@@ -1,0 +1,24 @@
+﻿@model BOCore.IdNameBO 
+
+<section class="card">
+    <div class="card-body text-center">
+        <div class="modal-wrapper">
+            <div class="modal-icon center">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <div class="modal-text">
+                <h4>Verwijderen @Model.Display </h4>
+                <p>U staat op het punt om de klant @Model.Display van het project te verwijderen.</p>
+                <p>Bent u zeker dat u deze wilt verwijderen?</p>
+            </div>
+        </div>
+    </div>
+    <footer class="card-footer">
+        <div class="row">
+            <div class="col-md-12 text-end">
+                <a href="@Url.Action("DeleteClient", "Klanten", new {id = Model.ID})" class="btn btn-primary">Verwijderen</a>
+                <button class="btn btn-default modal-dismiss">Annuleren</button>
+            </div>
+        </div>
+    </footer>
+</section>

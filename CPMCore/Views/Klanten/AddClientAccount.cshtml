@@ -1,0 +1,866 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Klanten.AddClientAccountModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+	ViewData["Title"] = "Project - " + Model.ProjectName;
+}
+@{
+	ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb("Detail", nameof(ProjectenController.Detail), "Projecten", false)
+	};
+}
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
+<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+
+}
+@* <script src="~/lib/autoNumeric/autoNumeric.js"></script> *@
+@using (Html.BeginForm("AddClientAccount", "Klanten", FormMethod.Post, new {@class="ecommerce-form action-buttons-fixed",@action="#"}))
+{
+	<div class="row">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="tabs-modern row" style="min-height: 490px;">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<div class="nav flex-column" id="tab" role="tablist" aria-orientation="vertical">
+								<a class="nav-link active" id="gegevens-tab" data-bs-toggle="pill" data-bs-target="#gegevens" role="tab" aria-controls="gegevens" aria-selected="true"><i class="bx bxs-contact me-2"></i> Gegevens</a>
+								<a class="nav-link" id="eigenaars-tab" data-bs-toggle="pill" data-bs-target="#eigenaars" role="tab" aria-controls="eigenaars" aria-selected="false"><i class="bx bxs-user-plus me-2"></i> Mede-eigenaars</a>
+								<a class="nav-link" id="entiteiten-tab" data-bs-toggle="pill" data-bs-target="#entiteiten" role="tab" aria-controls="entiteiten" aria-selected="false"><i class="bx bxs-building-house me-2"></i> Entiteiten</a>
+							</div>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							<div class="tab-content" id="tabContent">
+
+								<div class="tab-pane fade show active" id="gegevens" role="tabpanel" aria-labelledby="gegevens-tab">
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Eigenaar is een onderneming ?</label>
+										<div class="col-lg-7 col-xl-6">
+											<div class="checkbox-custom checkbox-default">
+												<input type="checkbox" value="" id="checkboxCompany">
+												<label for="checkboxCompany">Vink hier aan als de klant een onderneming is..</label>
+											</div>
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										@Html.HiddenFor(m => m.ProjectId)
+										@Html.HiddenFor(m => m.ProjectName)
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.ClientAccount.Name)</label>
+										<div class="col-lg-2 col-xl-2">
+											@Html.DropDownListFor(m => m.ClientAccount.Salutation, Html.GetEnumSelectList(Model.ClientAccount.Salutation.GetType()), new { @class = "form-control", @id = "lstSalutationAccount" })
+										</div>	
+										<div class="col-lg-5 col-xl-6">
+											@Html.TextBoxFor(m => m.ClientAccount.Name, new { placeholder = "Naam", @class = "form-control form-control-modern", id = "txtinputname", autocomplete = "name"})
+										</div>
+
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bedrijfsgegevens</label>
+										<div class="col-lg-4 col-xl-4">
+											@Html.TextBoxFor(m => m.ClientAccount.CompanyName, new { placeholder = "Bedrijfsnaam", @class = "form-control form-control-modern", id = "txtCompanyName", disabled="disabled"})
+										</div>
+										<div class="col-lg-3 col-xl-4
+										">
+											@Html.TextBoxFor(m => m.ClientAccount.VATnumber, new { placeholder = "Ondernemingsnummer", @class = "form-control form-control-modern", id = "txtVatNumber", disabled = "disabled" })
+										</div>
+									</div>
+									<div class="form-group">
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.ClientAccount.Street)</label>
+											<div class="col-lg-5 col-xl-6">
+												@Html.TextBoxFor(m => m.ClientAccount.Street, new { placeholder = "Straat", @class = "form-control form-control-modern"})
+											</div>
+											<div class="col-lg-1 col-xl-1">
+												@Html.TextBoxFor(m => m.ClientAccount.Housenumber, new { placeholder = "Nr", @class = "form-control form-control-modern", autocomplete="off" })
+											</div>
+											<div class="col-lg-1 col-xl-1">
+												@Html.TextBoxFor(m => m.ClientAccount.Busnumber, new { placeholder = "Bus", @class = "form-control form-control-modern" })
+											</div>
+										</div>
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+											<div class="col-lg-3 col-xl-2">
+												@Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern populate", id = "lstCompanyCountries" })
+											</div>
+											<label class="col-lg-1 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0" onload="loadCountry()">@Html.LabelFor(m => m.ClientAccount.Postalcode.Gemeente)</label>
+											<div class="col-lg-3 col-xl-4">
+												<select asp-for="SelectedPostalcode" id="txtPostalcode" class="form-control form-control-modern populate"></select>
+											</div>
+										</div>
+									</div>
+									<div class="form-group">
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Facturatieadres ?</label>
+											<div class="col-lg-7 col-xl-6">
+												<div class="checkbox-custom checkbox-default">
+													@Html.CheckBox("ClientAccount.InvoiceAddress", Model.ClientAccount.InvoiceAddress ?? false, new { id = "checkboxInvoiceAddress" })
+													<label for="checkboxInvoiceAddress">Vink hier aan voor een ander facturatieadres.</label>
+												</div>
+											</div>
+										</div>
+										<div class="InvoiceAddress form-group" hidden="hidden">
+											<div class=" row align-items-center pb-3">
+												<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Facturatiegegevens</label>
+												<div class="col-lg-5 col-xl-6">
+													@Html.TextBoxFor(m => m.ClientAccount.InvoiceStreet, new { placeholder = "Straat", @class = "form-control form-control-modern" })
+												</div>
+												<div class="col-lg-1 col-xl-1">
+													@Html.TextBoxFor(m => m.ClientAccount.InvoiceHousenumber, new { placeholder = "Nr", @class = "form-control form-control-modern"})
+												</div>
+												<div class="col-lg-1 col-xl-1">
+													@Html.TextBoxFor(m => m.ClientAccount.InvoiceBusnumber, new { placeholder = "Bus", @class = "form-control form-control-modern" })
+												</div>
+											</div>
+											<div class=" row align-items-center pb-3">
+												<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+
+												<div class="col-lg-3 col-xl-2">
+													@Html.DropDownListFor(m => m.SelectedInvoiceCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedInvoiceCountry), new { @class = "form-control form-control-modern populate", id = "lstClientInvoiceCountries" })
+												</div>
+												<label class="col-lg-3 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0" onload="loadCountry2()">@Html.LabelFor(m => m.ClientAccount.InvoicePostalcode.Gemeente)</label>
+												<div class="col-lg-3 col-xl-4">
+													<select asp-for="SelectedInvoicePostalcode" id="txtInvoicePostalcode" class="form-control form-control-modern populate"></select>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Type eigenaar</label>
+										<div class="col-lg-3 col-xl-2">
+											@Html.DropDownListFor(m => m.ClientAccount.OwnerType.Id, new SelectList(Model.OwnerTypes, "ID", "Display", Model.ClientAccount.OwnerType.Id), new { @class = "form-control form-control-modern populate", id = "lstOwnerTypes" })
+										</div>
+										<label class="col-lg-1 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.ClientAccount.DateSalesAgreement)</label>
+										<div class="col-lg-3 col-xl-4">
+											@Html.EditorFor(m => m.ClientAccount.DateSalesAgreement)
+										</div>
+									</div>
+									<div class="form-group">
+										<div id="editorRows">
+											@foreach (var item in Model.ClientAccount.Contacts)
+											{
+												@Html.Partial("_ContactRow",item)
+											}
+										</div>
+									</div>
+									<div class="form-group col-lg-12 col-xl-11">
+										<div class="pull-right btn-group-vertical">
+											<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Contactgegevens toevoegen" href="@Url.Action("BlankContactRow", "Klanten", null)" class="btn btn-default pull-right" id="addContact"><i class="fa fa-plus"></i> Contactgegevens toevoegen</a>
+										</div>
+									</div>
+
+								</div>
+								<div class="tab-pane fade" id="eigenaars" role="tabpanel" aria-labelledby="eigenaars-tab">
+									<h2 class="card-title mb-3">Eigenaarslijst</h2>
+									<div class="form-group">
+										<table class="table table-ecommerce-simple table-striped mb-0" id="datatable-owners-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true">
+
+											<thead>
+												<tr>
+													<th>Eigenaar</th>
+													<th>Type</th>
+													<th>%</th>
+													<th></th>
+												</tr>
+											</thead>
+											<tbody id="CoOwnerRows" >
+												<tr>
+													<td data-title='Naam'>
+														<label id="txtOwnerName" name="txtOwnerName" />
+													</td>
+													<td data-title='Type'>
+														<label id="txtOwnerType" name="txtOwnerType">Volle Eigenaar</label>
+													</td>
+													<td data-title='%' id="ownerpercentage">
+														100,00
+													</td>
+													<td data-title=''></td>
+												</tr>
+
+												@foreach (var item in Model.ClientAccount.CoOwners){
+													Html.Partial("_CoOwnerRow", item, new ViewDataDictionary(ViewData) { { "mode", "add" } });
+												}
+											</tbody>
+										</table>
+									</div>
+									<hr />
+									<h2 class="card-title mb-3">Mede-eigenaar toevoegen</h2>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Mede-eigenaar is een onderneming ?</label>
+										<div class="col-lg-7 col-xl-6">
+											<div class="checkbox-custom checkbox-default">
+												<input type="checkbox" value="" id="checkboxCoOwnerCompany" disabled="">
+												<label for="checkboxCoOwnerCompany">Vink hier aan als de mede-eigenaar een onderneming is.</label>
+											</div>
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
+										<div class="col-lg-2 col-xl-2">
+											@Html.DropDownListFor(m => m.Salutations, Html.GetEnumSelectList(Model.Salutations.GetType()), new { @class = "form-control form-control-modern", id = "lstSalutationCoOwner", disabled="" })
+										</div>
+										<div class="col-lg-3 col-xl-3">
+											<input type="text" class="form-control form-control-modern" placeholder="Naam" name="txtCoOwnerName" id="txtCoOwnerName" disabled="">
+										</div>
+										<div class="col-lg-2 col-xl-3">
+											<input type="text" class="form-control form-control-modern" placeholder="Voornaam" name="txtCoOwnerForeName" id="txtCoOwnerForeName" disabled="">
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bedrijfsgegevens</label>
+										<div class="col-lg-4 col-xl-4">
+											<input type="text" class="form-control form-control-modern" placeholder="Bedrijfsnaam" name="txtCoOwnerCompanyName" id="txtCoOwnerCompanyName" disabled="">
+										</div>
+										<div class="col-lg-3 col-xl-4
+										">
+											<input type="text" class="form-control form-control-modern" placeholder="BTW nummer" name="txtCoOwnerVATNumber" id="txtCoOwnerVATNumber" disabled="">
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Contactgegevens</label>
+										<div class="col-lg-3 col-xl-4">
+											<div class="input-group">
+												<span class="input-group-text">
+													<i class="bx bx-at"></i>
+												</span>
+												<input type="email" class="form-control form-control-modern" placeholder="Email" name="txtCoOwnerEmail" id="txtCoOwnerEmail" disabled="">
+											</div>
+										</div>
+										<div class="col-lg-2 col-xl-2">
+											<div class="input-group">
+												<span class="input-group-text">
+													<i class="bx bx-phone"></i>
+												</span>
+												<input type="text" class="form-control form-control-modern" placeholder="Telefoon" data-plugin-masked-input="" data-input-mask="999/99.99.99" name="txtCoOwnerPhone" id="txtCoOwnerPhone" disabled="">
+											</div>
+										</div>
+										<div class="col-lg-2 col-xl-2">
+											<div class="input-group">
+												<span class="input-group-text">
+													<i class="bx bx-mobile"></i>
+												</span>
+												<input type="text" class="form-control form-control-modern" placeholder="Mobiel" data-plugin-masked-input="" data-input-mask="9999/99.99.99" name="txtCoOwnerCellphone" id="txtCoOwnerCellphone" disabled="">
+											</div>
+										</div>
+									</div>
+									<div class="form-group">
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Adres</label>
+										<div class="col-lg-5 col-xl-6">
+											<input type="text" class="form-control form-control-modern" placeholder="Straat" name="txtCoOwnerStreet" id="txtCoOwnerStreet" disabled="">
+										</div>
+										<div class="col-lg-1 col-xl-1">
+											<input type="text" class="form-control form-control-modern" placeholder="Nr" name="txtCoOwnerHousenumber" id="txtCoOwnerHousenumber" disabled="">
+										</div>
+										<div class="col-lg-1 col-xl-1">
+											<input type="text" class="form-control form-control-modern" placeholder="Bus" name="txtCoOwnerBusnumber" id="txtCoOwnerBusnumber" disabled="">
+										</div>
+									</div>
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+
+										<div class="col-lg-3 col-xl-2">
+											@Html.DropDownListFor(m => m.SelectedCoOwnerCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCoOwnerCountry), new { @class = "form-control form-control-modern populate", id = "lstCoOwnerCountries", disabled = "" })
+										</div>
+										<label class="col-lg-3 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.ClientAccount.InvoicePostalcode.Gemeente)</label>
+										<div class="col-lg-3 col-xl-4">
+											<select asp-for="SelectedCoOwnerPostalCode" id="txtCoOwnerPostalcode" class="form-control form-control-modern populate" disabled=""></select>
+										</div>
+									</div>
+									</div>
+									<div class="form-group">
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Facturatieadres ?</label>
+										<div class="col-lg-7 col-xl-6">
+											<div class="checkbox-custom checkbox-default">
+												<input type="checkbox" id="checkboxCoOnwerInvoiceAddress" disabled="" />
+												<label for="checkboxInvoiceAddress">Vink hier aan voor een ander facturatieadres.</label>
+											</div>
+										</div>
+									</div>
+									<div class="CoOwnerInvoiceAddress" hidden="hidden">
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Facturatiegegevens</label>
+											<div class="col-lg-5 col-xl-6">
+												<input type="text" class="form-control form-control-modern" placeholder="vb. Klaverdries" name="txtCoOwnerInvoiceStreet" id="txtCoOwnerInvoiceStreet" disabled="">
+											</div>
+											<div class="col-lg-1 col-xl-1">
+												<input type="text" class="form-control form-control-modern" placeholder="Nr" name="txtCoOwnerInvoiceHousenumber" id="txtCoOwnerInvoiceHousenumber" disabled="">
+											</div>
+											<div class="col-lg-1 col-xl-1">
+												<input type="text" class="form-control form-control-modern" placeholder="Bus" name="txtCoOwnerInvoiceBusnumber" id="txtCoOwnerInvoiceBusnumber" disabled="">
+											</div>
+										</div>
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+
+											<div class="col-lg-3 col-xl-2">
+												@Html.DropDownListFor(m => m.SelectedCoOwnerInvoiceCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCoOwnerInvoiceCountry), new { @class = "form-control form-control-modern populate", id = "lstCoOwnerInvoiceCountries", disabled = "" })
+											</div>
+											<label class="col-lg-2 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.ClientAccount.InvoicePostalcode.Gemeente)</label>
+											<div class="col-lg-4 col-xl-4">
+												<select asp-for="SelectedCoOwnerInvoicePostalCode" id="txtCoOwnerInvoicePostalcode" class="form-control form-control-modern populate" disabled=""></select>
+
+											</div>
+										</div>
+									</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Type eigenaar</label>
+										<div class="col-lg-3 col-xl-2">
+											@Html.DropDownListFor(m => m.SelectedCoOwnerType, new SelectList(Model.OwnerTypes, "ID", "Display", Model.SelectedCoOwnerType), new { @class = "form-control form-control-modern populate", id = "lstCoOwnerType", disabled = "" })
+										</div>
+										<label class="col-lg-2 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0">Percentage</label>
+										<div class="col-lg-2 col-xl-2">
+											<input type="number" step="0.01" min="0.01" max="99.99" class="form-control form-control-modern" name="txtCoOwnerPercentage" id="txtCoOwnerPercentage" disabled="">
+										</div>
+										<div class="col-lg-2 col-xl-2">
+											<button type="button" id="btnAddCoOwner" disabled="" class="submit-button btn btn-primary btn-block btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+												<i class="bx bx-save text-4 me-2"></i> Opslaan
+											</button>
+										</div>
+
+									</div>
+
+								</div>
+								<div class="tab-pane fade" id="entiteiten" role="tabpanel" aria-labelledby="entiteiten-tab">
+									<h2 class="card-title mb-3">Entiteitenlijst</h2>
+									<div class="form-group">
+										<table class="table table-ecommerce-simple table-striped mb-0" id="datatable-owners-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true">
+
+											<thead>
+												<tr>
+												<th class="col-md-1">#</th>
+												<th class="col-md-1">Entiteit</th>
+												<th class="col-md-4">Grondwaarde verkoop</th>
+												<th class="col-md-4">Bouwwaarde verkoop</th>
+												<th class="col-md-2">Verwijderen</th>
+												</tr>
+											</thead>
+											<tbody id="UnitRows">
+
+												@foreach (var item in Model.AddedUnits)
+												{
+													Html.Partial("_UnitRow", item, new ViewDataDictionary(ViewData) { { "mode", "add" } });
+												}
+											</tbody>
+										</table>
+									</div>
+									<hr />
+									<h2 class="card-title mb-3">Entiteit toevoegen</h2>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Kies entiteit</label>
+										<div class="col-lg-7 col-xl-6">
+
+											@Html.ListBoxFor(m => m.SelectedUnits, new SelectList(Model.AvailableUnits, "ID", "Display", Model.SelectedUnits, "Group"), new { @class = "form-control populate", multiple = "", data_plugin_selecttwo = "", id = "lstUnits" })
+
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row action-buttons">
+		<div class="col-12 col-md-auto">
+			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+				<i class="bx bx-save text-4 me-2"></i> Klant opslaan
+			</button>
+		</div>
+		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+			<a href="ecommerce-coupons-list.html" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+		</div>
+		<div class="col-12 col-md-auto ms-md-auto mt-3 mt-md-0 ms-auto">
+			<a href="#" class="delete-button btn btn-danger btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1">
+				<i class="bx bx-trash text-4 me-2"></i> Klant verwijderen
+			</a>
+		</div>
+	</div>
+}
+
+
+@section PageScripts
+{
+	<script src="~/lib/select2/js/select2.js"></script>
+	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+	<script src="~/lib/bootstrap-wizard/jquery.bootstrap.wizard.js"></script>
+	<script src="~/lib/dropzone/dropzone.js"></script>
+	<script>
+		//indien klant bedrijf is
+		$('#checkboxCompany').change(function () {
+		if ($(this).is(":checked")) {
+		$('#lstSalutationAccount').attr("disabled", "disabled");
+		$('#txtinputname').attr("disabled", "disabled");
+		$('#txtVatNumber').removeAttr("disabled");
+		$('#txtCompanyName').removeAttr("disabled");
+		return;
+		}
+		$('#lstSalutationAccount').removeAttr("disabled");
+		$('#txtinputname').removeAttr("disabled");
+		$('#txtVatNumber').attr("disabled", "disabled");
+		$('#txtCompanyName').attr("disabled", "disabled");
+		});
+		//als er een facturatieadres is voor de klant
+		$('#checkboxInvoiceAddress').change(function () {
+		if ($(this).is(":checked")) {
+		$('.InvoiceAddress').removeAttr("hidden");
+		return;
+		}
+		$('.InvoiceAddress').attr("hidden", "hidden");
+		});
+		//als de mede-eigenaar een bedrijf is
+		$('#checkboxCoOwnerCompany').change(function () {
+		if ($(this).is(":checked")) {
+		$('#lstSalutationCoOwner').attr("disabled", "disabled");
+		$('#txtCoOwnerName').attr("disabled", "disabled");
+		$('#txtCoOwnerForeName').attr("disabled", "disabled");
+		$('#txtCoOwnerVATNumber').removeAttr("disabled");
+		$('#txtCoOwnerCompanyName').removeAttr("disabled");
+
+		return;
+		}
+		$('#lstSalutationCoOwner').removeAttr("disabled");
+		$('#txtCoOwnerName').removeAttr("disabled");
+		$('#txtCoOwnerForeName').removeAttr("disabled");
+		$('#txtCoOwnerVATNumber').attr("disabled", "disabled");
+		$('#txtCoOwnerCompanyName').attr("disabled", "disabled");
+		});
+		//als er een facturatieadres is voor de mede-eigenaar
+		$('#checkboxCoOnwerInvoiceAddress').change(function () {
+		if ($(this).is(":checked")) {
+		$('.CoOwnerInvoiceAddress').removeAttr("hidden");
+		return;
+		}
+		$('.CoOwnerInvoiceAddress').attr("hidden", "hidden");
+		});
+		//selecteren van een land
+		var iCountryId = jQuery("#lstCompanyCountries option:selected").val();
+		function loadCountry() {
+		var iCountryId = jQuery("#lstCompanyCountries option:selected").val();
+		}
+
+		$('#lstCompanyCountries').on('change', function () {
+
+		iCountryId = this.value;
+		});
+		//selecteren van een land bij facturatiegegevens
+		var iClientInvoiceCountryId = jQuery("#lstClientInvoiceCountries option:selected").val();
+		function loadCountry2() {
+		var iClientInvoiceCountryId = jQuery("#lstClientInvoiceCountries option:selected").val();
+		}
+		$('#lstClientInvoiceCountries').on('change', function () {
+		iClientInvoiceCountryId = this.value;
+		});
+		//selecteren van een land bij mede-eigenaar
+		var iCoOwnerCountryId = jQuery("#lstCoOwnerCountries option:selected").val();
+		$('#lstCoOwnerCountries').on('change', function () {
+		iCoOwnerCountryId = this.value;
+		});
+		//selecteren van een land invoice bij mede-eigenaar
+		var iCoOwnerInvoiceCountryId = jQuery("#lstCoOwnerInvoiceCountries option:selected").val();
+		$('#lstCoOwnerInvoiceCountries').on('change', function () {
+		iCoOwnerInvoiceCountryId = this.value;
+		});
+		//nieuwe rij toevoegen aan de contacten op tab 1
+		$("#addContact").click(function(){
+			$.ajax({
+				url:this.href,
+				cache:false,
+				success:function(html) {$("#editorRows").append(html);}
+			});
+			return false;
+		});
+
+		//verwijderen van een contact
+		$(document).on('click', 'a.deleteContact', function () { // <-- changes
+
+			$(this).closest('.contactRow').remove();
+			return false;
+		});
+		//toevoegen van een mede-eigenaar
+		$('#btnAddCoOwner').click(function () {
+		var sum = 100.00;
+		$('.percentage').each(function(){
+		var percentage = $(this);
+
+		sum -= parseFloat(percentage.text()).toFixed(2);
+
+		});
+		if (!$('#txtCoOwnerName').val()) {
+		$('#txtCoOwnerName').parent('div').addClass('has-error');
+		}
+		else if (!$('#txtCoOwnerPercentage').val()) {
+		$('#txtCoOwnerPercentage').parent('div').addClass('has-error');
+		}
+		else if (!$('#txtCoOwnerStreet').val()) {
+		$('#txtCoOwnerStreet').parent('div').addClass('has-error');
+		}
+		else if (!$('#txtCoOwnerHousenumber').val()) {
+		$('#txtCoOwnerHousenumber').parent('div').addClass('has-error');
+		}
+		else if (!$('#txtCoOwnerPostalcode').val()) {
+		$('#txtCoOwnerPostalcode').parent('div').addClass('has-error');
+		}
+		else if (sum <=0) {
+		$('#txtCoOwnerPercentage').parent('div').addClass('has-error');
+		}
+		else {
+		$.ajax({
+		url: '/Klanten/AddCoOwner',
+		data: {
+		Name: $('#txtCoOwnerName').val(),
+		Forename: $('#txtCoOwnerForeName').val(),
+		Salutation : $('#lstSalutationCoOwner').val(),
+		Street: $('#txtCoOwnerStreet').val(),
+		Housenumber: $('#txtCoOwnerHousenumber').val(),
+		Busnumber: $('#txtCoOwnerBusnumber').val(),
+		Zipcode: $('#txtCoOwnerPostalcode').val(),
+		Phone: $('#txtCoOwnerPhone').val(),
+		Cellphone: $('#txtCoOwnerCellphone').val(),
+		Email: $('#txtCoOwnerEmail').val(),
+		OwnerType: $('#lstCoOwnerType').val(),
+		OwnerPercentage : $('#txtCoOwnerPercentage').val(),
+		VatNumber :  $('#txtCoOwnerVATNumber').val(),
+		CompanyName : $('#txtCoOwnerCompanyName').val(),
+		InvoiceAddress : $('#checkboxCoOwnerInvoiceAddress').val(),
+		InvoiceStreet: $('#txtCoOwnerInvoiceStreet').val(),
+		InvoiceHousenumber: $('#txtCoOwnerInvoiceHousenumber').val(),
+		InvoiceBusnumber: $('#txtCoOwnerInvoiceBusnumber').val(),
+		InvoiceZipcode: $('#txtCoOwnerInvoicePostalcode').val()
+		},
+		cache: false,
+		traditional: true,
+		type: 'POST',
+		success: function (result) {
+		$("#txtOwnerPercentage").text($("#txtinputname").val());
+		$('#CoOwnerRows').append(result);
+		$('#txtCoOwnerName').val(null);
+		$('#txtCoOwnerForeName').val(null);
+		$('#txtCoOwnerStreet').val(null);
+		$('#txtCoOwnerHousenumber').val(null);
+		$('#txtCoOwnerBusnumber').val(null);
+		$('#txtCoOwnerEmail').val(null);
+		$('#txtCoOwnerPhone').val(null);
+		$('#txtCoOwnerCellphone').val(null);
+		$('#txtCoOwnerPercentage').val(null);
+		$('#txtCoOwnerVATNumber').val(null);
+		$('#txtCoOwnerCompanyName').val(null);
+		$('#lstSalutationCoOwner').val(0);
+		$('#lstCoOwnerType').val('1');
+		$('#lstCoOwnerCountries').val('19');
+		$('#txtCoOwnerName').parent('div').removeClass('has-error');
+		$('#txtCoOwnerPercentage').parent('div').removeClass('has-error');
+		$('#txtCoOwnerStreet').parent('div').removeClass('has-error');
+		$('#txtCoOwnerHousenumber').parent('div').removeClass('has-error');
+		$('#txtCoOwnerPostalcode').parent('div').removeClass('has-error');
+		$('#txtCoOwnerInvoiceStreet').val(null);
+		$('#txtCoOwnerInvoiceHousenumber').val(null);
+		$('#txtCoOwnerInvoiceBusnumber').val(null);
+		$('#lstCoOwnerInvoiceCountries').val('19');
+		sum = 100.00;
+		$('.percentage').each(function(){
+		var percentage = $(this);
+		var p = percentage.text().replace(",",".");
+		sum -= parseFloat(p).toFixed(2);
+		});
+		$('#txtCoOwnerPercentage').attr("max",sum-0.01)
+		$('#ownerpercentage').html(sum.toLocaleString('nl-BE',{minimumFractionDigits:2}));
+
+		},
+
+		});
+		}
+
+
+		});
+		//verwijderen van mede-eigenaar
+		$(document).on('click', 'a.deleteCoOwnerRow', function () { // <-- changes
+
+		$(this).closest('tr').remove();
+		sum = 100.00;
+		$('.percentage').each(function(){
+		var percentage = $(this);
+		var p = percentage.text().replace(",",".");
+		sum -= parseFloat(p).toFixed(2);
+		});
+		$('#txtCoOwnerPercentage').attr("max",sum-0.01)
+		$('#ownerpercentage').html(sum.toLocaleString('nl-BE',{minimumFractionDigits:2}));
+		return false;
+		});
+		//naam update in tweede tabblad na wijzigen
+		$("#txtinputname").on('input',function(){
+		$("#txtOwnerName").text($("#txtinputname").val());
+		});
+		
+		//Type eigenaar update in tweede tabblad na wijzigen
+		$('#lstOwnerTypes').on('change', function () {
+		if($('#lstOwnerTypes option:selected').val() == 1){
+		$('#txtCoOwnerName').attr("disabled","disabled");
+		$('#txtCoOwnerForeName').attr("disabled","disabled");
+		$('#txtCoOwnerStreet').attr("disabled","disabled");
+		$('#txtCoOwnerHousenumber').attr("disabled","disabled");
+		$('#txtCoOwnerBusnumber').attr("disabled","disabled");
+		$('#txtCoOwnerEmail').attr("disabled","disabled");
+		$('#txtCoOwnerPhone').attr("disabled","disabled");
+		$('#txtCoOwnerCellphone').attr("disabled","disabled");
+		$('#txtCoOwnerPercentage').attr("disabled","disabled");
+		$('#txtCoOwnerPostalcode').attr("disabled","disabled");
+		$('#txtCoOwnerInvoicePostalcode').attr("disabled","disabled");
+		$('#lstSalutationCoOwner').attr("disabled", "disabled");
+		$('#lstCoOwnerType').attr("disabled","disabled");
+		$('#lstCoOwnerCountries').attr("disabled","disabled");
+		$('#lstCoOwnerInvoiceCountries').attr("disabled","disabled");
+		$('#btnAddCoOwner').attr("disabled","disabled");
+		$('#checkboxCoOwnerCompany').attr("disabled","disabled");
+		$('#txtCoOwnerVATNumber').attr("disabled", "disabled");
+		$('#txtCoOwnerCompanyName').attr("disabled", "disabled");
+		$('#txtCoOwnerInvoiceStreet').attr("disabled","disabled");
+		$('#txtCoOwnerInvoiceHousenumber').attr("disabled","disabled");
+		$('#txtCoOwnerInvoiceBusnumber').attr("disabled","disabled");
+		$('#checkboxCoOnwerInvoiceAddress').attr("disabled","disabled");
+		} else{
+		$('#txtCoOwnerName').removeAttr("disabled");
+		$('#txtCoOwnerForename').removeAttr("disabled");
+		$('#txtCoOwnerStreet').removeAttr("disabled");
+		$('#txtCoOwnerHousenumber').removeAttr("disabled");
+		$('#txtCoOwnerBusnumber').removeAttr("disabled");
+		$('#txtCoOwnerEmail').removeAttr("disabled");
+		$('#txtCoOwnerPhone').removeAttr("disabled");
+		$('#txtCoOwnerCellphone').removeAttr("disabled");
+		$('#txtCoOwnerPercentage').removeAttr("disabled");
+		$('#txtCoOwnerPostalcode').select2('enable');
+		$('#txtCoOwnerInvoicePostalcode').select2('enable');
+		$('#lstSalutationCoOwner').removeAttr("disabled");
+		$('#lstCoOwnerType').removeAttr("disabled");
+		$('#lstCoOwnerCountries').removeAttr("disabled");
+		$('#lstCoOwnerInvoiceCountries').removeAttr("disabled");
+		$('#btnAddCoOwner').removeAttr("disabled");
+		$('#checkboxCoOwnerCompany').removeAttr("disabled");
+				$('#checkboxCoOnwerInvoiceAddress').removeAttr("disabled");
+		$('#txtCoOwnerInvoiceStreet').removeAttr("disabled");
+		$('#txtCoOwnerInvoiceHousenumber').removeAttr("disabled");
+		$('#txtCoOwnerInvoiceBusnumber').removeAttr("disabled");
+		$('#lstCoOwnerType option[value=1]').each(function(){
+		$(this).remove();
+		});
+		if ($('#checkboxCoOwnerCompany').is(":checked")) {
+		$('#lstSalutationCoOwner').attr("disabled", "disabled");
+		$('#txtCoOwnerName').attr("disabled", "disabled");
+		$('#txtCoOwnerForeName').attr("disabled", "disabled");
+		$('#txtCoOwnerVATNumber').removeAttr("disabled");
+		$('#txtCoOwnerCompanyName').removeAttr("disabled");
+		} else {
+		$('#lstSalutationCoOwner').removeAttr("disabled");
+		$('#txtCoOwnerName').removeAttr("disabled");
+		$('#txtCoOwnerForeName').removeAttr("disabled");
+		$('#txtCoOwnerVATNumber').attr("disabled", "disabled");
+		$('#txtCoOwnerCompanyName').attr("disabled", "disabled");
+		}
+
+		}
+		$("#txtOwnerType").text($("#lstOwnerTypes option:selected").text());
+		});
+		//laden bij start
+		$(document).ready(function () {
+		//select2 postcode tabblad 1
+		$("#txtPostalcode").select2({
+		minimumInputLength: 3,  // minimumInputLength for sending ajax request to server
+		theme: 'bootstrap',
+		dropdownAutoWidth: true,
+		placeholder: "Selecteer uw gemeente",
+		ajax: {
+
+		url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+		cache: false,
+		traditional: true,
+		type: 'POST',
+		data: function (params) {
+		return {
+		term: params.term,
+		CountryId: iCountryId,
+		};
+		},
+
+		processResults: function (data, params) {
+		return {
+					results: $.map(data, function (item) {
+						return {
+							text: item.text,
+							id: item.id
+						}
+					})
+				};
+
+		},
+
+		},
+
+		});
+		//select2 postcode invoice tabblad 1
+		$("#txtInvoicePostalcode").select2({
+
+		minimumInputLength: 3,  // minimumInputLength for sending ajax request to server
+		theme: 'bootstrap',
+		dropdownAutoWidth: true,
+		placeholder: "Selecteer uw gemeente",
+		ajax: {
+
+		url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+		cache: false,
+		traditional: true,
+		type: 'POST',
+		data: function (params) {
+		return {
+		term: params.term,
+		CountryId: iClientInvoiceCountryId,
+		};
+		},
+
+		processResults: function (data, params) {
+		return {
+					results: $.map(data, function (item) {
+						return {
+							text: item.text,
+							id: item.id
+						}
+					})
+				};
+
+		},
+
+		},
+
+		});
+		//select2 postcode tabblad 2
+		$("#txtCoOwnerPostalcode").select2({
+
+		minimumInputLength: 3,  // minimumInputLength for sending ajax request to server
+		theme: 'bootstrap',
+		dropdownAutoWidth: true,
+		placeholder: "Selecteer uw gemeente",
+		ajax: {
+
+		url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+		cache: false,
+		traditional: true,
+		type: 'POST',
+		data: function (params) {
+		return {
+		term: params.term,
+		CountryId: iCoOwnerCountryId,
+		};
+		},
+
+		processResults: function (data, params) {
+		return {
+					results: $.map(data, function (item) {
+						return {
+							text: item.text,
+							id: item.id
+						}
+					})
+				};
+
+		},
+
+		},
+		         @if(Model.SelectedPostalcode > 0){
+					 <text>
+			             initSelection: function (element, callback) {
+			                 var data = {id:@Model.SelectedPostalcode, text: '@Model.ClientAccount.Postalcode.Postcode  - @Model.ClientAccount.Postalcode.Gemeente' };
+			                 callback(data);
+			             }
+				</text>
+			}
+
+
+
+		});
+		$("#txtCoOwnerInvoicePostalcode").select2({
+
+		minimumInputLength: 3,  // minimumInputLength for sending ajax request to server
+		theme: 'bootstrap',
+		dropdownAutoWidth: true,
+		placeholder: "Selecteer uw gemeente",
+		ajax: {
+
+		url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+		cache: false,
+		traditional: true,
+		type: 'POST',
+		data: function (params) {
+		return {
+		term: params.term,
+		CountryId: iCoOwnerInvoiceCountryId,
+		};
+		},
+
+		processResults: function (data, params) {
+		return {
+					results: $.map(data, function (item) {
+						return {
+							text: item.text,
+							id: item.id
+						}
+					})
+				};
+
+		},
+
+		},
+		@if (Model.SelectedPostalcode > 0)
+		{
+			<text>
+			initSelection: function (element, callback) {
+				var data = {id:@Model.SelectedPostalcode, text: '@Model.ClientAccount.Postalcode.Postcode  - @Model.ClientAccount.Postalcode.Gemeente' };
+				callback(data);
+			}
+			</text>
+		}
+
+
+
+
+		 });
+
+		});
+
+
+				(function($) {
+
+			'use strict';
+
+			if ( $.isFunction($.fn[ 'select2' ]) ) {
+
+				$(function() {
+					$('[data-plugin-selectTwo]').each(function() {
+						var $this = $( this ),
+							opts = {};
+
+						var pluginOptions = $this.data('plugin-options');
+						if (pluginOptions)
+							opts = pluginOptions;
+
+						$this.themePluginSelect2(opts);
+					});
+				});
+
+			}
+
+		}).apply(this, [jQuery]);
+	</script>
+}

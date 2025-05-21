@@ -1,0 +1,1 @@
+﻿@Html.TextBox("", ViewData.TemplateInfo.FormattedModelValue, New With {.Class = "form-control", .placeHolder = ViewData.ModelMetadata.DisplayName, .type = ViewData("type"), .min = ViewData("min"), .max = ViewData("max"), .step = ViewData("step")})

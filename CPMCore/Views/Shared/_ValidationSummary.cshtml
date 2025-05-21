@@ -1,0 +1,17 @@
+﻿@{
+    var model = ViewData.ModelState;
+    var hasErrors = model.Values.Any(v => v.Errors.Count > 0);
+    var style = hasErrors ? "margin-left:-17px;margin-right:-17px;margin-top:-40px;" : "";
+}
+
+<div class="validation-message" style="@style">
+    <ul style="@(hasErrors ? "display: block;" : "display: none;")">
+        @if (hasErrors)
+        {
+            @foreach (var modelError in model.SelectMany(kvp => kvp.Value.Errors))
+            {
+                <li><label class="error">@modelError.ErrorMessage</label></li>
+            }
+        }
+    </ul>
+</div>

@@ -1,0 +1,193 @@
+﻿@using BOCore
+@model CPMCore.Models.Klanten.DetailClientsModel
+
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+}
+
+<div class="inner-toolbar clearfix">
+	<ul>
+		@if (User.IsInRole("Admin"))
+		{
+			<li>
+				<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Toevoegen klant" href="@Url.Action("AddClientAccount", "Klanten", new {id = Model.ProjectId})" class="AddClientAccount"><i class="fa fa-user-plus"></i></a>
+			</li> 
+		}
+
+		<li>
+			<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Wijzigingsopdrachten" href="@Url.Action("ChangeOrder", "Projecten", new {projectid = Model.ProjectId})" Class="ChangeOrder"><i Class="fa fa-shopping-cart"></i></a>
+		</li>
+	</ul>
+</div>
+@Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+<div class="card card-modern pt-5">
+	<div class="card-body">
+		<div class="datatables-header-footer-wrapper mt-2">
+			<div class="datatable-header">
+				
+			</div>
+
+			<table class="table table-ecommerce-simple table-striped mb-0" id="datatable-clients-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar="#toolbar" data-toolbar-align="right">
+
+				<thead>
+					<tr>
+						<th>Naam</th>
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 1).Count()) > 0) 
+						{
+							<th>Wooneenheid</th>
+						}
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 4).Count()) > 0)
+						{
+							<th class="hidden-xs">Commerciële ruimte</th>
+						}
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 3).Count()) > 0)
+						{
+							<th class="hidden-xs">Parkeergelegenheid</th>
+						}
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 2).Count()) > 0)
+						{
+							<th class="hidden-xs">Berging</th>
+						}
+						<th class="hidden-xs" data-visible="false" data-sortable="true">Verkoopdatum</th>
+						<th class="hidden-xs" data-visible="false" data-sortable="true">Aktedatum</th>
+						<th class="hidden-xs" data-visible="false" data-sortable="true">Opleverdatum</th>
+						<th class="hidden-xs noVis" data-sortable="false">Acties</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach(var item in Model.ClientAccounts)
+					{
+						<tr>
+							<td>
+								<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Klantgegevens" href="@Url.Action("Detail", "Klanten", new {clientid = item.Client.Id, projectid = Model.ProjectId})">
+									@if (item.Client.Name is not null)
+									{
+										@item.Client.Salutation.GetDisplayName() @Html.Raw(" ") @item.Client.DisplayName
+									}
+									else
+									{
+										@item.Client.DisplayName
+									}
+								</a>
+							</td>
+						
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 1).Count()) > 0)
+						{
+							<td>
+							@foreach (var unit in item.Units.Where(a => a.Type.GroupId == 1))
+							{
+
+
+										@unit.Type.Name @Html.Raw(" ") @unit.Name.ToUpper()
+										@if (unit.Id != item.Units.Where(m => m.Type.GroupId == 1).Last().Id)
+										{
+											@Html.Raw(" - ")
+										}
+									
+                                
+                            }
+								</td>
+						}
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 4).Count()) > 0)
+						{
+							<td>
+							@foreach (var unit in item.Units.Where(a => a.Type.GroupId == 4))
+							{
+
+
+										@unit.Type.Name	@Html.Raw(" ") @unit.Name.ToUpper()
+										@if (unit.Id != item.Units.Where(m => m.Type.GroupId == 4).Last().Id)
+										{
+											@Html.Raw(" - ")
+										}
+									
+								
+							}
+									</td>
+						}
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 3).Count()) > 0)
+						{
+							<td>
+							@foreach (var unit in item.Units.Where(a => a.Type.GroupId == 3))
+							{
+
+
+										@unit.Type.Name	@Html.Raw(" ") @unit.Name.ToUpper()
+										@if (unit.Id != item.Units.Where(m => m.Type.GroupId == 3).Last().Id)
+										{
+											@Html.Raw(" - ")
+										}
+									
+								
+							}
+								</td>
+						}
+
+						@if (Model.ClientAccounts.Sum(m => m.Units.Where(a => a.Type.GroupId == 2).Count()) > 0)
+						{
+							<td>
+							@foreach (var unit in item.Units.Where(a => a.Type.GroupId == 2))
+							{
+
+
+										@unit.Type.Name	@Html.Raw(" ") @unit.Name.ToUpper()
+										@if (unit.Id != item.Units.Where(m => m.Type.GroupId == 2).Last().Id)
+										{
+											@Html.Raw(" - ")
+										}
+									
+								
+							}
+								</td>
+						}
+							<td class="hidden-xs">@Html.DisplayFor(m => item.Client.DateSalesAgreement)</td>
+							<td class="hidden-xs">@if (item.Client.DateDeedOfSale is not null)
+									{
+										@Html.DisplayFor(m => item.Client.DateDeedOfSale)
+									}</td>
+							<td class="hidden-xs">
+										@if (item.Client.DeliveryDate is not null)
+										{
+											@Html.DisplayFor(m => item.Client.DeliveryDate)
+										}
+							</td>
+							<td>
+								  <a data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken"  id="editAccount" href="@Url.Action("Edit", "Klanten", new {projectid = Model.ProjectId, clientid = item.Client.Id, activetab = 0})"><i class="fa fa-edit"></i></a>
+                                                @if(User.IsInRole("Admin")) {
+                                                <a href="#modaldeleteclient" data-toggle="tooltip" id="deleteClient" data-placement="top" title="" data-original-title="Verwijderen" class="deleteClient" data-id="@item.Client.Id"><i class="fa fa-remove "></i></a>
+												}
+							</td>
+						</tr>
+
+					}
+				</tbody>
+			</table>
+@* 			<hr class="solid mt-5 opacity-4">
+			<div class="datatable-footer">
+				<div class="row align-items-center justify-content-between mt-3">
+					<div class="col-md-auto order-1 mb-3 mb-lg-0">
+						<div class="d-flex align-items-stretch">
+							<div class="d-grid gap-3 d-md-flex justify-content-md-end me-4">
+								<select class="form-control select-style-1 bulk-action" name="bulk-action" style="min-width: 170px;">
+									<option value="" selected>Bulk Actions</option>
+									<option value="delete">Delete</option>
+								</select>
+								<a href="#" class="bulk-action-apply btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Apply</a>
+							</div>
+						</div>
+					</div>
+					<div class="col-lg-auto text-center order-3 order-lg-2">
+						<div class="results-info-wrapper"></div>
+					</div>
+					<div class="col-lg-auto order-2 order-lg-3 mb-3 mb-lg-0">
+						<div class="pagination-wrapper"></div>
+					</div>
+				</div>
+			</div> *@
+		</div>
+	</div>
+
+</div>

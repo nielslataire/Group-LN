@@ -1,0 +1,38 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewBag.Title</title>
+	<!-- Vendor CSS -->
+	<link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.css" />
+	<link rel="stylesheet" href="~/lib/animate/animate.compat.css">
+	<link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
+	<link rel="stylesheet" href="~/lib/boxicons/css/boxicons.min.css" />
+	<link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.css" />
+	<link rel="stylesheet" href="~/lib/jquery-ui/jquery-ui.theme.css" />
+
+	<!-- GROUP LN CSS -->
+	@* 	<link rel="stylesheet" href="css/groupln.css" />
+	<link rel="stylesheet" href="css/skins/skin.css" /> *@
+
+	<!-- Theme CSS -->
+	<link rel="stylesheet" href="~/css/theme.css" />
+
+	<!-- Skin CSS -->
+	<link rel="stylesheet" href="~/css/skins/default.css" />
+
+	<!-- Theme Custom CSS -->
+	<link rel="stylesheet" href="~/css/custom.css">
+	@* 	<link rel="stylesheet" href="css/groupln-custom.css" /> *@
+
+    @RenderSection("scripts", required: false)
+</head>
+<body>
+    <div>
+        @RenderBody()
+    </div>
+
+
+</body>
+</html>

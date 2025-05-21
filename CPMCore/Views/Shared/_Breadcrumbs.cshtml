@@ -1,0 +1,56 @@
+﻿@using Microsoft.AspNetCore.Mvc.Controllers;
+@using CPMCore.Attributes;
+@{
+	string projectNaam = null;
+
+	// Dynamisch checken of Model een ProjectName property heeft (met reflection)
+	if (Model != null)
+	{
+		var prop = Model.GetType().GetProperty("ProjectName");
+		if (prop != null)
+		{
+			projectNaam = prop.GetValue(Model) as string;
+			if (string.IsNullOrWhiteSpace(projectNaam))
+			{
+				projectNaam = null;
+			}
+		}
+	}
+	var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+	var action = ViewContext.RouteData.Values["action"]?.ToString();
+	var projectId = ViewContext.RouteData.Values["projectid"]?.ToString()
+							?? Context.Request.Query["projectid"].ToString();
+	var descriptor = (ControllerActionDescriptor)ViewContext.ActionDescriptor;
+	var breadcrumbAttr = descriptor.MethodInfo
+		.GetCustomAttributes(typeof(BreadcrumbAttribute), true)
+		.FirstOrDefault() as BreadcrumbAttribute;
+	var breadcrumbTitle = breadcrumbAttr?.Title ?? ViewContext.RouteData.Values["action"]?.ToString();
+	// Moet extra breadcrumb getoond worden?
+	var showBreadcrumb = !string.Equals(action, "Index", StringComparison.OrdinalIgnoreCase);
+
+}
+
+<ol class="breadcrumbs me-3">
+	<li>
+		<a href="@Url.Action("Index", "Home")">
+			<i class="bx bx-home-alt"></i>
+		</a>
+	</li>
+
+		<li>
+			<a href="@Url.Action("Index", controller)">
+				@controller
+			</a>
+		</li>
+	@if (showBreadcrumb)
+	{
+		@if (!string.IsNullOrEmpty(projectId) && !string.IsNullOrEmpty(projectNaam))
+		{
+			<li>
+				<a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })">@projectNaam</a>
+			</li>
+		}
+
+		<li><span>@breadcrumbTitle</span></li>
+	}
+</ol>

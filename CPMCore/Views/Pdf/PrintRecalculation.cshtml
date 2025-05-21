@@ -1,0 +1,135 @@
+﻿
+@model CPMCore.Models.Projecten.ProjectContractsModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Nacalculatie @Model.ProjectName</title>
+
+    <!-- Web Fonts  -->
+    <!-- <link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800" rel="stylesheet" type="text/css"> -->
+    <!-- Vendor CSS -->
+    <link rel="stylesheet" href="../lib/bootstrap/css/bootstrap.css" />
+
+    <!-- Invoice Print Style -->
+    <link rel="stylesheet" href="../css/admin/invoice-print.css" />
+    <style>
+        .row {
+            height: 20px !important;
+            padding-top: 0px !important;
+            padding-bottom: 0px !important;
+        }
+
+    </style>
+</head>
+<body style="font-size:12px;line-height:1;">
+    <div class="invoice">
+
+        <div class="col-sm-12 mt-md">
+            <h1>Nacalculatie @Model.ProjectName</h1>
+            <h5>@DateTime.Now.ToLongDateString()</h5>
+            <hr />
+            <section id="pnlList">
+                <div>
+                    <table class="table mb-none" style="page-break-after: always;">
+                        <tbody>
+                            <tr>
+                                <td>Lot</td>
+                                <td>Omschrijving</td>
+                                <td class="text-right">Budget</td>
+                                <td class="text-right">Contract</td>
+                                <td class="text-right">Gefactureerd</td>
+                                <td class="text-right">Verschil Budget - Contract</td>
+                                <td class="text-right">Verschil Budget - Facturatie</td>
+                            </tr>
+                            @foreach (var group in Model.ActivityGroups)
+                            {
+                                <tr class="active">
+                                    <td>@group.Lot</td>
+                                    <td class="text-weight-bold">@group.Name</td>
+                                    <td class="text-right" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(s => s.Price))</td>
+                                    <td class="text-right" width="10%">@String.Format("{0:C}", Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == group.ID)).Sum(s => s.Price))</td>
+                                    <td class="text-right" width="10%">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price))</td>
+                                    @if (Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) - Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == group.ID)).Sum(s => s.Price) >= 0)
+                                    {
+                                        <td class="text-right" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) - Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == group.ID)).Sum(s => s.Price))</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="text-right text-danger" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) - Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == group.ID)).Sum(s => s.Price))</td>
+                                    }
+                                    @if (Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) - Model.IncommingInvoicesActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) >= 0)
+                                    {
+                                        <td class="text-right" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) - Model.IncommingInvoicesActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price))</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="text-right text-danger" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price) - Model.IncommingInvoicesActivities.Where(l => l.Activity.Group.ID == group.ID).Sum(t => t.Price))</td>
+                                    }
+                                </tr>
+
+                                @foreach (var activity in group.Activities.Where(m => Model.Contracts.Any(a => a.Activities.Any(i => i.Activity.ID == m.ID)) || Model.BudgetActivities.Any(l => l.Activity.ID == m.ID) || Model.IncommingInvoicesActivities.Any(l => l.Activity.ID == m.ID)).OrderBy(o => o.Name))
+                                {
+                                    <tr>
+                                        <td></td>
+                                        <td>@activity.Name</td>
+                                        <td class="text-right" width="10%">
+                                            @if (Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Count() > 0)
+                                            {
+                                                @String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).FirstOrDefault().Price)
+                                            }
+                                        </td>
+                                        <td class="text-right" width="10%">@String.Format("{0:C}", Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID)).GroupBy(g => g.ContractId).Sum(s => s.Sum(t => t.Price)))</td>
+                                        <td class="text-right" width="10%">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price))</td>
+                                        @if (Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) - Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID)).GroupBy(g => g.ContractId).Sum(s => s.Sum(t => t.Price)) >= 0)
+                                        {
+                                            <td class="text-right" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) - Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID)).GroupBy(g => g.ContractId).Sum(s => s.Sum(t => t.Price)))</td>
+                                        }
+                                        else
+                                        {
+                                            <td class="text-right text-danger" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) - Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID)).GroupBy(g => g.ContractId).Sum(s => s.Sum(t => t.Price)))</td>
+                                        }
+                                        @if (Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) - Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) >= 0)
+                                        {
+                                            <td class="text-right" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) - Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price))</td>
+                                        }
+                                        else
+                                        {
+                                            <td class="text-right text-danger" width="10%">@String.Format("{0:C}", Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price) - Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price))</td>
+                                        }
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+
+                    <tfoot>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td class="text-right"></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        <tr class="primary">
+                            <td>TOTAAL</td>
+                            <td></td>
+                            <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price))</td>
+                            <td class="text-right">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
+                            <td class="text-right">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
+                            <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
+                            <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
+                        </tr>
+                    </tfoot>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

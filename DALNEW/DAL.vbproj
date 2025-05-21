@@ -1,0 +1,386 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\EntityFramework.6.5.1\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D1BF5C0D-4949-4F05-9EB2-CE45FD3355B8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>DAL</RootNamespace>
+    <AssemblyName>DAL</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <MyType>Windows</MyType>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DocumentationFile>DAL.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DocumentationFile>DAL.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionExplicit>On</OptionExplicit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionCompare>Binary</OptionCompare>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionStrict>Off</OptionStrict>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'NoAPI|AnyCPU'">
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\NoAPI\</OutputPath>
+    <DocumentationFile>DAL.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.5.1\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.5.1\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.Infrastructure, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.Infrastructure.2.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.Helpers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Mvc, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.Mvc.5.3.0\lib\net45\System.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.Razor.3.3.0\lib\net45\System.Web.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.WebPages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Deployment, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.WebPages.Deployment.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <Import Include="Microsoft.VisualBasic" />
+    <Import Include="System" />
+    <Import Include="System.Collections" />
+    <Import Include="System.Collections.Generic" />
+    <Import Include="System.Data" />
+    <Import Include="System.Diagnostics" />
+    <Import Include="System.Linq" />
+    <Import Include="System.Xml.Linq" />
+    <Import Include="System.Threading.Tasks" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Activity.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ActivityGroup.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="AspNetRoles.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="AspNetUsers.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="BadWeatherDays.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ChangeOrder.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ChangeOrderDetail.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ClientAccount.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ClientContacts.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ClientGift.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ClientOwnerType.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ClientPOA.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CompanyContacts.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CompanyDepartments.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CompanyInfo.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Contract.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ContractActivity.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CoproContext.vb" />
+    <Compile Include="CoproModel.Context.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CoproModel.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Include="CoproModel.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CoproModel.edmx</DependentUpon>
+    </Compile>
+    <Compile Include="CoproModel.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Country.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="GenericDAO.vb" />
+    <Compile Include="IncommingInvoiceDetail.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="IncommingInvoices.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="InsuranceCompanies.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Insurances.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Invoices.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="InvoicesDetails.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="InvoicingPaymentGroup.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="InvoicingPaymentStages.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="LogList.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\AssemblyInfo.vb" />
+    <Compile Include="My Project\Application.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Application.myapp</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\Resources.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\Settings.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="Partials\ClientAccount.vb" />
+    <Compile Include="Partials\ChangeOrders.vb" />
+    <Compile Include="Partials\Contract.vb" />
+    <Compile Include="Partials\ContractActivity.vb" />
+    <Compile Include="Partials\InsuranceCompany.vb" />
+    <Compile Include="Partials\ProjectPaymentGroup.vb" />
+    <Compile Include="Partials\ProjectDoc.vb" />
+    <Compile Include="Partials\WheaterStations.vb" />
+    <Compile Include="Partials\Project.vb" />
+    <Compile Include="Partials\Units.vb" />
+    <Compile Include="Partials\ClientOwnerType.vb" />
+    <Compile Include="Partials\Activity.vb" />
+    <Compile Include="Partials\ActivityGroup.vb" />
+    <Compile Include="Partials\CompanyDepartments.vb" />
+    <Compile Include="Partials\CompanyInfo.vb" />
+    <Compile Include="Partials\ProjectStatus.vb" />
+    <Compile Include="Partials\Country.vb" />
+    <Compile Include="Partials\Provincie.vb" />
+    <Compile Include="Permission.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="PermissionPerUser.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="PostalCode.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Project.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectBudget.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectDocs.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectLevels.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectNews.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectPictures.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectSalesSettings.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="ProjectStatus.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Provincie.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Query\ClientAccountQuery.vb" />
+    <Compile Include="Query\InvoicesQuery.vb" />
+    <Compile Include="Query\ProjectQuery.vb" />
+    <Compile Include="Query\CompanyQuery.vb" />
+    <Compile Include="Query\ContactQuery.vb" />
+    <Compile Include="Query\CountryQuery.vb" />
+    <Compile Include="Query\PostalcodeQuery.vb" />
+    <Compile Include="UnitConstructionValue.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="UnitGroupTypes.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="UnitOfWork.vb" />
+    <Compile Include="UnitRooms.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Units.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="UnitTypes.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Users.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="UtilityPercentage.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="VacationDays.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="WheaterStations.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="My Project\Resources.resx">
+      <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+      <CustomToolNamespace>My.Resources</CustomToolNamespace>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.Config">
+      <SubType>Designer</SubType>
+    </None>
+    <EntityDeploy Include="CoproModel.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>CoproModel.Designer.vb</LastGenOutput>
+    </EntityDeploy>
+    <None Include="CoproModel.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>CoproModel.edmx</DependentUpon>
+      <LastGenOutput>CoproModel.Context.vb</LastGenOutput>
+    </None>
+    <None Include="CoproModel.edmx.diagram">
+      <DependentUpon>CoproModel.edmx</DependentUpon>
+    </None>
+    <None Include="CoproModel.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>CoproModel.edmx</DependentUpon>
+      <LastGenOutput>CoproModel.vb</LastGenOutput>
+    </None>
+    <None Include="My Project\Application.myapp">
+      <Generator>MyApplicationCodeGenerator</Generator>
+      <LastGenOutput>Application.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="My Project\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <CustomToolNamespace>My</CustomToolNamespace>
+      <LastGenOutput>Settings.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BO\BO.vbproj">
+      <Project>{82e1e700-1322-4583-9181-45eee1dab8e3}</Project>
+      <Name>BO</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.5.1\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.5.1\build\EntityFramework.targets'))" />
+    <Error Condition="!Exists('..\packages\QuestPDF.2025.1.2\build\net4\QuestPDF.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\QuestPDF.2025.1.2\build\net4\QuestPDF.targets'))" />
+  </Target>
+  <Import Project="..\packages\EntityFramework.6.5.1\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.5.1\build\EntityFramework.targets')" />
+  <Import Project="..\packages\QuestPDF.2025.1.2\build\net4\QuestPDF.targets" Condition="Exists('..\packages\QuestPDF.2025.1.2\build\net4\QuestPDF.targets')" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

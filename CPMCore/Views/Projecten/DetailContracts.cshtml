@@ -1,0 +1,154 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.DetailContractsModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+	ViewData["Title"] = Model.ProjectName + " - Contracten";
+}
+@* @{
+	ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+		new Breadcrumb("Klanten", nameof(ProjectenController.DetailClients), "Projecten", false)
+	};
+} *@
+@{
+	String urlTotal = "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+           @*  <div id="toolbar">
+                <div class="btn-group">
+                    <button type="button" class="mr-xs ml-xs btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-file-pdf-o"></i> <span class="caret"></span></button>
+                    <ul class="dropdown-menu" role="menu">
+                        <li><a href="#modalgiftspdf" id="btnGiftsPDF" data-id="@Model.ProjectId">Toegiften</a></li>
+                        <li><a href="@Url.Action("DetailClientsListPdf", "Projecten", new {id = Model.ProjectId})">Klantenlijst</a></li>
+                    </ul>
+                    <button type="button" data-toggle="tooltip" data-placement="top" title="Adrukken" onclick="window.open('@Url.Action("DetailClientsListPrint", "Projecten", new {id = Model.ProjectId})')" class="mr-xs btn btn-default hidden-tablet hidden-phone hidden-xs "><i class="fa fa-print"></i></button>
+                </div>
+            </div> *@
+            @await Html.PartialAsync("Contracts", Model)
+        </div>
+    </div>
+</section>
+<div id="modaldeletecontract" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-contract-container"></div>
+</div>
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/rowGroup.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/jquery-mask/jquery.mask.js"></script>
+    <script>
+
+
+                new DataTable('#datatable-contracts-list', {
+                layout: {
+                    topStart: {
+                        buttons: [
+                            {
+                                extend:'excel',
+                                text:'<i class="fa fa-file-excel"></i>',
+                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                                titleAttr: 'Exporteer naar excel',
+                                attr: {
+                                  "data-bs-toggle": "tooltip"
+                                },
+                                exportOptions: {
+                                    columns: ':visible'
+                                }
+                            },
+                            {
+                                extend:'pdf',
+                                text:'<i class="fa fa-file-pdf"></i>',
+                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                                titleAttr: 'Exporteer naar pdf',
+                                    attr: {
+                                      "data-bs-toggle": "tooltip"
+                                    },
+                                 orientation: 'landscape',
+                                 pageSize:'A3',
+                                 exportOptions: {
+                                    columns: ':visible'
+                                }
+                            }
+                        ]
+                    }
+                },
+                     language: {
+                processing:     "Bezig met verwerken...",
+                search:         "Zoeken&nbsp;:",
+                lengthMenu:    "Afficher _MENU_ &eacute;l&eacute;ments",
+                info:           "Contract _START_ tot _END_ van de _TOTAL_ Contracten",
+                infoEmpty:      "Contract 0 van 0 tot 0 Contracten",
+                infoFiltered:   "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
+                infoPostFix:    "",
+                loadingRecords: "Bezig met laden...",
+                zeroRecords:    "Geen contracten om weer te geven",
+                emptyTable:     "Er zijn geen contracten om weer te geven",
+                aria: {
+                    sortAscending:  ": klikken om aflopend te sorteren",
+                    sortDescending: ": klikken om oplopend te sorteren"
+                }
+            },
+            order: [[1, 'asc']],
+            pageLength: 20,
+            info: false,
+
+                });
+            //Hide the default buttons
+             $(".buttons-excel").hide();
+             $(".buttons-pdf").hide();
+             $(".dt-search").hide();
+             //attach click event to custom buttons
+             $("#btnExportExcel").on('click', function (ev) {
+                 $(".buttons-excel").trigger("click");
+             });
+              $("#btnExportPdf").on('click', function (ev) {
+                 $(".buttons-pdf").trigger("click");
+             });
+
+        //custom search textbox
+        oTable = $('#datatable-contracts-list').DataTable();
+        $('#search-term').keyup(function(){
+              oTable.search($(this).val()).draw();
+        });
+        //BIj laden
+            $(document).ready(function () {
+            $('.deleteContract').magnificPopup({
+                type: 'inline',
+                src: 'deleteContract',
+            });
+
+        });
+        //Tonen van modal delete contract
+        $('.deleteContract').click(function () {
+            var url = "/Projecten/ModalDeleteContract"; // the url to the controller
+            var id = $(this).attr('data-id'); // the id that's given to each button in the list
+            $.get(url + '/' + id, function (data) {
+                $('#delete-contract-container').html(data);
+            });
+        });
+    </script>
+}

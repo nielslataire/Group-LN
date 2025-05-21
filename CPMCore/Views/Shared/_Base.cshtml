@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>@ViewData["Title"]</title>
+    <link href="http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800|Shadows+Into+Light" rel="stylesheet" type="text/css">
+
+	<link rel="stylesheet" href="~/lib//bootstrap/css/bootstrap.css" />
+		<link rel="stylesheet" href="~/lib/animate/animate.compat.css">
+		<link rel="stylesheet" href="~/lib//font-awesome/css/all.min.css" />
+		<link rel="stylesheet" href="~/lib//boxicons/css/boxicons.min.css" />
+		<link rel="stylesheet" href="~/lib//magnific-popup/magnific-popup.css" />
+		<link rel="stylesheet" href="~/lib//bootstrap-datepicker/css/bootstrap-datepicker3.css" />
+		<!-- Theme CSS -->
+		<link rel="stylesheet" href="~/css/theme.css" />
+
+		<!-- Skin CSS -->
+		<link rel="stylesheet" href="~/css/skins/default.css" />
+
+		<!-- Theme Custom CSS -->
+		<link rel="stylesheet" href="~/css/custom.css">
+
+	<script src="~/lib/modernizr/modernizr.js"></script>
+</head>
+
+<body>
+    <div>
+        @RenderBody()
+    </div>
+	<!-- Vendor -->
+	<script src="~/lib/jquery/jquery.js"></script>
+	<script src="~/lib/jquery-browser-mobile/jquery.browser.mobile.js"></script>
+	<script src="~/lib/popper/umd/popper.min.js"></script>
+	<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+	<script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
+	<script src="~/lib/common/common.js"></script>
+	<script src="~/lib/nanoscroller/nanoscroller.js"></script>
+	<script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
+	<script src="~/lib/jquery-placeholder/jquery.placeholder.js"></script>
+
+	<!-- Specific Page Vendor -->
+	<script src="~/lib/jquery-ui/jquery-ui.js"></script>
+	<script src="~/lib/jqueryui-touch-punch/jquery.ui.touch-punch.js"></script>
+	<script src="~/lib/jquery-appear/jquery.appear.js"></script>
+	<script src="~/lib/flot/jquery.flot.js"></script>
+	<script src="~/lib/flot.tooltip/jquery.flot.tooltip.js"></script>
+	<script src="~/lib/flot/jquery.flot.pie.js"></script>
+	<script src="~/lib/flot/jquery.flot.categories.js"></script>
+	<script src="~/lib/flot/jquery.flot.resize.js"></script>
+
+	<!-- Theme Base, Components and Settings -->
+	<script src="~/js/theme.js"></script>
+
+	<!-- Theme Custom -->
+	<script src="~/js/custom.js"></script>
+
+	<!-- Theme Initialization Files -->
+	<script src="~/js/theme.init.js"></script>
+
+	<!-- Examples -->
+	<script src="~/js/examples/examples.dashboard.js"></script>
+    @RenderSection("scripts", required: false)
+</body>
+</html>

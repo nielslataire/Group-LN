@@ -1,0 +1,199 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Authorization	
+
+@inject UserManager<ApplicationUser> UserManager
+
+
+
+<aside id="sidebar-left" class="sidebar-left">
+
+	<div class="sidebar-header">
+		<div class="sidebar-title">
+			Navigatie
+		</div>
+		<div class="sidebar-toggle hidden-xs" data-toggle-class="sidebar-left-collapsed" data-target="html" data-fire-event="sidebar-left-toggle">
+			<i class="fas fa-bars" aria-label="Toggle sidebar"></i>
+		</div>
+	</div>
+
+	<div class="nano">
+		<div class="nano-content">
+			<nav id="menu" class="nav-main" role="navigation">
+
+				<ul class="nav nav-main">
+					<li class="nav-active">
+						<a href="@Url.Action("Index", "Home")">
+							<i class="fa fa-house" aria-hidden="true"></i>
+							<span>Home</span>
+						</a>
+					</li>
+
+					<li class="nav-parent">
+						<a>
+							<i class="fa fa-truck" aria-hidden="true"></i>
+							<span>Leveranciers</span>
+						</a>
+						<ul class="nav nav-children">
+							<li>
+								@Html.ActionLink("Zoeken", "Zoeken", "Leveranciers")    
+							</li>
+							<li style="display:none">
+								@Html.ActionLink("Overzicht", "Lijsten", "Leveranciers") 
+							</li>
+							<li>
+								@Html.ActionLink("Toevoegen", "Toevoegen", "Leveranciers") 
+							</li>
+						</ul>
+					</li>
+					<li class="nav-parent" style="display:none">
+						<a>
+							<i class="fa fa-user" aria-hidden="true"></i>
+							<span>Klanten                 </span>
+						</a>
+						<ul class="nav nav-children">
+							<li>
+								<a href="ui-elements-typography.html">
+									Zoeken
+								</a>
+							</li>
+							<li class="nav-parent">
+								<a>
+									Lijsten
+								</a>
+							</li>
+							<li>
+								<a href="ui-elements-tabs.html">
+									Toevoegen
+								</a>
+							</li>
+
+						</ul>
+					</li>
+					<li class="nav-parent">
+						<a>
+							<i class="fa fa-city" aria-hidden="true"></i>
+							<span>Projecten</span>
+						</a>
+						<ul class="nav nav-children">
+							<li>
+
+								@Html.ActionLink("Overzicht", "Index", "Projecten")
+
+							</li>
+							<li>
+							<a href="@(Url.Action("ProjectsByUserId", "Projecten", new { UserId = UserManager.GetUserId(User)}))">
+									Eigen Projecten 
+								</a>
+							</li>
+							<li>
+
+								@Html.ActionLink("Toevoegen", "Toevoegen", "Projecten")
+
+
+							</li>
+							<li>
+
+								@Html.ActionLink("Weerverlet", "Weather", "Projecten")
+
+
+							</li>
+
+						</ul>
+					</li>
+					@if (User.IsInRole("Boekhouding"))
+					{
+						<li class="nav-parent">
+							<a>
+								<i class="fa fa-file-invoice" aria-hidden="true"></i>
+								<span>Facturatie</span>
+							</a>
+							<ul class="nav nav-children">
+								<li>
+									@Html.ActionLink("BCO", "Index", "Facturatie", new { company = 1 }, "")
+								</li>
+								<li>
+									@Html.ActionLink("Group LN", "Index", "Facturatie", new { company = 2 }, "")
+								</li>
+							</ul>
+						</li>
+
+					}
+					<li class="nav-parent">
+						<a>
+							<i class="fa fa-gears" aria-hidden="true"></i>
+							<span>Instellingen</span>
+						</a>
+						<ul class="nav nav-children">
+							@if (User.IsInRole("Boekhouding"))
+							{
+								<li>
+									@Html.ActionLink("Instellingen", "Settings", "Admin")
+								</li>
+								<li>
+									@Html.ActionLink("Gebruikers beheren", "Index", "Useradmin")
+								</li>
+								<li>
+									@Html.ActionLink("Rollen beheren", "Index", "AppRoles")
+								</li>
+								 <li>
+                                        @Html.ActionLink("Verlofdagen - weerverlet", "VacationDays", "Admin")
+								</li>
+							}
+                            <li>
+                                @Html.ActionLink("Activiteiten beheren", "Activiteiten", "Admin")       
+                            </li>
+                        </ul>
+                    </li>
+					<li class="nav-parent">
+						<a>
+							<i class="fa fa-link" aria-hidden="true"></i>
+							<span>Links</span>
+						</a>
+						<ul class="nav nav-children">
+							<li>
+								<a href="http://www.copro-bouwteam.be" target="_blank">
+									www.copro-bouwteam.be
+								</a>
+							</li>
+							<li>
+								<a href="http://www.bouwenconstructie.be" target="_blank">
+									www.bouwenconstructie.be
+								</a>
+							</li>
+							<li>
+								<a href="http://www.verspurten.be" target="_blank">
+
+									www.verspurten.be
+								</a>
+							</li>
+							<li>
+								<a href="http://www.home-estate.be" target="_blank">
+
+									www.home-estate.be
+								</a>
+							</li>
+						</ul>
+					</li>
+
+
+				</ul>
+			</nav>
+
+
+		</div>
+
+		<script>
+			// Maintain Scroll Position
+			if (typeof localStorage !== 'undefined') {
+				if (localStorage.getItem('sidebar-left-position') !== null) {
+					var initialPosition = localStorage.getItem('sidebar-left-position'),
+						sidebarLeft = document.querySelector('#sidebar-left .nano-content');
+
+					sidebarLeft.scrollTop = initialPosition;
+				}
+			}
+		</script>
+
+	</div>
+
+</aside>

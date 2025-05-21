@@ -1,0 +1,14 @@
+﻿@model String
+
+<div class="input-group">
+    <span class="input-group-text">
+        <i class="bx bx-phone"></i>
+    </span>
+    @Html.TextBox("", ViewData.TemplateInfo.FormattedModelValue, new { @class = "form-control form-control-modern Phonemask", placeHolder = ViewData.ModelMetadata.DisplayName})
+</div>
+
+<script>
+    jQuery(function ($) {
+        $(".Phonemask").mask("999/99.99.99");
+    });
+</script>

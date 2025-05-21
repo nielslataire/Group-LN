@@ -1,0 +1,220 @@
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@model CPMCore.Models.Home.HomeModel
+
+@{
+	ViewData["Title"] = "Home";
+}
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
+<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-markdown/css/bootstrap-markdown.min.css" />
+<link rel="stylesheet" href="~/lib/pnotify/pnotify.custom.css" />
+<link rel="stylesheet" href="~/lib/jstree/themes/default/style.css" />
+<link rel="stylesheet" href="~/lib/select2/select2.css" />
+<link rel="stylesheet" href="~/libn/select2/select2-bootstrap.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-multiselect/bootstrap-multiselect.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+}
+
+@section PageScripts
+{
+<script src="~/lib/jquery-ui/jquery-ui.js"></script>
+<script src="~/lib/jqueryui-touch-punch/jquery.ui.touch-punch.js"></script>
+<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+<script src="~/lib/select2/js/select2.js"></script>
+<script src="~/lib/dropzone/dropzone.js"></script>
+<script src="~/lib/pnotify/pnotify.custom.js"></script>
+<script src="https://unpkg.com/isotope-layout@3.0.6/dist/isotope.pkgd.min.js"></script>
+	<script>
+		$(document).ready(function(){
+		  // Initialize Isotope
+		  var $grid = $('.row').isotope({
+			itemSelector: '.filteritem',
+			layoutMode: 'fitRows'
+		  });
+
+		  // Filter items when a filter link is clicked
+		  $('.filter-link').on('click', function(e){
+			e.preventDefault();
+			var filterValue = $(this).attr('data-filter');
+			$grid.isotope({ filter: filterValue });
+
+			// Toggle active class on the filter links
+			$('.filter-link').removeClass('active');
+			$(this).addClass('active');
+		  });
+		});
+	</script>
+}
+@{String urlTotal = "";}
+
+
+
+
+
+	<!-- start: page -->
+	<div class="row row-gutter-sm mb-5">
+		<div class="col-lg-3-5 col-xl-4-5">
+
+			<div class="row row-gutter-sm">
+
+				@foreach (var project in Model.Projects)
+				{
+					<div class="col-sm-12 col-xl-3 mb-4 filteritem Status@(project.Status.Id)">
+						<div class="card card-modern card-modern-alt-padding">
+							<a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))">
+
+								@if (project.DefaultPicture.Name is null)
+								{
+									urlTotal = "~/img/no_image.jpg";
+								}
+								else
+								{
+									urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
+								}
+								<img src="@Url.Content(urlTotal)" class="card-img-top" alt="@project.Name" />
+							</a>
+							<div class="card-body bg-light">
+								<small><a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))" class="ecommerce-sidebar-link text-color-grey text-color-hover-primary text-decoration-none">@project.Postalcode.Gemeente</a></small>
+								<h4 class="text-4 line-height-2 mt-0 mb-2"><a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))" class="ecommerce-sidebar-link text-color-dark text-color-hover-primary text-decoration-none">@project.Name</a></h4>
+							</div>
+						</div>
+					</div>
+				}
+				@foreach (var project in Model.OldProjects.OrderByDescending(m => m.DeliveryDate))
+				{
+						<div class="col-sm-12 col-xl-3 mb-4 filteritem Status@(project.Status.Id)">
+						<div class="card card-modern card-modern-alt-padding">
+							<div class="image-frame-wrapper">
+
+								<a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))">
+
+									@if (project.DefaultPicture.Name is null)
+									{
+										urlTotal = "~/img/no_image.jpg";
+									}
+									else
+									{
+										urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
+									}
+									<img src="@Url.Content(urlTotal)" class="card-img-top" alt="@project.Name" />
+								</a>
+							</div>
+							<div class="card-body bg-light">
+								<small><a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))" class="ecommerce-sidebar-link text-color-grey text-color-hover-primary text-decoration-none">@project.Postalcode.Gemeente</a></small>
+								<h4 class="text-4 line-height-2 mt-0 mb-2"><a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))" class="ecommerce-sidebar-link text-color-dark text-color-hover-primary text-decoration-none">@project.Name</a></h4>
+							</div>
+						</div>
+					</div>
+				}
+
+			</div>
+
+		</div>
+		<div class="col-lg-2-5 col-xl-1-5 mb-4 mb-lg-0">
+
+			<div class="card card-modern">
+				<div class="card-header">
+					<div class="card-actions">
+						<a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+					</div>
+					<h4 class="card-title">Filter status</h4>
+				</div>
+				<div class="card-body">
+					<ul class="list list-unstyled mb-0 filters">
+						<li>
+							<a class="filter-link active" data-filter="*" href="#">Alle projecten</a></li>
+						@foreach (var status in Model.Statuses)
+						{
+								<li><a class="filter-link" data-filter=".Status@(status.Id)" href="#">@status.Name</a></li>
+						}
+					
+					</ul>
+				</div>
+			</div>
+			<hr class="solid opacity-7">
+			<div class="card card-modern">
+				<div class="card-header">
+					<div class="card-actions">
+						<a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+					</div>
+					<h4 class="card-title">Berichtenbox</h4>
+				</div>
+				<div class="card-body">
+					<div class="card-body">
+
+					@* 		<ul class="list list-unstyled">
+							@if (User.IsInRole("Admin"))
+							{
+								
+								@foreach (var account in Model.DeedofSaleWarnings)
+								{
+
+									<li>
+										<i class="fa fa-triangle-exclamation text-color-danger"></i>
+										<span>
+											Akte <strong><a class="alert-danger" href="@Url.Action("Detail", "Klanten", new {clientid = account.Id})">@account.DisplayName </a></strong> te verlijden voor <strong> @account.DateSalesAgreement.Value.AddMonths(4).ToShortDateString()</strong>.
+										</span>
+									</li>
+								}
+
+							}
+							</ul>
+						<ul class="list list-unstyled">
+							@foreach(var warning in Model.InsuranceWarnings)
+							{
+
+								<li >
+									<i class="fa fa-triangle-exclamation text-color-@warning.Type"></i>
+
+										<strong><a href="@Url.Action("DetailInsurances", "Projecten", new {projectid = warning.ProjectId})">@warning.Display </a></strong>
+
+								</li>
+							}
+						</ul>
+							<ul class="list list-unstyled">
+							@foreach (var info in Model.ProjectInfo.OrderBy(m => m.Type))
+							{
+
+								<li>
+									<i class="fa fa-triangle-exclamation text-color-@info.Type"></i>
+									<span>
+										<a href="@Url.Action("Detail", "Projecten", new {projectid = info.ProjectId})">@info.Display </a>
+									</span>
+								</li>
+							}
+						</ul> *@
+
+			
+					</div>
+					</div>
+				</div>
+				
+		
+		</div>
+	</div>
+
+@* </section> *@
+
+@* @section PageStyle{
+    <link href="~/vendor/admin/jstree/themes/default/style.css" rel="stylesheet" />
+    <link rel="stylesheet" href="~/vendor/admin/pnotify/pnotify.custom.css" />
+    <link rel="stylesheet" href="~/vendor/admin/select2/select2.css" />
+    <link rel="stylesheet" href="~/vendor/admin/select2/select2-bootstrap.css" />
+    <link rel="stylesheet" href="~/vendor/admin/bootstrap-multiselect/bootstrap-multiselect.css" />
+    <link rel="stylesheet" href="~/vendor/admin/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+} *@
+
+
+
+@* 
+<script src="~/vendor/admin/select2/select2.js"></script>
+<script src="~/vendor/admin/select2/select2_locale_nl.js"></script>
+<script src="~/vendor/admin/bootstrap-multiselect/bootstrap-multiselect.js"></script>
+<script src="~/vendor/admin/bootstrap-tagsinput/bootstrap-tagsinput.js"></script>
+
+
+ *@

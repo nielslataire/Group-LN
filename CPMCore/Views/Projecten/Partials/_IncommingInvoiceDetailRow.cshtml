@@ -1,0 +1,38 @@
+﻿@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@using System.Globalization
+@model IncommingInvoiceDetailBO
+
+<div class="row align-items-center pb-3">
+    @using (Html.BeginCollectionItem("details"))
+    {
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.ContractActivityID)
+        @Html.HiddenFor(m => m.ContractActivityText)
+        @Html.HiddenFor(m => m.ActivityID)
+        @Html.HiddenFor(m => m.IncommingInvoiceID)
+
+        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+            @Model.ContractActivityText
+        </label>
+            <div class="col-lg-1 col-xl-1"> @Html.DropDownListFor(m => m.IncommingInvoiceType, Html.GetEnumSelectList(Model.IncommingInvoiceType.GetType()), new { @class = "form-control form-control-modern type", id = "lstType", onchange = "change(this)" })</div>
+            <div class="col-lg-2 col-xl-2">
+                @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern",placeholder="Omschrijving" })
+            </div>
+            <div class="col-lg-2 col-xl-2">
+                @Html.EditorFor(m => m.Price, new { @class = "form-control form-control-modern Currencymask" })
+            </div>
+            <div class="col-lg-2 col-xl-2">
+                @Html.DropDownListFor(m => m.ChangeOrderId, new SelectList(Model.ChangeOrders, "ID", "Display", Model.ChangeOrderId), new { @class = "form-control form-control-modern populate select2", id = "lstchangeorders", data_plugin_selectTwo = "", disabled = "disabled" })
+
+            </div>
+            <div class="col-lg-1 col-xl-1">
+                <button class="btn btn-danger deleterow" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@Model.IncommingInvoiceID"><i class="fa fa-remove"></i></button>
+            </div>
+
+       
+}
+</div>
+
+
+          

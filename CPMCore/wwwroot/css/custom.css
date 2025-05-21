@@ -1,0 +1,13 @@
+/* Add here all your CSS customizations */
+
+.card {
+    height: 100%;
+}
+.card-body{
+    display : flex;
+    height: 100%;
+    flex-direction : column;
+}
+.card-text {
+    flex-grow: 1;
+}

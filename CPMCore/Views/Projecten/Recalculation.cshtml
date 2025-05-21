@@ -1,0 +1,344 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectContractsModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] =  Model.ProjectName + " - Nacalculatie";
+}
+@* @{
+	ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+		new Breadcrumb("Klanten", nameof(ProjectenController.DetailClients), "Projecten", false)
+	};
+} *@
+@{
+    String urlTotal = "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            height: auto;
+            min-height: 38px;
+        }
+
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            height: 38px;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 0.2rem;
+            color: #495057;
+        }
+        /* Zorg dat de eerste kolom zich aanpast aan de inhoud */
+        table td:first-child,
+        table th:first-child {
+            white-space: nowrap;
+            width: 1%;
+        }
+    </style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <div class="datatables-header-footer-wrapper mt-2">
+                            <div class="datatable-header">
+                                <div class="row align-items-center mb-3">
+
+                                    <div class="col-12 col-lg-auto mb-3 mb-lg-0">
+                                        <div class="btn-group flex-wrap">
+                                            <button type="button" class="mb-1 mt-1 me-1 btn btn-primary btn-md font-weight-semibold btn-py-2 px-4 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-print"></i> <span class="caret"></span></button>
+                                            <div class="dropdown-menu" role="menu" style="">
+                                                <a class="dropdown-item text-1" href="@Url.Action("PrintRecalculation", "Pdf", new {projectid = Model.ProjectId, details = 0})">Overzicht</a>
+                                                <a class="dropdown-item text-1" href="@Url.Action("PrintRecalculation", "Pdf", new {projectid = Model.ProjectId, details = 1})">Overzicht met details</a>
+                                            </div>
+                                        </div>
+                                        <div class="btn-group flex-wrap">
+                                            <button type="button" class="mb-1 mt-1 me-1 btn btn-primary btn-md font-weight-semibold btn-py-2 px-4 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-plus"></i> <span class="caret"></span></button>
+                                            <div class="dropdown-menu" role="menu" style="">
+                                                <a class="dropdown-item text-1" href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})">Contract</a>
+                                                <li class="divider"></li>
+                                                <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new {projectid = Model.ProjectId, type = "1"})">Factuur zonder contract</a> 
+                                                <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new {projectid = Model.ProjectId, type = "0"})">Factuur binnen contract</a>
+                                            </div>
+                                        </div>
+                                        <a href="@Url.Action("CalculationSettings", "Projecten" , new {projectid=Model.ProjectId })" class="mb-1 mt-1 me-1 btn btn-primary btn-md font-weight-semibold btn-py-2 px-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-original-title="Instellingen"><i class="fa fa-gear"></i></a>
+                                       
+                                    </div>
+                                    <div class="col-8 col-lg-auto ms-auto ml-auto mb-3 mb-lg-0">
+                                    </div>
+                                    <div class="col-4 col-lg-auto ps-lg-1 mb-3 mb-lg-0">
+                                    </div>
+                                    <div class="col-12 col-lg-auto ps-lg-1">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+
+                            <table class="table table-ecommerce-simple mb-0" style="min-width: 550px;">
+                                <thead>
+                                    <tr>
+                                        <th data-sortable="false">Lot</th>
+                                        <th>Omsschrijving</th>
+                                        <th class="text-right">Budget</th>
+                                        <th class="text-right">Contract</th>
+                                        <th class="text-right">Gefactureerd</th>
+                                        <th class="text-right"><i class="fa fa-plus-minus me-2"></i>Budget - Contract</th>
+                                        <th class="text-right"><i class="fa fa-plus-minus me-2"></i>Budget - Facturatie</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var group in Model.ActivityGroups)
+                                {
+                                    var groupId = $"group-{group.ID}";
+
+
+                                        <tr class="clickable" data-bs-toggle="collapse" data-bs-target="#details-@group.ID" aria-expanded="false" aria-controls="details-@group.ID">
+                                            <td class="dt-type-string">
+                                                <i class="far fa-plus-square text-primary me-2"></i>
+                                                Deel @group.Lot
+                                            </td>
+                                            <td class="text-weight-bold">
+                                                @group.Name
+                                            </td>
+
+                                            @{
+                                                var budgetActivitySum = Model.BudgetActivities
+                                                .Where(l => l.Activity.Group.ID == group.ID)
+                                                .Sum(s => s.Price);
+
+                                                var contractSum = Model.Contracts
+                                                .SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == group.ID))
+                                                .Sum(s => s.Price);
+
+                                                var incomingInvoiceSum = Model.IncommingInvoicesActivities
+                                                .Where(l => l.Activity.Group.ID == group.ID)
+                                                .Sum(t => t.Price);
+                                            }
+
+                                            <td class="text-right dt-type-numeric" width="10%">
+                                                @String.Format("{0:C}", budgetActivitySum)
+                                            </td>
+                                            <td class="text-right dt-type-numeric" width="10%">
+                                                @String.Format("{0:C}", contractSum)
+                                            </td>
+                                            <td class="text-right dt-type-numeric" width="10%">
+                                                @String.Format("{0:C}", incomingInvoiceSum)
+                                            </td>
+
+                                            <td class="text-right dt-type-numeric @(budgetActivitySum - contractSum < 0 ? "text-danger" : "")" width="10%">
+                                                @String.Format("{0:C}", budgetActivitySum - contractSum)
+                                            </td>
+                                            <td class="text-right dt-type-numeric @(budgetActivitySum - incomingInvoiceSum < 0 ? "text-danger" : "")" width="10%">
+                                                @String.Format("{0:C}", budgetActivitySum - incomingInvoiceSum)
+                                            </td>
+                                        </tr>
+                                        @foreach (var activity in group.Activities.Where(m => Model.Contracts.Any(a => a.Activities.Any(i => i.Activity.ID == m.ID))
+                                       || Model.BudgetActivities.Any(l => l.Activity.ID == m.ID)
+                                       || Model.IncommingInvoicesActivities.Any(l => l.Activity.ID == m.ID))
+                                       .OrderBy(o => o.Name))
+                                        {
+                                            // Berekeningen van de sommen vooraf om herhaalde berekeningen te vermijden
+                                            var budgetActivitySum2 = Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
+                                            var contractSum2 = Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID))
+                                            .GroupBy(g => g.ContractId)
+                                            .Sum(s => s.Sum(t => t.Price));
+                                            var incomingInvoiceSum2 = Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
+
+                                            <tr class="collapse table-secondary" id="details-@group.ID">
+                                                <td></td>
+                                                <td>
+                                                    <a href="@Url.Action("RecalculationDetail", "Projecten", new { projectid = Model.ProjectId, activityid = activity.ID, groupid = group.ID })">@activity.Name</a>
+                                                </td>
+                                                <td class="text-right" width="10%">
+                                                    @if (Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Count() > 0)
+                                                    {
+                                                        @String.Format("{0:C}", budgetActivitySum2)
+                                                    }
+                                                </td>
+                                                <td class="text-right" width="10%">
+                                                    @String.Format("{0:C}", contractSum2)
+                                                </td>
+                                                <td class="text-right" width="10%">
+                                                    @String.Format("{0:C}", incomingInvoiceSum2)
+                                                </td>
+
+                                                @if (budgetActivitySum2 - contractSum2 >= 0)
+                                                {
+                                                    <td class="text-right" width="10%">
+                                                        @String.Format("{0:C}", budgetActivitySum2 - contractSum2)
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="text-right text-danger" width="10%">
+                                                        @String.Format("{0:C}", budgetActivitySum2 - contractSum2)
+                                                    </td>
+                                                }
+
+                                                @if (budgetActivitySum2 - incomingInvoiceSum2 >= 0)
+                                                {
+                                                    <td class="text-right" width="10%">
+                                                        @String.Format("{0:C}", budgetActivitySum2 - incomingInvoiceSum2)
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td class="text-right text-danger" width="10%">
+                                                        @String.Format("{0:C}", budgetActivitySum2 - incomingInvoiceSum2)
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    }
+
+                                    
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td></td>
+                                        <td></td>
+                                        <td class="text-right"></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                    <tr class="primary">
+                                        <td></td>
+                                        <td>TOTAAL</td>
+                                        <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price))</td>
+                                        <td class="text-right">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
+                                        <td class="text-right">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
+                                        <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
+                                        <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
+                                    </tr>
+
+                                </tfoot>
+                            </table>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+</div>
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/rowGroup.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/jquery-mask/jquery.mask.js"></script>
+    <script>
+                DataTable.type('num', 'detect', () => false);
+                new DataTable('#datatable-details', {
+                layout: {
+                    topStart: {
+                        buttons: [
+                            {
+                                extend:'excel',
+                                text:'<i class="fa fa-file-excel"></i>',
+                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                                titleAttr: 'Exporteer naar excel',
+                                attr: {
+                                  "data-bs-toggle": "tooltip"
+                                },
+                                exportOptions: {
+                                    columns: ':visible'
+                                }
+                            },
+                            {
+                                extend:'pdf',
+                                text:'<i class="fa fa-file-pdf"></i>',
+                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                                titleAttr: 'Exporteer naar pdf',
+                                    attr: {
+                                      "data-bs-toggle": "tooltip"
+                                    },
+                                 orientation: 'landscape',
+                                 pageSize:'A3',
+                                 exportOptions: {
+                                    columns: ':visible'
+                                }
+                            }
+                        ]
+                    }
+                },
+                columnDefs: [{ width: '1%', targets: 0 }],
+                     language: {
+                processing:     "Bezig met verwerken...",
+                search:         "Zoeken&nbsp;:",
+                lengthMenu:    "Afficher _MENU_ &eacute;l&eacute;ments",
+                info:           "Eenheid _START_ tot _END_ van de _TOTAL_ Eenheden",
+                infoEmpty:      "Eenheid 0 van 0 tot 0 Eenheden",
+                infoFiltered:   "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
+                infoPostFix:    "",
+                loadingRecords: "Bezig met laden...",
+                zeroRecords:    "Geen eenheden om weer te geven",
+                emptyTable:     "Er zijn geen eenheden om weer te geven",
+                aria: {
+                    sortAscending:  ": klikken om aflopend te sorteren",
+                    sortDescending: ": klikken om oplopend te sorteren"
+                }
+            },
+            order: [[2, 'asc'],[3, 'asc'],[1, 'asc']],
+            pageLength: 15,
+            info: false,
+                
+                });
+            //Hide the default buttons
+             $(".buttons-excel").hide();
+             $(".buttons-pdf").hide();
+             $(".dt-search").hide();
+             //attach click event to custom buttons
+             $("#btnExportExcel").on('click', function (ev) {
+                 $(".buttons-excel").trigger("click");
+             });
+              $("#btnExportPdf").on('click', function (ev) {
+                 $(".buttons-pdf").trigger("click");
+             });
+
+        //custom search textbox
+        oTable = $('#datatable-details').DataTable();
+        $('#search-term').keyup(function(){
+              oTable.search($(this).val()).draw();
+        });
+        //BIj laden
+            $(document).ready(function () {
+          
+        });
+    </script>
+}

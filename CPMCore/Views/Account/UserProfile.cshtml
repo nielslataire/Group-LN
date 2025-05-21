@@ -1,0 +1,32 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@{
+	ViewData["Title"] = "Mijn profiel";
+}
+
+<section role="main" class="content-body">
+	<header class="page-header">
+		<h2>@ViewData["Title"]</h2>
+
+		<div class="right-wrapper text-end">
+			<ol class="breadcrumbs">
+				<li>
+					<a href="@Url.Action("Index", "Home")">
+						<i class="bx bx-home-alt"></i>
+					</a>
+				</li>
+				<li><span>Mijn Profiel</span></li>
+			</ol>
+
+			<a class="sidebar-right-toggle" data-open="sidebar-right"><i class="fas fa-chevron-left"></i></a>
+		</div>
+	</header>
+
+	<!-- start: page -->
+	<div class="row">
+		<div class="col-md-12 col-lg-12 col-xl-12">
+			<h2>Nog aan te vullen met profiel gegevens.</h2>
+		</div>
+	</div>
+</section>

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="96d1340469c24830aef3cd90241f3616" Name="Diagram1" ZoomLevel="85">
+        <EntityTypeShape EntityType="copropmModel.Activity" Width="1.5" PointX="8.25" PointY="37.375" />
+        <EntityTypeShape EntityType="copropmModel.ActivityGroup" Width="1.5" PointX="6" PointY="37.875" />
+        <EntityTypeShape EntityType="copropmModel.AspNetRoles" Width="1.5" PointX="2.75" PointY="4.75" />
+        <EntityTypeShape EntityType="copropmModel.AspNetUsers" Width="1.5" PointX="15.5" PointY="60.375" />
+        <EntityTypeShape EntityType="copropmModel.BadWeatherDays" Width="1.5" PointX="17.75" PointY="32.125" />
+        <EntityTypeShape EntityType="copropmModel.ChangeOrder" Width="1.5" PointX="12.75" PointY="55.875" />
+        <EntityTypeShape EntityType="copropmModel.ClientAccount" Width="1.5" PointX="7.5" PointY="47.75" />
+        <EntityTypeShape EntityType="copropmModel.ClientContacts" Width="1.5" PointX="12.75" PointY="48.75" />
+        <EntityTypeShape EntityType="copropmModel.ClientGift" Width="1.5" PointX="9.75" PointY="53.75" />
+        <EntityTypeShape EntityType="copropmModel.ClientOwnerType" Width="1.5" PointX="5.25" PointY="50.875" />
+        <EntityTypeShape EntityType="copropmModel.CompanyContacts" Width="1.5" PointX="15" PointY="44" />
+        <EntityTypeShape EntityType="copropmModel.CompanyDepartments" Width="1.5" PointX="12.75" PointY="44" />
+        <EntityTypeShape EntityType="copropmModel.CompanyInfo" Width="1.5" PointX="10.5" PointY="41.75" />
+        <EntityTypeShape EntityType="copropmModel.Contract" Width="1.5" PointX="12.75" PointY="39.125" />
+        <EntityTypeShape EntityType="copropmModel.ContractActivity" Width="1.5" PointX="15" PointY="39.5" />
+        <EntityTypeShape EntityType="copropmModel.Country" Width="1.5" PointX="0.75" PointY="40.5" />
+        <EntityTypeShape EntityType="copropmModel.InsuranceCompanies" Width="1.5" PointX="7.5" PointY="68.5" />
+        <EntityTypeShape EntityType="copropmModel.Insurances" Width="1.5" PointX="17.25" PointY="53.875" />
+        <EntityTypeShape EntityType="copropmModel.Invoices" Width="1.5" PointX="7.5" PointY="41.875" />
+        <EntityTypeShape EntityType="copropmModel.InvoicesDetails" Width="1.5" PointX="28.5" PointY="51.75" />
+        <EntityTypeShape EntityType="copropmModel.InvoicingPaymentGroup" Width="1.5" PointX="20" PointY="50.375" />
+        <EntityTypeShape EntityType="copropmModel.Permission" Width="1.5" PointX="0.75" PointY="5.75" />
+        <EntityTypeShape EntityType="copropmModel.PermissionPerUser" Width="1.5" PointX="3" PointY="1.5" />
+        <EntityTypeShape EntityType="copropmModel.PostalCode" Width="1.5" PointX="5.25" PointY="43.75" />
+        <EntityTypeShape EntityType="copropmModel.Project" Width="1.5" PointX="17.75" PointY="39.75" />
+        <EntityTypeShape EntityType="copropmModel.ProjectBudget" Width="1.5" PointX="20" PointY="42.625" />
+        <EntityTypeShape EntityType="copropmModel.ProjectDocs" Width="1.5" PointX="20" PointY="46.125" />
+        <EntityTypeShape EntityType="copropmModel.ProjectLevels" Width="1.5" PointX="20" PointY="56.25" />
+        <EntityTypeShape EntityType="copropmModel.ProjectNews" Width="1.5" PointX="22.25" PointY="39.625" />
+        <EntityTypeShape EntityType="copropmModel.ProjectPictures" Width="1.5" PointX="20" PointY="38.25" />
+        <EntityTypeShape EntityType="copropmModel.ProjectStatus" Width="1.5" PointX="15.5" PointY="33" />
+        <EntityTypeShape EntityType="copropmModel.Provincie" Width="1.5" PointX="3" PointY="49.125" />
+        <EntityTypeShape EntityType="copropmModel.UnitGroupTypes" Width="1.5" PointX="18.5" PointY="34.875" />
+        <EntityTypeShape EntityType="copropmModel.UnitRooms" Width="1.5" PointX="25.875" PointY="46.5" />
+        <EntityTypeShape EntityType="copropmModel.Units" Width="2.125" PointX="23" PointY="43.75" />
+        <EntityTypeShape EntityType="copropmModel.UnitTypes" Width="1.5" PointX="20.75" PointY="34.5" />
+        <EntityTypeShape EntityType="copropmModel.Users" Width="1.5" PointX="0.75" PointY="1" />
+        <EntityTypeShape EntityType="copropmModel.VacationDays" Width="1.5" PointX="20" PointY="53.625" />
+        <EntityTypeShape EntityType="copropmModel.WheaterStations" Width="1.5" PointX="15.5" PointY="35.875" />
+        <AssociationConnector Association="copropmModel.FK_Activity_ActivityGroup" />
+        <AssociationConnector Association="copropmModel.FK_ContractActivity_Activity" />
+        <AssociationConnector Association="copropmModel.FK_ProjectBudget_Activity" />
+        <AssociationConnector Association="copropmModel.FK_Project_AspNetUsers" />
+        <AssociationConnector Association="copropmModel.FK_BadWeatherDays_WheaterStations" />
+        <AssociationConnector Association="copropmModel.FK_ChangeOrder_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_ChangeOrder_ContractActivity" />
+        <AssociationConnector Association="copropmModel.FK_InvoicesDetails_ChangeOrderDetail" />
+        <AssociationConnector Association="copropmModel.FK_ClientAccount_ClientOwnerType" />
+        <AssociationConnector Association="copropmModel.FK_ClientAccount_PostalCode" />
+        <AssociationConnector Association="copropmModel.FK_ClientAccount_PostalCode1" />
+        <AssociationConnector Association="copropmModel.FK_ClientAccount_PostalCode2" />
+        <AssociationConnector Association="copropmModel.FK_ClientContacts_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_ClientGift_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_ProjectDocs_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_Units_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_ClientContacts_ClientOwnerType" />
+        <AssociationConnector Association="copropmModel.FK_ClientContacts_PostalCode" />
+        <AssociationConnector Association="copropmModel.FK_ClientContacts_PostalCode1" />
+        <AssociationConnector Association="copropmModel.FK_CompanyContacts_CompanyDepartments" />
+        <AssociationConnector Association="copropmModel.FK_CompanyContacts_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_CompanyDepartments_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_CompanyDepartments_PostalCode" />
+        <AssociationConnector Association="copropmModel.FK_CompanyInfo_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_CompanyInfo_PostalCode" />
+        <AssociationConnector Association="copropmModel.FK_Contract_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_Project_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_Project_CompanyInfo1" />
+        <AssociationConnector Association="copropmModel.FK_Project_CompanyInfo2" />
+        <AssociationConnector Association="copropmModel.FK_Project_CompanyInfo3" />
+        <AssociationConnector Association="copropmModel.FK_Project_CompanyInfo4" />
+        <AssociationConnector Association="copropmModel.FK_Project_CompanyInfo5" />
+        <AssociationConnector Association="copropmModel.FK_Contract_Project" />
+        <AssociationConnector Association="copropmModel.FK_ContractActivity_Contract1" />
+        <AssociationConnector Association="copropmModel.FK_Insurances_ContractActivity" />
+        <AssociationConnector Association="copropmModel.FK_PostalCode_Country" />
+        <AssociationConnector Association="copropmModel.FK_Provincie_Country" />
+        <AssociationConnector Association="copropmModel.FK_InsuranceCompanies_PostalCode" />
+        <AssociationConnector Association="copropmModel.FK_Insurances_InsuranceCompanies" />
+        <AssociationConnector Association="copropmModel.FK_InvoicesStages_Invoices" />
+        <AssociationConnector Association="copropmModel.FK_InvoicesStages_Units" />
+        <AssociationConnector Association="copropmModel.FK_InvoicingPaymentGroup_Project" />
+        <AssociationConnector Association="copropmModel.FK_Units_InvoicingPaymentGroup" />
+        <AssociationConnector Association="copropmModel.FK_PermissionPerUser_Permissions" />
+        <AssociationConnector Association="copropmModel.FK_PermissionPerUser_Users" />
+        <AssociationConnector Association="copropmModel.FK_PostalCode_Provincie" />
+        <AssociationConnector Association="copropmModel.FK_Project_PostalCode" />
+        <AssociationConnector Association="copropmModel.FK_Project_ProjectPictures" />
+        <AssociationConnector Association="copropmModel.FK_Project_ProjectStatus" />
+        <AssociationConnector Association="copropmModel.FK_Project_WheaterStations" />
+        <AssociationConnector Association="copropmModel.FK_ProjectBudget_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectDocs_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectLevels_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectNews_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectPictures_Project" />
+        <AssociationConnector Association="copropmModel.FK_Units_Project" />
+        <AssociationConnector Association="copropmModel.FK_VacationDays_Project" />
+        <AssociationConnector Association="copropmModel.FK_Units_ProjectLevels" />
+        <AssociationConnector Association="copropmModel.FK_ProjectNews_ProjectPictures" />
+        <AssociationConnector Association="copropmModel.FK_UnitTypes_UnitGroupTypes" />
+        <AssociationConnector Association="copropmModel.FK_UnitRooms_Units" />
+        <AssociationConnector Association="copropmModel.FK_Units_LinkedUnits" />
+        <AssociationConnector Association="copropmModel.FK_Units_Units" />
+        <AssociationConnector Association="copropmModel.FK_Units_UnitTypes" />
+        <AssociationConnector Association="copropmModel.ClientGiftActivity" />
+        <AssociationConnector Association="copropmModel.CompanyActivity" />
+        <EntityTypeShape EntityType="copropmModel.ChangeOrderDetail" Width="1.5" PointX="15" PointY="56.125" />
+        <AssociationConnector Association="copropmModel.FK_ChangeOrderDetail_ChangeOrder" />
+        <EntityTypeShape EntityType="copropmModel.ClientPOA" Width="1.5" PointX="9.75" PointY="50.75" />
+        <AssociationConnector Association="copropmModel.FK_ClientPOA_ClientAccount" />
+        <AssociationConnector Association="copropmModel.ClientPOAActivity" />
+        <EntityTypeShape EntityType="copropmModel.InvoicingPaymentStages" Width="1.5" PointX="26.25" PointY="50.125" />
+        <AssociationConnector Association="copropmModel.FK_InvoicesStages_InvoicingPaymentStages" />
+        <AssociationConnector Association="copropmModel.FK_InvoicingPaymentStages_InvoicingPaymentGroup" />
+        <AssociationConnector Association="copropmModel.FK_InvoicingPaymentStages_ProjectDocs" />
+        <EntityTypeShape EntityType="copropmModel.UnitConstructionValue" Width="1.5" PointX="28.875" PointY="48.125" />
+        <AssociationConnector Association="copropmModel.FK_UnitConstructionValue_InvoicingPaymentGroup" />
+        <AssociationConnector Association="copropmModel.FK_UnitConstructionValue_Units" />
+        <AssociationConnector Association="copropmModel.FK_Invoices_PostalCode" />
+        <EntityTypeShape EntityType="copropmModel.IncommingInvoiceDetail" Width="1.5" PointX="22.25" PointY="52.875" />
+        <EntityTypeShape EntityType="copropmModel.IncommingInvoices" Width="1.5" PointX="15" PointY="49.125" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoiceDetail_Activity" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoiceDetail_ChangeOrder" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoices_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoices_Contract" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoiceDetail_ContractActivity" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoices_Project" />
+        <AssociationConnector Association="copropmModel.FK_Units_Invoices" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoiceDetail_IncommingInvoices1" />
+        <EntityTypeShape EntityType="copropmModel.UtilityPercentage" Width="1.5" PointX="26.5" PointY="42.625" />
+        <AssociationConnector Association="copropmModel.FK_UtilityPercentage_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_UtilityPercentage_Contract" />
+        <AssociationConnector Association="copropmModel.FK_UtilityPercentage_IncommingInvoiceDetail" />
+        <EntityTypeShape EntityType="copropmModel.LogList" Width="1.5" PointX="5.375" PointY="0.75" />
+        </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>

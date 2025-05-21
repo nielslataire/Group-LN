@@ -1,0 +1,5 @@
+﻿@model Decimal
+<div class="input-group mb3">   
+    @Html.TextBox("", Model, new { @Class = "form-control form-control-modern Currencymask", placeHolder = ViewData.ModelMetadata.DisplayName })
+    <span class="input-group-text">€</span>
+</div>

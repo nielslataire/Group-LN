@@ -1,0 +1,65 @@
+﻿@model LoginViewModel
+
+@{
+    ViewBag.Title = "Login";
+}
+<section class="body-sign">
+			<div class="center-sign">
+				<a href="/" class="logo float-start">
+					<img src="~/img/logo.png" height="54" alt="CPM" />
+				</a>
+
+				<div class="panel card-sign">
+					<div class="card-title-sign mt-3 text-end">
+						<h2 class="title text-uppercase font-weight-bold m-0"><i class="bx bx-user-circle me-1 text-6 position-relative top-5"></i> Inloggen</h2>
+					</div>
+					<div class="card-body">
+						   @using (Html.BeginForm("Login" , "Account", new { returnUrl = ViewBag.returnUrl }, FormMethod.Post , null,  new {@role = "form"}))
+							{
+							   @Html.AntiForgeryToken()
+							   @Html.ValidationSummary(true, "", new { @class = "text-danger"})
+							<div class="form-group mb-3">
+								<label>@Html.LabelFor(m => m.Input.Username)</label>
+								<div class="input-group">
+									 @Html.TextBoxFor(m => m.Input.Username, new { @class = "form-control", tabindex="1"})
+									<span class="input-group-text">
+										<i class="bx bx-user text-4"></i>
+									</span>
+								</div>
+								 @Html.ValidationMessageFor(m => m.Input.Username, "", new { @class = "text-danger"})
+							</div>
+
+							<div class="form-group mb-3">
+								<div class="clearfix">
+									  @Html.LabelFor(m => m.Input.Password, new{ @class = "float-start"})
+									  @Html.ActionLink("Paswoord verloren?", "ForgotPassword", "Account" , null , new { @class = "float-end" })
+								</div>
+								<div class="input-group">
+							@Html.PasswordFor(m => m.Input.Password, new { @class = "form-control", tabindex = "2" })
+									<span class="input-group-text">
+										<i class="bx bx-lock text-4"></i>
+									</span>
+								</div>
+								@Html.ValidationMessageFor(m => m.Input.Password, "", new { @class = "text-danger"})
+							</div>
+
+							<div class="row">
+								<div class="col-sm-8">
+									<div class="checkbox-custom checkbox-default">
+										@Html.CheckBoxFor(m => m.Input.RememberMe)
+										@Html.LabelFor(m => m.Input.RememberMe)
+									</div>
+								</div>
+								<div class="col-sm-4 text-end">
+									<button type="submit" class="btn btn-primary mt-2" tabindex="2">Inloggen</button>
+								</div>
+							</div>
+
+						}
+					</div>
+				</div>
+
+				<p class="text-center text-muted mt-3 mb-3">&copy; Copyright @DateTime.Now.Year. All Rights Reserved.</p>
+			</div>
+		</section>
+

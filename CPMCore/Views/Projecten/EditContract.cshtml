@@ -1,0 +1,301 @@
+﻿@using CPMCore.Controllers
+@using CPMCore.Helpers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectAddContractModel;
+
+@{
+	ViewData["Title"] = "Project - " + Model.ProjectName;
+}
+
+@section PageStyle
+{
+	<link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+	<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+ 	<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
+	<link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
+	<link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+	<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+	<link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css">
+	<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
+	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
+	</style>
+
+}
+
+
+<h2 class="font-weight-bold text-6">Contract bewerken</h2>
+@using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+{
+	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
+	@Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
+	@Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
+	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
+	<div class="row mt-2">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="row">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<i class="card-big-info-icon bx bx-box"></i>
+							<h2 class="card-big-info-title">Algemene info</h2>
+							<p class="card-big-info-desc">Voeg hier de algemene info van het contract in.</p>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+									@Html.LabelFor(m => m.Companies)
+								</label>
+								<div class="col-lg-8 col-xl-6">
+									@if (Model.Contract.Company.ID > 0)
+									{
+										<p class="form-control-static mb-0">
+											<strong>
+												@Model.Contract.Company.Display
+												@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
+											</strong>
+										</p>
+									}
+									else
+									{
+										<select id="ddlCompany" class="form-control" style="width: 100%;">
+											<!-- Voeg hier de opties toe -->
+										</select>
+										@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
+									}
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.VatPercentage)</label>
+								<div class="col-lg-3 col-xl-2">
+									@Html.EditorFor(m => m.Contract.VatPercentage, new { id = "txtVatPercentage", @class = "form-control form-control-modern", placeholder = "0,00", autocomplete = "off" })
+								</div>
+								<label class="col-lg-2 col-xl-23 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.PaymentTerm)</label>
+								<div class="col-lg-3 col-xl-2">
+									@Html.TextBoxFor(m => m.Contract.PaymentTerm, new { id = "txtPaymentTerm", @class = "form-control form-control-modern", placeholder = "Aantal dagen" })
+								</div>
+							</div>
+
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.CashDiscountPaymentTerm)</label>
+								<div class="col-lg-3 col-xl-2">
+									<div class="input-group mb-3">
+										<span class="input-group-text">
+											@Html.CheckBoxFor(m => m.Contract.CashDiscount, new  {id = "chkCashDiscount"})
+										</span>
+										@Html.TextBoxFor(m => m.Contract.CashDiscountPaymentTerm, new { id = "txtCashDiscountPaymentTerm", @class = "form-control form-control-modern", type = "text", placeholder = "Aantal dagen" }).DisableIf(() => !Model.Contract.CashDiscount)
+									</div>
+									
+								</div>
+								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.CashDiscountPercentage)</label>
+								<div class="col-lg-3 col-xl-2">
+									@Html.EditorFor(m => m.Contract.CashDiscountPercentage, new { id = "txtCashDiscountPercentage", @class = "form-control form-control-modern", placeholder = "Aantal dagen" }).DisableIf(() => !Model.Contract.CashDiscount)
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.GuaranteeType)</label>
+								<div class="col-lg-3 col-xl-2">
+									@Html.DropDownListFor(m => m.Contract.GuaranteeType, Html.GetEnumSelectList(Model.Contract.GuaranteeType.GetType()), new { @class = "form-control form-control-modern", id = "lstGuaranteeType" })
+								</div>
+								<label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.GuaranteePercentage)</label>
+								<div class="col-lg-3 col-xl-2">
+									@Html.EditorFor(m => m.Contract.GuaranteePercentage, new { id = "txtGuaranteePercentage", @class = "form-control form-control-modern", placeholder = "Aantal dagen" }).DisableIf(() => Model.Contract.GuaranteeType != ContractGuaranteeType.FinancialGuarantee)
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.ContractSigned)</label>
+								<div class="col-lg-8 col-xl-6">
+									<div class="checkbox-custom checkbox-default">
+										@Html.CheckBoxFor(m => m.Contract.ContractSigned, new {id = "chkContractSigned"})
+										<label></label>
+									</div>
+								</div>
+							</div>
+
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row mt-4">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="row">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<i class="card-big-info-icon bx bx-building-house"></i>
+							<h2 class="card-big-info-title">Loten</h2>
+							<p class="card-big-info-desc">Selecteer de loten van het contract en voeg deze toe en vul per lot het bedrag van het lot in</p>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+									Lot toevoegen
+								</label>
+								<div class="col-lg-8 col-xl-6">
+									<div class="d-flex align-items-start gap-2">
+
+										<select id="lstActivities" name="SelectedActivities" multiple
+												class="form-control populate select2" data-plugin-selectTwo
+												style="flex: 1; min-height: 38px;">
+												@foreach (var activity in Model.Activities)
+												{
+													var isDisabled = Model.Contract.Activities.Any(ca => ca.Activity.ID == activity.ID);
+													var optionTag = $"<option value=\"{activity.ID}\" {(isDisabled ? "disabled" : "")}>{activity.Display}</option>";
+													@Html.Raw(optionTag)
+												}
+										</select>
+										<button type="button" class="btn btn-outline-secondary" id="btnAddActivities">
+											Toevoegen
+										</button>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<div id="ActivityRows">
+
+								</div>
+							
+										@foreach (var item in Model.Contract.Activities)
+									{
+											@await Html.PartialAsync("_ActivityRow", item, new ViewDataDictionary(ViewData) {{ "mode", "add" }})
+									}
+								
+							</div>
+
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row action-buttons">
+		<div class="col-12 col-md-auto">
+			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+				<i class="bx bx-save text-4 me-2"></i> Contract opslaan
+			</button>
+		</div>
+		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+		</div>
+
+	</div>
+}
+
+
+@section PageScripts
+{
+	<script src="~/lib/select2/js/select2.js"></script>
+	<script src="~/js/theme.admin.extension.js"></script>
+	<script src="~/js/examples/examples.advanced.form.js"></script>
+	<script src="~/lib/select2/js/i18n/nl.js"></script>
+	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+	<script src="~/lib/dropzone/dropzone.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+
+	<script>
+		function initCurrencyMasks() {
+			document.querySelectorAll('.Currencymask').forEach(el => {
+				if (!AutoNumeric.getAutoNumericElement(el)) {
+					new AutoNumeric(el, {
+						decimalCharacter: ',',
+						digitGroupSeparator: '.',
+						decimalPlaces: 2,
+						unformatOnSubmit: true,
+						watchExternalChanges: true,       // belangrijk bij al ingevulde velden
+						modifyValueOnWheel: false         // optioneel om gebruikersfouten te voorkomen
+					});
+				}
+			});
+		}
+			
+		$(function () {
+
+			//ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
+			$("#lstActivities").select2({
+						theme: 'bootstrap',
+						placeholder: 'Selecteer het lot',
+						width: '100%',
+						dropdownAutoWidth: true,
+						data:[]
+			});
+			
+
+
+		
+
+			// ======= GARANTIE TYPE =======
+			$('#lstGuaranteeType').on('change', function (e) {
+
+				if ($('#lstGuaranteeType').val() == 2) {
+					$("#Contract_GuaranteePercentage").removeAttr("disabled");
+				} else {
+					$("#Contract_GuaranteePercentage").attr("disabled", "disabled");
+				}
+			});
+
+			// ======= KORTING CONTANT =======
+			$('#chkCashDiscount').on('change', function () {
+				const isChecked = $(this).prop('checked');
+				$('#Contract_CashDiscountPercentage, #txtCashDiscountPaymentTerm').prop('disabled', !isChecked);
+			});
+
+		
+			// ======= INITIËLE CHECK CASH DISCOUNT =======
+			$('#chkCashDiscount').trigger('change');
+
+		});
+
+		
+
+		// ======= ACTIVITEITEN TOEVOEGEN AAN CONTRACT =======
+		$('#btnAddActivities').click(function () {
+			var data = $('#lstActivities').select2('data');
+
+			if (data && data.length > 0) {
+				data.forEach(function (item) {
+					$.ajax({
+						url: '@Url.Action("AddSelectedActivities", "Projecten")',
+						data: { ActivityId: item.id, ActivityName: item.text },
+						cache: false,
+						traditional: true,
+						type: 'POST',
+						success: function (result) {
+							$('#ActivityRows').append(result);
+							// Voeg inputmask alleen toe als het nog niet bestaat
+							initCurrencyMasks();
+						}
+					});
+
+					// Optioneel: disable de toegevoegde optie zodat die niet opnieuw gekozen kan worden
+					$("#lstActivities option[value='" + item.id + "']").attr('disabled', 'disabled');
+				});
+
+				// Selectie wissen
+				$("#lstActivities").val(null).trigger("change");
+			}
+
+			return false;
+		});
+	
+		// ======= ACTIVITEITEN VERWIJDEREN VAN CONTRACT =======
+		  $(document).on('click', 'button.deleterow', function () { // <-- changes
+					$(this).closest('div').parent('div').parent('div').remove();
+					const activiteitId = $(this).data('id'); // Haalt het ID uit data-id attribuut
+					$("#lstActivities option[value='" + activiteitId + "']").removeAttr('disabled');
+					return false;
+				});
+		
+
+		  $(document).ready(function () {
+
+			initCurrencyMasks();
+
+		  });
+
+
+	</script>
+}

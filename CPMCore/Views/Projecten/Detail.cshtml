@@ -1,0 +1,362 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ShowProjectDetail
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = Model.Project.Name + " - Overzicht";
+}
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb("Detail", nameof(ProjectenController.Detail), "Projecten", false)
+	};
+}
+@{
+    String urlTotal = "";
+}
+<!-- start: page -->
+<section class="content-with-menu">
+    @await Html.PartialAsync("DetailMenu", Model.Project.Id)
+        <div class="inner-body">
+
+            <div class="row">
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                @*HOOFDFOTO*@
+                 <div class="card">
+                        @if (Model.Project.DefaultPicture.Name is null)
+                        {
+                            urlTotal = "~/img/no_image.jpg";
+                        }
+                        else
+                        {
+                            urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
+                        }
+                        <img src="@Url.Content(urlTotal)" class="card-img-top" alt="@Model.Project.Name" />
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                    @*ALGEMEEN*@
+                    <div class="card card-modern card-modern-alt-padding">
+                        <header class="card-header">
+
+                            <h2 class="card-title">Algemene gegevens</h2>
+                        </header>
+                        <div class="card-body bg-light">
+                            <ul class="list list-icons">
+                                <li>
+                                    <i class="fa fa-map-marker"></i>
+                                    <span>
+                                        <strong>Adres: </strong>@Model.Project.Street @Model.Project.HouseNumber<br />
+                                    @Model.Project.Postalcode.Postcode @Model.Project.Postalcode.Gemeente.ToUpper()<br />
+                                    @Model.Project.Postalcode.Country.Name</span>
+                                    
+
+                                </li>
+                                @if (Model.Project.Status is not null)
+                                {
+                                    <li>
+                                        <i Class="fa fa-spinner"></i>
+                                        <strong> Status : </strong>@Model.Project.Status.Name
+                                    </li>
+                                }
+                                @if (Model.Project.WheaterStation is not null)
+                                {
+                                    <li>
+                                        <i Class="fa fa-sun-o"></i>
+                                        <strong> Weerstation : </strong>@Model.Project.WheaterStation.Name
+                                    </li>
+                                }
+                                @if (Model.Project.Developer is not null)
+                                {
+
+                                    <li>
+                                        <i Class="fa fa-calculator"></i>
+                                        <strong> Ontwikkelaar : </strong>@Model.Project.Developer.Display
+                                    </li>
+
+                                }
+                                @if (Model.Project.Builder is not null)
+                                {
+
+                                    <li>
+                                        <i Class="fa fa-building"></i>
+                                        <strong> Aannemer : </strong>@Model.Project.Builder.Display
+                                    </li>
+
+                                }
+                                @if (Model.Project.Architect is not null)
+                                {
+
+                                    <li>
+                                        <i Class="fa fa-male"></i>
+                                        <strong> Architect : </strong>@Model.Project.Architect.Display
+                                    </li>
+
+                                }
+                                @if (Model.Project.Engineer is not null)
+                                {
+
+                                    <li>
+                                        <i Class="fa fa-male"></i>
+                                        <strong> Ingenieur stabiliteit : </strong>@Model.Project.Engineer.Display
+                                    </li>
+
+                                }
+                                @if (Model.Project.SecurityCoordinator is not null)
+                                {
+
+                                    <li>
+                                        <i Class="fa fa-male"></i>
+                                        <strong> Veiligheidscoördinator : </strong>@Model.Project.SecurityCoordinator.Display
+                                    </li>
+
+                                }
+                                @if (Model.Project.EpbReporter is not null)
+                                {
+
+                                    <li>
+                                        <i Class="fa fa-male"></i>
+                                        <strong> Epb-verslaggever : </strong>@Model.Project.EpbReporter.Display
+                                    </li>
+
+                                }
+
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                
+            </div>
+            <div class="row">
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3" ">
+                @*KLANTEN*@
+                    <div class="card card-modern card-modern-alt-padding">
+                        <header class="card-header">
+
+                            <h2 class="card-title">Klanten</h2>
+                        </header>
+                        <div class="card-body bg-light">
+                            <ul>
+                @if (Model.RecentClients is not null & Model.RecentClients.Count > 0)
+                {
+                    @foreach (var item in Model.RecentClients)
+                    {
+                                        <li>
+                                            <a data-toggle="tooltip" data-placement="top" title="" data-original-title="Klantgegevens" href="@Url.Action("Detail", "Klanten", new {clientid = item.ID, projectid = Model.Project.Id})">
+                                                <span Class="title">@item.Display </span>
+                                            </a>
+                                        </li>
+                    }
+                }
+
+
+                            </ul>
+                            <div Class="text-right">
+                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Klanten" href="@Url.Action("DetailClients", "Projecten", new { projectid = Model.Project.Id })">
+                                    (Toon Alle)
+                                </a>
+                            </div>
+                            <hr Class="dotted short">
+                            <div class="social-icons-list">
+                                <a rel="tooltip" data-placement="bottom" href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.Project.Id })" data-original-title="Klant toevoegen"><i class="fa fa-plus"></i><span>Klant toevoegen</span></a>
+                            </div>
+                        </div>
+                    </div>
+                @*WERKDAGEN*@
+                @if (Model.Project.DeliveryDate is null)
+                {
+                        <div class="card card-modern card-modern-alt-padding">
+                            <div class="card-body bg-primary">
+                                <div Class="widget-summary widget-summary-md">
+                                    <div Class="widget-summary-col widget-summary-col-icon">
+                                        <div Class="summary-icon">
+                                            <i Class="fa fa-building"></i>
+                                        </div>
+                                    </div>
+                                    <div Class="widget-summary-col">
+                                        <div Class="summary">
+                                            <h4 Class="title">Werkdagen resterend</h4>
+                                            <div Class="info">
+                                            @if (Model.WorkingDaysLeft == -9999)
+                                            {
+
+                                                    <div>Kan nog geen werkdagen berekenen, gelieve de startdatum en werkdagen In te geven</div>
+                                            }
+                                            else
+                                            {
+
+                                                    <strong Class="amount">@Model.WorkingDaysLeft</strong>
+
+                                            }
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="card card-modern card-modern-alt-padding">
+                            <div class="card-body bg-primary">
+                                <div class="widget-summary widget-summary-md">
+                                    <div class="widget-summary-col widget-summary-col-icon">
+                                        <div class="summary-icon">
+                                            <i class="fa fa-calendar"></i>
+                                        </div>
+                                    </div>
+                                    <div class="widget-summary-col">
+                                        <div class="summary">
+                                            <h4 class="title">Uiterste einddatum</h4>
+                                            <div class="info">
+                                            @if (Model.FinalConstructionDate == DateOnly.MinValue)
+                                            {
+
+                                                    <div>Kan nog geen datum berekenen, gelieve de startdatum en werkdagen in te geven</div>
+
+                                            }
+                                            else
+                                            {
+
+                                                    <strong Class="amount ">@Model.FinalConstructionDate.ToString("ddd dd MMMM yyyy")</strong>
+
+                                            }
+
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                }
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                @*NIEUWS*@
+                    <div class="card card-modern card-modern-alt-padding">
+                        <header class="card-header">
+                            <h2 class="card-title">Nieuws</h2>
+                        </header>
+                        <div class="card-body bg-light">
+                @if (Model.LatestNews is not null)
+                {
+                                <img src="@Url.Content(Configuration["URL:ImageWebUrl"] + "pictures/News/" + Model.LatestNews.Picture.Name)" class="card-img-top" alt="@Model.LatestNews.TitleNL">
+                                <div class="post-date">
+                                    <span class="day">@Model.LatestNews.NewsDate.Day </span>
+                                    <span class="month">@Model.LatestNews.NewsDate.ToString("MMM")</span>
+                                </div>
+                                <div class="post-content">
+
+                                    <h4><a href="blog-post.html">@Model.LatestNews.TitleNL </a></h4>
+                                    <p class="small">@Model.LatestNews.TextNL</p>
+
+                                </div>
+                }
+                            <div Class="text-right">
+                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Nieuws" href="@Url.Action("DetailNews", "Projecten", new { projectid = Model.Project.Id })">
+                                    (Toon Alle)
+                                </a>
+                            </div>
+                            <hr Class="dotted short">
+                            <div class="social-icons-list">
+                                <a rel="tooltip" data-placement="bottom" class="modal-with-form" id="btnAddNews" href="#modaladdnews" data-original-title="Foto toevoegen"><i class="fa fa-plus"></i><span>Foto toevoegen</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                @*DOCUMENTEN*@
+                    <div class="card card-modern card-modern-alt-padding">
+                        <header class="card-header">
+
+                            <h2 class="card-title">Documenten</h2>
+                        </header>
+                        <div class="card-body bg-light">
+                            <ul class="simple-">
+                @foreach (var doc in Model.LatestDocs)
+                {
+                                    <li>
+
+                        @if (doc.Name is null | doc.Name == "")
+                        {
+
+                                            <a href="@Url.Content(Configuration["URL:DocWebURL"] + "Docs/" + doc.Filename)" target="_blank"><span Class="title">@doc.Type.GetDisplayName()</span></a>
+                            @if (doc.DocDate.HasValue)
+                            {
+
+                                                <span Class="message truncate">@doc.DocDate.Value.ToLongDateString()</span>
+                            }
+
+                        }
+                        else
+                        {
+
+                                            <a href="@Url.Content(Configuration["URL:DocWebURL"] + "Docs/" + doc.Filename)" target="_blank"> <span Class="title">@doc.Name</span></a>
+                                            <br />
+                            @if (doc.DocDate.HasValue)
+                            {
+                                                <span Class="message truncate">@doc.Type.GetDisplayName() - @doc.DocDate.Value.ToLongDateString()</span>
+                            }
+                            else
+                            {
+                                                <span Class="message truncate">@doc.Type.GetDisplayName()</span>
+                            }
+                        }
+                                    </li>
+                }
+
+                            </ul>
+
+
+                            <div Class="text-right">
+                                <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Documenten" href="@Url.Action("DetailDocs", "Projecten", new { projectid = Model.Project.Id })">
+                                    (Toon Alle)
+                                </a>
+                            </div>
+                            <hr Class="dotted short">
+                            <div class="social-icons-list">
+                                <a rel="tooltip" data-placement="bottom" class="modal-with-form" id="btnAddPhoto" href="#modaladddoc" data-original-title="Document toevoegen"><i class="fa fa-plus"></i><span>Document toevoegen</span></a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
+                @*FOTOS*@
+                    <div class="card card-modern card-modern-alt-padding">
+                        <header class="card-header">
+                            <h2 class="card-title">Foto's</h2>
+                        </header>
+                        <div class="card-body bg-light">
+
+                                        @if(Model.LatestPicture is not null ){
+                                            <img src="@Url.Content(Configuration["URL:ImageWebURL"] + "pictures/447/" + Model.LatestPicture.Name)" class="card-img" alt="@Model.LatestPicture.Name">
+                                        }
+                                        <br />
+                                        <br />
+                                        <div Class="text-right">
+                                            <a Class="text-uppercase text-muted" data-toggle="tooltip" data-placement="top" title="" data-original-title="Fotos" href="@Url.Action("DetailPhotos", "Projecten", new {projectid = Model.Project.Id})">
+                                                (Toon Alle)
+                                            </a>
+                                        </div>
+                                    
+                                    <hr Class="dotted short">
+                                    <div Class="social-icons-list">
+                                        <a rel="tooltip" data-placement="bottom" Class="modal-with-form" id="btnAddPhoto" href="#modaladdphoto" data-original-title="Foto toevoegen"><i Class="fa fa-plus"></i><span>Foto toevoegen</span></a>
+                                    </div>
+                        </div>
+                    </div>
+                </div>
+
+                
+            </div>
+			</div>
+		</div>
+	</section>

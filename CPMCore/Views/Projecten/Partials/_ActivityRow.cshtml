@@ -1,0 +1,41 @@
+﻿@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@using System.Globalization
+@model ContractActivityBO
+
+<div class="row align-items-center pb-3">
+    @using (Html.BeginCollectionItem("activities")) {
+
+        @Html.HiddenFor(m => m.ContractActivityId)
+        @Html.HiddenFor(m => m.ContractId)
+        @Html.HiddenFor(m => m.Activity.ID)
+        @Html.HiddenFor(m => m.Activity.Name)
+        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Model.Activity.Name</label>
+        <div class="col-lg-8 col-xl-6">
+            <div class="input-group mb-3">
+                <span class="input-group-text">€</span>
+                @Html.TextBoxFor(m => m.Price, new
+                    {
+                        @class = "form-control form-control-modern Currencymask",
+                        @Value = Model.Price.HasValue ? Model.Price.Value.ToString("0.##", CultureInfo.InvariantCulture) : ""
+                    })
+                @if (ViewData["mode"] == "edit")
+                {
+                    <button class="btn btn-danger deleteUnit" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" ms-2" data-id="@Model.Activity.ID"><i class="fa fa-remove"></i></button>
+
+                }
+                else if (ViewData["mode"] == "add")
+                {
+                    <button class="btn btn-danger deleterow" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@Model.Activity.ID"><i class="fa fa-remove"></i></button>
+
+                }
+            </div>
+            
+        </div>
+
+       
+}
+</div>
+
+
+          

@@ -1,0 +1,48 @@
+﻿@model BOCore.ClientContactBO 
+@using HtmlHelpers.BeginCollectionItemCore
+<tr>
+    @using (Html.BeginCollectionItem("coowners")){
+
+            <td data-title='Naam'>
+                @Html.DisplayFor(m => m.Name) @Html.DisplayFor(m => m.Firstname)               
+                @Html.HiddenFor(m => m.Name)
+                @Html.HiddenFor(m => m.Firstname)
+
+                @Html.HiddenFor(m => m.Street)
+                @Html.HiddenFor(m => m.Housenumber)
+                @Html.HiddenFor(m => m.Busnumber)
+                @Html.HiddenFor(m => m.Postalcode.Postcode)
+                @Html.HiddenFor(m => m.Postalcode.PostcodeId)
+                @Html.HiddenFor(m => m.Postalcode.Gemeente)
+                @Html.HiddenFor(m => m.Postalcode.Country.Name)
+                @Html.HiddenFor(m => m.Phone)
+                @Html.HiddenFor(m => m.Cellphone)
+                @Html.HiddenFor(m => m.Email)
+                @Html.HiddenFor(m => m.CompanyName)
+                @Html.HiddenFor(m => m.VATnumber)
+            </td>
+    <td data-title="Type">
+        @Html.DisplayFor(m => m.CoOwnerType.Name)
+        @Html.HiddenFor(m => m.CoOwnerType.Id)
+    </td>
+    <td data-title="%" class="percentage">
+        @Html.DisplayFor(m => m.CoOwnerPercentage)
+        @Html.HiddenFor(m => m.CoOwnerPercentage)
+    </td>
+   
+            @if(ViewData["mode"] == "edit"){
+                    <td class="actions" data-title="Acties">
+                        <a href="#modaladddepartment" data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken" class="editDepartment" id="editDepartment" data-id="@Model.Id"><i class="fa fa-edit"></i></a>
+                        <a href="#modaldeletedepartment" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" class="deleteDepartment" data-id="@Model.Id"><i class="fa fa-remove "></i></a>
+                    </td>
+            }
+            else if (ViewData["mode"] == "add"){
+
+                    <td class="actions" data-title="Acties">
+                        <a href="#" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" class="deleteCoOwnerRow"><i class="fa fa-remove "></i></a>
+                    </td>
+            }
+    }
+
+</tr>
+

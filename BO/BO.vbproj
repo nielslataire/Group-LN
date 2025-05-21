@@ -1,0 +1,259 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{82E1E700-1322-4583-9181-45EEE1DAB8E3}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BO</RootNamespace>
+    <AssemblyName>BO</AssemblyName>
+    <FileAlignment>512</FileAlignment>
+    <MyType>Windows</MyType>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+    <_MigrateToProjectGuid>28d5f684-3c98-a13e-6a38-f97c5500d4be</_MigrateToProjectGuid>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DocumentationFile>BO.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DocumentationFile>BO.xml</DocumentationFile>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionExplicit>On</OptionExplicit>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionCompare>Binary</OptionCompare>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionStrict>Off</OptionStrict>
+  </PropertyGroup>
+  <PropertyGroup>
+    <OptionInfer>On</OptionInfer>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'NoAPI|AnyCPU'">
+    <DefineTrace>true</DefineTrace>
+    <OutputPath>bin\NoAPI\</OutputPath>
+    <DocumentationFile>BO.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <NoWarn>42016,41999,42017,42018,42019,42032,42036,42020,42021,42022</NoWarn>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Web.Infrastructure, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Web.Infrastructure.2.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.5.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Web.Helpers, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.Helpers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Mvc, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.Mvc.5.3.0\lib\net45\System.Web.Mvc.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.Razor.3.3.0\lib\net45\System.Web.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.WebPages.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Deployment, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.WebPages.Deployment.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.WebPages.Razor, Version=3.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebPages.3.3.0\lib\net45\System.Web.WebPages.Razor.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+  </ItemGroup>
+  <ItemGroup>
+    <Import Include="Microsoft.VisualBasic" />
+    <Import Include="System" />
+    <Import Include="System.Collections" />
+    <Import Include="System.Collections.Generic" />
+    <Import Include="System.Data" />
+    <Import Include="System.Diagnostics" />
+    <Import Include="System.Linq" />
+    <Import Include="System.Xml.Linq" />
+    <Import Include="System.Threading.Tasks" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BO\Client\ClientAccountChangeOrderInvoiceBO.vb" />
+    <Compile Include="BO\Client\ClientAccountWithInvoicableChangeOrderBO.vb" />
+    <Compile Include="BO\Client\ClientAccountWithInvoicableBO.vb" />
+    <Compile Include="BO\Client\ClientAccountWithUnitsBO.vb" />
+    <Compile Include="BO\Client\ClientAccountUnitInvoiceBO.vb" />
+    <Compile Include="BO\Client\ClientPoaBO.vb" />
+    <Compile Include="BO\Client\ClientGiftBO.vb" />
+    <Compile Include="BO\Client\ClientContactBO.vb" />
+    <Compile Include="BO\Client\ClientAccountBO.vb" />
+    <Compile Include="BO\Client\ClientOwnerTypeBO.vb" />
+    <Compile Include="BO\Facebook\FacebookAlbumBO.vb" />
+    <Compile Include="BO\Facebook\FacebookPlaceBO.vb" />
+    <Compile Include="BO\Facebook\FacebookFeedBO.vb" />
+    <Compile Include="BO\Company\ActivityGroupBO.vb" />
+    <Compile Include="BO\Company\DepartmentBO.vb" />
+    <Compile Include="BO\Company\ActivityBO.vb" />
+    <Compile Include="BO\Company\CompanyBO.vb" />
+    <Compile Include="BO\Company\ContactBO.vb" />
+    <Compile Include="BO\Invoicing\InvoicePdfBO.vb" />
+    <Compile Include="BO\LogBO.vb" />
+    <Compile Include="BO\Project\Calculation\IncommingInvoiceActivityBO.vb" />
+    <Compile Include="BO\Project\Calculation\ContractAdditionalOrderBO.vb" />
+    <Compile Include="BO\Project\IncommingInvoice\IncommingInvoiceDetailBO.vb" />
+    <Compile Include="BO\Project\IncommingInvoice\IncommingInvoiceBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitConstructionValueBO.vb" />
+    <Compile Include="BO\Project\UtilityCost\ClientUtilityCostBO.vb" />
+    <Compile Include="BO\Project\UtilityCost\UtilityPercentageBO.vb" />
+    <Compile Include="BO\Project\UtilityCost\UtilityCostBO.vb" />
+    <Compile Include="BO\WarningBO.vb" />
+    <Compile Include="BO\Invoicing\InvoiceRowBO.vb" />
+    <Compile Include="BO\Invoicing\InvoiceFileBO.vb" />
+    <Compile Include="BO\Postalcode\CountryBO.vb" />
+    <Compile Include="BO\IdNameBO.vb" />
+    <Compile Include="BO\ImageBO.vb" />
+    <Compile Include="BO\Invoicing\InvoiceBO.vb" />
+    <Compile Include="BO\Project\Calculation\BudgetActivityBO.vb" />
+    <Compile Include="BO\Project\CalendarDayBO.vb" />
+    <Compile Include="BO\Project\Calculation\ContractActivityBO.vb" />
+    <Compile Include="BO\Project\Calculation\InInvoiceDetailBO.vb" />
+    <Compile Include="BO\Project\Calculation\ContractBO.vb" />
+    <Compile Include="BO\Project\ChangeOrder\ChangeOrderDetailBO.vb" />
+    <Compile Include="BO\Project\ChangeOrder\ChangeOrderBO.vb" />
+    <Compile Include="BO\Project\Insurances\InsuranceBO.vb" />
+    <Compile Include="BO\Project\Insurances\InsuranceCompanyBO.vb" />
+    <Compile Include="BO\Project\ProjectDocBO.vb" />
+    <Compile Include="BO\Project\Invoice\ProjectPaymentStageBO.vb" />
+    <Compile Include="BO\Project\Invoice\ProjectPaymentGroupBO.vb" />
+    <Compile Include="BO\Project\ProjectSalesDataBO.vb" />
+    <Compile Include="BO\Project\ProjectSalesSettingsBO.vb" />
+    <Compile Include="BO\Project\Unit\RoomBO.vb" />
+    <Compile Include="BO\Project\Unit\ConstructionReductionBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitWithStagesBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitWithReductionBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitWithAttachedUnitsWithDetailsBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitWithAttachedUnitsBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitWithDetailsBO.vb" />
+    <Compile Include="BO\Project\VacationDayBO.vb" />
+    <Compile Include="BO\Project\ProjectNewsBO.vb" />
+    <Compile Include="BO\Project\ProjectLevelBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitTypeBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitGroupTypeBO.vb" />
+    <Compile Include="BO\Project\ProjectPictureBO.vb" />
+    <Compile Include="BO\Project\ProjectBO.vb" />
+    <Compile Include="BO\Project\ProjectStatusBO.vb" />
+    <Compile Include="BO\Postalcode\ProvincieBO.vb" />
+    <Compile Include="BO\Project\BadWeatherDayBO.vb" />
+    <Compile Include="BO\Response\GetResponse.vb" />
+    <Compile Include="BO\Response\Message.vb" />
+    <Compile Include="BO\Response\Response.vb" />
+    <Compile Include="BO\SelectBO.vb" />
+    <Compile Include="BO\Settings\BankAccountBO.vb" />
+    <Compile Include="BO\UrlRecordBO.vb" />
+    <Compile Include="BO\Project\WheaterStationBO.vb" />
+    <Compile Include="BO\Validators\AtLeastOnePropertyAttribute.vb" />
+    <Compile Include="Enum\ProjectType.vb" />
+    <Compile Include="Enum\ContractGuaranteeType.vb" />
+    <Compile Include="Enum\IncommingInvoiceType.vb" />
+    <Compile Include="Enum\RegistrationType.vb" />
+    <Compile Include="Enum\InsuranceType.vb" />
+    <Compile Include="Enum\MeasurementUnit.vb" />
+    <Compile Include="Enum\MeasurementType.vb" />
+    <Compile Include="Enum\ProgFirm.vb" />
+    <Compile Include="Enum\ErrorCode.vb" />
+    <Compile Include="Enum\MessageType.vb" />
+    <Compile Include="Enum\ProjectDocType.vb" />
+    <Compile Include="Enum\ClientType.vb" />
+    <Compile Include="Enum\RoomType.vb" />
+    <Compile Include="Enum\Salutation.vb" />
+    <Compile Include="Enum\ProjectStatusType.vb" />
+    <Compile Include="Enum\PictureType.vb" />
+    <Compile Include="Filter\CompanyFilter.vb" />
+    <Compile Include="Groups\GroupUnitsWithAttachedUnitsWithDetailsBO.vb" />
+    <Compile Include="Groups\GroupUnitsWithAttachedUnitsBO.vb" />
+    <Compile Include="Groups\GroupUnitsBO.vb" />
+    <Compile Include="Helper\EnumExtensions.vb" />
+    <Compile Include="Helper\PredicateUtility.vb" />
+    <Compile Include="My Project\AssemblyInfo.vb" />
+    <Compile Include="My Project\Application.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Application.myapp</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\Resources.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="My Project\Settings.Designer.vb">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="BO\Postalcode\PostalCodeBO.vb" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="My Project\Resources.resx">
+      <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.vb</LastGenOutput>
+      <CustomToolNamespace>My.Resources</CustomToolNamespace>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="My Project\Application.myapp">
+      <Generator>MyApplicationCodeGenerator</Generator>
+      <LastGenOutput>Application.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="My Project\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <CustomToolNamespace>My</CustomToolNamespace>
+      <LastGenOutput>Settings.Designer.vb</LastGenOutput>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Sorter\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

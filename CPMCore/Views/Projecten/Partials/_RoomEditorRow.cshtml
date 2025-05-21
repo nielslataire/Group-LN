@@ -1,0 +1,25 @@
+﻿@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@model RoomBO
+
+
+@using(Html.BeginCollectionItem("rooms")){
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.UnitId)
+        <div class="form-group row justify-content-center ecommerce-attribute-row mb-2">
+        <div class="col-lg-5 col-xl-3"> @Html.DropDownListFor(m => m.Type, Html.GetEnumSelectList(Model.Type.GetType()), new { @class = "form-control form-control-modern", id = "lstType" })</div>
+            <div class="col-lg-1 col-xl-1">
+                @Html.TextBoxFor(m => m.Number, new { type = "number", @class = "form-control form-control-modern", id = "txtNumber" })
+            </div>
+            <div class="col-lg-1 col-xl-1">
+                @Html.EditorFor(m => m.Surface, new { @class = "form-control form-control-modern", id = "txtSurface" })
+            </div>
+            <div class="col-lg-3 col-xl-4">
+                @Html.TextBoxFor(m => m.Remark, new { @class = "form-control form-control-modern", id = "txtRemark" })
+            </div>
+            <div class="col-lg-1 col-xl-1">
+                <a href="#" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" Class="deleteRow"><i Class="fa fa-remove"></i></a>
+            </div>
+        </div>
+}
+

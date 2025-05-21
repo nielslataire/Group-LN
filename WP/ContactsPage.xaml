@@ -1,0 +1,145 @@
+﻿<Page
+    x:Class="CPM.ContactsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:CPM"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    DataContext="{Binding DefaultViewModel, RelativeSource={RelativeSource Self}}">
+    <Page.Transitions>
+        <TransitionCollection>
+            <NavigationThemeTransition>
+                <NavigationThemeTransition.DefaultNavigationTransitionInfo>
+                    <ContinuumNavigationTransitionInfo/>
+                </NavigationThemeTransition.DefaultNavigationTransitionInfo>
+            </NavigationThemeTransition>
+        </TransitionCollection>
+    </Page.Transitions>
+    <Page.Resources>
+        <CollectionViewSource x:Key="AddressGroups"
+                              IsSourceGrouped="True"/>
+        
+        <JumpListItemBackgroundConverter x:Key="BackgroundConverter"/>
+        <JumpListItemForegroundConverter x:Key="ForegroundConverter"/>
+        <DataTemplate x:Key="AddrBookJumpTemplate">
+            <Border Padding="5">
+                <Border Background="{Binding Converter={StaticResource BackgroundConverter}}" 
+                        Width="82" Height="82" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding Group.Key}" 
+                               Foreground="{Binding Converter={StaticResource ForegroundConverter}}" 
+                               FontSize="48" Padding="6" 
+                               HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                </Border>
+            </Border>
+        </DataTemplate>
+        <DataTemplate x:Key="AddrBookItemTemplate">
+            <StackPanel Margin="0,0,0,19">
+                <TextBlock Text="{Binding Weergavenaam1 }" Style="{ThemeResource ListViewItemTextBlockStyle}"/>
+                <TextBlock Text="{Binding Weergavenaam2}" Style="{ThemeResource ListViewItemSubheaderTextBlockStyle}"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="AddrBookSearchItemTemplate">
+            <StackPanel Margin="0,0,0,19">
+                <TextBlock Text="{Binding Weergavenaam1 }" Style="{ThemeResource ListViewItemTextBlockStyle}" Loaded="TextBlock_Loaded"/>
+                <TextBlock Text="{Binding Weergavenaam2}" Style="{ThemeResource ListViewItemSubheaderTextBlockStyle}" Loaded="TextBlock_Loaded"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="AddrBookGroupHeaderTemplate">
+            <Border Background="Transparent" Padding="5">
+                <Border Background="{StaticResource PhoneAccentBrush}" BorderBrush="{StaticResource PhoneAccentBrush}" BorderThickness="2" Width="62" 
+                        Height="62" Margin="0,0,18,0" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding Key}" Foreground="{StaticResource PhoneForegroundBrush}" FontSize="48" Padding="6" 
+                               FontFamily="{StaticResource PhoneFontFamilySemiLight}" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                </Border>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+    
+
+
+
+    <Page.BottomAppBar>
+        <CommandBar >
+            <AppBarButton x:Name="btnRefresh" Label="Vernieuwen" Icon="Refresh" />
+            <AppBarButton x:Name="btnSearch" Label="Zoeken" Icon="Find"  />
+        </CommandBar>
+
+    </Page.BottomAppBar>
+
+    <Grid x:Name="LayoutRoot">
+        <Grid.ChildrenTransitions>
+            <TransitionCollection>
+                <EntranceThemeTransition/>
+            </TransitionCollection>
+        </Grid.ChildrenTransitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="auto"></RowDefinition>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title Panel -->
+        <StackPanel Grid.Row="0" Margin="19,0,0,0" Name="stpHeader">
+            <TextBlock x:Uid="Header" Text="Copro Project Management" Style="{ThemeResource TitleTextBlockStyle}" Margin="0,12,0,0" />
+            <TextBlock Text="Leveranciers" Style="{ThemeResource HeaderTextBlockStyle}" Margin="0,-6.5,0,26.5" CharacterSpacing="{ThemeResource PivotHeaderItemCharacterSpacing}"/>
+        </StackPanel>
+        <Grid Grid.Row="1" Name="SearchGrid" Visibility="Collapsed">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"></ColumnDefinition>
+                <ColumnDefinition Width="50"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <TextBox Name="txtsearch" />
+            </Grid>
+            <Grid Grid.Column="1">
+                <Button >
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <SymbolIcon Symbol="ShowResults" HorizontalAlignment="Left" Width="40" ></SymbolIcon>
+                        </ControlTemplate>
+                    </Button.Template>
+
+                    
+                </Button>
+            </Grid>
+        </Grid>
+        <!--
+        <StackPanel Name="stpSearch" Visibility="Visible"  Margin="19,0,19,0" Orientation="Horizontal" >
+            
+            
+        </StackPanel>
+        -->
+        <!-- 
+            TODO: Content should be placed within the following grid 
+                  to show details for the current item
+        -->
+        <Grid Grid.Row="2" x:Name="ContentRoot" Margin="19,9.5,19,0">
+            <ProgressRing x:Name="prProgress" Visibility="Collapsed" />
+            <SemanticZoom>
+                <SemanticZoom.ZoomedInView>
+                    <ListView  x:Name="lsvContacten" IsItemClickEnabled="True"  IsHoldingEnabled="True"
+                          ItemsSource="{Binding Source={StaticResource AddressGroups}}"
+                          ItemTemplate="{StaticResource AddrBookItemTemplate}"
+                          ContinuumNavigationTransitionInfo.ExitElementContainer="True" ItemClick="ListView_ItemClick" >
+                        <ListView.GroupStyle>
+                            <GroupStyle HidesIfEmpty="True" HeaderTemplate="{StaticResource AddrBookGroupHeaderTemplate}"/>
+                        </ListView.GroupStyle>
+                    </ListView>
+                </SemanticZoom.ZoomedInView>
+                <SemanticZoom.ZoomedOutView>
+                    <GridView Background="Black" 
+                          ItemsSource="{Binding Source={StaticResource AddressGroups}, Path=CollectionGroups}"
+                          ItemTemplate="{StaticResource AddrBookJumpTemplate}">
+                    </GridView>
+                </SemanticZoom.ZoomedOutView>
+            </SemanticZoom>
+            
+            <ListView  x:Name="lsvSearch" Visibility="Collapsed"  IsItemClickEnabled="True"  IsHoldingEnabled="True"
+                          ItemsSource="{Binding Source={StaticResource AddressGroups}}"
+                          ItemTemplate="{StaticResource AddrBookSearchItemTemplate }"
+                          ContinuumNavigationTransitionInfo.ExitElementContainer="True" ItemClick="ListView_ItemClick" ShowsScrollingPlaceholders="False" />
+            </Grid>
+    </Grid>
+</Page>

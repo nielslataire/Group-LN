@@ -1,0 +1,22 @@
+﻿@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@model UnitConstructionValueBO 
+<tr>
+    @using (Html.BeginCollectionItem("ConstructionValues")) {
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.UnitId)
+        <td width="30%">
+            @Html.EditorFor(m => m.Value, new {@class = "form-control form-control-modern", id = "txtValue", placeholder="Bouwwaarde"})
+        </td>
+        <td width="30%">
+            @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern", id = "txtDescription", placeholder = "Omschrijving" })
+    </td>
+        <td width="35%">
+            @Html.DropDownListFor(m => m.PaymentGroupId, new SelectList(ViewBag.Paymentgroups, "ID", "Display", Model.PaymentGroupId, "Group"), "Selecteer betalingsgroep ...", new { @class = "form-control form-control-modern populate", id = "lstpaymentgroups, " })
+    </td>
+    <td width="5%">
+        <a href="#" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" Class="deleteConstructionRow ms-2"><i Class="fa fa-remove"></i></a>
+    </td>
+
+    }
+</tr>

@@ -1,0 +1,1 @@
+﻿@Html.TextBox("", ViewData.TemplateInfo.FormattedModelValue, New With {.class = "form-control", .placeHolder = ViewData.ModelMetadata.DisplayName})

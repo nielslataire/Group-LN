@@ -1,0 +1,42 @@
+﻿@model BOCore.ClientContactBO
+@using HtmlHelpers.BeginCollectionItemCore
+
+<div class="contactRow">
+    @using (Html.BeginCollectionItem("contacts")){
+        <div class="form-group">
+        <div class="row align-items-center pb-3">
+                <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Contactgegevens</label>
+            <div class="col-lg-2 col-xl-2">
+                @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList(Model.Salutation.GetType()), new { @class = "form-control form-control-modern", id = "lstSalutation", })
+            </div>
+            <div class="col-lg-2 col-xl-3">
+                @Html.TextBoxFor(m => m.Name, new { placeholder = "Naam", @class = "form-control form-control-modern", id = "txtName" })
+            </div>
+            <div class="col-lg-2 col-xl-3">
+                @Html.TextBoxFor(m => m.Firstname, new { placeholder = "Voornaam", @class = "form-control form-control-modern", id = "txtForeName" })
+            </div>
+            <div class="col-lg-1 col-xl-1">
+                <a href="" data-toggle="tooltip" data-placement="top" title="" data-original-title="Contact verwijderen" class="deleteContact"><i class="fa fa-remove"></i></a>
+            </div>
+        </div>
+        <div class="row align-items-center pb-3">
+            <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
+            <div class="col-lg-3 col-xl-4">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bx bx-at"></i>
+                    </span>
+                    @Html.TextBoxFor(m => m.Email, new { placeholder = "Email", @class = "form-control form-control-modern", id = "txtName", Type="email"})
+                </div>
+            </div>
+            <div class="col-lg-2 col-xl-2">
+                @Html.EditorFor(m => m.Phone)
+            </div>
+            <div class="col-lg-2 col-xl-2">
+                @Html.EditorFor(m => m.Cellphone)
+            </div>
+        </div>
+        </div>
+    }
+</div>
+

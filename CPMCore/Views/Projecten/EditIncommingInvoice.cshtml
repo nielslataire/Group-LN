@@ -1,0 +1,460 @@
+﻿@using CPMCore.Controllers
+@using CPMCore.Helpers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectIncommingInvoiceAddUpdateModel;
+
+@{
+	ViewData["Title"] = Model.ProjectName + " - Factuur bewerken";
+}
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
+<link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
+<link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css">
+<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
+<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
+</style>
+
+}
+
+
+<h2 class="font-weight-bold text-6">Factuur bewerken</h2>
+@* @Html.PartialAsync("_ValidationSummary", ViewData.ModelState) *@
+@using (Html.BeginForm("IncommingInvoiceAdd", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+{
+	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
+	@Html.HiddenFor(m => m.Type, new { id = "type" })
+	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
+	@Html.HiddenFor(m => m.IncommingInvoice.Id)
+	@Html.HiddenFor(m => m.IncommingInvoice.ContractID)
+    @Html.HiddenFor(m => m.IncommingInvoice.CompanyId)
+	<div class="row mt-2">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="row">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<i class="card-big-info-icon bx bx-box"></i>
+							<h2 class="card-big-info-title">Algemene info</h2>
+							<p class="card-big-info-desc">Voeg hier de algemene info van de factuur in.</p>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							@await Html.PartialAsync("_ValidationSummary", ViewData.ModelState)
+							<div class="form-group row align-items-center pb-3">
+								@if (Model.Type == 0)
+								{
+									<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+										@Html.LabelFor(m => m.ProjectContracts)
+									</label>
+									<div class="col-lg-8 col-xl-6">
+										@Model.CompanyName
+@* 										@Html.DropDownListFor(m => m.IncommingInvoice.ContractID, new SelectList(Model.ProjectContracts, "ID", "Display", Model.IncommingInvoice.ContractID), "Selecteer...", new { @class = "form-control form-control-modern populate select2", id = "lstProjectContracts", data_plugin_selectTwo="" })
+ *@									</div>
+								}
+								else
+								{
+									<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+										@Html.LabelFor(m => m.ProjectContracts)
+									</label>
+									<div class="col-lg-8 col-xl-6">
+											<select id="ddlCompany" class="form-control" style="width: 100%;">
+												<!-- Voeg hier de opties toe -->
+											</select>
+											@Html.HiddenFor(m => m.IncommingInvoice.CompanyId, new { id = "txtCompanyID", @class = "form-control" })
+									</div>
+								}
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+									@Html.LabelFor(m => m.IncommingInvoice.InvoicePrice)
+								</label>
+								<div class="col-lg-8 col-xl-6">
+									@Html.EditorFor(m => m.IncommingInvoice.InvoicePrice)
+								</div>
+                            </div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+									@Html.LabelFor(m => m.IncommingInvoice.IncommingInvoiceDate)
+								</label>
+								<div class="col-lg-8 col-xl-6">
+									@Html.EditorFor(m => m.IncommingInvoice.IncommingInvoiceDate)
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+									@Html.LabelFor(m => m.IncommingInvoice.InvoiceExternalId)
+								</label>
+								<div class="col-lg-8 col-xl-6">
+									@Html.TextBoxFor(m => m.IncommingInvoice.InvoiceExternalId, new { @class="form-control form-control-modern"})
+								</div>
+							</div>
+
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row mt-4">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="row">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<i class="card-big-info-icon bx bx-detail"></i>
+							<h2 class="card-big-info-title">Details</h2>
+							<p class="card-big-info-desc">Voeg per lot een factuurlijn toe zodat deze aan het correct lot toegevoegd wordt.</p>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+									Lijn per lot toevoegen
+								</label>
+								<div class="col-lg-8 col-xl-6">
+									<div class="d-flex align-items-start gap-2">
+										@Html.ListBoxFor(m => m.SelectedActivities, new SelectList(Model.ListActivities, "ID", "Display", Model.SelectedActivities, "Group"), new { @class = "form-control populate select2", multiple = "", id = "lstActivities", data_plugin_selectTwo = "", style = "flex: 1; min-height: 38px;" })
+@* 
+										<select id="lstActivities" name="SelectedActivities" multiple
+												class="form-control populate select2" data-plugin-selectTwo
+												style="flex: 1; min-height: 38px;">
+											<!-- Opties -->
+										</select> *@
+										<button type="button" class="btn btn-outline-secondary" id="btnAddActivities">
+											Toevoegen
+										</button>
+									</div>
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<div id="DetailRows">
+
+								</div>
+
+								@foreach (var item in Model.IncommingInvoice.Details)
+									{
+									@await Html.PartialAsync("_IncommingInvoiceDetailRow", item, new ViewDataDictionary(ViewData) { { "mode", "add" } })
+									}
+								
+							</div>
+
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row action-buttons">
+		<div class="col-12 col-md-auto">
+			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+				<i class="bx bx-save text-4 me-2"></i> Factuur opslaan
+			</button>
+		</div>
+		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+		</div>
+
+	</div>
+}
+
+
+@section PageScripts
+{
+	<script src="~/lib/select2/js/select2.js"></script>
+	<script src="~/js/theme.admin.extension.js"></script>
+	<script src="~/js/examples/examples.advanced.form.js"></script>
+	<script src="~/lib/select2/js/i18n/nl.js"></script>
+	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+	<script src="~/lib/dropzone/dropzone.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+
+	<script>
+		function initEuroInput(selector) {
+			document.querySelectorAll(selector).forEach(el => {
+				if (!AutoNumeric.getAutoNumericElement(el)) {
+					new AutoNumeric(el, {
+						decimalCharacter: ',',
+						digitGroupSeparator: '.',
+						decimalPlaces: 2,
+						unformatOnSubmit: true
+					});
+				}
+			});
+		}
+		// ======= BIJ HET VERANDEREN VAN EEN FACTUURLIJN NAAR MEERWERK KLANT =======
+		function change(theStatus) {
+			const $row = $(theStatus).closest('.row');
+			const $changeOrders = $row.find('#lstchangeorders');
+
+			if (theStatus.value === "3") {
+				$changeOrders.prop('disabled', false);
+			} else {
+				$changeOrders.prop('disabled', true);
+			}
+		}
+		$(function () {
+
+			//ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
+			$("#lstActivities").select2({
+						theme: 'bootstrap',
+						placeholder: 'Selecteer het lot',
+						width: '100%',
+						dropdownAutoWidth: true,
+						data:[]
+			});
+
+		});
+		function getContractId() {
+			return $('#lstProjectContracts').val();  // Haalt de geselecteerde waarde van de dropdown op
+		}
+		// ======= BIJ HET SELECTEREN VAN EEN CONTRACT =======
+		$('#lstProjectContracts').on('change', function () {
+			var contractId = $(this).val(); // geeft rechtstreeks de ID
+			if (contractId) {
+				GetActivities(contractId);
+				$('#DetailRows').empty();
+			}
+		});
+		var options = {
+			tags: true,
+			createTag: function (params) {
+				return {
+					id: params.term,
+					text: params.term,
+					newOption: true
+				}
+			},
+			templateResult: function (data) {
+				var $result = $("<span></span>");
+
+				$result.text(data.text);
+
+				if (data.newOption) {
+					$result.append(" <em>(new)</em>");
+				}
+
+				return $result;
+			}
+		}
+		function GetActivities(contractid) {
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("GetContractActivities", "Projecten")',
+				data: { contractid: contractid },
+				dataType: 'json',
+				success: function (data) {
+					var $select = $('#lstActivities');
+
+					// Reset selectie van bestaande contractactiviteiten
+					var selectedValues = $select.val(); // bewaar huidige selectie
+
+					// Destroy select2 tijdelijk om DOM manipulatie toe te staan
+					if ($select.hasClass("select2-hidden-accessible")) {
+						$select.select2('destroy');
+					}
+
+					// Verwijder alleen de optgroup met label 'Contractactiviteiten'
+					$select.find('optgroup[label="Contractactiviteiten"]').remove();
+
+					// Nieuwe optgroup aanmaken
+					var optgroup = $('<optgroup>', { label: 'Contractactiviteiten' });
+
+					// Voeg opties toe
+					$.each(data, function (i, item) {
+						$('<option>', {
+							value: item.id,
+							text: item.text
+						}).appendTo(optgroup);
+					});
+
+					// ✅ Voeg optgroup toe vóór andere elementen
+					$select.prepend(optgroup);
+
+					// Herinitialiseer Select2
+					$select.select2({
+						theme: 'bootstrap',
+						placeholder: 'Selecteer het lot',
+						width: '100%',
+						dropdownAutoWidth: true
+					});
+
+					// Herstel eerdere selectie indien nodig
+					if (selectedValues) {
+						$select.val(selectedValues).trigger('change');
+					}
+				},
+				error: function () {
+					console.error("Er ging iets mis bij het ophalen van de activiteiten.");
+				}
+			});
+		}
+			function GetActivitiesCompany(companyid) {
+			$.ajax({
+				type: 'POST',
+				url: '@Url.Action("GetCompanyActivities", "Projecten")',
+				data: { companyid: companyid },
+				dataType: 'json',
+				success: function (data) {
+					var $select = $('#lstActivities');
+
+					// Reset selectie van bestaande contractactiviteiten
+					var selectedValues = $select.val(); // bewaar huidige selectie
+
+					// Destroy select2 tijdelijk om DOM manipulatie toe te staan
+					if ($select.hasClass("select2-hidden-accessible")) {
+						$select.select2('destroy');
+					}
+
+					// Verwijder alleen de optgroup met label 'Contractactiviteiten'
+					$select.find('optgroup[label="Bedrijfsactiviteiten"]').remove();
+
+					// Nieuwe optgroup aanmaken
+					var optgroup = $('<optgroup>', { label: 'Bedrijfsactiviteiten' });
+
+					// Voeg opties toe
+					$.each(data, function (i, item) {
+						$('<option>', {
+							value: item.id,
+							text: item.text
+						}).appendTo(optgroup);
+					});
+
+					// ✅ Voeg optgroup toe vóór andere elementen
+					$select.prepend(optgroup);
+
+					// Herinitialiseer Select2
+					$select.select2({
+						theme: 'bootstrap',
+						placeholder: 'Selecteer het lot',
+						width: '100%',
+						dropdownAutoWidth: true
+					});
+
+					// Herstel eerdere selectie indien nodig
+					if (selectedValues) {
+						$select.val(selectedValues).trigger('change');
+					}
+				},
+				error: function () {
+					console.error("Er ging iets mis bij het ophalen van de activiteiten.");
+				}
+			});
+		}
+		//SELECT2 COMPANY
+		$('#ddlCompany').select2({
+					theme: 'bootstrap',
+					minimumInputLength: 3,
+					width: '100%',
+					placeholder: "Voer een bedrijfsnaam in...",
+					allowClear: true,
+					language:"nl",
+					ajax: {
+						url: '@Url.Action("GetCompanys", "Projecten")',
+						type: 'POST',
+						dataType: 'json',
+						delay: 250,
+						data: function (params) {
+							return { term: params.term };
+						},
+						processResults: function (data) {
+							return {
+								results: $.map(data, function (item) {
+									return {
+										id: item.id,
+										text: item.text
+									};
+								})
+							};
+						},
+						cache: true
+					}
+				});
+
+		// ======= ACTIVITEITEN TOEVOEGEN AAN CONTRACT =======
+				$('#btnAddActivities').click(function () {
+			const modelType = @Model.Type;
+			const companyId = modelType === 0 ? "0" : "@Model.IncommingInvoice.CompanyId";
+			const contractId = modelType === 0 ? "getContractId()" : "0";
+			const data = $('#lstActivities').select2('data');
+
+			if (data && data.length > 0) {
+				data.forEach(function (item) {
+					// Zoek het <option>-element bij het geselecteerde item
+					const option = $('#lstActivities option[value="' + item.id + '"]');
+
+					// Controleer of de parent optgroup het label 'Contractactiviteiten' heeft
+					const isContractActivity = option.parent('optgroup').attr('label') === 'Contractactiviteiten';
+
+					// Bepaal contractId op basis van de groep
+					const contractId = isContractActivity ? getContractId() : "0";
+
+					$.ajax({
+						url: '@Url.Action("AddIncommingInvoiceDetailRow", "Projecten")',
+						data: {
+							ActivityId: item.id,
+							ActivityName: item.text,
+							ContractId: contractId,
+							CompanyId: companyId
+						},
+						cache: false,
+						traditional: true,
+						type: 'POST',
+						success: function (result) {
+							$('#DetailRows').append(result);
+
+							// Voeg inputmask toe indien nog niet aanwezig
+							document.querySelectorAll('.Currencymask').forEach(el => {
+								if (!AutoNumeric.getAutoNumericElement(el)) {
+									initEuroInput(el);
+								}
+							});
+						}
+					});
+				});
+
+				// Reset selectie
+				$("#lstActivities").val(null).trigger("change");
+			}
+
+			return false;
+		});
+		
+	
+		// ======= ACTIVITEITEN VERWIJDEREN VAN CONTRACT =======
+		  $(document).on('click', 'button.deleterow', function () { // <-- changes
+					$(this).closest('div').parent('div').remove();
+					const activiteitId = $(this).data('id'); // Haalt het ID uit data-id attribuut
+					$("#lstActivities option[value='" + activiteitId + "']").removeAttr('disabled');
+					return false;
+				});
+		
+		$(document).ready(function () {
+
+			$('#ddlCompany').on('select2:select', function (e) {
+				const selectedData = e.params?.data;
+				if (selectedData && selectedData.id) {
+					$('#txtCompanyID').val(selectedData.id);
+					GetActivitiesCompany(selectedData.id);
+
+				} else {
+					console.warn('Geen geldig select2 item geselecteerd:', e);
+				}
+			});
+			$('#txtCompanyID').on('change', function (e) {
+				var data = $('#txtCompanyID').val();
+				GetActivitiesCompany(data);
+			});
+
+			initEuroInput('.Currencymask');
+
+		  });
+
+
+	</script>
+}

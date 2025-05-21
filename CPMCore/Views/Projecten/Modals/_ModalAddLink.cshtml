@@ -1,0 +1,36 @@
+﻿@model CPMCore.Models.Projecten.AddUnitLinkModel;
+@using (Html.BeginForm("AddUnitLink", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#", id = "FormAddUnitLInk", enctype = "multipart/form-data" }))
+{
+	@Html.AntiForgeryToken()
+	@Html.HiddenFor(m => m.SelectedUnit.ProjectId)
+	<section class="card">
+		<header class="card-header">
+			<h2 class="card-title">Eenheden koppelen aan @Model.SelectedUnit.Type.Name @Model.SelectedUnit.Name</h2>
+		</header>
+		<div class="card-body">
+
+				<div class="form-group col-md-8">
+					<label>Eenheden</label>
+				@Html.DropDownListFor(m => m.SelectedUnits, new SelectList(Model.Units, "ID", "Display", Model.SelectedUnits, null), new { @class = "form-control populate", id = "lstLinkUnits", multiple = "multiple" })
+				</div>
+			<div class="form-group col-md-8">
+				<label>@Html.LabelFor(m => m.Unit.ConstructionValue)</label>
+				@Html.EditorFor(m => m.Unit.ConstructionValue)
+				</div>
+			<div class="form-group col-md-8">
+				<label>@Html.LabelFor(m => m.Unit.LandValue)</label>
+				@Html.EditorFor(m => m.Unit.LandValue)
+			</div>
+		</div>
+		<footer class="card-footer">
+			<div class="row">
+				<div class="col-md-12 text-end">
+					<button class="btn btn-primary modal-confirm">Koppelen</button>
+					<button class="btn btn-default modal-dismiss">Annuleren</button>
+				</div>
+			</div>
+		</footer>
+	</section>
+}
+
+End Using

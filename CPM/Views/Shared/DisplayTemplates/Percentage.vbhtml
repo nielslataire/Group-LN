@@ -1,0 +1,3 @@
+﻿@Modeltype Decimal
+
+@Model %

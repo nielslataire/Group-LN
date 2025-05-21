@@ -1,0 +1,264 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>6f069f92-0818-4291-8030-cc11e7e69e88</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="wwwroot\Scripts\**" />
+    <Compile Remove="wwwroot\vendor\**" />
+    <Content Remove="wwwroot\Scripts\**" />
+    <Content Remove="wwwroot\vendor\**" />
+    <EmbeddedResource Remove="wwwroot\Scripts\**" />
+    <EmbeddedResource Remove="wwwroot\vendor\**" />
+    <None Remove="wwwroot\Scripts\**" />
+    <None Remove="wwwroot\vendor\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="package.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BOCore\BOCore.vbproj" />
+    <ProjectReference Include="..\ServiceCore\ServiceCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="package.json" />
+    <None Include="wwwroot\Img\admin-banner.png" />
+    <None Include="wwwroot\Img\admin\jstree-dark.png" />
+    <None Include="wwwroot\Img\admin\jstree.png" />
+    <None Include="wwwroot\Img\apple-touch-icon-precomposed.png" />
+    <None Include="wwwroot\Img\apple-touch-icon.png" />
+    <None Include="wwwroot\Img\arrows-dark.png" />
+    <None Include="wwwroot\Img\arrows.png" />
+    <None Include="wwwroot\Img\avatar-2.jpg" />
+    <None Include="wwwroot\Img\avatar-3.jpg" />
+    <None Include="wwwroot\Img\avatar-4.jpg" />
+    <None Include="wwwroot\Img\avatar.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-1-thumb.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-1.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-2-thumb.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-2.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-3-thumb.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-3.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-4-thumb.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-4.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-5-thumb.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-5.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-6-thumb.jpg" />
+    <None Include="wwwroot\Img\benefits\benefits-6.jpg" />
+    <None Include="wwwroot\Img\blog\blog-image-1.jpg" />
+    <None Include="wwwroot\Img\blog\blog-image-2.jpg" />
+    <None Include="wwwroot\Img\blog\blog-image-3.jpg" />
+    <None Include="wwwroot\Img\blog\blog-medium-image-1.jpg" />
+    <None Include="wwwroot\Img\blog\blog-medium-image-2.jpg" />
+    <None Include="wwwroot\Img\blog\blog-medium-image-3.jpg" />
+    <None Include="wwwroot\Img\blog\blog-thumb-1.jpg" />
+    <None Include="wwwroot\Img\blog\blog-thumb-2.jpg" />
+    <None Include="wwwroot\Img\blog\blog-thumb-3.jpg" />
+    <None Include="wwwroot\Img\clients\client-1.jpg" />
+    <None Include="wwwroot\Img\custom-header-bg.jpg" />
+    <None Include="wwwroot\Img\custom-header.png" />
+    <None Include="wwwroot\Img\dark-and-light.jpg" />
+    <None Include="wwwroot\Img\details_close.png" />
+    <None Include="wwwroot\Img\details_open.png" />
+    <None Include="wwwroot\Img\device.png" />
+    <None Include="wwwroot\Img\favicon.ico" />
+    <None Include="wwwroot\Img\gallery\gallery-1.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-10.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-11.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-2.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-3.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-4.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-5.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-6.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-7.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-8.jpg" />
+    <None Include="wwwroot\Img\gallery\gallery-9.jpg" />
+    <None Include="wwwroot\Img\headers\header-1.png" />
+    <None Include="wwwroot\Img\headers\header-10.png" />
+    <None Include="wwwroot\Img\headers\header-11.png" />
+    <None Include="wwwroot\Img\headers\header-12.png" />
+    <None Include="wwwroot\Img\headers\header-13.png" />
+    <None Include="wwwroot\Img\headers\header-14.png" />
+    <None Include="wwwroot\Img\headers\header-2.png" />
+    <None Include="wwwroot\Img\headers\header-3.png" />
+    <None Include="wwwroot\Img\headers\header-4.png" />
+    <None Include="wwwroot\Img\headers\header-5.png" />
+    <None Include="wwwroot\Img\headers\header-6.png" />
+    <None Include="wwwroot\Img\headers\header-7.png" />
+    <None Include="wwwroot\Img\headers\header-8.png" />
+    <None Include="wwwroot\Img\headers\header-9.png" />
+    <None Include="wwwroot\Img\history-thumb-dark.png" />
+    <None Include="wwwroot\Img\history-thumb.png" />
+    <None Include="wwwroot\Img\holder.png" />
+    <None Include="wwwroot\Img\home-concept-dark.png" />
+    <None Include="wwwroot\Img\home-concept-icons-dark.png" />
+    <None Include="wwwroot\Img\home-concept-icons.png" />
+    <None Include="wwwroot\Img\home-concept-item-1.png" />
+    <None Include="wwwroot\Img\home-concept-item-2.png" />
+    <None Include="wwwroot\Img\home-concept-item-3.png" />
+    <None Include="wwwroot\Img\home-concept-item-dark.png" />
+    <None Include="wwwroot\Img\home-concept-item.png" />
+    <None Include="wwwroot\Img\home-concept-shadow.png" />
+    <None Include="wwwroot\Img\home-concept.png" />
+    <None Include="wwwroot\Img\icons\icon-user-16.png" />
+    <None Include="wwwroot\Img\icons\icon-user-24.png" />
+    <None Include="wwwroot\Img\icons\icon-user-48.png" />
+    <None Include="wwwroot\Img\layout-styles.png" />
+    <None Include="wwwroot\Img\list-primary.png" />
+    <None Include="wwwroot\Img\Logo-bco.png" />
+    <None Include="wwwroot\Img\logo-dark.png" />
+    <None Include="wwwroot\Img\logo-default-slim.png" />
+    <None Include="wwwroot\Img\logo-default.png" />
+    <None Include="wwwroot\Img\logo-footer-dark.png" />
+    <None Include="wwwroot\Img\logo-footer-small.png" />
+    <None Include="wwwroot\Img\logo-footer.png" />
+    <None Include="wwwroot\Img\logo-skin.png" />
+    <None Include="wwwroot\Img\logo-white.png" />
+    <None Include="wwwroot\Img\logo.png" />
+    <None Include="wwwroot\Img\logoimg.jpg" />
+    <None Include="wwwroot\Img\logos\LN-GROUP-BCO.jpg" />
+    <None Include="wwwroot\Img\logos\logo-1.png" />
+    <None Include="wwwroot\Img\logos\logo-2.png" />
+    <None Include="wwwroot\Img\logos\logo-3.png" />
+    <None Include="wwwroot\Img\logos\logo-4.png" />
+    <None Include="wwwroot\Img\logos\logo-5.png" />
+    <None Include="wwwroot\Img\logos\logo-6.png" />
+    <None Include="wwwroot\Img\map-bottom-dark.png" />
+    <None Include="wwwroot\Img\map-bottom.png" />
+    <None Include="wwwroot\Img\map-dark.png" />
+    <None Include="wwwroot\Img\map-top-dark.png" />
+    <None Include="wwwroot\Img\map-top.png" />
+    <None Include="wwwroot\Img\map.png" />
+    <None Include="wwwroot\Img\no_image.jpg" />
+    <None Include="wwwroot\Img\office-1.jpg" />
+    <None Include="wwwroot\Img\office-2.jpg" />
+    <None Include="wwwroot\Img\office-3.jpg" />
+    <None Include="wwwroot\Img\office-4.jpg" />
+    <None Include="wwwroot\Img\our-office-1.jpg" />
+    <None Include="wwwroot\Img\our-office-2.jpg" />
+    <None Include="wwwroot\Img\our-office-3.jpg" />
+    <None Include="wwwroot\Img\parallax-image.jpg" />
+    <None Include="wwwroot\Img\parallax-transparent.jpg" />
+    <None Include="wwwroot\Img\parallax.jpg" />
+    <None Include="wwwroot\Img\patterns\az_subtle.png" />
+    <None Include="wwwroot\Img\patterns\blizzard.png" />
+    <None Include="wwwroot\Img\patterns\bright_squares.png" />
+    <None Include="wwwroot\Img\patterns\denim.png" />
+    <None Include="wwwroot\Img\patterns\fancy_deboss.png" />
+    <None Include="wwwroot\Img\patterns\gray_jean.png" />
+    <None Include="wwwroot\Img\patterns\honey_im_subtle.png" />
+    <None Include="wwwroot\Img\patterns\linedpaper.png" />
+    <None Include="wwwroot\Img\patterns\linen.png" />
+    <None Include="wwwroot\Img\patterns\pw_maze_white.png" />
+    <None Include="wwwroot\Img\patterns\random_grey_variations.png" />
+    <None Include="wwwroot\Img\patterns\skin_side_up.png" />
+    <None Include="wwwroot\Img\patterns\stitched_wool.png" />
+    <None Include="wwwroot\Img\patterns\straws.png" />
+    <None Include="wwwroot\Img\patterns\subtle_grunge.png" />
+    <None Include="wwwroot\Img\patterns\textured_stripes.png" />
+    <None Include="wwwroot\Img\patterns\wild_oliva.png" />
+    <None Include="wwwroot\Img\patterns\worn_dots.png" />
+    <None Include="wwwroot\Img\pin.png" />
+    <None Include="wwwroot\Img\products\product-1.jpg" />
+    <None Include="wwwroot\Img\products\product-10.jpg" />
+    <None Include="wwwroot\Img\products\product-11.jpg" />
+    <None Include="wwwroot\Img\products\product-12.jpg" />
+    <None Include="wwwroot\Img\products\product-13.jpg" />
+    <None Include="wwwroot\Img\products\product-2.jpg" />
+    <None Include="wwwroot\Img\products\product-3.jpg" />
+    <None Include="wwwroot\Img\products\product-4.jpg" />
+    <None Include="wwwroot\Img\products\product-5.jpg" />
+    <None Include="wwwroot\Img\products\product-6.jpg" />
+    <None Include="wwwroot\Img\products\product-7-2.jpg" />
+    <None Include="wwwroot\Img\products\product-7-3.jpg" />
+    <None Include="wwwroot\Img\products\product-7.jpg" />
+    <None Include="wwwroot\Img\products\product-8.jpg" />
+    <None Include="wwwroot\Img\products\product-9.jpg" />
+    <None Include="wwwroot\Img\projects\project-1.jpg" />
+    <None Include="wwwroot\Img\projects\project-2.jpg" />
+    <None Include="wwwroot\Img\projects\project-3.jpg" />
+    <None Include="wwwroot\Img\projects\project-4.jpg" />
+    <None Include="wwwroot\Img\projects\project-5.jpg" />
+    <None Include="wwwroot\Img\projects\project-6.jpg" />
+    <None Include="wwwroot\Img\projects\project-7.jpg" />
+    <None Include="wwwroot\Img\projects\project-home-1.jpg" />
+    <None Include="wwwroot\Img\projects\project-home-2.jpg" />
+    <None Include="wwwroot\Img\projects\project-home-3.jpg" />
+    <None Include="wwwroot\Img\projects\project-thumb.jpg" />
+    <None Include="wwwroot\Img\projects\project.jpg" />
+    <None Include="wwwroot\Img\slides\CPR_Hooglede_Cam007_DefStill_20140704.jpg" />
+    <None Include="wwwroot\Img\slides\dark-cover.jpg" />
+    <None Include="wwwroot\Img\slides\DORPSTRAAT_DefStill_CamA_20130731_KP-SMALL.jpg" />
+    <None Include="wwwroot\Img\slides\light-cover.jpg" />
+    <None Include="wwwroot\Img\slides\mobile-device.png" />
+    <None Include="wwwroot\Img\slides\slide-1.jpg" />
+    <None Include="wwwroot\Img\slides\slide-2.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-3.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-4.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-5.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-full-2-dark.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-full-2.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-full.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg-light.jpg" />
+    <None Include="wwwroot\Img\slides\slide-bg.jpg" />
+    <None Include="wwwroot\Img\slides\slide-concept-2-1.png" />
+    <None Include="wwwroot\Img\slides\slide-concept-2-2.png" />
+    <None Include="wwwroot\Img\slides\slide-concept-2-3.png" />
+    <None Include="wwwroot\Img\slides\slide-concept-2-4.png" />
+    <None Include="wwwroot\Img\slides\slide-concept-2-5.png" />
+    <None Include="wwwroot\Img\slides\slide-concept-draft.png" />
+    <None Include="wwwroot\Img\slides\slide-concept.png" />
+    <None Include="wwwroot\Img\slides\slide-light-1.jpg" />
+    <None Include="wwwroot\Img\slides\slide-title-border-light.png" />
+    <None Include="wwwroot\Img\slides\slide-title-border.png" />
+    <None Include="wwwroot\Img\social-sprites.png" />
+    <None Include="wwwroot\Img\system.jpg" />
+    <None Include="wwwroot\Img\team\team-1.jpg" />
+    <None Include="wwwroot\Img\team\team-2.jpg" />
+    <None Include="wwwroot\Img\team\team-3.jpg" />
+    <None Include="wwwroot\Img\team\team-4.jpg" />
+    <None Include="wwwroot\Img\team\team-5.jpg" />
+    <None Include="wwwroot\Img\team\team-6.jpg" />
+    <None Include="wwwroot\Img\team\team-7.jpg" />
+    <None Include="wwwroot\Img\team\team-8.jpg" />
+    <None Include="wwwroot\Img\team\team-9.jpg" />
+    <None Include="wwwroot\Img\video-overlay.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BeginCollectionItemCore" Version="1.1.0" />
+    <PackageReference Include="BuildBundlerMinifier2022.Core" Version="6.0.0" />
+    <PackageReference Include="DinkToPdf" Version="1.0.8" />
+    <PackageReference Include="HtmlToPdfConverter.Core" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.7" />
+    <PackageReference Include="Rotativa.AspNetCore" Version="1.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Models\Account\" />
+    <Folder Include="Views\Projecten\Reports\" />
+  </ItemGroup>
+
+</Project>

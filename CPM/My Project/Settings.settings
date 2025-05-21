@@ -1,0 +1,102 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
+  <Profiles />
+  <Settings>
+    <Setting Name="ImageWebURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">http://www.groupln.be/Uploads/</Value>
+    </Setting>
+    <Setting Name="FacebookAccessTokenCopro" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">EAAIimmlGFwkBAD1Q4LYdDf63Es0mIJ1JVNae1dB4DattoX9bEO1GMRvBZBaFwVEmrcirC4dVhYLjkZA1pJnGDQ4mHdaHupApwSOzUBiBCTZBQ1LUMRFY6wLOmFMeZAGMeW802KZCP2YqjqFuybWqgZAfMIp35hp8UZD</Value>
+    </Setting>
+    <Setting Name="FacebookAppTokenCopro" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">600996539930377|Vu7n9p-HKTVLNup58TGDEQY3oos</Value>
+    </Setting>
+    <Setting Name="FacebookIDCopro" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">208486209193590</Value>
+    </Setting>
+    <Setting Name="FacebookAppId" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">600996539930377</Value>
+    </Setting>
+    <Setting Name="DeliveryDocLocalURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\04 - Klanten\02 - Opleveringsverslagen\</Value>
+    </Setting>
+    <Setting Name="ImageLocalURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\server.groupln.local\WEBSITES\Copro\Uploads\Pictures\</Value>
+    </Setting>
+    <Setting Name="PlanLocalURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\server.groupln.local\WEBSITES\Copro\Uploads\Plans\</Value>
+    </Setting>
+    <Setting Name="DocLocalURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\server.groupln.local\WEBSITES\Copro\Uploads\Docs\</Value>
+    </Setting>
+    <Setting Name="TemplateInvoiceBCO" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\nasarchive.groupln.local\data\BCO\Algemeen\Documenten\Standaard\template.docx</Value>
+    </Setting>
+    <Setting Name="CompanyStreetNr" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Klaverdries 53</Value>
+    </Setting>
+    <Setting Name="CompanyPostalcode" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">9031 Drongen</Value>
+    </Setting>
+    <Setting Name="CompanyEmail" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">info@bouwenconstructie.be</Value>
+    </Setting>
+    <Setting Name="CompanyWWW" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">www.bouwenconstructie.be</Value>
+    </Setting>
+    <Setting Name="CompanyName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">BCO BV</Value>
+    </Setting>
+    <Setting Name="CompanyVAT" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">BE 0464.670.778</Value>
+    </Setting>
+    <Setting Name="CompanyRPR" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">RPR GENT</Value>
+    </Setting>
+    <Setting Name="CompanyBankaccount" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">BE68 0015 1882 9434</Value>
+    </Setting>
+    <Setting Name="CompanyPhone" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">T +32 (0)9 216 49 50</Value>
+    </Setting>
+    <Setting Name="CompanyFax" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">F +32 (0)9 223 73 00</Value>
+    </Setting>
+    <Setting Name="TemplateInvoiceGroupLN" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">\\nasarchive.groupln.local\data\Group LN\Algemeen\Documenten\Standaard\Facturen\template.docx</Value>
+    </Setting>
+    <Setting Name="InvoiceFtpURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">BCO\Boekhouding\Facturatie\</Value>
+    </Setting>
+    <Setting Name="PlanWebURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">http://www.groupln.be/Uploads/</Value>
+    </Setting>
+    <Setting Name="DocWebURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">http://www.groupln.be/Uploads/</Value>
+    </Setting>
+    <Setting Name="InvoiceURLFTP" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">/BCO/Boekhouding/Facturatie/</Value>
+    </Setting>
+    <Setting Name="InvoiceURL" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">/BCO/Boekhouding/Facturatie/</Value>
+    </Setting>
+    <Setting Name="InvoiceURLGroupLN" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">/Group LN/Boekhouding/Facturatie/</Value>
+    </Setting>
+    <Setting Name="localTempPath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">E:\TFS\CPM\Temp\</Value>
+    </Setting>
+    <Setting Name="FTPHost" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">79.132.239.221</Value>
+    </Setting>
+    <Setting Name="FTPUser" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">latni</Value>
+    </Setting>
+    <Setting Name="FTPPassword" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">840683Pas</Value>
+    </Setting>
+    <Setting Name="FTPPort" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">1433</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

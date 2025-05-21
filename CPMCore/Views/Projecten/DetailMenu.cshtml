@@ -1,0 +1,153 @@
+﻿@model Int32
+@* <li>
+    <a href="@Url.Action("Detail", "Projecten", new {projectid = Model})" class="menu-item"> Project</a>
+
+</li>
+<li>
+    <a href="@Url.Action("Recalculation", "Projecten", new  {projectid = Model})" class="menu-item">Nacalculatie</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailContracts", "Projecten", new  {projectid = Model})" class="menu-item">Contracten</a>
+</li>
+<li>
+    <a href="@Url.Action("ProjectVacationDays", "Projecten", new  {projectid = Model})" class="menu-item">Verlofdagen project</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailPhotos", "Projecten", new  {projectid = Model})" class="menu-item"> Foto's</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailNews", "Projecten", new  {projectid = Model})" class="menu-item">Nieuws</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailClients", "Projecten", new  {projectid = Model})" class="menu-item">Klanten</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailUnits", "Projecten", new  {projectid = Model})" class="menu-item">Eenheden</a>
+</li>
+<li>
+    <a href="@Url.Action("Sales", "Projecten", new  {projectid = Model})" class="menu-item">Verkoop</a>
+</li>
+<li>
+    <a href="@Url.Action("Invoicing", "Projecten", new  {projectid = Model})" class="menu-item">Facturatie</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailDocs", "Projecten", new  {projectid = Model})" class="menu-item">Documenten</a>
+</li>
+<li>
+    <a href="@Url.Action("DetailInsurances", "Projecten", new  {projectid = Model})" class="menu-item">Vezekeringen</a>
+</li> *@
+
+<div class="inner-menu-toggle">
+    <a href="#" class="inner-menu-expand" data-open="inner-menu">
+        Toon Menu <i class="fas fa-chevron-right"></i>
+    </a>
+</div>
+<menu id="content-menu" class="inner-menu" role="menu">
+	<div class="nano has-scrollbar">
+		<div class="nano-content" tabindex="0" style="right: -15px;">
+
+			<div class="inner-menu-toggle-inside">
+				<a href="#" class="inner-menu-collapse">
+					<i class="fas fa-chevron-up d-inline-block d-md-none"></i><i class="fas fa-chevron-left d-none d-md-inline-block"></i> Verberg Menu
+				</a>
+
+				<a href="#" class="inner-menu-expand" data-open="inner-menu">
+					Toon Menu <i class="fas fa-chevron-down"></i>
+				</a>
+			</div>
+
+			<div class="inner-menu-content">
+				@{
+					var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+					var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+					var projectId = Model; // Pas dit aan indien je `Model` geen id is.
+				}
+				<h6 class="title">ALGEMEEN</h6>
+				<ul class="list-unstyled mt-3 pt-3">
+					<li>
+						<a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "Detail" && currentController == "Projecten" ? "active" : "")">
+							Project
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailClients", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailClients" && currentController == "Projecten" ? "active" : "")">
+							Klanten
+						</a>
+					</li>
+				</ul>	
+
+				<h6 class="title">DETAILS</h6>
+				<ul class="list-unstyled mt-3 pt-3">
+					<li>
+						<a href="@Url.Action("ProjectVacationDays", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "ProjectVacationDays" && currentController == "Projecten" ? "active" : "")">
+							Verlofdagen project
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailPhotos" && currentController == "Projecten" ? "active" : "")">
+							Foto's
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailNews", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailNews" && currentController == "Projecten" ? "active" : "")">
+							Nieuws
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailUnits", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailUnits" && currentController == "Projecten" ? "active" : "")">
+							Eenheden
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailDocs" && currentController == "Projecten" ? "active" : "")">
+							Documenten
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailInsurances", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailInsurances" && currentController == "Projecten" ? "active" : "")">
+							Vezekeringen
+						</a>
+					</li>
+				</ul>
+
+				<h6 class="title">FINANCIEEL</h6>
+				<ul class="list-unstyled mt-3 pt-3">
+					<li>
+						<a href="@Url.Action("Sales", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "Sales" && currentController == "Projecten" ? "active" : "")">
+							Verkoop
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("Invoicing", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "Invoicing" && currentController == "Projecten" ? "active" : "")">
+							Facturatie
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "Recalculation" && currentController == "Projecten" ? "active" : "")">
+							Nacalculatie
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailContracts", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailContracts" && currentController == "Projecten" ? "active" : "")">
+							Contracten
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		<div class="nano-pane" style="opacity: 1; visibility: visible; display: none;"><div class="nano-slider" style="height: 1171px; transform: translate(0px, 0px);"></div></div>
+	</div>
+</menu>
+

@@ -1,0 +1,24 @@
+﻿@model BOCore.UnitBO
+<section class="card">
+	<header class="card-header">
+		<h2 class="card-title">Eenheid verwijderen?</h2>
+	</header>
+	<div class="card-body">
+		<div class="modal-wrapper">
+			<div class="modal-icon">
+				<i class="fas fa-question-circle"></i>
+			</div>
+			<div class="modal-text">
+				<p>U staat op het punt om de eenheid met naam "@Model.Type.Name @Model.Name"  te verwijderen. Bent u zeker dat u deze wilt verwijderen?</p>
+			</div>
+		</div>
+	</div>
+	<footer class="card-footer">
+		<div class="row">
+			<div class="col-md-12 text-end">
+				<a href="@Url.Action("DeleteUnit", "Projecten", new {id = Model.Id,projectid = Model.ProjectId})" class="btn btn-warning">Verwijderen</a>
+				<button class="btn btn-default modal-dismiss">Annuleren</button>
+			</div>
+		</div>
+	</footer>
+</section>

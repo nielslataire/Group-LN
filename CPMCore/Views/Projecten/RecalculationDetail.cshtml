@@ -1,0 +1,252 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectRecalculationDetailModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = Model.ProjectName + " - Nacalculatie";
+}
+@* @{
+	ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+		new Breadcrumb("Klanten", nameof(ProjectenController.DetailClients), "Projecten", false)
+	};
+} *@
+@{
+    String urlTotal = "";
+}
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+<link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="inner-toolbar clearfix">
+                <ul>
+                    @foreach (var group in Model.ActivityGroups)
+                    {
+                        @if (group.ID == Model.GroupID)
+                        {
+                            <li class="background-color-primary">
+                                <span style="color:#FFF">@group.Name</span>
+                            </li>
+                        }
+                        else
+                        {
+                            <li>
+                                <a href="@Url.Action("RecalculationDetail", "Projecten", new { projectid = Model.ProjectId, groupid = group.ID, activityid = 0 })">@group.Name</a>
+                            </li>
+                        }
+
+                    }
+                </ul>
+            </div>
+            @Html.HiddenFor(m => m.ProjectId, new { id = "txtProjectId" })
+            <div class="tabs pt-5">
+                <ul class="nav nav-tabs" role="tablist">
+
+                    @{
+                        var group2 = Model.ActivityGroups.SingleOrDefault(m => m.ID == Model.GroupID);
+                        var filteredActivities = group2?.Activities
+                        .Where(m => Model.Contracts.Any(a => a.Activities.Any(i => i.Activity.ID == m.ID))
+                        || Model.BudgetActivities.Any(l => l.Activity.ID == m.ID)
+                        || Model.IncommingInvoicesActivities.Any(l => l.Activity.ID == m.ID))
+                        .OrderBy(o => o.Name);
+                    }
+
+                    @if (filteredActivities != null)
+                    {
+                        @foreach (var activity in filteredActivities)
+                        {
+                            bool isActive = Model.ActivityID == 0
+                            ? activity == filteredActivities.First()
+                            : activity.ID == Model.ActivityID;
+
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link @(isActive ? "active" : "")"
+                                   href="#act-@activity.ID"
+                                   data-bs-toggle="tab"
+                                   role="tab"
+                                   aria-selected="@(isActive ? "true" : "false")">
+                                    @activity.Name
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+                <div class="tab-content">
+                    @if (filteredActivities != null)
+                    {
+                        @foreach (var activity in filteredActivities)
+                        {
+                            bool isActive = Model.ActivityID == 0
+                            ? activity == filteredActivities.First()
+                            : activity.ID == Model.ActivityID;
+
+                            <div id="act-@activity.ID" class="tab-pane fade @(isActive ? "show active" : "")" role="tabpanel">
+                                @foreach (var comp in Model.IncommingInvoicesActivities
+                               .Where(i => i.Activity.ID == activity.ID)
+                               .GroupBy(m => m.Company.ID)
+                               .Select(m => m.FirstOrDefault()))
+                                {
+                                    <h3 class="text-primary">@comp.Company.Display</h3>
+                                    <div class="datatables-header-footer-wrapper mt-2 mb-4">
+                                        <table class="table table-ecommerce-simple table-striped mb-0 datatable-invoices-list"
+                                               id="datatable-invoices-list"
+                                               style="min-width: 550px;"
+                                               data-toggle="table"
+                                               data-show-columns="true"
+                                               data-toolbar-align="right">
+                                            <thead>
+                                                <tr>
+                                                    <th width="10%">Fact nr.</th>
+                                                    <th width="10%" data-sortable="true">Datum</th>
+                                                    <th data-sortable="true">Omschrijving</th>
+                                                    <th width="10%" data-sortable="true">Type</th>
+                                                    <th width="10%" data-sortable="true">Prijs</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var invoice in Model.IncommingInvoicesActivities
+                                               .Where(m => m.Company.ID == comp.Company.ID && m.Activity.ID == activity.ID))
+                                                {
+                                                    <tr>
+                                                        <td><a href="@Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = Model.ProjectId, invoiceid = invoice.InvoiceId })">@invoice.ExternalInvoiceId</td>
+                                                        <td data-order="@invoice.Invoicedate.ToString("yyyy-MM-dd")">
+                                                            @Html.DisplayFor(m => invoice.Invoicedate)
+                                                        </td>
+                                                        <td>@invoice.Description</td>
+                                                        <td>@Html.DisplayFor(m => invoice.IncommingInvoiceType)</td>
+                                                        <td>@Html.DisplayFor(m => invoice.Price)</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                @foreach (var cont in Model.ContractsWithoutInvoices
+                               .Where(i => i.Activities.Any(a => a.Activity.ID == activity.ID)))
+                                {
+                                    <h3 class="text-primary">@cont.Company.Display</h3>
+                                    <div class="datatables-header-footer-wrapper mt-2 mb-4">
+                                        <table class="table table-ecommerce-simple table-striped mb-0 datatable-invoices-list"
+                                               id="datatable-invoices-list"
+                                               style="min-width: 550px;"
+                                               data-toggle="table"
+                                               data-show-columns="true"
+                                               data-toolbar-align="right">
+                                            <thead>
+                                                <tr>
+                                                    <th width="10%">Fact nr.</th>
+                                                    <th width="10%" data-sortable="true">Datum</th>
+                                                    <th data-sortable="true">Omschrijving</th>
+                                                    <th width="10%" data-sortable="true">Type</th>
+                                                    <th width="10%" data-sortable="true">Prijs</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</section>
+<div id="modaldeleteclient" class="modal-block modal-block-primary mfp-hide">
+    <div id="delete-client-container"></div>
+</div>
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/rowGroup.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+            new DataTable('.datatable-invoices-list', {
+                paging: false,
+                searching: false,
+                info: false,
+                lengthChange: false,
+                columnDefs: [
+                { targets: 0, orderable: true, type: 'string' } // Eerste kolom: niet sorteerbaar én string type
+                ],
+                language: {
+                    processing:     "Bezig met verwerken...",
+                    search:         "Zoeken&nbsp;:",
+                    lengthMenu:    "Afficher _MENU_ &eacute;l&eacute;ments",
+                    info:           "Klant _START_ tot _END_ van de _TOTAL_ Klanten",
+                    infoEmpty:      "Klant 0 van 0 tot 0 Klanten",
+                    infoFiltered:   "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
+                    infoPostFix:    "",
+                    loadingRecords: "Bezig met laden...",
+                    zeroRecords:    "Geen facturen om weer te geven",
+                    emptyTable:     "Er zijn geen facturen om weer te geven",
+                    aria: {
+                        sortAscending:  ": klikken om aflopend te sorteren",
+                        sortDescending: ": klikken om oplopend te sorteren"
+                    }
+                },
+                order: [[1, 'asc']],
+                rowGroup: {
+                    dataSrc: 3,
+                    endRender: function(rows, group) {
+                        let total = 0;
+                        rows.nodes().each(function(row) {
+                            let text = $(row).find('td:eq(4)').text().trim();
+
+                            // Verwijder € en spaties, vervang duizendtallen en decimaal
+                            text = text.replace(/[^\d,.-]/g, '')       // € en spaties weg
+                                       .replace(/\./g, '')             // duizendtallen weg
+                                       .replace(',', '.');             // komma → punt
+
+                            const value = parseFloat(text) || 0;
+                            total += value;
+                        });
+
+                        return $('<tr/>')
+                            .append('<td colspan="4" style="text-align: right;"><strong>Totaal voor ' + group + ':</strong></td>')
+                                .append('<td style="text-align: right;"><strong>€ ' + total.toLocaleString('nl-BE', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2
+                            }) + '</strong></td>');
+                    }
+                },
+            });
+
+        $('.deleteClient').click(function () {
+            var url = "/Klanten/PartialDeleteClientModal"; // the url to the controller
+            var id = $(this).attr('data-id'); // the id that's given to each button in the list
+            $.get(url + '/' + id, function (data) {
+
+                $('#delete-client-container').html(data);
+            });
+        });
+    $(document).ready(function () {
+        $('.deleteClient').magnificPopup({
+            type: 'inline',
+            src: 'deleteClient',
+        });       
+    });
+
+    </script>
+}

@@ -1,0 +1,336 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.EditUnitModel;
+
+@{
+	ViewData["Title"] = "Project - " + Model.ProjectName;
+}
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+
+}
+
+
+<h2 class="font-weight-bold text-6">Eenheid bewerken</h2>
+@using (Html.BeginForm("EditUnit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+{
+@* 	@Html.AntiForgeryToken() *@
+	@Html.HiddenFor(m => m.Unit.Id, new {id = "unitid"})
+	@Html.HiddenFor(m => m.Unit.ClientAccountId)
+	@Html.HiddenFor(m => m.Unit.IsLink)
+	@Html.HiddenFor(m => m.ProjectId, new {id = "projectid"})
+	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
+	<div class="row mt-2">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="row">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<i class="card-big-info-icon bx bx-box"></i>
+							<h2 class="card-big-info-title">Algemene info</h2>
+							<p class="card-big-info-desc">Voeg hier de algemene info van de eenheid in.</p>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.Name, new { @class = "form-control form-control-modern", id = "txtNaam", placeholder = "naam van de eenheid" })
+								</div>
+							</div>
+							<div class="form-group">
+								<div class="row align-items-center pb-3">
+									<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Adres</label>
+									<div class="col-lg-5 col-xl-4">
+										@Html.TextBoxFor(m => m.Unit.Street, new { @class = "form-control form-control-modern", id = "txtStraat", placeholder = "straat" })
+									</div>
+									<div class="col-lg-1 col-xl-1">
+										@Html.TextBoxFor(m => m.Unit.HouseNumber, new { @class = "form-control form-control-modern", id = "txtHuisnr", placeholder = "nr" })
+									</div>
+									<div class="col-lg-1 col-xl-1">
+										@Html.TextBoxFor(m => m.Unit.BusNumber, new { @class = "form-control form-control-modern", id = "txtBusnr", placeholder = "bus" })
+									</div>
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Kadaster</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.PreKad, new { @class = "form-control form-control-modern", id = "txtKadaster", placeholder = "kadastraal nummer" })
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Aandeel in de basisakte</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.Landshare, new { @class = "form-control form-control-modern", id = "txtTienduizend", placeholder = "geef het aantal aandelen in de basisakte in", type = "number" })
+								</div>
+							</div>
+							<div class="form-group row align-items-center pb-3">
+								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Verdieping</label>
+								<div class="col-lg-7 col-xl-6">
+									@Html.TextBoxFor(m => m.Unit.Level, new { @class = "form-control form-control-modern", id = "txtVerdieping", placeholder = "Geef het nummer van de verdieping in", type = "number" })
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row mt-4">
+		<div class="col">
+			<section class="card card-modern card-big-info">
+				<div class="card-body">
+					<div class="tabs-modern row" style="min-height: 490px;">
+						<div class="col-lg-2-5 col-xl-1-5">
+							<div class="nav flex-column" id="tab" role="tablist" aria-orientation="vertical">
+								<a class="nav-link active" id="types-tab" data-bs-toggle="pill" data-bs-target="#types" role="tab" aria-controls="types" aria-selected="false"><i class="bx bxs-building-house me-2"></i> Types</a>
+								<a class="nav-link" id="bedragen-tab" data-bs-toggle="pill" data-bs-target="#bedragen" role="tab" aria-controls="bedragen" aria-selected="false"><i class="bx bx-euro me-2"></i> Bedragen</a>
+								<a class="nav-link" id="oppervlaktes-tab" data-bs-toggle="pill" data-bs-target="#oppervlaktes" role="tab" aria-controls="oppervlaktes" aria-selected="false"><i class="fa fa-ruler me-2"></i> Oppervlaktes</a>
+								<a class="nav-link" id="indeling-tab" data-bs-toggle="pill" data-bs-target="#indeling" role="tab" aria-controls="indeling" aria-selected="false"><i class="bx bx-cabinet me-2"></i> Indeling</a>
+								<a class="nav-link" id="documenten-tab" data-bs-toggle="pill" data-bs-target="#documenten" role="tab" aria-controls="documenten" aria-selected="false"><i class="bx bx-file me-2"></i> Documenten</a>
+							</div>
+						</div>
+						<div class="col-lg-3-5 col-xl-4-5">
+							<div class="tab-content" id="tabContent">
+								<div class="tab-pane fade show active" id="types" role="tabpanel" aria-labelledby="types-tab">
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
+										<div class="col-lg-7 col-xl-6">
+											@Html.DropDownListFor(m => m.SelectedGroupType, new SelectList(Model.GroupTypes, "Id", "Name", Model.SelectedGroupType), "Selecteer...", new { @class = "form-control form-control-modern populate", id = "lstGroupTypes" })
+										</div>
+									</div>
+
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Subtype</label>
+										<div class="col-lg-7 col-xl-6">
+											@Html.DropDownListFor(m => m.SelectedType, new SelectList(Model.Types, "Id", "Name", Model.SelectedType), "Selecteer...", new { @class = "form-control form-control-modern populate", id = "lstTypes" })
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Koppelen aan hoofdeenheid</label>
+										<div class="col-lg-7 col-xl-6">
+											@Html.DropDownListFor(m => m.Unit.AttachedUnitsId, new SelectList(Model.AttachableUnits, "ID", "Display", Model.Unit.AttachedUnitsId, "Group"), "Selecteer...", new { @class = "form-control form-control-modern populate", data_plugin_selecttwo = "", id = "lstAttachableUnits" })
+										</div>
+									</div>
+								</div>
+								<div class="tab-pane fade show" id="bedragen" role="tabpanel" aria-labelledby="bedragen-tab">
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondwaarde</label>
+										<div class="col-lg-7 col-xl-6">
+											@Html.EditorFor(m => m.Unit.LandValue)
+										</div>
+									</div>
+									<div class="form-group">
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bouwwaardes</label>
+											<div class="col-lg-7 col-xl-6">
+												<table>
+													<tbody id="ConstructionValueRows">
+														@foreach (var item in Model.ConstructionValues)
+														{
+															@await Html.PartialAsync("_ConstructionValueRow", item)
+														}
+													</tbody>
+												</table>
+											</div>
+										</div>
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
+											<div class="col-md-3">
+												<button class="btn btn-default btn-block " type="button" id="btnAddConstructionValue"><i class="fa fa-plus mr-md"></i> Bouwwaarde toevoegen</button>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="tab-pane fade show" id="oppervlaktes" role="tabpanel" aria-labelledby="oppervlaktes-tab">
+									<div class="form-group row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondoppervlakte</label>
+										<div class="col-lg-7 col-xl-6">
+											@Html.EditorFor(m => m.Unit.GroundSurface)
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3 form-control-sm">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bewoonbare oppervlakte</label>
+										<div class="col-lg-7 col-xl-6">
+											@Html.EditorFor(m => m.Unit.Surface)
+										</div>
+									</div>
+								</div>
+								<div class="tab-pane fade show" id="indeling" role="tabpanel" aria-labelledby="indeling-tab">
+									<div id="RoomRows" class="ecommerce-attributes-wrapper">
+										@foreach(var item in Model.Rooms)
+										{
+											@await Html.PartialAsync("_RoomEditorRow", item)
+										}
+									</div>
+									<div class="row justify-content-center mt-4">
+										<div class="col-xl-9 text-end">
+											<a href="#" class="ecommerce-attribute-add-new btn btn-primary btn-px-4 btn-py-2" id="btnAddRoom">+ Ruimte toevoegen</a>
+										</div>
+									</div>
+								</div>
+								<div class="tab-pane fade show" id="documenten" role="tabpanel" aria-labelledby="documenten-tab">
+									<div class="form-group row pb-4">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2">Verkoopplan opladen</label>
+										<div class="col-lg-7 col-xl-6">
+											@if (Model.Unit.Plan is null)
+											{
+												<div class="fileupload fileupload-new w-100" data-provides="fileupload">
+													<div class="input-append d-flex w-100 gap-2">
+														<div class="uneditable-input d-flex flex-grow-1 align-items-center gap-2">
+															<span class="fileupload-preview flex-grow-1 text-truncate"></span>
+														</div>
+														<span class="btn btn-default btn-file">
+															<span class="fileupload-exists">Wijzig</span>
+															<span class="fileupload-new">Selecteer bestand</span>
+															<input type="file" accept=".pdf" formnovalidate="formnovalidate" />
+														</span>
+														<a href="#" class="btn btn-default fileupload-exists" data-dismiss="fileupload">Verwijder</a>
+													</div>
+												</div>
+											}
+											else
+											{
+												<div class="fileupload fileupload-exists w-100" data-provides="fileupload" data-name="Unit.Plan">
+													@Html.HiddenFor(m => m.Unit.Plan, new {name = "myimage"})
+													<div class="input-append d-flex w-100 gap-2">
+														<div class="uneditable-input d-flex flex-grow-1 align-items-center gap-2">
+															<span class="fileupload-preview flex-grow-1 text-truncate">@Model.Unit.Plan</span>
+														</div>
+														<span class="btn btn-default btn-file">
+															<span class="fileupload-exists">Wijzig</span>
+															<span class="fileupload-new">Selecteer bestand</span>
+															<input type="file" accept=".pdf" formnovalidate="formnovalidate" />
+														</span>
+														<a href="#" class="btn btn-default fileupload-exists" data-dismiss="fileupload">Verwijder</a>
+													</div>
+												</div>
+											}
+											@* <div class="fileinput fileinput-new input-group" data-provides="fileinput">
+												<div class="form-control" data-trigger="fileinput"><i class="fa fa-file-pdf-o fileinput-exists"></i> <span class="fileinput-filename"></span></div>
+												<span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Selecteren</span><span class="fileinput-exists">Wijzigen</span><input type="file" name="file" id="file" accept=".pdf"></span>
+												<a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Verwijderen</a>
+											</div> *@
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</div>
+	<div class="row action-buttons">
+		<div class="col-12 col-md-auto">
+			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+				<i class="bx bx-save text-4 me-2"></i> Eenheid opslaan
+			</button>
+		</div>
+		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+		</div>
+		
+	</div>
+}
+
+
+@section PageScripts
+{
+	<script src="~/lib/select2/js/select2.js"></script>
+	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+	<script src="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.js"></script>
+	<script src="~/lib/jquery-mask/jquery.mask.js"></script>
+
+	<script>
+		//BIJ VERANDEREN VAN HOOFDTYPE
+		 $('#lstGroupTypes').on('change', function () {
+
+			var val = $(this).val();
+			if(val){
+
+				var subitems = "";
+				$.getJSON("@Url.Action("GetSubType", "Projecten")", { id: val }, function (data) {
+					$.each(data,function(index, item){
+						subitems+="<option value='"+item.id+"'>"+item.display+"</option>"
+					});
+					$('#lstTypes').html(subitems);
+					$('#lstTypes').attr("disabled", false);
+
+				});
+			}
+			else {
+
+				$('#lstTypes').attr("disabled", true);
+			}
+
+		});
+				// on first focus (bubbles up to document), open the menu
+		$(document).on('focus', '.select2-selection.select2-selection--single', function (e) {
+		  $(this).closest(".select2-container").siblings('select:enabled').select2('open');
+		});
+
+		// steal focus during close - only capture once and stop propogation
+		$('select.select2').on('select2:closing', function (e) {
+		  $(e.target).data("select2").$selection.one('focus focusin', function (e) {
+			e.stopPropagation();
+		  });
+		});
+		// //maskedinput op textboxes uitvoeren
+		$('.Currencymask').mask("#.##0,00", {reverse: true});
+		$('.Surfacemask').mask("#.##0,00", {reverse: true});
+		
+		// jQuery(function ($) {
+		// 	$('.Currencymask').autoNumeric('init',{aSep:".",aDec:",",unformatOnSubmit:true};  //autoNumeric with defaults
+		// });
+		// 		jQuery(function ($) {
+		// 	$('.Surfacemask').autoNumeric('init',{aSep:".",aDec:",",unformatOnSubmit:true});  //autoNumeric with defaults
+		// });
+		//Nieuw rij bij indeling
+			  $("#btnAddRoom").click(function() {
+			$.ajax({
+				url: "BlankRoomRow",
+				data: { unitid: @Model.Unit.Id},
+				cache: false,
+				traditional: true,
+				type: 'POST',
+				success: function(html) {
+					$("#RoomRows").append(html);
+
+				}
+			});
+			return false;
+		});
+		//Nieuwe rij met bouwwaardes toevoegen
+				$("#btnAddConstructionValue").click(function() {
+			$.ajax({
+				url: "BlankConstructionValueRow",
+				data: { unitid:0, projectid:@Model.ProjectId},
+				cache: false,
+				traditional: true,
+				type: 'POST',
+				success: function(html) {
+					$("#ConstructionValueRows").append(html);
+
+				}
+			});
+			return false;
+		});
+		//indeling verwijderen
+			 $(document).on('click', 'a.deleteRow', function () { // <-- changes
+			$(this).closest('div').parent('div').remove();
+			return false;
+		});
+		//Bouwwaarde verwijderen
+		$(document).on('click', 'a.deleteConstructionRow', function () { // <-- changes
+			$(this).closest('tr').remove();
+			return false;
+		});
+</script>
+}

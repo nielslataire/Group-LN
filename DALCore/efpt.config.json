@@ -1,0 +1,321 @@
+﻿{
+   "CodeGenerationMode": 4,
+   "ContextClassName": "cpmRunningContext",
+   "ContextNamespace": null,
+   "FilterSchemas": false,
+   "IncludeConnectionString": true,
+   "ModelNamespace": null,
+   "OutputContextPath": null,
+   "OutputPath": "Models",
+   "PreserveCasingWithRegex": true,
+   "ProjectRootNamespace": "DALCore",
+   "Schemas": null,
+   "SelectedHandlebarsLanguage": 2,
+   "SelectedToBeGenerated": 0,
+   "T4TemplatePath": null,
+   "Tables": [
+      {
+         "Name": "[dbo].[__MigrationHistory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Activity]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ActivityGroup]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_Applications]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_Membership]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_Paths]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_PersonalizationAllUsers]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_PersonalizationPerUser]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_Profile]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_Roles]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_SchemaVersions]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_Users]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_UsersInRoles]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[aspnet_WebEvent_Events]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[AspNetRoles]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[AspNetUserClaims]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[AspNetUserLogins]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[AspNetUserRoles]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[AspNetUsers]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[BadWeatherDays]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ChangeOrder]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ChangeOrderDetail]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientAccount]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientContacts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientGift]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientGiftActivity]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientOwnerType]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientPOA]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientPOAActivity]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CompanyActivity]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CompanyContacts]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CompanyDepartments]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CompanyInfo]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Contract]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ContractActivity]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Country]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[CustomerProject]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[IncommingInvoiceDetail]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[IncommingInvoices]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InsuranceCompanies]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Insurances]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Invoices]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoicesDetails]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoicingPaymentGroup]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoicingPaymentStages]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Permission]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PermissionPerUser]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PostalCode]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Project]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectBudget]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectDocs]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectLevels]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectNews]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectPictures]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectSalesSettings]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectStatus]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Provincie]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Setting]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UnitConstructionValue]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UnitGroupTypes]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UnitRooms]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Units]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UnitTypes]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UserCompany]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Users]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UtilityPercentage]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[VacationDays]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[VATtype]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[WheaterStations]",
+         "ObjectType": 0
+      }
+   ],
+   "UiHint": null,
+   "UncountableWords": null,
+   "UseAsyncStoredProcedureCalls": true,
+   "UseBoolPropertiesWithoutDefaultSql": false,
+   "UseDatabaseNames": false,
+   "UseDatabaseNamesForRoutines": true,
+   "UseDateOnlyTimeOnly": true,
+   "UseDbContextSplitting": false,
+   "UseDecimalDataAnnotationForSprocResult": true,
+   "UseFluentApiOnly": true,
+   "UseHandleBars": false,
+   "UseHierarchyId": false,
+   "UseInflector": false,
+   "UseInternalAccessModifiersForSprocsAndFunctions": false,
+   "UseLegacyPluralizer": false,
+   "UseManyToManyEntity": false,
+   "UseNoDefaultConstructor": false,
+   "UseNoNavigations": false,
+   "UseNoObjectFilter": false,
+   "UseNodaTime": false,
+   "UseNullableReferences": false,
+   "UsePrefixNavigationNaming": false,
+   "UseSchemaFolders": false,
+   "UseSchemaNamespaces": false,
+   "UseSpatial": false,
+   "UseT4": false,
+   "UseT4Split": false
+}

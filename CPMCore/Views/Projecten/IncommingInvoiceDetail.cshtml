@@ -1,0 +1,502 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectIncommingInvoiceModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = Model.ProjectName + " - Factuur detail";
+}
+@* @{
+	ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+		new Breadcrumb("Klanten", nameof(ProjectenController.DetailClients), "Projecten", false)
+	};
+} *@
+@{
+    String urlTotal = "";
+}
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+<style>
+    .select2-container--default .select2-selection--multiple {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    height: auto;
+    min-height: 38px;
+    }
+
+    .select2-container--default .select2-selection--single {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    height: 38px;
+    padding: 0.375rem 0.75rem;
+    }
+
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 0.2rem;
+    color: #495057;
+    }
+
+</style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            <h2 class="font-weight-bold text-6">Factuur @Model.Company.Bedrijfsnaam - @Model.IncommingInvoice.InvoiceExternalId</h2>
+            <div class="row">
+                <div class="col-xl-4 mb-4 mb-xl-0">
+
+                    <div class="card card-modern">
+                        <div class="card-header">
+                            <h2 class="card-title">Algemeen</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="col-xl-auto ps-xl-5">
+                                <h3 class="text-color-dark font-weight-bold text-4 line-height-1 mt-0 mb-3">PROJECT - @Model.ProjectName</h3>
+                                <strong class="d-block text-color-dark">Leverancier:</strong>
+                                @Model.Company.Bedrijfsnaam
+                                <strong class="d-block text-color-dark mt-3">Factuurdatum:</strong>
+                                @Html.DisplayFor(m => m.IncommingInvoice.IncommingInvoiceDate)
+                                <strong class="d-block text-color-dark mt-3">Externe factuurnr:</strong>
+                                <a href="tel:+5551234" class="text-color-dark">@Model.IncommingInvoice.InvoiceExternalId</a>
+                                <strong class="d-block text-color-dark mt-3">Totaalprijs:</strong>
+                                <a href="tel:+5551234" class="text-color-dark">@Html.DisplayFor(m => m.IncommingInvoice.InvoicePrice)</a>
+                            </div>
+                            @* 										<div class="form-row">
+											<div class="form-group col mb-3">
+												<label>Status</label>
+												<select class="form-control form-control-modern select2-hidden-accessible" name="orderStatus" required="" data-select2-id="1" tabindex="-1" aria-hidden="true">
+													<option value="on-hold" selected="" data-select2-id="3">On Hold</option>
+													<option value="pending">Pending Payment</option>
+													<option value="processing">Processing</option>
+													<option value="completed">Completed</option>
+													<option value="cancelled">Cancelled</option>
+													<option value="refunded">Refunded</option>
+													<option value="failed">Failed</option>
+												</select><span class="select2 select2-container select2-container--bootstrap" dir="ltr" data-select2-id="2" style="width: 470.984px;"><span class="selection"><span class="select2-selection select2-selection--single" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="0" aria-disabled="false" aria-labelledby="select2-orderStatus-b6-container"><span class="select2-selection__rendered" id="select2-orderStatus-b6-container" role="textbox" aria-readonly="true" title="On Hold"><span class="ecommerce-status on-hold">On Hold</span></span><span class="select2-selection__arrow" role="presentation"><b role="presentation"></b></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+											</div>
+										</div>
+										<div class="form-row">
+											<div class="form-group col mb-3">
+												<label>Date Created</label>
+												<div class="date-time-field">
+													<div class="date">
+														<input type="text" class="form-control form-control-modern" name="orderDate" value="2019-11-21" required="" data-plugin-datepicker="" data-plugin-options="{&quot;orientation&quot;: &quot;bottom&quot;, &quot;format&quot;: &quot;yyyy-mm-dd&quot;}">
+													</div>
+													<div class="time">
+														<span class="px-2">@</span>
+														<input type="text" class="form-control form-control-modern text-center" name="orderTimeHour" value="10" required="">
+														<span class="px-2">:</span>
+														<input type="text" class="form-control form-control-modern text-center" name="orderTimeMin" value="28" required="">
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="form-row">
+											<div class="form-group col mb-3">
+												<label>Customer</label>
+												<select class="form-control form-control-modern select2-hidden-accessible" name="orderCustomer" required="" data-plugin-selecttwo="" data-select2-id="4" tabindex="-1" aria-hidden="true">
+													<option value="21" selected="" data-select2-id="6">John Doe</option>
+													<option value="33">Monica Doe</option>
+													<option value="55">Robert Doe</option>
+													<option value="60">Tim Doe</option>
+												</select><span class="select2 select2-container select2-container--bootstrap" dir="ltr" data-select2-id="5" style="width: 470.984px;"><span class="selection"><span class="select2-selection select2-selection--single" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="0" aria-disabled="false" aria-labelledby="select2-orderCustomer-qg-container"><span class="select2-selection__rendered" id="select2-orderCustomer-qg-container" role="textbox" aria-readonly="true" title="John Doe">John Doe</span><span class="select2-selection__arrow" role="presentation"><b role="presentation"></b></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span>
+											</div>
+										</div> *@
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-xl-8">
+
+                    <div class="card card-modern">
+                        <div class="card-header">
+                            @if (Model.Contract.Id != 0)
+                            {
+                                <h2 class="card-title">Contractgegevens</h2>
+                            }
+                            else
+                            {
+                                <h2 class="card-title">Factuurgegevens</h2>
+                            }
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-xl-auto me-xl-5 pe-xl-5 mb-4 mb-xl-0">
+                                    <h3 class="text-color-dark font-weight-bold text-4 line-height-1 mt-0 mb-3">ADRES</h3>
+                                    <ul class="list list-unstyled list-item-bottom-space-0">
+                                        <li>@Model.Company.Straat @Model.Company.Huisnummer @if(Model.Company.Busnummer is not null){@Html.Raw("/")@Model.Company.Busnummer}</li>
+                                        <li>@Model.Company.Postcode.Postcode @Model.Company.Postcode.Gemeente</li>
+                                        <li>@Model.Company.Postcode.Country.Name.ToUpper()</li>
+                                    </ul>
+                                    <strong class="d-block text-color-dark">Email adres:</strong>
+                                    @if(Model.Company.Email is not null)
+                                    {
+                                        <a href="mailto:@Model.Company.Email">@Model.Company.Email</a>
+                                    }
+                                    else
+                                    {
+                                        <span>geen mail opgegeven</span>
+                                    }
+                                    @if (Model.Company.GSM is not null)
+                                    {
+                                        <strong class="d-block text-color-dark mt-3">Mobiel:</strong>
+                                        <a href="tel:@Model.Company.GSM" class="text-color-dark">@Model.Company.GSM</a>
+                                    }
+                                    @if (Model.Company.Telefoon1 is not null)
+                                    {
+                                        <strong class="d-block text-color-dark mt-3">Telefoon:</strong>
+                                        <a href="tel:@Model.Company.Telefoon1" class="text-color-dark">@Model.Company.Telefoon1</a>
+                                    }
+                                    @if (Model.Company.Telefoon2 is not null)
+                                    {
+                                        <strong class="d-block text-color-dark mt-3">Telefoon:</strong>
+                                        <a href="tel:@Model.Company.Telefoon2" class="text-color-dark">@Model.Company.Telefoon2</a>
+                                    }
+
+                                </div>
+                                <div class="col-xl-auto ps-xl-5">
+                                    @if(Model.Contract.Id != 0){
+                                        <h3 class="font-weight-bold text-color-dark text-4 line-height-1 mt-0 mb-3">BETAALVOORWAARDEN</h3>
+                                        <ul class="list list-unstyled list-item-bottom-space-0">
+                                            <li>@Model.Contract.PaymentTerm <span> dagen na ontvangst</span></li>
+                                            @if (Model.Contract.CashDiscount == true)
+                                            {
+                                                <li>@Model.Contract.CashDiscountPercentage % korting contant binnen de @Model.Contract.CashDiscountPaymentTerm dagen</li>
+                                            }
+
+                                        </ul>
+                                        <strong class="d-block text-color-dark">Waarborg:</strong>
+                                        
+                                            var guaranteeType = Model.Contract.GuaranteeType;
+                                            var displayName = guaranteeType.GetDisplayName();
+                                        
+
+                                        @if (guaranteeType == ContractGuaranteeType.FinancialGuarantee)
+                                        {
+                                            @Model.Contract.GuaranteePercentage <span>% waarborg inhouding op factuur</span>
+                                        }
+                                        else
+                                        {
+                                            @displayName
+                                        }
+
+                                        <strong class="d-block text-color-dark mt-3">Status:</strong>
+                                        @if (Model.Contract.ContractSigned == true)
+                                        {
+                                            <span class="ecommerce-status completed"> Ondertekend</span> 
+                                        }
+                                        else
+                                        {
+                                            <span class="ecommerce-status failed"> Nog niet ondertekend</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col">
+                    <div class="card card-modern">
+                        <div class="card-header">
+                            <h2 class="card-title">Details</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="datatables-header-footer-wrapper mt-2 mb-4">
+                                <table class="table table-ecommerce-simple table-striped mb-0 datatable-details-list"
+                                id="datatable-details-list"
+                                style="min-width: 550px;"
+                                data-toggle="table"
+                                data-show-columns="true"
+                                data-toolbar-align="right">
+                                    <thead>
+                                        <tr>
+                                            <th width="10%">Lot</th>
+                                            <th width="10%" data-sortable="true">Type</th>
+                                            <th width="10%" data-sortable="true">Omschrijving</th>
+                                            <th width="10%" data-sortable="true">Wijzigingsopdracht</th>
+                                            <th width="10%" data-sortable="true" class="text-end">Prijs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var detail in Model.IncommingInvoice.Details)
+                                        {
+                                            <tr>
+                                                <td class="ps-4">@detail.ContractActivityText</td>
+                                                <td>@detail.IncommingInvoiceType.GetDisplayName()</td>
+                                                <td>@detail.Description</td>
+                                                <td class="text-end">@if (detail.ChangeOrderId != 0)
+                                                    {
+                                                        @detail.ChangeOrderId
+                                                    }</td>
+                                                <td class="text-end">@Html.DisplayFor(m => detail.Price)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            @*  <div class="table-responsive">
+                                <table class="table table-ecommerce-simple table-ecommerce-simple-border-bottom table-borderless table-striped mb-0" style="min-width: 380px;">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-4">Lot</th>
+                                            <th>Type</th>
+                                            <th class="text-end">Wijzigingsopdracht</th>
+                                            <th width="100%" class="text-end">Prijs</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach(var detail in Model.IncommingInvoice.Details){
+                                            <tr>
+                                                <td class="ps-4">@detail.ContractActivityText</td>
+                                                <td>@detail.IncommingInvoiceType.GetDisplayName()</td>
+                                                <td class="text-end">@if (detail.ChangeOrderId != 0) { @detail.ChangeOrderId}</td>
+                                                <td class="text-end">@Html.DisplayFor(m => detail.Price)</td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div> *@
+
+                            <div class="row justify-content-end flex-column flex-lg-row my-3">
+                                <div class="col-auto me-5">
+                                    <h3 class="font-weight-bold text-color-dark text-4 mb-3">Subtotaal</h3>
+                                    <span class="d-flex align-items-center">
+                                        @Model.IncommingInvoice.Details.Count() @if (@Model.IncommingInvoice.Details.Count() > 1)
+                                        {
+                                            @Html.Raw("&nbsp;Loten")
+                                        } @if (@Model.IncommingInvoice.Details.Count() == 1)
+                                        {
+                                            @Html.Raw("&nbsp;Lot")
+                                        }
+                                        <i class="fas fa-chevron-right text-color-primary px-3"></i>
+                                        <b class="text-color-dark text-xxs">@Model.IncommingInvoice.Details.Sum(m => m.Price).ToString("C", new System.Globalization.CultureInfo("nl-BE"))</b>
+                                    </span>
+                                </div>
+                                <div class="col-auto me-5">
+                                    <h3 class="font-weight-bold text-color-dark text-4 mb-3">BTW</h3>
+                                    <span class="d-flex align-items-center">
+                                        @((Model.Contract.Id != 0) ? $"{Model.Contract.VatPercentage} %" : "")
+                                        <i class="fas fa-chevron-right text-color-primary px-3"></i>
+                                        @{
+                                            decimal totaal = Model.IncommingInvoice.Details.Sum(m => m.Price);
+                                            decimal vatPercentage = Model.Contract.Id != 0 ? (decimal)Model.Contract.VatPercentage : 0;
+                                            decimal btw = (totaal / 100m) * vatPercentage;
+                                            string btwFormatted = btw.ToString("C", new System.Globalization.CultureInfo("nl-BE"));
+                                        }
+                                        <b class="text-color-dark text-xxs">@btwFormatted</b>
+                                    </span>
+                                </div>
+                                <div class="col-auto">
+                                    <h3 class="font-weight-bold text-color-dark text-4 mb-3">Factuur Totaal</h3>
+                                    <span class="d-flex align-items-center justify-content-lg-end">
+                                        <strong class="text-color-dark text-5">
+                                            @((
+                                                (decimal)Model.IncommingInvoice.Details.Sum(m => m.Price)
+                                                + btw
+                                                ).ToString("C", new System.Globalization.CultureInfo("nl-BE")))
+                                        </strong>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="row action-buttons mt-4">
+
+                <div class="col-12 col-md-auto">
+                    <a href="@Url.Action("EditIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, invoiceid = Model.IncommingInvoice.Id })" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1"><i class="bx bx-edit text-4 me-2"></i> Factuur bewerken</a>
+@*                         <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                            <i class="bx bx-edit text-4 me-2"></i> Factuur bewerken
+                        </button> *@
+                </div>
+                <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+                    <a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+                </div>
+                <div class="col-12 col-md-auto ms-md-auto mt-3 mt-md-0 ms-auto">
+                    <a href="#modaldeleteinvoice" class="delete-button btn btn-danger btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 deleteInvoice" data-id="@Model.IncommingInvoice.Id" data-company="@Model.Company.Bedrijfsnaam">
+                        <i class="bx bx-trash text-4 me-2"></i> Factuur verwijderen
+                    </a>
+                </div>
+
+            </div>
+            
+
+
+        </div>
+    </div>
+</section>
+<div id="modaldeleteinvoice" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-invoice-container"></div>
+</div>
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/rowGroup.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/jquery-mask/jquery.mask.js"></script>
+    <script>
+
+
+                new DataTable('#datatable-units-list', {
+                layout: {
+                    topStart: {
+                        buttons: [
+                            {
+                                extend:'excel',
+                                text:'<i class="fa fa-file-excel"></i>',
+                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                                titleAttr: 'Exporteer naar excel',
+                                attr: {
+                                  "data-bs-toggle": "tooltip"
+                                },
+                                exportOptions: {
+                                    columns: ':visible'
+                                }
+                            },
+                            {
+                                extend:'pdf',
+                                text:'<i class="fa fa-file-pdf"></i>',
+                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                                titleAttr: 'Exporteer naar pdf',
+                                    attr: {
+                                      "data-bs-toggle": "tooltip"
+                                    },
+                                 orientation: 'landscape',
+                                 pageSize:'A3',
+                                 exportOptions: {
+                                    columns: ':visible'
+                                }
+                            }
+                        ]
+                    }
+                },
+                     language: {
+                processing:     "Bezig met verwerken...",
+                search:         "Zoeken&nbsp;:",
+                lengthMenu:    "Afficher _MENU_ &eacute;l&eacute;ments",
+                info:           "Eenheid _START_ tot _END_ van de _TOTAL_ Eenheden",
+                infoEmpty:      "Eenheid 0 van 0 tot 0 Eenheden",
+                infoFiltered:   "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
+                infoPostFix:    "",
+                loadingRecords: "Bezig met laden...",
+                zeroRecords:    "Geen eenheden om weer te geven",
+                emptyTable:     "Er zijn geen eenheden om weer te geven",
+                aria: {
+                    sortAscending:  ": klikken om aflopend te sorteren",
+                    sortDescending: ": klikken om oplopend te sorteren"
+                }
+            },
+            order: [[2, 'asc'],[3, 'asc'],[1, 'asc']],
+            pageLength: 15,
+            info: false,
+            rowGroup: {
+             dataSrc: 2
+            },
+                  footerCallback: function (row, data, start, end, display) {
+            let api = this.api();
+
+            // Remove the formatting to get integer data for summation
+            let intVal = function (i) {
+                return typeof i === 'string'
+                    ? i.replace(/[\$,]/g, '') * 1
+                    : typeof i === 'number'
+                    ? i
+                    : 0;
+            };
+
+            // Total over all pages
+            total = api
+                .column(4)
+                .data()
+                .reduce((a, b) => intVal(a) + intVal(b), 0);
+
+            // Total over this page
+            pageTotal = api
+                .column(4, { page: 'current' })
+                .data()
+                .reduce((a, b) => intVal(a) + intVal(b), 0);
+
+            // Update footer
+            api.column(4).footer().innerHTML =
+                 + pageTotal + ' (' + total + ' totaal)';
+        }
+                });
+            //Hide the default buttons
+             $(".buttons-excel").hide();
+             $(".buttons-pdf").hide();
+             $(".dt-search").hide();
+             //attach click event to custom buttons
+             $("#btnExportExcel").on('click', function (ev) {
+                 $(".buttons-excel").trigger("click");
+             });
+              $("#btnExportPdf").on('click', function (ev) {
+                 $(".buttons-pdf").trigger("click");
+             });
+
+        //custom search textbox
+        oTable = $('#datatable-units-list').DataTable();
+        $('#search-term').keyup(function(){
+              oTable.search($(this).val()).draw();
+        });
+        //BIj laden
+            $(document).ready(function () {
+            $('.deleteUnit').magnificPopup({
+                type: 'inline',
+                src: 'deleteUnit',
+            });
+            $('.addLink').magnificPopup({
+                type: 'inline',
+                src: 'addLink',
+            });
+        });
+        //Tonen van modal delete unit
+        $('.deleteInvoice').click(function () {
+            var url = "/Projecten/ModalDeleteIncommingInvoice"; // URL naar controller
+            var id = $(this).attr('data-id'); // factuur-id
+            var companyName = $(this).attr('data-company'); // extra attribuut voor bedrijfsnaam
+
+            // Encodeer companyName voor veilige URL
+            var encodedCompanyName = encodeURIComponent(companyName);
+
+            $.get(url + '/' + id + '?companyName=' + encodedCompanyName, function (data) {
+                $('#delete-invoice-container').html(data);
+            });
+        });
+                $(document).ready(function () {
+            $('.deleteInvoice').magnificPopup({
+                type: 'inline',
+                src: 'deleteInvoice',
+            });
+        });
+
+
+
+
+    </script>
+}

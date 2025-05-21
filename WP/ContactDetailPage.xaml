@@ -1,0 +1,110 @@
+﻿<Page x:Name="pageRoot"
+    x:Class="CPM.ContactDetailPage"    
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:CPM"
+    xmlns:data="using:CPM.Data"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    DataContext="{Binding DefaultViewModel.Detail, RelativeSource={RelativeSource Self}}"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <Page.Transitions>
+        <TransitionCollection>
+            <NavigationThemeTransition>
+                <NavigationThemeTransition.DefaultNavigationTransitionInfo>
+                    <ContinuumNavigationTransitionInfo/>
+                </NavigationThemeTransition.DefaultNavigationTransitionInfo>
+            </NavigationThemeTransition>
+        </TransitionCollection>
+    </Page.Transitions>
+    <Page.BottomAppBar>
+        <CommandBar >
+            <AppBarButton x:Name="btnDelete" Label="Verwijderen" Icon="Delete">
+                <Button.Flyout>
+                    <Flyout>
+                        <StackPanel Margin="19,9,19,25">
+                            <TextBlock Margin="0,0,0,9" Style="{StaticResource MessageDialogTitleStyle }">
+                    Contact verwijderen ?
+                            </TextBlock>
+                            <TextBlock TextWrapping="WrapWholeWords"  Margin="0,0,0,9" Style="{StaticResource BaseTextBlockStyle}">
+                                <Run Text="{Binding Weergavenaam}"></Run>
+                                <Run Text=" wordt uit projectmanagement verwijderd."></Run>
+                            </TextBlock>
+                            <Grid>
+                                <Grid.ColumnDefinitions >
+                                    <ColumnDefinition  Width="*"/>
+                                    <ColumnDefinition Width="19"/>
+                                    <ColumnDefinition  Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Button  HorizontalAlignment="Stretch"  Grid.Column ="0"  Click="DeleteConfirmation_Click" Margin="0,5,0,0">
+                                    Verwijderen
+                                </Button>
+                                <Button HorizontalAlignment="Stretch" Grid.Column="2" Click="DeleteAnnulation_Click" Margin="0,5,0,0">
+                                    Annuleren
+                                </Button>
+                            </Grid>
+
+
+                        </StackPanel>
+                    </Flyout>
+
+                </Button.Flyout>
+            </AppBarButton>
+            <AppBarButton x:Name="btnEdit" Label="Bewerken" Icon="Edit"   />
+        </CommandBar>
+    </Page.BottomAppBar>
+    <Grid x:Name="LayoutRoot">
+        <Grid.ChildrenTransitions>
+            <TransitionCollection>
+                <EntranceThemeTransition/>
+            </TransitionCollection>
+        </Grid.ChildrenTransitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title Panel -->
+        <StackPanel Grid.Row="0" Margin="19,0,0,0">
+            <TextBlock x:Uid="Header" Text="copro project management" Style="{ThemeResource TitleTextBlockStyle}" Margin="0,12,0,0" />
+            <TextBlock Name="txtNaam" Text="{Binding WeergaveNaam}" Style="{ThemeResource HeaderTextBlockStyle}" Margin="0,-6.5,0,26.5" CharacterSpacing="{ThemeResource PivotHeaderItemCharacterSpacing}"/>
+         </StackPanel>
+
+        <!-- 
+            TODO: Content should be placed within the following grid 
+                  to show details for the current item
+        -->
+        <Grid Grid.Row="1" x:Name="ContentRoot" Margin="19,9.5,19,0" >
+
+            <StackPanel>
+                <TextBlock Name="txtContactId" Visibility="Collapsed" Text="{Binding ContactId}"></TextBlock>
+            <StackPanel Name="stpTelefoon" Visibility="Collapsed"  >
+                    <TextBlock Text="bellen" Style="{ThemeResource SubheaderTextBlockStyle}" ></TextBlock>
+                    <TextBlock Name="txtTelefoon" Text="{Binding Telefoon}" Style="{ThemeResource ListViewItemContentTextBlockStyle}" Foreground="{ThemeResource PhoneAccentBrush  }"></TextBlock>
+            </StackPanel>
+                <StackPanel Name="stpGSM" Visibility="Collapsed" >
+                    <TextBlock Text="mobiel bellen" Style="{ThemeResource SubheaderTextBlockStyle}" ></TextBlock>
+                    <TextBlock Name="txtGSM" Text="{Binding GSM}" Style="{ThemeResource ListViewItemContentTextBlockStyle}" Foreground="{ThemeResource PhoneAccentBrush }"></TextBlock>
+                </StackPanel>
+                <StackPanel Name="stpSMS" Visibility="Collapsed" >
+                    <TextBlock Text="sms" Style="{ThemeResource SubheaderTextBlockStyle}" ></TextBlock>
+                    <TextBlock Text="sms" Style="{ThemeResource ListViewItemContentTextBlockStyle}" Foreground="{ThemeResource PhoneAccentBrush }"></TextBlock>
+                </StackPanel>
+                <StackPanel Name="stpMail" Visibility="Collapsed" >
+                    <TextBlock Text="mailen" Style="{ThemeResource SubheaderTextBlockStyle}"  ></TextBlock>
+                    <TextBlock Name="txtMail" Text="{Binding Email}" Style="{ThemeResource ListViewItemContentTextBlockStyle}" Foreground="{ThemeResource PhoneAccentBrush }"></TextBlock>
+                </StackPanel>  
+                <StackPanel>
+                    <TextBlock Text="Bedrijf" Style="{ThemeResource SubheaderTextBlockStyle}"  Foreground="{ThemeResource PhoneDisabledBrush }"></TextBlock>
+                    <TextBlock Text="{Binding Bedrijfsnaam}" Style="{ThemeResource ListViewItemContentTextBlockStyle}" Foreground="{ThemeResource PhoneDisabledBrush }"></TextBlock>
+                </StackPanel>
+                    <StackPanel>             
+                    <TextBlock Text="Functie" Style="{ThemeResource SubheaderTextBlockStyle}"  Foreground="{ThemeResource PhoneDisabledBrush }"></TextBlock>
+                    <TextBlock Text="{Binding Functie}" Style="{ThemeResource ListViewItemContentTextBlockStyle}" Foreground="{ThemeResource PhoneDisabledBrush }"></TextBlock>
+
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

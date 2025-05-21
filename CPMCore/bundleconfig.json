@@ -1,0 +1,70 @@
+﻿[
+  {
+    "outputFileName": "wwwroot/css/Admin.min.css",
+    "inputFiles": [
+      "Content/Admin/theme.css",
+      "Content/Admin/skins/skin.css",
+      "Content/Admin/skins/square-borders.css",
+      "Content/Admin/theme-custom.css"
+    ]
+  },
+  {
+    "outputFileName": "wwwroot/css/AdminTheme.min.css",
+    "inputFiles": [
+      "vendor/admin/bootstrap/css/bootstrap.css"
+    ]
+  },
+  {
+    "outputFileName": "wwwroot/js/modernizr.min.js",
+    "inputFiles": [
+      "vendor/admin/modernizr/modernizr.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  },
+  {
+    "outputFileName": "wwwroot/js/jquery.min.js",
+    "inputFiles": [
+      "vendor/jquery/jquery.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  },
+  {
+    "outputFileName": "wwwroot/js/AdminVendor.min.js",
+    "inputFiles": [
+      "vendor/admin/jquery/jquery.js",
+      "vendor/admin/jquery-browser-mobile/jquery.browser.mobile.js",
+      "vendor/admin/bootstrap/js/bootstrap.js",
+      "vendor/admin/nanoscroller/nanoscroller.js",
+      "vendor/admin/bootstrap-datepicker/js/bootstrap-datepicker.js",
+      "vendor/admin/bootstrap-datepicker/js/locales/bootstrap-datepicker.nl-BE.js",
+      "vendor/admin/magnific-popup/magnific-popup.js",
+      "scripts/admin/ui-elements/examples.modals.js",
+      "vendor/admin/jquery-maskedinput/jquery.maskedinput.js",
+      "vendor/admin/pnotify/pnotify.custom.js",
+      "vendor/admin/jquery-placeholder/jquery.placeholder.js",
+      "vendor/admin/select2/select2.js",
+      "vendor/admin/select2/select2_locale_nl.js",
+      "vendor/admin/bootstrap-multiselect/bootstrap-multiselect.js",
+      "vendor/admin/isotope/jquery.isotope.js",
+      "vendor/admin/bootstrap-fileupload/bootstrap-fileupload.min.js",
+      "vendor/admin/bootstrap-tagsinput/bootstrap-tagsinput.js",
+      "vendor/admin/bootstrap-maxlength/bootstrap-maxlength.js",
+      "vendor/admin/jquery-autosize/jquery.autosize.js",
+      "Scripts/admin/pages/examples.mediagallery.js",
+      "vendor/admin/jquery-validation/jquery.fixes.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  }
+]
