@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using CPMCore.Data;
@@ -8,32 +8,54 @@ using CPMCore.Helpers;
 using Microsoft.AspNetCore.Mvc.Razor;
 using DinkToPdf;
 using DinkToPdf.Contracts;
+using Microsoft.Extensions.Logging;
 
 
 
 var builder = WebApplication.CreateBuilder(args);
 
 
-ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
-IConfiguration configuration = configurationBuilder.AddUserSecrets<Program>().Build();
- string connectionString = configuration.GetSection("CPMRUNNING")["ConnectionString"].ToString();
+// 🔧 Configuratie inladen
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(Directory.GetCurrentDirectory())
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddUserSecrets<Program>()
+    .Build();
+
+// 🔑 Connection details ophalen
+string connectionString = configuration.GetSection("CPMRUNNING")["ConnectionString"];
 string DbPassword = configuration.GetSection("CPMRUNNING")["DbPassword"];
 string DbUser = configuration.GetSection("CPMRUNNING")["DbUser"];
 
-var conStrBuilder = new SqlConnectionStringBuilder(
-        connectionString);
-conStrBuilder.Password = DbPassword;
-conStrBuilder.UserID = DbUser;
-conStrBuilder.TrustServerCertificate = true;
+// 🔨 Connection string bouwen
+var conStrBuilder = new SqlConnectionStringBuilder(connectionString)
+{
+    Password = DbPassword,
+    UserID = DbUser,
+    TrustServerCertificate = true
+};
+
 var connection = conStrBuilder.ConnectionString;
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(
-    connection,
-    sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
+// 📝 LOGGING – log naar console
+//if (builder.Environment.IsDevelopment())
+//{
+    var logger = LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger("ConnectionLogger");
+    Console.WriteLine("=== DEBUG: Final connection string ===");
+    Console.WriteLine(connection);
+    Console.WriteLine("======================================");
+//}
 
+
+// ✅ Add services
+builder.Services.AddControllersWithViews();
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(
+        connection,
+        sqlServerOptions => sqlServerOptions.CommandTimeout(5000)
+    )
 );
+
 builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider => new SynchronizedConverter(new PdfTools()));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

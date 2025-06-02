@@ -97,8 +97,8 @@ namespace CPMCore.Models.Klanten
                 _executiondays = value;
             }
         }
-        private DateTime _startdate;
-        public DateTime StartDate
+        private DateOnly _startdate;
+        public DateOnly StartDate
         {
             get
             {
@@ -109,8 +109,8 @@ namespace CPMCore.Models.Klanten
                 _startdate = value;
             }
         }
-        private DateTime _finalconstructiondate;
-        public DateTime FinalConstructionDate
+        private DateOnly _finalconstructiondate;
+        public DateOnly FinalConstructionDate
         {
             get
             {
