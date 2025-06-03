@@ -85,4 +85,31 @@ namespace CPMCore.Models
             public bool RememberMe { get; set; }
         }
     }
+    public class ForgotPasswordViewModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Emailadres")]
+        public required string Email { get; set; }
+    }
+    public class ResetPasswordViewModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Emailadres")]
+        public required string Email { get; set; }
+
+        [Required]
+        [StringLength(100, ErrorMessage = "Het {0} moet minstens {2} karakters bevatten.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Nieuw paswoord")]
+        public required string Password { get; set; }
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Bevestig paswoord")]
+        [Compare("Password", ErrorMessage = "De paswoorden komen niet overeen.")]
+        public required string ConfirmPassword { get; set; }
+
+        public required string Code { get; set; } // Token van Identity
+    }
 }

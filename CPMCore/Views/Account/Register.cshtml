@@ -3,7 +3,101 @@
 @{
     ViewBag.Title = "Register";
 }
+<section class="body-sign">
+    <div class="center-sign">
+        <a href="/" class="logo float-start">
+            <img src="~/img/logo.png" height="54" alt="CPM">
+        </a>
 
+        <div class="panel card-sign">
+            <div class="card-title-sign mt-3 text-end">
+                <h2 class="title text-uppercase font-weight-bold m-0"><i class="bx bx-user-circle me-1 text-6 position-relative top-5"></i> Registreren</h2>
+            </div>
+            <div class="card-body">
+                @using (Html.BeginForm("Register", "Account", FormMethod.Post, new { @class = "form-horizontal", @role = "form" }))
+                {
+                    @Html.AntiForgeryToken()
+                    <div class="form-group mb-3">
+                        <label>@Html.LabelFor(m => m.Input.Username, new { @class = "col-md-2 control-label" })</label>
+                        @Html.TextBoxFor(m => m.Input.Username, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Input.Username, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label>@Html.LabelFor(m => m.Input.Email, new { @class = "col-md-2 control-label" })</label>
+                        @Html.TextBoxFor(m => m.Input.Email, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Input.Email, "", new { @class = "text-danger" })
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>@Html.LabelFor(m => m.Input.Name, new { @class = "col-md-2 control-label" })</label>
+                        @Html.TextBoxFor(m => m.Input.Name, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Input.Name, "", new { @class = "text-danger" })
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>@Html.LabelFor(m => m.Input.Forename, new { @class = "col-md-2 control-label" })</label>
+                        @Html.TextBoxFor(m => m.Input.Forename, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Input.Forename, "", new { @class = "text-danger" })
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>@Html.LabelFor(m => m.Input.JobFunction, new { @class = "col-md-2 control-label" })</label>
+                        @Html.TextBoxFor(m => m.Input.JobFunction, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Input.JobFunction, "", new { @class = "text-danger" })
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>@Html.LabelFor(m => m.Input.Cellphone, new { @class = "col-md-2 control-label" })</label>
+                        @Html.TextBoxFor(m => m.Input.Cellphone, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(m => m.Input.Cellphone, "", new { @class = "text-danger" })
+                    </div>
+                    <div class="form-group mb-0">
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <label>@Html.LabelFor(m => m.Input.Password, new { @class = "col-md-2 control-label" })</label>
+                                @Html.PasswordFor(m => m.Input.Password, new { @class = "form-control" })
+                                @Html.ValidationMessageFor(m => m.Input.Password, "", new { @class = "text-danger" })
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <label>@Html.LabelFor(m => m.Input.ConfirmPassword, new { @class = "col-md-2 control-label" })</label>
+                                @Html.PasswordFor(m => m.Input.ConfirmPassword, new { @class = "form-control" })
+                                @Html.ValidationMessageFor(m => m.Input.ConfirmPassword, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-8">
+                            <div class="checkbox-custom checkbox-default">
+                                <input id="AgreeTerms" name="agreeterms" type="checkbox">
+                                <label for="AgreeTerms">I agree with <a href="#">terms of use</a></label>
+                            </div>
+                        </div>
+                        <div class="col-sm-4 text-end">
+                            <button type="submit" class="btn btn-primary mt-2">Registreer</button>
+                        </div>
+                    </div>
+                    
+                    <span class="mt-3 mb-3 line-thru text-center text-uppercase">
+                        <span>or</span>
+                    </span>
+
+                    <div class="mb-1 text-center">
+                        <a class="btn btn-facebook mb-3 ms-1 me-1" href="#">Connect with <i class="fab fa-facebook-f"></i></a>
+                    </div>
+
+                    <p class="text-center">Already have an account? <a href="pages-signin.html">Sign In!</a></p>
+
+                }
+            </div>
+        </div>
+
+        <p class="text-center text-muted mt-3 mb-3">© Copyright 2025. All Rights Reserved.</p>
+    </div>
+</section>
+
+
+
+
+
+@* 
 <h2>@ViewBag.Title</h2>
 
 @using (Html.BeginForm("Register","Account",FormMethod.Post,new { @class = "form-horizontal", @role = "form" }))
@@ -73,7 +167,7 @@
             <input type="submit" class="btn btn-default" value="Register" />
         </div>
     </div>
-}
+} *@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

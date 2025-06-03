@@ -8,6 +8,7 @@ using CPMCore.Helpers;
 using Microsoft.AspNetCore.Mvc.Razor;
 using DinkToPdf;
 using DinkToPdf.Contracts;
+using CPMCore.Service;
 
 
 
@@ -100,6 +101,9 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 {
     options.ViewLocationExpanders.Add(new CustomViewLocationExpander());
 });
+
+//SMTP server
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 var app = builder.Build();
 
