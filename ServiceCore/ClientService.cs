@@ -24,7 +24,21 @@ namespace ServiceCore
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetClientAccountDAO();
 
-            var _entity = dao.GetById(id);
+            var _entity = dao.GetNormal(m => m.Id == id)
+                .Include(m => m.PostalCode)
+                .ThenInclude(m => m.Country)
+                .Include(m => m.InvoicePostalCode)
+                .ThenInclude(m => m.Country)
+                .Include(m => m.OwnerType)
+                .Include(m => m.ClientContacts)
+                .ThenInclude(m => m.PostalCode)
+                .ThenInclude(m => m.Country)
+                .Include(m => m.ClientContacts)
+                .ThenInclude(m => m.InvoicePostalCode)
+                .ThenInclude(m => m.Country)
+                .Include(m => m.ClientContacts)
+                .ThenInclude(m => m.CoOwnerType)
+                .FirstOrDefault();
             ClientAccountBO clientaccount = new ClientAccountBO();
 
             var err = ClientAccountTranslator.TranslateEntityToBO(_entity, clientaccount);

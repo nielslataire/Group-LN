@@ -1,20 +1,110 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using BOCore;
-using CPMCore.Service;
+﻿using BOCore;
+using CPMCore.Models;
 using CPMCore.Models.Klanten;
-using System.Text.RegularExpressions;
-using System.Drawing;
+using CPMCore.Service;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Drawing;
+using System.Text.RegularExpressions;
+using CPMCore.Attributes;
 
 namespace CPMCore.Controllers
 {
     public class KlantenController : BaseController
     {
+        private readonly ILogger<HomeController> _logger;
+        private UserManager<ApplicationUser> _userManager;
+        private readonly IConfiguration Configuration;
+
+        public KlantenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration)
+        {
+            _userManager = userManager;
+            _logger = logger;
+            Configuration = configuration;
+        }
         public IActionResult Index()
         {
             return View();
         }
         // KLANTEN
+        public ActionResult Detail(int clientId, int projectId = 0)
+        {
+            var model = new ClientModel();
+            var clientService = ServiceFactory.GetClientService();
+            var unitService = ServiceFactory.GetUnitService();
+            var projectService = ServiceFactory.GetProjectService();
+
+            // 1. Get Client
+            var clientResponse = clientService.GetClientAccountById(clientId);
+            if (clientResponse.Success)
+            {
+                model.Client = clientResponse.Values.FirstOrDefault();
+            }
+
+            // 2. Get Units for Client
+            model.UnitsGrouped = unitService.GetGroupedUnitsByAccountId(clientId)?.Values;
+
+            // 3. Get Units with Payment Stages
+            model.UnitsWithStages = unitService.GetClientUnitsWithStages(clientId)?.Values;
+
+            // 4. Get Invoices for those Units
+            var unitIds = model.UnitsWithStages?.Select(m => m.Unit.Id).ToList() ?? new List<int>();
+            model.Invoices = projectService.GetInvoicesByUnitIds(unitIds)?.Values;
+
+            // 5. Determine Project ID
+            model.ProjectId = projectId != 0
+                ? projectId
+                : model.UnitsGrouped?.FirstOrDefault()?.Units?.FirstOrDefault()?.ProjectId ?? 0;
+
+            // 6. Project Folder Path
+            var deliveryDocPath = Configuration["URL:DeliveryDocLocalURL"];
+            model.Folder = projectService.GetProjectFolderById(model.ProjectId) + deliveryDocPath;
+            var imageUrl = Configuration["URL:ImageWebURL"];
+            ViewBag.ImageWebURL = imageUrl;
+
+            // 7. Get Gifts and PoAs
+            model.Gifts = clientService.GetClientGiftByAccountId(clientId)?.Values;
+            model.Poas = clientService.GetClientPoaByAccountId(clientId)?.Values;
+
+            // 9. Execution Days
+            model.ExecutionDays = (int)model.Client.ExecutionDays == 0
+                ? projectService.GetProjectExecutionDays(model.ProjectId)
+                : (int)model.Client.ExecutionDays;
+
+            // 10. Start Date
+            model.StartDate = model.Client.StartDateConstruction != null
+                ? model.Client.StartDateConstruction.Value
+                : projectService.GetProjectStartDateConstruction(model.ProjectId);
+
+            // 11. Final Construction Date & Working Days Left
+            model.WorkingDaysLeft = -9999;
+            if (model.ExecutionDays > 0 && model.StartDate != DateOnly.FromDateTime(DateTime.MinValue))
+            {
+                model.FinalConstructionDate = projectService.GetFinalConstructionDay(model.ProjectId, model.StartDate, model.ExecutionDays);
+                if (model.FinalConstructionDate != DateOnly.FromDateTime(DateTime.MinValue))
+                {
+                    model.WorkingDaysLeft = projectService.GetWorkingDaysLeft(model.FinalConstructionDate, model.ProjectId);
+                }
+            }
+
+            // 12. Latest Documents
+            var latestDocsResponse = projectService.GetLatestClientDocs(5, clientId);
+            if (latestDocsResponse.Success)
+            {
+                model.LatestDocs = latestDocsResponse.Values;
+            }
+
+            // 13. Change Orders
+            var changeOrderResponse = projectService.GetClientChangeOrders(clientId);
+            if (changeOrderResponse.Success)
+            {
+                model.ChangeOrders = changeOrderResponse.Values;
+            }
+
+            return View(model);
+        }
+
         // KLANT TOEVOEGEN
         [HttpGet]
         public ActionResult AddClientAccount(int id)

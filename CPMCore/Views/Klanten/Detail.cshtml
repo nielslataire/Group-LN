@@ -1,0 +1,104 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Klanten.ClientModel
+@{
+	ViewData["Title"] = "Klant - " + Model.Client.DisplayName;
+}
+<!-- start: page -->
+
+    <!-- Page Content -->
+    <div class="row">
+	<div class="col-md-4">
+		<section class="card card-modern card-modern-alt-padding">
+			<header class="card-header">
+				<h2 class="card-title">Algemene gegevens</h2>
+			</header>
+			<div class="card-body bg-light">
+				<ul class="list list-icons">
+					<li>
+						<i class="fa fa-user"></i>
+						<strong>Naam: </strong>@Model.Client.Salutation.GetDisplayName() @Model.Client.DisplayName
+					</li>
+					<li>
+						<i class="fa fa-map-marker"></i>
+						<strong>Adres: </strong>@Model.Client.Street @Model.Client.Housenumber
+						@if (Model.Client.Busnumber != null)
+						{
+							@:/ @Model.Client.Busnumber
+						}
+						<br />
+						@Model.Client.Postalcode.Postcode @Model.Client.Postalcode.Gemeente.ToUpper()<br />
+						@Model.Client.Postalcode.Country.Name
+					</li>
+
+					@if (!string.IsNullOrEmpty(Model.Client.VATnumber))
+					{
+						<li>
+							<i class="fa fa-pie-circle"></i>
+							<strong>BTW-nummer: </strong>@Model.Client.VATnumber
+						</li>
+					}
+					<li>
+						<i class="fa fa-pie-chart"></i>
+						<strong> @Model.Client.OwnerType.Name : </strong>@(100 - Model.Client.CoOwners.Select(m => m.CoOwnerPercentage).Sum()) @Html.Raw("% ")
+					</li>
+
+					@if (Model.Client.DateDeedOfSale != null)
+					{
+						<li>
+							<i class="fa fa-briefcase"></i>
+							<strong> Aktedatum : </strong>@Html.DisplayFor(m => m.Client.DateDeedOfSale)
+						</li>
+					}
+
+					@if (Model.Client.DeliveryDate != null)
+					{
+						<li>
+							<i class="fa fa-key"></i>
+							<strong> Opleverdatum : </strong>
+							@if (!string.IsNullOrEmpty(Model.Client.DeliveryDoc))
+							{
+								<a href="@($"{ViewBag.ImageWebURL}docs/{Model.Client.DeliveryDoc}")" target="_blank">
+									@Html.DisplayFor(m => m.Client.DeliveryDate)
+								</a>
+							}
+							else
+							{
+								@Html.DisplayFor(m => m.Client.DeliveryDate)
+							}
+						</li>
+					}
+					else
+					{
+						<li>
+								<i class="fa fa-key"></i>
+							<strong> Opleverdatum :</strong> - nog niet opgeleverd -
+						</li>
+					}
+					
+				</ul>
+			</div>
+		</section>
+	</div>
+	<div class="col-md-4">
+		<section class="card card-modern card-modern-alt-padding">
+			<header class="card-header">
+				<h2 class="card-title">Facturatie gegevens</h2>
+			</header>
+			<div class="card-body bg-light">
+				Content.
+			</div>
+		</section>
+	</div>
+	<div class="col-md-4">
+		<section class="card card-modern card-modern-alt-padding">
+			<header class="card-header">
+				<h2 class="card-title">Termijnen</h2>
+			</header>
+			<div class="card-body bg-light">
+				Content.
+			</div>
+		</section>
+	</div>
+    </div>
+
