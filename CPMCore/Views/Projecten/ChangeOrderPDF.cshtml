@@ -1,0 +1,161 @@
+﻿@using BOCore
+@model CPMCore.Models.Projecten.ProjectChangeOrderExportModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html style="height:100%">
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>Wijzigingsopdracht @Model.Project.Name - @Model.ClientAccount.DisplayName </title>
+
+    <!-- Vendor CSS -->
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.css" />
+    <link rel="stylesheet" href="~/css/admin/invoice-print.css" />
+</head>
+<body style="font-size:10px;line-height:1">
+    <div class="invoice" style="padding-bottom: 40mm;">
+        <div class="col-sm-12 mt-md">
+            <section id="pnlList">
+                <table class="table table-bordered" style="height:100%;margin-top:40px;">
+                    <tr class="primary">
+                        <td colspan="3" style="font-size:24px;text-align:center;font-weight:bold;">
+                            Wijzigingsopdracht - WO @Html.DisplayFor(m => m.ChangeOrder.ChangeOrderDate) _ @Model.ChangeOrder.Id
+                        </td>
+                    </tr>
+                    <tr style="background-color:#e1e7ac;">
+                        <td colspan="3" style="font-size:16px;text-align:center;">
+                            <strong>Project : </strong>@Model.Project.Name, @Model.Project.Street @Model.Project.HouseNumber te @Model.Project.Postalcode.Postcode @Model.Project.Postalcode.Gemeente
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" style="font-size:16px;text-align:center;">
+                            <strong>Opdracht : </strong>@Model.ChangeOrder.Description
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" style="font-size:16px;text-align:center;">
+                            <strong>Klant : </strong>@Model.ClientAccount.Salutation.GetDisplayName() @Model.ClientAccount.DisplayName<br />
+                            @Model.Units
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td colspan="3">
+                            <table style="border:none;width:100%;font-size:16px;margin-top:40px;">
+                                <tr style="border-bottom:1px solid;height:25px">
+                                    <td width="20px">&nbsp;</td>
+                                    <td style="border-right:1px dotted;padding-left:5px;">Omschrijving</td>
+                                    <td colspan="2" width="20%" style="border-right:1px dotted;padding-left:5px;">eenheid</td>
+                                    <td width="10%" style="border-right:1px dotted;padding-left:5px;">hoev.</td>
+                                    <td width="15%" style="border-right:1px dotted;padding-right:5px;text-align:right;">EH-prijs</td>
+                                    <td width="15%" style="padding-left:5px;text-align:right;">Totaal</td>
+                                </tr>
+                                <tr>
+                                    <td></td>
+                                    <td colspan="6" style="border-right:1px dotted;padding-left:5px;"></td>
+                                </tr>
+
+                                @foreach (var detail in Model.ChangeOrder.Details)
+                                {
+                                        <tr style="height:50px;">
+                                            <td></td>
+                                            <td style="border-right:1px dotted;padding-left:5px;">@detail.Description</td>
+                                            <td width="10%" style="border-right:1px dotted;padding-left:5px;">@detail.MeasurementUnit.GetDisplayName()</td>
+                                            <td width="10%" style="border-right:1px dotted;padding-left:5px;">@detail.MeasurementType.GetDisplayName()</td>
+                                            <td width="10%" style="border-right:1px dotted;padding-left:5px;">@detail.Number</td>
+                                            <td width="15%" style="border-right:1px dotted;padding-right:5px;text-align:right;">
+                                            @String.Format("{0:C}", ((detail.Price * detail.Commision / 100) + detail.Price))
+                                            </td>
+                                            <td width="15%" style="padding-left:5px;text-align:right;">
+                                            @String.Format("{0:C}", (((detail.Price * detail.Commision / 100) + detail.Price) * detail.Number))
+                                            </td>
+                                        </tr>
+                                }
+                            </table>
+                        </td>
+                    </tr>
+
+                    @if (Model.ChangeOrder.Comment != null)
+                    {
+                            <tr>
+                                <td colspan="3" style="font-size:14px;text-align:left;padding-left:25px;">
+                                    <strong>Opmerkingen : </strong><br /><br />
+                                @Html.Raw(Model.ChangeOrder.Comment)
+                                </td>
+                            </tr>
+                    }
+
+                    <tr>
+                        <td colspan="3" style="font-size:16px;text-align:center;">
+                            <table style="border:none;width:100%;font-size:16px;margin-top:40px;">
+                                <tr style="height:25px">
+                                    <td width="20px">&nbsp;</td>
+                                    <td colspan="3" style="padding-left:5px;text-align:left;">Totale som van de opdracht (excl. BTW) :</td>
+                                    <td width="10%"></td>
+                                    <td width="15%"></td>
+                                    <td width="15%" style="padding-left:5px;text-align:right;">
+                                        @String.Format("{0:C}", Model.ChangeOrder.Totaal)
+                                    </td>
+                                </tr>
+                                <tr style="height:25px">
+                                    <td width="20px">&nbsp;</td>
+                                    <td colspan="3" style="padding-left:5px;text-align:left;">BTW bedrag :</td>
+                                    <td width="10%"></td>
+                                    <td width="15%"></td>
+                                    <td width="15%" style="padding-left:5px;text-align:right;">
+                                        @String.Format("{0:C}", Model.ProjectSalesSettings.VatPercentage * Model.ChangeOrder.Totaal / 100)
+                                    </td>
+                                </tr>
+                                <tr style="height:25px">
+                                    <td width="20px">&nbsp;</td>
+                                    <td colspan="3" style="padding-left:5px;text-align:left;"><strong>Totale som van de opdracht (incl. BTW) :</strong></td>
+                                    <td width="10%"></td>
+                                    <td width="15%"></td>
+                                    <td width="15%" style="padding-left:5px;text-align:right;">
+                                        <strong>@String.Format("{0:C}", (Model.ProjectSalesSettings.VatPercentage * Model.ChangeOrder.Totaal / 100) + Model.ChangeOrder.Totaal)</strong>
+                                    </td>
+                                </tr>
+                                <tr style="height:25px">
+                                    <td colspan="7">&nbsp;</td>
+                                </tr>
+                                <tr style="height:25px;margin-top:100px;text-align:left;">
+                                    <td></td>
+                                    <td colspan="6" style="padding-left:5px;font-size:14px;" class="text-warning">
+                                        <strong>Gelieve, indien u akkoord gaat, deze wijzigingsopdracht voor akkoord ondertekend terug te bezorgen tegen ten laatste @Html.DisplayFor(m => m.ChangeOrder.ExpirationDate).</strong>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </section>
+        </div>
+    </div>
+    <footer style="position: fixed; bottom: 0; left: 0; right: 0; height: 40mm; font-size: 10px; text-align: center; border-top: 1px solid #ccc; padding-top: 5px;">
+        <div class="invoice">
+            <div class="col-sm-12 mt-md">
+                <section id="pnlList">
+                    <div>
+                        <table class="table table-bordered">
+                            <tr>
+                                <td style="font-size:16px;text-align:center;" width="40%">VOORWAARDEN</td>
+                                <td style="font-size:16px;text-align:center;" width="30%">DATUM</td>
+                                <td style="font-size:16px;text-align:center;" width="30%">HANDTEKENING VOOR AKKOORD</td>
+                            </tr>
+                            <tr style="height:75px;">
+                                <td style="font-size:12px;text-align:center;">@Model.ChangeOrder.ChangeOrderConditions</td>
+                                <td style="font-size:12px;text-align:center;"></td>
+                                <td style="font-size:12px;text-align:center;"></td>
+                            </tr>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </footer>
+
+   
+</body>
+</html>

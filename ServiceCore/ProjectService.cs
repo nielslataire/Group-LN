@@ -2091,7 +2091,12 @@ namespace ServiceCore
             GetResponse<ChangeOrderBO> response = new GetResponse<ChangeOrderBO>();
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetChangeOrderDAO();
-            var _entity = dao.GetById(changeorderid);
+            var _entity = dao.GetNormal().Where(m => m.Id == changeorderid)
+                .Include(m => m.ClientAccount)
+                .Include(m => m.ContractActivity)
+                .ThenInclude(m => m.Contract)
+                .Include(m => m.ChangeOrderDetail)
+                .FirstOrDefault();
             ChangeOrderBO bo = new ChangeOrderBO();
             var err = ChangeOrderTranslator.TranslateEntityToBO(_entity, bo);
             if (err == ErrorCode.Success)

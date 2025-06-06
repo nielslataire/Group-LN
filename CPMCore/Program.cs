@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using CPMCore.Service;
+using Rotativa.AspNetCore;
 
 
 
@@ -106,6 +107,9 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 var app = builder.Build();
+
+//ROTATIVA INSTELLEN VOOR PDFS
+RotativaConfiguration.Setup(app.Environment.WebRootPath, "lib/rotativa");
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

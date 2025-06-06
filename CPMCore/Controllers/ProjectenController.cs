@@ -18,6 +18,8 @@ using Rotativa.AspNetCore;
 using System.Collections;
 using Microsoft.CodeAnalysis;
 using CPMCore.Attributes;
+using Rotativa.AspNetCore.Options;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CPMCore.Controllers
 {
@@ -1330,6 +1332,63 @@ namespace CPMCore.Controllers
 
 
             return View(model);
+        }
+
+        //CHANGE ORDERS
+        [HttpGet]
+        public IActionResult ChangeOrderPDF(int changeorderid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var model = new ProjectChangeOrderExportModel();
+            var clientService = ServiceFactory.GetClientService();
+            var projectService = ServiceFactory.GetProjectService();
+
+            var changeOrderResponse = projectService.GetChangeOrder(changeorderid);
+            if (changeOrderResponse.Success)
+                model.ChangeOrder = changeOrderResponse.Values.FirstOrDefault();
+
+            var projectResponse = projectService.GetProjectByID(model.ChangeOrder.ProjectId);
+            if (projectResponse.Success)
+                model.Project = projectResponse.Values.FirstOrDefault();
+
+            var salesSettingsResponse = projectService.GetSalesSettings(model.Project.Id);
+            if (salesSettingsResponse.Success)
+                model.ProjectSalesSettings = salesSettingsResponse.Values.FirstOrDefault();
+
+            var clientResponse = clientService.GetClientAccountById(model.ChangeOrder.ClientAccountID);
+            if (clientResponse.Success)
+                model.ClientAccount = clientResponse.Values.FirstOrDefault();
+
+            model.Units = clientService.GetClientAccountUnitsNameById(model.ChangeOrder.ClientAccountID);
+
+
+            // Gebruik juiste constructor om model + view te combineren
+            return new ViewAsPdf("ChangeOrderPDF", model)
+            {
+                PageOrientation = Orientation.Portrait,
+                PageMargins = new Margins(10, 5, 0, 5),
+                PageSize = Size.A4,
+                FileName = $"Wijzigingsopdracht - {model.Project.Name} {DateTime.Now:yyyyMMdd}_{model.ChangeOrder.Id}.pdf",
+                //CustomSwitches = $"--footer-html {Url.Action("ChangeOrderFooter", "Projecten", new { text = model.ChangeOrder.ChangeOrderConditions }, "http")} --footer-spacing 0"
+            };
+        }
+        [AllowAnonymous]
+        [HttpGet]
+        public PartialViewResult ChangeOrderFooter(string text)
+        {
+            return PartialView("ChangeOrderFooter", text);
+        }
+        public IActionResult MinimalTestPDF()
+        {
+            var pdf = new ViewAsPdf("MinimalTestPDF", "Dit is een test.")
+            {
+                PageOrientation = Orientation.Portrait,
+                PageSize = Size.A4,
+                PageMargins = new Margins(10, 5, 40, 5),
+                FileName = "MinimalTest.pdf"
+            };
+            return pdf;
         }
 
         //SHARED
