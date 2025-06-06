@@ -2065,12 +2065,16 @@ namespace ServiceCore
             }
             return response;
         }
-        public GetResponse<ChangeOrderBO> GetClientChangeOrders(int clientaccountid)
+        public GetResponse<ChangeOrderBO> GetClientChangeOrders(int number,int clientaccountid)
         {
             GetResponse<ChangeOrderBO> response = new GetResponse<ChangeOrderBO>();
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetChangeOrderDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == clientaccountid);
+            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == clientaccountid).OrderByDescending(m => m.Date).Take(number)
+                .Include(m => m.ClientAccount)
+                .Include(m => m.ContractActivity)
+                .ThenInclude(m => m.Contract)
+                .Include(m => m.ChangeOrderDetail);
             foreach (var _entity in entities)
             {
                 ChangeOrderBO bo = new ChangeOrderBO();

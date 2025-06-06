@@ -146,7 +146,7 @@ namespace FacadeCore
 
         // Change Orders 
         GetResponse<ChangeOrderBO> GetProjectChangeOrders(int projectid);
-        GetResponse<ChangeOrderBO> GetClientChangeOrders(int clientaccountid);
+        GetResponse<ChangeOrderBO> GetClientChangeOrders(int number,int clientaccountid);
         GetResponse<ChangeOrderBO> GetChangeOrder(int changeorderid);
         Response InsertUpdateProjectChangeOrder(ChangeOrderBO changeorder);
         //Response InsertUpdateProjectChangeOrders(List<ChangeOrderBO> changeorders, int projectid);

@@ -89,14 +89,14 @@ namespace CPMCore.Controllers
             }
 
             // 12. Latest Documents
-            var latestDocsResponse = projectService.GetLatestClientDocs(5, clientId);
+            var latestDocsResponse = projectService.GetLatestClientDocs(4, clientId);
             if (latestDocsResponse.Success)
             {
                 model.LatestDocs = latestDocsResponse.Values;
             }
 
             // 13. Change Orders
-            var changeOrderResponse = projectService.GetClientChangeOrders(clientId);
+            var changeOrderResponse = projectService.GetClientChangeOrders(4,clientId);
             if (changeOrderResponse.Success)
             {
                 model.ChangeOrders = changeOrderResponse.Values;

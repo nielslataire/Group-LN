@@ -190,8 +190,11 @@ Public Class UnitBO
     Public ReadOnly Property TotalValueSold() As Decimal
         Get
             If Not LandValueSold Is Nothing AndAlso Not ConstructionValues Is Nothing Then
-                Return _landvalue + _constructionvalues.Sum(Function(m) m.ValueSold)
+                Return _landvaluesold + _constructionvalues.Sum(Function(m) m.ValueSold)
+            ElseIf Not LandValueSold Is Nothing AndAlso Not ConstructionValueSold Is Nothing Then
+                Return _landvaluesold + _constructionvaluesold
             Else
+
                 Return 0
             End If
         End Get

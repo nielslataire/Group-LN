@@ -1,14 +1,16 @@
 ﻿@using CPMCore.Controllers
 @using BOCore
+@using System.IO
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @model CPMCore.Models.Klanten.ClientModel
 @{
 	ViewData["Title"] = "Klant - " + Model.Client.DisplayName;
 }
 <!-- start: page -->
 
-    <!-- Page Content -->
-    <div class="row">
-	<div class="col-md-4">
+<!-- Page Content -->
+<div class="row">
+	<div class="col-md-3">
 		<section class="card card-modern card-modern-alt-padding">
 			<header class="card-header">
 				<h2 class="card-title">Algemene gegevens</h2>
@@ -71,34 +73,373 @@
 					else
 					{
 						<li>
-								<i class="fa fa-key"></i>
+							<i class="fa fa-key"></i>
 							<strong> Opleverdatum :</strong> - nog niet opgeleverd -
 						</li>
 					}
-					
+
 				</ul>
 			</div>
 		</section>
+
 	</div>
-	<div class="col-md-4">
+	<div class="col-md-3">
 		<section class="card card-modern card-modern-alt-padding">
 			<header class="card-header">
 				<h2 class="card-title">Facturatie gegevens</h2>
 			</header>
 			<div class="card-body bg-light">
-				Content.
+				<ul class="list list-icons">
+					@if (Model.Client.InvoiceAddress == true)
+					{
+						<li>
+							<i class="fa fa-user"></i>
+							<strong>Naam: </strong>@Model.Client.Salutation.GetDisplayName() @Model.Client.DisplayName
+						</li>
+						<li>
+							<i class="fa fa-map-marker"></i>
+							<strong>Adres: </strong>@Model.Client.InvoiceStreet @Model.Client.InvoiceHousenumber
+							@if (Model.Client.InvoiceBusnumber != null)
+							{
+								@:/ @Model.Client.InvoiceBusnumber
+							}
+							<br />
+							@Model.Client.InvoicePostalcode.Postcode @Model.Client.InvoicePostalcode.Gemeente.ToUpper()<br />
+							@Model.Client.InvoicePostalcode.Country.Name
+						</li>
+
+						@if (!string.IsNullOrWhiteSpace(Model.Client.VATnumber))
+						{
+							<li>
+								<i class="fa fa-pie-circle"></i>
+								<strong>BTW-nummer: </strong>@Model.Client.VATnumber
+							</li>
+						}
+						@if (!string.IsNullOrWhiteSpace(Model.Client.InvoiceExtra))
+						{
+							<li>
+								<i class="fa fa-circle-info"></i>
+								<strong>Info: </strong>@Model.Client.InvoiceExtra
+							</li>
+						}
+					}
+					else
+					{
+						<li>
+							<i class="fa fa-user"></i>
+							<strong>Naam: </strong>@Model.Client.Salutation.GetDisplayName() @Model.Client.DisplayName
+						</li>
+						<li>
+							<i class="fa fa-map-marker"></i>
+							<strong>Adres: </strong>@Model.Client.Street @Model.Client.Housenumber
+							@if (Model.Client.Busnumber != null)
+							{
+								@:/ @Model.Client.Busnumber
+							}
+							<br />
+							@Model.Client.Postalcode.Postcode @Model.Client.Postalcode.Gemeente.ToUpper()<br />
+							@Model.Client.Postalcode.Country.Name
+						</li>
+
+						@if (!string.IsNullOrWhiteSpace(Model.Client.VATnumber))
+						{
+							<li>
+								<i class="fa fa-pie-circle"></i>
+								<strong>BTW-nummer: </strong>@Model.Client.VATnumber
+							</li>
+						}
+						@if (!string.IsNullOrWhiteSpace(Model.Client.InvoiceExtra))
+						{
+							<li>
+								<i class="fa fa-circle-info"></i>
+								<strong>Info: </strong>@Model.Client.InvoiceExtra
+							</li>
+						}
+					}
+				</ul>
 			</div>
 		</section>
 	</div>
-	<div class="col-md-4">
+	<div class="col-md-3">
 		<section class="card card-modern card-modern-alt-padding">
+			@foreach (var projectGroup in Model.UnitsWithStages.GroupBy(item => item.Unit.ProjectId))
+				{
 			<header class="card-header">
-				<h2 class="card-title">Termijnen</h2>
+					<h2 class="card-title">Eenheden - @projectGroup.First().Unit.ProjectName</h2>
 			</header>
 			<div class="card-body bg-light">
-				Content.
+			
+					@foreach (var item in projectGroup)
+					{
+						<div class="widget-summary widget-summary-md mb-4">
+							<div class="widget-summary-col widget-summary-col-icon">
+								<div class="summary-icon bg-primary">
+									@if (item.Unit.Type.GroupId == 1)
+									{
+										<i class="fas fa-house"></i>
+									}
+									else if (item.Unit.Type.GroupId == 2)
+									{
+										<i class="fas fa-warehouse"></i>
+									}
+									else if (item.Unit.Type.GroupId == 3)
+									{
+										<i class="fas fa-car"></i>
+									}
+									else if (item.Unit.Type.GroupId == 4)
+									{
+										<i class="fas fa-shop"></i>
+									}
+								</div>
+							</div>
+							<div class="widget-summary-col">
+								<div class="summary">
+									<h4 class="title">
+										@item.Unit.Type.Name.ToUpper() @Html.Raw(" ") @item.Unit.Name.ToUpper()
+										@if (item.Unit.Type.GroupId == 1 || item.Unit.Type.GroupId == 4)
+										{
+											if (item.Unit.Street != null)
+											{
+												@Html.Raw(" - ") @item.Unit.Street.ToUpper() @Html.Raw(" ") @item.Unit.HouseNumber
+
+												if (!string.IsNullOrWhiteSpace(item.Unit.BusNumber))
+												{
+													@Html.Raw(" BUS ") @item.Unit.BusNumber
+												}
+											}
+										}
+									</h4>
+									<div class="info">
+										<strong class="amount">@Html.DisplayFor(m => item.Unit.TotalValueSold)</strong>
+									</div>
+								</div>
+								<div class="summary-footer">
+									<a class="text-muted text-uppercase">(Bewerk eenheid)</a>
+								</div>
+							</div>
+						</div>
+					}
+		
+				
+			</div>
+			}
+		</section>
+	</div>
+	<div class="col-md-3  d-flex flex-column">
+
+		<section class="card flex-grow-1 d-flex flex-column">
+			<div class="card-body bg-primary  d-flex flex-column justify-content-center">
+				<div class="widget-summary">
+					<div class="widget-summary-col widget-summary-col-icon">
+						<div class="summary-icon">
+							<i class="fas fa-building"></i>
+						</div>
+					</div>
+					<div class="widget-summary-col">
+						<div class="summary">
+							<h4 class="title">Werkdagen resterend</h4>
+							<div class="info">
+								@if (Model.WorkingDaysLeft == -9999)
+								{
+									<text>
+										Kan nog geen werkdagen berekenen, gelieve de startdatum en werkdagen in te geven
+									</text>
+								}
+								else
+								{
+									<text>
+										<strong class="amount">@Model.WorkingDaysLeft</strong>
+									</text>
+								}
+							</div>
+						</div>
+						
+					</div>
+				</div>
+			</div>
+		</section>
+		<section class="card flex-grow-1 d-flex flex-column">
+			<div class="card-body bg-primary  d-flex flex-column justify-content-center">
+				<div class="widget-summary">
+					<div class="widget-summary-col widget-summary-col-icon">
+						<div class="summary-icon">
+							<i class="fas fa-calendar"></i>
+						</div>
+					</div>
+					<div class="widget-summary-col">
+						<div class="summary">
+							<h4 class="title">Uiterste einddatum</h4>
+							<div class="info">
+								@if (Model.FinalConstructionDate == DateOnly.MinValue)
+								{
+									<text>
+										Kan nog geen werkdagen berekenen, gelieve de startdatum en werkdagen in te geven
+									</text>
+								}
+								else
+								{
+									<text>
+										<strong class="amount">@Model.FinalConstructionDate.ToString("ddd dd MMMM yyyy")</strong>
+									</text>
+								}
+							</div>
+						</div>
+						@if (Model.FinalConstructionDate != DateOnly.MinValue)
+						{
+									<div class="summary-footer">
+								<a href="@Url.Action("CalendarToPdf", "Klanten", new { id = Model.Client.Id, projectid = Model.ProjectId })" target="_blank">
+									<i class="fa fa-file-pdf-o mr-xs"></i> Kalender afdrukken
+									</a>
+									</div>
+						}
+					</div>
+				</div>
+			</div>
+		</section>
+
+	</div>
+    </div>
+
+<div class="row g-4 align-items-stretch">
+	<div class="col-md-3 d-flex flex-column">
+		@{
+			int contactCount = Model.Client.Contacts.Count();
+		}
+		@for (int i = 0; i < Model.Client.Contacts.Count(); i++)
+		{
+			var contact = Model.Client.Contacts[i];
+			var isLast = (i == Model.Client.Contacts.Count() - 1);
+			string mbClass = isLast ? "" : "mb-3";
+			<div class="flex-fill d-flex @mbClass" style="flex-basis: calc(100% / @contactCount);">
+				<section class="card card-modern card-horizontal w-100">
+					<header class="card-header bg-primary">
+						<div class="card-header-icon">
+							<i class="fas fa-user"></i>
+						</div>
+					</header>
+					<div class="card-body p-4">
+						<h4 class="font-weight-semibold mt-3">
+							@contact.Salutation.GetDisplayName() @Html.Raw(" ") @contact.Name @Html.Raw(" ") @contact.Firstname
+						</h4>
+
+						@if (!string.IsNullOrEmpty(contact.Phone))
+						{
+							<strong>Telefoon:</strong> @Html.DisplayFor(m => contact.FormattedTelefoon)
+
+							<br />
+						}
+						@if (!string.IsNullOrEmpty(contact.Cellphone))
+						{
+							<strong>Mobiel:</strong> @Html.DisplayFor(m => contact.FormattedGSM)
+
+							<br />
+						}
+						@if (!string.IsNullOrEmpty(contact.Email))
+						{
+							<strong>Email:</strong> @Html.DisplayFor(m => contact.Email)
+
+							<br />
+						}
+					</div>
+				</section>
+			</div>
+		}
+	</div>
+
+	<div class="col-md-3 d-flex">
+		<section class="card card-modern card-modern-alt-padding w-100 d-flex flex-column">
+			<header class="card-header">
+				<h2 class="card-title">Documenten</h2>
+			</header>
+			<div class="card-body bg-light flex-grow-1">
+				<ul class="simple-post-list">
+
+					@foreach (var doc in Model.LatestDocs)
+					{
+						var ext = System.IO.Path.GetExtension(doc.Filename)?.ToLowerInvariant();
+						var iconClass = ext switch
+						{
+							".pdf" => "fas fa-file-pdf",
+							".doc" or ".docx" => "fas fa-file-word",
+							".xls" or ".xlsx" => "fas fa-file-excel",
+							".jpg" or ".jpeg" or ".png" or ".gif" => "fas fa-file-image",
+							".zip" or ".rar" => "fas fa-file-archive",
+							".txt" => "fas fa-file-alt",
+							_ => "fas fa-file"
+						};
+
+						<li>
+							<div class="post-image">
+								<div class="d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+									<a href="@Url.Content($"{Configuration["URL:DocWebURL"]}Docs/{doc.Filename}")" target="_blank">
+										<i class="@iconClass fa-2x"></i>
+									</a>
+								</div>
+							</div>
+							<div class="post-info">
+								<a href="@Url.Content($"{Configuration["URL:DocWebURL"]}Docs/{doc.Filename}")" target="_blank">
+									@(string.IsNullOrEmpty(doc.Name) ? doc.Type.GetDisplayName() : doc.Name)
+								</a>
+								<div class="post-meta">
+									@doc.DocDate?.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)
+								</div>
+							</div>
+						</li>
+					}
+				</ul>
+				<a class="btn btn-light btn-xl border font-weight-semibold text-color-dark text-3 mb-4" data-toggle="tooltip" data-placement="top" title="" data-original-title="Documenten" href="@Url.Action("DetailDocs", "Klanten", new { projectid = Model.ProjectId, clientid = Model.Client.Id })">Toon alle documenten</a>
+
+		</div>
+		</section>
+	</div>
+
+	<div class="col-md-3 d-flex">
+		<section class="card card-modern card-modern-alt-padding w-100 d-flex flex-column">
+			<header class="card-header">
+				<h2 class="card-title">Wijzigingsopdrachten</h2>
+			</header>
+			<div class="card-body bg-light flex-grow-1">
+				<ul class="simple-post-list">
+				@foreach (var order in Model.ChangeOrders)
+				{
+					<li>
+						<div class="post-image d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+								<a href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = order.Id })" target="_blank">
+								<i class="fas fa-file-pdf fa-2x"></i>
+								</a>
+						</div>
+
+						<div class="post-info ms-3">
+								<a href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = order.Id })" class="d-flex align-items-center justify-content-between">
+									<span class="me-2">@order.Description</span>
+									@if (order.DateAgreement != null)
+									{
+										<span class="ecommerce-status active"></span>
+									}
+									else
+									{
+										<span class="ecommerce-status on-hold"></span>
+									}
+									
+								</a>
+							<div class="post-meta">
+								@if (order.DateAgreement != null)
+								{
+									@order.DateAgreement?.ToString("dd MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)
+								}
+								else
+								{
+									<a href="@Url.Action("ChangeOrderAddUpdate", "Projecten", new { projectid = Model.ProjectId, changeorderid = order.Id })">Bewerken</a>
+								}
+							</div>
+						</div>
+					</li>
+				}
+				</ul>
+				<a class="btn btn-light btn-xl border font-weight-semibold text-color-dark text-3 mb-4" data-toggle="tooltip" data-placement="top" title="" data-original-title="Wijzigingsopdrachten" href="@Url.Action("DetailWO", "Klanten", new { projectid = Model.ProjectId, clientid = Model.Client.Id })">Toon alle wijzigingsopdrachten</a>
+
 			</div>
 		</section>
 	</div>
-    </div>
+</div>
 

@@ -1,0 +1,37 @@
+﻿@model string
+@{
+    if (!string.IsNullOrWhiteSpace(Model) && Model.Length >= 8)
+    {
+        var formatted = string.Format("{0:###/##.##.## x}{1}", Model.Substring(0, 8), Model.Length > 8 ? Model.Substring(8) : "");
+        if (long.TryParse(Model.Replace("/", "").Replace(".", "").Replace(" ", "").Replace("x", ""), out var phonedigits))
+        {
+            string cleanPhoneDigits = phonedigits.ToString();
+            int digitCount = cleanPhoneDigits.Length;
+            string display = "";
+            string link = "tel:";
+
+            if (digitCount == 8)
+            {
+                display = string.Format("+32 {0:## ## ## ##}", phonedigits);
+                link += "+32" + cleanPhoneDigits;
+            }
+            else if (digitCount == 9)
+            {
+                display = string.Format("+32 {0:### ## ## ##}", phonedigits);
+                link += "+32" + cleanPhoneDigits;
+            }
+            else if (digitCount > 9)
+            {
+                display = string.Format("+32 {0:## ## ## ##} x{1}", cleanPhoneDigits.Substring(0, 8), cleanPhoneDigits.Substring(8));
+                link += "+32" + cleanPhoneDigits.Substring(0, 8);
+            }
+            else
+            {
+                display = cleanPhoneDigits;
+                link += cleanPhoneDigits;
+            }
+
+            <a href="@link">@display</a>
+        }
+    }
+}

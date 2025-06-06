@@ -953,12 +953,12 @@ namespace CPMCore.Models.Klanten
                 _executiondays = value;
             }
         }
-        private DateTime _startdate;
+        private DateOnly _startdate;
         [UIHint("Date")]
         [DisplayFormat(ApplyFormatInEditMode = true, DataFormatString = "{0:dd/MM/yyyy}")]
         [DataType(DataType.Date)]
         [Display(Name = "Aanvangsdatum")]
-        public DateTime Startdate
+        public DateOnly Startdate
         {
             get
             {

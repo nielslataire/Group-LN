@@ -418,7 +418,12 @@ namespace ServiceCore
             GetResponse<UnitWithStagesBO> response = new GetResponse<UnitWithStagesBO>();
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == ClientAcccountId);
+            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == ClientAcccountId)
+                .Include(m => m.Type)
+                .ThenInclude(m => m.Group)
+                .Include(m => m.Project)
+                .Include(m => m.UnitConstructionValue);
+                
             foreach (var _entity in entities)
             {
                 UnitWithStagesBO unitwithstages = new UnitWithStagesBO();
