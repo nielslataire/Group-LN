@@ -1,5 +1,17 @@
-﻿@model Decimal
-<div class="input-group mb3">   
-    @Html.TextBox("", Model, new { @Class = "form-control form-control-modern Currencymask", placeHolder = ViewData.ModelMetadata.DisplayName })
+﻿@model decimal?
+
+@{
+    var culture = System.Globalization.CultureInfo.CreateSpecificCulture("nl-BE");
+    var formatted = Model.HasValue
+        ? Model.Value.ToString("N2", culture).Replace('\u00A0', ' ')  // NBSP → gewone spatie
+        : string.Empty;
+}
+<div class="input-group mb3">
+    @Html.TextBox("", formatted, new
+        {
+            @class = "form-control form-control-modern Currencymask",
+            placeholder = ViewData.ModelMetadata.DisplayName,
+            autocomplete = "off"
+        })
     <span class="input-group-text">€</span>
 </div>

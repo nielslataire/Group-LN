@@ -195,6 +195,8 @@ namespace CPMCore.Models.Klanten
             _selectedInvoicePostalCode = new PostalcodeModel();
             _gifts = new List<ClientGiftBO>();
             _poas = new List<ClientPoaBO>();
+            _countries = new List<IdNameBO>();
+            _listactivities = new List<IdNameBO>();
         }
         private int _projectid;
         public int ProjectId
@@ -208,18 +210,6 @@ namespace CPMCore.Models.Klanten
                 _projectid = value;
             }
         }
-        private string _projectname;
-        public string ProjectName
-        {
-            get
-            {
-                return _projectname;
-            }
-            set
-            {
-                _projectname = value;
-            }
-        }
         private ClientAccountBO _clientAccount;
         public ClientAccountBO Client
         {
@@ -230,6 +220,18 @@ namespace CPMCore.Models.Klanten
             set
             {
                 _clientAccount = value;
+            }
+        }
+        private List<IdNameBO> _countries;
+        public List<IdNameBO> Countries
+        {
+            get
+            {
+                return _countries;
+            }
+            set
+            {
+                _countries = value;
             }
         }
         private List<UnitBO> _units;
@@ -280,6 +282,10 @@ namespace CPMCore.Models.Klanten
                 _poas = value;
             }
         }
+        [Display(Name = "Postcode")]
+        public int? SelectedPostalcodeId { get; set; }
+        [Display(Name = "Postcode")]
+        public int? SelectedInvoicePostalcodeId { get; set; }
         private PostalcodeModel _selectedPostalCode;
         [UIHint("Postalcode")]
         public PostalcodeModel SelectedPostalcode
@@ -325,6 +331,18 @@ namespace CPMCore.Models.Klanten
             set
             {
                 _iscompany = value;
+            }
+        }
+        private List<IdNameBO> _listactivities;
+        public List<IdNameBO> ListActivities
+        {
+            get
+            {
+                return _listactivities;
+            }
+            set
+            {
+                _listactivities = value;
             }
         }
     }

@@ -76,6 +76,12 @@
 							Klanten
 						</a>
 					</li>
+					<li>
+						<a href="@Url.Action("DetailContracts", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailContracts" && currentController == "Projecten" ? "active" : "")">
+							Leveranciers
+						</a>
+					</li>
 				</ul>	
 
 				<h6 class="title">DETAILS</h6>
@@ -138,12 +144,7 @@
 							Nacalculatie
 						</a>
 					</li>
-					<li>
-						<a href="@Url.Action("DetailContracts", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailContracts" && currentController == "Projecten" ? "active" : "")">
-							Contracten
-						</a>
-					</li>
+				
 				</ul>
 			</div>
 		</div>

@@ -1,6 +1,7 @@
 ﻿using BOCore;
 using Microsoft.EntityFrameworkCore;
 using DALCore.Models;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DALCore
 {
@@ -20,57 +21,36 @@ namespace DALCore
             this.disposedValue = true;
         }
 
-        // TODO: override Finalize() only if Dispose(ByVal disposing As Boolean) above has code to free unmanaged resources.
-        // Protected Overrides Sub Finalize()
-        // ' Do not change this code.  Put cleanup code in Dispose(ByVal disposing As Boolean) above.
-        // Dispose(False)
-        // MyBase.Finalize()
-        // End Sub
-
-        // This code added by Visual Basic to correctly implement the disposable pattern.
         public void Dispose()
         {
-            // Do not change this code.  Put cleanup code in Dispose(disposing As Boolean) above.
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
         private cpmRunningContext  _context;
 
-        /// <summary>
-        /// Detectchanges = true
-        /// </summary>
-        /// <remarks></remarks>
+
         public UnitOfWork()
         {
             _context = new cpmRunningContext();
         }
-
-        //public UnitOfWork(bool detectChanges)
-        //{
-        //    _context = new TestdbEntities(detectChanges);
-        //}
-
-        //public UnitOfWork(bool detectChanges, string connString)
-        //{
-        //    _context = new TestdbEntities(detectChanges, connString);
-        //}
 
         public List<Message> SaveChanges()
         {
             List<Message> messages = new List<Message>();
             try
             {
-                _context.SaveChanges();
+                _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                Message m = new Message();
-                m.Type = MessageType.Error;
-                m.Message = ex.Message;
-                messages.Add(m);
+                messages.Add(new Message { Type = MessageType.Error, Message = ex.Message });
             }
             return messages;
+        }
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
         }
         public List<Message> DetachEntity(object entity)
         {

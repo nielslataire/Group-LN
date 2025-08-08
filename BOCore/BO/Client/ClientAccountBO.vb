@@ -228,12 +228,12 @@ Public Class ClientAccountBO
     End Property
 
     'INVOICING
-    Private m_invoiceaddress As Boolean?
-    Public Property InvoiceAddress() As Boolean?
+    Private m_invoiceaddress As Boolean
+    Public Property InvoiceAddress() As Boolean
         Get
             Return m_invoiceaddress
         End Get
-        Set(ByVal value As Boolean?)
+        Set(ByVal value As Boolean)
             m_invoiceaddress = value
         End Set
     End Property

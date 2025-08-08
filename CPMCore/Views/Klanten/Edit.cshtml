@@ -1,0 +1,860 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Klanten.EditClientModel;
+
+@{
+	ViewData["Title"] = Model.Client.DisplayName;
+}
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
+<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
+<style>
+	/* Algemeen container padding en achtergrond */
+	.tabs .nav-tabs {
+	background-color: #e0e0e0; /* middelgrijs */
+	padding: 10px 15px;
+	border: none;
+	border-radius: 0;
+	color: #333;
+	}
+
+	/* Verwijder default border en accentkleur */
+	.tabs .nav-tabs .nav-link {
+	border: none;
+	color:#333;
+	background-color: transparent;
+	font-weight: 500;
+	padding: 12px 20px;
+	margin-bottom: 0;
+	border-radius: 0;
+	transition: background-color 0.2s ease-in-out;
+	}
+
+	/* Hover effect zonder accentkleur */
+	.tabs .nav-tabs .nav-link:hover {
+	background-color: #d0d0d0; /* iets donkerder grijs */
+	color: #333; /* iets donkerder tekstkleur */
+	border-top:0
+	}
+
+	/* Actieve tab */
+	.tabs .nav-tabs .nav-link.active {
+	background-color: #f9f9f9; /* lichtgrijs */
+	color: #111; /* bijna zwart */
+	border: none;
+	border-bottom: 0px solid transparent; /* verwijder border */
+	}
+
+	/* Focus outline uitschakelen voor cleaner UI */
+	.tabs .nav-tabs .nav-link:focus {
+	box-shadow: none;
+	outline: none;
+	}
+
+	/* Tab pane zonder achtergrond indien nodig */
+	.tabs .tab-content {
+	background-color: transparent;
+	padding-top: 15px;
+	}
+
+	.tabs .nav-tabs .nav-link.active {
+	border-color: transparent !important;
+	}
+
+	/* Overschrijf Porto's groene kleur */
+	html body .tabs .nav-tabs .nav-link,
+	html.dark body .tabs .nav-tabs .nav-link,
+	html body .tabs .nav-tabs .nav-link:hover,
+	html.dark body .tabs .nav-tabs .nav-link:hover {
+	color: #555 !important; /* donkergrijs voor niet-actieve tabs */
+	}
+
+	/* Actieve tab donkerder maken */
+	html body .tabs .nav-tabs .nav-link.active,
+	html.dark body .tabs .nav-tabs .nav-link.active {
+	color: #111 !important; /* bijna zwart */
+	background-color: #f5f5f5 !important;
+	border-color: transparent !important;
+	}
+
+	/* Hover effect grijs maken */
+	html body .tabs .nav-tabs .nav-link:hover {
+	background-color: #e0e0e0 !important;
+	}
+</style>
+}
+
+
+<div class="row">
+	<div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+		<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+			<div class="row align-items-center">
+				<div class="col-sm-auto d-flex align-items-center">
+					<a href="@TempData.Peek("Referrer")" class="text-decoration-none text-reset d-flex align-items-center">
+						<i class="bx bx-chevron-left fs-1"></i>
+					</a>
+				</div>
+				<div class="col-sm-auto">
+					<h1 class="fw-bold mb-0">Klant bewerken</h1>
+					<h5 class="mb-4 mt-0">Bewerk hier alle gegevens van de klant </h5>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+@using (Html.BeginForm("Edit", "Klanten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @id = "myForm", @action = "#" }))
+{
+	@* 	@Html.AntiForgeryToken() *@
+	@Html.HiddenFor(m => m.Client.Id)
+	@Html.HiddenFor(m => m.Client.OwnerPercentage)
+	@Html.HiddenFor(m => m.ProjectId, new {id = "projectid"})
+	<div class="tabs mt-4 border-0">
+		<ul class="nav nav-tabs nav-justified" role="tablist">
+			<li class="nav-item" role="presentation">
+				<a class="nav-link active" data-bs-toggle="tab" href="#algemeen" role="tab" aria-selected="true">
+					<i class="bx bxs-box pe-2"></i> Algemeen
+				</a>
+			</li>
+			<li class="nav-item" role="presentation">
+				<a class="nav-link" data-bs-toggle="tab" href="#eenheden" role="tab" aria-selected="true">
+					<i class="bx bxs-building-house pe-2"></i> Eenheden
+				</a>
+			</li>
+			<li class="nav-item" role="presentation">
+				<a class="nav-link" data-bs-toggle="tab" href="#contacten" role="tab" aria-selected="false">
+					<i class="bx bxs-contact pe-2"></i> Contacten
+				</a>
+			</li>
+
+			<li id="tabMedeEigenaars"  class="nav-item" role="presentation">
+				<a class="nav-link" data-bs-toggle="tab" href="#medeEigenaars" role="tab" aria-selected="false">
+					<i class="bx bxs-user-plus pe-2"></i> Mede-eigenaars
+				</a>
+			</li>
+
+			<li class="nav-item" role="presentation">
+				<a class="nav-link" data-bs-toggle="tab" href="#toegiften" role="tab" aria-selected="false">
+					<i class="bx bxs-plus-square pe-2"></i> Toegiften
+				</a>
+			</li>
+			<li class="nav-item" role="presentation">
+				<a class="nav-link" data-bs-toggle="tab" href="#aandachtspunten" role="tab" aria-selected="false">
+					<i class="fa-solid fa-triangle-exclamation pe-2"></i> Aandachtspunten
+				</a>
+			</li>
+		</ul>
+
+		<div class="tab-content bg-transparent mt-4 p-0" style="box-shadow: none;">
+			<!-- ALGEMEEN -->
+			<div id="algemeen" class="tab-pane show active" role="tabpanel">
+				<section class="card card-modern card-big-info">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-2-5 col-xl-1-5">
+								<i class="card-big-info-icon bx bxs-box"></i>
+								<h2 class="card-big-info-title">Algemene info</h2>
+								<p class="card-big-info-desc">Voeg hier de algemene info van de klant in.</p>
+							</div>
+							<div class="col-lg-3-5 col-xl-4-5">
+								<div class="form-group">
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Client.Name)</label>
+										<div class="col-lg-2 col-xl-2">
+											@Html.DropDownListFor(m => m.Client.Salutation, Html.GetEnumSelectList(Model.Client.Salutation.GetType()), new { @class = "form-control", @id = "lstSalutationAccount" })
+										</div>
+										<div class="col-lg-5 col-xl-6">
+											@Html.TextBoxFor(m => m.Client.Name, new { placeholder = "Naam", @class = "form-control form-control-modern", id = "txtinputname", autocomplete = "name" })
+										</div>
+
+									</div>
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Type eigenaar</label>
+										<div class="col-lg-7 col-xl-8">
+											@Html.DropDownListFor(m => m.Client.OwnerType.Id, new SelectList(Model.OwnerTypes, "ID", "Display", Model.Client.OwnerType.Id), new { @class = "form-control form-control-modern populate", id = "lstOwnerTypes" })
+										</div>
+									</div>
+									<div class="row align-items-center pb-3">
+										<div class="col-lg-5 col-xl-3"></div>
+										<div class="col-lg-7 col-xl-6">
+											<div class="checkbox-custom checkbox-default">
+												@Html.CheckBoxFor(m => m.IsCompany, new { @class = "form-control form-control-modern", id = "checkboxCompany" })
+@* 												<input type="checkbox" value="" id="checkboxCompany"> *@
+												<label for="checkboxCompany">Dit is een bedrijf</label>
+											</div>
+										</div>
+									</div>
+									<div class="form-group row align-items-center pb-3 bedrijfsgegevens d-none">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bedrijfsgegevens</label>
+										<div class="col-lg-4 col-xl-4">
+											@Html.TextBoxFor(m => m.Client.CompanyName, new { placeholder = "Bedrijfsnaam", @class = "form-control form-control-modern", id = "txtCompanyName", disabled = "disabled" })
+										</div>
+										<div class="col-lg-3 col-xl-4
+										">
+											@Html.TextBoxFor(m => m.Client.VATnumber, new { placeholder = "Ondernemingsnummer", @class = "form-control form-control-modern", id = "txtVatNumber", disabled = "disabled" })
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Client.Street)</label>
+										<div class="col-lg-5 col-xl-6">
+											@Html.TextBoxFor(m => m.Client.Street, new { placeholder = "Straat", @class = "form-control form-control-modern" })
+										</div>
+										<div class="col-lg-1 col-xl-1">
+											@Html.TextBoxFor(m => m.Client.Housenumber, new { placeholder = "Nr", @class = "form-control form-control-modern", autocomplete = "off" })
+										</div>
+										<div class="col-lg-1 col-xl-1">
+											@Html.TextBoxFor(m => m.Client.Busnumber, new { placeholder = "Bus", @class = "form-control form-control-modern" })
+										</div>
+									</div>
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+										<div class="col-lg-3 col-xl-2">
+											@Html.DropDownListFor(m => m.Client.Postalcode.Country.CountryId, new SelectList(Model.SelectedPostalcode.Countries, "ID", "Display", Model.Client.Postalcode.Country.CountryId), new { @class = "form-control form-control-modern populate", id = "lstCompanyCountries" })
+										</div>
+										<div class="col-lg-6 col-xl-6">
+											<select asp-for="SelectedPostalcodeId" id="txtPostalcode" class="form-control form-control-modern populate"></select>
+											<span asp-validation-for="SelectedPostalcodeId" class="text-danger"></span>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.Client.DateSalesAgreement)</label>
+										<div class="col-lg-3 col-xl-3">
+											@Html.EditorFor(m => m.Client.DateSalesAgreement)
+										</div>
+										<label class="col-lg-1 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.Client.DateDeedOfSale)</label>
+										<div class="col-lg-3 col-xl-3">
+											@Html.EditorFor(m => m.Client.DateDeedOfSale)
+										</div>
+									</div>
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.Client.StartDateConstruction)</label>
+										<div class="col-lg-3 col-xl-3">
+											@Html.EditorFor(m => m.Client.StartDateConstruction)
+										</div>
+										<label class="col-lg-1 col-xl-2 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.Client.ExecutionDays)</label>
+										<div class="col-lg-3 col-xl-3">
+											<div class="input-group">
+												<span class="input-group-text">
+													<i class="fas fa-wrench"></i>
+												</span>
+												@Html.TextBoxFor(m => m.Client.ExecutionDays, new { placeholder = "Werkdagen", @class = "form-control form-control-modern", @type = "number" })
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="form-group">
+									<div class="row align-items-center pb-3">
+										<div class="col-lg-5 col-xl-3"></div>
+										<div class="col-lg-7 col-xl-6">
+											<div class="checkbox-custom checkbox-default">
+												<i class="bx bx-location-plus"></i> @Html.CheckBoxFor(m => m.Client.InvoiceAddress, new { id = "checkboxInvoiceAddress" })
+												<label for="checkboxInvoiceAddress">Afwijkend facturatieadres</label>
+											</div>
+										</div>
+									</div>
+									<div class="InvoiceAddress form-group" hidden="hidden">
+										<div class=" row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Facturatiegegevens</label>
+											<div class="col-lg-5 col-xl-6">
+												@Html.TextBoxFor(m => m.Client.InvoiceStreet, new { placeholder = "Straat", @class = "form-control form-control-modern" })
+											</div>
+											<div class="col-lg-1 col-xl-1">
+												@Html.TextBoxFor(m => m.Client.InvoiceHousenumber, new { placeholder = "Nr", @class = "form-control form-control-modern" })
+											</div>
+											<div class="col-lg-1 col-xl-1">
+												@Html.TextBoxFor(m => m.Client.InvoiceBusnumber, new { placeholder = "Bus", @class = "form-control form-control-modern" })
+											</div>
+										</div>
+										<div class=" row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+
+											<div class="col-lg-3 col-xl-2">
+												@Html.DropDownListFor(m => m.Client.InvoicePostalcode.Country.CountryId, new SelectList(Model.SelectedInvoicePostalcode.Countries, "ID", "Display", Model.Client.InvoicePostalcode.Country.CountryId), new { @class = "form-control form-control-modern populate", id = "lstCompanyCountries" })
+
+											</div>
+
+											<div class="col-lg-6 col-xl-6">
+												@Html.HiddenFor(m => m.Client.InvoicePostalcode.PostcodeId)
+												<select asp-for="SelectedInvoicePostalcodeId" id="txtInvoicePostalcode" class="form-control form-control-modern populate"></select>
+											</div>
+										</div>
+									</div>
+									<div class="row align-items-center pb-3">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">@Html.LabelFor(m => m.Client.BankAccountNumber)</label>
+										<div class="col-lg-7 col-xl-8">
+											@Html.TextBoxFor(m => m.Client.BankAccountNumber, new { placeholder = "Rekeningnummer betalingen", @class = "form-control form-control-modern" })
+										</div>
+									</div>
+								</div>
+
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<!-- EENHEDEN -->
+			<div id="eenheden" class="tab-pane" role="tabpanel">
+				<section class="card card-modern card-big-info">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-2-5 col-xl-1-5">
+								<i class="card-big-info-icon bx bxs-building-house"></i>
+								<h2 class="card-big-info-title">Entiteiten</h2>
+								<p class="card-big-info-desc">Hier staan alle entiteiten die aan een klant toebehoren, je kan er ook één toevoegen</p>
+							</div>
+							<div class="col-lg-3-5 col-xl-4-5">
+								<div class="row mt-4 UnitRows">
+
+										@foreach (var unit in Model.Units)
+										{
+											<div class="card mb-4">
+												<div class="card-body border p-4">
+													<div class="d-flex justify-content-between align-items-start mb-1">
+														<div class=" fs-6">@unit.Type.Name @unit.Name</div>
+													</div>
+													<div class="form-group">
+														<div class="row align-items-center pb-2">
+															<div class="col-lg-2 col-xl-2">
+																Grondwaarde
+															</div>
+															<div class="col-lg-4 col-xl-4">
+																@Html.EditorFor(m => unit.LandValueSold)
+															</div>
+
+															@if (unit.ConstructionValues.Count > 0)
+															{
+																<div class="col-lg-2 col-xl-2">
+																	@Html.HiddenFor(m => unit.ConstructionValues[0].Id)
+																	@Html.DisplayFor(m => unit.ConstructionValues[0].Description)
+																</div>
+																<div class="col-lg-4 col-xl-4">
+																	@Html.EditorFor(m => unit.ConstructionValues[0].ValueSold)
+																</div>
+															}
+														</div>
+
+														<!-- Extra constructionvalues -->
+														@for (int j = 1; j < unit.ConstructionValues.Count; j++)
+														{
+															<div class="row align-items-center pb-2">
+																<div class="col-lg-6 col-xl-6">
+																	<!-- leeg als spacer -->
+																</div>
+																<div class="col-lg-2 col-xl-2">
+																	@Html.HiddenFor(m => unit.ConstructionValues[j].Id)
+																	@Html.DisplayFor(m => unit.ConstructionValues[j].Description)
+																</div>
+																<div class="col-lg-4 col-xl-4">
+																	@Html.EditorFor(m => unit.ConstructionValues[j].ValueSold)
+																</div>
+															</div>
+														}
+													</div>
+												</div>
+											</div>
+										}
+									
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<!-- CONTACTEN -->
+			<div id="contacten" class="tab-pane" role="tabpanel">
+				<section class="card card-modern card-big-info">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-2-5 col-xl-1-5">
+								<i class="card-big-info-icon bx bxs-contact"></i>
+								<h2 class="card-big-info-title">Contactpersonen</h2>
+								<p class="card-big-info-desc">Hier staan alle contactpersoon voor de account, je kan er ook één toevoegen</p>
+							</div>
+							<div class="col-lg-3-5 col-xl-4-5">
+								<div class="d-flex justify-content-end">
+									<a href="@Url.Action("BlankContactRow", "Klanten", null)" class="btn btn-default btn-md" id="addContact"><i class="fa fa-plus me-3"></i>Contactgegevens Toevoegen</a>
+								</div>
+								<div class="row mt-4">
+									<div class="form-group">
+										<div id="editorRows">
+
+											@foreach (var item in Model.Client.Contacts)
+											{
+												@Html.Partial("_ContactRow", item)
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<!-- MEDE-EIGENAARS -->
+			<div id="medeEigenaars" class="tab-pane" role="tabpanel">
+				<section class="card card-modern card-big-info">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-2-5 col-xl-1-5">
+								<i class="card-big-info-icon bx bxs-user-plus"></i>
+								<h2 class="card-big-info-title">Mede-eigenaars</h2>
+								<p class="card-big-info-desc">Voeg hier extra eigenaars toe</p>
+							</div>
+							<div class="col-lg-3-5 col-xl-4-5 ">
+								<div class="d-flex justify-content-end">
+									<button type="button" id="btnAddCoOwner" class="btn btn-default btn-md">
+										<i class="fa fa-plus me-3"></i>Mede-eigenaar Toevoegen
+									</button>
+								</div>
+								<div class="row mt-4">
+									<div class="form-group">
+										@{
+											ViewData["Countries"] = Model.SelectedPostalcode.Countries.Select(c => new SelectListItem
+										{
+											Value = c.ID.ToString(),
+											Text = c.Display
+										}).ToList();
+
+											ViewData["OwnerTypes"] = Model.OwnerTypes.Select(o => new SelectListItem
+										{
+											Value = o.ID.ToString(),
+											Text = o.Display
+										}).ToList();
+										}
+										<div id="coownerContainer">
+											@foreach (var CoOwner in Model.Client.CoOwners)
+											{
+												@Html.Partial("_CoOwnerRow", CoOwner, ViewData)
+											}	
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<!-- TOEGIFTEN -->
+			<div id="toegiften" class="tab-pane" role="tabpanel">
+				<section class="card card-modern card-big-info">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-2-5 col-xl-1-5">
+								<i class="card-big-info-icon bx bxs-plus-square"></i>
+								<h2 class="card-big-info-title">Toegiften</h2>
+								<p class="card-big-info-desc">Bewerk hier de toegiften voor de klant</p>
+							</div>
+							<div class="col-lg-3-5 col-xl-4-5 ">
+								<div class="d-flex justify-content-end">
+									<button type="button" id="btnAddGifts" class="btn btn-default btn-md">
+										<i class="fa fa-plus me-3"></i>Toegeving toevoegen
+									</button>
+								</div>
+								<div class="row mt-4">
+									<div class="form-group">
+										<div id="giftRows">
+											@{
+												ViewData["Listactivities"] = Model.ListActivities;
+											}
+											@foreach (var gift in Model.Gifts)
+											{
+												@Html.Partial("_GiftRow", gift,ViewData)
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+			<!-- AANDACHTSPUNTEN -->
+			<div id="aandachtspunten" class="tab-pane" role="tabpanel">
+				<section class="card card-modern card-big-info">
+					<div class="card-body">
+						<div class="row">
+							<div class="col-lg-2-5 col-xl-1-5">
+								<i class="card-big-info-icon fa-solid fa-triangle-exclamation"></i>
+								<h2 class="card-big-info-title">Aandachtspunten</h2>
+								<p class="card-big-info-desc">Bewerk hier de aandachtspunten voor de klant</p>
+							</div>
+							<div class="col-lg-3-5 col-xl-4-5 ">
+								<div class="d-flex justify-content-end">
+									<button type="button" id="btnAddPOA" class="btn btn-default btn-md">
+										<i class="fa fa-plus me-3"></i>Aandachtspunt toevoegen
+									</button>
+								</div>
+								<div class="row mt-4">
+									<div class="form-group">
+										<div id="poaRows">
+											@{
+												ViewData["Listactivities"] = Model.ListActivities;
+											}
+											@foreach (var POA in Model.Poas)
+											{
+												@Html.Partial("_PoaRow", POA, ViewData)
+											}
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</section>
+			</div>
+		</div>
+	</div>
+
+	<div class="row action-buttons">
+		<div class="col-12 col-md-auto">
+			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+				<i class="bx bx-save text-4 me-2"></i> Klant opslaan
+			</button>
+		</div>
+		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+			<a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+		</div>
+		
+	</div>
+}
+
+
+@section PageScripts
+{
+	<script src="~/lib/select2/js/select2.js"></script>
+	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+	<script src="~/lib/bootstrap-wizard/jquery.bootstrap.wizard.js"></script>
+	<script src="~/lib/dropzone/dropzone.js"></script>
+	<script src="~/lib/jquery-mask/jquery.mask.js"></script>
+
+	<script>
+		
+		function initCoOwnerItem($item) {
+			// 1. Select2 Postcode Dropdown Initialisatie
+			$item.find('.select2-postcode').each(function () {
+				const $select = $(this);
+				const countryFieldId = $select.data('country-field-id');
+				const targetFieldId = $select.data('target-id');
+				const $countryField = $('#' + countryFieldId.replace(/\./g, '_'));
+				const $hiddenTarget = $('#' + targetFieldId.replace(/\./g, '_'));
+
+				$select.select2({
+					minimumInputLength: 3,
+					theme: 'bootstrap',
+					dropdownAutoWidth: true,
+					placeholder: "Gemeente",
+					ajax: {
+						url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+						cache: false,
+						type: 'POST',
+						data: function (params) {
+							let countryId = $countryField.val();
+							if (countryId==0) countryId = 19;
+							return {
+								term: params.term,
+								CountryId: countryId
+							};
+						},
+						processResults: function (data) {
+							return {
+								results: $.map(data, function (item) {
+									return { id: item.id, text: item.text };
+								})
+							};
+						}
+					}
+				});
+
+				// Waarde zetten in hidden field
+				$select.on('select2:select', function (e) {
+					$hiddenTarget.val(e.params.data.id);
+				});
+
+				// Indien postcode-id al ingevuld is: gemeente ophalen en selecteren
+				const existingId = $hiddenTarget.val();
+				if (existingId) {
+					$.get('@Url.Action("GetPostcodeById", "Shared")', { id: existingId }, function (data) {
+						if (data) {
+							const option = new Option(data.text, data.id, true, true);
+							$select.append(option).trigger('change');
+						}
+					});
+				}
+			});
+
+			// 2. Bedrijfsgegevens toggle
+			const $companyToggle = $item.find('.toggle-CoOwnerCompany');
+			const $companySection = $item.find('.CoOwnerBedrijfsgegevens');
+			
+			const companyHasData = $companySection.find('input, textarea, select')
+				.not('[name*="Country"]')
+				.filter(function () {
+					return $(this).val() && $(this).val().trim() !== '';
+				}).length > 0;
+				
+			if (companyHasData) {
+				$companyToggle.prop('checked', true);
+				$companySection.removeClass('d-none');
+			}
+
+			$companyToggle.on('change', function () {
+				if (this.checked) {
+					$companySection.removeClass('d-none');
+				} else {
+					$companySection.addClass('d-none');
+					$companySection.find('input, textarea').val('');
+					$companySection.find('select').not('[name*="Country"]').val('').trigger('change.select2');
+				}
+			});
+
+			// 3. Facturatieadres toggle
+			const $invoiceToggle = $item.find('.toggle-CoOwnerInvoice');
+			const $invoiceSection = $item.find('.CoOwnerInvoiceAddress');
+
+			const invoiceHasData = $invoiceSection.find('input, textarea, select')
+				.not('[name*="Country"]')
+				.filter(function () {
+					return $(this).val() && $(this).val().trim() !== '';
+				}).length > 0;
+
+			if (invoiceHasData) {
+				$invoiceToggle.prop('checked', true);
+				$invoiceSection.removeClass('d-none');
+			}
+
+			$invoiceToggle.on('change', function () {
+				if (this.checked) {
+					$invoiceSection.removeClass('d-none');
+				} else {
+					$invoiceSection.addClass('d-none');
+					$invoiceSection.find('input, textarea').val('');
+					$invoiceSection.find('select').not('[name*="Country"]').val('').trigger('change.select2');
+				}
+			});
+		}
+
+
+		$(document).ready(function () {
+
+			$('.lstactivities').select2({
+				theme: 'bootstrap',
+				width: '100%',
+				dropdownAutoWidth: true,
+				placeholder: 'Selecteer een of meerdere activiteiten'
+			});
+			$('.lstactivitiesPoas').select2({
+				theme: 'bootstrap',
+				width: '100%',
+				dropdownAutoWidth: true,
+				placeholder: 'Selecteer een of meerdere activiteiten'
+			});
+			$(function () {
+				$('.coOwnerRow').each(function () {
+					initCoOwnerItem($(this));
+				});
+			});
+			$('#btnAddCoOwner').on('click', function () {
+				
+				$.get('@Url.Action("BlankCoOwnerRow")', function (html) {
+					const $newItem = $(html);
+					$('#coownerContainer').append($newItem);
+					initCoOwnerItem($newItem);
+
+				});
+			});
+		$('#btnAddGifts').on('click', function () {
+			$.get('@Url.Action("BlankGiftRow")', function (html) {
+				const $newItem = $(html);
+				$('#giftRows').append($newItem);
+
+				// Initialiseer select2 binnen de callback
+				$newItem.find('.lstactivities').select2({
+					theme: 'bootstrap',
+					width: '100%',
+					dropdownAutoWidth: true,
+					placeholder: 'Selecteer een of meerdere activiteiten'
+				});
+			});
+		});
+				$('#btnAddPoa').on('click', function () {
+			$.get('@Url.Action("BlankPoaRow")', function (html) {
+				const $newItem = $(html);
+				$('#poaRows').append($newItem);
+
+				// Initialiseer select2 binnen de callback
+				$newItem.find('.lstactivitiesPoas').select2({
+					theme: 'bootstrap',
+					width: '100%',
+					dropdownAutoWidth: true,
+					placeholder: 'Selecteer een of meerdere activiteiten'
+				});
+			});
+		});
+
+
+			
+			// --- Formulier correct formatten bij submit ---
+			$('#myForm').on('submit', function () {
+				$('.Currencymask').each(function () {
+					var val = $(this).val();
+					var cleanVal = val.replace(/\./g, ''); // verwijder duizendtallen
+					$(this).val(cleanVal);
+				});
+			});
+
+			// --- Checkbox: toggle bedrijfsgegevens ---
+			function toggleCompanyFields() {
+				const isChecked = $('#checkboxCompany').is(":checked");
+				$('#lstSalutationAccount, #txtinputname').prop('disabled', isChecked);
+				$('#txtVatNumber, #txtCompanyName').prop('disabled', !isChecked);
+				$('.bedrijfsgegevens').toggleClass('d-none', !isChecked);
+			}
+
+			// --- Checkbox: toggle facturatieadres ---
+			function toggleInvoiceAddress() {
+				const isChecked = $('#checkboxInvoiceAddress').is(":checked");
+				$('.InvoiceAddress').prop('hidden', !isChecked);
+			}
+
+			// Initieel toepassen op paginalaad
+			toggleCompanyFields();
+			toggleInvoiceAddress();
+
+			// Event listeners
+			$('#checkboxCompany').change(toggleCompanyFields);
+			$('#checkboxInvoiceAddress').change(toggleInvoiceAddress);
+
+			// --- Select2 init ---
+			function initSelect2(id, countryId, placeholder, postcodeId, postcode, gemeente) {
+				const $element = $(id);
+
+				// Voeg initiële selectie toe
+				if (postcodeId > 0) {
+					const option = new Option(`${postcode} - ${gemeente}`, postcodeId, true, true);
+					$element.append(option).trigger('change');
+				}
+
+				$element.select2({
+					minimumInputLength: 3,
+					theme: 'bootstrap',
+					dropdownAutoWidth: true,
+					placeholder: placeholder,
+					ajax: {
+						url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+						type: 'POST',
+						dataType: 'json',
+						delay: 250,
+						cache: false,
+						data: function (params) {
+							return {
+								term: params.term,
+								CountryId: countryId
+							};
+						},
+						processResults: function (data) {
+							return {
+								results: $.map(data, function (item) {
+									return { id: item.id, text: item.text };
+								})
+							};
+						}
+					}
+				});
+
+
+				// Open bij keyboard focus
+				$element.next('.select2-container').find('.select2-selection').on('focus', function () {
+					$element.select2('open');
+				});
+
+				// Vermijd sluiten bij tab-out
+				$element.on('select2:closing', function (e) {
+					if ($(this).data('skipClose')) {
+						e.preventDefault();
+						$(this).data('skipClose', false);
+					}
+				});
+			}
+			
+
+			// Initialiseer Select2 voor postalcode
+			initSelect2("#txtPostalcode",@Model.Client.Postalcode.Country.CountryId,"Selecteer uw gemeente",@Model.Client.Postalcode.PostcodeId,"@Model.Client.Postalcode.Postcode","@Model.Client.Postalcode.Gemeente");
+			initSelect2("#txtInvoicePostalcode",@Model.Client.InvoicePostalcode.Country.CountryId,"Selecteer uw gemeente",@(Model.Client.InvoicePostalcode.PostcodeId.HasValue ? Model.Client.InvoicePostalcode.PostcodeId.ToString() : "null"),"@Model.Client.InvoicePostalcode.Postcode","@Model.Client.InvoicePostalcode.Gemeente");
+
+						// --- Currency mask bij opmaak ---
+								$('.Currencymask').each(function () {
+			var val = $(this).val();
+			if (val && val.indexOf(' ') > -1) {
+				val = val.replace(/ /g, '.'); // vervang spaties door punten
+				$(this).val(val);
+			}
+		});
+				$(document).on('click', '.addGift', function () {
+			alert("klik");
+		});
+
+
+		});
+
+		$('.Currencymask').mask("#.##0,00", { reverse: true });
+
+							// Contacten toevoegen
+		$("#addContact").click(function () {
+			$.ajax({
+				url: this.href,
+				cache: false,
+				success: function (html) { $("#editorRows").append(html); }
+			});
+			return false;
+		});
+
+		// Contact verwijderen
+		$(document).on('click', 'a.deleteContact', function () {
+			$(this).closest('.contactRow').remove();
+			return false;
+		});
+		// CoOwner verwijderen
+		$(document).on('click', 'a.deleteCoOwner', function () {
+			$(this).closest('.coOwnerRow').remove();
+			return false;
+		});
+		// Gift verwijderen
+		$(document).on('click', 'a.deleteGift', function () {
+			$(this).closest('.giftRow').remove();
+			return false;
+		});
+				// Poa verwijderen
+		$(document).on('click', 'a.deletePoa', function () {
+			$(this).closest('.poaRow').remove();
+			return false;
+		});
+				$(document).ready(function () {
+			function toggleMedeEigenaarsTab() {
+				const selectedValue = $('#lstOwnerTypes').val();
+				if (selectedValue === '1') {
+					$('#tabMedeEigenaars').hide();
+				} else {
+					$('#tabMedeEigenaars').show();
+				}
+			}
+
+			// Initieel aanroepen bij laden van de pagina
+			toggleMedeEigenaarsTab();
+
+			// Op verandering van de dropdown
+			$('#lstOwnerTypes').on('change', toggleMedeEigenaarsTab);
+		});
+
+	</script>
+
+}

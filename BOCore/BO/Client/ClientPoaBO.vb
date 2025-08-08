@@ -42,5 +42,7 @@ Public Class ClientPoaBO
             _activities = value
         End Set
     End Property
+    ' ✅ Bindbare lijst met geselecteerde activiteit-ID's (voor ListBoxFor)
+    Public Property SelectedActivityIds As List(Of Integer)
 
 End Class

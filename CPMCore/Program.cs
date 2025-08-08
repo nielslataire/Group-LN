@@ -10,6 +10,8 @@ using DinkToPdf;
 using DinkToPdf.Contracts;
 using CPMCore.Service;
 using Rotativa.AspNetCore;
+using Microsoft.AspNetCore.Localization;
+using System.Globalization;
 
 
 
@@ -107,6 +109,20 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 var app = builder.Build();
+
+//LOCALIZATION INSTELLEN zodat alle cijfers correct worden verwerkt
+//var cultureInfo = new CultureInfo("nl-BE");
+//cultureInfo.NumberFormat.NumberDecimalSeparator = ",";
+//cultureInfo.NumberFormat.NumberGroupSeparator = ".";
+
+//var localizationOptions = new RequestLocalizationOptions
+//{
+//    DefaultRequestCulture = new RequestCulture(cultureInfo),
+//    SupportedCultures = new List<CultureInfo> { cultureInfo },
+//    SupportedUICultures = new List<CultureInfo> { cultureInfo }
+//};
+
+//app.UseRequestLocalization(localizationOptions);
 
 //ROTATIVA INSTELLEN VOOR PDFS
 RotativaConfiguration.Setup(app.Environment.WebRootPath, "lib/rotativa");

@@ -33,6 +33,7 @@ namespace ServiceCore
                 .Include(m => m.InverseLinkedUnit)
                 .Include(m => m.InverseAttachedUnit)
                 .Include(m => m.LevelNavigation)
+                .Include(m => m.UnitConstructionValue)
                 .FirstOrDefault();
             UnitBO unit = new UnitBO();
 
@@ -121,7 +122,11 @@ namespace ServiceCore
             GetResponse<UnitBO> response = new GetResponse<UnitBO>();
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == AccountId);
+            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == AccountId)
+                   .Include(m => m.Type)
+                   .Include(m => m.UnitConstructionValue)
+                   .ToList();
+
             foreach (var _entity in entities)
             {
                 UnitBO bo = new UnitBO();
@@ -335,7 +340,10 @@ namespace ServiceCore
             GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.ClientAccountId == null && m.LinkedUnit == null);
+            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.ClientAccountId == null && m.LinkedUnit == null)
+                .Include(m => m.Type)
+                .ThenInclude(m => m.Group)
+                .ToList();
             foreach (var _entity in entities)
                 response.AddValue(_entity.GetIdName());
             return response;
@@ -777,8 +785,8 @@ namespace ServiceCore
         public Response InsertUpdateConstructionValue(UnitConstructionValueBO bo)
         {
             Response response = new Response();
-            if ((bo.UnitId == 0))
-                response.AddError("Er moet een unit geselecteerd zijn");
+            if ((bo.Id == 0))
+                response.AddError("Er moet een constructiewaarde geselecteerd zijn");
             if ((!response.Success))
                 return response;
 

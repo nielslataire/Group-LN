@@ -10,6 +10,23 @@
 
 <!-- Page Content -->
 <div class="row">
+	<div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+		<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+			<div class="row align-items-center">
+				<div class="col-sm-auto d-flex align-items-center">
+					<a href="@TempData.Peek("Referrer")" class="text-decoration-none text-reset d-flex align-items-center">
+						<i class="bx bx-chevron-left fs-1"></i>
+					</a>
+				</div>
+				<div class="col-sm-auto">
+					<h1 class="fw-bold mb-0">@Model.Client.Salutation.GetDisplayName() @Model.Client.DisplayName</h1>
+					<h5 class="mb-4 mt-0">Bekijk alle gegevens van deze klant.</h5>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="row">
 	<div class="col-md-3">
 		<section class="card card-modern card-modern-alt-padding">
 			<header class="card-header">

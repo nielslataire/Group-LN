@@ -1,0 +1,59 @@
+﻿@model BOCore.UnitBO
+@using HtmlHelpers.BeginCollectionItemCore
+
+<div class="unitRow">
+    @using (Html.BeginCollectionItem("units")){
+        <section class="card mb-4">
+            <div class="card-body border p-4">
+                <div class="d-flex justify-content-between align-items-start mb-1">
+                    <div class="fs-6">@Model.Type.Name @Model.Name</div>
+                    <a href="#" class="deleteContact" data-toggle="tooltip" data-placement="top" title="Contact verwijderen">
+                        <i class="bx bx-trash fs-5"></i>
+                    </a>
+                </div>
+                @Html.HiddenFor(m => m.Id)
+                <div class="form-group">
+                    <!-- Eerste rij: grondwaarde + eerste constructionvalue -->
+                    <div class="row align-items-center pb-2">
+                        <div class="col-lg-2 col-xl-2">
+                            Grondwaarde
+                        </div>
+                        <div class="col-lg-4 col-xl-4">
+                            @Html.EditorFor(m => m.LandValueSold)
+                        </div>
+
+                        @if (Model.ConstructionValues.Count > 0)
+                        {
+                            <div class="col-lg-2 col-xl-2">
+                                @Html.HiddenFor(m => m.ConstructionValues[0].Id)
+                                @Html.DisplayFor(m => m.ConstructionValues[0].Description)
+                            </div>
+                            <div class="col-lg-4 col-xl-4">
+                                @Html.EditorFor(m => m.ConstructionValues[0].ValueSold)
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Volgende constructionvalues op aparte rijen -->
+                    @for (int j = 1; j < Model.ConstructionValues.Count; j++)
+                    {
+                        <div class="row align-items-center pb-2">
+                            <div class="col-lg-6 col-xl-6">
+                                <!-- leeg om plaats te houden voor grondwaarde -->
+                            </div>
+                            <div class="col-lg-2 col-xl-2">
+                                @Html.HiddenFor(m => m.ConstructionValues[j].Id)
+                                @Html.DisplayFor(m => m.ConstructionValues[j].Description)
+                            </div>
+                            <div class="col-lg-4 col-xl-4">
+                                @Html.EditorFor(m => m.ConstructionValues[j].ValueSold)
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </section>
+        
+    }
+</div>
+

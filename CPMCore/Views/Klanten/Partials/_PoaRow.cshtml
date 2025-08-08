@@ -1,0 +1,36 @@
+﻿@model BOCore.ClientPoaBO;
+@using HtmlHelpers.BeginCollectionItemCore
+@using BOCore
+@{
+    var listactivities = ViewData["Listactivities"] as List<IdNameBO>;
+}
+<div class="poaRow form-group">
+    @using (Html.BeginCollectionItem("poas")){
+
+    
+                    <div class="form-group row align-items-top pb-3">
+                    @Html.HiddenFor(m => m.AccountId)
+                    @Html.HiddenFor(m => m.Id)
+                         <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">Aandachtspunt</label>
+                        <div class="col-lg-5 col-xl-5">
+                @Html.TextAreaFor(m => m.Description, new { placeholder = "Omschrijving", @class = "form-control form-control-modern poaDescription" })
+                        </div>
+                        <div class="col-lg-4 col-xl-4 align-text-top ">
+                @Html.ListBoxFor(
+                         m => m.SelectedActivityIds,
+                         new SelectList(listactivities, "ID", "Display", Model.SelectedActivityIds, "Group"),
+                         new
+                         {
+                             @class = "form-control populate select2 lstactivitiesPoas",
+                             multiple = "",
+                             data_plugin_selecttwo = "",
+                         }
+                         )
+                        </div>
+                <div class="col-lg-4-1 col-xl-1">
+                <a href="" data-toggle="tooltip" data-placement="top" title="" data-original-title="Aandachtspunt verwijderen" class="deletePoa"><i class="bx bx-trash fs-5"></i></a>
+                </div>
+        </div>  
+    }
+</div>
+

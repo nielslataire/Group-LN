@@ -33,17 +33,20 @@
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
-           @*  <div id="toolbar">
-                <div class="btn-group">
-                    <button type="button" class="mr-xs ml-xs btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-file-pdf-o"></i> <span class="caret"></span></button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#modalgiftspdf" id="btnGiftsPDF" data-id="@Model.ProjectId">Toegiften</a></li>
-                        <li><a href="@Url.Action("DetailClientsListPdf", "Projecten", new {id = Model.ProjectId})">Klantenlijst</a></li>
-                    </ul>
-                    <button type="button" data-toggle="tooltip" data-placement="top" title="Adrukken" onclick="window.open('@Url.Action("DetailClientsListPrint", "Projecten", new {id = Model.ProjectId})')" class="mr-xs btn btn-default hidden-tablet hidden-phone hidden-xs "><i class="fa fa-print"></i></button>
+            <div class="row">
+            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                    <h1 class="font-weight-bold mb-0 mt-0">Leveranciers</h1>
+                    <h5 class="mb-4 mt-0">Beheer de leveranciers van het project</h5>
                 </div>
-            </div> *@
+                <div class="col-sm-auto px-0">
+                    <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+                    <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+                        <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
+                </div>
+            </div>
             @await Html.PartialAsync("Contracts", Model)
+            </div>
         </div>
     </div>
 </section>

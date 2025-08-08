@@ -1,48 +1,160 @@
-﻿@model BOCore.ClientContactBO 
+﻿@model BOCore.ClientContactBO
 @using HtmlHelpers.BeginCollectionItemCore
-<tr>
-    @using (Html.BeginCollectionItem("coowners")){
+@{
+	var countries = ViewData["Countries"] as List<SelectListItem>;
+	var ownerTypes = ViewData["OwnerTypes"] as List<SelectListItem>;
+}
+<div class="coOwnerRow">
+    @using (Html.BeginCollectionItem("coowners"))
+    {
 
-            <td data-title='Naam'>
-                @Html.DisplayFor(m => m.Name) @Html.DisplayFor(m => m.Firstname)               
-                @Html.HiddenFor(m => m.Name)
-                @Html.HiddenFor(m => m.Firstname)
+		<section class="card mb-4">
+			<div class="card-body border p-4">
+				<div class="d-flex justify-content-between align-items-start mb-1">
+					<div class=" fs-6">Mede-eigenaar</div>
+					<a href="" data-toggle="tooltip" data-placement="top" title="" data-original-title="Mede-eigenaar verwijderen" class="deleteCoOwner"><i class="bx bx-trash fs-5"></i></a>
+				</div>
+				<div class="form-group">
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
+						<div class="col-lg-2 col-xl-2">
+							@Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList(Model.Salutation.GetType()), new { @class = "form-control form-control-modern" })
+						</div>
+						<div class="col-lg-3 col-xl-2">
+							@Html.TextBoxFor(m => m.Name, new { placeholder = "Naam", @class = "form-control form-control-modern" })
+						</div>
+						<div class="col-lg-2 col-xl-4">
+							@Html.TextBoxFor(m => m.Firstname, new { placeholder = "Voornaam", @class = "form-control form-control-modern" })
+						</div>
+					</div>
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Type eigenaar</label>
+						<div class="col-lg-4 col-xl-4">
+  							@Html.DropDownListFor(m => m.CoOwnerType.Id, new SelectList(ownerTypes, "Value", "Text", Model.CoOwnerType.Id), new { @class = "form-control form-control-modern populate" })
+ 						</div>
+						<div class="col-lg-4 col-xl-4">
+							<div class="input-group">
+								<span class="input-group-text">
+									<i class="fa fa-percentage"></i>
+								</span>
+								@Html.TextBoxFor(m => m.CoOwnerPercentage, new { placeholder = "Percentage", @class = "form-control form-control-modern", @type = "number", @step = "0.01", @min = "0.01" })
+							</div>
 
-                @Html.HiddenFor(m => m.Street)
-                @Html.HiddenFor(m => m.Housenumber)
-                @Html.HiddenFor(m => m.Busnumber)
-                @Html.HiddenFor(m => m.Postalcode.Postcode)
-                @Html.HiddenFor(m => m.Postalcode.PostcodeId)
-                @Html.HiddenFor(m => m.Postalcode.Gemeente)
-                @Html.HiddenFor(m => m.Postalcode.Country.Name)
-                @Html.HiddenFor(m => m.Phone)
-                @Html.HiddenFor(m => m.Cellphone)
-                @Html.HiddenFor(m => m.Email)
-                @Html.HiddenFor(m => m.CompanyName)
-                @Html.HiddenFor(m => m.VATnumber)
-            </td>
-    <td data-title="Type">
-        @Html.DisplayFor(m => m.CoOwnerType.Name)
-        @Html.HiddenFor(m => m.CoOwnerType.Id)
-    </td>
-    <td data-title="%" class="percentage">
-        @Html.DisplayFor(m => m.CoOwnerPercentage)
-        @Html.HiddenFor(m => m.CoOwnerPercentage)
-    </td>
-   
-            @if(ViewData["mode"] == "edit"){
-                    <td class="actions" data-title="Acties">
-                        <a href="#modaladddepartment" data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken" class="editDepartment" id="editDepartment" data-id="@Model.Id"><i class="fa fa-edit"></i></a>
-                        <a href="#modaldeletedepartment" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" class="deleteDepartment" data-id="@Model.Id"><i class="fa fa-remove "></i></a>
-                    </td>
-            }
-            else if (ViewData["mode"] == "add"){
+						</div>
+					</div>
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+						<div class="col-lg-8 col-xl-6">
+							<div class="checkbox-custom checkbox-default">
+								<input type="checkbox" class="toggle-CoOwnerCompany">
+								<label>Dit is een bedrijf</label>
+							</div>
+						</div>
+					</div>
+					<div class="row align-items-center pb-3 CoOwnerBedrijfsgegevens d-none">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bedrijfsgegevens</label>
+						<div class="col-lg-4 col-xl-4">
+							@Html.TextBoxFor(m => m.CompanyName, new { placeholder = "Bedrijfsnaam", @class = "form-control form-control-modern", })
+						</div>
+						<div class="col-lg-3 col-xl-4">
+							@Html.TextBoxFor(m => m.VATnumber, new { placeholder = "BTW nummer", @class = "form-control form-control-modern" })
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Contactgegevens</label>
+						<div class="col-lg-4 col-xl-4">
+							<div class="input-group">
+								<span class="input-group-text">
+									<i class="bx bx-at"></i>
+								</span>
+								@Html.TextBoxFor(m => m.Email, new { placeholder = "Email", @class = "form-control form-control-modern", @type = "email" })
+							</div>
+						</div>
+						<div class="col-lg-2 col-xl-2">
+							@Html.EditorFor(m => m.Phone)
+						</div>
+						<div class="col-lg-2 col-xl-2">
+							@Html.EditorFor(m => m.Cellphone)
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Adres</label>
+						<div class="col-lg-5 col-xl-6">
+							@Html.TextBoxFor(m => m.Street, new { placeholder = "Straat", @class = "form-control form-control-modern" })
+						</div>
+						<div class="col-lg-1 col-xl-1">
+							@Html.TextBoxFor(m => m.Housenumber, new { placeholder = "Nr", @class = "form-control form-control-modern" })
+						</div>
+						<div class="col-lg-1 col-xl-1">
+							@Html.TextBoxFor(m => m.Busnumber, new { placeholder = "Bus", @class = "form-control form-control-modern" })
+						</div>
+					</div>
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
 
-                    <td class="actions" data-title="Acties">
-                        <a href="#" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" class="deleteCoOwnerRow"><i class="fa fa-remove "></i></a>
-                    </td>
-            }
+						<div class="col-lg-3 col-xl-2">
+ 							@Html.DropDownListFor(m => m.Postalcode.Country.CountryId, new SelectList(countries, "Value", "Text", Model.Postalcode.Country.CountryId), new { @class = "form-control form-control-modern populate" })
+ 					</div>
+
+						<div class="col-lg-6 col-xl-6">
+							@Html.HiddenFor(m => m.Postalcode.PostcodeId)
+							@Html.HiddenFor(m => m.Postalcode.Country.CountryId)
+							<select class="form-control form-control-modern select2-postcode populate" data-country-field-id="@Html.IdFor(m => m.Postalcode.Country.CountryId)" data-target-id="@Html.IdFor(m => m.Postalcode.PostcodeId)">
+								<option></option> <!-- Placeholder -->
+							</select>
+						</div>
+					</div>
+				</div>
+				<div class="form-group">
+					<div class="row align-items-center pb-3">
+						<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
+						<div class="col-lg-7 col-xl-6">
+							<div class="checkbox-custom checkbox-default">
+								<i class="bx bx-location-plus"></i> <input type="checkbox" class="toggle-CoOwnerInvoice" />
+								<label for="checkboxInvoiceAddress">Afwijkend facturatieadres</label>
+							</div>
+						</div>
+					</div>
+					<div class="CoOwnerInvoiceAddress d-none">
+						<div class="row align-items-center pb-3">
+							<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Facturatiegegevens</label>
+							<div class="col-lg-5 col-xl-6">
+								@Html.TextBoxFor(m => m.InvoiceStreet, new { placeholder = "Straat", @class = "form-control form-control-modern" })
+							</div>
+							<div class="col-lg-1 col-xl-1">
+								@Html.TextBoxFor(m => m.InvoiceHousenumber, new { placeholder = "Nr", @class = "form-control form-control-modern" })
+							</div>
+							<div class="col-lg-1 col-xl-1">
+								@Html.TextBoxFor(m => m.InvoiceBusnumber, new { placeholder = "Bus", @class = "form-control form-control-modern" })
+							</div>
+						</div>
+						<div class="row align-items-center pb-3">
+							<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
+
+							<div class="col-lg-3 col-xl-2">
+ 								@Html.DropDownListFor(m => m.InvoicePostalcode.Country.CountryId, new SelectList(countries, "Value", "Text", Model.InvoicePostalcode.Country.CountryId), new { @class = "form-control form-control-modern populate" })
+ 							</div>
+
+							<div class="col-lg-6 col-xl-6">
+								@Html.HiddenFor(m => m.InvoicePostalcode.PostcodeId)
+								@Html.HiddenFor(m => m.InvoicePostalcode.Country.CountryId)
+								<select class="form-control form-control-modern select2-postcode populate" data-country-field-id="@Html.IdFor(m => m.InvoicePostalcode.Country.CountryId)" data-target-id="@Html.IdFor(m => m.InvoicePostalcode.PostcodeId)">
+									<option></option> <!-- Placeholder -->
+								</select>
+
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
     }
+</div>
 
-</tr>
+
 

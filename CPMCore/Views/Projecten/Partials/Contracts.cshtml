@@ -11,8 +11,18 @@
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
 <div class="card card-modern">
 	<div class="card-body">
+		<div class="input-group">
+			<span class="input-group-text">
+				<i class="bx bx-search"></i>
+			</span>
+			<input type="text" class="form-control" name="search-term" id="search-term" placeholder="Zoeken ...">
+		</div>
+	</div>
+</div>
+<div class="card card-modern">
+	<div class="card-body">
 		<div class="datatables-header-footer-wrapper mt-2">
-			<div class="datatable-header">
+@* 			<div class="datatable-header">
 				<div class="row align-items-center mb-3">
 
 					<div class="col-12 col-lg-auto mb-3 mb-lg-0">
@@ -33,7 +43,7 @@
 						</div>
 					</div>
 				</div>
-			</div>
+			</div> *@
 
 			<table class="table table-ecommerce-simple table-striped mb-0" id="datatable-contracts-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
 
@@ -111,7 +121,7 @@
 							</td>					
 							<td>
 								<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken"  id="editContract" href="@Url.Action("EditContract", "Projecten", new {projectid = Model.ProjectId, contractid = item.Id})"><i class="fa fa-edit"></i></a>
-								<a href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-remove "></i></a>
+								<a href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-trash "></i></a>
 												
 							</td>
 						</tr>

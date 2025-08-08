@@ -34,7 +34,7 @@ namespace ServiceCore.Translators
             bo.CompanyName = _entity.CompanyName;
             bo.StartDateConstruction = _entity.StartDateConstruction;
             bo.BankAccountNumber = _entity.BankAccountNumber;
-            bo.InvoiceAddress = _entity.InvoiceAddress;
+            bo.InvoiceAddress = _entity.InvoiceAddress ?? false;
             bo.InvoiceStreet = _entity.InvoiceStreet;
             bo.InvoiceHousenumber = _entity.InvoiceHousenumber;
             bo.InvoiceBusnumber = _entity.InvoiceBusnumber;

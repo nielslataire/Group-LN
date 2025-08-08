@@ -6,7 +6,7 @@
     For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 *@
 @{
-    ViewData["Title"] =  Model.ProjectName + " - Nacalculatie";
+    ViewData["Title"] =  Model.ProjectName;
 }
 @* @{
 	ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -22,47 +22,381 @@
 }
 @section PageStyle
 {
-    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
-    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
-    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
-    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
-    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
-    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-    <style>
-        .select2-container--default .select2-selection--multiple {
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            padding: 0.375rem 0.75rem;
-            height: auto;
-            min-height: 38px;
-        }
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+<style>
+    .select2-container--default .select2-selection--multiple {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    height: auto;
+    min-height: 38px;
+    }
 
-        .select2-container--default .select2-selection--single {
-            border: 1px solid #ced4da;
-            border-radius: 0.25rem;
-            height: 38px;
-            padding: 0.375rem 0.75rem;
-        }
+    .select2-container--default .select2-selection--single {
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    height: 38px;
+    padding: 0.375rem 0.75rem;
+    }
 
-        .select2-container--default .select2-selection--multiple .select2-selection__choice {
-            background-color: #e9ecef;
-            border: 1px solid #ced4da;
-            border-radius: 0.2rem;
-            color: #495057;
-        }
-        /* Zorg dat de eerste kolom zich aanpast aan de inhoud */
-        table td:first-child,
-        table th:first-child {
-            white-space: nowrap;
-            width: 1%;
-        }
-    </style>
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background-color: #e9ecef;
+    border: 1px solid #ced4da;
+    border-radius: 0.2rem;
+    color: #495057;
+    }
+    /* Zorg dat de eerste kolom zich aanpast aan de inhoud */
+    table td:first-child,
+    table th:first-child {
+    white-space: nowrap;
+    width: 1%;
+    }
+    /* Verwijder achtergrondkleur bij geopende accordion button */
+    .accordion-button:not(.collapsed) {
+    background-color: transparent !important;
+    box-shadow: none;
+    }
+
+    /* Verwijder border color van accordion button wanneer gesloten */
+    .accordion-button.collapsed {
+    border-color: transparent !important;
+    }
+
+    /* Optioneel: Zorg dat hover en focus geen ongewenste stijlen geven */
+    .accordion-button:focus {
+    box-shadow: none;
+    }
+
+    .accordion-button:hover {
+    background-color: transparent;
+    }
+
+    .accordion-button {
+    position: relative;
+    padding-left: 2rem; /* ruimte voor het icoon links */
+    }
+
+    .accordion-button::before {
+    content: "";
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    width: 1rem;
+    height: 1rem;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23333' viewBox='0 0 16 16'%3e%3cpath d='M6 12L10 8L6 4' stroke='%23333' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    transform: translateY(-50%);
+    transition: transform 0.2s ease-in-out;
+    }
+
+    /* open = rotate chevron down */
+    .accordion-button:not(.collapsed)::before {
+    transform: translateY(-50%) rotate(90deg);
+    }
+
+    /* verberg standaard ::after */
+    .accordion-button::after {
+    display: none;
+    }
+
+
+</style>
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
             <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Nacalculatie</h1>
+                        <h5 class="mb-4 mt-0">Een overzicht van alle kosten van het project</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        @*                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+                    <button type="button" class="btn btn-primary btn-md px-3" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button> *@
+                    </div>
+                </div>
+            </div>
+            <section class="card card-featured-left card-featured-primary mb-4">
+                <div class="card-body">
+                    <h2 class="card-title m-4 h1" style="font-size: 2rem;">Totaaloverzicht</h2>
+                    <div class="row p-4 text-center">
+                        <div class="col">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <p class="mb-1">Totaal Begroot</p>
+                                        <div class="info">
+                                            <strong class="amount">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price))</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <p class="mb-1">Totaal Gecontracteerd</p>
+                                        <div class="info">
+                                            <strong class="amount">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <p class="mb-1">Totaal Gefactureerd</p>
+                                        <div class="info">
+                                            <strong class="amount">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Sum(s => s.Price))</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <p class="mb-1">Verschil Begroot vs Contract</p>
+                                        <div class="info">
+                                            @{
+                                                decimal budgetSum = Model.BudgetActivities.Sum(s => (decimal?)s.Price) ?? 0;
+                                                decimal contractS = Model.Contracts.Sum(s => s.Activities.Sum(f => (decimal?)f.Price)) ?? 0;
+
+                                                var verschil = budgetSum - contractS;
+                                                var cssClass = verschil < 0 ? "amount text-danger" : "amount";
+                                                var formattedBedrag = (verschil < 0 ? "+" : "") + "€ " + Math.Abs(verschil).ToString("N2");
+                                            }
+                                            <strong class="@cssClass">@formattedBedrag</strong>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @{
+                            // Som van alle prijzen in contractactiviteiten
+                            decimal contractS2 = Model.Contracts
+                            .SelectMany(c => c.Activities)
+                            .Sum(a => (decimal?)a.Price) ?? 0;
+
+                            // Som van alle inkomende factuurprijzen
+                            decimal factuurSum = Model.IncommingInvoicesActivities
+                            .Sum(f => (decimal?)f.Price) ?? 0;
+
+                            // Verschil: factuur - contract
+                            var verschil2 = factuurSum - contractS2;
+                            var cssClass2 = verschil2 > 0 ? "amount text-danger" : "amount";
+                            var formattedBedrag2 = (verschil2 > 0 ? "+" : "") + "€ " + Math.Abs(verschil2).ToString("N2");
+                            var toonOverfacturatie = verschil2 > 0;
+                        }
+
+                        <div class="col">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <p class="mb-1">Verschil Contract vs Factuur</p>
+                                        <div class="info">
+                                            <strong class="@cssClass2">@formattedBedrag2</strong>
+                                            @if (toonOverfacturatie)
+                                            {
+                                                <div class="text-danger small mt-1">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> Overfacturatie
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+            <section class="card mb-4">
+                <div class="card-body">
+                    <h2 class="card-title h1 m-4" style="font-size: 2rem;">Categorieën</h2>
+                    <div class="accordion m-4" id="accordionExample">
+                        @foreach (var categorie in Model.ActivityGroups)
+                        {
+                            <div class="card border mb-4">
+                                <h2 class="card-header bg-transparent mt-0 ms-1" id="heading-@categorie.ID">
+                                    @{
+                                        var budgetActivitySum = Model.BudgetActivities
+                                        .Where(l => l.Activity.Group.ID == categorie.ID)
+                                        .Sum(s => (decimal?)s.Price) ?? 0;
+
+                                        var contractSum = Model.Contracts
+                                        .SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == categorie.ID))
+                                        .Sum(s => (decimal?)s.Price) ?? 0;
+
+                                        var incomingInvoiceSum = Model.IncommingInvoicesActivities
+                                        .Where(l => l.Activity.Group.ID == categorie.ID)
+                                        .Sum(t => (decimal?)t.Price) ?? 0;
+
+                                        var verschilBegrootContract = budgetActivitySum - contractSum;
+                                        var verschilContractFactuur = contractSum - incomingInvoiceSum;
+
+                                        string FormatWithSign(decimal value)
+                                        {
+                                            return value < 0 ? $"-€{Math.Abs(value):N2}" : $"€{value:N2}";
+                                        }
+
+                                        string FormatCurrency(decimal value)
+                                        {
+                                            return $"€{value:N2}";
+                                        }
+
+                                        string FormatPercentage(decimal part, decimal whole)
+                                        {
+                                            if (whole == 0) return "0%";
+                                            var perc = (part / whole) * 100;
+                                            return $"{Math.Round(perc, 1)}%";
+                                        }
+                                    }
+                                    <button class="accordion-button collapsed" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#collapse-@categorie.ID"
+                                    aria-expanded="false" aria-controls="collapse-@categorie.ID">
+                                        <span>@categorie.Name</span>
+
+                                        @if (verschilContractFactuur < 0)
+                                        {
+                                            <span class="badge bg-danger ms-2"><i class="fas fa-exclamation-triangle me-1"></i>  Overschrijding</span>
+                                        }
+                                    </button>
+                                </h2>
+                               <div class="row ms-3">
+                                    <div class="col mb-3">
+                                        Begroot:<br />
+                                        <strong>@FormatCurrency(budgetActivitySum)</strong>
+                                    </div>
+                                    <div class="col mb-3">
+                                        Gecontracteerd:<br />
+                                        <strong>@FormatCurrency(contractSum)</strong>
+                                    </div>
+                                    <div class="col mb-3">
+                                        Gefactureerd:<br />
+                                        <strong>@FormatCurrency(incomingInvoiceSum)</strong>
+                                    </div>
+                                    <div class="col mb-3">
+                                        Verschil Begroot vs Contract:<br />
+                                        <strong class="@(verschilBegrootContract < 0 ? "text-danger" : "")">
+                                            @FormatWithSign(verschilBegrootContract)
+                                        </strong>
+                                    </div>
+                                    <div class="col mb-3">
+                                        Verschil Contract vs Factuur:<br />
+                                        <strong class="@(verschilContractFactuur < 0 ? "text-danger" : "")">
+                                            @FormatWithSign(verschilContractFactuur)
+                                        </strong>
+                                    </div>
+                                    <div class="col mb-3">
+                                        Percentage Gefactureerd:<br />
+                                        <strong>@FormatPercentage(incomingInvoiceSum, contractSum)</strong>
+                                    </div>
+                                </div>
+                                <div id="collapse-@categorie.ID" class="accordion-collapse collapse" aria-labelledby="heading-@categorie.ID">
+                                    <div class="card-body">
+                                        <div class="border-top mx-n4 mb-3"></div>
+                                        <h4 class="card-header bg-transparent px-3">Loten</h4>
+                                        <div class="px-4">
+                                        <table class="table table-responsive-md mb-0 align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:auto;">Lot</th>
+                                                    <th class="text-end" style="width: 12%;">Begroot</th>
+                                                    <th class="text-end" style="width: 12%;">Gecontracteerd</th>
+                                                    <th class="text-end" style="width: 12%;">Gefactureerd</th>
+                                                    <th class="text-end" style="width: 12%;">Verschil Begroot vs Contract</th>
+                                                    <th class="text-end" style="width: 12%;">Verschil Contract vs Factuur</th>
+                                                    <th class="text-end" style="width: 12%;">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var activity in categorie.Activities.Where(m =>
+                                               Model.Contracts.Any(a => a.Activities.Any(i => i.Activity.ID == m.ID)) ||
+                                               Model.BudgetActivities.Any(l => l.Activity.ID == m.ID) ||
+                                               Model.IncommingInvoicesActivities.Any(l => l.Activity.ID == m.ID))
+                                               .OrderBy(o => o.Name))
+                                                {
+                                                    var budgetActivitySum2 = Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
+                                                    var contractSum2 = Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID))
+                                                    .GroupBy(g => g.ContractId)
+                                                    .Sum(s => s.Sum(t => t.Price));
+                                                    var incomingInvoiceSum2 = Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
+
+                                                    string status;
+                                                    string badgeClass;
+
+                                                    if (incomingInvoiceSum2 == contractSum2)
+                                                    {
+                                                        status = "Volledig";
+                                                        badgeClass = "bg-success";
+                                                    }
+                                                    else if (incomingInvoiceSum2 < contractSum2)
+                                                    {
+                                                        status = "Gedeeltelijk";
+                                                        badgeClass = "bg-dark-subtle";
+                                                    }
+                                                    else
+                                                    {
+                                                        status = "Over";
+                                                        badgeClass = "bg-danger";
+                                                    }
+
+                                                    <tr>
+                                                        <td>
+                                                            <a href="@Url.Action("RecalculationDetail", "Projecten", new {
+                        projectid = Model.ProjectId,
+                        activityid = activity.ID,
+                        groupid = categorie.ID })">
+                                                                @activity.Name
+                                                            </a>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            @if (Model.BudgetActivities.Any(l => l.Activity.ID == activity.ID))
+                                                            {
+                                                                @String.Format("{0:C}", budgetActivitySum2)
+                                                            }
+                                                        </td>
+                                                        <td class="text-end">@String.Format("{0:C}", contractSum2)</td>
+                                                        <td class="text-end">@String.Format("{0:C}", incomingInvoiceSum2)</td>
+                                                        <td class="text-end @(budgetActivitySum2 - contractSum2 < 0 ? "text-danger" : "")">
+                                                            @String.Format("{0:C}", budgetActivitySum2 - contractSum2)
+                                                        </td>
+                                                        <td class="text-end @(contractSum2 - incomingInvoiceSum2 < 0 ? "text-danger" : "")">
+                                                            @String.Format("{0:C}", contractSum2 - incomingInvoiceSum2)
+                                                        </td>
+                                                        <td class="text-end text-nowrap">
+                                                            <span class="badge @badgeClass">@status</span>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+
+            
+          @*   <div class="row">
                 <div class="card card-modern">
                     <div class="card-body">
                         <div class="datatables-header-footer-wrapper mt-2">
@@ -245,7 +579,7 @@
                     </div>
 
                 </div>
-            </div>
+            </div> *@
 
         </div>
     </div>
@@ -340,5 +674,6 @@
             $(document).ready(function () {
           
         });
+
     </script>
 }

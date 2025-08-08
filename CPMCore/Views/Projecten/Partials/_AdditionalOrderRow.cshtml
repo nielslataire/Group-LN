@@ -15,12 +15,12 @@
                 @Html.TextBoxFor(m => m.Price, new { @class = "form-control form-control-modern Currencymask" })
                 @if (ViewData["mode"] == "edit")
                 {
-                    <button class="btn btn-danger deleteUnit" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" ms-2" data-id="@Model.Activity.ID"><i class="fa fa-remove"></i></button>
+                    <button class="btn btn-danger deleteUnit" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" ms-2" data-id="@Model.Activity.ID"><i class="fa fa-trash"></i></button>
 
                 }
                 else if (ViewData["mode"] == "add")
                 {
-                    <button class="btn btn-danger deleterow" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@Model.Activity.ID"><i class="fa fa-remove"></i></button>
+                    <button class="btn btn-danger deleterow" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@Model.Activity.ID"><i class="fa fa-trash"></i></button>
 
                 }
             </div>

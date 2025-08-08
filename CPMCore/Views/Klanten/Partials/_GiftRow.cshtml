@@ -1,0 +1,36 @@
+﻿@model BOCore.ClientGiftBO;
+@using HtmlHelpers.BeginCollectionItemCore
+@using BOCore
+@{
+    var listactivities = ViewData["Listactivities"] as List<IdNameBO>;
+}
+<div class="giftRow form-group">
+    @using (Html.BeginCollectionItem("gifts")){
+
+    
+                    <div class=" form-group row align-items-center pb-3">
+                    @Html.HiddenFor(m => m.AccountId)
+                    @Html.HiddenFor(m => m.Id)
+                         <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0">Toegift</label>
+                        <div class="col-lg-5 col-xl-5">
+                @Html.TextBoxFor(m => m.Description, new { placeholder = "Omschrijving", @class = "form-control form-control-modern giftDescription" })
+                        </div>
+                        <div class="col-lg-4 col-xl-4">
+                @Html.ListBoxFor(
+                         m => m.SelectedActivityIds,
+                         new SelectList(listactivities, "ID", "Display", Model.SelectedActivityIds, "Group"),
+                         new
+                         {
+                             @class = "form-control populate select2 lstactivities",
+                             multiple = "",
+                             data_plugin_selecttwo = "",
+                         }
+                         )
+                        </div>
+                <div class="col-lg-4-1 col-xl-1">
+                <a href="" data-toggle="tooltip" data-placement="top" title="" data-original-title="Toegift verwijderen" class="deleteGift"><i class="bx bx-trash fs-5"></i></a>
+                </div>
+        </div>  
+    }
+</div>
+

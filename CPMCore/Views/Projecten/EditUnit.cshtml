@@ -19,7 +19,7 @@
 
 
 <h2 class="font-weight-bold text-6">Eenheid bewerken</h2>
-@using (Html.BeginForm("EditUnit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+@using (Html.BeginForm("EditUnit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @id = "myForm", @action = "#" }))
 {
 @* 	@Html.AntiForgeryToken() *@
 	@Html.HiddenFor(m => m.Unit.Id, new {id = "unitid"})
@@ -98,6 +98,7 @@
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5">
 							<div class="tab-content" id="tabContent">
+								<!-- TYPES-->
 								<div class="tab-pane fade show active" id="types" role="tabpanel" aria-labelledby="types-tab">
 									<div class="form-group row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
@@ -119,6 +120,7 @@
 										</div>
 									</div>
 								</div>
+								<!-- BEDRAGEN-->
 								<div class="tab-pane fade show" id="bedragen" role="tabpanel" aria-labelledby="bedragen-tab">
 									<div class="form-group row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondwaarde</label>
@@ -148,6 +150,7 @@
 										</div>
 									</div>
 								</div>
+								<!-- OPPERVLAKTES-->
 								<div class="tab-pane fade show" id="oppervlaktes" role="tabpanel" aria-labelledby="oppervlaktes-tab">
 									<div class="form-group row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondoppervlakte</label>
@@ -162,6 +165,7 @@
 										</div>
 									</div>
 								</div>
+								<!-- INDELING-->
 								<div class="tab-pane fade show" id="indeling" role="tabpanel" aria-labelledby="indeling-tab">
 									<div id="RoomRows" class="ecommerce-attributes-wrapper">
 										@foreach(var item in Model.Rooms)
@@ -175,6 +179,7 @@
 										</div>
 									</div>
 								</div>
+								<!-- DOCUMENTEN-->
 								<div class="tab-pane fade show" id="documenten" role="tabpanel" aria-labelledby="documenten-tab">
 									<div class="form-group row pb-4">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2">Verkoopplan opladen</label>
@@ -249,6 +254,17 @@
 	<script src="~/lib/jquery-mask/jquery.mask.js"></script>
 
 	<script>
+		$('#myForm').on('submit', function(e) {
+			$('.Currencymask').each(function() {
+				var val = $(this).val();
+
+				// Verwijder alle punten (duizendtallen), laat komma staan
+				var cleanVal = val.replace(/\./g, '');
+
+				// Zet de schone waarde terug
+				$(this).val(cleanVal);
+			});
+		});
 		//BIJ VERANDEREN VAN HOOFDTYPE
 		 $('#lstGroupTypes').on('change', function () {
 
@@ -311,7 +327,7 @@
 				$("#btnAddConstructionValue").click(function() {
 			$.ajax({
 				url: "BlankConstructionValueRow",
-				data: { unitid:0, projectid:@Model.ProjectId},
+				data: { unitid:@Model.Unit.Id, projectid:@Model.ProjectId},
 				cache: false,
 				traditional: true,
 				type: 'POST',

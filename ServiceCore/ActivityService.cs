@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 namespace ServiceCore
 {
     public class ActivityService : IActivityService
+
     {
         public GetResponse<IdNameBO> GetActivitiesForSelect()
         {

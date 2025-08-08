@@ -1,0 +1,66 @@
+﻿@model PostalcodeModel
+
+<div class="col-md-6">
+    @Html.DropDownListFor(
+            m => m.CountryId,
+            new SelectList(Model.Countries, "ID", "Display", Model.CountryId),
+            new { @class = "form-control populate" }
+            )
+</div>
+
+<div class="col-md-6">
+    <select asp-for="PostalCodeId" id="txtPostalcode" class="form-control form-control-modern populate"></select>
+@*     @Html.HiddenFor(m => m.PostalCodeId, new { @class = "form-control" }) *@
+    @Html.HiddenFor(m => m.CountryId)
+</div>
+
+@{
+    var prefix = ViewData.TemplateInfo.HtmlFieldPrefix;
+    var countryIdField = "#" + prefix + "_CountryId";
+    var postalCodeField = "#" + prefix + "_PostalCodeId";
+    var postcodeId = ViewData["PostcodeId"] as int? ?? 0;
+    var postcode = ViewData["Postcode"] as string ?? "";
+    var gemeente = ViewData["Gemeente"] as string ?? "";
+}
+
+<script>
+    // Selecteren van een land (initiële waarde)
+    var prefix_CountryId = jQuery('@countryIdField option:selected').val();
+
+    // Update CountryId bij wijziging
+    $('@countryIdField').on('change', function () {
+        prefix_CountryId = this.value;
+    });
+
+    $(document).ready(function () {
+        $(txtPostalcode).select2({
+            placeholder: 'Gemeente',
+            minimumInputLength: 3,
+            width: 'resolve',
+            ajax: {
+                url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+                cache: false,
+                traditional: true,
+                type: 'POST',
+                data: function (params) {
+                    return {
+                        term: params.term,
+                        CountryId: prefix_CountryId
+                    };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                }
+            },
+            initSelection: function (element, callback) {
+                if (@postcodeId > 0) {
+                    var data = {
+                        id: @postcodeId,
+                        text: '@postcode - @gemeente'
+                    };
+                    callback(data);
+                }
+            }
+        });
+    });
+</script>

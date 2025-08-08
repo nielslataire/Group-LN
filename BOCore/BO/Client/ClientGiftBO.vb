@@ -1,8 +1,11 @@
 ﻿Imports System.ComponentModel.DataAnnotations
+
 Public Class ClientGiftBO
     Public Sub New()
-        _activities = New List(Of ActivityBO)
+        Activities = New List(Of ActivityBO)()
+        SelectedActivityIds = New List(Of Integer)()
     End Sub
+
     Private m_Id As Integer
     Public Property Id() As Integer
         Get
@@ -12,6 +15,7 @@ Public Class ClientGiftBO
             m_Id = value
         End Set
     End Property
+
     Private m_accountid As Integer
     <Required(ErrorMessage:="Gelieve een account te kiezen")>
     Public Property AccountId() As Integer
@@ -22,6 +26,7 @@ Public Class ClientGiftBO
             m_accountid = value
         End Set
     End Property
+
     Private _description As String
     <Display(Name:="Toegift")>
     <Required(ErrorMessage:="Gelieve de omschrijving in te vullen")>
@@ -33,6 +38,7 @@ Public Class ClientGiftBO
             _description = value
         End Set
     End Property
+
     Private _activities As List(Of ActivityBO)
     Public Property Activities() As List(Of ActivityBO)
         Get
@@ -43,4 +49,6 @@ Public Class ClientGiftBO
         End Set
     End Property
 
+    ' ✅ Bindbare lijst met geselecteerde activiteit-ID's (voor ListBoxFor)
+    Public Property SelectedActivityIds As List(Of Integer)
 End Class

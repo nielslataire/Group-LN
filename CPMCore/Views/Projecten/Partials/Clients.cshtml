@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
 <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
 }
-
+@* 
 <div class="inner-toolbar clearfix">
 	<ul>
 		@if (User.IsInRole("Admin"))
@@ -21,9 +21,20 @@
 			<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Wijzigingsopdrachten" href="@Url.Action("ChangeOrder", "Projecten", new {projectid = Model.ProjectId})" Class="ChangeOrder"><i Class="fa fa-shopping-cart"></i></a>
 		</li>
 	</ul>
-</div>
+</div> *@
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
-<div class="card card-modern pt-5">
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="input-group">
+			<span class="input-group-text">
+				<i class="bx bx-search"></i>
+			</span>
+			<input type="text" class="form-control me-2"" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+		</div>
+	</div>
+</div>
+
+<div class="card card-modern">
 	<div class="card-body">
 		<div class="datatables-header-footer-wrapper mt-2">
 			<div class="datatable-header">
@@ -157,7 +168,7 @@
 							<td>
 								  <a data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken"  id="editAccount" href="@Url.Action("Edit", "Klanten", new {projectid = Model.ProjectId, clientid = item.Client.Id, activetab = 0})"><i class="fa fa-edit"></i></a>
                                                 @if(User.IsInRole("Admin")) {
-                                                <a href="#modaldeleteclient" data-toggle="tooltip" id="deleteClient" data-placement="top" title="" data-original-title="Verwijderen" class="deleteClient" data-id="@item.Client.Id"><i class="fa fa-remove "></i></a>
+                                                <a href="#modaldeleteclient" data-toggle="tooltip" id="deleteClient" data-placement="top" title="" data-original-title="Verwijderen" class="deleteClient" data-id="@item.Client.Id"><i class="fa fa-trash "></i></a>
 												}
 							</td>
 						</tr>

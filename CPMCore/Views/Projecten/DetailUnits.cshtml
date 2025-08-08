@@ -6,7 +6,7 @@
     For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 *@
 @{
-    ViewData["Title"] = Model.ProjectName + " - Eenheden";
+    ViewData["Title"] = Model.ProjectName;
 }
 @* @{
 	ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -57,16 +57,18 @@
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
             <div class="row">
-            @*  <div id="toolbar">
-                <div class="btn-group">
-                    <button type="button" class="mr-xs ml-xs btn btn-default dropdown-toggle" data-toggle="dropdown"><i class="fa fa-file-pdf-o"></i> <span class="caret"></span></button>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a href="#modalgiftspdf" id="btnGiftsPDF" data-id="@Model.ProjectId">Toegiften</a></li>
-                        <li><a href="@Url.Action("DetailClientsListPdf", "Projecten", new {id = Model.ProjectId})">Klantenlijst</a></li>
-                    </ul>
-                    <button type="button" data-toggle="tooltip" data-placement="top" title="Adrukken" onclick="window.open('@Url.Action("DetailClientsListPrint", "Projecten", new {id = Model.ProjectId})')" class="mr-xs btn btn-default hidden-tablet hidden-phone hidden-xs "><i class="fa fa-print"></i></button>
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Eenheden</h1>
+                        <h5 class="mb-4 mt-0">Beheer de eenheden van het project</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+                        <a href="@Url.Action("AddUnit", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Eenheid toevoegen</a>
+                    </div>
                 </div>
-            </div> *@
+
             @await Html.PartialAsync("Units", Model)
             </div>
 

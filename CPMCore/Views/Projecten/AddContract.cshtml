@@ -5,7 +5,7 @@
 @model CPMCore.Models.Projecten.ProjectAddContractModel;
 
 @{
-	ViewData["Title"] = "Project - " + Model.ProjectName;
+	ViewData["Title"] = Model.ProjectName;
 }
 
 @section PageStyle
@@ -20,15 +20,29 @@
 	<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
 	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.8/jquery.inputmask.min.js"></script>
-	</style>
 
 }
 
-
-<h2 class="font-weight-bold text-6">Contract toevoegen</h2>
+<div class="row">
+<div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+	<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+			<div class="row align-items-center">
+				<div class="col-sm-auto d-flex align-items-center">
+					<a href="@Url.Action("DetailContracts", "Projecten",new {projectid = Model.ProjectId})" class="text-decoration-none text-reset d-flex align-items-center">
+						<i class="bx bx-chevron-left fs-1"></i>
+					</a>
+				</div>
+				<div class="col-sm-auto">
+					<h1 class="fw-bold mb-0">Leverancier toevoegen</h1>
+					<h5 class="mb-4 mt-0">Voeg een leverancier aan het project toe</h5>
+				</div>
+			</div>
+	</div>
+</div>
+</div>
 @using (Html.BeginForm("AddContract", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
 {
-	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
+
 	@Html.HiddenFor(m => m.Contract.ProjectId, new { id = "contractprojectid" })
 	@Html.HiddenFor(m => m.Contract.Id, new { id = "contractid" })
 	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
@@ -169,7 +183,7 @@
 	<div class="row action-buttons">
 		<div class="col-12 col-md-auto">
 			<button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-				<i class="bx bx-save text-4 me-2"></i> Contract opslaan
+				<i class="bx bx-save text-4 me-2"></i> Leverancier opslaan
 			</button>
 		</div>
 		<div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">

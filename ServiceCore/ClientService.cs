@@ -20,7 +20,6 @@ namespace ServiceCore
         public GetResponse<ClientAccountBO> GetClientAccountById(int id)
         {
             GetResponse<ClientAccountBO> response = new GetResponse<ClientAccountBO>();
-
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetClientAccountDAO();
 
@@ -459,7 +458,11 @@ namespace ServiceCore
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetClientGiftDAO();
 
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == id);
+            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == id)
+                .Include(m => m.Activity)
+                .ThenInclude(m => m.Group)
+                .ToList();
+
             foreach (var _entity in entities)
             {
                 ClientGiftBO clientgift = new ClientGiftBO();
@@ -595,7 +598,10 @@ namespace ServiceCore
             UnitOfWork uow = new UnitOfWork();
             var dao = uow.GetClientPoaDAO();
 
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == id);
+            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == id)
+                .Include(m => m.Activity)
+                .ThenInclude(m => m.Group)
+                .ToList();
             foreach (var _entity in entities)
             {
                 ClientPoaBO clientpoa = new ClientPoaBO();

@@ -8,6 +8,12 @@ using System;
 using System.Drawing;
 using System.Text.RegularExpressions;
 using CPMCore.Attributes;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using static System.Net.Mime.MediaTypeNames;
+using NuGet.Configuration;
 
 namespace CPMCore.Controllers
 {
@@ -30,6 +36,7 @@ namespace CPMCore.Controllers
         // KLANTEN
         public ActionResult Detail(int clientId, int projectId = 0)
         {
+            var referrer = Request.Headers["Referer"].ToString();
             var model = new ClientModel();
             var clientService = ServiceFactory.GetClientService();
             var unitService = ServiceFactory.GetUnitService();
@@ -68,9 +75,9 @@ namespace CPMCore.Controllers
             model.Poas = clientService.GetClientPoaByAccountId(clientId)?.Values;
 
             // 9. Execution Days
-            model.ExecutionDays = (int)model.Client.ExecutionDays == 0
-                ? projectService.GetProjectExecutionDays(model.ProjectId)
-                : (int)model.Client.ExecutionDays;
+            model.ExecutionDays = model.Client.ExecutionDays.HasValue && model.Client.ExecutionDays.Value != 0
+                ? model.Client.ExecutionDays.Value
+                : projectService.GetProjectExecutionDays(model.ProjectId);
 
             // 10. Start Date
             model.StartDate = model.Client.StartDateConstruction != null
@@ -109,6 +116,10 @@ namespace CPMCore.Controllers
         [HttpGet]
         public ActionResult AddClientAccount(int id)
         {
+            var referrer = Request.Headers["Referer"].ToString();
+
+            // Use the referrer URL as needed
+            TempData["Referrer"] = referrer;
             AddClientAccountModel model = new AddClientAccountModel();
             var service = ServiceFactory.GetProjectService();
             model.ProjectName = service.GetProjectNameById(id);
@@ -118,6 +129,133 @@ namespace CPMCore.Controllers
             FillInAddSelectLists(ref model);
             return View(model);
         }
+        [HttpPost]
+        public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, List<ClientContactBO> coowners, List<UnitBO> units)
+        {
+            var Referrer = TempData["Referrer"];
+            var errors = new Dictionary<string, ModelErrorCollection>();
+
+            // Verzamel modelstate fouten
+            foreach (var key in ModelState.Keys)
+            {
+                if (ModelState[key].Errors.Count > 0)
+                {
+                    errors[key] = ModelState[key].Errors;
+                }
+            }
+
+            // Controleer of er minstens één eenheid gekozen werd
+            if (units == null || !units.Any())
+            {
+                ModelState.AddModelError("CustomError", "U dient minstens één eenheid te kiezen voor deze klant");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                FillInAddSelectLists(ref model);
+                return View(model);
+            }
+
+            // Postcodes en contacten koppelen
+            model.ClientAccount.Postalcode.PostcodeId = model.SelectedPostalcode;
+            model.ClientAccount.InvoicePostalcode.PostcodeId = model.SelectedInvoicePostalcode;
+            model.ClientAccount.CoOwners = coowners;
+            model.ClientAccount.Contacts = contacts;
+
+            var clientService = ServiceFactory.GetClientService();
+            var unitService = ServiceFactory.GetUnitService();
+
+            // 1. Voeg klantenaccount toe
+            var response = clientService.InsertUpdate(model.ClientAccount);
+
+            if (!response.Success || response.Messages == null || !response.Messages.Any())
+            {
+                AddMessage("error", $"De klantenaccount {model.ClientAccount.Name} is NIET toegevoegd", "Fout!");
+                return View(model);
+            }
+
+            model.ClientAccount.Id = int.Parse(response.Messages[0].Message);
+
+            var failedUnits = new List<string>();
+            var failedConstructionValues = new List<string>();
+            bool everythingSucceeded = true;
+
+            // 2. Voeg units toe
+            foreach (var item in units)
+            {
+                var unitResponse = unitService.GetUnitById(item.Id);
+                if (!unitResponse.Success)
+                {
+                    everythingSucceeded = false;
+                    failedUnits.Add(item.Name);
+                    continue;
+                }
+
+                var bo = unitResponse.Value;
+                bo.ClientAccountId = model.ClientAccount.Id;
+                bo.ConstructionValueSold = item.ConstructionValueSold;
+                bo.LandValueSold = item.LandValueSold;
+
+                var response2 = unitService.InsertUpdateUnit(bo);
+                if (!response2.Success)
+                {
+                    everythingSucceeded = false;
+                    failedUnits.Add(item.Name);
+                    continue;
+                }
+
+                // 3. Update bouwwaardes
+                foreach (var coitem in item.ConstructionValues)
+                {
+                    var coResponse = unitService.GetConstructionValue(coitem.Id);
+                    if (!coResponse.Success)
+                    {
+                        everythingSucceeded = false;
+                        failedConstructionValues.Add($"{item.Name} - {coitem.Id}");
+                        continue;
+                    }
+
+                    var covalue = coResponse.Value;
+                    covalue.ValueSold = coitem.ValueSold;
+
+                    var response3 = unitService.InsertUpdateConstructionValue(covalue);
+                    if (!response3.Success)
+                    {
+                        everythingSucceeded = false;
+                        failedConstructionValues.Add($"{item.Name} - {coitem.Id}");
+                    }
+                }
+            }
+
+            // 4. Indien fouten → verwijder klant
+            if (!everythingSucceeded)
+            {
+                var deleteResponse = clientService.Delete(new List<int> { model.ClientAccount.Id }); // hier in een lijst
+
+                AddMessage("error", $"De klantenaccount {model.ClientAccount.Name} is NIET toegevoegd omwille van fouten", "Fout!");
+
+                if (failedUnits.Any())
+                {
+                    AddMessage("error", $"Volgende eenheden konden niet toegevoegd worden: {string.Join(", ", failedUnits)}", "Fout!");
+                }
+
+                if (failedConstructionValues.Any())
+                {
+                    AddMessage("error", $"Volgende bouwwaardes konden niet geüpdatet worden: {string.Join(", ", failedConstructionValues)}", "Fout!");
+                }
+
+                FillInAddSelectLists(ref model);
+                return View(model);
+            }
+
+            // Alles is gelukt
+            AddMessage("success", $"De klantenaccount {model.ClientAccount.Name} en bijhorende eenheden zijn succesvol toegevoegd", "Geslaagd!");
+
+            return Referrer != null
+                ? Redirect(Referrer.ToString())
+                : RedirectToAction("DetailClients", "Projecten", new { projectid = model.ProjectId });
+        }
+
         [HttpPost]
         public PartialViewResult AddCoOwner(string Name, string Forename, string Salutation, string Street, string Housenumber, string Busnumber, int Zipcode, string Phone, string Cellphone, string Email, int OwnerType, string OwnerPercentage, string VatNumber, string CompanyName, string InvoiceAddress, string InvoiceStreet, string InvoiceHousenumber, string InvoiceBusnumber, string InvoiceZipcode)
         {
@@ -199,9 +337,253 @@ namespace CPMCore.Controllers
         {
             return PartialView("_ContactRow", new ClientContactBO());
         }
+        public PartialViewResult BlankCoOwnerRow()
+        {
+            var countryService = ServiceFactory.GetCountryService();
+            var countryResponse = countryService.GetVisibleCountriesForSelect();
+            // Dummy country (bv. België)
+            var country = new CountryBO { CountryId = 19 };
+
+            var client = new ClientContactBO
+            {
+                IsCoOwner = true,
+                Postalcode = new PostalCodeBO { Country = country },
+                InvoicePostalcode = new PostalCodeBO { Country = country },
+                CoOwnerType = new ClientOwnerTypeBO()
+            };
 
 
+            // ❗️ Haal de lijsten uit je service of statisch (pas dit aan naar je situatie)
+            var countries = countryResponse.Values; ; // bijv. List<CountryBO>
+            var ownerTypeService = ServiceFactory.GetClientService();
+            var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
+            var ownerTypes = ownerTypeResponse.Values;
 
+
+            var viewData = new ViewDataDictionary<ClientContactBO>(ViewData, client)
+                {
+                    { "Countries", countries.Select(c => new SelectListItem { Value = c.ID.ToString(), Text = c.Display }).ToList() },
+                    { "OwnerTypes", ownerTypes.Select(o => new SelectListItem { Value = o.ID.ToString(), Text = o.Display }).ToList() }
+                };
+
+            return new PartialViewResult
+            {
+                ViewName = "_CoOwnerRow",
+                ViewData = viewData
+            };
+        }
+        public PartialViewResult BlankGiftRow()
+        {
+            var Service = ServiceFactory.GetActivityService();
+            var gift = new ClientGiftBO();
+            var actResponse = Service.GetActivitiesForSelect();
+            var activities = actResponse.Values;
+        
+            var viewData = new ViewDataDictionary<ClientGiftBO>(ViewData, gift)
+                {
+                    { "Listactivities", activities}
+                };
+
+            return new PartialViewResult
+            {
+                ViewName = "_GiftRow",
+                ViewData = viewData
+            };
+        }
+        public PartialViewResult BlankPoaRow()
+        {
+            var Service = ServiceFactory.GetActivityService();
+            var poa = new ClientPoaBO();
+            var actResponse = Service.GetActivitiesForSelect();
+            var activities = actResponse.Values;
+
+            var viewData = new ViewDataDictionary<ClientGiftBO>(ViewData, poa)
+                {
+                    { "Listactivities", activities}
+                };
+
+            return new PartialViewResult
+            {
+                ViewName = "_PoaRow",
+                ViewData = viewData
+            };
+        }
+        [HttpPost]
+        public PartialViewResult AddSelectedUnits(int unitId, string unitName, string unitGroup)
+        {
+            var unitService = ServiceFactory.GetUnitService();
+            var response = unitService.GetUnitById(unitId);
+
+            if (!response.Success)
+            {
+                // Optioneel: behandel fout of geef lege partial terug
+                return PartialView("_UnitRow", new UnitBO());
+            }
+
+            var unit = response.Value;
+
+            unit.LandValueSold = unit.LandValue;
+
+            foreach (var item in unit.ConstructionValues)
+            {
+                item.ValueSold = item.Value;
+            }
+
+            ViewData["mode"] = "add";
+            return PartialView("_UnitRow", unit);
+        }
+
+        //KLANT BEWERKEN
+        [HttpGet]
+        public ActionResult Edit(int projectid, int clientid, int activetab)
+        {
+            var model = new EditClientModel();
+
+            if (clientid != 0)
+            {
+                var clientService = ServiceFactory.GetClientService();
+                var unitService = ServiceFactory.GetUnitService();
+                var actService = ServiceFactory.GetActivityService();
+
+                var clientResponse = clientService.GetClientAccountById(clientid);
+                if (clientResponse.Success && clientResponse.Values.Any())
+                {
+                    var client = clientResponse.Values.First();
+                    model.Client = client;
+
+                    if (client.CompanyName is null || client.VATnumber is null)
+                    {
+                        model.IsCompany = false;
+                    }
+                    else
+                    {
+                        model.IsCompany = true;
+                    }
+
+                        model.SelectedPostalcode.CountryId = client.Postalcode.Country.CountryId;
+                    model.SelectedPostalcodeId = client.Postalcode.PostcodeId ?? 0;
+
+                    if (client.InvoicePostalcode.PostcodeId != 0)
+                    {
+                        model.SelectedInvoicePostalcode.CountryId = client.InvoicePostalcode.Country.CountryId;
+                        model.SelectedInvoicePostalcode.PostalCodeId = client.InvoicePostalcode.PostcodeId ?? 0;
+                    }
+
+                    ViewData["PostcodeDisplayName"] = $"{client.Postalcode.Postcode} - {client.Postalcode.Gemeente}";
+                    ViewData["activetab"] = activetab;
+
+                    string title = "Klant bewerken";
+                    title += client.CompanyName == null
+                        ? $" - {client.Salutation.GetDisplayName()} {client.DisplayName}"
+                        : $" - {client.DisplayName}";
+                    ViewData["Title"] = title;
+
+                    // Eenheden
+                    var unitsResponse = unitService.GetUnitsByAccountId(clientid);
+                    model.Units = unitsResponse.Values
+                        .OrderBy(u => u.Type.GroupId)
+                        .ThenBy(u => u.Type.Id)
+                        .ToList();
+
+                    // Geschenken
+                    var giftsResponse = clientService.GetClientGiftByAccountId(clientid);
+                    model.Gifts = giftsResponse.Values;
+                    var actResponse = actService.GetActivitiesForSelect();
+                    if (actResponse.Success)
+                    {
+                        model.ListActivities = actResponse.Values;
+                    }
+                    foreach (var gift in model.Gifts)
+                    {
+                        gift.SelectedActivityIds = gift.Activities?.Select(a => a.ID).ToList() ?? new List<int>();
+                    }
+
+                    // Aandachtspunten
+                    var poasResponse = clientService.GetClientPoaByAccountId(clientid);
+                    model.Poas = poasResponse.Values;
+                    foreach (var poa in model.Poas)
+                    {
+                        poa.SelectedActivityIds = poa.Activities?.Select(a => a.ID).ToList() ?? new List<int>();
+                    }
+                }
+            }
+
+            model.ProjectId = projectid;
+            FillInAddSelectListsEdit(ref model);
+            return View(model);
+        }
+
+        [HttpPost]
+        public ActionResult Edit(EditClientModel viewmodel)
+        {
+            if (!ModelState.IsValid || viewmodel.Client.Id == 0)
+            {
+                FillInAddSelectListsEdit(ref viewmodel);
+                return View(viewmodel);
+            }
+
+            var clientService = ServiceFactory.GetClientService();
+
+            viewmodel.Client.Postalcode.PostcodeId = viewmodel.SelectedPostalcode.PostalCodeId;
+            viewmodel.Client.InvoicePostalcode.PostcodeId = viewmodel.SelectedInvoicePostalcode.PostalCodeId;
+
+            if (viewmodel.IsCompany)
+            {
+                viewmodel.Client.Name = null;
+                viewmodel.Client.Salutation = 0;
+            }
+            else
+            {
+                viewmodel.Client.CompanyName = null;
+                viewmodel.Client.VATnumber = null;
+            }
+            viewmodel.Client.Postalcode.PostcodeId = viewmodel.SelectedPostalcodeId;
+            viewmodel.Client.InvoicePostalcode.PostcodeId = viewmodel.SelectedInvoicePostalcodeId;
+
+            var response = clientService.InsertUpdate(viewmodel.Client);
+
+
+            if (response.Success)
+            {
+                AddMessage("success", $"Account {viewmodel.Client.DisplayName} is bijgewerkt", "Geslaagd!");
+                return RedirectToAction("Edit", new { projectid = viewmodel.ProjectId, clientid = viewmodel.Client.Id, activetab = 0 });
+            }
+            else
+            {
+                AddMessage("error", $"Contact {viewmodel.Client.DisplayName} is niet bijgewerkt", "Fout!");
+                FillInAddSelectListsEdit(ref viewmodel);
+                return View(viewmodel);
+            }
+        }
+
+
+        private void FillInAddSelectListsEdit(ref EditClientModel model)
+        {
+            var countryService = ServiceFactory.GetCountryService();
+            var countryResponse = countryService.GetVisibleCountriesForSelect();
+            if (countryResponse.Success)
+            {
+                model.SelectedPostalcode.Countries = countryResponse.Values;
+                model.SelectedInvoicePostalcode.Countries = countryResponse.Values;
+            }
+
+            var defaultCountry = model.SelectedPostalcode.Countries
+                .FirstOrDefault(c => c.Group == "19");
+            if (defaultCountry != null)
+            {
+                model.SelectedPostalcode.CountryId = defaultCountry.ID;
+            }
+
+            var ownerTypeService = ServiceFactory.GetClientService();
+            var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
+            if (ownerTypeResponse.Success)
+            {
+                model.OwnerTypes = ownerTypeResponse.Values;
+            }
+        }
+
+
+        // KLANT VERWIJDEREN
         public ActionResult PartialDeleteClientModal(int id)
         {
             var viewModel = new IdNameBO();

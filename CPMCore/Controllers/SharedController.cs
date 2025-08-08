@@ -31,6 +31,21 @@ namespace CPMCore.Controllers
 
             return Json(PostalcodeList);
         }
+        [HttpGet]
+        public JsonResult GetPostcodeById(int id)
+        {
+            var pservice = ServiceFactory.GetPostalcodeService();
+            var presponse = pservice.GetPostalcodeById(id);
+            if(!presponse.Success)
+                return Json(null);
+
+            return Json(new
+            {
+                Value = presponse.Value.PostcodeId,
+                Text = presponse.Value.Postcode + " - " + presponse.Value.Gemeente
+            });
+        }
+
         [HttpPost]
         public string GetCountryIsoCode(int countryid)
         {
