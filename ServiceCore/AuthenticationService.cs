@@ -1,30 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BOCore;
+﻿using BOCore;
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
-using ServiceCore.Translators;
+using System.Linq;
 
 namespace ServiceCore
 {
     public class AuthenticationService : IAuthenticationService
     {
+        private readonly UnitOfWorkCore _uow;
+
+        public AuthenticationService(UnitOfWorkCore uow)
+        {
+            _uow = uow;
+        }
+
         public GetResponse<bool> ValidateUser(string userName, string password)
         {
-            var response = new GetResponse<bool>();
-            response.Value = false;
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUsersDAO();
-            var _entity = dao.GetNoTracking().Where(s => s.UserId == userName).FirstOrDefault();
-            if ((_entity != null))
+            var response = new GetResponse<bool> { Value = false };
+
+            // Haal gebruiker op (no tracking)
+            var user = _uow.Users.GetNoTracking()
+                .SingleOrDefault(u => u.UserId == userName);
+
+            if (user == null)
             {
-                if ((_entity.Password == _entity.Password))
-                    response.Value = true;
+                response.AddError("user not found");
+                return response;
             }
+
+            // TODO: vervang dit door een hash-verify (bv. BCrypt/ASP.NET Core Identity)
+            var isOk = user.Password == password;
+
+            if (!isOk)
+            {
+                response.AddError("invalid credentials");
+            }
+
+            response.Value = isOk;
             return response;
         }
     }

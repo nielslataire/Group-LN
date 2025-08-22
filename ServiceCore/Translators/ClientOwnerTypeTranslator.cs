@@ -22,7 +22,7 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        internal static ErrorCode TranslateBOToEntity(ClientOwnerType _entity, ClientOwnerTypeBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ClientOwnerType _entity, ClientOwnerTypeBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;

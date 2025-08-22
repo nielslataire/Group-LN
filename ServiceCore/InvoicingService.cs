@@ -1,102 +1,98 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BOCore;
+﻿using BOCore;
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
 using ServiceCore.Translators;
 using DALCore.Query;
+using System.Linq;
 
 namespace ServiceCore
 {
     public class InvoicingService : IInvoicingService
     {
+        private readonly UnitOfWorkCore _uow;
+
+        public InvoicingService(UnitOfWorkCore uow)
+        {
+            _uow = uow;
+        }
+
         public GetResponse<InvoiceBO> GetInvoices()
         {
-            GetResponse<InvoiceBO> response = new GetResponse<InvoiceBO>();
+            var response = new GetResponse<InvoiceBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetInvoicesDAO();
-
-            var entities = dao.GetNoTracking();
-            foreach (var _entity in entities)
+            var entities = _uow.Invoices.GetNoTracking();
+            foreach (var e in entities)
             {
-                InvoiceBO invoice = new InvoiceBO();
-
-                var err = InvoiceTranslator.TranslateEntityToBO(_entity, invoice);
-                if (err == ErrorCode.Success)
-                    response.AddValue(invoice);
-                else
-                    response.AddError(err.ToString());
+                var bo = new InvoiceBO();
+                var err = InvoiceTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
+
             return response;
         }
+
         public GetResponse<InvoiceBO> GetClientInvoices(int id, int itype = 1)
         {
-            GetResponse<InvoiceBO> response = new GetResponse<InvoiceBO>();
+            var response = new GetResponse<InvoiceBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetInvoicesDAO();
+            var entities = _uow.Invoices
+                .GetNoTracking()
+                .Where(m => m.ClientId == id && m.ClientType == itype);
 
-            var entities = dao.GetNoTracking().Where(m => m.ClientId == id && m.ClientType == itype);
-            foreach (var _entity in entities)
+            foreach (var e in entities)
             {
-                InvoiceBO invoice = new InvoiceBO();
-
-                var err = InvoiceTranslator.TranslateEntityToBO(_entity, invoice);
-                if (err == ErrorCode.Success)
-                    response.AddValue(invoice);
-                else
-                    response.AddError(err.ToString());
+                var bo = new InvoiceBO();
+                var err = InvoiceTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
+
             return response;
         }
+
         public GetResponse<InvoiceBO> GetInvoiceById(int id)
         {
-            GetResponse<InvoiceBO> response = new GetResponse<InvoiceBO>();
+            var response = new GetResponse<InvoiceBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetInvoicesDAO();
+            var entity = _uow.Invoices.GetById(id);
+            if (entity == null)
+            {
+                response.AddError("invoice not found");
+                return response;
+            }
 
-            var _entity = dao.GetById(id);
-            InvoiceBO invoice = new InvoiceBO();
+            var bo = new InvoiceBO();
+            var err = InvoiceTranslator.TranslateEntityToBO(entity, bo);
+            if (err == ErrorCode.Success) response.Value = bo;
+            else response.AddError(err.ToString());
 
-            var err = InvoiceTranslator.TranslateEntityToBO(_entity, invoice);
-            if (err == ErrorCode.Success)
-                response.Value = invoice;
-            else
-                response.AddError(err.ToString());
             return response;
         }
+
         public GetResponse<InvoiceFileBO> GetInvoiceFileByFilename(string name)
         {
-            GetResponse<InvoiceFileBO> response = new GetResponse<InvoiceFileBO>();
+            var response = new GetResponse<InvoiceFileBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetInvoicesDAO();
+            var entity = _uow.Invoices
+                .GetNoTracking()
+                .FirstOrDefault(m => m.Filename == name);
 
-            var _entity = dao.GetNoTracking().Where(m => m.Filename == name).FirstOrDefault();
-            InvoiceFileBO invoice = new InvoiceFileBO();
-            if (_entity is not null)
+            if (entity is null)
             {
-                invoice.Filename = _entity.Filename;
-                invoice.DbId = _entity.Id;
-                invoice.ClientId = _entity.ClientId;
-                invoice.InvoiceDate = _entity.Date;
-                response.Value = invoice;
-            }
-            else
                 response.AddError("no invoice found");
+                return response;
+            }
 
-            // Dim err = InvoiceTranslator.TranslateEntityToBO(_entity, invoice)
-            // If err = ErrorCode.Success Then
-            // response.Value = invoice
-            // Else
-            // response.AddError(err.ToString())
-            // End If
+            response.Value = new InvoiceFileBO
+            {
+                Filename = entity.Filename,
+                DbId = entity.Id,
+                ClientId = entity.ClientId,
+                InvoiceDate = entity.Date
+            };
+
             return response;
         }
     }

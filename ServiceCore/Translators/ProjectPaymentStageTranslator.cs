@@ -34,7 +34,7 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        internal static ErrorCode TranslateBOToEntity(InvoicingPaymentStages _entity, ProjectPaymentStageBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(InvoicingPaymentStages _entity, ProjectPaymentStageBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;

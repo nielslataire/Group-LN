@@ -2,7 +2,7 @@
 @using HtmlHelpers.BeginCollectionItemCore
 
 <div class="contactRow">
-    @using (Html.BeginCollectionItem("contacts")){
+    @using (Html.BeginCollectionItem("Client.Contacts")){
         <section class="card mb-4">
             <div class="card-body border p-4">
                 <div class="d-flex justify-content-between align-items-start mb-1">
@@ -12,6 +12,8 @@
                 <div class="form-group">
                     <div class="row align-items-center pb-3">
                         <div class="col-lg-4 col-xl-4">
+                            @Html.HiddenFor(m => m.Id)
+                            @Html.HiddenFor(m => m.IsCoOwner)
                             @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList(Model.Salutation.GetType()), new { @class = "form-control form-control-modern", id = "lstSalutation", })
                         </div>
                         <div class="col-lg-4 col-xl-4">
@@ -31,10 +33,20 @@
                             </div>
                         </div>
                         <div class="col-lg-4 col-xl-4">
-                            @Html.EditorFor(m => m.Phone)
+                            @Html.TextBoxFor(m => m.Phone, new
+                                {
+                                    placeholder = "Telefoon",
+                                    @class = "form-control form-control-modern phone-input",
+                                    type = "tel"
+                                })
                         </div>
                         <div class="col-lg-4 col-xl-4">
-                            @Html.EditorFor(m => m.Cellphone)
+                            @Html.TextBoxFor(m => m.Cellphone, new
+                                {
+                                    placeholder = "GSM",
+                                    @class = "form-control form-control-modern cellphone-input",
+                                    type = "tel"
+                                })
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,30 @@
+﻿@model BOCore.ChangeOrderBO
+
+<section class="card">
+  <header class="card-header">
+    <h2 class="card-title">Wijzigingsopdracht verwijderen?</h2>
+  </header>
+
+  <div class="card-body">
+    <div class="modal-wrapper">
+      <div class="modal-icon"><i class="fas fa-question-circle"></i></div>
+      <div class="modal-text">
+        <p>U staat op het punt om de wijzigingsopdracht van de klant @Model.ClientName te verwijderen.
+           Bent u zeker dat u deze wilt verwijderen?</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="card-footer">
+    <div class="row">
+      <div class="col-md-12 text-end">
+                <form id="frm-delete-co" method="post" action="@Url.Action("DeleteChangeOrder", "Projecten")" class="d-inline">
+          @Html.AntiForgeryToken()
+          <input type="hidden" name="id" value="@Model.Id" />
+          <button type="submit" class="btn btn-warning">Verwijderen</button>
+        </form>
+                <button class="btn btn-default modal-dismiss">Annuleren</button>
+      </div>
+    </div>
+  </footer>
+</section>

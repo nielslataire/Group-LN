@@ -26,7 +26,7 @@ namespace ServiceCore.Translators
             bo.FacebookIdCopro = _entity.FacebookIdCopro;
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(ProjectPictures _entity, ProjectPictureBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ProjectPictures _entity, ProjectPictureBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;

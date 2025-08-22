@@ -55,5 +55,8 @@ namespace DALCore
             _dbSet.Add(retval);
             return retval;
         }
+
+        public IQueryable<T> Query() => _dbSet.AsQueryable();
+        public IEnumerable<T> Find(Expression<Func<T, bool>> predicate) => _dbSet.Where(predicate);
     }
 }

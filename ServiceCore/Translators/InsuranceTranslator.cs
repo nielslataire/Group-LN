@@ -38,7 +38,7 @@ namespace ServiceCore.Translators
 
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(Insurances _entity, InsuranceBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(Insurances _entity, InsuranceBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;

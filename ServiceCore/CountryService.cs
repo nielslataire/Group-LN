@@ -1,60 +1,71 @@
 ﻿using FacadeCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using BOCore;
 using DALCore;
 using DALCore.Models;
 using DALCore.Query;
-using ServiceCore.Translators;
-
+using System.Linq;
 
 namespace ServiceCore
 {
     public class CountryService : ICountryService
     {
+        private readonly UnitOfWorkCore _uow;
+
+        public CountryService(UnitOfWorkCore uow)
+        {
+            _uow = uow;
+        }
+
         public GetResponse<CountryBO> GetCountrys()
         {
-            GetResponse<CountryBO> response = new GetResponse<CountryBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCountryDAO();
-            var entities = dao.GetNoTracking();
-            foreach (var _entity in entities)
-            {
-                CountryBO bo = new CountryBO();
-                bo.CountryId = _entity.Id;
-                bo.Name = _entity.LandNaam;
-                bo.ISOCode = _entity.LandIsocode;
+            var response = new GetResponse<CountryBO>();
 
+            var entities = _uow.Countries.GetNoTracking(); // zorg dat UnitOfWorkCore.Countries bestaat
+            foreach (var e in entities)
+            {
+                var bo = new CountryBO
+                {
+                    CountryId = e.Id,
+                    Name = e.LandNaam,
+                    ISOCode = e.LandIsocode
+                };
                 response.AddValue(bo);
             }
             return response;
         }
+
         public GetResponse<CountryBO> GetCountryById(int id)
         {
-            GetResponse<CountryBO> response = new GetResponse<CountryBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCountryDAO();
-            var _entity = dao.GetById(id);
+            var response = new GetResponse<CountryBO>();
 
-            CountryBO bo = new CountryBO();
-            bo.CountryId = _entity.Id;
-            bo.Name = _entity.LandNaam;
-            bo.ISOCode = _entity.LandIsocode;
+            var e = _uow.Countries.GetById(id);
+            if (e == null)
+            {
+                response.AddError("country not found");
+                return response;
+            }
 
+            var bo = new CountryBO
+            {
+                CountryId = e.Id,
+                Name = e.LandNaam,
+                ISOCode = e.LandIsocode
+            };
             response.AddValue(bo);
+
             return response;
         }
+
         public GetResponse<IdNameBO> GetVisibleCountriesForSelect()
         {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCountryDAO();
-            var entities = dao.GetNoTracking().Where(CountryQuery.GetVisibleQuery(true));
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
+            var response = new GetResponse<IdNameBO>();
+
+            var entities = _uow.Countries.GetNoTracking()
+                .Where(CountryQuery.GetVisibleQuery(true));
+
+            foreach (var e in entities)
+                response.AddValue(e.GetIdName());
+
             return response;
         }
     }

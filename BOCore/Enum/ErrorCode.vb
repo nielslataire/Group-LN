@@ -1,5 +1,6 @@
 ﻿Public Enum ErrorCode
-    Success = 1
-    BoNull = 2
-    EntityNull = 3
+    Success = 0
+    BoNull = 1
+    EntityNull = 2
+    UowNull = 3
 End Enum

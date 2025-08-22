@@ -1,128 +1,129 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BOCore;
+﻿using BOCore;
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
 using DALCore.Query;
 using ServiceCore.Translators;
+using System.Linq;
 
 namespace ServiceCore
 {
     public class ContactService : IContactService
     {
+        private readonly UnitOfWorkCore _uow;
+
+        public ContactService(UnitOfWorkCore uow)
+        {
+            _uow = uow;
+        }
+
         public GetResponse<ContactBO> GetContacts()
         {
-            GetResponse<ContactBO> response = new GetResponse<ContactBO>();
+            var response = new GetResponse<ContactBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCompanyContactsDAO();
-
-            var entities = dao.GetNoTracking();
-            foreach (var _entity in entities)
+            var entities = _uow.CompanyContacts.GetNoTracking();
+            foreach (var e in entities)
             {
-                ContactBO bo = new ContactBO();
-                var err = ContactTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new ContactBO();
+                var err = ContactTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
+
         public GetResponse<ContactBO> GetContactById(int id)
         {
-            GetResponse<ContactBO> response = new GetResponse<ContactBO>();
+            var response = new GetResponse<ContactBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCompanyContactsDAO();
-            var _entity = dao.GetById(id);
-            ContactBO bo = new ContactBO();
-            var err = ContactTranslator.TranslateEntityToBO(_entity, bo);
-            if (err == ErrorCode.Success)
-                response.AddValue(bo);
-            else
-                response.AddError(err.ToString());
+            var entity = _uow.CompanyContacts.GetById(id);
+            var bo = new ContactBO();
+            var err = ContactTranslator.TranslateEntityToBO(entity, bo);
+            if (err == ErrorCode.Success) response.AddValue(bo);
+            else response.AddError(err.ToString());
 
             return response;
         }
-        public GetResponse<ContactBO> GetContactsByIds(List<int> IdList)
-        {
-            GetResponse<ContactBO> response = new GetResponse<ContactBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCompanyContactsDAO();
-            foreach (var id in IdList)
+        public GetResponse<ContactBO> GetContactsByIds(List<int> idList)
+        {
+            var response = new GetResponse<ContactBO>();
+
+            foreach (var id in idList)
             {
-                var _entity = dao.GetById(id);
-                ContactBO bo = new ContactBO();
-                var err = ContactTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var entity = _uow.CompanyContacts.GetById(id);
+                var bo = new ContactBO();
+                var err = ContactTranslator.TranslateEntityToBO(entity, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
+
         public GetResponse<SelectBO> GetContactsForSearchList(string searchterm)
         {
-            GetResponse<SelectBO> response = new GetResponse<SelectBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCompanyContactsDAO();
-            var entitys = dao.GetNoTracking().Where(ContactQuery.GetNameQuery(searchterm)).OrderBy(m => m.ContactNaam).Select(m => new SelectBO() { id = m.CompanyId, text = m.ContactNaam + " " + m.ContactVoornaam + " - " + m.Company.BedrijfsNaam, extra = "Contact" });
-            response.Values = entitys.ToList();
-            // For Each _entity In entitys
-            // response.AddValue(_entity.GetIdNameForSearch())
-            // Next
+            var response = new GetResponse<SelectBO>();
+
+            // Let op: ik ga ervan uit dat het contact een Id-veld heeft met de sleutel.
+            // In je originele code stond 'CompanyId'; dat lijkt onjuist voor contacts.
+            var query = _uow.CompanyContacts.GetNoTracking()
+                .Where(ContactQuery.GetNameQuery(searchterm))
+                .OrderBy(m => m.ContactNaam)
+                .Select(m => new SelectBO
+                {
+                    id = m.CompanyId, // was m.CompanyId
+                    text = m.ContactNaam + " " + m.ContactVoornaam + " - " + m.Company.BedrijfsNaam,
+                    extra = "Contact"
+                });
+
+            response.Values = query.ToList();
             return response;
         }
 
         public Response InsertUpdate(ContactBO bo)
         {
-            Response response = new Response();
-            if ((string.IsNullOrWhiteSpace(bo.Name)))
-                response.AddError("name is mandatory");
-            if ((!response.Success))
-                return response;
-
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetCompanyContactsDAO();
-            CompanyContacts _entity = null/* TODO Change to default(_) if this is not a reference type */;
-
-            if ((bo.Id == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.Id);
-            if ((_entity != null))
+            var response = new Response();
+            if (string.IsNullOrWhiteSpace(bo.Name))
             {
-                var err = ContactTranslator.TranslateBOToEntity(_entity, bo);
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
+                response.AddError("name is mandatory");
+                return response;
             }
-            else
-                response.AddError("department not found");
 
-            response.AddError(uow.SaveChanges());
+            CompanyContacts entity = bo.Id == 0
+                ? _uow.CompanyContacts.GetNew()
+                : _uow.CompanyContacts.GetById(bo.Id);
+
+            if (entity == null)
+            {
+                response.AddError("contact not found");
+                return response;
+            }
+
+            var err = ContactTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Contact aangepast of toegevoegd", "Contact niet aangepast of toegevoegd");
             return response;
         }
 
         public Response Delete(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
+            var response = new Response();
 
             foreach (var id in ids)
-                uow.GetCompanyContactsDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+                _uow.CompanyContacts.DeleteObject(id);
 
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
             return response;
         }
+
         public Response Delete(List<ContactBO> bos)
-        {
-            return Delete(bos.Select(s => s.Id).ToList());
-        }
+            => Delete(bos.Select(s => s.Id).ToList());
     }
 }

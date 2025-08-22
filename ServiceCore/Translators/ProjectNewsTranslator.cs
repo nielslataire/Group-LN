@@ -31,7 +31,7 @@ namespace ServiceCore.Translators
             }
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(ProjectNews _entity, ProjectNewsBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ProjectNews _entity, ProjectNewsBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;

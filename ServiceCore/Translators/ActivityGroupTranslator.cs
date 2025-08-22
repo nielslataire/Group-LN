@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using BOCore;
 using DALCore.Models;
 
@@ -10,75 +8,92 @@ namespace ServiceCore.Translators
 {
     public class ActivityGroupTranslator
     {
+        // Vertaal een ActivityGroup entity naar een BO
         public static ErrorCode TranslateEntityToBO(ActivityGroup _entity, ActivityGroupBO bo)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
             if (bo == null)
                 return ErrorCode.BoNull;
+
             bo.ID = _entity.GroupId;
             bo.Name = _entity.Name;
-            bo.Lot = System.Convert.ToInt16(_entity.Lot);
-            foreach (var x in _entity.Activities)
-            {
-                ActivityBO activity = new ActivityBO();
-                activity.ID = x.ActivityId;
-                activity.Name = x.Omschrijving;
+            bo.Lot = Convert.ToInt16(_entity.Lot);
 
-                bo.Activities.Add(activity);
+            foreach (var activityEntity in _entity.Activities)
+            {
+                var activityBO = new ActivityBO
+                {
+                    ID = activityEntity.ActivityId,
+                    Name = activityEntity.Omschrijving
+                };
+
+                bo.Activities.Add(activityBO);
             }
+
             return ErrorCode.Success;
         }
-        // NAZIEN AUB
+
+        // Vertaal een BO naar een ActivityGroup entity
         internal static ErrorCode TranslateBOToEntity(ActivityGroup _entity, ActivityGroupBO bo)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
             if (bo == null)
                 return ErrorCode.BoNull;
+
+            // Update de basisgegevens van de groep
             _entity.Lot = bo.Lot;
             _entity.Name = bo.Name;
+
+            // Verwerk de activiteiten
             var err = HandleActivities(_entity, bo.Activities);
-            if ((err != ErrorCode.Success))
+            if (err != ErrorCode.Success)
                 return err;
+
             return ErrorCode.Success;
         }
+
+        // Verwerk de activiteiten binnen een ActivityGroup
         private static ErrorCode HandleActivities(ActivityGroup _entity, List<ActivityBO> activities)
         {
-            if ((activities.Count == 0))
+            // Als er geen activiteiten zijn, is er niets te doen
+            if (activities == null || activities.Count == 0)
                 return ErrorCode.Success;
-            foreach (var x in activities)
+
+            foreach (var activityBO in activities)
             {
-                if ((x.ID == 0))
+                if (activityBO.ID == 0)
                 {
-                    // insert
-                    Activity activity = new Activity();
-                    var err = ActivityTranslator.TranslateBOToEntity(activity, x);
-                    if ((err != ErrorCode.Success))
+                    // Nieuwe activiteit toevoegen
+                    var activityEntity = new Activity();
+                    var err = ActivityTranslator.TranslateBOToEntity(activityEntity, activityBO);
+                    if (err != ErrorCode.Success)
                         return err;
-                    _entity.Activities.Add(activity);
+
+                    _entity.Activities.Add(activityEntity);
                 }
                 else
                 {
-                    // update
-                    var activity = _entity.Activities.FirstOrDefault(f => f.ActivityId == x.ID);
-                    if ((activity != null))
+                    // Activiteit bijwerken
+                    var activityEntity = _entity.Activities.FirstOrDefault(f => f.ActivityId == activityBO.ID);
+                    if (activityEntity != null)
                     {
-                        var err = ActivityTranslator.TranslateBOToEntity(activity, x);
-                        if ((err != ErrorCode.Success))
+                        var err = ActivityTranslator.TranslateBOToEntity(activityEntity, activityBO);
+                        if (err != ErrorCode.Success)
                             return err;
                     }
                 }
             }
-            // delete
-            List<Activity> delList = new List<Activity>();
-            foreach (var x in _entity.Activities)
-            {
-                if ((!activities.Any(f => f.ID == x.ActivityId)))
-                    delList.Add(x);
-            }
-            foreach (var x in delList)
-                _entity.Activities.Remove(x);
+
+            // Verwijder de activiteiten die niet meer in de nieuwe lijst zitten
+            var activitiesToDelete = _entity.Activities
+                .Where(x => !activities.Any(f => f.ID == x.ActivityId))
+                .ToList();
+
+            foreach (var activity in activitiesToDelete)
+                _entity.Activities.Remove(activity);
+
             return ErrorCode.Success;
         }
     }

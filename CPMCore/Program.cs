@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Mvc.Razor;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using CPMCore.Service;
+using ServiceCore;
+using DALCore;
+using FacadeCore;
 using Rotativa.AspNetCore;
 using Microsoft.AspNetCore.Localization;
 using System.Globalization;
@@ -38,6 +41,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlSer
     sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
 
 );
+
+
 builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider => new SynchronizedConverter(new PdfTools()));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

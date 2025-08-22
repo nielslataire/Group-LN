@@ -14,6 +14,12 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using static System.Net.Mime.MediaTypeNames;
 using NuGet.Configuration;
+using ServiceCore;
+using DinkToPdf;
+using Humanizer;
+using DALCore.Models;
+using Microsoft.EntityFrameworkCore;
+using CPMCore.Models.Projecten;
 
 namespace CPMCore.Controllers
 {
@@ -103,7 +109,7 @@ namespace CPMCore.Controllers
             }
 
             // 13. Change Orders
-            var changeOrderResponse = projectService.GetClientChangeOrders(4,clientId);
+            var changeOrderResponse = projectService.GetClientChangeOrders(4, clientId);
             if (changeOrderResponse.Success)
             {
                 model.ChangeOrders = changeOrderResponse.Values;
@@ -278,12 +284,12 @@ namespace CPMCore.Controllers
                 nCoOwner.InvoiceStreet = InvoiceStreet;
                 nCoOwner.InvoiceHousenumber = InvoiceHousenumber;
                 nCoOwner.InvoiceBusnumber = InvoiceBusnumber;
-                if(InvoiceZipcode is not null)
+                if (InvoiceZipcode is not null)
                 {
                     nCoOwner.InvoicePostalcode.PostcodeId = int.Parse(InvoiceZipcode);
                 }
-               
-            }  
+
+            }
             if (Phone != null)
                 nCoOwner.Phone = Regex.Replace(Phone, "[^0-9]", "");
             if (Cellphone != null)
@@ -378,7 +384,7 @@ namespace CPMCore.Controllers
             var gift = new ClientGiftBO();
             var actResponse = Service.GetActivitiesForSelect();
             var activities = actResponse.Values;
-        
+
             var viewData = new ViewDataDictionary<ClientGiftBO>(ViewData, gift)
                 {
                     { "Listactivities", activities}
@@ -397,7 +403,7 @@ namespace CPMCore.Controllers
             var actResponse = Service.GetActivitiesForSelect();
             var activities = actResponse.Values;
 
-            var viewData = new ViewDataDictionary<ClientGiftBO>(ViewData, poa)
+            var viewData = new ViewDataDictionary<ClientPoaBO>(ViewData, poa)
                 {
                     { "Listactivities", activities}
                 };
@@ -437,6 +443,10 @@ namespace CPMCore.Controllers
         [HttpGet]
         public ActionResult Edit(int projectid, int clientid, int activetab)
         {
+            var referrer = Request.Headers["Referer"].ToString();
+
+            // Use the referrer URL as needed
+            TempData["Referrer"] = referrer;
             var model = new EditClientModel();
 
             if (clientid != 0)
@@ -460,7 +470,7 @@ namespace CPMCore.Controllers
                         model.IsCompany = true;
                     }
 
-                        model.SelectedPostalcode.CountryId = client.Postalcode.Country.CountryId;
+                    model.SelectedPostalcode.CountryId = client.Postalcode.Country.CountryId;
                     model.SelectedPostalcodeId = client.Postalcode.PostcodeId ?? 0;
 
                     if (client.InvoicePostalcode.PostcodeId != 0)
@@ -514,46 +524,185 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost]
-        public ActionResult Edit(EditClientModel viewmodel)
+        public async Task<IActionResult> Edit(EditClientModel viewmodel)
         {
+            var Referrer = TempData["Referrer"];
             if (!ModelState.IsValid || viewmodel.Client.Id == 0)
             {
                 FillInAddSelectListsEdit(ref viewmodel);
                 return View(viewmodel);
             }
 
-            var clientService = ServiceFactory.GetClientService();
+            // 1) Één UoW voor alles in deze actie
+            using var uow = ServiceFactory.CreateUoW();
 
-            viewmodel.Client.Postalcode.PostcodeId = viewmodel.SelectedPostalcode.PostalCodeId;
-            viewmodel.Client.InvoicePostalcode.PostcodeId = viewmodel.SelectedInvoicePostalcode.PostalCodeId;
+            // 2) Services die DEZELFDE uow delen
+            var clientService = ServiceFactory.CreateClientService(uow);
+            var unitService = ServiceFactory.CreateUnitService(uow);
+            var actService = ServiceFactory.CreateActivityService(uow);
+            var contactService = ServiceFactory.CreateContactService(uow); // voorbeeld
 
-            if (viewmodel.IsCompany)
+            await using var tx = await uow.BeginTransactionAsync();
+
+            try
             {
-                viewmodel.Client.Name = null;
-                viewmodel.Client.Salutation = 0;
-            }
-            else
-            {
-                viewmodel.Client.CompanyName = null;
-                viewmodel.Client.VATnumber = null;
-            }
-            viewmodel.Client.Postalcode.PostcodeId = viewmodel.SelectedPostalcodeId;
-            viewmodel.Client.InvoicePostalcode.PostcodeId = viewmodel.SelectedInvoicePostalcodeId;
+                // --- voorbereiden ---
+                viewmodel.Client.Postalcode.PostcodeId = viewmodel.SelectedPostalcodeId;
+                viewmodel.Client.InvoicePostalcode.PostcodeId = viewmodel.SelectedInvoicePostalcodeId;
 
-            var response = clientService.InsertUpdate(viewmodel.Client);
+                if (viewmodel.IsCompany)
+                {
+                    viewmodel.Client.Name = null;
+                    viewmodel.Client.Salutation = 0;
+                }
+                else
+                {
+                    viewmodel.Client.CompanyName = null;
+                    viewmodel.Client.VATnumber = null;
+                }
 
+                // 3) Eerste bewerking
+                // Clientaccount updaten
+                var r1 = clientService.InsertUpdate(viewmodel.Client);
+                if (!r1.Success)
+                {
+                    await tx.RollbackAsync();
+                    AddMessage("error", $"Klant {viewmodel.Client.DisplayName} is niet bijgewerkt", "Fout!");
+                    FillInAddSelectListsEdit(ref viewmodel);
+                    return View(viewmodel);
+                }
 
-            if (response.Success)
-            {
+                //Eenheden updaten
+                foreach (var unit in viewmodel.Units)
+                {
+                    var r2 = unitService.UpdateLandValueSold(unit);
+                    if (!r2.Success)
+                    {
+                        await tx.RollbackAsync();
+                        AddMessage("error", $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
+                        FillInAddSelectListsEdit(ref viewmodel);
+                        return View(viewmodel);
+                    }
+                    foreach (var constructionvalue in unit.ConstructionValues)
+                    {
+                        var r3 = unitService.UpdateConstructionValueSold(constructionvalue);
+                        if (!r3.Success)
+                        {
+                            await tx.RollbackAsync();
+                            AddMessage("error", $"Unit {unit.Name} is niet bijgewerkt", "Fout!");
+                            FillInAddSelectListsEdit(ref viewmodel);
+                            return View(viewmodel);
+                        }
+                    }
+                }
+                //GIFTS
+                var postedIds = (viewmodel.Gifts ?? Enumerable.Empty<ClientGiftBO>())
+                    .Where(g => g.Id > 0)
+                    .Select(g => g.Id)
+                    .ToHashSet();
+
+                // 2) Huidige gift-IDs in de database voor deze account
+                var existingIds = uow.Context.Set<ClientGift>()
+                    .Where(g => g.ClientAccountId == viewmodel.Client.Id)   // let op: klopt de FK? (soms AccountId)
+                    .Select(g => g.Id)
+                    .ToList();
+
+                // 3) IDs die we moeten verwijderen
+                var removeIds = existingIds.Where(id => !postedIds.Contains(id)).ToList();
+
+                if (removeIds.Count > 0)
+                {
+                    var r6 = clientService.DeleteClientGift(removeIds);
+                    if (!r6.Success)
+                    {
+                        await tx.RollbackAsync();
+                        AddMessage("error", $"Gifts zijn niet verwijderd", "Fout!");
+                        FillInAddSelectListsEdit(ref viewmodel);
+                        return View(viewmodel);
+                    }
+                }
+                foreach (var gift in viewmodel.Gifts)
+                {
+                    gift.AccountId = viewmodel.Client.Id;
+                    foreach (var i in gift.SelectedActivityIds)
+                    {
+                        gift.Activities.Add(actService.GetActivitybyId(i).Value);
+                    }
+                    var r4 = clientService.InsertUpdateClientGift(gift);
+                    if (!r4.Success)
+                    {
+                        await tx.RollbackAsync();
+                        AddMessage("error", $"Gift {gift.Description} is niet bijgewerkt", "Fout!");
+                        FillInAddSelectListsEdit(ref viewmodel);
+                        return View(viewmodel);
+                    }
+                }
+
+                //AANDACHTSPUNTEN
+
+                var postedPoasIds = (viewmodel.Poas ?? Enumerable.Empty<ClientPoaBO>())
+                    .Where(g => g.Id > 0)
+                    .Select(g => g.Id)
+                    .ToHashSet();
+
+                // 2) Huidige poa-IDs in de database voor deze account
+                var existingPoasIds = uow.Context.Set<ClientPoa>()
+                    .Where(g => g.ClientAccountId == viewmodel.Client.Id)   // let op: klopt de FK? (soms AccountId)
+                    .Select(g => g.Id)
+                    .ToList();
+
+                // 3) IDs die we moeten verwijderen
+                var removePoasIds = existingPoasIds.Where(id => !postedPoasIds.Contains(id)).ToList();
+
+                if (removePoasIds.Count > 0)
+                {
+                    var r6 = clientService.DeleteClientPoa(removeIds);
+                    if (!r6.Success)
+                    {
+                        await tx.RollbackAsync();
+                        AddMessage("error", $"Poa's zijn niet verwijderd", "Fout!");
+                        FillInAddSelectListsEdit(ref viewmodel);
+                        return View(viewmodel);
+                    }
+                }
+                foreach (var poa in viewmodel.Poas)
+                {
+                    poa.AccountId = viewmodel.Client.Id;
+                    foreach (var i in poa.SelectedActivityIds)
+                    {
+                        poa.Activities.Add(actService.GetActivitybyId(i).Value);
+                    }
+                    var r5 = clientService.InsertUpdateClientPoa(poa);
+                    if (!r5.Success)
+                    {
+                        await tx.RollbackAsync();
+                        AddMessage("error", $"Poa {poa.Description} is niet bijgewerkt", "Fout!");
+                        FillInAddSelectListsEdit(ref viewmodel);
+                        return View(viewmodel);
+                    }
+                }
+
+                // 4) (Optioneel) andere bewerkingen met dezelfde UoW
+                // var r2 = contactService.InsertUpdate(viewmodel.Contact);
+                // if (!r2.Success) { await tx.RollbackAsync(); ... return View(viewmodel); }
+
+                // 5) Alles OK? Opslaan + commit
+                await uow.SaveChangesAsync();
+                await tx.CommitAsync();
+
                 AddMessage("success", $"Account {viewmodel.Client.DisplayName} is bijgewerkt", "Geslaagd!");
-                return RedirectToAction("Edit", new { projectid = viewmodel.ProjectId, clientid = viewmodel.Client.Id, activetab = 0 });
+                return Referrer != null
+                    ? Redirect(Referrer.ToString())
+                    : RedirectToAction("Edit", new { projectid = viewmodel.ProjectId, clientid = viewmodel.Client.Id, activetab = 0 });
             }
-            else
+            catch (Exception)
             {
-                AddMessage("error", $"Contact {viewmodel.Client.DisplayName} is niet bijgewerkt", "Fout!");
+                await tx.RollbackAsync();
+                AddMessage("error", "Er is een onverwachte fout opgetreden.", "Fout!");
                 FillInAddSelectListsEdit(ref viewmodel);
                 return View(viewmodel);
             }
+
         }
 
 
@@ -634,6 +783,28 @@ namespace CPMCore.Controllers
             TempData["Message"] = message;
             TempData["MessageType"] = messagetype;
             TempData["MessageTitle"] = messagetitle;
+        }
+
+        //WIJZIGNGSOPDRACHTEN
+        public ActionResult DetailCO(int projectid, int clientid)
+        {
+            var referrer = Request.Headers["Referer"].ToString();
+            TempData["Referrer"] = referrer;
+            var model = new DetailChangeOrderModel();
+            var service = ServiceFactory.GetProjectService();
+            var cservice = ServiceFactory.GetClientService();
+            var response = service.GetClientChangeOrders(0, clientid);
+
+            if (response.Success)
+                model.CO = response.Values;
+
+            model.ProjectId = projectid;
+            model.ProjectName = service.GetProjectNameById(projectid);
+            model.ClientName = cservice.GetClientAccountNameById(clientid);
+            model.ClientAccountId = clientid;
+
+            return View(model);
+
         }
 
     }

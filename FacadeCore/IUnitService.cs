@@ -55,6 +55,9 @@ namespace FacadeCore
         GetResponse<UnitConstructionValueBO> GetConstructionValues(int UnitId);
         GetResponse<UnitConstructionValueBO> GetConstructionValue(int id);
         Response InsertUpdateConstructionValue(UnitConstructionValueBO bo);
+        Response UpdateConstructionValueSold(UnitConstructionValueBO bo);
+        Response UpdateLandValueSold(UnitBO bo);
+
         Response DeleteConstructionValues(List<int> ids);
     }
 }

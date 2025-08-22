@@ -33,7 +33,7 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        internal static ErrorCode TranslateBOToEntity(InvoicingPaymentGroup _entity, ProjectPaymentGroupBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(InvoicingPaymentGroup _entity, ProjectPaymentGroupBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
@@ -48,7 +48,7 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        private static ErrorCode HandleStages(InvoicingPaymentGroup _entity, List<ProjectPaymentStageBO> stages, UnitOfWork uow)
+        private static ErrorCode HandleStages(InvoicingPaymentGroup _entity, List<ProjectPaymentStageBO> stages, UnitOfWorkCore uow)
         {
             if ((stages == null))
                 return ErrorCode.Success;
@@ -86,7 +86,7 @@ namespace ServiceCore.Translators
             }
             foreach (var x in delList)
             {
-                uow.GetProjectPaymentStagesDAO().DeleteObject(x.Id);
+                uow.PaymentStages.DeleteObject(x.Id);
                 _entity.InvoicingPaymentStages.Remove(x);
             }
             return ErrorCode.Success;

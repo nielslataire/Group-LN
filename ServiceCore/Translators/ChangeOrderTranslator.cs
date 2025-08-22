@@ -48,7 +48,7 @@ namespace ServiceCore.Translators
 
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(ChangeOrder _entity, ChangeOrderBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ChangeOrder _entity, ChangeOrderBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
@@ -90,7 +90,7 @@ namespace ServiceCore.Translators
                 bo.Invoiced = _entity.Invoiced;
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateDetailBOToEntity(ChangeOrderDetail _entity, ChangeOrderDetailBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateDetailBOToEntity(ChangeOrderDetail _entity, ChangeOrderDetailBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
@@ -108,7 +108,7 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        private static ErrorCode HandleDetails(ChangeOrder _entity, List<ChangeOrderDetailBO> details, UnitOfWork uow)
+        private static ErrorCode HandleDetails(ChangeOrder _entity, List<ChangeOrderDetailBO> details, UnitOfWorkCore uow)
         {
             if ((details == null))
                 return ErrorCode.Success;

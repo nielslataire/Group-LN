@@ -132,147 +132,237 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        internal static ErrorCode TranslateBOToEntity(ClientAccount _entity, ClientAccountBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ClientAccount entity, ClientAccountBO bo, UnitOfWorkCore uow)
         {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
+            if (entity == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
+            if (uow == null) return ErrorCode.UowNull;
 
+            // 1) Eenvoudige velden
+            entity.Name = bo.Name;
+            entity.Salutation = bo.Salutation.ToString();
+            entity.Street = bo.Street;
+            entity.Housenumber = bo.Housenumber;
+            entity.Busnumber = bo.Busnumber;
+            entity.DateDeedOfSale = bo.DateDeedOfSale;
+            entity.DeedOfSaleExpDate = bo.DateDeedOfSaleExpDate;
+            entity.DateSalesAgreement = bo.DateSalesAgreement;
+            entity.DeliveryDate = bo.DeliveryDate;
+            entity.DeliveryDoc = bo.DeliveryDoc;
+            entity.Vatnumber = bo.VATnumber;
+            entity.CompanyName = bo.CompanyName;
+            entity.ExecutionDays = bo.ExecutionDays;
+            entity.StartDateConstruction = bo.StartDateConstruction;
+            entity.BankAccountNumber = bo.BankAccountNumber;
+            entity.InvoiceAddress = bo.InvoiceAddress;          // bool? of bool in jouw model
+            entity.InvoiceStreet = bo.InvoiceStreet;
+            entity.InvoiceHousenumber = bo.InvoiceHousenumber;
+            entity.InvoiceBusnumber = bo.InvoiceBusnumber;
+            entity.InvoiceExtra = bo.InvoiceExtra;
 
-            _entity.Name = bo.Name;
-            _entity.Salutation = bo.Salutation.ToString();
-            _entity.Street = bo.Street;
-            _entity.Housenumber = bo.Housenumber;
-            _entity.Busnumber = bo.Busnumber;
-            _entity.DateDeedOfSale = bo.DateDeedOfSale;
-            _entity.DeedOfSaleExpDate = bo.DateDeedOfSaleExpDate;
-            _entity.DateSalesAgreement = bo.DateSalesAgreement;
-            _entity.DeliveryDate = bo.DeliveryDate;
-            _entity.DeliveryDoc = bo.DeliveryDoc;
-            _entity.Vatnumber = bo.VATnumber;
-            _entity.CompanyName = bo.CompanyName;
-            _entity.ExecutionDays = bo.ExecutionDays;
-            _entity.StartDateConstruction = bo.StartDateConstruction;
-            _entity.BankAccountNumber = bo.BankAccountNumber;
-            _entity.InvoiceAddress = bo.InvoiceAddress;
-            _entity.InvoiceStreet = bo.InvoiceStreet;
-            _entity.InvoiceHousenumber = bo.InvoiceHousenumber;
-            _entity.InvoiceBusnumber = bo.InvoiceBusnumber;
-            _entity.InvoiceExtra = bo.InvoiceExtra;
+            // 2) OwnerType
+            if (bo.OwnerType != null && bo.OwnerType.Id != 0)
+                entity.OwnerTypeId = bo.OwnerType.Id;
+            else
+                entity.OwnerTypeId = null;
 
+            entity.OwnerPercentage = bo.OwnerPercentage;
 
-            if ((bo.OwnerType != null | bo.OwnerType.Id != 0))
-                _entity.OwnerTypeId = bo.OwnerType.Id;
-            _entity.OwnerPercentage = bo.OwnerPercentage;
+            // 3) Postcodes
+            if (bo.Postalcode?.PostcodeId is int pcId && pcId != 0)
+                entity.PostalCodeId = pcId;
+            else
+                entity.PostalCodeId = null;
 
+            if (bo.InvoicePostalcode?.PostcodeId is int invPcId && invPcId != 0)
+                entity.InvoicePostalCodeId = invPcId;
+            else
+                entity.InvoicePostalCodeId = null;
 
-            if ((bo.Postalcode != null))
-                _entity.PostalCodeId = bo.Postalcode.PostcodeId;
-            if ((bo.InvoicePostalcode != null) && bo.InvoicePostalcode.PostcodeId != 0)
-                _entity.InvoicePostalCodeId = bo.InvoicePostalcode.PostcodeId;
-            var err = HandleContacts(_entity, bo.Contacts, bo.CoOwners, uow);
-            if ((err != ErrorCode.Success))
-                return err;
-            err = HandleCoOwners(_entity, bo.CoOwners, bo.Contacts, uow);
-            if ((err != ErrorCode.Success))
-                return err;
+            // 4) Contacts & Co-owners
+            var err = HandleContacts(entity, bo.Contacts, bo.CoOwners, uow);
+            if (err != ErrorCode.Success) return err;
+
+            err = HandleCoOwners(entity, bo.CoOwners, bo.Contacts, uow);
+            if (err != ErrorCode.Success) return err;
+
             return ErrorCode.Success;
         }
 
-        private static ErrorCode HandleContacts(ClientAccount _entity, List<ClientContactBO> contacts, List<ClientContactBO> coowners, UnitOfWork uow)
+        private static ErrorCode HandleContacts(
+        ClientAccount entity,
+        List<ClientContactBO> contacts,
+        List<ClientContactBO> coowners,
+        UnitOfWorkCore uow)
         {
-            if ((contacts == null))
-                return ErrorCode.Success;
-            if ((contacts.Count == 0))
-                return ErrorCode.Success;
-            foreach (var x in contacts)
+            if (entity == null) return ErrorCode.EntityNull;
+            if (uow == null) return ErrorCode.UowNull;
+
+            // Niks te doen (=> verwijder niet-co-owners die niet meer bestaan)
+            if (contacts == null || contacts.Count == 0)
             {
-                if ((x.Id == 0))
+                var delList = entity.ClientContacts
+                    .Where(x => !x.IsCoOwner)
+                    .Where(x => coowners == null || !coowners.Any(c => c.Id == x.Id))
+                    .ToList();
+
+                foreach (var x in delList)
+                    uow.Context.Remove(x); // <-- echt deleten, niet enkel uit de collectie
+
+                return ErrorCode.Success;
+            }
+
+            // Insert/Update
+            foreach (var bo in contacts)
+            {
+                if (bo.Id == 0)
                 {
-                    // insert
-                    ClientContacts contact = new ClientContacts();
-                    var err = ClientContactTranslator.TranslateBOToEntity(contact, x, uow);
+                    // INSERT
+                    var contact = new ClientContacts();
+                    var err = ClientContactTranslator.TranslateBOToEntity(contact, bo, uow);
+                    if (err != ErrorCode.Success) return err;
+
                     contact.IsCoOwner = false;
                     contact.CoOwnerTypeId = null;
                     contact.CoOwnerType = null;
                     contact.PostalCode = null;
-                    contact.PostalCodeId = null;
+                    contact.PostalCodeId = bo.Postalcode?.PostcodeId ?? null;
                     contact.InvoicePostalCode = null;
-                    contact.InvoicePostalCodeId = null;
-                    if (err != ErrorCode.Success)
-                        return err;
+                    contact.InvoicePostalCodeId = bo.InvoicePostalcode?.PostcodeId ?? null;
 
-                    _entity.ClientContacts.Add(contact);
+                    // >>> koppel aan parent (cruciaal om FK te zetten)
+                    if (entity.Id == 0)
+                        contact.ClientAccount = entity;         // nieuw: via navigatie
+                    else
+                        contact.ClientAccountId = entity.Id;    // bestaand: via FK
+
+                    entity.ClientContacts.Add(contact);
                 }
                 else
                 {
-                    // update
-                    var contact = _entity.ClientContacts.FirstOrDefault(f => f.Id == x.Id);
-                    if ((contact != null))
+                    // UPDATE
+                    var contact = entity.ClientContacts.FirstOrDefault(f => f.Id == bo.Id);
+                    if (contact != null)
                     {
-                        var err = ClientContactTranslator.TranslateBOToEntity(contact, x, uow);
+                        var err = ClientContactTranslator.TranslateBOToEntity(contact, bo, uow);
+                        if (err != ErrorCode.Success) return err;
+
                         contact.IsCoOwner = false;
                         contact.CoOwnerTypeId = null;
                         contact.CoOwnerType = null;
                         contact.PostalCode = null;
-                        contact.PostalCodeId = null;
+                        contact.PostalCodeId = bo.Postalcode?.PostcodeId ?? null;
                         contact.InvoicePostalCode = null;
-                        contact.InvoicePostalCodeId = null;
+                        contact.InvoicePostalCodeId = bo.InvoicePostalcode?.PostcodeId ?? null;
+
+                        // >>> enforce juiste parent-link bij update
+                        if (entity.Id == 0)
+                            contact.ClientAccount = entity;
+                        else
+                            contact.ClientAccountId = entity.Id;
                     }
+                    // else: onbekende Id in POST → negeren of fout, jouw keuze
                 }
             }
-            // delete
-            List<ClientContacts> delList = new List<ClientContacts>();
-            foreach (var x in _entity.ClientContacts)
-            {
-                if ((!contacts.Any(f => f.Id == x.Id) && !coowners.Any(m => m.Id == x.Id)))
-                    delList.Add(x);
-            }
-            foreach (var x in delList)
-                _entity.ClientContacts.Remove(x);
+
+            // Delete contacts die niet meer in contacts/coowners zitten
+            var delContacts = entity.ClientContacts
+                .Where(x => !x.IsCoOwner)
+                .Where(x => !contacts.Any(c => c.Id == x.Id) && (coowners == null || !coowners.Any(m => m.Id == x.Id)))
+                .ToList();
+
+            foreach (var x in delContacts)
+                uow.Context.Remove(x); // <-- echt deleten
+
             return ErrorCode.Success;
         }
-        private static ErrorCode HandleCoOwners(ClientAccount _entity, List<ClientContactBO> coowners, List<ClientContactBO> contacts, UnitOfWork uow)
-        {
-            if ((coowners == null))
-                return ErrorCode.Success;
-            if ((coowners.Count == 0))
-                return ErrorCode.Success;
-            foreach (var x in coowners)
-            {
-                if ((x.Id == 0))
-                {
-                    // insert
-                    ClientContacts contact = new ClientContacts();
-                    var err = ClientContactTranslator.TranslateBOToEntity(contact, x, uow);
-                    contact.IsCoOwner = true;
-                    if (err != ErrorCode.Success)
-                        return err;
 
-                    _entity.ClientContacts.Add(contact);
+
+        private static ErrorCode HandleCoOwners(
+            ClientAccount entity,
+            List<ClientContactBO> coowners,
+            List<ClientContactBO> contacts,
+            UnitOfWorkCore uow)
+        {
+            if (entity == null) return ErrorCode.EntityNull;
+            if (uow == null) return ErrorCode.UowNull;
+
+            if (coowners == null || coowners.Count == 0)
+            {
+                // Verwijder co-owners die niet meer voorkomen
+                var delList = entity.ClientContacts
+                    .Where(x => x.IsCoOwner)
+                    .Where(x => contacts == null || !contacts.Any(c => c.Id == x.Id))
+                    .ToList();
+
+                foreach (var x in delList)
+                    uow.Context.Remove(x); // <-- echte delete i.p.v. uit collectie halen
+
+                return ErrorCode.Success;
+            }
+
+            // Insert/Update
+            foreach (var bo in coowners)
+            {
+                if (bo.Id == 0)
+                {
+                    var contact = new ClientContacts();
+                    var err = ClientContactTranslator.TranslateBOToEntity(contact, bo, uow);
+                    if (err != ErrorCode.Success) return err;
+
+                    contact.IsCoOwner = true;
+                    contact.CoOwnerTypeId = bo.CoOwnerType?.Id == 0 ? null : bo.CoOwnerType?.Id;
+
+                    contact.PostalCode = null;
+                    contact.PostalCodeId = bo.Postalcode?.PostcodeId ?? null;
+                    contact.InvoicePostalCode = null;
+                    contact.InvoicePostalCodeId = bo.InvoicePostalcode?.PostcodeId ?? null;
+
+                    // >>> parent-link forceren
+                    if (entity.Id == 0)
+                        contact.ClientAccount = entity;      // nieuwe klant: via navigatie
+                    else
+                        contact.ClientAccountId = entity.Id; // bestaande klant: via FK
+
+                    entity.ClientContacts.Add(contact);
                 }
                 else
                 {
-                    // update
-                    var contact = _entity.ClientContacts.FirstOrDefault(f => f.Id == x.Id);
-                    if ((contact != null))
+                    var contact = entity.ClientContacts.FirstOrDefault(f => f.Id == bo.Id);
+                    if (contact != null)
                     {
-                        var err = ClientContactTranslator.TranslateBOToEntity(contact, x, uow);
+                        var err = ClientContactTranslator.TranslateBOToEntity(contact, bo, uow);
+                        if (err != ErrorCode.Success) return err;
+
                         contact.IsCoOwner = true;
+                        contact.CoOwnerTypeId = bo.CoOwnerType?.Id == 0 ? null : bo.CoOwnerType?.Id;
+
+                        contact.PostalCode = null;
+                        contact.PostalCodeId = bo.Postalcode?.PostcodeId ?? null;
+                        contact.InvoicePostalCode = null;
+                        contact.InvoicePostalCodeId = bo.InvoicePostalcode?.PostcodeId ?? null;
+
+                        // >>> parent-link forceren bij update
+                        if (entity.Id == 0)
+                            contact.ClientAccount = entity;
+                        else
+                            contact.ClientAccountId = entity.Id;
                     }
+                    // else: onbekende Id in POST → negeren of fout (jij beslist)
                 }
             }
-            // delete
-            List<ClientContacts> delList = new List<ClientContacts>();
-            foreach (var x in _entity.ClientContacts)
-            {
-                if ((!coowners.Any(f => f.Id == x.Id) && !contacts.Any(m => m.Id == x.Id)))
-                    delList.Add(x);
-            }
-            foreach (var x in delList)
-                _entity.ClientContacts.Remove(x);
+
+            // Delete co-owners die niet meer voorkomen in coowners/contacts
+            var delCoOwners = entity.ClientContacts
+                .Where(x => x.IsCoOwner)
+                .Where(x => !coowners.Any(c => c.Id == x.Id) && (contacts == null || !contacts.Any(m => m.Id == x.Id)))
+                .ToList();
+
+            foreach (var x in delCoOwners)
+                uow.Context.Remove(x); // <-- echte delete
+
             return ErrorCode.Success;
         }
+
     }
 }

@@ -33,7 +33,7 @@ namespace ServiceCore.Translators
             }
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(ClientPoa _entity, ClientPoaBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ClientPoa _entity, ClientPoaBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
@@ -48,33 +48,44 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        private static ErrorCode HandleActivities(ClientPoa _entity, List<ActivityBO> activities, UnitOfWork uow)
+        private static ErrorCode HandleActivities(ClientPoa _entity, List<ActivityBO> activities, UnitOfWorkCore uow)
         {
-            if ((activities.Count == 0))
-                return ErrorCode.Success;
-            foreach (var x in activities)
+            if (_entity == null) return ErrorCode.EntityNull;
+            if (uow == null) return ErrorCode.UowNull;
+
+            // Null-safe
+            activities ??= new List<ActivityBO>();
+            _entity.Activity ??= new List<Activity>();
+
+            // Gewenste ids uit BO (alleen > 0)
+            var desiredIds = new HashSet<int>(activities.Where(a => a.ID > 0)
+                                                        .Select(a => a.ID));
+
+            // Bestaande ids op entity
+            var existingIds = _entity.Activity.Select(a => a.ActivityId).ToHashSet();
+
+            // ADD: wat nog niet aanwezig is
+            foreach (var id in desiredIds)
             {
-                if ((x.ID == 0))
+                if (!existingIds.Contains(id))
                 {
-                }
-                else
-                   // add the activity to the clientpoa
-                   if ((!_entity.Activity.Any(m => m.ActivityId == x.ID)))
-                {
-                    var act = uow.GetActivityDAO().GetById(x.ID);
-                    _entity.Activity.Add(act);
+                    var act = uow.Activities.GetById(id);
+                    if (act != null)
+                        _entity.Activity.Add(act);
+                    existingIds.Add(id); // guard tegen dubbel toevoegen in één run
                 }
             }
-            // delete
-            List<Activity> delList = new List<Activity>();
-            foreach (var x in _entity.Activity)
-            {
-                if ((!activities.Any(f => f.ID == x.ActivityId)))
-                    delList.Add(x);
-            }
-            foreach (var x in delList)
-                _entity.Activity.Remove(x);
+
+            // DELETE: wat niet meer gewenst is
+            var delList = _entity.Activity
+                                 .Where(a => !desiredIds.Contains(a.ActivityId))
+                                 .ToList();
+
+            foreach (var a in delList)
+                _entity.Activity.Remove(a);
+
             return ErrorCode.Success;
         }
+
     }
 }

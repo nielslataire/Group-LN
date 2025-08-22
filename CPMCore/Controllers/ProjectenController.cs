@@ -20,6 +20,14 @@ using Microsoft.CodeAnalysis;
 using CPMCore.Attributes;
 using Rotativa.AspNetCore.Options;
 using Microsoft.AspNetCore.Authorization;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using FluentFTP;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Net;
+
 
 namespace CPMCore.Controllers
 {
@@ -531,7 +539,7 @@ namespace CPMCore.Controllers
 
         //CONTRACTEN
         [HttpGet]
-        [Breadcrumb("Contracten")]
+        [Breadcrumb("Leveranciers")]
         public ActionResult DetailContracts(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -744,7 +752,7 @@ namespace CPMCore.Controllers
                 {
                     var singleActivity = new IdNameBO
                     {
-                        ID = selectedActivity.ID,   
+                        ID = selectedActivity.ID,
                         Display = selectedActivity.Name,
                         Group = "-Bedrijfsactiviteit-"
                     };
@@ -867,11 +875,12 @@ namespace CPMCore.Controllers
             IdNameBO bo = new IdNameBO();
             if ((responselevels.Success))
             {
-                foreach (var type in responselevels.Values) {
-                        bo = new IdNameBO();
-                        bo.ID = type.Id;
-                        bo.Display = type.Name;
-                        iList.Add(bo);
+                foreach (var type in responselevels.Values)
+                {
+                    bo = new IdNameBO();
+                    bo.ID = type.Id;
+                    bo.Display = type.Name;
+                    iList.Add(bo);
                 }
             }
             return Json(iList);
@@ -999,10 +1008,10 @@ namespace CPMCore.Controllers
             //}
             //else
             //{
-                model.Type = type;
-                model.IncommingInvoice = new IncommingInvoiceBO();
-                model.IncommingInvoice.IncommingInvoiceDate = DateOnly.FromDateTime(DateTime.Now);
-                model.IncommingInvoice.ContractID = 0;
+            model.Type = type;
+            model.IncommingInvoice = new IncommingInvoiceBO();
+            model.IncommingInvoice.IncommingInvoiceDate = DateOnly.FromDateTime(DateTime.Now);
+            model.IncommingInvoice.ContractID = 0;
             //}
 
             IncommingInvoiceFillInSelectList(model);
@@ -1032,7 +1041,7 @@ namespace CPMCore.Controllers
                 model.IncommingInvoice.Details.Add(invoiceRow);
             }
 
-            if(model.IncommingInvoice.ContractID is null && model.IncommingInvoice.CompanyId is null)
+            if (model.IncommingInvoice.ContractID is null && model.IncommingInvoice.CompanyId is null)
             {
                 ModelState.AddModelError("CustomError", "Er is geen bedrijf geselecteerd");
             }
@@ -1094,7 +1103,7 @@ namespace CPMCore.Controllers
         public ActionResult EditIncommingInvoice(int projectid, int invoiceid)
         {
             // Referrer bijhouden
-            
+
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectIncommingInvoiceAddUpdateModel
@@ -1311,7 +1320,7 @@ namespace CPMCore.Controllers
                 model.IncommingInvoice = response.Value;
             }
             companyid = model.IncommingInvoice.CompanyId ?? companyid;
-            if( model.IncommingInvoice.ContractID is not null)
+            if (model.IncommingInvoice.ContractID is not null)
             {
                 var response3 = service2.GetContract((int)model.IncommingInvoice.ContractID);
                 if (response3.Success)
@@ -1335,6 +1344,256 @@ namespace CPMCore.Controllers
         }
 
         //CHANGE ORDERS
+        [HttpGet]
+        [Breadcrumb("Wijzigingsopdracht toevoegen")]
+        public ActionResult AddChangeOrder(int projectid, int type, int clientaccountid = 0)
+        {
+            // 1) Veilige referrer voor je "terug"-link (enkel van dezelfde host)
+            var refHeader = Request.Headers["Referer"].ToString();
+            if (Uri.TryCreate(refHeader, UriKind.Absolute, out var refUri) &&
+                string.Equals(refUri.Host, Request.Host.Host, StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Referrer"] = refHeader;
+            }
+
+            // 2) Services ophalen
+            var projectService = ServiceFactory.GetProjectService();
+            var clientService = ServiceFactory.GetClientService();
+
+            // 3) Model opbouwen (zorgt ervoor dat ChangeOrder nooit null is)
+            var model = new ProjectChangeOrderAddUpdateModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid),
+                ChangeOrder = new ChangeOrderBO
+                {
+                    // Als je 'type' wil mappen naar een enum, zie comment onderaan.
+                    ChangeOrderConditions = DefaultChangeOrderConditions,
+                    // DateOnly: gebruik Today voor datum‑zonder‑tijd
+                    ChangeOrderDate = DateOnly.FromDateTime(DateTime.Today),
+                    ExpirationDate = DateOnly.FromDateTime(DateTime.Today.AddDays(30))
+                }
+            };
+
+            if (clientaccountid > 0)
+            {
+                model.ChangeOrder.ClientAccountID = clientaccountid;
+                model.ClientName = clientService.GetClientAccountNameById(clientaccountid);
+
+            }
+
+
+
+            // 4) Minstens één detailrij
+            if (model.ChangeOrder.Details == null || model.ChangeOrder.Details.Count == 0)
+            {
+                model.ChangeOrder.Details = new List<ChangeOrderDetailBO>
+        {
+            new ChangeOrderDetailBO
+            {
+                MeasurementType = MeasurementType.Vermoedelijk,
+                MeasurementUnit = MeasurementUnit.stuk,
+                Number = 1,
+                Commision = 20,
+            }
+        };
+            }
+
+            // 5) Dropdowns / selects vullen
+            ChangeOrderFillInSelectList(model);
+
+            return View(model);
+        }
+        private const string DefaultChangeOrderConditions =
+            "Het bedrag zal verrekend worden bij de laatste facturatieschijf 'voorlopige oplevering'";
+
+        [HttpPost]
+        public ActionResult AddChangeOrder(ProjectChangeOrderAddUpdateModel model, List<ChangeOrderDetailBO> Details)
+        {
+
+            // Merge posted details
+            if (Details != null)
+            {
+                foreach (var d in Details)
+                    model.ChangeOrder.Details.Add(d);
+            }
+
+            // Early return on invalid model
+            if (!ModelState.IsValid)
+            {
+                ChangeOrderFillInSelectList(model);
+                return View(model);
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdateProjectChangeOrder(model.ChangeOrder);
+
+            if (response.Success)
+            {
+                var Referrer = TempData["Referrer"];
+                AddMessage("success", "De wijzigingsopdracht is toegevoegd", "Geslaagd!");
+                return Redirect(Referrer.ToString());
+            }
+
+            AddMessage("error", "De wijzigingsopdracht is NIET toegevoegd", "Fout!");
+            ChangeOrderFillInSelectList(model);
+            return View(model);
+        }
+
+        [HttpGet]
+        public PartialViewResult AddChangeOrderDetailRow()
+        {
+            var model = new ChangeOrderDetailBO
+            {
+                MeasurementType = MeasurementType.Vermoedelijk,
+                MeasurementUnit = MeasurementUnit.stuk,
+                Number = 1,
+                Price = 0m,
+                Commision = 20,
+            };
+            return PartialView("_ChangeOrderDetailRow", model);
+        }
+        [HttpGet]
+        [Breadcrumb("Wijzigingsopdracht bewerken")]
+        public ActionResult EditChangeOrder(int projectid, int clientid, int coid)
+        {
+            // 0) Basisvalidatie
+            if (projectid <= 0)
+            {
+                AddMessage("error", "Ongeldig project.", "Fout!");
+                return RedirectToAction("Index", "Projecten");
+            }
+
+            // 1) Veilige referrer (relative URL bewaren) + fallback
+            var refHeader = Request.Headers["Referer"].ToString();
+            if (Uri.TryCreate(refHeader, UriKind.Absolute, out var refUri) &&
+                string.Equals(refUri.Host, Request.Host.Host, StringComparison.OrdinalIgnoreCase) &&
+                Url.IsLocalUrl(refUri.PathAndQuery))
+            {
+                TempData["Referrer"] = refUri.PathAndQuery; // relative is veiliger
+            }
+            else
+            {
+                // Fallback als er geen geldige referrer is
+                TempData["Referrer"] = Url.Action("Detail", "Projecten", new { projectid, clientid });
+            }
+
+            // 2) Services
+            var projectService = ServiceFactory.GetProjectService();
+
+            // 3) Model opbouwen met veilige defaults
+            var model = new ProjectChangeOrderAddUpdateModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid) ?? string.Empty,
+                ChangeOrder = new ChangeOrderBO
+                {
+                    ProjectId = projectid,
+                    ClientAccountID = clientid
+                }
+            };
+
+            // 4) Bestaande CO ophalen (indien coid > 0)
+            if (coid > 0)
+            {
+                var resp = projectService.GetChangeOrder(coid);
+                if (resp?.Success == true)
+                {
+                    var co = resp.Values?.FirstOrDefault();
+                    if (co != null)
+                    {
+                        model.ChangeOrder = co;
+                    }
+                    else
+                    {
+                        AddMessage("warning", "De gevraagde wijzigingsopdracht werd niet gevonden.", "Opgelet");
+                    }
+                }
+                else
+                {
+                    AddMessage("error", "Kon de wijzigingsopdracht niet ophalen.", "Fout!");
+                }
+            }
+
+            // 5) Dropdowns / Selects vullen
+            ChangeOrderFillInSelectList(model);
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public ActionResult EditChangeOrder(ProjectChangeOrderAddUpdateModel model, List<ChangeOrderDetailBO> Details)
+        {
+
+            // Merge posted details
+            if (Details != null)
+            {
+                foreach (var d in Details)
+                    model.ChangeOrder.Details.Add(d);
+            }
+
+            // Early return on invalid model
+            if (!ModelState.IsValid)
+            {
+                ChangeOrderFillInSelectList(model);
+                return View(model);
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdateProjectChangeOrder(model.ChangeOrder);
+
+            if (response.Success)
+            {
+                var Referrer = TempData["Referrer"];
+                AddMessage("success", "De wijzigingsopdracht is bewerkt", "Geslaagd!");
+                return Redirect(Referrer.ToString());
+            }
+
+            AddMessage("error", "De wijzigingsopdracht is NIET bewerkt", "Fout!");
+            ChangeOrderFillInSelectList(model);
+            return View(model);
+        }
+        [HttpGet]
+        public ActionResult ModalDeleteChangeOrder(int id)
+        {
+
+            var viewModel = new ChangeOrderBO();
+
+            if (id != 0)
+            {
+                var dservice = ServiceFactory.GetProjectService();
+                var response = dservice.GetChangeOrder(id);
+
+                if (response.Success && response.Values.Any())
+                {
+                    viewModel = response.Values.First();
+                }
+            }
+
+            return PartialView("_ModalDeleteChangeOrder", viewModel);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult DeleteChangeOrder(int id)
+        {
+            if (id == 0)
+                return Json(new { success = false, message = "Ongeldig ID." });
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.DeleteChangeOrders(new List<int> { id });
+
+            if (response.Success)
+            {
+                // Optioneel: server-side toast registreren
+                AddMessage("success", "De wijzigingsopdracht is verwijderd", "Geslaagd!");
+
+                // Eenvoudigste aanpak: laat de client de pagina (of enkel de lijst) herladen
+                return Json(new { success = true, message = "Verwijderd." });
+            }
+
+            AddMessage("error", "De wijzigingsopdracht is niet verwijderd. Probeer opnieuw.", "Fout!");
+            return Json(new { success = false, message = "Verwijderen mislukt." });
+        }
         [HttpGet]
         public IActionResult ChangeOrderPDF(int changeorderid)
         {
@@ -1368,7 +1627,7 @@ namespace CPMCore.Controllers
             {
                 PageOrientation = Orientation.Portrait,
                 PageMargins = new Margins(10, 5, 0, 5),
-                PageSize = Size.A4,
+                PageSize = Rotativa.AspNetCore.Options.Size.A4,
                 FileName = $"Wijzigingsopdracht - {model.Project.Name} {DateTime.Now:yyyyMMdd}_{model.ChangeOrder.Id}.pdf",
                 //CustomSwitches = $"--footer-html {Url.Action("ChangeOrderFooter", "Projecten", new { text = model.ChangeOrder.ChangeOrderConditions }, "http")} --footer-spacing 0"
             };
@@ -1384,14 +1643,345 @@ namespace CPMCore.Controllers
             var pdf = new ViewAsPdf("MinimalTestPDF", "Dit is een test.")
             {
                 PageOrientation = Orientation.Portrait,
-                PageSize = Size.A4,
+                PageSize = Rotativa.AspNetCore.Options.Size.A4,
                 PageMargins = new Margins(10, 5, 40, 5),
                 FileName = "MinimalTest.pdf"
             };
             return pdf;
         }
+        //WEATHER
+
+        [HttpGet]
+        [Breadcrumb("Weerverlet")]
+        public ActionResult Weather()
+        {
+            var model = new BWDModel();
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetWheaterstationsSelect();
+            if (response.Success)
+            {
+                model.WeatherStations = response.Values;
+            }
+            return View(model);
+        }
+        [HttpGet]
+        public IActionResult GetCalendarBundle(int weatherstationid, int year)
+        {
+            var service = ServiceFactory.GetProjectService();
+
+
+            var rain = new List<object>();
+            var wind = new List<object>();
+            var vacation = new List<object>();
+
+            var rainResponse = service.GetBadWeatherDays(weatherstationid, 0);
+            if (rainResponse.Success)
+            {
+                rain = rainResponse.Values.Select(b => new
+                {
+                    id = b.Id,
+                    title = "Regen/Vorst",
+                    year = b.BWDate.Year,
+                    month = b.BWDate.Month,
+                    day = b.BWDate.Day,
+                    color = "#009336"
+                }).Cast<object>().ToList();
+            }
+            var windResponse = service.GetBadWeatherDays(weatherstationid, 1);
+            if (windResponse.Success)
+            {
+                wind = windResponse.Values.Select(b => new
+                {
+                    id = b.Id,
+                    title = "Wind",
+                    year = b.BWDate.Year,
+                    month = b.BWDate.Month,
+                    day = b.BWDate.Day,
+                    color = "#009336"
+                }).Cast<object>().ToList();
+            }
+            var vacationResponse = service.GetVacationDays();
+            if (vacationResponse.Success)
+            {
+                vacation = vacationResponse.Values.Select(b => new
+                {
+                    id = b.Id,
+                    title = "verlofdag",
+                    year = b.VacationDay.Year,
+                    month = b.VacationDay.Month,
+                    day = b.VacationDay.Day,
+                    color = "#777"
+                }).Cast<object>().ToList();
+            }
+            return Ok(new { rain = rain, wind = wind, vacation = vacation });
+        }
+
+        [HttpGet]
+        public JsonResult GetBadWeatherDays(int type, int weatherstationid, int year)
+        {
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetBadWeatherDays(weatherstationid, type);
+
+            var rows = new List<object>();
+            var vacationRows = new List<object>();
+
+            if (response.Success)
+            {
+                rows = response.Values.Select(b => new
+                {
+                    id = b.Id,
+                    title = "vorst",
+                    year = b.BWDate.Year,
+                    month = b.BWDate.Month,
+                    day = b.BWDate.Day,
+                    color = "#009336"
+                }).Cast<object>().ToList();
+
+                var response2 = service.GetVacationDays();
+                if (response2.Success)
+                {
+                    vacationRows = response2.Values.Select(b => new
+                    {
+                        id = b.Id,
+                        title = "verlofdag",
+                        year = b.VacationDay.Year,
+                        month = b.VacationDay.Month,
+                        day = b.VacationDay.Day,
+                        color = "#777"
+                    }).Cast<object>().ToList();
+                }
+            }
+
+            var allResults = new List<object>(rows.Count + vacationRows.Count);
+            allResults.AddRange(rows);
+            allResults.AddRange(vacationRows);
+
+
+            return new JsonResult(allResults);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken] // in Core ook geldig
+        public int AddBadWeatherDay(DateOnly dag, int weatherstationid, int type)
+        {
+            var bwd = new BadWeatherDayBO
+            {
+                BWDate = dag,
+                WeatherStationId = weatherstationid,
+                Type = type
+            };
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdateBadWeatherDay(bwd);
+
+            if (!response.Success) return 0;
+
+            var msg = response.Messages.FirstOrDefault()?.Message;
+            return int.TryParse(msg, out var id) ? id : 0;
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public bool DeleteBadWeatherDay(int id)
+        {
+            var list = new List<int> { id };
+            var service = ServiceFactory.GetProjectService();
+            var response = service.DeleteBadWeatherDays(list);
+            return response.Success;
+        }
+
+        [HttpGet]
+        public JsonResult GetVacationDays()
+        {
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetVacationDays();
+
+            var rows = new List<object>();
+            if (response.Success)
+            {
+                rows = response.Values.Select(b => new
+                {
+                    year = b.VacationDay.Year,
+                    month = b.VacationDay.Month,
+                    day = b.VacationDay.Day
+                }).Cast<object>().ToList();
+            }
+
+            // Classic MVC:
+            return Json(rows);
+
+            // ASP.NET Core alternatief:
+            // return new JsonResult(rows);
+            // of: return Ok(rows);
+        }
+
+        //PHOTOS
+        [HttpGet]
+        [Breadcrumb("Foto's")]
+        public ActionResult DetailPhotos(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            ViewBag.ImageWebURL = Configuration["URL:ImageWebURL"];
+            var model = new DetailPhotosModel();
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetPicturesByProjectId(projectid);
+
+            if (response.Success)
+            {
+                model.Photos = response.Values
+                                       .OrderByDescending(m => m.DateTimeUploaded)
+                                       .ToList();
+            }
+
+            model.ProjectId = projectid;
+            model.ProjectName = service.GetProjectNameById(projectid);
+
+            return View(model);
+        }
+        [HttpGet]
+        public ActionResult ModalAddPhoto(int id)
+        {
+            var viewModel = new ProjectPictureBO();
+            viewModel.ProjectId = id;
+            viewModel.Type = PictureType.Werffoto;
+            return PartialView("_ModalAddPhoto", viewModel);
+        }
+
+        [HttpGet]
+        public ActionResult ModalDeletePhoto(int id)
+        {
+            var viewModel = new ProjectPictureBO();
+
+            if (id != 0)
+            {
+                var dservice = ServiceFactory.GetProjectService();
+                viewModel = dservice.GetPictureById(id).Value;
+            }
+
+            return PartialView("_ModalDeletePhoto", viewModel);
+        }
+
+        public ActionResult DeletePhoto(int id, int projectid, PictureType type)
+        {
+            if (id != 0 && projectid != 0)
+            {
+                if (type == PictureType.Hoofdfoto)
+                {
+                    var service = ServiceFactory.GetProjectService();
+                    var ids = new List<int> { id };
+
+                    var response1 = service.SetDefaultProjectPicture(projectid, 0);
+                    if (response1.Success)
+                    {
+                        DeletePictureFile(id);
+                        var response2 = service.DeletePicture(ids);
+
+                        if (response2.Success)
+                        {
+                            AddMessage("success", "De foto is verwijderd", "Geslaagd!");
+                            return RedirectToAction("DetailPhotos", "Projecten", new { projectid });
+                        }
+                        else
+                        {
+                            AddMessage("error", "De foto is niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+                            return RedirectToAction("DetailPhotos", "Projecten", new { projectid });
+                        }
+                    }
+                    else
+                    {
+                        AddMessage("error", "De foto is niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid });
+                    }
+                }
+                else
+                {
+                    DeletePictureFile(id);
+                    var service = ServiceFactory.GetProjectService();
+                    var ids = new List<int> { id };
+                    var response = service.DeletePicture(ids);
+
+                    if (response.Success)
+                    {
+                        AddMessage("success", "De foto is verwijderd", "Geslaagd!");
+                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid });
+                    }
+                    else
+                    {
+                        AddMessage("error", "De foto is niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid });
+                    }
+                }
+            }
+
+            return RedirectToAction("DetailPhotos", "Projecten", new { projectid });
+        }
+
+        public ActionResult UpdatePhotoType(int id, PictureType type)
+        {
+            var service = ServiceFactory.GetProjectService();
+            var picture = service.GetPictureById(id).Value;
+
+            if (picture != null)
+            {
+                if (type != PictureType.Hoofdfoto)
+                {
+                    picture.Type = type;
+                    var response = service.InsertUpdatePicture(picture);
+
+                    if (response.Success)
+                    {
+                        AddMessage("success", "Het type van de foto is gewijzigd", "Geslaagd!");
+                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid = picture.ProjectId });
+                    }
+                    else
+                    {
+                        AddMessage("error", "Het type van de foto is NIET gewijzigd", "Fout!");
+                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid = picture.ProjectId });
+                    }
+                }
+                else
+                {
+                    picture.Type = type;
+
+                    var response1 = service.SetDefaultProjectPicture(picture.ProjectId, picture.Id);
+                    if (response1.Success)
+                    {
+                        var response = service.InsertUpdatePicture(picture);
+                        if (response.Success)
+                        {
+                            AddMessage("success", "Het type van de foto is gewijzigd", "Geslaagd!");
+                            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = picture.ProjectId });
+                        }
+                        else
+                        {
+                            AddMessage("error", "Het type van de foto is NIET gewijzigd", "Fout!");
+                            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = picture.ProjectId });
+                        }
+                    }
+                }
+            }
+
+            // fallback: als picture null is, vermijden we NullReference
+            var fallbackProjectId = picture != null ? picture.ProjectId : 0;
+            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = fallbackProjectId });
+        }
+
 
         //SHARED
+        public void ChangeOrderFillInSelectList(ProjectChangeOrderAddUpdateModel model)
+        {
+            if (model == null) throw new ArgumentNullException(nameof(model));
+
+            var projectService = ServiceFactory.GetProjectService();
+            var clientService = ServiceFactory.GetClientService();
+
+            var cresponse = clientService.GetClientAccountsByProjectIdForSelect(model.ProjectId);
+            model.ClientAccounts = cresponse.Success ? cresponse.Values : model.ClientAccounts;
+
+            var aresponse = projectService.GetProjectContractActivitiesForSelect(model.ProjectId);
+            model.ProjectContractActivities = aresponse.Success ? aresponse.Values : model.ProjectContractActivities;
+        }
+
         private void FillInAddSelectListsDetail(ref ShowProjectDetail model)
         {
             // get the activities
@@ -1453,12 +2043,428 @@ namespace CPMCore.Controllers
         }
 
         //IMAGE HANDLERS
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadImage(ProjectPictureBO UploadedBO, IFormFile file)
+        {
+            // 0) Validatie
+            if (file == null || file.Length == 0)
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+
+            var validTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/png", "image/gif"
+    };
+            if (!validTypes.Contains(file.ContentType))
+            {
+                ModelState.AddModelError("ImageUpload", "Verkeerd type gekozen, kies een gif, jpeg of png");
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            }
+
+            // 1) Upload-map (lokaal) – zelfde stijl als je snippet
+            var uploadDir = (Configuration["URL:ImageLocalURL"] ?? Path.Combine(Path.GetTempPath(), "project-pictures")).Trim();
+            CheckDir(uploadDir);                           // jouw bestaande helper die Directory.CreateDirectory doet
+
+            // submappen voor varianten
+            var dir447 = Path.Combine(uploadDir, "447");
+            var dir800 = Path.Combine(uploadDir, "800");
+            CheckDir(dir447);
+            CheckDir(dir800);
+
+            // 2) Bestandsnaam (zoals VB): altijd .jpg
+            var filename = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + ".jpg";
+
+            // 3) Volledige paden
+            var imagePath = Path.Combine(uploadDir, filename);
+            var imagePath2 = Path.Combine(dir447, filename);
+            var imagePath3 = Path.Combine(dir800, filename);
+
+            // 4) Opslaan zoals in je snippet (één bestand, FileStream)
+            using (var fs = new FileStream(imagePath, FileMode.Create))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            // Kopieën maken voor bewerking (zelfde patroon als je VB)
+            System.IO.File.Copy(imagePath, imagePath2, true);
+            System.IO.File.Copy(imagePath, imagePath3, true);
+
+            // 5) Bewerken (je bestaande ImageSharp-helpers die we eerder maakten)
+            // - 447x447 gecropt
+            ScaleAndCropImage(imagePath2, 447, 447);
+            // - 800x800 gecropt
+            ScaleAndCropImage(imagePath3, 800, 800);
+            // - origineel schalen naar max 1280x960
+            ScaleImage(imagePath, 1280, 960);
+
+            // 6) DB opslaan (zelfde logica als VB)
+            var picture = new ProjectPictureBO
+            {
+                Name = filename,
+                Caption = UploadedBO.Caption,
+                ProjectId = UploadedBO.ProjectId,
+                Type = UploadedBO.Type,
+                DateTimeUploaded = DateTime.Now
+            };
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdatePicture(picture);
+
+            if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
+            {
+                foreach (var msg in response.Messages)
+                {
+                    if (msg.Type == MessageType.Value && int.TryParse(msg.Message, out var pictureId))
+                    {
+                        _ = service.SetDefaultProjectPicture(UploadedBO.ProjectId, pictureId);
+                    }
+                }
+            }
+
+            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadImageFtp(ProjectPictureBO UploadedBO, IFormFile photo)
+        {
+            if (photo == null || photo.Length == 0)
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+
+            var validTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/png", "image/gif"
+    };
+
+            if (!validTypes.Contains(photo.ContentType))
+            {
+                ModelState.AddModelError("ImageUpload", "Verkeerd type gekozen, kies een gif, jpeg of png");
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            }
+
+            // 1) Lokaal temp-pad
+            var tempRoot = (Configuration["URL:LocalTempPath"] ?? Path.Combine(Path.GetTempPath(), "project-pictures")).Trim();
+            Directory.CreateDirectory(tempRoot);
+
+            // 2) FTP root-pad
+            var baseFtp = (Configuration["URL:PicturesFtpPath"] ?? string.Empty).TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(baseFtp))
+            {
+                ModelState.AddModelError("", "FTP-pad ontbreekt (URL:PicturesFtpPath).");
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            }
+
+            await using var ftp = await ConnectAsync();
+            if (ftp == null)
+            {
+                ModelState.AddModelError("", "FTP-verbinding mislukt.");
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            }
+
+            var filename = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + ".jpg";
+
+            // 3) Lokaal opslaan
+            var localOriginal = Path.Combine(tempRoot, filename);
+            var local447 = Path.Combine(tempRoot, "447_" + filename);
+            var local800 = Path.Combine(tempRoot, "800_" + filename);
+
+            try
+            {
+                using (var fs = new FileStream(localOriginal, FileMode.Create))
+                {
+                    await photo.CopyToAsync(fs);
+                }
+
+                System.IO.File.Copy(localOriginal, local447, true);
+                System.IO.File.Copy(localOriginal, local800, true);
+
+                // 4) Bewerken (met ImageSharp helpers)
+                ScaleAndCropImage(local447, 447, 447);
+                ScaleAndCropImage(local800, 800, 800);
+                ScaleImage(localOriginal, 1280, 960);
+
+                // 5) Zorg dat remote directories bestaan
+                var remoteRoot = $"{baseFtp}";
+                var remote447 = $"{baseFtp}/447";
+                var remote800 = $"{baseFtp}/800";
+
+                await EnsureDirectoryAsync(ftp, remoteRoot);
+                await EnsureDirectoryAsync(ftp, remote447);
+                await EnsureDirectoryAsync(ftp, remote800);
+
+                // 6) Upload bestanden
+                var ok1 = await UploadAsync(ftp, localOriginal, $"{remoteRoot}/{filename}");
+                var ok2 = await UploadAsync(ftp, local447, $"{remote447}/{filename}");
+                var ok3 = await UploadAsync(ftp, local800, $"{remote800}/{filename}");
+
+                if (!(ok1 && ok2 && ok3))
+                {
+                    await DeleteFileAsync(ftp, $"{remoteRoot}/{filename}");
+                    await DeleteFileAsync(ftp, $"{remote447}/{filename}");
+                    await DeleteFileAsync(ftp, $"{remote800}/{filename}");
+
+                    ModelState.AddModelError("ImageUpload", "Upload naar server is mislukt.");
+                    return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                }
+
+                // 7) DB opslaan
+                var picture = new ProjectPictureBO
+                {
+                    Name = filename,
+                    Caption = UploadedBO.Caption,
+                    ProjectId = UploadedBO.ProjectId,
+                    Type = UploadedBO.Type,
+                    DateTimeUploaded = DateTime.Now
+                };
+
+                var service = ServiceFactory.GetProjectService();
+                var response = service.InsertUpdatePicture(picture);
+
+                if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
+                {
+                    foreach (var msg in response.Messages)
+                    {
+                        if (msg.Type == MessageType.Value && int.TryParse(msg.Message, out var pictureId))
+                        {
+                            _ = service.SetDefaultProjectPicture(UploadedBO.ProjectId, pictureId);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                TryDelete(localOriginal);
+                TryDelete(local447);
+                TryDelete(local800);
+            }
+
+            return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+
+            // --- helpers ---
+            void TryDelete(string p)
+            {
+                try { if (System.IO.File.Exists(p)) System.IO.File.Delete(p); } catch { /* ignore/log */ }
+            }
+        }
+
+        public void ScaleAndCropImage(string imagePath, int maxWidth, int maxHeight, int quality = 65)
+        {
+            using (var image = Image.Load(imagePath))
+            {
+                double ratioX = (double)maxWidth / image.Width;
+                double ratioY = (double)maxHeight / image.Height;
+                double ratio = Math.Max(ratioX, ratioY);
+
+                int newWidth = (int)(image.Width * ratio);
+                int newHeight = (int)(image.Height * ratio);
+
+                image.Mutate(x => x.Resize(newWidth, newHeight));
+
+                var cropX = (newWidth - maxWidth) / 2;
+                var cropY = (newHeight - maxHeight) / 2;
+
+                image.Mutate(x => x.Crop(new Rectangle(cropX, cropY, maxWidth, maxHeight)));
+
+                var encoder = new JpegEncoder { Quality = quality };
+                image.Save(imagePath, encoder); // <-- schrijf terug naar hetzelfde pad
+            }
+        }
+        public void ScaleImage(string imagePath, int maxWidth, int maxHeight, int quality = 65)
+        {
+            using (var image = Image.Load(imagePath))
+            {
+                double ratioX = (double)maxWidth / image.Width;
+                double ratioY = (double)maxHeight / image.Height;
+                double ratio = Math.Max(ratioX, ratioY);
+
+                int newWidth = (int)(image.Width * ratio);
+                int newHeight = (int)(image.Height * ratio);
+
+                image.Mutate(x => x.Resize(newWidth, newHeight));
+
+                var encoder = new JpegEncoder { Quality = quality };
+                image.Save(imagePath, encoder); // <-- in-place
+            }
+        }
+        private static void EnsureDir(string dir)
+        {
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+        }
+        // ==== FTP CONNECT ====
+        public async Task<AsyncFtpClient?> ConnectToFtpAsync()
+        {
+            var host = Configuration["FTP:Host"];
+            var user = Configuration["FTP:User"];
+            var pass = Configuration["FTP:Password"];
+            var port = int.TryParse(Configuration["FTP:Port"], out var p) ? p : 21;
+            var useFtps = bool.TryParse(Configuration["FTP:UseFtps"], out var ftps) && ftps;
+            var validateCert = bool.TryParse(Configuration["FTP:ValidateCert"], out var vc) && vc;
+
+            var client = new AsyncFtpClient(host, new NetworkCredential(user, pass), port);
+
+            // Config
+            client.Config.DataConnectionType = FtpDataConnectionType.PASV; // passive
+            if (useFtps)
+            {
+                client.Config.EncryptionMode = FtpEncryptionMode.Explicit;  // AUTH TLS
+                client.Config.DataConnectionEncryption = true;
+
+                client.ValidateCertificate += (control, e) =>
+                {
+                    e.Accept = !validateCert || e.PolicyErrors == SslPolicyErrors.None;
+                };
+            }
+            else
+            {
+                client.Config.EncryptionMode = FtpEncryptionMode.None;
+                client.Config.DataConnectionEncryption = false;
+            }
+
+            try
+            {
+                await client.Connect();  // AsyncFtpClient: async connect heet 'Connect()'
+                return client;
+            }
+            catch (Exception ex)
+            {
+                // jouw logging hier
+                Console.WriteLine("FTP connect failed: " + ex.Message);
+                await client.DisposeAsync();
+                return null;
+            }
+        }
+
+        // ==== LOCAL DIR CHECK ====
         public void CheckDir(string path)
         {
             if (!Directory.Exists(path))
                 Directory.CreateDirectory(path);
         }
 
+        // ==== REMOTE DIR CHECK/CREATE ====
+        public async Task CheckDirFtpAsync(string remoteDir, AsyncFtpClient ftp)
+        {
+            // Maakt recursief aan; geen chdir nodig bij FluentFTP
+            await ftp.CreateDirectory(remoteDir, true);
+        }
 
+        // ==== LOKALE FOTO'S VERWIJDEREN (ongewijzigd, puur filesystem) ====
+        public void DeletePictureFile(int id)
+        {
+            var service = ServiceFactory.GetProjectService();
+            var resp = service.GetPictureById(id);
+            var pic = resp.Success ? resp.Value : null;
+            if (pic == null) return;
+
+            var baseDir = Configuration["URL:ImageLocalURL"];
+
+            string[] paths = pic.Type switch
+            {
+                PictureType.Hoofdfoto or PictureType.Nevenfoto or PictureType.Werffoto => new[]
+                {
+            Path.Combine(baseDir, pic.Name),
+            Path.Combine(baseDir, "447", pic.Name),
+            Path.Combine(baseDir, "800", pic.Name)
+        },
+                PictureType.Nieuws => new[]
+                {
+            Path.Combine(baseDir, "news", pic.Name),
+            Path.Combine(baseDir, "news", "original", pic.Name)
+        },
+                _ => Array.Empty<string>()
+            };
+
+            foreach (var p in paths)
+            {
+                if (System.IO.File.Exists(p))
+                {
+                    try { System.IO.File.Delete(p); }
+                    catch (IOException ex) { Console.WriteLine($"Bestand kon niet verwijderd worden: {ex.Message}"); }
+                }
+            }
+        }
+
+        // ==== REMOTE FILE DELETE ====
+        public async Task<bool> DeleteFtpFileAsync(string remoteDir, string filename, AsyncFtpClient ftp)
+        {
+            try
+            {
+                var remotePath = $"{remoteDir.TrimEnd('/')}/{filename}";
+                if (await ftp.FileExists(remotePath))
+                {
+                    await ftp.DeleteFile(remotePath);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"FTP delete failed: {ex.Message}");
+                return false;
+            }
+        }
+
+
+        //FTP HELPERS
+        private AsyncFtpClient CreateClient()
+        {
+            var host = Configuration["FTP:Host"];
+            var user = Configuration["FTP:User"];
+            var pass = Configuration["FTP:Password"];
+            var port = int.TryParse(Configuration["FTP:Port"], out var p) ? p : 21;
+            var useFtps = bool.TryParse(Configuration["FTP:UseFtps"], out var ftps) && ftps;
+            var validateCert = bool.TryParse(Configuration["FTP:ValidateCert"], out var vc) && vc;
+
+            var client = new AsyncFtpClient(host, new NetworkCredential(user, pass), port);
+
+            if (useFtps)
+            {
+                client.Config.EncryptionMode = FtpEncryptionMode.Explicit;   // FTPS (AUTH TLS)
+                client.Config.DataConnectionEncryption = true;
+                client.ValidateCertificate += (control, e) =>
+                {
+                    e.Accept = !validateCert || e.PolicyErrors == SslPolicyErrors.None;
+                };
+            }
+            else
+            {
+                client.Config.EncryptionMode = FtpEncryptionMode.None;
+                client.Config.DataConnectionEncryption = false;
+            }
+
+            client.Config.DataConnectionType = FtpDataConnectionType.PASV;  // passive
+
+            return client;
+        }
+
+        public async Task<AsyncFtpClient> ConnectAsync()
+        {
+            var client = CreateClient();
+            await client.Connect();   // AsyncFtpClient: async method heet Connect()
+            return client;
+        }
+
+        public async Task EnsureDirectoryAsync(AsyncFtpClient client, string remoteDir)
+            => await client.CreateDirectory(remoteDir, true);   // async
+
+        public async Task<bool> UploadAsync(AsyncFtpClient client, string localPath, string remoteFullPath)
+        {
+            var status = await client.UploadFile(localPath, remoteFullPath,
+                FtpRemoteExists.Overwrite, true);
+            return status == FtpStatus.Success;
+        }
+
+        public async Task<bool> DeleteFileAsync(AsyncFtpClient client, string remoteFullPath)
+        {
+            try
+            {
+                if (await client.FileExists(remoteFullPath))
+                    await client.DeleteFile(remoteFullPath);
+                return true;
+            }
+            catch { return false; }
+        }
     }
 }

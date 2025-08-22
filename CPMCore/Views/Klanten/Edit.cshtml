@@ -314,56 +314,62 @@
 							</div>
 							<div class="col-lg-3-5 col-xl-4-5">
 								<div class="row mt-4 UnitRows">
+									@for (int i = 0; i < Model.Units.Count; i++)
+									{
+										@Html.HiddenFor(m => m.Units[i].Id)
 
-										@foreach (var unit in Model.Units)
-										{
-											<div class="card mb-4">
-												<div class="card-body border p-4">
-													<div class="d-flex justify-content-between align-items-start mb-1">
-														<div class=" fs-6">@unit.Type.Name @unit.Name</div>
-													</div>
-													<div class="form-group">
-														<div class="row align-items-center pb-2">
-															<div class="col-lg-2 col-xl-2">
-																Grondwaarde
-															</div>
-															<div class="col-lg-4 col-xl-4">
-																@Html.EditorFor(m => unit.LandValueSold)
-															</div>
+										<div class="card mb-4">
+											<div class="card-body border p-4">
+												<div class="d-flex justify-content-between align-items-start mb-1">
+													<div class="fs-6">@Model.Units[i].Type.Name @Model.Units[i].Name</div>
+												</div>
 
-															@if (unit.ConstructionValues.Count > 0)
-															{
-																<div class="col-lg-2 col-xl-2">
-																	@Html.HiddenFor(m => unit.ConstructionValues[0].Id)
-																	@Html.DisplayFor(m => unit.ConstructionValues[0].Description)
-																</div>
-																<div class="col-lg-4 col-xl-4">
-																	@Html.EditorFor(m => unit.ConstructionValues[0].ValueSold)
-																</div>
-															}
+												<div class="form-group">
+													<!-- Grondwaarde -->
+													<div class="row align-items-center pb-2">
+														<div class="col-lg-2 col-xl-2">
+															Grondwaarde
+														</div>
+														<div class="col-lg-4 col-xl-4">
+															@Html.EditorFor(m => m.Units[i].LandValueSold)
 														</div>
 
-														<!-- Extra constructionvalues -->
-														@for (int j = 1; j < unit.ConstructionValues.Count; j++)
+														<!-- Eerste construction value (indien aanwezig) -->
+														@if (Model.Units[i].ConstructionValues != null && Model.Units[i].ConstructionValues.Count > 0)
 														{
-															<div class="row align-items-center pb-2">
-																<div class="col-lg-6 col-xl-6">
-																	<!-- leeg als spacer -->
-																</div>
-																<div class="col-lg-2 col-xl-2">
-																	@Html.HiddenFor(m => unit.ConstructionValues[j].Id)
-																	@Html.DisplayFor(m => unit.ConstructionValues[j].Description)
-																</div>
-																<div class="col-lg-4 col-xl-4">
-																	@Html.EditorFor(m => unit.ConstructionValues[j].ValueSold)
-																</div>
+															<div class="col-lg-2 col-xl-2">
+																@Html.HiddenFor(m => m.Units[i].ConstructionValues[0].Id)
+																@Html.DisplayFor(m => m.Units[i].ConstructionValues[0].Description)
+															</div>
+															<div class="col-lg-4 col-xl-4">
+																@Html.EditorFor(m => m.Units[i].ConstructionValues[0].ValueSold)
 															</div>
 														}
 													</div>
+
+													<!-- Overige construction values -->
+													@if (Model.Units[i].ConstructionValues != null && Model.Units[i].ConstructionValues.Count > 1)
+													{
+														for (int j = 1; j < Model.Units[i].ConstructionValues.Count; j++)
+														{
+															<div class="row align-items-center pb-2">
+																<div class="col-lg-6 col-xl-6">
+																	<!-- spacer -->
+																</div>
+																<div class="col-lg-2 col-xl-2">
+																	@Html.HiddenFor(m => m.Units[i].ConstructionValues[j].Id)
+																	@Html.DisplayFor(m => m.Units[i].ConstructionValues[j].Description)
+																</div>
+																<div class="col-lg-4 col-xl-4">
+																	@Html.EditorFor(m => m.Units[i].ConstructionValues[j].ValueSold)
+																</div>
+															</div>
+														}
+													}
 												</div>
 											</div>
-										}
-									
+										</div>
+									}
 								</div>
 							</div>
 						</div>
@@ -490,7 +496,7 @@
 							</div>
 							<div class="col-lg-3-5 col-xl-4-5 ">
 								<div class="d-flex justify-content-end">
-									<button type="button" id="btnAddPOA" class="btn btn-default btn-md">
+									<button type="button" id="btnAddPoas" class="btn btn-default btn-md">
 										<i class="fa fa-plus me-3"></i>Aandachtspunt toevoegen
 									</button>
 								</div>
@@ -538,7 +544,8 @@
 	<script src="~/lib/jquery-mask/jquery.mask.js"></script>
 
 	<script>
-		
+
+
 		function initCoOwnerItem($item) {
 			// 1. Select2 Postcode Dropdown Initialisatie
 			$item.find('.select2-postcode').each(function () {
@@ -686,7 +693,7 @@
 				});
 			});
 		});
-				$('#btnAddPoa').on('click', function () {
+				$('#btnAddPoas').on('click', function () {
 			$.get('@Url.Action("BlankPoaRow")', function (html) {
 				const $newItem = $(html);
 				$('#poaRows').append($newItem);
@@ -803,25 +810,27 @@
 			alert("klik");
 		});
 
-
 		});
 
 		$('.Currencymask').mask("#.##0,00", { reverse: true });
 
-							// Contacten toevoegen
-		$("#addContact").click(function () {
-			$.ajax({
-				url: this.href,
-				cache: false,
-				success: function (html) { $("#editorRows").append(html); }
-			});
-			return false;
+		// Contacten toevoegen
+		$('#addContact').on('click', function (e) {
+		  e.preventDefault();
+		  $.ajax({
+			url: this.href,
+			cache: false,
+			success: function (html) {
+			  var $html = $(html);
+			  $('#editorRows').append($html);
+			}
+		  });
 		});
 
 		// Contact verwijderen
-		$(document).on('click', 'a.deleteContact', function () {
-			$(this).closest('.contactRow').remove();
-			return false;
+		$(document).on('click', 'a.deleteContact', function (e) {
+		  e.preventDefault();
+		  $(this).closest('.contactRow').remove();
 		});
 		// CoOwner verwijderen
 		$(document).on('click', 'a.deleteCoOwner', function () {

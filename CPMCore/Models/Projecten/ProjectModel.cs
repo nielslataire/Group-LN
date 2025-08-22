@@ -922,6 +922,73 @@ namespace CPMCore.Models.Projecten
             }
         }
     }
+    public class DetailChangeOrderModel
+    {
+        public DetailChangeOrderModel()
+        {
+            _co = new List<ChangeOrderBO>();
+        }
+        private List<ChangeOrderBO> _co;
+        public List<ChangeOrderBO> CO
+        {
+            get
+            {
+                return _co;
+            }
+            set
+            {
+                _co = value;
+            }
+        }
+        private int _projectid;
+        public int ProjectId
+        {
+            get
+            {
+                return _projectid;
+            }
+            set
+            {
+                _projectid = value;
+            }
+        }
+        private int _clientaccountid;
+        public int ClientAccountId
+        {
+            get
+            {
+                return _clientaccountid;
+            }
+            set
+            {
+                _clientaccountid = value;
+            }
+        }
+        private string _projectname;
+        public string ProjectName
+        {
+            get
+            {
+                return _projectname;
+            }
+            set
+            {
+                _projectname = value;
+            }
+        }
+        private string _clientname;
+        public string ClientName
+        {
+            get
+            {
+                return _clientname;
+            }
+            set
+            {
+                _clientname = value;
+            }
+        }
+    }
 
     // UNITS
     public class AddUnitModel
@@ -2579,8 +2646,8 @@ namespace CPMCore.Models.Projecten
                 _projectid = value;
             }
         }
-        private string _projectname;
-        public string ProjectName
+        private string? _projectname;
+        public string? ProjectName
         {
             get
             {
@@ -2589,6 +2656,18 @@ namespace CPMCore.Models.Projecten
             set
             {
                 _projectname = value;
+            }
+        }
+        private string? _clientName;
+        public string? ClientName
+        {
+            get
+            {
+                return _clientName;
+            }
+            set
+            {
+                _clientName = value;
             }
         }
         private List<IdNameBO> _clientaccounts;

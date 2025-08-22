@@ -1,0 +1,121 @@
+﻿@using System.Text.Json
+@using System.Text.Encodings.Web
+@model CPMCore.Models.Projecten.DetailChangeOrderModel
+
+
+
+@{
+    // JSON-serializer voor de per-CO detailsblokken
+    var jsonOpts = new JsonSerializerOptions
+            {
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false
+            };
+}
+
+@section PageStyle {
+	<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+	<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+
+}
+
+@Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="input-group">
+			<span class="input-group-text">
+				<i class="bx bx-search"></i>
+			</span>
+			<input type="text" class="form-control me-2"" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+		</div>
+	</div>
+</div>
+
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="datatables-header-footer-wrapper mt-2">
+			<div class="datatable-header">
+				
+			</div>
+
+            <table class="table table-ecommerce-simple table-striped mb-0"
+                   id="datatable-clients-list"
+                   style="min-width: 550px;"
+                   data-toggle="table" data-show-columns="true" data-toolbar="#toolbar" data-toolbar-align="right">
+
+                <thead>
+                    <tr>
+                        <th class="noVis" style="width:36px;"></th> @* Toggler-kolom *@
+                        <th data-sortable="true">Datum</th>
+                        <th class="hidden-xs" data-visible="false" data-sortable="true">Datum verzonden</th>
+                        <th class="hidden-xs" data-visible="false" data-sortable="true">Vervaldatum</th>
+                        <th class="hidden-xs" data-visible="false" data-sortable="true">Datum akkoord</th>
+                        <th data-sortable="true">Omschrijving</th>
+                        <th data-sortable="true">Bedrag excl. btw</th>
+                        <th data-sortable="true" data-align="center">Factuur door bouwheer</th>
+                        <th data-sortable="true">Status</th>
+                        <th class="hidden-xs noVis" data-sortable="false">Acties</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+            @foreach (var item in Model.CO)
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
+
+                bool hasAgreement = item.DateAgreement is not null;
+                bool hasExpiration = item.ExpirationDate != default(DateOnly);
+                bool sent = item.DateSendToClient is not null;
+
+                bool expired = item.ExpirationDate is DateOnly exp
+                && exp < today
+                && item.DateAgreement is null;
+
+                string iconClass, title;
+                if (hasAgreement) { iconClass = "bx bxs-circle text-success"; title = "Akkoord"; }
+                else if (expired) { iconClass = "bx bxs-circle text-danger"; title = "Vervallen, geen akkoord"; }
+                else if (sent) { iconClass = "bx bxs-circle text-warning"; title = "Verzonden, geen akkoord"; }
+                else { iconClass = "bx bxs-circle text-muted"; title = "Open, nog niet vervallen"; }
+
+                        <tr data-co-id="@item.Id" aria-expanded="false">
+                            <td class="details-control text-center" role="button" aria-label="Toon details" tabindex="0">
+                                <i class="bx bx-chevron-right"></i>
+                            </td>
+                            <td>@item.ChangeOrderDate</td>
+                            <td class="hidden-xs">@Html.DisplayFor(m => item.DateSendToClient)</td>
+                            <td class="hidden-xs">@Html.DisplayFor(m => item.ExpirationDate)</td>
+                            <td class="hidden-xs">@Html.DisplayFor(m => item.DateAgreement)</td>
+                            <td>@Html.DisplayFor(m => item.Description)</td>
+                            <td>@item.Totaal.ToString("C")</td>
+                            <td class="text-center">@Html.DisplayFor(m => item.Invoiceable)</td>
+                            <td><i class="@iconClass" title="@title" aria-label="@title"></i> @title</td>
+                            <td>
+                                <a data-toggle="tooltip" data-placement="top" title="Bewerken"
+                                   href="@Url.Action("EditChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientid = item.ClientAccountID, coid = item.Id })">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                        @if (User.IsInRole("Admin"))
+                        {
+                                    <a href="#modaldeletechangeorder" data-toggle="tooltip" data-placement="top" title="Verwijderen"
+                                       class="deleteChangeOrder" data-id="@item.Id"><i class="fa fa-trash"></i></a>
+                        }
+                            </td>
+                        </tr>
+
+            }
+                </tbody>
+            </table>
+            <!-- JSON store buiten de DataTable (heel belangrijk) -->
+            <div id="co-json-store" class="d-none">
+            @foreach (var item in Model.CO)
+            {
+                    <script type="application/json" id="co-details-@item.Id">
+                    @Html.Raw(JsonSerializer.Serialize(item.Details, jsonOpts))
+                    </script>
+            }
+		</div>
+	</div>
+
+</div>
+          

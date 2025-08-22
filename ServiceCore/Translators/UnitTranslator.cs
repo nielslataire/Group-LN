@@ -76,7 +76,7 @@ namespace ServiceCore.Translators
             }
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(Units _entity, UnitBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(Units _entity, UnitBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
@@ -116,12 +116,12 @@ namespace ServiceCore.Translators
                 // add the activity to the company
                 if ((_entity.AttachedUnit == null))
             {
-                var unit = uow.GetUnitsDAO().GetById(bo.AttachedUnitsId.Value);
+                var unit = uow.Units.GetById(bo.AttachedUnitsId.Value);
                 _entity.AttachedUnit = unit;
             }
             else if ((_entity.AttachedUnit.Id != bo.AttachedUnitsId))
             {
-                var unit = uow.GetUnitsDAO().GetById(bo.AttachedUnitsId.Value);
+                var unit = uow.Units.GetById(bo.AttachedUnitsId.Value);
                 _entity.AttachedUnit = unit;
             }
             // Handle Payment Group
@@ -132,12 +132,12 @@ namespace ServiceCore.Translators
                 // add paymentgroup to unit
                 if ((_entity.PaymentGroup == null))
             {
-                var paymentgroup = uow.GetProjectPaymentGroupsDAO().GetById(bo.PaymentGroupId.Value);
+                var paymentgroup = uow.PaymentGroups.GetById(bo.PaymentGroupId.Value);
                 _entity.PaymentGroup = paymentgroup;
             }
             else if ((_entity.PaymentGroup.Id != bo.PaymentGroupId))
             {
-                var paymentgroup = uow.GetProjectPaymentGroupsDAO().GetById(bo.PaymentGroupId.Value);
+                var paymentgroup = uow.PaymentGroups.GetById(bo.PaymentGroupId.Value);
                 _entity.PaymentGroup = paymentgroup;
             }
             var Err = HandleLinkedUnits(_entity, bo.LinkedUnits, uow);
@@ -194,7 +194,7 @@ namespace ServiceCore.Translators
             // Next
             return ErrorCode.Success;
         }
-        private static ErrorCode HandleLinkedUnits(Units _entity, List<UnitBO> linkedunits, UnitOfWork uow)
+        private static ErrorCode HandleLinkedUnits(Units _entity, List<UnitBO> linkedunits, UnitOfWorkCore uow)
         {
             if ((linkedunits == null))
                 return ErrorCode.Success;
@@ -208,7 +208,7 @@ namespace ServiceCore.Translators
                    // add the activity to the company
                    if ((!_entity.InverseLinkedUnit.Any(m => m.Id == x.Id)))
                 {
-                    var unit = uow.GetUnitsDAO().GetById(x.Id);
+                    var unit = uow.Units.GetById(x.Id);
                     _entity.InverseLinkedUnit.Add(unit);
                 }
             }
@@ -223,7 +223,7 @@ namespace ServiceCore.Translators
                 _entity.InverseLinkedUnit.Remove(x);
             return ErrorCode.Success;
         }
-        private static ErrorCode HandleConstructionValues(Units _entity, List<UnitConstructionValueBO> constructionvalues, UnitOfWork uow)
+        private static ErrorCode HandleConstructionValues(Units _entity, List<UnitConstructionValueBO> constructionvalues, UnitOfWorkCore uow)
         {
             if ((constructionvalues == null))
                 return ErrorCode.Success;
@@ -237,7 +237,7 @@ namespace ServiceCore.Translators
                    // add the constructionvalue to the unit
                    if ((!_entity.UnitConstructionValue.Any(m => m.Id == x.Id)))
                 {
-                    var constructionvalue = uow.GetUnitConstructionValuesDAO().GetById(x.Id);
+                    var constructionvalue = uow.UnitConstructionValues.GetById(x.Id);
                     _entity.UnitConstructionValue.Add(constructionvalue);
                 }
             }

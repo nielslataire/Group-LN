@@ -1,0 +1,355 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectChangeOrderAddUpdateModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+	ViewData["Title"] = Model.ProjectName;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+        div.dt-buttons .btn.buttons-colvis::after {
+            font-family: "Font Awesome 6 Free";
+            content: "\f078"; /* Unicode voor fa-chevron-down */
+            font-weight: 900; /* Voor solid stijl */
+            font-size: 0.85rem;
+            vertical-align: middle;
+            border: none;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
+            transform: rotate(180deg);
+        }
+    </style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <div class="row align-items-center g-2">
+                            <div class="col-sm-auto d-flex align-items-center">
+                                @{
+                                    var referrer = TempData.Peek("Referrer");
+                                    var link = Model.ChangeOrder.ClientAccountID > 0
+                                    ? Url.Action("Detail", "Klanten", new { clientid = Model.ChangeOrder.ClientAccountID, projectid = Model.ProjectId })
+                                    : Url.Action("Detail", "Projecten", new { id = Model.ProjectId });
+
+                                    // Als referrer aanwezig is, gebruik die
+                                    if (referrer != null)
+                                    {
+                                        link = referrer.ToString();
+                                    }
+                                }
+
+                                <a href="@link" class="text-decoration-none text-reset d-flex align-items-center">
+                                    <i class="bx bx-chevron-left fs-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-sm-auto">
+                                <h1 class="font-weight-bold mb-0 mt-0">Wijzigingsopdracht toevoegen
+                                </h1>
+                                <h5 class="mb-4 mt-0">
+                                    @(Model.ChangeOrder.ClientAccountID != 0
+                                        ? "Maak hier een wijzigingsopdracht voor de klant " +  Model.ClientName + " aan"
+                                        : "Maak hier een wijzigingsopdracht voor een klant aan")
+
+
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-auto px-0">
+                    </div>
+                </div>
+
+
+            </div>
+            @using (Html.BeginForm(
+            "AddChangeOrder",        // exact de naam van je [HttpPost]-actie
+            "Projecten",
+            FormMethod.Post,
+            new { @class = "ecommerce-form" } // verwijder 'action-buttons-fixed' als je die niet meer nodig hebt
+            ))
+                    {
+                @Html.AntiForgeryToken()
+                        
+			<div class="card card-modern pb-4">
+				<div class="card-body">
+                    <h3 class="mb-4"><i class="bx bx-file me-2 pb-3"></i>Nieuwe wijzigingsopdracht</h3>
+
+	                    @Html.HiddenFor(m => m.ProjectId, new {id = "projectid"})
+                        @Html.HiddenFor(m => m.ProjectName)
+                        @Html.HiddenFor(m => m.ClientName)
+                        @Html.HiddenFor(m => m.ChangeOrder.ClientAccountID)
+                        <div class="form-group">
+                            <div class="row  pb-3">
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ChangeOrder.Description)</label>
+                                <div class="col-lg-5">
+                                    @Html.TextAreaFor(m => m.ChangeOrder.Description, new { @class = "form-control form-control-modern"})
+                                </div>
+                                    <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ChangeOrder.ChangeOrderConditions)</label>
+                                <div class="col-lg-5">
+                                    @Html.TextAreaFor(m => m.ChangeOrder.ChangeOrderConditions, new { @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ProjectContractActivities)</label>
+                                <div class="col-lg-5"> @Html.DropDownListFor(m => m.ChangeOrder.ContractActivityID, new SelectList(Model.ProjectContractActivities, "ID", "Display", Model.ChangeOrder.ContractActivityID), new { @class = "form-control populate", @data_plugin_selecttwo = "", @id = "lstProjectActivities" }) </div>
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> </label>
+                                <div class="col-lg-3">
+                                    <div class="checkbox-custom checkbox-default">
+                                        @Html.CheckBoxFor(m => m.ChangeOrder.Invoiceable)
+                                        <label for="checkboxExample1">@Html.LabelFor(m => m.ChangeOrder.Invoiceable)</label>
+                                    </div>
+                                   
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ChangeOrder.ChangeOrderDate)</label>
+                                <div class="col-lg-2">
+                                    @Html.EditorFor(m => m.ChangeOrder.ChangeOrderDate, new { @class = "form-control form-control-modern" })
+                                </div>
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ChangeOrder.ExpirationDate)</label>
+                                <div class="col-lg-2">
+                                    @Html.EditorFor(m => m.ChangeOrder.ExpirationDate, new { @class = "form-control form-control-modern" })
+                                </div>
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ChangeOrder.DateSendToClient)</label>
+                                <div class="col-lg-2">
+                                    @Html.EditorFor(m => m.ChangeOrder.DateSendToClient, new { @class = "form-control form-control-modern" })
+                                </div>
+                                <label class="col-lg-1 control-label text-lg-end mb-0 mt-1"> @Html.LabelFor(m => m.ChangeOrder.DateAgreement)</label>
+                                <div class="col-lg-2">
+                                    @Html.EditorFor(m => m.ChangeOrder.DateAgreement, new { @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+                            <div class="row justify-content-center justify-content-sm-between pt-5 pe-0">
+                                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                                    <div class="row align-items-center g-2">
+                                        <div class="col-sm-auto">
+                                            <h4>Regels</h4>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-auto px-0">
+                                    <button type="button" class="btn btn-default btn-md px-3 me-1" id="btnAddRow">
+                                        <i class="fas fa-plus"></i> Regel toevoegen
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3 pt-3">
+                                <div class="col-lg-4">Omschrijving</div>
+                                <div class="col-lg-2">Eenheid</div>
+                                <div class="col-lg-1">Aantal</div>
+                                <div class="col-lg-1">Eenheidsprijs</div>
+                                <div class="col-lg-1">Commissie</div>
+                                <div class="col-lg-1">Totaalprijs</div>
+                                <div class="col-lg-1">BTW</div>
+                                <div class="col-lg-1 text-end">Acties</div>
+                            </div>
+                        </div>
+                        <div class="form-group pb-4">
+                            <div id="ChangeOrderRows">
+                                @foreach (var co in Model.ChangeOrder.Details)
+                                {
+                                    @Html.Partial("_ChangeOrderDetailRow", co) 
+                                }
+                            </div>
+                        </div>
+                        <div class="form-group pt-5">
+                            <div class="row align-items-center">
+                                <div class="col-lg-8"></div>
+
+                                <div class="col-lg-4 fs-6">
+                                    <div class="row align-items-center g-2">
+                                        <div class="col-lg-8">Subtotaal :</div>
+                                        <div class="col-lg-4 text-end"><span id="SummarySubtotal">0,00 €</span></div>
+                                    </div>
+
+                                    <div class="row align-items-center g-2">
+                                        <div class="col-lg-8">Commissie :</div>
+                                        <div class="col-lg-4 text-end"><span id="SummaryCommission">0,00 €</span></div>
+                                    </div>
+
+                                    <div class="row align-items-center g-2 pb-1">
+                                        <div class="col-lg-8">BTW :</div>
+                                        <div class="col-lg-4 text-end"><span id="SummaryVAT">0,00 €</span></div>
+                                    </div>
+
+                                    <!-- Border boven totaal -->
+                                    <div class="row align-items-center g-2 pt-1 mt-2 border-top fw-bold">
+                                        <div class="col-lg-8">Totaal :</div>
+                                        <div class="col-lg-4 text-end"><span id="SummaryGrandTotal">0,00 €</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    
+				</div>
+
+			</div>
+            <div class="row action-buttons">
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                        <i class="bx bx-save text-4 me-2"></i> Wijzingsopdracht opslaan
+                    </button>
+                </div>
+                <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+                    <a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+                </div>
+
+            </div>
+            }
+        </div>
+    </div>
+</section>
+<div id="modaldeletechangeorder" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-changeorder-container"></div>
+</div>
+@section PageScripts
+{
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/jquery-validation/jquery.validate.js"></script>
+    <script src="~/lib/dropzone/dropzone.js"></script>
+    <script src="~/lib/jquery-mask/jquery.mask.js"></script>
+
+
+    <script>
+        // -------- Helpers --------
+        function getNum($el) {
+          const el = $el[0];
+          if (!el) return 0;
+          const an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el);
+          if (an) return Number(an.getNumber()) || 0; // ruwe number, geen €/scheidingst.
+          const v = ($el.val() || '').toString().trim();
+          return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function formatEUR(n) {
+          return n.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        }
+
+        // -------- Per rij herberekenen (totaal = aantal*prijs*(1+commissie%)) --------
+        function recalcRow(elem) {
+          const $row = $(elem).closest('.row');
+          const number     = getNum($row.find('.number-field'));
+          const price      = getNum($row.find('.price-field'));
+          const commission = getNum($row.find('.commission-field')); // %
+
+          const total = number * price * (1 + (commission / 100));
+
+          const $total = $row.find('.total-field');
+          const anTotal = window.AutoNumeric && AutoNumeric.getAutoNumericElement($total[0]);
+          if (anTotal) anTotal.set(total);
+          else $total.val(total.toFixed(2));
+        }
+
+        // -------- Samenvatting over ALLE rijen --------
+        function recomputeTotals() {
+          let subtotal = 0;         // Σ (aantal * prijs)
+          let commissionTotal = 0;  // Σ (aantal * prijs * commissie%)
+          let vatTotal = 0;         // Σ ((aantal*prijs + commissie) * btw%)
+          const $rowsScope = $('#ChangeOrderRows');
+
+          $rowsScope.find('> .row').each(function () {
+            const $r  = $(this);
+            const qty = getNum($r.find('.number-field'));
+            const p   = getNum($r.find('.price-field'));
+            const cP  = getNum($r.find('.commission-field')); // %
+            const vP  = getNum($r.find('.vat-field'));        // %
+
+            const base = qty * p;
+            const cA   = base * (cP / 100);
+            const vA   = (base + cA) * (vP / 100); // <-- aanpassing
+
+            subtotal        += base;
+            commissionTotal += cA;
+            vatTotal        += vA;
+          });
+
+          const grand = subtotal + commissionTotal + vatTotal;
+
+          $('#SummarySubtotal').text(formatEUR(subtotal));
+          $('#SummaryCommission').text(formatEUR(commissionTotal));
+          $('#SummaryVAT').text(formatEUR(vatTotal));
+          $('#SummaryGrandTotal').text(formatEUR(grand));
+        }
+
+
+        // -------- Events --------
+        // Herbereken bij typen én bij AutoNumeric wijzigingen
+        $(document).on('input autoNumeric:rawValueModified',
+          '.number-field, .price-field, .commission-field, .vat-field',
+          function () {
+            recalcRow(this);
+            recomputeTotals();
+          }
+        );
+
+        // -------- AutoNumeric init --------
+        function initCurrencyInputs(scope) {
+          $(scope).find('.currency-input, .total-field').each(function () {
+            if (AutoNumeric.getAutoNumericElement(this)) return;
+            new AutoNumeric(this, {
+              decimalCharacter: ',',
+              digitGroupSeparator: '.'
+              // geen currencySymbol omdat jij de € via input-group-text toont
+            });
+          });
+        }
+
+        $(function () {
+          initCurrencyInputs(document);
+          recomputeTotals(); // initiale samenvatting
+        });
+
+        // -------- Tooltips --------
+        function initTooltips(scope) {
+          $(scope).find('[data-bs-toggle="tooltip"]').each(function () {
+            new bootstrap.Tooltip(this);
+          });
+        }
+
+        // -------- Rij toevoegen --------
+        $(document).on('click', '#btnAddRow', function () {
+          $.get('@Url.Action("AddChangeOrderDetailRow", "Projecten")', function (html) {
+            const $row = $(html);
+            $('#ChangeOrderRows').append($row);
+
+            initCurrencyInputs($row);
+            initTooltips($row);
+
+            if ($.validator && $.validator.unobtrusive) {
+              $.validator.unobtrusive.parse($row);
+            }
+
+            recomputeTotals();
+          });
+        });
+
+        // -------- Rij verwijderen --------
+        $(document).on('click', '.delete-row', function () {
+          $(this).closest('.row').remove();
+          recomputeTotals();
+        });
+    </script>
+
+}

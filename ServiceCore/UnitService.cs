@@ -1,821 +1,961 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using BOCore;
 using FacadeCore;
 using DALCore;
 using DALCore.Models;
-using ServiceCore.Translators;
-using ServiceCore.Helpers;
-using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
-//using System.Linq.Dynamic.Core;
-//using System.Linq.Dynamic;
-
+using ServiceCore.Helpers;
+using ServiceCore.Translators;
 
 namespace ServiceCore
 {
     public class UnitService : IUnitService
     {
-        public GetResponse<UnitBO> GetUnitById(int Id)
+        private readonly UnitOfWorkCore _uow;
+
+        public UnitService(UnitOfWorkCore uow)
         {
-            GetResponse<UnitBO> response = new GetResponse<UnitBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var _entity = dao.GetNoTracking().Where(m => m.Id == Id)
+            _uow = uow;
+        }
+
+        public GetResponse<UnitBO> GetUnitById(int id)
+        {
+            var response = new GetResponse<UnitBO>();
+
+            var entity = _uow.Units.GetNoTracking()
+                .Where(m => m.Id == id)
                 .Include(m => m.AttachedUnit)
                 .Include(m => m.LinkedUnit)
                 .Include(m => m.Project)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group)
+                .Include(m => m.Type).ThenInclude(t => t.Group)
                 .Include(m => m.InverseLinkedUnit)
                 .Include(m => m.InverseAttachedUnit)
                 .Include(m => m.LevelNavigation)
                 .Include(m => m.UnitConstructionValue)
                 .FirstOrDefault();
-            UnitBO unit = new UnitBO();
 
-            var err = UnitTranslator.TranslateEntityToBO(_entity, unit);
-            if (err == ErrorCode.Success)
-                response.Value = unit;
-            else
-                response.AddError(err.ToString());
+            var bo = new UnitBO();
+            var err = UnitTranslator.TranslateEntityToBO(entity, bo);
+            if (err == ErrorCode.Success) response.Value = bo;
+            else response.AddError(err.ToString());
+
             return response;
         }
-        public GetResponse<UnitBO> GetUnitsByProjectId(int ProjectId)
+
+        public GetResponse<UnitBO> GetUnitsByProjectId(int projectId)
         {
-            GetResponse<UnitBO> response = new GetResponse<UnitBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.TypeId != 0)
+            var response = new GetResponse<UnitBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.TypeId != 0)
                 .Include(m => m.AttachedUnit)
                 .Include(m => m.LinkedUnit)
                 .Include(m => m.Project)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group)
+                .Include(m => m.Type).ThenInclude(t => t.Group)
                 .Include(m => m.InverseLinkedUnit)
                 .Include(m => m.LevelNavigation)
                 .OrderBy(x => x.Name);
 
-            foreach (var _entity in entities)
+            foreach (var e in query)
             {
-                UnitBO bo = new UnitBO();
-                var err = UnitTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitBO();
+                var err = UnitTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
-        public GetResponse<UnitBO> GetUnitsByProjectId(int ProjectId, int UnitTypeId)
+
+        public GetResponse<UnitBO> GetUnitsByProjectId(int projectId, int unitTypeId)
         {
-            GetResponse<UnitBO> response = new GetResponse<UnitBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.TypeId == UnitTypeId);
-            foreach (var _entity in entities)
+            var response = new GetResponse<UnitBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.TypeId == unitTypeId);
+
+            foreach (var e in query)
             {
-                UnitBO bo = new UnitBO();
-                var err = UnitTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitBO();
+                var err = UnitTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
-        public GetResponse<UnitWithDetailsBO> GetUnitsWithDetailsByProjectId(int ProjectId)
+
+        public GetResponse<UnitWithDetailsBO> GetUnitsWithDetailsByProjectId(int projectId)
         {
-            GetResponse<UnitWithDetailsBO> response = new GetResponse<UnitWithDetailsBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId);
-            foreach (var _entity in entities)
+            var response = new GetResponse<UnitWithDetailsBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId)
+                .Include(m => m.UnitRooms);
+
+            foreach (var e in query)
             {
-                UnitWithDetailsBO bo = new UnitWithDetailsBO();
-                var err = UnitTranslator.TranslateEntityToBO(_entity, bo);
+                var bo = new UnitWithDetailsBO();
+                var err = UnitTranslator.TranslateEntityToBO(e, bo);
                 if (err == ErrorCode.Success)
                 {
-                    foreach (var room in _entity.UnitRooms)
+                    foreach (var room in e.UnitRooms)
                     {
-                        RoomBO boroom = new RoomBO();
-                        err = UnitRoomTranslator.TranslateEntityToBO(room, boroom);
-                        if (err == ErrorCode.Success)
-                            bo.Rooms.Add(boroom);
-                        
-                       
+                        var roomBo = new RoomBO();
+                        var rerr = UnitRoomTranslator.TranslateEntityToBO(room, roomBo);
+                        if (rerr == ErrorCode.Success) bo.Rooms.Add(roomBo);
+                        else response.AddError(rerr.ToString());
                     }
                     response.AddValue(bo);
                 }
-                else
-                    response.AddError(err.ToString());
+                else response.AddError(err.ToString());
             }
-            response.Values = response.Values.OrderBy(m => m.Name, new AlphanumComparator()).ThenBy(m => m.Level).ToList();
-            //response.Values = response.Values.OrderBy(m => m.Name, new AlphanumComparator()).ThenBy(m => m.Level, new AlphanumComparator()).ToList();
-            return response;
-        }
-        public GetResponse<UnitBO> GetUnitsByAccountId(int AccountId)
-        {
-            GetResponse<UnitBO> response = new GetResponse<UnitBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == AccountId)
-                   .Include(m => m.Type)
-                   .Include(m => m.UnitConstructionValue)
-                   .ToList();
 
-            foreach (var _entity in entities)
+            response.Values = response.Values
+                .OrderBy(m => m.Name, new AlphanumComparator())
+                .ThenBy(m => m.Level)
+                .ToList();
+
+            return response;
+        }
+
+        public GetResponse<UnitBO> GetUnitsByAccountId(int accountId)
+        {
+            var response = new GetResponse<UnitBO>();
+
+            var list = _uow.Units.GetNoTracking()
+                .Where(m => m.ClientAccountId == accountId)
+                .Include(m => m.Type)
+                .Include(m => m.UnitConstructionValue)
+                .ToList();
+
+            foreach (var e in list)
             {
-                UnitBO bo = new UnitBO();
-                var err = UnitTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitBO();
+                var err = UnitTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
-        public GetResponse<GroupUnitsBO> GetGroupedUnitsByProjectId(int ProjectId)
+
+        public GetResponse<GroupUnitsBO> GetGroupedUnitsByProjectId(int projectId)
         {
-            GetResponse<GroupUnitsBO> response = new GetResponse<GroupUnitsBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.LinkedUnit == null)
+            var response = new GetResponse<GroupUnitsBO>();
+
+            var groups = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.LinkedUnit == null)
                 .Include(m => m.AttachedUnit)
                 .Include(m => m.LinkedUnit)
                 .Include(m => m.Project)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group)
+                .Include(m => m.Type).ThenInclude(t => t.Group)
                 .Include(m => m.InverseLinkedUnit)
-                .OrderBy(x => x.Name).GroupBy(x => x.TypeId);
-;
+                .OrderBy(x => x.Name)
+                .GroupBy(x => x.TypeId);
 
-            foreach (var _entity in entities)
+            foreach (var g in groups)
             {
-                GroupUnitsBO bo = new GroupUnitsBO();
-                bo.Id = (int)_entity.Key;
-                foreach (var item in _entity)
+                var bo = new GroupUnitsBO { Id = g.Key ?? 0 };
+                foreach (var item in g)
                 {
-                    UnitBO boUnit = new UnitBO();
-                    var err = UnitTranslator.TranslateEntityToBO(item, boUnit);
-                    if (err == ErrorCode.Success)
-                        bo.Units.Add(boUnit);
-                    else
-                        response.AddError(err.ToString());
+                    var ubo = new UnitBO();
+                    var err = UnitTranslator.TranslateEntityToBO(item, ubo);
+                    if (err == ErrorCode.Success) bo.Units.Add(ubo);
+                    else response.AddError(err.ToString());
                 }
-                bo.Units = bo.Units.OrderBy(m => m.Level).ThenBy(m => m.Name, new AlphanumComparator()).ToList();
+                bo.Units = bo.Units
+                    .OrderBy(m => m.Level)
+                    .ThenBy(m => m.Name, new AlphanumComparator())
+                    .ToList();
                 response.AddValue(bo);
             }
             return response;
         }
-        public GetResponse<GroupUnitsWithAttachedUnitsBO> GetGroupedUnitsForSaleByProjectId(int ProjectId)
-        {
-            GetResponse<GroupUnitsWithAttachedUnitsBO> response = new GetResponse<GroupUnitsWithAttachedUnitsBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.ClientAccountId == null && m.AttachedUnit == null && m.LinkedUnit == null).OrderBy(x => x.Name).GroupBy(x => x.TypeId);
 
-            foreach (var _entity in entities)
+        public GetResponse<GroupUnitsWithAttachedUnitsBO> GetGroupedUnitsForSaleByProjectId(int projectId)
+        {
+            var response = new GetResponse<GroupUnitsWithAttachedUnitsBO>();
+
+            var groups = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.ClientAccountId == null && m.AttachedUnit == null && m.LinkedUnit == null)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a2 => a2.InverseAttachedUnit)
+                .OrderBy(x => x.Name)
+                .GroupBy(x => x.TypeId);
+
+            foreach (var g in groups)
             {
-                GroupUnitsWithAttachedUnitsBO bo = new GroupUnitsWithAttachedUnitsBO();
-                bo.Id = (int)_entity.Key;
-                foreach (var item in _entity)
+                var go = new GroupUnitsWithAttachedUnitsBO { Id = g.Key ?? 0 };
+
+                foreach (var item in g)
                 {
-                    UnitWithAttachedUnitsBO boUnit = new UnitWithAttachedUnitsBO();
-                    var err = UnitTranslator.TranslateEntityToBO(item, boUnit.Unit);
-                    foreach (var attachedunit in item.InverseAttachedUnit)
+                    var u = new UnitWithAttachedUnitsBO();
+                    var err = UnitTranslator.TranslateEntityToBO(item, u.Unit);
+                    if (err != ErrorCode.Success) { response.AddError(err.ToString()); continue; }
+
+                    // nested attached up to depth 3 (zoals origineel)
+                    foreach (var a1 in item.InverseAttachedUnit)
                     {
-                        UnitBO boattachedunit = new UnitBO();
-                        err = UnitTranslator.TranslateEntityToBO(attachedunit, boattachedunit);
-                        if (err == ErrorCode.Success)
-                            boUnit.AttachedUnits.Add(boattachedunit);
-                        else
-                            response.AddError(err.ToString());
-                        foreach (var attachedunit2 in attachedunit.InverseAttachedUnit)
+                        var au1 = new UnitBO();
+                        var e1 = UnitTranslator.TranslateEntityToBO(a1, au1);
+                        if (e1 == ErrorCode.Success) u.AttachedUnits.Add(au1);
+                        else response.AddError(e1.ToString());
+
+                        foreach (var a2 in a1.InverseAttachedUnit)
                         {
-                            UnitBO boattachedunit2 = new UnitBO();
-                            err = UnitTranslator.TranslateEntityToBO(attachedunit2, boattachedunit2);
-                            if (err == ErrorCode.Success)
-                                boUnit.AttachedUnits.Add(boattachedunit2);
-                            else
-                                response.AddError(err.ToString());
-                            foreach (var attachedunit3 in attachedunit2.InverseAttachedUnit)
+                            var au2 = new UnitBO();
+                            var e2 = UnitTranslator.TranslateEntityToBO(a2, au2);
+                            if (e2 == ErrorCode.Success) u.AttachedUnits.Add(au2);
+                            else response.AddError(e2.ToString());
+
+                            foreach (var a3 in a2.InverseAttachedUnit)
                             {
-                                UnitBO boattachedunit3 = new UnitBO();
-                                err = UnitTranslator.TranslateEntityToBO(attachedunit3, boattachedunit3);
-                                if (err == ErrorCode.Success)
-                                    boUnit.AttachedUnits.Add(boattachedunit3);
-                                else
-                                    response.AddError(err.ToString());
+                                var au3 = new UnitBO();
+                                var e3 = UnitTranslator.TranslateEntityToBO(a3, au3);
+                                if (e3 == ErrorCode.Success) u.AttachedUnits.Add(au3);
+                                else response.AddError(e3.ToString());
                             }
                         }
                     }
-                    if (err == ErrorCode.Success)
-                        bo.Units.Add(boUnit);
-                    else
-                        response.AddError(err.ToString());
+
+                    go.Units.Add(u);
                 }
-                bo.Units = bo.Units.OrderBy(m => m.Unit.Level).ThenBy(m => m.Unit.Name, new AlphanumComparator()).ToList();
-                response.AddValue(bo);
+
+                go.Units = go.Units
+                    .OrderBy(m => m.Unit.Level)
+                    .ThenBy(m => m.Unit.Name, new AlphanumComparator())
+                    .ToList();
+
+                response.AddValue(go);
             }
+
             return response;
         }
-        public GetResponse<GroupUnitsWithAttachedUnitsWithDetailsBO> GetGroupedUnitsForSaleWithDetailsByProjectId(int ProjectId)
-        {
-            GetResponse<GroupUnitsWithAttachedUnitsWithDetailsBO> response = new GetResponse<GroupUnitsWithAttachedUnitsWithDetailsBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.ClientAccountId == null && m.AttachedUnit == null && m.LinkedUnit == null).OrderBy(x => x.Name).GroupBy(x => x.TypeId);
 
-            foreach (var _entity in entities)
+        public GetResponse<GroupUnitsWithAttachedUnitsWithDetailsBO> GetGroupedUnitsForSaleWithDetailsByProjectId(int projectId)
+        {
+            var response = new GetResponse<GroupUnitsWithAttachedUnitsWithDetailsBO>();
+
+            var groups = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.ClientAccountId == null && m.AttachedUnit == null && m.LinkedUnit == null)
+                .Include(m => m.UnitRooms)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.UnitRooms)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a2 => a2.UnitRooms)
+                .OrderBy(x => x.Name)
+                .GroupBy(x => x.TypeId);
+
+            foreach (var g in groups)
             {
-                GroupUnitsWithAttachedUnitsWithDetailsBO bo = new GroupUnitsWithAttachedUnitsWithDetailsBO();
-                bo.Id = (int)_entity.Key;
-                foreach (var item in _entity)
+                var go = new GroupUnitsWithAttachedUnitsWithDetailsBO { Id = g.Key ?? 0 };
+
+                foreach (var item in g)
                 {
-                    UnitWithAttachedUnitsWithDetailsBO boUnit = new UnitWithAttachedUnitsWithDetailsBO();
-                    var err = UnitTranslator.TranslateEntityToBO(item, boUnit.Unit);
+                    var u = new UnitWithAttachedUnitsWithDetailsBO();
+
+                    var err = UnitTranslator.TranslateEntityToBO(item, u.Unit);
+                    if (err != ErrorCode.Success) { response.AddError(err.ToString()); continue; }
+
                     foreach (var room in item.UnitRooms)
                     {
-                        RoomBO boroom = new RoomBO();
-                        err = UnitRoomTranslator.TranslateEntityToBO(room, boroom);
-                        if (err == ErrorCode.Success)
-                            boUnit.Unit.Rooms.Add(boroom);
-                        else
-                            response.AddError(err.ToString());
+                        var rbo = new RoomBO();
+                        var rerr = UnitRoomTranslator.TranslateEntityToBO(room, rbo);
+                        if (rerr == ErrorCode.Success) u.Unit.Rooms.Add(rbo);
+                        else response.AddError(rerr.ToString());
                     }
-                    foreach (var attachedunit in item.InverseAttachedUnit)
+
+                    foreach (var a1 in item.InverseAttachedUnit)
                     {
-                        UnitWithDetailsBO boattachedunit = new UnitWithDetailsBO();
-                        err = UnitTranslator.TranslateEntityToBO(attachedunit, boattachedunit);
-                        if (err == ErrorCode.Success)
-                            boUnit.AttachedUnits.Add(boattachedunit);
-                        else
-                            response.AddError(err.ToString());
-                        foreach (var room in attachedunit.UnitRooms)
+                        var au1 = new UnitWithDetailsBO();
+                        var e1 = UnitTranslator.TranslateEntityToBO(a1, au1);
+                        if (e1 == ErrorCode.Success) u.AttachedUnits.Add(au1);
+                        else response.AddError(e1.ToString());
+
+                        foreach (var room in a1.UnitRooms)
                         {
-                            RoomBO boroom = new RoomBO();
-                            err = UnitRoomTranslator.TranslateEntityToBO(room, boroom);
-                            if (err == ErrorCode.Success)
-                                boattachedunit.Rooms.Add(boroom);
-                            else
-                                response.AddError(err.ToString());
+                            var rbo = new RoomBO();
+                            var rerr = UnitRoomTranslator.TranslateEntityToBO(room, rbo);
+                            if (rerr == ErrorCode.Success) au1.Rooms.Add(rbo);
+                            else response.AddError(rerr.ToString());
                         }
-                        foreach (var attachedunit2 in attachedunit.InverseAttachedUnit)
+
+                        foreach (var a2 in a1.InverseAttachedUnit)
                         {
-                            UnitWithDetailsBO boattachedunit2 = new UnitWithDetailsBO();
-                            err = UnitTranslator.TranslateEntityToBO(attachedunit2, boattachedunit2);
-                            if (err == ErrorCode.Success)
-                                boUnit.AttachedUnits.Add(boattachedunit2);
-                            else
-                                response.AddError(err.ToString());
-                            foreach (var room in attachedunit2.UnitRooms)
+                            var au2 = new UnitWithDetailsBO();
+                            var e2 = UnitTranslator.TranslateEntityToBO(a2, au2);
+                            if (e2 == ErrorCode.Success) u.AttachedUnits.Add(au2);
+                            else response.AddError(e2.ToString());
+
+                            foreach (var room in a2.UnitRooms)
                             {
-                                RoomBO boroom = new RoomBO();
-                                err = UnitRoomTranslator.TranslateEntityToBO(room, boroom);
-                                if (err == ErrorCode.Success)
-                                    boattachedunit2.Rooms.Add(boroom);
-                                else
-                                    response.AddError(err.ToString());
+                                var rbo = new RoomBO();
+                                var rerr = UnitRoomTranslator.TranslateEntityToBO(room, rbo);
+                                if (rerr == ErrorCode.Success) au2.Rooms.Add(rbo);
+                                else response.AddError(rerr.ToString());
                             }
-                            foreach (var attachedunit3 in attachedunit2.InverseAttachedUnit)
+
+                            foreach (var a3 in a2.InverseAttachedUnit)
                             {
-                                UnitWithDetailsBO boattachedunit3 = new UnitWithDetailsBO();
-                                err = UnitTranslator.TranslateEntityToBO(attachedunit3, boattachedunit3);
-                                if (err == ErrorCode.Success)
-                                    boUnit.AttachedUnits.Add(boattachedunit3);
-                                else
-                                    response.AddError(err.ToString());
-                                foreach (var room in attachedunit3.UnitRooms)
+                                var au3 = new UnitWithDetailsBO();
+                                var e3 = UnitTranslator.TranslateEntityToBO(a3, au3);
+                                if (e3 == ErrorCode.Success) u.AttachedUnits.Add(au3);
+                                else response.AddError(e3.ToString());
+
+                                foreach (var room in a3.UnitRooms)
                                 {
-                                    RoomBO boroom = new RoomBO();
-                                    err = UnitRoomTranslator.TranslateEntityToBO(room, boroom);
-                                    if (err == ErrorCode.Success)
-                                        boattachedunit3.Rooms.Add(boroom);
-                                    else
-                                        response.AddError(err.ToString());
+                                    var rbo3 = new RoomBO();
+                                    var rerr3 = UnitRoomTranslator.TranslateEntityToBO(room, rbo3);
+                                    if (rerr3 == ErrorCode.Success) au3.Rooms.Add(rbo3);
+                                    else response.AddError(rerr3.ToString());
                                 }
                             }
                         }
                     }
-                    if (err == ErrorCode.Success)
-                        bo.Units.Add(boUnit);
-                    else
-                        response.AddError(err.ToString());
+
+                    go.Units.Add(u);
                 }
-                bo.Units = bo.Units.OrderBy(m => m.Unit.Level).ThenBy(m => m.Unit.Name, new AlphanumComparator()).ToList();
-                response.AddValue(bo);
+
+                go.Units = go.Units
+                    .OrderBy(m => m.Unit.Level)
+                    .ThenBy(m => m.Unit.Name, new AlphanumComparator())
+                    .ToList();
+
+                response.AddValue(go);
             }
+
             return response;
         }
-        public GetResponse<GroupUnitsBO> GetGroupedUnitsByAccountId(int AccountId)
+
+        public GetResponse<GroupUnitsBO> GetGroupedUnitsByAccountId(int accountId)
         {
-            GetResponse<GroupUnitsBO> response = new GetResponse<GroupUnitsBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == AccountId).OrderBy(x => x.Name).GroupBy(x => x.TypeId);
-            foreach (var _entity in entities)
+            var response = new GetResponse<GroupUnitsBO>();
+
+            var groups = _uow.Units.GetNoTracking()
+                .Where(m => m.ClientAccountId == accountId)
+                .OrderBy(x => x.Name)
+                .GroupBy(x => x.TypeId);
+
+            foreach (var g in groups)
             {
-                GroupUnitsBO bo = new GroupUnitsBO();
-                bo.Id = (int)_entity.Key;
-                foreach (var item in _entity)
+                var bo = new GroupUnitsBO { Id = g.Key ?? 0 };
+                foreach (var item in g)
                 {
-                    UnitBO boUnit = new UnitBO();
-                    var err = UnitTranslator.TranslateEntityToBO(item, boUnit);
-                    if (err == ErrorCode.Success)
-                        bo.Units.Add(boUnit);
-                    else
-                        response.AddError(err.ToString());
+                    var ubo = new UnitBO();
+                    var err = UnitTranslator.TranslateEntityToBO(item, ubo);
+                    if (err == ErrorCode.Success) bo.Units.Add(ubo);
+                    else response.AddError(err.ToString());
                 }
                 bo.Units = bo.Units.OrderBy(m => m.Name, new AlphanumComparator()).ToList();
                 response.AddValue(bo);
             }
             return response;
         }
-        public GetResponse<IdNameBO> GetAvailableUnitsByProjectId(int ProjectId)
+
+        public GetResponse<IdNameBO> GetAvailableUnitsByProjectId(int projectId)
         {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.ClientAccountId == null && m.LinkedUnit == null)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group)
+            var response = new GetResponse<IdNameBO>();
+
+            var list = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.ClientAccountId == null && m.LinkedUnit == null)
+                .Include(m => m.Type).ThenInclude(t => t.Group)
                 .ToList();
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
-            return response;
-        }
-        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelect(int ProjectId, bool WithLinked)
-        {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            IEnumerable<Units> entities;
-            if (WithLinked == true)
-                entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group);
-            else
-                entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.Type.Id != 11)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group);
 
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
-            return response;
-        }
-        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelect(int ProjectId, int UnitTypeId)
-        {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-           var  entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.TypeId == UnitTypeId)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group);
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
-            return response;
-        }
-        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int ProjectId)
-        {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.LinkedUnit == null)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group);
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
-            return response;
-        }
-        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int ProjectId, int UnitId)
-        {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == ProjectId && m.LinkedUnit == null && m.Id != UnitId)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group);
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
+            foreach (var e in list) response.AddValue(e.GetIdName());
             return response;
         }
 
-        public GetResponse<UnitTypeBO> GetUniqueUnitTypesInProjectByProjectId(int projectid)
+        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelect(int projectId, bool withLinked)
         {
-            GetResponse<UnitTypeBO> response = new GetResponse<UnitTypeBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ProjectId == projectid).Select(m => m.Type).Distinct();
-            foreach (var _entity in entities)
+            var response = new GetResponse<IdNameBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && (withLinked || m.Type.Id != 11))
+                .Include(m => m.Type).ThenInclude(t => t.Group);
+
+            foreach (var e in query) response.AddValue(e.GetIdName());
+            return response;
+        }
+
+        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelect(int projectId, int unitTypeId)
+        {
+            var response = new GetResponse<IdNameBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.TypeId == unitTypeId)
+                .Include(m => m.Type).ThenInclude(t => t.Group);
+
+            foreach (var e in query) response.AddValue(e.GetIdName());
+            return response;
+        }
+
+        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int projectId)
+        {
+            var response = new GetResponse<IdNameBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.LinkedUnit == null)
+                .Include(m => m.Type).ThenInclude(t => t.Group);
+
+            foreach (var e in query) response.AddValue(e.GetIdName());
+            return response;
+        }
+
+        public GetResponse<IdNameBO> GetUnitsByProjectIdForSelectAttachedUnit(int projectId, int unitId)
+        {
+            var response = new GetResponse<IdNameBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.LinkedUnit == null && m.Id != unitId)
+                .Include(m => m.Type).ThenInclude(t => t.Group);
+
+            foreach (var e in query) response.AddValue(e.GetIdName());
+            return response;
+        }
+
+        public GetResponse<UnitTypeBO> GetUniqueUnitTypesInProjectByProjectId(int projectId)
+        {
+            var response = new GetResponse<UnitTypeBO>();
+
+            var types = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId)
+                .Select(m => m.Type)
+                .Distinct();
+
+            foreach (var t in types)
             {
-                UnitTypeBO bo = new UnitTypeBO();
-                var err = UnitTypeTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitTypeBO();
+                var err = UnitTypeTranslator.TranslateEntityToBO(t, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
-        public GetResponse<UnitWithStagesBO> GetClientUnitsWithStages(int ClientAcccountId)
+
+        public GetResponse<UnitWithStagesBO> GetClientUnitsWithStages(int clientAcccountId)
         {
-            GetResponse<UnitWithStagesBO> response = new GetResponse<UnitWithStagesBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == ClientAcccountId)
-                .Include(m => m.Type)
-                .ThenInclude(m => m.Group)
+            var response = new GetResponse<UnitWithStagesBO>();
+
+            var query = _uow.Units.GetNoTracking()
+                .Where(m => m.ClientAccountId == clientAcccountId)
+                .Include(m => m.Type).ThenInclude(t => t.Group)
                 .Include(m => m.Project)
-                .Include(m => m.UnitConstructionValue);
-                
-            foreach (var _entity in entities)
+                .Include(m => m.UnitConstructionValue)
+                .Include(m => m.PaymentGroup).ThenInclude(pg => pg.InvoicingPaymentStages);
+
+            foreach (var e in query)
             {
-                UnitWithStagesBO unitwithstages = new UnitWithStagesBO();
-                UnitBO bo = new UnitBO();
-                var err = UnitTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
+                var bo = new UnitWithStagesBO();
+                var ubo = new UnitBO();
+                var err = UnitTranslator.TranslateEntityToBO(e, ubo);
+                if (err != ErrorCode.Success) { response.AddError(err.ToString()); continue; }
+
+                bo.Unit = ubo;
+
+                if (e.PaymentGroup?.InvoicingPaymentStages != null)
                 {
-                    unitwithstages.Unit = bo;
-                    if (_entity.PaymentGroup is not null)
+                    foreach (var st in e.PaymentGroup.InvoicingPaymentStages)
                     {
-                        if (_entity.PaymentGroup.InvoicingPaymentStages is not null)
-                        {
-                            foreach (var item in _entity.PaymentGroup.InvoicingPaymentStages)
-                            {
-                                ProjectPaymentStageBO stage = new ProjectPaymentStageBO();
-                                var err2 = ProjectPaymentStageTranslator.TranslateEntityToBO(item, stage);
-                                if (err2 == ErrorCode.Success)
-                                    unitwithstages.PaymentStages.Add(stage);
-                                else
-                                    response.AddError(err2.ToString());
-                            }
-                        }
+                        var stbo = new ProjectPaymentStageBO();
+                        var serr = ProjectPaymentStageTranslator.TranslateEntityToBO(st, stbo);
+                        if (serr == ErrorCode.Success) bo.PaymentStages.Add(stbo);
+                        else response.AddError(serr.ToString());
                     }
-                    response.AddValue(unitwithstages);
                 }
-                else
-                    response.AddError(err.ToString());
+
+                response.AddValue(bo);
             }
+
             return response;
         }
 
         public Response InsertUpdateUnit(UnitBO bo)
         {
-            Response response = new Response();
-            if ((string.IsNullOrWhiteSpace(bo.Name)))
-                response.AddError("name is mandatory");
-            if ((!response.Success))
-                return response;
-
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            Units _entity = null/* TODO Change to default(_) if this is not a reference type */;
-
-            if ((bo.Id == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.Id);
-            if ((_entity != null))
+            var response = new Response();
+            if (string.IsNullOrWhiteSpace(bo.Name))
             {
-                var err = UnitTranslator.TranslateBOToEntity(_entity, bo, uow);
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
+                response.AddError("name is mandatory");
+                return response;
             }
-            else
+
+            var entity = bo.Id == 0 ? _uow.Units.GetNew()
+                                    : _uow.Units.GetById(bo.Id);
+
+            if (entity == null)
+            {
                 response.AddError("unit not found");
-            response.AddError(uow.SaveChanges());
-            response.InsertedId = _entity.Id;
+                return response;
+            }
+
+            var err = UnitTranslator.TranslateBOToEntity(entity, bo, _uow);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Unit opgeslagen", "Geen wijzigingen");
+            response.InsertedId = entity.Id;
             return response;
         }
+
         public Response InsertUpdateUnitToClientAccount(UnitBO bo)
         {
-            Response response = new Response();
-            if ((bo.ClientAccountId == 0))
-                response.AddError("No ClientAccount selected");
-            else if ((bo.Id == 0))
-                response.AddError("No Unit selected");
-            if ((!response.Success))
-                return response;
+            var response = new Response();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            Units _entity = null/* TODO Change to default(_) if this is not a reference type */;
-            _entity = dao.GetById(bo.Id);
+            if (bo.ClientAccountId == 0) response.AddError("No ClientAccount selected");
+            else if (bo.Id == 0) response.AddError("No Unit selected");
+            if (!response.Success) return response;
 
-            if ((_entity != null))
+            var entity = _uow.Units.GetById(bo.Id);
+            if (entity == null)
             {
-                _entity.ClientAccountId = bo.ClientAccountId;
-                _entity.ConstructionValueSold = bo.ConstructionValueSold;
-                _entity.LandValueSold = bo.LandValueSold;
-            }
-            else
                 response.AddError("unit not found");
-            response.AddError(uow.SaveChanges());
+                return response;
+            }
+
+            entity.ClientAccountId = bo.ClientAccountId;
+            entity.ConstructionValueSold = bo.ConstructionValueSold;
+            entity.LandValueSold = bo.LandValueSold;
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Unit gekoppeld", "Geen wijzigingen");
             return response;
         }
 
         public Response DeleteUnit(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
+            var response = new Response();
+
             foreach (var id in ids)
             {
-                var entities = dao.GetNormal().Where(m => m.AttachedUnitId == id);
-                foreach (var _entity in entities)
-                    _entity.AttachedUnitId = null;
-                var entities1 = dao.GetNormal().Where(m => m.LinkedUnitId == id);
-                foreach (var _entity in entities1)
-                    _entity.LinkedUnitId = null;
-                response.Messages.AddRange(uow.SaveChanges());
-                dao.DeleteObject(id);
+                // unlink children
+                var attached = _uow.Units.GetNormal().Where(m => m.AttachedUnitId == id);
+                foreach (var e in attached) e.AttachedUnitId = null;
+
+                var linked = _uow.Units.GetNormal().Where(m => m.LinkedUnitId == id);
+                foreach (var e in linked) e.LinkedUnitId = null;
+
+                _uow.Units.DeleteObject(id);
             }
-            response.Messages.AddRange(uow.SaveChanges());
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Unit(s) verwijderd", "Geen records verwijderd");
             return response;
         }
+
+        // FIXED: correcte Response retour + éénmalig saven
         public Response DeleteUnitFromClientAccountByUnitId(List<int> ids)
         {
-            GetResponse<UnitBO> response = new GetResponse<UnitBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
+            var response = new Response();
+
             foreach (var id in ids)
             {
-                var _entity = dao.GetById(id);
-                _entity.ConstructionValueSold = null;
-                _entity.LandValueSold = null;
-                _entity.ClientAccountId = null;
-                response.Messages.AddRange(uow.SaveChanges());
+                var entity = _uow.Units.GetById(id);
+                if (entity == null)
+                {
+                    response.AddError($"Unit {id} niet gevonden");
+                    continue;
+                }
+                entity.ConstructionValueSold = null;
+                entity.LandValueSold = null;
+                entity.ClientAccountId = null;
             }
 
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Eenheden losgekoppeld", "Geen wijzigingen opgeslagen");
             return response;
         }
-        public Response DeleteUnitFromClientAccountByAccountId(List<int> ids)
+
+        public Response DeleteUnitFromClientAccountByAccountId(List<int> accountIds)
         {
-            GetResponse<UnitBO> response = new GetResponse<UnitBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitsDAO();
-            foreach (var id in ids)
+            var response = new Response();
+
+            foreach (var accountId in accountIds)
             {
-                var entities = dao.GetNoTracking().Where(m => m.ClientAccountId == id);
-                List<int> idlist = new List<int>();
-                foreach (var _entity in entities)
-                    idlist.Add(_entity.Id);
-                response = (GetResponse<UnitBO>)DeleteUnitFromClientAccountByUnitId(idlist);
+                var unitIds = _uow.Units.GetNoTracking()
+                    .Where(m => m.ClientAccountId == accountId)
+                    .Select(m => m.Id)
+                    .ToList();
+
+                var r = DeleteUnitFromClientAccountByUnitId(unitIds);
+                response.Messages.AddRange(r.Messages);
             }
+
             return response;
         }
-
 
         // UNIT GROUP TYPES
         public GetResponse<UnitGroupTypeBO> GetUnitGroupTypes()
         {
-            GetResponse<UnitGroupTypeBO> response = new GetResponse<UnitGroupTypeBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitGroupTypesDAO();
-            var entities = dao.GetNoTracking().Where(m => m.Selectable == true);
-            foreach (var _entity in entities)
+            var response = new GetResponse<UnitGroupTypeBO>();
+
+            var query = _uow.UnitGroupTypes.GetNoTracking()
+                .Where(m => m.Selectable == true);
+
+            foreach (var e in query)
             {
-                UnitGroupTypeBO bo = new UnitGroupTypeBO();
-                var err = UnitGroupTypeTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitGroupTypeBO();
+                var err = UnitGroupTypeTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
+
             return response;
         }
+
         public Response InsertUpdateUnitGroupType(UnitGroupTypeBO bo)
         {
-            Response response = new Response();
-            if ((string.IsNullOrWhiteSpace(bo.Name)))
-                response.AddError("name is mandatory");
-            if ((!response.Success))
-                return response;
-
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitGroupTypesDAO();
-            UnitGroupTypes _entity = null/* TODO Change to default(_) if this is not a reference type */;
-
-            if ((bo.Id == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.Id);
-            if ((_entity != null))
+            var response = new Response();
+            if (string.IsNullOrWhiteSpace(bo.Name))
             {
-                var err = UnitGroupTypeTranslator.TranslateBOToEntity(_entity, bo);
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
+                response.AddError("name is mandatory");
+                return response;
             }
-            else
+
+            var entity = bo.Id == 0 ? _uow.UnitGroupTypes.GetNew()
+                                    : _uow.UnitGroupTypes.GetById(bo.Id);
+
+            if (entity == null)
+            {
                 response.AddError("unitgrouptype not found");
-            response.AddError(uow.SaveChanges());
+                return response;
+            }
+
+            var err = UnitGroupTypeTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "UnitGroupType opgeslagen", "Geen wijzigingen");
             return response;
         }
+
         public Response DeleteUnitGroupType(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
-            foreach (var id in ids)
-                uow.GetUnitGroupTypesDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+            var response = new Response();
+            foreach (var id in ids) _uow.UnitGroupTypes.DeleteObject(id);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
             return response;
         }
 
         // UNIT TYPES
-        public GetResponse<UnitTypeBO> GetUnitTypesByGroupId(int GroupId)
+        public GetResponse<UnitTypeBO> GetUnitTypesByGroupId(int groupId)
         {
-            GetResponse<UnitTypeBO> response = new GetResponse<UnitTypeBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitTypesDAO();
-            var entities = dao.GetNoTracking().Where(m => m.GroupId == GroupId && m.Selectable == true);
-            foreach (var _entity in entities)
+            var response = new GetResponse<UnitTypeBO>();
+
+            var query = _uow.UnitTypes.GetNoTracking()
+                .Where(m => m.GroupId == groupId && m.Selectable == true);
+
+            foreach (var e in query)
             {
-                UnitTypeBO bo = new UnitTypeBO();
-                var err = UnitTypeTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitTypeBO();
+                var err = UnitTypeTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
+
         public Response InsertUpdateUnitType(UnitTypeBO bo)
         {
-            Response response = new Response();
-            if ((string.IsNullOrWhiteSpace(bo.Name)))
-                response.AddError("name is mandatory");
-            if ((!response.Success))
-                return response;
-
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitTypesDAO();
-            UnitTypes _entity = null/* TODO Change to default(_) if this is not a reference type */;
-
-            if ((bo.Id == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.Id);
-            if ((_entity != null))
+            var response = new Response();
+            if (string.IsNullOrWhiteSpace(bo.Name))
             {
-                var err = UnitTypeTranslator.TranslateBOToEntity(_entity, bo);
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
+                response.AddError("name is mandatory");
+                return response;
             }
-            else
+
+            var entity = bo.Id == 0 ? _uow.UnitTypes.GetNew()
+                                    : _uow.UnitTypes.GetById(bo.Id);
+
+            if (entity == null)
+            {
                 response.AddError("UnitType not found");
-            response.AddError(uow.SaveChanges());
+                return response;
+            }
+
+            var err = UnitTypeTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "UnitType opgeslagen", "Geen wijzigingen");
             return response;
         }
+
         public Response DeleteUnitType(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
-            foreach (var id in ids)
-                uow.GetUnitTypesDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+            var response = new Response();
+            foreach (var id in ids) _uow.UnitTypes.DeleteObject(id);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
             return response;
         }
 
         // UNIT ROOMS
-        public GetResponse<RoomBO> GetRooms(int UnitId)
+        public GetResponse<RoomBO> GetRooms(int unitId)
         {
-            GetResponse<RoomBO> response = new GetResponse<RoomBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitRoomsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.UnitId == UnitId);
-            foreach (var _entity in entities)
+            var response = new GetResponse<RoomBO>();
+
+            var query = _uow.UnitRooms.GetNoTracking()
+                .Where(m => m.UnitId == unitId);
+
+            foreach (var e in query)
             {
-                RoomBO bo = new RoomBO();
-                var err = UnitRoomTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new RoomBO();
+                var err = UnitRoomTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
-        public GetResponse<RoomType> GetUniqueRoomTypesInProjectByProjectId(int projectid)
+
+        public GetResponse<RoomType> GetUniqueRoomTypesInProjectByProjectId(int projectId)
         {
-            GetResponse<RoomType> response = new GetResponse<RoomType>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitRoomsDAO();
-            var entities = dao.GetNoTracking().Where(m => m.Unit.ProjectId == projectid && m.Unit.ClientAccountId == null).Where(i => i.Type == (int)RoomType.Terras | i.Type == (int)RoomType.Slaapkamer | i.Type == (int)RoomType.Dakterras | i.Type == (int)RoomType.Tuin | i.Type == (int)RoomType.Zolder).Select(m => m.Type).Distinct();
-            foreach (var _entity in entities)
-                response.AddValue((RoomType)_entity);
+            var response = new GetResponse<RoomType>();
+
+            var types = _uow.UnitRooms.GetNoTracking()
+                .Where(m => m.Unit.ProjectId == projectId && m.Unit.ClientAccountId == null)
+                .Where(i => i.Type == (int)RoomType.Terras
+                         || i.Type == (int)RoomType.Slaapkamer
+                         || i.Type == (int)RoomType.Dakterras
+                         || i.Type == (int)RoomType.Tuin
+                         || i.Type == (int)RoomType.Zolder)
+                .Select(m => m.Type)
+                .Distinct();
+
+            foreach (var t in types) response.AddValue((RoomType)t);
             return response;
         }
+
         public Response InsertUpdateRoom(RoomBO bo)
         {
-            Response response = new Response();
-            if ((bo.UnitId == 0))
-                response.AddError("Er moet een eenheid geselecteerd zijn");
-            else if ((bo.Type == 0))
-                response.AddError("Er moet een kamertype geselecteerd zijn");
-            else if ((bo.Number < 1))
-                response.AddError("Er moet een aantal vermeld zijn");
-            if ((!response.Success))
-                return response;
+            var response = new Response();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitRoomsDAO();
-            UnitRooms _entity = null/* TODO Change to default(_) if this is not a reference type */;
-            if ((bo.Id == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.Id);
-            if ((_entity != null))
+            if (bo.UnitId == 0) response.AddError("Er moet een eenheid geselecteerd zijn");
+            else if (bo.Type == 0) response.AddError("Er moet een kamertype geselecteerd zijn");
+            else if (bo.Number < 1) response.AddError("Er moet een aantal vermeld zijn");
+            if (!response.Success) return response;
+
+            var entity = bo.Id == 0 ? _uow.UnitRooms.GetNew()
+                                    : _uow.UnitRooms.GetById(bo.Id);
+
+            if (entity == null)
             {
-                var err = UnitRoomTranslator.TranslateBOToEntity(_entity, bo);
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
-            }
-            else
                 response.AddError("UnitRoom not found");
-            response.AddError(uow.SaveChanges());
+                return response;
+            }
+
+            var err = UnitRoomTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Kamer opgeslagen", "Geen wijzigingen");
             return response;
         }
+
         public Response DeleteRooms(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
-            foreach (var id in ids)
-                uow.GetUnitRoomsDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+            var response = new Response();
+            foreach (var id in ids) _uow.UnitRooms.DeleteObject(id);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
             return response;
         }
 
         // UNIT CONSTRUCTION VALUES
-        public GetResponse<UnitConstructionValueBO> GetConstructionValues(int unitid)
+        public GetResponse<UnitConstructionValueBO> GetConstructionValues(int unitId)
         {
-            GetResponse<UnitConstructionValueBO> response = new GetResponse<UnitConstructionValueBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitConstructionValuesDAO();
-            var entities = dao.GetNoTracking().Where(m => m.UnitId == unitid)
+            var response = new GetResponse<UnitConstructionValueBO>();
+
+            var query = _uow.UnitConstructionValues.GetNoTracking()
+                .Where(m => m.UnitId == unitId)
                 .Include(m => m.PaymentGroup)
                 .Include(m => m.Unit);
-            foreach (var _entity in entities)
+
+            foreach (var e in query)
             {
-                UnitConstructionValueBO bo = new UnitConstructionValueBO();
-                var err = UnitConstructionValueTranslator.TranslateEntityToBO(_entity, bo);
-                if (err == ErrorCode.Success)
-                    response.AddValue(bo);
-                else
-                    response.AddError(err.ToString());
+                var bo = new UnitConstructionValueBO();
+                var err = UnitConstructionValueTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
             }
             return response;
         }
+
         public GetResponse<UnitConstructionValueBO> GetConstructionValue(int id)
         {
-            GetResponse<UnitConstructionValueBO> response = new GetResponse<UnitConstructionValueBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitConstructionValuesDAO();
-            var _entity = dao.GetById(id);
-            UnitConstructionValueBO unitcv = new UnitConstructionValueBO();
-            var err = UnitConstructionValueTranslator.TranslateEntityToBO(_entity, unitcv);
-            if (err == ErrorCode.Success)
-                response.Value = unitcv;
-            else
-                response.AddError(err.ToString());
+            var response = new GetResponse<UnitConstructionValueBO>();
+
+            var entity = _uow.UnitConstructionValues.GetById(id);
+
+            var bo = new UnitConstructionValueBO();
+            var err = UnitConstructionValueTranslator.TranslateEntityToBO(entity, bo);
+            if (err == ErrorCode.Success) response.Value = bo;
+            else response.AddError(err.ToString());
+
             return response;
         }
+
+        // Let op: logica is overgenomen zoals in je oorspronkelijke service (ook al voelt de Id-check wat onnatuurlijk bij "Insert")
         public Response InsertUpdateConstructionValue(UnitConstructionValueBO bo)
         {
-            Response response = new Response();
-            if ((bo.Id == 0))
-                response.AddError("Er moet een constructiewaarde geselecteerd zijn");
-            if ((!response.Success))
-                return response;
+            var response = new Response();
+            if (bo.Id == 0) response.AddError("Er moet een constructiewaarde geselecteerd zijn");
+            if (!response.Success) return response;
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetUnitConstructionValuesDAO();
-            UnitConstructionValue _entity = null/* TODO Change to default(_) if this is not a reference type */;
-            if ((bo.Id == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.Id);
-            if ((_entity != null))
+            var entity = bo.Id == 0 ? _uow.UnitConstructionValues.GetNew()
+                                    : _uow.UnitConstructionValues.GetById(bo.Id);
+
+            if (entity == null)
             {
-                var err = UnitConstructionValueTranslator.TranslateBOToEntity(_entity, bo);
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
-            }
-            else
                 response.AddError("Unitconstructionvalue not found");
-            response.AddError(uow.SaveChanges());
-            response.InsertedId = _entity.Id;
+                return response;
+            }
+
+            var err = UnitConstructionValueTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Constructiewaarde opgeslagen", "Geen wijzigingen");
+            response.InsertedId = entity.Id;
             return response;
         }
+        public Response UpdateConstructionValueSold(UnitConstructionValueBO bo)
+        {
+            var response = new Response();
+            if (bo.Id == 0)
+            {
+                response.AddError("Er moet een constructiewaarde geselecteerd zijn");
+                return response;
+            }
+
+            // 1) Huidige waarde no-tracking ophalen
+            var current = _uow.Context.Set<UnitConstructionValue>()
+                .AsNoTracking()
+                .Where(x => x.Id == bo.Id)
+                .Select(x => new { x.Id, x.ValueSold })
+                .FirstOrDefault();
+
+            if (current == null)
+            {
+                response.AddError("Unitconstructionvalue not found");
+                return response;
+            }
+
+            // 2) Geen wijziging? -> geen UPDATE, wel succes
+            var newVal = bo.ValueSold;
+            var oldVal = current.ValueSold;
+
+            // Exacte decimal-vergelijking (financieel)
+            var isEqual = newVal == oldVal;
+            if (isEqual)
+            {
+                response.InsertedId = bo.Id;
+                response.AddSaveChangesResult(1, "Geen wijziging nodig", ""); // 1 = behandel als succes
+                return response;
+            }
+
+            // 3) Wijziging doorvoeren via stub + IsModified
+            var entity = new UnitConstructionValue { Id = bo.Id };
+            _uow.Context.Attach(entity);
+            entity.ValueSold = newVal;
+            _uow.Context.Entry(entity).Property(e => e.ValueSold).IsModified = true;
+
+            // 4) Saven enkel als er geen expliciete transactie is
+            var hasTx = _uow.HasActiveTransaction;
+            var saved = _uow.SaveIfNoActiveTransaction(); // 0 als hasTx==true, anders echte savecount
+            var result = hasTx ? 1 : saved;
+
+            response.InsertedId = bo.Id;
+
+            if (_uow.HasActiveTransaction)
+                response.AddSaveChangesResult(1, "Constructiewaarde gemarkeerd voor update", "Geen wijzigingen");
+            else
+                response.AddSaveChangesResult(result, "Constructiewaarde opgeslagen", "Geen wijzigingen");
+
+            return response;
+        }
+
+        public Response UpdateLandValueSold(UnitBO bo)
+        {
+            var response = new Response();
+            if (bo.Id == 0)
+            {
+                response.AddError("Er moet een unit geselecteerd zijn");
+                return response;
+            }
+
+            // 1) Huidige waarde no-tracking ophalen
+            var current = _uow.Context.Set<Units>()
+                .AsNoTracking()
+                .Where(x => x.Id == bo.Id)
+                .Select(x => new { x.Id, x.LandValueSold })
+                .FirstOrDefault();
+
+            if (current == null)
+            {
+                response.AddError("Unit not found");
+                return response;
+            }
+
+            // 2) Geen wijziging? -> geen UPDATE, wel succes
+            var newVal = bo.LandValueSold;
+            var oldVal = current.LandValueSold;
+
+            var isEqual = newVal == oldVal;
+            if (isEqual)
+            {
+                response.InsertedId = bo.Id;
+                response.AddSaveChangesResult(1, "Geen wijziging nodig", ""); // 1 = behandel als succes
+                return response;
+            }
+
+            // 3) Wijziging doorvoeren via stub + IsModified
+            var entity = new Units { Id = bo.Id };
+            _uow.Context.Attach(entity);
+            entity.LandValueSold = newVal;
+            _uow.Context.Entry(entity).Property(e => e.LandValueSold).IsModified = true;
+
+            // 4) Saven enkel als er geen expliciete transactie is
+            var hasTx = _uow.HasActiveTransaction;
+            var saved = _uow.SaveIfNoActiveTransaction(); // 0 als hasTx==true, anders echte savecount
+            var result = hasTx ? 1 : saved;
+
+            response.InsertedId = bo.Id;
+
+            if (_uow.HasActiveTransaction)
+                response.AddSaveChangesResult(1, "Grondwaarde gemarkeerd voor update", "Geen wijzigingen");
+            else
+                response.AddSaveChangesResult(result, "Grondwaarde opgeslagen", "Geen wijzigingen");
+
+            return response;
+        }
+
+
+
+
         public Response DeleteConstructionValues(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
-            foreach (var id in ids)
-                uow.GetUnitConstructionValuesDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+            var response = new Response();
+            foreach (var id in ids) _uow.UnitConstructionValues.DeleteObject(id);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
             return response;
         }
     }

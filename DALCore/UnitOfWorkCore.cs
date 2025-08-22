@@ -1,14 +1,17 @@
 ﻿using System;
-using BOCore;
-using Castle.Core.Resource;
+using System.Threading;
+using System.Threading.Tasks;
 using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DALCore
 {
     public class UnitOfWorkCore : IDisposable
     {
         private readonly cpmRunningContext _context;
+
+        // Repositories
         public GenericRepository<CompanyContacts> CompanyContacts { get; }
         public GenericRepository<CompanyInfo> CompanyInfo { get; }
         public GenericRepository<CompanyDepartments> Departments { get; }
@@ -54,12 +57,17 @@ namespace DALCore
         public GenericRepository<InsuranceCompanies> InsuranceCompanies { get; }
 
 
+        // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
+        public DbContext Context => _context;
+
+        // Detectie van (expliciete) transacties die hogerop gestart zijn
+        public bool HasActiveTransaction => _context.Database.CurrentTransaction != null;
+        public IDbContextTransaction? CurrentTransaction => _context.Database.CurrentTransaction;
 
         public UnitOfWorkCore(cpmRunningContext context)
         {
             _context = context;
 
-            // Initialiseer repositories
             CompanyContacts = new GenericRepository<CompanyContacts>(_context);
             CompanyInfo = new GenericRepository<CompanyInfo>(_context);
             Departments = new GenericRepository<CompanyDepartments>(_context);
@@ -103,18 +111,30 @@ namespace DALCore
             ChangeOrderDetails = new GenericRepository<ChangeOrderDetail>(_context);
             Insurances = new GenericRepository<Insurances>(_context);
             InsuranceCompanies = new GenericRepository<InsuranceCompanies>(_context);
-
         }
 
+        // Eenduidige save-methodes
+        public int SaveChanges() => _context.SaveChanges();
+        public Task<int> SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
 
-        public int Complete()
-        {
-            return _context.SaveChanges();
-        }
+        // Slim saven: alleen als er geen expliciete transactie loopt
+        public int SaveIfNoActiveTransaction()
+            => HasActiveTransaction ? 0 : _context.SaveChanges();
 
-        public void Dispose()
-        {
-            _context.Dispose();
-        }
+        public Task<int> SaveIfNoActiveTransactionAsync(CancellationToken ct = default)
+            => HasActiveTransaction ? Task.FromResult(0) : _context.SaveChangesAsync(ct);
+
+        // Transaction helpers
+        public Task<IDbContextTransaction> BeginTransactionAsync(CancellationToken ct = default)
+            => _context.Database.BeginTransactionAsync(ct);
+
+        // Optioneel: handige wrappers als je ze wil gebruiken
+        public Task CommitTransactionAsync(IDbContextTransaction tx, CancellationToken ct = default)
+            => tx.CommitAsync(ct);
+
+        public Task RollbackTransactionAsync(IDbContextTransaction tx, CancellationToken ct = default)
+            => tx.RollbackAsync(ct);
+
+        public void Dispose() => _context.Dispose();
     }
 }

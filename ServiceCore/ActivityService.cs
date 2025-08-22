@@ -3,259 +3,307 @@ using FacadeCore;
 using DALCore;
 using DALCore.Models;
 using ServiceCore.Translators;
-//using System.Data.Entity;
 using Microsoft.EntityFrameworkCore;
-using System.Text.RegularExpressions;
-
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ServiceCore
 {
     public class ActivityService : IActivityService
-
     {
+        private readonly UnitOfWorkCore _uow;
+
+        public ActivityService(UnitOfWorkCore uow)
+        {
+            _uow = uow ?? throw new ArgumentNullException(nameof(uow));
+        }
+
         public GetResponse<IdNameBO> GetActivitiesForSelect()
         {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityDAO();
-            var entities = dao.GetNoTracking()
+            var response = new GetResponse<IdNameBO>();
+
+            var entities = _uow.Activities
+                .GetNoTracking()
                 .Include(m => m.Group)
-                .OrderBy(m => m.Omschrijving);
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
-            response.Values.OrderBy(m => m.Display);
+                .OrderBy(m => m.Omschrijving)
+                .ToList();
+
+            foreach (var e in entities)
+                response.AddValue(e.GetIdName());
+
+            // Sorteren op Display (de OrderBy bovenaan sorteert op Omschrijving in DB)
+            // Hier nog eens voor de zekerheid op de uiteindelijke Display.
+            if (response.Values != null && response.Values.Count > 1)
+                response.Values = response.Values.OrderBy(v => v.Display).ToList();
+
             return response;
         }
 
         public GetResponse<ActivityBO> GetActivities()
         {
-            GetResponse<ActivityBO> response = new GetResponse<ActivityBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityDAO();
-            var entities = dao.GetNoTracking().OrderBy(m => m.Omschrijving);
-            foreach (var _entity in entities)
+            var response = new GetResponse<ActivityBO>();
+
+            var entities = _uow.Activities
+                .GetNoTracking()
+                .Include(m => m.Group)
+                .OrderBy(m => m.Omschrijving)
+                .ToList();
+
+            foreach (var e in entities)
             {
-                ActivityBO bo = new ActivityBO();
-                bo.ID = _entity.ActivityId;
-                bo.Name = _entity.Omschrijving;
-                if ((_entity.Group != null))
+                var bo = new ActivityBO
                 {
-                    bo.Group.Name = _entity.Group.Name;
-                    bo.Group.ID = _entity.Group.GroupId;
-                    bo.Group.Lot = System.Convert.ToInt16(_entity.Group.Lot);
+                    ID = e.ActivityId,
+                    Name = e.Omschrijving
+                };
+
+                if (e.Group != null)
+                {
+                    bo.Group.Name = e.Group.Name;
+                    bo.Group.ID = e.Group.GroupId;
+                    bo.Group.Lot = Convert.ToInt16(e.Group.Lot);
                 }
-                // bo.GroupName = _entity.ActivityGroup.Name
 
                 response.AddValue(bo);
             }
+
             return response;
         }
-        public GetResponse<ActivityBO> GetActivitiesbyId(List<int> IdList)
+
+        public GetResponse<ActivityBO> GetActivitiesbyId(List<int> idList)
         {
-            GetResponse<ActivityBO> response = new GetResponse<ActivityBO>();
+            var response = new GetResponse<ActivityBO>();
+            if (idList == null || idList.Count == 0) return response;
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityDAO();
+            var entities = _uow.Activities
+                .GetNoTracking()
+                .Include(m => m.Group)
+                .Where(m => idList.Contains(m.ActivityId))
+                .ToList();
 
-            var entities = dao.GetNoTracking().Where(m => IdList.Contains(m.ActivityId));
-            foreach (var _entity in entities)
+            foreach (var e in entities)
             {
-                ActivityBO bo = new ActivityBO();
-                bo.ID = _entity.ActivityId;
-                bo.Name = _entity.Omschrijving;
-                if ((_entity.Group != null))
+                var bo = new ActivityBO
                 {
-                    bo.Group.Name = _entity.Group.Name;
-                    bo.Group.ID = _entity.Group.GroupId;
-                    bo.Group.Lot = System.Convert.ToInt16(_entity.Group.Lot);
+                    ID = e.ActivityId,
+                    Name = e.Omschrijving
+                };
+
+                if (e.Group != null)
+                {
+                    bo.Group.Name = e.Group.Name;
+                    bo.Group.ID = e.Group.GroupId;
+                    bo.Group.Lot = Convert.ToInt16(e.Group.Lot);
                 }
+
                 response.AddValue(bo);
             }
+
             return response;
         }
+
         public GetResponse<ActivityBO> GetActivitybyId(int id)
         {
             var response = new GetResponse<ActivityBO>();
 
-            using (var uow = new UnitOfWork())
-            {
-                var dao = uow.GetActivityDAO();
-                var entity = dao.GetNoTracking()
-                    .Where(m => m.ActivityId == id)
-                    .Include(m => m.Group)
-                    .SingleOrDefault();
+            var entity = _uow.Activities
+                .GetNoTracking()
+                .Include(m => m.Group)
+                .SingleOrDefault(m => m.ActivityId == id);
 
-                if (entity != null)
+            if (entity != null)
+            {
+                var bo = new ActivityBO
                 {
-                    var bo = new ActivityBO
-                    {
-                        ID = entity.ActivityId,
-                        Name = entity.Omschrijving,
-                        Group = entity.Group != null ? new ActivityGroupBO
+                    ID = entity.ActivityId,
+                    Name = entity.Omschrijving,
+                    Group = entity.Group != null
+                        ? new ActivityGroupBO
                         {
                             ID = entity.Group.GroupId,
                             Name = entity.Group.Name,
                             Lot = Convert.ToInt16(entity.Group.Lot)
-                        } : null
-                    };
+                        }
+                        : null
+                };
 
-                    response.AddValue(bo);
-                }
+                response.AddValue(bo);
             }
 
             return response;
         }
         public GetResponse<ActivityGroupBO> GetActivityGroups()
-
         {
-            GetResponse<ActivityGroupBO> response = new GetResponse<ActivityGroupBO>();
+            var response = new GetResponse<ActivityGroupBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityGroupDAO();
+            var entities = _uow.ActivityGroups.GetNoTracking()
+                .Include(g => g.Activities)               // we hebben de activiteiten vaak nodig
+                .OrderBy(g => g.Lot).ThenBy(g => g.Name);
 
-            var entities = dao.GetNoTracking()
-                .Include(m => m.Activities);
-            foreach (var _entity in entities)
+            foreach (var entity in entities)
             {
-                ActivityGroupBO bo = new ActivityGroupBO();
-                var err = ActivityGroupTranslator.TranslateEntityToBO(_entity, bo);
+                var bo = new ActivityGroupBO();
+                var err = ActivityGroupTranslator.TranslateEntityToBO(entity, bo);
                 if (err == ErrorCode.Success)
                     response.AddValue(bo);
                 else
                     response.AddError(err.ToString());
             }
+
             return response;
         }
+
         public GetResponse<IdNameBO> GetActivityGroupsForSelect()
         {
-            GetResponse<IdNameBO> response = new GetResponse<IdNameBO>();
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityGroupDAO();
-            var entities = dao.GetNoTracking();
-            entities = entities.OrderBy(m => m.Lot);
-            foreach (var _entity in entities)
-                response.AddValue(_entity.GetIdName());
+            var response = new GetResponse<IdNameBO>();
+
+            var entities = _uow.ActivityGroups.GetNoTracking()
+                .OrderBy(g => g.Lot).ThenBy(g => g.Name)
+                .ToList();
+
+            foreach (var entity in entities)
+                response.AddValue(entity.GetIdName());
+
             return response;
         }
+
         public GetResponse<ActivityGroupBO> GetActivityGroupbyId(int id)
         {
-            GetResponse<ActivityGroupBO> response = new GetResponse<ActivityGroupBO>();
+            var response = new GetResponse<ActivityGroupBO>();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityGroupDAO();
+            // Belangrijk: GetById() gebruikt Find() en laadt navigaties niet.
+            var entity = _uow.ActivityGroups.GetNoTracking()
+                .Include(g => g.Activities)
+                .SingleOrDefault(g => g.GroupId == id);
 
-            var _entity = dao.GetById(id);
-            // For Each _entity In entities
-            ActivityGroupBO bo = new ActivityGroupBO();
-            bo.ID = _entity.GroupId;
-            bo.Name = _entity.Name;
-            bo.Lot = System.Convert.ToInt16(_entity.Lot);
-            foreach (var Activity in _entity.Activities)
+            if (entity == null)
             {
-                ActivityBO act = new ActivityBO();
-                act.Name = Activity.Omschrijving;
-                act.ID = Activity.ActivityId;
-                bo.Activities.Add(act);
+                response.AddError("activity group not found");
+                return response;
             }
-            response.AddValue(bo);
-            // Next
+
+            var bo = new ActivityGroupBO();
+            var err = ActivityGroupTranslator.TranslateEntityToBO(entity, bo);
+            if (err == ErrorCode.Success)
+                response.AddValue(bo);
+            else
+                response.AddError(err.ToString());
+
             return response;
         }
-
-
         public Response InsertUpdate(ActivityBO bo)
         {
-            Response response = new Response();
-            if ((string.IsNullOrWhiteSpace(bo.Name)))
-                response.AddError("name is mandatory");
-            if ((!response.Success))
-                return response;
+            var response = new Response();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityDAO();
-            Activity _entity = null/* TODO Change to default(_) if this is not a reference type */;
-
-            if ((bo.ID == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.ID);
-
-            if ((_entity != null))
+            if (string.IsNullOrWhiteSpace(bo?.Name))
             {
-                var err = ActivityTranslator.TranslateBOToEntity(_entity, bo);
-
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
+                response.AddError("name is mandatory");
+                return response;
             }
-            else
-                response.AddError("activity not found");
-            response.AddError(uow.SaveChanges());
 
+            Activity entity = null;
+
+            if (bo.ID == 0)
+                entity = _uow.Activities.GetNew();
+            else
+                entity = _uow.Activities.GetById(bo.ID);
+
+            if (entity == null)
+            {
+                response.AddError("activity not found");
+                return response;
+            }
+
+            var err = ActivityTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "Activiteit aangepast of toegevoegd", "Activiteit niet aangepast of toegevoegd");
+
+            // eventueel: response.InsertedId = entity.ActivityId;
             return response;
         }
+
         public Response InsertUpdateGroup(ActivityGroupBO bo)
         {
-            Response response = new Response();
-            if ((string.IsNullOrWhiteSpace(bo.Name)))
-                response.AddError("name is mandatory");
-            if ((!response.Success))
-                return response;
+            var response = new Response();
 
-            UnitOfWork uow = new UnitOfWork();
-            var dao = uow.GetActivityGroupDAO();
-            ActivityGroup _entity = null/* TODO Change to default(_) if this is not a reference type */;
-
-            if ((bo.ID == 0))
-                _entity = dao.GetNew();
-            else
-                _entity = dao.GetById(bo.ID);
-
-            if ((_entity != null))
+            if (string.IsNullOrWhiteSpace(bo?.Name))
             {
-                var err = ActivityGroupTranslator.TranslateBOToEntity(_entity, bo);
-
-                if ((err != ErrorCode.Success))
-                    response.AddError(err.ToString());
+                response.AddError("name is mandatory");
+                return response;
             }
+
+            ActivityGroup entity = null;
+
+            if (bo.ID == 0)
+                entity = _uow.ActivityGroups.GetNew();
             else
-                response.AddError("activity not found");
-            response.AddError(uow.SaveChanges());
+                entity = _uow.ActivityGroups.GetById(bo.ID);
+
+            if (entity == null)
+            {
+                response.AddError("activitygroup not found");
+                return response;
+            }
+
+            var err = ActivityGroupTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "Activiteitgroep aangepast of toegevoegd", "Activiteitgroep niet aangepast of toegevoegd");
 
             return response;
         }
 
         public Response Delete(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
+            var response = new Response();
+            if (ids == null || ids.Count == 0) return response;
 
             foreach (var id in ids)
-                uow.GetActivityDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+                _uow.Activities.DeleteObject(id);
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
 
             return response;
         }
 
         public Response Delete(List<ActivityBO> bos)
         {
-            return Delete(bos.Select(s => s.ID).ToList());
+            return Delete(bos?.Select(s => s.ID).ToList() ?? new List<int>());
         }
+
         public Response DeleteGroup(List<int> ids)
         {
-            Response response = new Response();
-            UnitOfWork uow = new UnitOfWork();
+            var response = new Response();
+            if (ids == null || ids.Count == 0) return response;
 
             foreach (var id in ids)
-                uow.GetActivityGroupDAO().DeleteObject(id);
-            response.Messages.AddRange(uow.SaveChanges());
+                _uow.ActivityGroups.DeleteObject(id);
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "Record(s) verwijderd", "Geen records verwijderd");
 
             return response;
         }
 
         public Response DeleteGroup(List<ActivityBO> bos)
         {
-            return Delete(bos.Select(s => s.ID).ToList());
+            // Let op: jouw vorige code riep hier Delete(bos...) aan (die Activities delete),
+            // dat lijkt me niet de bedoeling voor groups. Dus we mappen naar group-ids als je die hebt.
+            // Als bos eigenlijk groups bevat met ID = groupId, is dit oké:
+            return DeleteGroup(bos?.Select(b => b.ID).ToList() ?? new List<int>());
         }
     }
-
 }

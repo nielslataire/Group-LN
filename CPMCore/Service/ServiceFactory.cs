@@ -1,124 +1,146 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Security;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.VisualBasic;
-using FacadeCore;
+﻿using FacadeCore;
 using ServiceCore;
+using DALCore.Models;
+using DALCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CPMCore.Service
 {
-    public class ServiceFactory
+    public static class ServiceFactory
     {
+        // De gedeelde (legacy) UoW voor singleton-getters.
+        // Gebruik voor transacties liever CreateUoW() en de CreateXxxService(uow) overloads.
+        private static UnitOfWorkCore _uow = new UnitOfWorkCore(new cpmRunningContext());
+
+        // Singleton velden
         private static IAuthenticationService? _authenticationService;
-        public static IAuthenticationService GetAuthenticationService()
-        {
-            if ((_authenticationService == null))
-                _authenticationService = new AuthenticationService();
-            return _authenticationService;
-        }
-
         private static IActivityService? _activityService;
-        public static IActivityService GetActivityService()
-        {
-            if ((_activityService == null))
-                _activityService = new ActivityService();
-            return _activityService;
-        }
-
         private static IProvinceService? _provinceService;
-        public static IProvinceService GetProvinceService()
-        {
-            if ((_provinceService == null))
-                _provinceService = new ProvinceService();
-            return _provinceService;
-        }
-
         private static ICompanyService? _companyService;
+        private static ICountryService? _countryService;
+        private static IPostalcodeService? _postalcodeService;
+        private static IDepartmentService? _departmentService;
+        private static IContactService? _contactService;
+        private static IProjectService? _projectService;
+        private static IUnitService? _unitService;
+        private static IClientService? _clientService;
+        private static IInvoicingService? _invoicingService;
+        private static IInsuranceService? _insuranceService;
+
+
+        // Generieke helper om duplicatie te vermijden
+        private static TService GetOrCreate<TService>(ref TService? field, Func<UnitOfWorkCore, TService> factory)
+            where TService : class
+        {
+            return field ??= factory(_uow);
+        }
+
+        // ====== Legacy singleton getters (gebruiken de gedeelde _uow) ======
+        public static IAuthenticationService GetAuthenticationService()
+            => GetOrCreate(ref _authenticationService, uow => new AuthenticationService(uow));
+
+        public static IActivityService GetActivityService()
+            => GetOrCreate(ref _activityService, uow => new ActivityService(uow));
+
+        public static IProvinceService GetProvinceService()
+            => GetOrCreate(ref _provinceService, uow => new ProvinceService(uow));
+
         public static ICompanyService GetCompanyService()
-        {
-            if ((_companyService == null))
-                _companyService = new CompanyService();
-            return _companyService;
-        }
+            => GetOrCreate(ref _companyService, uow => new CompanyService(uow));
 
-        private static ICountryService? _CountryService;
         public static ICountryService GetCountryService()
+            => GetOrCreate(ref _countryService, uow => new CountryService(uow));
+
+        public static IPostalcodeService GetPostalcodeService()
+            => GetOrCreate(ref _postalcodeService, uow => new PostalcodeService(uow));
+
+        public static IDepartmentService GetDepartmentService()
+            => GetOrCreate(ref _departmentService, uow => new DepartmentService(uow));
+
+        public static IContactService GetContactService()
+            => GetOrCreate(ref _contactService, uow => new ContactService(uow));
+
+        public static IProjectService GetProjectService()
+            => GetOrCreate(ref _projectService, uow => new ProjectService(uow));
+
+        public static IUnitService GetUnitService()
+            => GetOrCreate(ref _unitService, uow => new UnitService(uow));
+
+        public static IClientService GetClientService()
+            => GetOrCreate(ref _clientService, uow => new ClientService(uow));
+
+        public static IInvoicingService GetInvoicingService()
+            => GetOrCreate(ref _invoicingService, uow => new InvoicingService(uow));
+
+        public static IInsuranceService GetInsuranceService()
+            => GetOrCreate(ref _insuranceService, uow => new InsuranceService(uow));
+
+        // ====== Overloads voor transacties: instanties met een meegegeven UoW ======
+        public static UnitOfWorkCore CreateUoW()
+            => new UnitOfWorkCore(new cpmRunningContext());
+
+        public static IAuthenticationService CreateAuthenticationService(UnitOfWorkCore uow)
+            => new AuthenticationService(uow);
+        public static IActivityService CreateActivityService(UnitOfWorkCore uow)
+            => new ActivityService(uow);
+        public static IProvinceService CreateProvinceService(UnitOfWorkCore uow)
+            => new ProvinceService(uow);
+        public static ICompanyService CreateCompanyService(UnitOfWorkCore uow)
+            => new CompanyService(uow);
+        public static ICountryService CreateCountryService(UnitOfWorkCore uow)
+            => new CountryService(uow);
+        public static IPostalcodeService CreatePostalcodeService(UnitOfWorkCore uow)
+            => new PostalcodeService(uow);
+        public static IDepartmentService CreateDepartmentService(UnitOfWorkCore uow)
+            => new DepartmentService(uow);
+        public static IContactService CreateContactService(UnitOfWorkCore uow)
+            => new ContactService(uow);
+        public static IProjectService CreateProjectService(UnitOfWorkCore uow)
+            => new ProjectService(uow);
+        public static IUnitService CreateUnitService(UnitOfWorkCore uow)
+            => new UnitService(uow);
+        public static IClientService CreateClientService(UnitOfWorkCore uow)
+            => new ClientService(uow);
+        public static IInvoicingService CreateInvoicingService(UnitOfWorkCore uow)
+            => new InvoicingService(uow);
+        public static IInsuranceService CreateInsuranceService(UnitOfWorkCore uow)
+            => new InsuranceService(uow);
+
+        // ====== Optioneel: helpers om gedeelde UoW te wisselen/cleanen ======
+        /// <summary>
+        /// Vervang de gedeelde UoW (alle toekomstige singleton-getters gaan de nieuwe UoW gebruiken).
+        /// Let op: bestaande singleton services houden hun oude UoW vast tot je ResetSingletons() aanroept.
+        /// </summary>
+        public static void ReplaceUoW(UnitOfWorkCore newUow)
         {
-            if ((_CountryService == null))
-                _CountryService = new CountryService();
-            return _CountryService;
+            _uow = newUow ?? throw new ArgumentNullException(nameof(newUow));
         }
 
-        private static IPostalcodeService? _PostalcodeService;
-        public static IPostalcodeService GetPostalcodeService()
+        /// <summary>
+        /// Reset alle singleton service-instanties zodat ze bij de volgende GetXxxService()-aanroep
+        /// met de huidige _uow opnieuw worden aangemaakt.
+        /// </summary>
+        public static void ResetSingletons()
         {
-            if ((_PostalcodeService == null))
-                _PostalcodeService = new PostalcodeService();
-            return _PostalcodeService;
+            _authenticationService = null;
+            _activityService = null;
+            _provinceService = null;
+            _companyService = null;
+            _countryService = null;
+            _postalcodeService = null;
+            _departmentService = null;
+            _contactService = null;
+            _projectService = null;
+            _unitService = null;
+            _clientService = null;
+            _invoicingService = null;
+            _insuranceService = null;
         }
-        private static IDepartmentService? _DepartmentService;
-        public static IDepartmentService GetDepartmentService()
+        public static async Task<(UnitOfWorkCore uow, IDbContextTransaction tx)> CreateUoWWithTransactionAsync()
         {
-            if ((_DepartmentService == null))
-                _DepartmentService = new DepartmentService();
-            return _DepartmentService;
-        }
-        private static IContactService? _ContactService;
-        public static IContactService GetContactService()
-        {
-            if ((_ContactService == null))
-                _ContactService = new ContactService();
-            return _ContactService;
-        }
-        private static IProjectService? _ProjectService;
-        public static IProjectService GetProjectService()
-        {
-            if ((_ProjectService == null))
-                _ProjectService = new ProjectService();
-            return _ProjectService;
-        }
-        private static IUnitService? _UnitService;
-        public static IUnitService GetUnitService()
-        {
-            if ((_UnitService == null))
-                _UnitService = new UnitService();
-            return _UnitService;
-        }
-        private static IClientService? _ClientService;
-        public static IClientService GetClientService()
-        {
-            if ((_ClientService == null))
-                _ClientService = new ClientService();
-            return _ClientService;
-        }
-        //private static IFacebookService _FacebookService;
-        //public static IFacebookService GetFacebookService()
-        //{
-        //    if ((_FacebookService == null))
-        //        _FacebookService = new FacebookService();
-        //    return _FacebookService;
-        //}
-        private static IInvoicingService? _InvoicingService;
-        public static IInvoicingService GetInvoicingService()
-        {
-            if ((_InvoicingService == null))
-                _InvoicingService = new InvoicingService();
-            return _InvoicingService;
-        }
-        private static IInsuranceService? _InsuranceService;
-        public static IInsuranceService GetInsuranceService()
-        {
-            if ((_InsuranceService == null))
-                _InsuranceService = new InsuranceService();
-            return _InsuranceService;
+            var uow = CreateUoW();
+            var tx = await uow.BeginTransactionAsync();
+            return (uow, tx);
         }
     }
 }

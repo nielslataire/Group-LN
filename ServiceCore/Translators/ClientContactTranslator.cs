@@ -1,132 +1,155 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using BOCore;
-using DALCore.Models;
 using DALCore;
+using DALCore.Models;
 
 namespace ServiceCore.Translators
 {
-   public class ClientContactTranslator
+    public class ClientContactTranslator
     {
-        internal static ErrorCode TranslateEntityToBO(ClientContacts _entity, ClientContactBO bo)
+        internal static ErrorCode TranslateEntityToBO(ClientContacts entity, ClientContactBO bo)
         {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
-            bo.Id = _entity.Id;
-            bo.AccountId = _entity.ClientAccountId;
-            bo.Name = _entity.Name;
-            bo.Street = _entity.Street;
-            bo.Housenumber = _entity.Housenumber;
-            bo.Busnumber = _entity.Busnumber;
-            bo.Email = _entity.Email;
-            bo.IsCoOwner = _entity.IsCoOwner;
-            bo.Phone = _entity.Phone;
-            bo.Cellphone = _entity.Cellphone;
-            bo.Firstname = _entity.Forename;
-            bo.Salutation = (Salutation)Enum.Parse(typeof(Salutation), _entity.Salutation);
-            bo.VATnumber = _entity.Vatnumber;
-            bo.CompanyName = _entity.CompanyName;
-            bo.InvoiceAddress = _entity.InvoiceAddress;
-            bo.InvoiceStreet = _entity.InvoiceStreet;
-            bo.InvoiceHousenumber = _entity.InvoiceHousenumber;
-            bo.InvoiceBusnumber = _entity.InvoiceBusnumber;
+            if (entity == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
 
+            bo.Id = entity.Id;
+            bo.AccountId = entity.ClientAccountId;
+            bo.Name = entity.Name;
+            bo.Street = entity.Street;
+            bo.Housenumber = entity.Housenumber;
+            bo.Busnumber = entity.Busnumber;
+            bo.Email = entity.Email;
+            bo.IsCoOwner = entity.IsCoOwner;
+            bo.Phone = entity.Phone;
+            bo.Cellphone = entity.Cellphone;
+            bo.Firstname = entity.Forename;
 
-            if ((_entity.PostalCode != null))
+            // Salutation komt als string uit de entity; veilig parsen
+            if (!string.IsNullOrWhiteSpace(entity.Salutation) &&
+                Enum.TryParse(typeof(Salutation), entity.Salutation, out var sal))
             {
-                bo.Postalcode.Postcode = _entity.PostalCode.Postcode;
-                bo.Postalcode.Gemeente = _entity.PostalCode.Gemeente;
-                bo.Postalcode.PostcodeId = _entity.PostalCode.PostcodeId;
-                if (_entity.PostalCode.Country != null)
+                bo.Salutation = (Salutation)sal;
+            }
+            else
+            {
+                // optioneel: default zetten, of niets doen als je BO nullable enum gebruikt
+                // bo.Salutation = Salutation.None;  // only if you have such value
+            }
+
+            bo.VATnumber = entity.Vatnumber;
+            bo.CompanyName = entity.CompanyName;
+            bo.InvoiceAddress = entity.InvoiceAddress;
+            bo.InvoiceStreet = entity.InvoiceStreet;
+            bo.InvoiceHousenumber = entity.InvoiceHousenumber;
+            bo.InvoiceBusnumber = entity.InvoiceBusnumber;
+
+            // PostalCode
+            if (entity.PostalCode != null)
+            {
+                bo.Postalcode.Postcode = entity.PostalCode.Postcode;
+                bo.Postalcode.Gemeente = entity.PostalCode.Gemeente;
+                bo.Postalcode.PostcodeId = entity.PostalCode.PostcodeId;
+
+                if (entity.PostalCode.Country != null)
                 {
-                    bo.Postalcode.Country.Name = _entity.PostalCode.Country.LandNaam;
-                    bo.Postalcode.Country.CountryId = _entity.PostalCode.Country.Id;
-                    bo.Postalcode.Country.ISOCode = _entity.PostalCode.Country.LandIsocode;
+                    bo.Postalcode.Country.Name = entity.PostalCode.Country.LandNaam;
+                    bo.Postalcode.Country.CountryId = entity.PostalCode.Country.Id;
+                    bo.Postalcode.Country.ISOCode = entity.PostalCode.Country.LandIsocode;
                 }
-                if (_entity.PostalCode.Provincie != null)
+                if (entity.PostalCode.Provincie != null)
                 {
-                    bo.Postalcode.Provincie.Name = _entity.PostalCode.Provincie.ProvincieName;
-                    bo.Postalcode.Provincie.ProvincieId = _entity.PostalCode.Provincie.ProvincieId;
+                    bo.Postalcode.Provincie.Name = entity.PostalCode.Provincie.ProvincieName;
+                    bo.Postalcode.Provincie.ProvincieId = entity.PostalCode.Provincie.ProvincieId;
                 }
             }
-            if ((_entity.InvoicePostalCode != null))
+
+            // InvoicePostalCode
+            if (entity.InvoicePostalCode != null)
             {
-                bo.InvoicePostalcode.Postcode = _entity.InvoicePostalCode.Postcode;
-                bo.InvoicePostalcode.Gemeente = _entity.InvoicePostalCode.Gemeente;
-                bo.InvoicePostalcode.PostcodeId = _entity.InvoicePostalCode.PostcodeId;
-                if (_entity.InvoicePostalCode.Country != null)
+                bo.InvoicePostalcode.Postcode = entity.InvoicePostalCode.Postcode;
+                bo.InvoicePostalcode.Gemeente = entity.InvoicePostalCode.Gemeente;
+                bo.InvoicePostalcode.PostcodeId = entity.InvoicePostalCode.PostcodeId;
+
+                if (entity.InvoicePostalCode.Country != null)
                 {
-                    bo.InvoicePostalcode.Country.Name = _entity.InvoicePostalCode.Country.LandNaam;
-                    bo.InvoicePostalcode.Country.CountryId = _entity.InvoicePostalCode.Country.Id;
-                    bo.InvoicePostalcode.Country.ISOCode = _entity.InvoicePostalCode.Country.LandIsocode;
+                    bo.InvoicePostalcode.Country.Name = entity.InvoicePostalCode.Country.LandNaam;
+                    bo.InvoicePostalcode.Country.CountryId = entity.InvoicePostalCode.Country.Id;
+                    bo.InvoicePostalcode.Country.ISOCode = entity.InvoicePostalCode.Country.LandIsocode;
                 }
-                if (_entity.InvoicePostalCode.Provincie != null)
+                if (entity.InvoicePostalCode.Provincie != null)
                 {
-                    bo.InvoicePostalcode.Provincie.Name = _entity.InvoicePostalCode.Provincie.ProvincieName;
-                    bo.InvoicePostalcode.Provincie.ProvincieId = _entity.InvoicePostalCode.Provincie.ProvincieId;
+                    bo.InvoicePostalcode.Provincie.Name = entity.InvoicePostalCode.Provincie.ProvincieName;
+                    bo.InvoicePostalcode.Provincie.ProvincieId = entity.InvoicePostalCode.Provincie.ProvincieId;
                 }
             }
-            if (_entity.CoOwnerPercentage is not null)
-                bo.CoOwnerPercentage = _entity.CoOwnerPercentage;
-            if ((_entity.CoOwnerType is not null))
+
+            if (entity.CoOwnerPercentage is not null)
+                bo.CoOwnerPercentage = entity.CoOwnerPercentage;
+
+            if (entity.CoOwnerType is not null)
             {
-                var err = ClientOwnerTypeTranslator.TranslateEntityToBO(_entity.CoOwnerType, bo.CoOwnerType);
-                if (err != ErrorCode.Success)
-                    return err;
+                var err = ClientOwnerTypeTranslator.TranslateEntityToBO(entity.CoOwnerType, bo.CoOwnerType);
+                if (err != ErrorCode.Success) return err;
             }
 
             return ErrorCode.Success;
         }
 
-        internal static ErrorCode TranslateBOToEntity(ClientContacts _entity, ClientContactBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(ClientContacts entity, ClientContactBO bo, UnitOfWorkCore uow)
         {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
+            if (entity == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
+            // uow wordt hier niet gebruikt, maar blijft in de signature voor consistentie
 
-            _entity.ClientAccountId = bo.AccountId;
-            _entity.Name = bo.Name;
-            _entity.Street = bo.Street;
-            _entity.Housenumber = bo.Housenumber;
-            _entity.Busnumber = bo.Busnumber;
-            _entity.Email = bo.Email;
-            _entity.IsCoOwner = bo.IsCoOwner;
-            if (bo.Cellphone is not null)
-                _entity.Cellphone = Regex.Replace(bo.Cellphone, "[^0-9]", "");
-            if (bo.Phone is not null)
-                _entity.Phone = Regex.Replace(bo.Phone, "[^0-9]", "");
-            _entity.Salutation = bo.Salutation.ToString();
-            _entity.Forename = bo.Firstname;
-            _entity.CompanyName = bo.CompanyName;
-            _entity.Vatnumber = bo.VATnumber;
-            _entity.InvoiceAddress = bo.InvoiceAddress;
-            _entity.InvoiceStreet = bo.InvoiceStreet;
-            _entity.InvoiceHousenumber = bo.InvoiceHousenumber;
-            _entity.InvoiceBusnumber = bo.InvoiceBusnumber;
+            entity.ClientAccountId = bo.AccountId;
+            entity.Name = bo.Name;
+            entity.Street = bo.Street;
+            entity.Housenumber = bo.Housenumber;
+            entity.Busnumber = bo.Busnumber;
+            entity.Email = bo.Email;
+            entity.IsCoOwner = bo.IsCoOwner;
 
-            if ((bo.Postalcode != null))
-            {
-                if (bo.Postalcode.PostcodeId != 0)
-                    _entity.PostalCodeId = bo.Postalcode.PostcodeId;
-            }
-            if ((bo.InvoicePostalcode != null))
-            {
-                if (bo.InvoicePostalcode.PostcodeId != 0)
-                    _entity.InvoicePostalCodeId = bo.InvoicePostalcode.PostcodeId;
-            }
-            _entity.CoOwnerPercentage = bo.CoOwnerPercentage;
-            if ((bo.CoOwnerType != null))
-            {
-                if (bo.CoOwnerType.Id != 0)
-                    _entity.CoOwnerTypeId = bo.CoOwnerType.Id;
-            }
+            if (!string.IsNullOrEmpty(bo.Cellphone))
+                entity.Cellphone = Regex.Replace(bo.Cellphone, "[^0-9]", "");
+            else
+                entity.Cellphone = null;
+
+            if (!string.IsNullOrEmpty(bo.Phone))
+                entity.Phone = Regex.Replace(bo.Phone, "[^0-9]", "");
+            else
+                entity.Phone = null;
+
+            // Salutation als string opslaan
+            entity.Salutation = bo.Salutation.ToString();
+
+            entity.Forename = bo.Firstname;
+            entity.CompanyName = bo.CompanyName;
+            entity.Vatnumber = bo.VATnumber;
+            entity.InvoiceAddress = bo.InvoiceAddress;
+            entity.InvoiceStreet = bo.InvoiceStreet;
+            entity.InvoiceHousenumber = bo.InvoiceHousenumber;
+            entity.InvoiceBusnumber = bo.InvoiceBusnumber;
+
+            // PostcodeId’s (0 => null)
+            if (bo.Postalcode != null && bo.Postalcode.PostcodeId.HasValue && bo.Postalcode.PostcodeId.Value != 0)
+                entity.PostalCodeId = bo.Postalcode.PostcodeId.Value;
+            else
+                entity.PostalCodeId = null;
+
+            if (bo.InvoicePostalcode != null && bo.InvoicePostalcode.PostcodeId.HasValue && bo.InvoicePostalcode.PostcodeId.Value != 0)
+                entity.InvoicePostalCodeId = bo.InvoicePostalcode.PostcodeId.Value;
+            else
+                entity.InvoicePostalCodeId = null;
+
+            entity.CoOwnerPercentage = bo.CoOwnerPercentage;
+
+            // CoOwnerTypeId
+            if (bo.CoOwnerType != null && bo.CoOwnerType.Id != 0)
+                entity.CoOwnerTypeId = bo.CoOwnerType.Id;
+            else
+                entity.CoOwnerTypeId = null;
 
             return ErrorCode.Success;
         }

@@ -171,4 +171,11 @@ Public Class ChangeOrderBO
             Return itotaal
         End Get
     End Property
+
+    Public ReadOnly Property TotalAmountWithCommission As Decimal
+        Get
+            Dim details = If(Me.Details, Enumerable.Empty(Of ChangeOrderDetailBO)())
+            Return details.Sum(Function(d) d.Price * (1D + (d.Commision / 100D)))
+        End Get
+    End Property
 End Class

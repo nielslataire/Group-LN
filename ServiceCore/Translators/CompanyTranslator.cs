@@ -102,7 +102,7 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        internal static ErrorCode TranslateBOToEntity(CompanyInfo _entity, CompanyBO bo, UnitOfWork uow)
+        internal static ErrorCode TranslateBOToEntity(CompanyInfo _entity, CompanyBO bo, UnitOfWorkCore uow)
         {
             if (_entity == null)
                 return ErrorCode.EntityNull;
@@ -232,7 +232,7 @@ namespace ServiceCore.Translators
                 _entity.CompanyDepartments.Remove(x);
             return ErrorCode.Success;
         }
-        private static ErrorCode HandleActivities(CompanyInfo _entity, List<ActivityBO> activities, UnitOfWork uow)
+        private static ErrorCode HandleActivities(CompanyInfo _entity, List<ActivityBO> activities, UnitOfWorkCore uow)
         {
             if ((activities.Count == 0))
                 return ErrorCode.Success;
@@ -245,7 +245,7 @@ namespace ServiceCore.Translators
                    // add the activity to the company
                    if ((!_entity.Activity.Any(m => m.ActivityId == x.ID)))
                 {
-                    var act = uow.GetActivityDAO().GetById(x.ID);
+                    var act = uow.Activities.GetById(x.ID);
                     _entity.Activity.Add(act);
                 }
             }
