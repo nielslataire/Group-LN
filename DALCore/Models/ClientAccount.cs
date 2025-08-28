@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -77,17 +76,4 @@ public partial class ClientAccount
     public virtual ICollection<ProjectDocs> ProjectDocs { get; set; } = new List<ProjectDocs>();
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
-
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        if (this.CompanyName == "" | this.CompanyName == null)
-            bo.Display = this.Name;
-        else
-            bo.Display = this.CompanyName;
-        // bo.Group = Me.
-        return bo;
-    }
-
 }

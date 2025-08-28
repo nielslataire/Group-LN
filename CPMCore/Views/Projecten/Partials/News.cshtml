@@ -1,0 +1,87 @@
+﻿@using BOCore
+@model CPMCore.Models.Projecten.DetailNewsModel
+
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+}
+
+@Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+
+
+
+@if (Model.News.Any())
+{
+    <div class="vstack gap-3">
+        @foreach (var item in Model.News)
+        {
+            <article class="card shadow-sm border-0">
+                <div class="row g-0">
+                    @if (!string.IsNullOrEmpty(item.Picture?.Name))
+                    {
+                        var baseUrl = (ViewData["NewsBaseUrl"] as string) ?? "";
+                        var fileName = item.Picture.Name;
+
+                        <div class="col-12 col-md-4">
+                            <img src="@($"{baseUrl}{fileName}")"
+                                 alt="@item.TitleNL"
+                                 class="img-fluid rounded-start w-100 h-100 object-fit-cover"
+                                 style="max-height:220px;"
+                                 loading="lazy">
+                        </div>
+                    }
+                    <div class="col">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h2 class="h5 card-title mb-1">@item.TitleNL</h2>
+
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="badge text-bg-light">@item.NewsDate.ToString("dd MMM yyyy")</span>
+
+                                    @* --- EDIT knop opent partial in modal --- *@
+                                    <a class="btn btn-sm editNews" href="#ModalEditNews"
+                                       data-id="@item.Id"
+                                       data-toggle="tooltip"
+                                       title="Bewerken"><i class="bx bx-edit"></i></a>
+                                    @* --- DELETE knop post via verborgen formulier --- *@
+                                    <a class="btn btn-sm deleteNews" href="#ModalDeleteNews"
+                                       data-id="@item.Id"
+                                       data-toggle="tooltip"
+                                       data-project-id="@Model.ProjectId"
+                                       data-picture-id="@(item.Picture?.Id ?? 0)"
+                                       title="Verwijderen"><i class="bx bx-trash"></i></a>
+                                </div>
+                            </div>
+
+                            <p class="card-text text-muted mb-0"
+                               style="-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;">
+                                @item.TextNL
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        }
+    </div>
+}
+else
+{
+<div class="card card-modern mb-4">
+        <div class="card-body align-items-center text-center card-big-info">
+            <div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+                <i class="bx bx-news"></i>
+             
+            </div>
+            <div class="col-12 text-muted mb-3">
+                <h4>Nog geen nieuws items toegevoegd</h4>
+            </div>
+            <div class="col-12 text-muted">
+                <a href="#ModalAddNews" class="btn btn-default btn-md addNews text-muted"
+                   data-id="@Model.ProjectId"
+                   title="Toevoegen">+  Eerste nieuws item toevoegen</a>
+            </div>
+    </div>
+</div>
+}

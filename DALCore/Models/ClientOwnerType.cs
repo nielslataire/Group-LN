@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore; 
 
 namespace DALCore.Models;
 
@@ -15,13 +14,4 @@ public partial class ClientOwnerType
     public virtual ICollection<ClientAccount> ClientAccount { get; set; } = new List<ClientAccount>();
 
     public virtual ICollection<ClientContacts> ClientContacts { get; set; } = new List<ClientContacts>();
-
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        bo.Display = this.Name;
-        return bo;
-    }
-
 }

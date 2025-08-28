@@ -34,13 +34,16 @@ Public Class ProjectNewsBO
             _textnl = value
         End Set
     End Property
-    Private _date As DateTime
+    Private _date As DateOnly
+    <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:dd/MM/yyyy}")>
+    <DataType(DataType.Date)>
     <Display(Name:="Datum")>
-    Public Property NewsDate() As DateTime
+    <UIHint("Date")>
+    Public Property NewsDate() As DateOnly
         Get
             Return _date
         End Get
-        Set(ByVal value As DateTime)
+        Set(ByVal value As DateOnly)
             _date = value
         End Set
     End Property

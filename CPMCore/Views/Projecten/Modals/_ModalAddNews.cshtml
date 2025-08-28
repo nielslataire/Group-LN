@@ -1,0 +1,53 @@
+﻿@model BOCore.ProjectNewsBO
+
+
+<div id="modaladdphoto" class="modal-block modal-block-primary">
+			@using (Html.BeginForm("AddNews", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddNews", enctype = "multipart/form-data" }))
+			{
+		@Html.HiddenFor(m => m.ProjectId)
+	<section class="card">
+		<header class="card-header">
+			<h2 class="card-title">Nieuwsbericht toevoegen</h2>
+		</header>
+		<div class="card-body">
+
+				<div class="form-group">
+					<div class="col-lg-12 mb-3">
+						<div class="form-group">
+							@Html.TextBoxFor(m => m.TitleNL, new { @placeholder = "Titel van het nieuws item", @class = "form-control form-control-modern" })
+						</div>
+					</div>
+					<div class="col-lg-12">
+						<div class="form-group">
+							@Html.TextAreaFor(m => m.TextNL, new { @placeholder = "Beschrijf het nieuws item....", @class = "form-control form-control-modern" })
+						</div>
+					</div>
+					<div class="col-lg-12">
+						<div class="form-group">
+							<label class="col-form-label" for="formGroupExampleInput">@Html.LabelFor(m => m.NewsDate)</label>
+							@Html.EditorFor(m => m.NewsDate)
+						</div>
+					</div>
+					<div class="col-lg-12">
+						<div class="form-group">
+							<label class="col-form-label" for="">Foto</label>
+							<input type="file"
+								   id="file"
+								   name="file"
+								   accept="image/*"
+								   class="form-control form-control-modern" />
+						</div>
+					</div>
+				</div>		
+		</div>
+			<footer class="card-footer">
+				<div class="row">
+					<div class="col-md-12 text-end">
+						<button type="submit" class="btn btn-primary">Toevoegen</button>
+						<button class="btn btn-default modal-dismiss">Annuleren</button>
+					</div>
+				</div>
+			</footer>
+		</section>
+	}
+</div>

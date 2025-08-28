@@ -7,8 +7,6 @@ namespace DALCore.Models;
 
 public partial class Insurances
 {
-    public int Id { get; set; }
-
     public int? InsuranceCompanyId { get; set; }
 
     public DateOnly? Startdate { get; set; }
@@ -24,6 +22,8 @@ public partial class Insurances
     public DateOnly? Enddate { get; set; }
 
     public int ContractActivityId { get; set; }
+
+    public int Id { get; set; }
 
     public virtual ContractActivity ContractActivity { get; set; }
 

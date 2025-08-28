@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;   
 
 namespace DALCore.Models;
 
@@ -29,12 +28,4 @@ public partial class ProjectDocs
     public virtual ICollection<InvoicingPaymentStages> InvoicingPaymentStages { get; set; } = new List<InvoicingPaymentStages>();
 
     public virtual Project Project { get; set; }
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        bo.Display = this.Name;
-        return bo;
-    }
-
 }

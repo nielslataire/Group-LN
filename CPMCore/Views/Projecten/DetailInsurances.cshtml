@@ -1,0 +1,249 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.DetailInsurancesModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+	ViewData["Title"] = Model.ProjectName;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+        div.dt-buttons .btn.buttons-colvis::after {
+            font-family: "Font Awesome 6 Free";
+            content: "\f078"; /* Unicode voor fa-chevron-down */
+            font-weight: 900; /* Voor solid stijl */
+            font-size: 0.85rem;
+            vertical-align: middle;
+            border: none;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
+            transform: rotate(180deg);
+        }
+    </style>
+
+    <style>
+
+        /* Alleen deze tabel compacter maken */
+        #datatable-docs-list.dataTable > thead > tr > th,
+        #datatable-docs-list.dataTable > tbody > tr > td {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            line-height: 1.2 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Status-dot uit Porto: geen extra hoogte laten forceren */
+        #datatable-docs-list .ecommerce-status {
+            display: inline-block;
+            margin: 0 !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Optioneel: iconen-kolom iets strakker */
+        #datatable-docs-list td.actions i {
+            line-height: 1 !important;
+        }
+
+        .datepicker-dropdown {
+            z-index: 200000 !important;
+        }
+    </style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Verzekeringen</h1>
+                        <h5 class="mb-4 mt-0">Beheer de verzekeringen van het project</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+@*                         <a href="#modaladdinsurance" class="btn btn-primary btn-md addInsurance" id="addInsurance" data-placement="top" title="Verwijderen" data-original-title="Toevoegen" data-id="@Model.ProjectId">
+                            + Verzekering toevoegen </a> *@
+                    </div>
+                </div>
+                @await Html.PartialAsync("Insurances", Model)
+            </div>
+        </div>
+    </div>
+</section>
+<div id="modaldeleteinsurance" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-insurance-container"></div>
+</div>
+<div id="modaladdinsurance" class="modal-block modal-block-primary mfp-hide">
+    <div id="add-insurance-container"></div>
+</div>
+<div id="modalendinsurance" class="modal-block modal-block-primary mfp-hide">
+    <div id="end-insurance-container"></div>
+</div>
+<div id="modaleditinsurance" class="modal-block modal-block-primary mfp-hide">
+    <div id="edit-insurance-container"></div>
+</div>
+@section PageScripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        // ===== Naamgeving voor weergave =====
+        // Pas deze 2 woorden aan en alle taalregels volgen mee
+        const entity = {
+          singular: 'verzekering',
+          plural: 'verzekeringen'
+        };
+
+        // Bouw de DataTables language-teksten in NL met dynamische naamgeving
+        function buildLanguage(e) {
+          const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+          const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+
+          return {
+            processing:     "Bezig met verwerken…",
+            search:         "Zoeken:",
+            lengthMenu:     "Toon _MENU_",
+            info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+            infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
+            infoFiltered:   "(gefilterd uit _MAX_ totaal)",
+            loadingRecords: "Bezig met laden…",
+            zeroRecords:    `Geen ${e.plural} om weer te geven`,
+            emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
+            aria: {
+              sortAscending:  ": activeer om oplopend te sorteren",
+              sortDescending: ": activeer om aflopend te sorteren"
+            }
+          };
+        }
+
+        // ===== Init DataTable =====
+        const table = new DataTable('#datatable-docs-list', {
+          order: [[1, 'asc']],
+          language: buildLanguage(entity),
+          layout: {
+            topStart: {
+              buttons: [
+                {
+                  extend: 'excel',
+                  text: '<i class="fa fa-file-excel"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar Excel',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'pdf',
+                  text: '<i class="fa fa-file-pdf"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar PDF',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  orientation: 'landscape',
+                  pageSize: 'A3',
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'colvis',
+                  text: '<i class="bx bx-filter me-2"></i><span>Alle kolommen</span>',
+                  titleAttr: 'Selecteer kolommen',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  columns: ':not(.noVis)',
+                  init: function (api, node) {
+                    // styling fix
+                    $(node).removeClass('btn-secondary').addClass('btn btn-default');
+                  }
+                }
+              ]
+            }
+          }
+        });
+
+        // ===== UI-aanpassingen / custom knoppen =====
+        // Verberg standaard knoppen/search indien je eigen UI gebruikt
+        $(".buttons-excel").hide();
+        $(".buttons-pdf").hide();
+        $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
+
+        // Koppel custom export-knoppen
+        $("#btnExportExcel").on('click', function () {
+          $(".buttons-excel").trigger("click");
+        });
+        $("#btnExportPdf").on('click', function () {
+          $(".buttons-pdf").trigger("click");
+        });
+
+        // Verplaats knoppen naar een eigen container
+        table.buttons(0, null).containers().appendTo('#colvis-container');
+
+        // ===== Custom zoekveld =====
+        $('#search-term').on('keyup', function () {
+          table.search($(this).val()).draw();
+        });
+
+        // DELETE
+        $(document).on('click', '.deleteInsurance', function (e) {
+          e.preventDefault();
+          const id = $(this).data('id');
+
+          $('#delete-insurance-container').empty();
+
+          $.get('@Url.Action("ModalDeleteInsurance", "Projecten")', { id: id })
+            .done(function (html) {
+              $('#delete-insurance-container').html(html);
+              $.magnificPopup.open({
+                items: { src: '#modaldeleteinsurance' }, // exact ID uit je view
+                type: 'inline'
+              });
+            })
+            .fail(function () { alert('Kon de modal niet laden.'); });
+        });
+
+                // EDIT
+        $(document).on('click', '.editInsurance', function (e) {
+          e.preventDefault();
+          const id = $(this).data('id');
+
+          $('#edit-insurance-container').empty();
+
+          $.get('@Url.Action("ModalEditInsurance", "Projecten")', { id: id })
+            .done(function (html) {
+              $('#edit-insurance-container').html(html);
+              $.magnificPopup.open({
+                items: { src: '#modaleditinsurance' }, // exact ID uit je view
+                type: 'inline'
+              });
+            })
+            .fail(function () { alert('Kon de modal niet laden.'); });
+        });
+
+                // END
+        $(document).on('click', '.endInsurance', function (e) {
+          e.preventDefault();
+          const id = $(this).data('id');
+
+          $('#end-insurance-container').empty();
+
+          $.get('@Url.Action("ModalEndInsurance", "Projecten")', { id: id })
+            .done(function (html) {
+              $('#end-insurance-container').html(html);
+              $.magnificPopup.open({
+                items: { src: '#modalendinsurance' }, // exact ID uit je view
+                type: 'inline'
+              });
+            })
+            .fail(function () { alert('Kon de modal niet laden.'); });
+        });
+
+    </script>
+
+}

@@ -392,37 +392,37 @@ namespace ServiceCore
         //{
         //}
 
-public GetResponse<IdNameBO> GetWheaterstationsSelect()
-{
-    var response = new GetResponse<IdNameBO>();
-    var entities = _uow.WheaterStations.GetNoTracking()
-        .OrderBy(m => m.Name)
-        .AsNoTracking()
-        .ToList();
+        public GetResponse<IdNameBO> GetWheaterstationsSelect()
+        {
+            var response = new GetResponse<IdNameBO>();
+            var entities = _uow.WheaterStations.GetNoTracking()
+                .OrderBy(m => m.Name)
+                .AsNoTracking()
+                .ToList();
 
-            foreach (var e in entities)
-        response.AddValue(e.GetIdName());
+                    foreach (var e in entities)
+                response.AddValue(e.GetIdName());
 
-    return response;
-}
+            return response;
+        }
 
-public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
-{
-    var response = new GetResponse<WheaterStationBO>();
-    var entities = _uow.WheaterStations.GetNoTracking()
-        .Where(m => m.Name.Contains(searchterm))
-        .OrderBy(m => m.Name)
-        .ToList();
+        public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
+        {
+            var response = new GetResponse<WheaterStationBO>();
+            var entities = _uow.WheaterStations.GetNoTracking()
+                .Where(m => m.Name.Contains(searchterm))
+                .OrderBy(m => m.Name)
+                .ToList();
 
-            foreach (var e in entities)
-    {
-        var bo = new WheaterStationBO();
-        var err = WheaterstationTranslator.TranslateEntityToBO(e, bo);
-        if (err == ErrorCode.Success) response.AddValue(bo);
-        else response.AddError(err.ToString());
-    }
-    return response;
-}
+                    foreach (var e in entities)
+            {
+                var bo = new WheaterStationBO();
+                var err = WheaterstationTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
+            }
+            return response;
+        }
 
 
         // Badweatherdays
@@ -873,7 +873,10 @@ public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
         public GetResponse<ProjectNewsBO> GetNewsById(int id)
         {
             var response = new GetResponse<ProjectNewsBO>();
-            var entity = _uow.ProjectNews.GetById(id);
+            var entity = _uow.ProjectNews.GetNoTracking()
+                .Where(m => m.Id == id)
+                .Include(m => m.Picture)
+                .FirstOrDefault();
             var bo = new ProjectNewsBO();
 
             var err = ProjectNewsTranslator.TranslateEntityToBO(entity, bo);
@@ -888,6 +891,7 @@ public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
             var entities = _uow.ProjectNews
                 .GetNoTracking()
                 .Where(m => m.ProjectId == id)
+                .Include(m => m.Picture)
                 .OrderByDescending(m => m.Date);
 
             foreach (var e in entities)
@@ -1278,11 +1282,18 @@ public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
             return response;
         }
 
+
         public Response InsertUpdateProjectDoc(ProjectDocBO projectDoc)
         {
             var response = new Response();
-            if (projectDoc.ProjectId <= 0) response.AddError("ProjectID is verplicht");
-            if (string.IsNullOrWhiteSpace(projectDoc.Filename)) response.AddError("Bestandsnaame is verplicht");
+
+            if (projectDoc.ProjectId <= 0)
+                response.AddError("ProjectID is verplicht");
+
+            // Bestandsnaam enkel verplicht bij NIEUW document
+            if (projectDoc.Docid == 0 && string.IsNullOrWhiteSpace(projectDoc.Filename))
+                response.AddError("Bestandsnaam is verplicht");
+
             if (!response.Success) return response;
 
             ProjectDocs entity;
@@ -1290,33 +1301,46 @@ public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
 
             if (projectDoc.Docid == 0)
             {
+                // unicity voor keycombinationcertificate
                 if (projectDoc.Type == ProjectDocType.keycombinationcertificate)
-                    toDelete = GetProjectDocsForSelect(projectDoc.ProjectId, ProjectDocType.keycombinationcertificate).Values.FirstOrDefault();
+                    toDelete = GetProjectDocsForSelect(projectDoc.ProjectId, ProjectDocType.keycombinationcertificate)
+                               .Values.FirstOrDefault();
 
                 entity = _uow.ProjectDocs.GetNew();
-                projectDoc.SortOrder = _uow.ProjectDocs.GetNoTracking()
+
+                // sortorder veilig berekenen (server-side translatable)
+                var maxSort = _uow.ProjectDocs.GetNoTracking()
                     .Where(m => m.ProjectId == projectDoc.ProjectId)
-                    .Select(a => a.SortOrder)
-                    .DefaultIfEmpty(0)
-                    .Max() + 1;
+                    .Select(m => (int?)m.SortOrder)
+                    .Max() ?? 0;
+                projectDoc.SortOrder = maxSort + 1;
+
             }
             else
             {
                 entity = _uow.ProjectDocs.GetById(projectDoc.Docid);
+                if (entity == null)
+                {
+                    response.AddError("ProjectDoc not found");
+                    return response;
+                }
             }
 
-            if (entity != null)
+            var err = ProjectDocsTranslator.TranslateBOToEntity(entity, projectDoc, _uow);
+            if (err != ErrorCode.Success)
             {
-                var err = ProjectDocsTranslator.TranslateBOToEntity(entity, projectDoc, _uow);
-                if (err != ErrorCode.Success) response.AddError(err.ToString());
-                else if (toDelete != null) _uow.ProjectDocs.DeleteObject(toDelete.ID);
+                response.AddError(err.ToString());
+                return response;
             }
-            else response.AddError("ProjectDoc not found");
+
+            if (toDelete != null)
+                _uow.ProjectDocs.DeleteObject(toDelete.ID);
 
             var saved = _uow.SaveChanges();
             response.AddSaveChangesResult(saved, "Document opgeslagen", "Document niet opgeslagen");
             return response;
         }
+
 
         public Response DeleteProjectDoc(List<int> ids)
         {
@@ -2234,7 +2258,11 @@ public GetResponse<WheaterStationBO> GetWheaterstations(string searchterm)
             var response = new GetResponse<InsuranceBO>();
 
             var entities = _uow.Insurances.GetNoTracking()
-                .Where(m => m.ContractActivity.Contract.ProjectId == projectid);
+                .Where(m => m.ContractActivity.Contract.ProjectId == projectid)
+                .Include(m => m.ContractActivity)
+                .ThenInclude(m => m.Contract)
+                .ThenInclude(m => m.Company)
+                .Include(m => m.InsuranceCompany);
 
             foreach (var e in entities)
             {

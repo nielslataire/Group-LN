@@ -1,0 +1,156 @@
+﻿@using BOCore
+@using System.IO
+@using System.Text.RegularExpressions
+@model CPMCore.Models.Projecten.DetailInsurancesModel
+
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+
+}
+
+@Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+@if (Model.Insurances.Any())
+{
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="input-group">
+			<span class="input-group-text">
+				<i class="bx bx-search"></i>
+			</span>
+			<input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+		</div>
+	</div>
+</div>
+
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="datatables-header-footer-wrapper mt-2">
+			<div class="datatable-header">
+				
+			</div>
+
+			<table class="table table-responsive-md table-hover mb-0" id="datatable-docs-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar="#toolbar" data-toolbar-align="right">
+
+				<thead>
+					<tr>
+						<th>Makelaar</th>
+						<th>Maatschappij</th>
+						<th>Polisnummer</th>
+						<th>Type</th>
+						<th>Startdatum</th>
+						<th>Termijn</th>
+							<th>Verlenging</th>
+						<th>Waarborgperiode</th>
+						<th>Einddatum</th>
+						<th class="hidden-xs noVis" data-sortable="false">Acties</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach(var item in Model.Insurances)
+					{
+						
+							// Startdatum (DateOnly?) + aantallen in maanden
+							DateOnly? start = item.Startdate;                // bv. DateOnly?
+							int termM = item.Period ?? 0;                // bv. 12
+							int verlM = item.ExtensionPeriod ?? 0;             // bv. 6 (0 = geen verlenging)
+							int waarM = item.GuaranteePeriod ?? 0;               // bv. 24 (0 = geen waarborg)
+
+							// Voorbereiding
+							DateOnly? termEnd      = null;   // start + termM
+							DateOnly? verlEnd      = null;   // start + termM + verlM
+							DateOnly? waarborgFrom = null;   // = verlEnd
+							DateOnly? waarborgTo   = null;   // waarborgFrom + waarM
+
+							if (start.HasValue)
+							{
+								termEnd = start.Value.AddMonths(termM);
+								verlEnd = termEnd.Value.AddMonths(verlM);
+								waarborgFrom = verlEnd;
+								waarborgTo   = waarborgFrom.Value.AddMonths(waarM);
+							}
+
+							string F(DateOnly? d) => d.HasValue ? d.Value.ToString("dd/MM/yyyy") : "";
+						
+						<tr>
+							<td>
+								@item.InsuranceBrokerName
+							</td>
+							<td>
+								@item.InsuranceCompany.Name
+							</td>
+							<td>
+								<!-- polisnummer nog toe te voegen -->
+							</td>
+							<td>
+									@if(item.Type != 0)
+									{
+										@item.Type.GetDisplayName()
+									}
+									
+							</td>
+							<td>
+									@F(start)
+							</td>
+							<td>
+                                    @F(start) - @F(termEnd)
+							</td>
+							<td>
+									@if (verlM > 0 && start.HasValue)
+									{
+										<div>@F(termEnd) - @F(verlEnd)</div>
+									}
+									else
+									{
+										<span class="text-muted">—</span>
+									}
+							</td>
+							<td>
+								@if (waarM > 0 && start.HasValue)
+								{
+									@($"{F(waarborgFrom)} – {F(waarborgTo)}")
+								}
+								else
+								{
+									<span class="text-muted">—</span>
+								}
+							</td>
+							<td>
+								@item.Enddate
+							</td>
+								
+							<td class="actions">
+									<a href="#modaleditinsurance" data-toggle="tooltip" id="editInsurance" data-placement="top" title="Bewerken" data-original-title="Bewerken" class="editInsurance" data-id="@item.Id"><i class="fa fa-edit "></i></a>
+									<a href="#modalendinsurance" data-toggle="tooltip" id="endInsurance" data-placement="top" title="Stoppen" data-original-title="Stoppen" class="endInsurance" data-id="@item.Id"><i class="fa-regular fa-calendar-check "></i></a>
+                                 <a href="#modaldeleteinsurance" data-toggle="tooltip" id="deleteInsurance" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteInsurance" data-id="@item.Id"><i class="fa fa-trash "></i></a>
+							</td>
+						</tr>
+
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+</div>
+}
+else
+{
+	<div class="card card-modern mb-4">
+		<div class="card-body align-items-center text-center card-big-info">
+			<div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+				<i class="bx bx-file"></i>
+
+			</div>
+			<div class="col-12 text-muted mb-3">
+				<h4>Nog geen documenten toegevoegd</h4>
+			</div>
+			<div class="col-12 text-muted">
+				<a href="#modaladdinsurance" class="btn btn-default btn-md modal-with-form text-muted" type="button" id="btnAddIns2"><i class="fa fa-upload"></i> Een eerste verzekering toevoegen</a>
+
+			</div>
+		</div>
+	</div>
+}

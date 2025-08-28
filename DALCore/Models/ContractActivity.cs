@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -27,12 +26,4 @@ public partial class ContractActivity
     public virtual ICollection<IncommingInvoiceDetail> IncommingInvoiceDetail { get; set; } = new List<IncommingInvoiceDetail>();
 
     public virtual Insurances Insurances { get; set; }
-
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        bo.Display = this.Activity.Omschrijving + " - " + this.Contract.Company.BedrijfsNaam;
-        return bo;
-    }
 }

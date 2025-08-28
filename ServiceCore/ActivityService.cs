@@ -138,7 +138,7 @@ namespace ServiceCore
             var response = new GetResponse<ActivityGroupBO>();
 
             var entities = _uow.ActivityGroups.GetNoTracking()
-                .Include(g => g.Activities)               // we hebben de activiteiten vaak nodig
+                .Include(g => g.Activity)               // we hebben de activiteiten vaak nodig
                 .OrderBy(g => g.Lot).ThenBy(g => g.Name);
 
             foreach (var entity in entities)
@@ -174,7 +174,7 @@ namespace ServiceCore
 
             // Belangrijk: GetById() gebruikt Find() en laadt navigaties niet.
             var entity = _uow.ActivityGroups.GetNoTracking()
-                .Include(g => g.Activities)
+                .Include(g => g.Activity)
                 .SingleOrDefault(g => g.GroupId == id);
 
             if (entity == null)

@@ -18,7 +18,7 @@ namespace ServiceCore.Translators
             if (bo == null)
                 return ErrorCode.BoNull;
             bo.Id = _entity.Id;
-            bo.NewsDate = _entity.Date;
+            bo.NewsDate = DateOnly.FromDateTime(_entity.Date);
             bo.ProjectId = _entity.ProjectId;
             bo.TextNL = _entity.TextNl;
             bo.TitleNL = _entity.TitleNl;
@@ -40,7 +40,7 @@ namespace ServiceCore.Translators
             _entity.TitleNl = bo.TitleNL;
             _entity.TextNl = bo.TextNL;
             _entity.ProjectId = bo.ProjectId;
-            _entity.Date = bo.NewsDate;
+            _entity.Date = bo.NewsDate.ToDateTime(TimeOnly.MinValue);
             _entity.Author = bo.Author;
             if (bo.Picture is not null)
                 ProjectPictureTranslator.TranslateBOToEntity(_entity.Picture, bo.Picture, uow);

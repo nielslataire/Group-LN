@@ -1,0 +1,137 @@
+﻿@using BOCore
+@using System.IO
+@using System.Text.RegularExpressions
+@model CPMCore.Models.Projecten.DetailDocsModel
+
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+
+}
+
+@Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+@if (Model.Docs.Any())
+{
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="input-group">
+			<span class="input-group-text">
+				<i class="bx bx-search"></i>
+			</span>
+			<input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+		</div>
+	</div>
+</div>
+
+<div class="card card-modern">
+	<div class="card-body">
+		<div class="datatables-header-footer-wrapper mt-2">
+			<div class="datatable-header">
+				
+			</div>
+
+			<table class="table table-responsive-md table-hover mb-0" id="datatable-docs-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar="#toolbar" data-toolbar-align="right">
+
+				<thead>
+					<tr>
+						<th>Type</th>
+						<th>Naam</th>
+						<th>Status</th>
+						<th>Documentdatum</th>
+						<th>Uploaddatum</th>
+						<th class="hidden-xs noVis" data-sortable="false">Acties</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach(var item in Model.Docs)
+					{
+						<tr>
+							<td>
+								@{
+									var name = item.Filename ?? string.Empty;
+									var dot = name.LastIndexOf('.');
+									var ext = dot >= 0 ? name.Substring(dot).ToLowerInvariant() : string.Empty;
+
+									var isPdf = ext == ".pdf";
+									var isImage = ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif"
+									|| ext == ".bmp" || ext == ".tif" || ext == ".tiff" || ext == ".webp"
+									|| ext == ".heic";
+
+									var iconCls = isPdf ? "fa-file-pdf"
+									: isImage ? "fa-file-image"
+									: "fa-file";
+								}
+								<i class="fa-regular @iconCls fs-6 me-2" title="@name" aria-hidden="true"></i>
+								<span class="visually-hidden">@name</span>
+								<span class="visually-hidden">@item.Filename</span>
+								@item.Type.GetDisplayName()
+							</td>
+							<td>
+								@item.Name
+							</td>
+							<td>
+								<!-- status nog toe te voegen -->
+							</td>
+							<td>
+								@item.DocDate
+							</td>
+							<td>
+								<!-- uploaddatum nog toe te voegen -->
+							</td>
+							<td class="actions">
+								<a href="@Url.Content($"{(string)ViewBag.DocWebUrl}{item.Filename}")" target="_blank" data-toggle="tooltip" title="Bekijken"><i class="fa fa-eye "></i></a>
+								@{
+									//type naam
+									var type = item.Type.GetDisplayName() ?? "";
+									// Pak project- en (optioneel) klantnaam
+									var projectName = Model.ProjectName ?? "";
+									// kies wat je beschikbaar hebt:
+									// var clientName = Model.ClientName ?? "";          // als je die op het model hebt
+									var clientName = (Model.ClientAccountId is int v && v > 0) ? (Model.ClientName ?? "") : "";
+
+									// Bouw de basisnaam
+									var baseName = string.IsNullOrWhiteSpace(clientName)
+									? $"{type}_{projectName}"
+									: $"{type}_{projectName}_{clientName}";
+
+									// Bestandsnaam veilig maken
+									var safe = Regex.Replace(baseName, @"[^\w\-. ]+", ""); // verwijdert vreemde tekens
+									safe = Regex.Replace(safe.Trim(), @"\s+", "_");        // spaties -> underscores
+									var asName = safe + ".pdf";                            // ext wordt in controller gefixt
+								}
+
+								<a href="@Url.Action("DownloadDoc", "Projecten", new { id = item.Docid, asName = asName })"class="me-2" data-toggle="tooltip" title="Download">
+									<i class="fa fa-download"></i>
+								</a>
+                                 <a href="#modaldeletedoc" data-toggle="tooltip" id="deleteDoc" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteDoc" data-id="@item.Docid"><i class="fa fa-trash "></i></a>
+							</td>
+						</tr>
+
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+</div>
+}
+else
+{
+	<div class="card card-modern mb-4">
+		<div class="card-body align-items-center text-center card-big-info">
+			<div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+				<i class="bx bx-file"></i>
+
+			</div>
+			<div class="col-12 text-muted mb-3">
+				<h4>Nog geen documenten toegevoegd</h4>
+			</div>
+			<div class="col-12 text-muted">
+				<a href="#modaladddoc" class="btn btn-default btn-md modal-with-form text-muted" type="button" id="btnAddDoc2"><i class="fa fa-upload"></i> Een eerste document uploaden</a>
+
+			</div>
+		</div>
+	</div>
+}

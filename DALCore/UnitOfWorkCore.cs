@@ -1,9 +1,10 @@
-﻿using System;
+﻿using DALCore.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Storage;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using DALCore.Models;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace DALCore
 {
@@ -116,6 +117,7 @@ namespace DALCore
         // Eenduidige save-methodes
         public int SaveChanges() => _context.SaveChanges();
         public Task<int> SaveChangesAsync(CancellationToken ct = default) => _context.SaveChangesAsync(ct);
+        public EntityEntry Entry(object entity) => _context.Entry(entity);
 
         // Slim saven: alleen als er geen expliciete transactie loopt
         public int SaveIfNoActiveTransaction()

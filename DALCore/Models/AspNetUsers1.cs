@@ -39,6 +39,14 @@ public partial class AspNetUsers1
 
     public string UserName { get; set; }
 
+    public string NormalizedUserName { get; set; }
+
+    public string NormalizedEmail { get; set; }
+
+    public DateTimeOffset? LockoutEnd { get; set; }
+
+    public string ConcurrencyStamp { get; set; }
+
     public virtual ICollection<AspNetUserClaims> AspNetUserClaims { get; set; } = new List<AspNetUserClaims>();
 
     public virtual ICollection<AspNetUserLogins> AspNetUserLogins { get; set; } = new List<AspNetUserLogins>();

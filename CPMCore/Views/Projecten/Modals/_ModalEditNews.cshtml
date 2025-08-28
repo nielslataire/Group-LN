@@ -1,0 +1,95 @@
+﻿@model BOCore.ProjectNewsBO
+
+<div id="modaladdphoto" class="modal-block modal-block-primary">
+    @using (Html.BeginForm("EditNews", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormEditNews", enctype = "multipart/form-data" }))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.ProjectId)
+        @Html.HiddenFor(m => m.Picture.Id)
+        @Html.HiddenFor(m => m.Id)
+        @* Belangrijk: deze hidden houdt de huidige bestandsnaam bij en kan door JS leeggemaakt worden *@
+        @Html.HiddenFor(m => m.Picture.Name)
+        <input type="hidden" name="RemovePicture" id="RemovePicture" value="false" />
+
+        <section class="card">
+            <header class="card-header">
+                <h2 class="card-title">Nieuwsbericht bewerken</h2>
+            </header>
+
+            <div class="card-body">
+                <div class="form-group">
+                    <div class="col-lg-12 mb-3">
+                        <div class="form-group">
+                            @Html.TextBoxFor(m => m.TitleNL, new { @placeholder = "Titel van het nieuws item", @class = "form-control form-control-modern" })
+                        </div>
+                    </div>
+
+                    <div class="col-lg-12">
+                        <div class="form-group">
+                            @Html.TextAreaFor(m => m.TextNL, new { @placeholder = "Beschrijf het nieuws item....", @class = "form-control form-control-modern" })
+                        </div>
+                    </div>
+
+                    <div class="col-lg-12">
+                        <div class="form-group">
+                            <label class="col-form-label">@Html.LabelFor(m => m.NewsDate)</label>
+                            @Html.EditorFor(m => m.NewsDate)
+                        </div>
+                    </div>
+
+                    <div class="col-lg-12">
+                        <div class="form-group">
+                            <label class="col-form-label">Foto</label>
+
+                            @{
+                                var hasPhoto = !string.IsNullOrWhiteSpace(Model?.Picture?.Name);
+                                var baseUrl = (ViewData["NewsBaseUrl"] as string) ?? "";
+                                var fileName = Model?.Picture?.Name;
+                            }
+
+                            <!-- Preview + Verwijder knop (als er al een foto is) -->
+                            <div id="photo-preview" style="display:@(hasPhoto ? "block" : "none")">
+                                @if (hasPhoto)
+                                {
+                                    <img src="@($"{baseUrl}{fileName}")"
+                                         alt="@Model.TitleNL"
+                                         class="img-fluid rounded mb-2"
+                                         style="max-height:220px;" loading="lazy" />
+                                    <div>
+                                        <button type="button" class="btn btn-outline-danger btn-sm btnRemovePhoto">
+                                            <i class="bx bx-trash"></i> Verwijder foto
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+
+                            <!-- File upload (zichtbaar als er geen foto is of na verwijderen) -->
+                            <div id="photo-upload" style="display:@(hasPhoto ? "none" : "block")">
+                                <input type="file"
+                                       id="file"
+                                       name="file"
+                                       accept="image/*"
+                                       class="form-control form-control-modern" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="submit" class="btn btn-primary">Opslaan</button>
+                        <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+                    </div>
+                </div>
+            </footer>
+        </section>
+    }
+</div>
+
+@section Scripts {
+    <script>
+
+    </script>
+}

@@ -157,7 +157,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.GroupId).HasColumnName("GroupID");
             entity.Property(e => e.Omschrijving).HasMaxLength(250);
 
-            entity.HasOne(d => d.Group).WithMany(p => p.Activities)
+            entity.HasOne(d => d.Group).WithMany(p => p.Activity)
                 .HasForeignKey(d => d.GroupId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Activity_ActivityGroup");
@@ -181,9 +181,8 @@ public partial class cpmRunningContext : DbContext
             entity.HasIndex(e => e.Name, "RoleNameIndex").IsUnique();
 
             entity.Property(e => e.Id).HasMaxLength(128);
-            entity.Property(e => e.Name)
-                .IsRequired()
-                .HasMaxLength(256);
+            entity.Property(e => e.Name).HasMaxLength(256);
+            entity.Property(e => e.NormalizedName).HasMaxLength(256);
         });
 
         modelBuilder.Entity<AspNetUserClaims>(entity =>
@@ -227,6 +226,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Id).HasMaxLength(128);
             entity.Property(e => e.Email).HasMaxLength(256);
             entity.Property(e => e.LockoutEndDateUtc).HasColumnType("datetime");
+            entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
+            entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
             entity.Property(e => e.UserName)
                 .IsRequired()
                 .HasMaxLength(256);
@@ -952,16 +953,14 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Insurances>(entity =>
         {
-            entity.HasKey(e => e.ContractActivityId).HasName("PK_Insurances_1");
+            entity.HasIndex(e => e.ContractActivityId, "UQ_Insurances_ContractActivity").IsUnique();
 
-            entity.Property(e => e.ContractActivityId)
-                .ValueGeneratedNever()
-                .HasColumnName("ContractActivityID");
-            entity.Property(e => e.Id).ValueGeneratedOnAdd();
+            entity.Property(e => e.ContractActivityId).HasColumnName("ContractActivityID");
             entity.Property(e => e.InsuranceCompanyId).HasColumnName("InsuranceCompanyID");
 
             entity.HasOne(d => d.ContractActivity).WithOne(p => p.Insurances)
                 .HasForeignKey<Insurances>(d => d.ContractActivityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Insurances_ContractActivity");
 
             entity.HasOne(d => d.InsuranceCompany).WithMany(p => p.Insurances)

@@ -6,8 +6,11 @@
 {
 <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
 <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
-}
 
+
+}
+@if (Model.Contracts.Any())
+{
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
 <div class="card card-modern">
 	<div class="card-body">
@@ -15,7 +18,7 @@
 			<span class="input-group-text">
 				<i class="bx bx-search"></i>
 			</span>
-			<input type="text" class="form-control" name="search-term" id="search-term" placeholder="Zoeken ...">
+			<input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
 		</div>
 	</div>
 </div>
@@ -45,7 +48,7 @@
 				</div>
 			</div> *@
 
-			<table class="table table-ecommerce-simple table-striped mb-0" id="datatable-contracts-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
+			<table class="table table-responsive-md table-hover mb-0" id="datatable-contracts-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
 
 				<thead>
 					<tr>
@@ -119,9 +122,9 @@
 									@item.GuaranteeType.GetDisplayName()
 								}
 							</td>					
-							<td>
-								<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken"  id="editContract" href="@Url.Action("EditContract", "Projecten", new {projectid = Model.ProjectId, contractid = item.Id})"><i class="fa fa-edit"></i></a>
-								<a href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-trash "></i></a>
+							<td class="actions">
+								<a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken"  id="editContract" href="@Url.Action("EditContract", "Projecten", new {projectid = Model.ProjectId, contractid = item.Id})"><i class="fa fa-edit"></i></a>
+								<a href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-trash "></i></a>
 												
 							</td>
 						</tr>
@@ -133,3 +136,21 @@
 	</div>
 
 </div>
+}
+else
+{
+	<div class="card card-modern mb-4">
+		<div class="card-body align-items-center text-center card-big-info">
+			<div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+				<i class="bx bx-file"></i>
+
+			</div>
+			<div class="col-12 text-muted mb-3">
+				<h4>Nog geen leveranciers toegevoegd</h4>
+			</div>
+			<div class="col-12 text-muted">
+				<a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default btn-md">+ Een eerste leverancier toevoegenn</a>
+			</div>
+		</div>
+	</div>
+}

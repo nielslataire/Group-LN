@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -33,13 +32,4 @@ public partial class CompanyDepartments
     public virtual ICollection<CompanyContacts> CompanyContacts { get; set; } = new List<CompanyContacts>();
 
     public virtual PostalCode Postcode { get; set; }
-
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.DepartmentId;
-        bo.Display = this.Naam;
-        return bo;
-    }
-
 }

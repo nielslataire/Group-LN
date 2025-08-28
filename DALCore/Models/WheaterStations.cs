@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -21,12 +20,4 @@ public partial class WheaterStations
     public virtual ICollection<BadWeatherDays> BadWeatherDays { get; set; } = new List<BadWeatherDays>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        bo.Display = this.Name;
-        return bo;
-    }
-
 }

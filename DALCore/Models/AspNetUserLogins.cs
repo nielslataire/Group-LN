@@ -13,5 +13,7 @@ public partial class AspNetUserLogins
 
     public string UserId { get; set; }
 
+    public string ProviderDisplayName { get; set; }
+
     public virtual AspNetUsers1 User { get; set; }
 }

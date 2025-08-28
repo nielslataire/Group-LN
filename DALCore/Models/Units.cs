@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -83,16 +82,4 @@ public partial class Units
     public virtual ICollection<UnitConstructionValue> UnitConstructionValue { get; set; } = new List<UnitConstructionValue>();
 
     public virtual ICollection<UnitRooms> UnitRooms { get; set; } = new List<UnitRooms>();
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        if (this.Type != null && this.Type.Id == 11)
-            bo.Display = this.Type.Name + " " + this.Name;
-        else
-            bo.Display = this.Name;
-        bo.Group = this.Type.Group.Name;
-        return bo;
-    }
-
 }

@@ -20,7 +20,7 @@ namespace ServiceCore.Translators
             bo.Name = _entity.Name;
             bo.Lot = Convert.ToInt16(_entity.Lot);
 
-            foreach (var activityEntity in _entity.Activities)
+            foreach (var activityEntity in _entity.Activity)
             {
                 var activityBO = new ActivityBO
                 {
@@ -71,12 +71,12 @@ namespace ServiceCore.Translators
                     if (err != ErrorCode.Success)
                         return err;
 
-                    _entity.Activities.Add(activityEntity);
+                    _entity.Activity.Add(activityEntity);
                 }
                 else
                 {
                     // Activiteit bijwerken
-                    var activityEntity = _entity.Activities.FirstOrDefault(f => f.ActivityId == activityBO.ID);
+                    var activityEntity = _entity.Activity.FirstOrDefault(f => f.ActivityId == activityBO.ID);
                     if (activityEntity != null)
                     {
                         var err = ActivityTranslator.TranslateBOToEntity(activityEntity, activityBO);
@@ -87,12 +87,12 @@ namespace ServiceCore.Translators
             }
 
             // Verwijder de activiteiten die niet meer in de nieuwe lijst zitten
-            var activitiesToDelete = _entity.Activities
+            var activitiesToDelete = _entity.Activity
                 .Where(x => !activities.Any(f => f.ID == x.ActivityId))
                 .ToList();
 
             foreach (var activity in activitiesToDelete)
-                _entity.Activities.Remove(activity);
+                _entity.Activity.Remove(activity);
 
             return ErrorCode.Success;
         }

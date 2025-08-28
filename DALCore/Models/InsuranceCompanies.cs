@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -25,13 +24,4 @@ public partial class InsuranceCompanies
     public virtual ICollection<Insurances> Insurances { get; set; } = new List<Insurances>();
 
     public virtual PostalCode Postcode { get; set; }
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.Id;
-        bo.Display = this.Name;
-
-        return bo;
-    }
-
 }

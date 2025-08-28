@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -27,13 +26,4 @@ public partial class Activity
     public virtual ICollection<ClientGift> Gift { get; set; } = new List<ClientGift>();
 
     public virtual ICollection<ClientPoa> Poa { get; set; } = new List<ClientPoa>();
-
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.ActivityId;
-        bo.Display = this.Omschrijving;
-        bo.Group = "Deel " + this.Group.Lot + " - " + this.Group.Name;
-        return bo;
-    }
 }

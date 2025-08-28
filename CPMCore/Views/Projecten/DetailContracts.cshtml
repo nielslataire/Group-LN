@@ -28,6 +28,31 @@
     <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+
+        /* Alleen deze tabel compacter maken */
+        #datatable-contracts-list.dataTable > thead > tr > th,
+        #datatable-contracts-list.dataTable > tbody > tr > td {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            line-height: 1.2 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Status-dot uit Porto: geen extra hoogte laten forceren */
+        #datatable-contracts-list .ecommerce-status {
+            display: inline-block;
+            margin: 0 !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Optioneel: iconen-kolom iets strakker */
+        #datatable-contracts-list td.actions i {
+            line-height: 1 !important;
+        }
+
+    </style>
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -64,78 +89,97 @@
     <script src="~/lib/select2/js/select2.js"></script>
     <script src="~/lib/jquery-mask/jquery.mask.js"></script>
     <script>
+            // ===== Naamgeving voor weergave =====
+        // Pas deze 2 woorden aan en alle taalregels volgen mee
+        const entity = {
+          singular: 'leverancier',
+          plural: 'leveranciers'
+        };
 
+        // Bouw de DataTables language-teksten in NL met dynamische naamgeving
+        function buildLanguage(e) {
+          const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+          const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
 
-                new DataTable('#datatable-contracts-list', {
-                layout: {
-                    topStart: {
-                        buttons: [
-                            {
-                                extend:'excel',
-                                text:'<i class="fa fa-file-excel"></i>',
-                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
-                                titleAttr: 'Exporteer naar excel',
-                                attr: {
-                                  "data-bs-toggle": "tooltip"
-                                },
-                                exportOptions: {
-                                    columns: ':visible'
-                                }
-                            },
-                            {
-                                extend:'pdf',
-                                text:'<i class="fa fa-file-pdf"></i>',
-                                className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
-                                titleAttr: 'Exporteer naar pdf',
-                                    attr: {
-                                      "data-bs-toggle": "tooltip"
-                                    },
-                                 orientation: 'landscape',
-                                 pageSize:'A3',
-                                 exportOptions: {
-                                    columns: ':visible'
-                                }
-                            }
-                        ]
-                    }
+          return {
+            processing:     "Bezig met verwerken…",
+            search:         "Zoeken:",
+            lengthMenu:     "Toon _MENU_",
+            info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+            infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
+            infoFiltered:   "(gefilterd uit _MAX_ totaal)",
+            loadingRecords: "Bezig met laden…",
+            zeroRecords:    `Geen ${e.plural} om weer te geven`,
+            emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
+
+            aria: {
+              sortAscending:  ": activeer om oplopend te sorteren",
+              sortDescending: ": activeer om aflopend te sorteren"
+            }
+          };
+        }
+
+        // ===== Init DataTable =====
+        const table = new DataTable('#datatable-contracts-list', {
+          order: [[1, 'asc']],
+          language: buildLanguage(entity),
+          layout: {
+            topStart: {
+              buttons: [
+                {
+                  extend: 'excel',
+                  text: '<i class="fa fa-file-excel"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar Excel',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  exportOptions: { columns: ':visible' }
                 },
-                     language: {
-                processing:     "Bezig met verwerken...",
-                search:         "Zoeken&nbsp;:",
-                lengthMenu:    "Afficher _MENU_ &eacute;l&eacute;ments",
-                info:           "Contract _START_ tot _END_ van de _TOTAL_ Contracten",
-                infoEmpty:      "Contract 0 van 0 tot 0 Contracten",
-                infoFiltered:   "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
-                infoPostFix:    "",
-                loadingRecords: "Bezig met laden...",
-                zeroRecords:    "Geen contracten om weer te geven",
-                emptyTable:     "Er zijn geen contracten om weer te geven",
-                aria: {
-                    sortAscending:  ": klikken om aflopend te sorteren",
-                    sortDescending: ": klikken om oplopend te sorteren"
+                {
+                  extend: 'pdf',
+                  text: '<i class="fa fa-file-pdf"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar PDF',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  orientation: 'landscape',
+                  pageSize: 'A3',
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'colvis',
+                  text: '<i class="bx bx-filter me-2"></i><span>Alle kolommen</span>',
+                  titleAttr: 'Selecteer kolommen',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  columns: ':not(.noVis)',
+                  init: function (api, node) {
+                    // styling fix
+                    $(node).removeClass('btn-secondary').addClass('btn btn-default');
+                  }
                 }
-            },
-            order: [[1, 'asc']],
-            pageLength: 20,
-            info: false,
+              ]
+            }
+          }
+        });
 
-                });
-            //Hide the default buttons
-             $(".buttons-excel").hide();
-             $(".buttons-pdf").hide();
-             $(".dt-search").hide();
-             //attach click event to custom buttons
-             $("#btnExportExcel").on('click', function (ev) {
-                 $(".buttons-excel").trigger("click");
-             });
-              $("#btnExportPdf").on('click', function (ev) {
-                 $(".buttons-pdf").trigger("click");
-             });
+        // ===== UI-aanpassingen / custom knoppen =====
+        // Verberg standaard knoppen/search indien je eigen UI gebruikt
+        $(".buttons-excel").hide();
+        $(".buttons-pdf").hide();
+        $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
 
-        //custom search textbox
-        oTable = $('#datatable-contracts-list').DataTable();
-        $('#search-term').keyup(function(){
-              oTable.search($(this).val()).draw();
+        // Koppel custom export-knoppen
+        $("#btnExportExcel").on('click', function () {
+          $(".buttons-excel").trigger("click");
+        });
+        $("#btnExportPdf").on('click', function () {
+          $(".buttons-pdf").trigger("click");
+        });
+
+        // Verplaats knoppen naar een eigen container
+        table.buttons(0, null).containers().appendTo('#colvis-container');
+
+        // ===== Custom zoekveld =====
+        $('#search-term').on('keyup', function () {
+          table.search($(this).val()).draw();
         });
         //BIj laden
             $(document).ready(function () {

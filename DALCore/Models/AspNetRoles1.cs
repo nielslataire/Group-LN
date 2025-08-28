@@ -11,5 +11,9 @@ public partial class AspNetRoles1
 
     public string Name { get; set; }
 
+    public string NormalizedName { get; set; }
+
+    public string ConcurrencyStamp { get; set; }
+
     public virtual ICollection<AspNetUsers1> User { get; set; } = new List<AspNetUsers1>();
 }

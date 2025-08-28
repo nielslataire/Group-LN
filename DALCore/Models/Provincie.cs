@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -17,13 +16,4 @@ public partial class Provincie
     public virtual Country Country { get; set; }
 
     public virtual ICollection<PostalCode> PostalCode { get; set; } = new List<PostalCode>();
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.ProvincieId;
-        bo.Display = this.ProvincieName;
-        bo.Group = this.Country.LandNaam;
-        return bo;
-    }
-
 }

@@ -38,27 +38,27 @@ namespace ServiceCore.Translators
 
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(Insurances _entity, InsuranceBO bo, UnitOfWorkCore uow)
+        internal static ErrorCode TranslateBOToEntity(Insurances e, InsuranceBO bo, UnitOfWorkCore uow)
         {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
+            if (e == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
 
-            if (bo.InsuranceCompany.Id != 0)
-                _entity.InsuranceCompanyId = bo.InsuranceCompany.Id;
-            if (bo.ContractActivityID != 0)
-                _entity.ContractActivityId = bo.ContractActivityID;
-            _entity.ExtensionPeriod = bo.ExtensionPeriod;
-            _entity.GuaranteePeriod = bo.GuaranteePeriod;
-            _entity.Period = bo.Period;
-            _entity.Startdate = bo.Startdate;
-            if (bo.Type != 0)
-                _entity.Type = (int)bo.Type;
-            _entity.Enddate = bo.Enddate;
+            // PK Id NIET aanpassen hier
+            e.ContractActivityId = bo.ContractActivityID;                 // FK (1-op-1 via UNIQUE)
+            e.InsuranceCompanyId = bo.InsuranceCompany?.Id;
 
+            e.Startdate = bo.Startdate;
+            e.Period = bo.Period;
+            e.ExtensionPeriod = bo.ExtensionPeriod;
+            e.GuaranteePeriod = bo.GuaranteePeriod;
+            if (bo.Type != 0) e.Type = (int)bo.Type;
+            e.Enddate = bo.Enddate;
+
+            // Navigations NIET zetten bij write
+            // e.ContractActivity = null; e.InsuranceCompany = null;
 
             return ErrorCode.Success;
         }
+
     }
 }

@@ -2,7 +2,6 @@
 #nullable disable
 using System;
 using System.Collections.Generic;
-using BOCore;
 
 namespace DALCore.Models;
 
@@ -14,15 +13,5 @@ public partial class ActivityGroup
 
     public decimal? Lot { get; set; }
 
-    public virtual ICollection<Activity> Activities { get; set; } = new List<Activity>();
-
-    public IdNameBO GetIdName()
-    {
-        IdNameBO bo = new IdNameBO();
-        bo.ID = this.GroupId;
-        bo.Display = "Deel " + this.Lot + " - " + this.Name;
-        bo.Group = System.Convert.ToString(this.Lot);
-        return bo;
-    }
-
+    public virtual ICollection<Activity> Activity { get; set; } = new List<Activity>();
 }

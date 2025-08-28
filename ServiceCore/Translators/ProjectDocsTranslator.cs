@@ -31,17 +31,24 @@ namespace ServiceCore.Translators
         }
         internal static ErrorCode TranslateBOToEntity(ProjectDocs _entity, ProjectDocBO bo, UnitOfWorkCore uow)
         {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
+            if (_entity == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
+
             _entity.Name = bo.Name;
-            _entity.Filename = bo.Filename;
             _entity.ProjectId = bo.ProjectId;
-            _entity.ClientAccountId = bo.ClientAccountId;
+            // FK nullable maken als er geen echte waarde is
+            if (bo.ClientAccountId is int v && v > 0)
+                _entity.ClientAccountId = v;
+            else
+                _entity.ClientAccountId = null;
             _entity.SortOrder = bo.SortOrder;
-            _entity.Type = (int)bo.Type;
+            _entity.Type = (int?)bo.Type;        // entity.Type is int? in jouw screenshot
             _entity.Date = bo.DocDate;
+
+            // >>> Alleen zetten als we een waarde hebben
+            if (!string.IsNullOrWhiteSpace(bo.Filename))
+                _entity.Filename = bo.Filename;
+
             return ErrorCode.Success;
         }
     }

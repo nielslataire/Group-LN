@@ -1,0 +1,78 @@
+﻿@model CPMCore.Models.Projecten.ProjectAddInsurancesModel
+
+
+			@using (Html.BeginForm("EditInsurance", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddInsurance", enctype = "multipart/form-data" }))
+			{
+		@Html.HiddenFor(m => m.ProjectId)
+	@Html.HiddenFor(m => m.Insurance.ContractActivityID)
+	@Html.HiddenFor(m => m.Insurance.Id)
+	<section class="card">
+		<header class="card-header">
+			<h2 class="card-title">Verzekering bewerken </h2>
+		</header>
+		<div class="card-body">
+
+				<div class="form-group">
+					<div class="row align-items-center  pb-3">
+						<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.InsuranceCompany)</label>
+						<div class="col-md-8">
+							@Html.DropDownListFor(m => m.Insurance.InsuranceCompany.Id, new SelectList(Model.Companies, "ID", "Display", Model.Insurance.InsuranceCompany.Id), new { @class = "form-control form-control-modern populate" })
+						</div>					
+					</div>
+				<div class="row align-items-center  pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.Type)</label>
+					<div class="col-md-8">
+						@Html.DropDownListFor(m => m.Insurance.Type, Html.GetEnumSelectList(Model.Insurance.Type.GetType()), new { @class = "form-control form-control-modern" })
+					</div>
+				</div>
+				<div class="row align-items-center  pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.Startdate)</label>
+					<div class="col-md-8">
+						@Html.EditorFor(m => m.Insurance.Startdate)
+					</div>
+				</div>
+				<div class="row align-items-center pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Insurance.Period)</label>
+					<div class="col-md-8">
+						<div class="input-group">
+							@Html.TextBoxFor(m => m.Insurance.Period, new { @class = "form-control form-control-modern", @Type = "number" })
+							<span class="input-group-text">Maanden</span>
+						</div>
+					</div>
+				</div>
+				<div class="row align-items-center pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Insurance.ExtensionPeriod)</label>
+					<div class="col-md-8">
+						<div class="input-group">
+							@Html.TextBoxFor(m => m.Insurance.ExtensionPeriod, new { @class = "form-control form-control-modern", @Type="number"  })
+							<span class="input-group-text">Maanden</span>
+						</div>
+					</div>
+				</div>
+				<div class="row align-items-center pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Insurance.GuaranteePeriod)</label>
+					<div class="col-md-8">
+						<div class="input-group">
+							@Html.TextBoxFor(m => m.Insurance.GuaranteePeriod, new { @class = "form-control form-control-modern", @Type = "number" })
+							<span class="input-group-text">Maanden</span>
+						</div>
+					</div>
+				</div>
+				<div class="row align-items-center  pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Insurance.Enddate)</label>
+					<div class="col-md-8">
+						@Html.EditorFor(m => m.Insurance.Enddate)
+					</div>
+				</div>
+				</div>		
+		</div>
+			<footer class="card-footer">
+				<div class="row">
+					<div class="col-md-12 text-end">
+						<button type="submit" class="btn btn-primary">Bewerken</button>
+						<button class="btn btn-default modal-dismiss">Annuleren</button>
+					</div>
+				</div>
+			</footer>
+		</section>
+	}

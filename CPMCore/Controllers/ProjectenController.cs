@@ -31,12 +31,17 @@ using System.Net;
 
 namespace CPMCore.Controllers
 {
-    //tes
+
     public class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
         private UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration Configuration;
+        // Content-types die we toelaten
+        private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg", "image/jpg", "image/png", "image/gif"
+    };
 
         public ProjectenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration)
         {
@@ -44,6 +49,9 @@ namespace CPMCore.Controllers
             _logger = logger;
             Configuration = configuration;
         }
+
+        // ========== PROJECT DETAIL ==========
+
         public IActionResult Index()
         {
             return View();
@@ -102,7 +110,9 @@ namespace CPMCore.Controllers
                 model.LatestDocs = response5.Values;
             return View(model);
         }
-        //KLANTEN
+
+        // ========== PROJECT DETAIL KLANTEN ==========
+
         [HttpGet]
         [Breadcrumb("Klanten")]
         public ActionResult DetailClients(int projectid)
@@ -122,7 +132,8 @@ namespace CPMCore.Controllers
             return View(model);
         }
 
-        //UNITS
+        // ========== PROJECT DETAIL EENHEDEN ==========
+
         [HttpGet]
         [Breadcrumb("Eenheden")]
         public ActionResult DetailUnits(int projectid)
@@ -537,7 +548,7 @@ namespace CPMCore.Controllers
             }
         }
 
-        //CONTRACTEN
+        // ========== PROJECT DETAIL CONTRACTEN ==========
         [HttpGet]
         [Breadcrumb("Leveranciers")]
         public ActionResult DetailContracts(int projectid)
@@ -960,7 +971,8 @@ namespace CPMCore.Controllers
             return PartialView("_AdditionalOrderRow", nAdditionalOrder);
         }
 
-        //INCOMMING INVOICES
+        // ========== PROJECT - INKOMENDE FACTUREN ==========
+
         [HttpGet]
         [Breadcrumb("Inkomende factuur toevoegen")]
         public ActionResult AddIncommingInvoice(int projectid, int type, int invoiceid = 0)
@@ -1343,7 +1355,8 @@ namespace CPMCore.Controllers
             return View(model);
         }
 
-        //CHANGE ORDERS
+        // ========== WIJZIGINGSOPDRACHTEN KLANTEN/PROJECTEN ==========
+
         [HttpGet]
         [Breadcrumb("Wijzigingsopdracht toevoegen")]
         public ActionResult AddChangeOrder(int projectid, int type, int clientaccountid = 0)
@@ -1649,7 +1662,8 @@ namespace CPMCore.Controllers
             };
             return pdf;
         }
-        //WEATHER
+
+        // ========== WEERVERLET ==========
 
         [HttpGet]
         [Breadcrumb("Weerverlet")]
@@ -1815,7 +1829,8 @@ namespace CPMCore.Controllers
             // of: return Ok(rows);
         }
 
-        //PHOTOS
+        // ========== PROJECT DETAIL FOTO'S ==========
+
         [HttpGet]
         [Breadcrumb("Foto's")]
         public ActionResult DetailPhotos(int projectid)
@@ -1965,6 +1980,627 @@ namespace CPMCore.Controllers
             var fallbackProjectId = picture != null ? picture.ProjectId : 0;
             return RedirectToAction("DetailPhotos", "Projecten", new { projectid = fallbackProjectId });
         }
+
+
+        // ========== PROJECT DETAIL NIEUWS ==========
+
+        [HttpGet]
+        [Breadcrumb("Nieuws")]
+        public IActionResult DetailNews(int projectId)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var _projectService = ServiceFactory.GetProjectService();
+
+            var model = new DetailNewsModel
+            {
+                ProjectId = projectId,
+
+                ProjectName = _projectService.GetProjectNameById(projectId),
+                News = _projectService.GetNewsByProjectId(projectId).Success
+                              ? _projectService.GetNewsByProjectId(projectId).Values
+                              : new List<ProjectNewsBO>()
+            };
+            ViewData["NewsBaseUrl"] = $"{Configuration["URL:ImageWebUrl"]?.TrimEnd('/')}/pictures/News/";
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ModalAddNews(int id)
+        {
+            var vm = new ProjectNewsBO
+            {
+                NewsDate = DateOnly.FromDateTime(DateTime.Now),
+                ProjectId = id 
+            };
+
+            return PartialView("_ModalAddNews", vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult AddNews(ProjectNewsBO newsItem, IFormFile file)
+        {
+            if (!ModelState.IsValid)
+            {
+                AddMessage("error", "Formulier ongeldig.", "Fout!");
+                return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+            }
+            var _projectService = ServiceFactory.GetProjectService();
+            if (file is not null && file.Length > 0 && IsValidImage(file))
+            {
+
+                // bestandsnaam
+                var filename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg";
+
+                // basis directory uit config (bv. "C:\\images\\")
+                var baseDir = (Configuration["URL:ImageLocalURL"] ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(baseDir))
+                {
+                    AddMessage("error", "Upload pad ontbreekt (ImageLocalURL).", "Fout!");
+                    return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+                }
+
+                // submappen
+                var newsDir = Path.Combine(baseDir, "News");
+                var newsOrigDir = Path.Combine(newsDir, "Original");
+                var news800Dir = Path.Combine(newsDir, "800");
+
+                EnsureDir(newsDir);
+                EnsureDir(newsOrigDir);
+                EnsureDir(news800Dir);
+
+                var pMain = Path.Combine(newsDir, filename);
+                var pOrig = Path.Combine(newsOrigDir, filename);
+                var p800 = Path.Combine(news800Dir, filename);
+
+                using (var stream = System.IO.File.Create(pMain))
+                    file.CopyTo(stream);
+                System.IO.File.Copy(pMain, pOrig, overwrite: true);
+                System.IO.File.Copy(pMain, p800, overwrite: true);
+
+                // afbeeldingsbewerkingen (gebruik jouw bestaande helpers)
+                ScaleAndCropImage(pMain, 1280, 500);
+                ScaleImage(p800, 800, 800);
+
+                // koppel picture aan nieuwsitem
+                var picture = new ProjectPictureBO
+                {
+                    Name = filename,
+                    Caption = newsItem.TitleNL,
+                    ProjectId = newsItem.ProjectId,
+                    Type = PictureType.Nieuws,
+                    DateTimeUploaded = DateTime.Now
+                };
+                newsItem.Picture = picture;
+            }
+
+            // auteur (gebruik wat voorhanden is)
+            newsItem.Author = (string?)ViewData["fullname"] ?? User?.Identity?.Name ?? "onbekend";
+
+            var response = _projectService.InsertUpdateNews(newsItem);
+            if (response.Success)
+            {
+                AddMessage("success", "Het nieuwsbericht is toegevoegd.", "Geslaagd!");
+            }
+            else
+            {
+                AddMessage("error", "Het nieuwsbericht is NIET toegevoegd. Probeer opnieuw of contacteer de administrator.", "Fout!");
+            }
+
+            return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+        }
+
+        [HttpGet]
+        public IActionResult ModalDeleteNews(int id)
+        {
+            var vm = new ProjectNewsBO();
+            if (id != 0)
+            {
+                var _projectService = ServiceFactory.GetProjectService();
+                var resp = _projectService.GetNewsById(id);
+                if (resp.Success && resp.Value is not null)
+                    vm = resp.Value;
+            }
+            return PartialView("_ModalDeleteNews", vm);
+        }
+
+        public ActionResult DeleteNews(int id, int projectId, int pictureId)
+        {
+            if (id == 0 || projectId == 0)
+                return RedirectToAction("DetailNews", new { projectId });
+            var _projectService = ServiceFactory.GetProjectService();
+            var resp = _projectService.DeleteNews(new List<int> { id });
+            if (!resp.Success)
+            {
+                AddMessage("error", "Het nieuwsitem is niet verwijderd.", "Fout!");
+                return RedirectToAction("DetailNews", new { projectId });
+            }
+
+            // eventueel gekoppelde foto verwijderen
+            if (pictureId > 0)
+            {
+                try { DeletePictureFile(pictureId); } catch { /* log indien gewenst */ }
+
+                var respPic = _projectService.DeletePicture(new List<int> { pictureId });
+                if (!respPic.Success)
+                {
+                    AddMessage("error", "Nieuws verwijderd maar foto kon niet verwijderd worden.", "Opgelet");
+                    return RedirectToAction("DetailNews", new { projectId });
+                }
+            }
+
+            AddMessage("success", "Het nieuwsitem is verwijderd.", "Geslaagd!");
+            return RedirectToAction("DetailNews", new { projectId });
+        }
+
+        [HttpGet]
+        public IActionResult ModalEditNews(int id)
+        {
+            var vm = new ProjectNewsBO();
+            if (id != 0)
+            {
+                var _projectService = ServiceFactory.GetProjectService();
+                var resp = _projectService.GetNewsById(id);
+                if (resp.Success && resp.Value is not null)
+                    vm = resp.Value;
+            }
+            return PartialView("_ModalEditNews", vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EditNews(ProjectNewsBO newsItem, IFormFile? file, bool RemovePicture = false)
+        {
+            if (!ModelState.IsValid)
+            {
+                AddMessage("error", "Formulier ongeldig.", "Fout!");
+                return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+            }
+
+            var _projectService = ServiceFactory.GetProjectService();
+
+            // Bewaar referentie naar de (mogelijke) bestaande foto om na succes op te ruimen
+            var oldPicId = newsItem.Picture?.Id ?? 0;
+            var oldPicName = newsItem.Picture?.Name;
+
+            // Validatie op bestandstype indien er een upload is
+            if (file is not null && file.Length > 0 && !IsValidImage(file))
+            {
+                AddMessage("error", "Verkeerd bestandstype. Kies een JPG/PNG/GIF.", "Fout!");
+                return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+            }
+
+            // Nieuwe upload?
+            ProjectPictureBO? newPicture = null;
+            if (file is not null && file.Length > 0)
+            {
+                var baseDir = (Configuration["URL:ImageLocalURL"] ?? Configuration["ImageLocalURL"] ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(baseDir))
+                {
+                    AddMessage("error", "Upload pad ontbreekt (URL:ImageLocalURL / ImageLocalURL).", "Fout!");
+                    return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+                }
+
+                var newsDir = Path.Combine(baseDir, "News");
+                var newsOrigDir = Path.Combine(newsDir, "Original");
+                EnsureDir(newsDir);
+                EnsureDir(newsOrigDir);
+
+                var filename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg";
+                var pMain = Path.Combine(newsDir, filename);
+                var pOrig = Path.Combine(newsOrigDir, filename);
+
+                using (var stream = System.IO.File.Create(pMain))
+                    file.CopyTo(stream);
+                System.IO.File.Copy(pMain, pOrig, overwrite: true);
+
+                // Crop naar headerformaat (pas je helper aan indien nodig)
+                ScaleAndCropImage(pMain, 1280, 500);
+
+                newPicture = new ProjectPictureBO
+                {
+                    Name = filename,
+                    Caption = newsItem.TitleNL,
+                    ProjectId = newsItem.ProjectId,
+                    Type = PictureType.Nieuws,
+                    DateTimeUploaded = DateTime.Now
+                };
+
+                // Koppel nieuwe foto aan het nieuwsitem
+                newsItem.Picture = newPicture;
+            }
+            else if (RemovePicture)
+            {
+                // Alleen verwijderen (geen nieuwe upload)
+                newsItem.Picture = null;               // verwijder koppeling
+                                                       // de eigenlijke oude foto (record + bestand) ruimen we op ná een geslaagde update
+            }
+            // Else: niets doen → bestaande foto blijft gekoppeld
+
+            var response = _projectService.InsertUpdateNews(newsItem);
+
+            if (response.Success)
+            {
+                // Als we een nieuwe foto hebben gezet of expliciet verwijderen, oude foto opruimen
+                if ((newPicture is not null || RemovePicture) && oldPicId > 0)
+                {
+                    try { DeletePictureFile(oldPicId); } catch { /* loggen indien gewenst */ }
+                    _projectService.DeletePicture(new List<int> { oldPicId });
+                }
+
+                AddMessage("success", "Het nieuwsbericht is bijgewerkt.", "Geslaagd!");
+            }
+            else
+            {
+                AddMessage("error", "Het nieuwsbericht is NIET bijgewerkt.", "Fout!");
+            }
+
+            return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+        }
+
+        // ========== PROJECT DETAIL DOCS ==========
+
+        [HttpGet]
+        public IActionResult DetailDocs(int projectid, int? clientaccountid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            ViewBag.DocWebUrl = Configuration["URL:DocWebUrl"];
+
+            var service = ServiceFactory.GetProjectService();
+            var cservice = ServiceFactory.GetClientService();
+            var model = new DetailDocsModel
+            {
+                ProjectId = projectid,
+                ProjectName = service.GetProjectNameById(projectid),
+
+            };
+
+            // Als er een client is: clientdocs, anders projectdocs
+            if (clientaccountid.HasValue && clientaccountid.Value > 0)
+            {
+
+                var respClient = service.GetClientDocs(clientaccountid.Value);
+                model.ClientAccountId = (int)clientaccountid;
+                model.ClientName = cservice.GetClientAccountNameById(model.ClientAccountId);
+
+
+                if (respClient.Success)
+                    model.Docs = respClient.Values;
+                else
+                    model.Docs = new List<ProjectDocBO>();
+            }
+            else
+            {
+                var respProj = service.GetProjectDocs(projectid);
+                if (respProj.Success)
+                    model.Docs = respProj.Values;
+                else
+                    model.Docs = new List<ProjectDocBO>();
+            }
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ModalAddDoc(int id, int? clientaccountid)
+        {
+            var vm = new ProjectDocBO
+            {
+                ProjectId = id,
+                ClientAccountId = clientaccountid ?? 0
+            };
+            return PartialView("_ModalAddDoc", vm);
+        }
+        [HttpPost]
+        public async Task<IActionResult> AddDocument(ProjectDocBO model, IFormFile file)
+        {
+
+            if (file == null || file.Length <= 0)
+            {
+                ModelState.AddModelError("Upload", "U moet een bestand kiezen");
+                return RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
+            }
+            if (model.ClientAccountId is int i && i <= 0)
+                model.ClientAccountId = null;
+            var ext = Path.GetExtension(file.FileName) ?? string.Empty;
+            var filename = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + ext;
+
+            var uploadDir = Configuration["URL:DocLocalURL"];
+            if (string.IsNullOrWhiteSpace(uploadDir))
+                uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Docs");
+
+            Directory.CreateDirectory(uploadDir);
+            var fullPath = Path.Combine(uploadDir, filename);
+
+            using (var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                await file.CopyToAsync(fs);
+            }
+
+            // Zet filename in het BO vóór de service call
+            model.Filename = filename;
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdateProjectDoc(model);
+
+            var clientIdVal = (model.ClientAccountId is int v && v > 0) ? v : 0;
+
+            if (response.Success)
+            {
+                AddMessage("success", "Het document is toegevoegd / bijgewerkt", "Gelukt!");
+                return clientIdVal > 0
+                    ? RedirectToAction("Detail", "Klanten", new { clientid = clientIdVal, projectid = model.ProjectId })
+                    : RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
+            }
+
+            AddMessage("error", "Het document is NIET toegevoegd / bijgewerkt, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+            return clientIdVal > 0
+                ? RedirectToAction("DetailDocs", new { clientaccountid = clientIdVal, projectid = model.ProjectId })
+                : RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
+        }
+        [HttpGet]
+        public IActionResult DownloadDoc(int id, string? asName = null)
+        {
+            var svc = ServiceFactory.GetProjectService();
+            var resp = svc.GetProjectDoc(id);
+            if (!resp.Success || resp.Value == null) return NotFound();
+
+            var doc = resp.Value;
+
+            // Pad naar opslag
+            var uploadDir = Configuration["URL:DocLocalURL"];
+            if (string.IsNullOrWhiteSpace(uploadDir))
+                uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Docs");
+
+            var path = Path.Combine(uploadDir, doc.Filename ?? "");
+            if (!System.IO.File.Exists(path)) return NotFound();
+
+            // ContentType
+            var ext = Path.GetExtension(path)?.ToLowerInvariant();
+            var contentType = ext switch
+            {
+                ".pdf" => "application/pdf",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                _ => "application/octet-stream"
+            };
+
+            // Gewenste downloadnaam (zorg dat extensie klopt)
+            var desired = string.IsNullOrWhiteSpace(asName) ? doc.Filename : asName;
+            if (!desired.EndsWith(ext ?? "", StringComparison.OrdinalIgnoreCase))
+                desired = Path.GetFileNameWithoutExtension(desired) + ext;  // ext van het echte bestand
+
+            var stream = System.IO.File.OpenRead(path);
+            return File(stream, contentType, fileDownloadName: desired);
+        }
+
+        [HttpGet]
+        public IActionResult ModalDeleteDoc(int id)
+        {
+            var vm = new ProjectDocBO();
+            if (id != 0)
+            {
+                var _projectService = ServiceFactory.GetProjectService();
+                var resp = _projectService.GetProjectDoc(id);
+                if (resp.Success && resp.Value is not null)
+                    vm = resp.Value;
+            }
+            return PartialView("_ModalDeleteDoc", vm);
+        }
+
+        public ActionResult DeleteDoc(int id, int projectId)
+        {
+            if (id == 0 || projectId == 0)
+                return RedirectToAction("DetailDocs", new { projectId });
+            var _projectService = ServiceFactory.GetProjectService();
+            var resp = _projectService.DeleteProjectDoc(new List<int> { id });
+            if (!resp.Success)
+            {
+                AddMessage("error", "Het document is niet verwijderd.", "Fout!");
+                return RedirectToAction("DetailDocs", new { projectId });
+            }
+
+            AddMessage("success", "Het document is verwijderd.", "Geslaagd!");
+            return RedirectToAction("DetailDocs", new { projectId });
+        }
+
+        // ========== PROJECT DETAIL INSURANCES ==========
+
+        [HttpGet]
+        public IActionResult DetailInsurances(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var model = new DetailInsurancesModel();
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetProjectInsurances(projectid);
+
+            if (response.Success)
+                model.Insurances = response.Values;
+
+            model.ProjectId = projectid;
+            model.ProjectName = service.GetProjectNameById(projectid);
+
+            return View(model);
+        }
+
+        //[HttpGet]
+        //public IActionResult ModalEditInsurance(int id)
+        //{
+        //    var viewModel = new ProjectAddInsurancesModel
+        //    {
+        //        ProjectId = id,
+        //        Insurance = new InsuranceBO() // zeker zijn dat Insurance niet null is
+        //        {
+        //            Startdate = DateOnly.FromDateTime(DateTime.Now)
+        //        }
+        //    };
+
+        //    var service = ServiceFactory.GetInsuranceService();
+        //    var cservice = ServiceFactory.GetCompanyService();
+
+        //    var cresponse = cservice.GetCompanyForSelectByActivity(142);
+        //    if (cresponse.Success) viewModel.Brokers = cresponse.Values;
+
+        //    var response = service.GetInsuranceCompaniesForSelect();
+        //    if (response.Success) viewModel.Companies = response.Values;
+
+        //    return PartialView("_ModalEditInsurance", viewModel);
+        //}
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EditInsurance(ProjectAddInsurancesModel viewmodel)
+        {
+            var response = new Response();
+
+            if (ModelState.IsValid)
+            {
+                if (viewmodel?.Insurance == null)
+                {
+                    response.AddError("Insurance model is leeg.");
+                }
+                else
+                {
+                    viewmodel.Insurance.ProjectID = viewmodel.ProjectId;
+                    var service = ServiceFactory.GetInsuranceService();
+                    response = service.InsertUpdate(viewmodel.Insurance);
+                }
+            }
+
+            if (response.Success)
+            {
+                AddMessage("success", "De verzekering is toegevoegd", "Geslaagd!");
+            }
+            else
+            {
+                AddMessage("error", "De verzekering is NIET toegevoegd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+            }
+
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid = viewmodel?.Insurance?.ProjectID ?? viewmodel?.ProjectId });
+        }
+
+        [HttpGet]
+        public IActionResult ModalDeleteInsurance(int id)
+        {
+            var viewModel = new InsuranceBO();
+
+            if (id != 0)
+            {
+                var dservice = ServiceFactory.GetInsuranceService();
+                viewModel = dservice.GetInsuranceById(id).Value;
+            }
+
+            return PartialView("_ModalDeleteInsurance", viewModel);
+        }
+
+        //[HttpPost]
+        //[ValidateAntiForgeryToken]
+        //public IActionResult DeleteInsurance(int id, int projectid)
+        //{
+        //    if (id != 0 && projectid != 0)
+        //    {
+        //        var service = ServiceFactory.GetInsuranceService();
+        //        var ids = new List<int> { id };
+        //        var response = service.Delete(ids);
+
+        //        if (response.Success)
+        //        {
+        //            AddMessage("success", "De verzekering is verwijderd", "Geslaagd!");
+        //        }
+        //        else
+        //        {
+        //            AddMessage("error", "De verzekering is niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+        //        }
+
+        //        return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
+        //    }
+
+        //    return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
+        //}
+
+        [HttpGet]
+        public IActionResult ModalEndInsurance(int id)
+        {
+            var viewModel = new InsuranceBO();
+
+            if (id != 0)
+            {
+                var dservice = ServiceFactory.GetInsuranceService();
+                viewModel = dservice.GetInsuranceById(id).Value;
+
+                if (viewModel != null)
+                {
+                    if (viewModel.Type == InsuranceType.ABR && viewModel.Startdate.HasValue)
+                    {
+                        var start = viewModel.Startdate.Value;
+                        viewModel.Enddate = start.AddMonths(
+                            viewModel.Period ?? 0 + viewModel.ExtensionPeriod ?? 0 + viewModel.GuaranteePeriod ?? 0
+                        );
+                    }
+                    else
+                    {
+                        viewModel.Enddate = DateOnly.FromDateTime(DateTime.Now);
+                    }
+                }
+            }
+
+            return PartialView("ModalEndInsurance", viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult EndInsurance(InsuranceBO viewmodel)
+        {
+            var response = new Response();
+
+            if (ModelState.IsValid)
+            {
+                var service = ServiceFactory.GetInsuranceService();
+                response = service.InsertUpdate(viewmodel);
+            }
+
+            if (response.Success)
+            {
+                AddMessage("success", "De verzekering is beëindigd", "Geslaagd!");
+            }
+            else
+            {
+                AddMessage("error", "De verzekering is NIET beëindigd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
+            }
+
+            return RedirectToAction("DetailInsurances", "Projecten", new { projectid = viewmodel.ProjectID });
+        }
+
+        [HttpGet]
+        public IActionResult ModalEditInsurance(int id)
+        {
+            var viewModel = new ProjectAddInsurancesModel();
+
+            if (id != 0)
+            {
+                var dservice = ServiceFactory.GetInsuranceService();
+                viewModel.Insurance = dservice.GetInsuranceById(id).Value;
+            }
+
+            // zeker dat ProjectId gezet is
+            viewModel.ProjectId = viewModel.Insurance?.ProjectID ?? viewModel.ProjectId;
+
+            var service = ServiceFactory.GetInsuranceService();
+            var cservice = ServiceFactory.GetCompanyService();
+
+            var cresponse = cservice.GetCompanyForSelectByActivity(142);
+            if (cresponse.Success) viewModel.Brokers = cresponse.Values;
+
+            var response = service.GetInsuranceCompaniesForSelect();
+            if (response.Success) viewModel.Companies = response.Values;
+
+            // Zelfde partial als Add
+            return PartialView("_ModalEditInsurance", viewModel);
+        }
+
+
+
 
 
         //SHARED
@@ -2286,6 +2922,9 @@ namespace CPMCore.Controllers
                 image.Save(imagePath, encoder); // <-- in-place
             }
         }
+        private static bool IsValidImage(IFormFile file) => _validImageTypes.Contains(file.ContentType);
+
+
         private static void EnsureDir(string dir)
         {
             if (!string.IsNullOrWhiteSpace(dir))

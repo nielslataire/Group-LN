@@ -921,6 +921,19 @@ namespace CPMCore.Models.Projecten
                 _clientname = value;
             }
         }
+        private ProjectDocBO _uploaddoc;
+        public ProjectDocBO UploadDoc
+        {
+            get
+            {
+                return _uploaddoc;
+            }
+            set
+            {
+                _uploaddoc = value;
+            }
+        }
+
     }
     public class DetailChangeOrderModel
     {
@@ -3231,8 +3244,8 @@ namespace CPMCore.Models.Projecten
                 _insurance = value;
             }
         }
-        private string _projectname;
-        public string ProjectName
+        private string? _projectname;
+        public string? ProjectName
         {
             get
             {
