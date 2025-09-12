@@ -119,8 +119,22 @@
                         <h5 class="mb-4 mt-0">Een overzicht van alle kosten van het project</h5>
                     </div>
                     <div class="col-sm-auto px-0">
-                        @*                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
-                    <button type="button" class="btn btn-primary btn-md px-3" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button> *@
+                        <a class="btn btn-default btn-md px-3" href="@Url.Action("CalculationSettings", "Projecten", new { projectid = Model.ProjectId })">
+                          <i class="fas fa-cog me-2"></i>Budget instellen
+                        </a>
+                        <a class="btn btn-default btn-md px-3" href="@Url.Action("PrintRecalculation", "Projecten", new { projectid = Model.ProjectId })">
+                          <i class="fas fa-file-pdf me-2"></i>Afdrukken
+                        </a>
+                        <div class="btn-group flex-wrap">
+												<button type="button" class="mb-1 mt-1 me-1 btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-plus me-2"></i>Toevoegen <span class="caret"></span></button>
+												<div class="dropdown-menu dropdown-menu-start" role="menu" style="">
+													<a class="dropdown-item text-1" href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId})">Contract</a>
+													<a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0  })">Inkomende factuur - contract</a>
+													<a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 1  })">Inkomende factuur - zonder contract</a>
+												</div>
+											</div>
+
+@*                         <button type="button" class="btn btn-primary btn-md px-3" id="btnAdd"><i class="fas fa-plus me-2"></i>Inkomende factuur</button> *@
                     </div>
                 </div>
             </div>
@@ -396,190 +410,7 @@
             </section>
 
             
-          @*   <div class="row">
-                <div class="card card-modern">
-                    <div class="card-body">
-                        <div class="datatables-header-footer-wrapper mt-2">
-                            <div class="datatable-header">
-                                <div class="row align-items-center mb-3">
-
-                                    <div class="col-12 col-lg-auto mb-3 mb-lg-0">
-                                        <div class="btn-group flex-wrap">
-                                            <button type="button" class="mb-1 mt-1 me-1 btn btn-primary btn-md font-weight-semibold btn-py-2 px-4 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-print"></i> <span class="caret"></span></button>
-                                            <div class="dropdown-menu" role="menu" style="">
-                                                <a class="dropdown-item text-1" href="@Url.Action("PrintRecalculation", "Pdf", new {projectid = Model.ProjectId, details = 0})">Overzicht</a>
-                                                <a class="dropdown-item text-1" href="@Url.Action("PrintRecalculation", "Pdf", new {projectid = Model.ProjectId, details = 1})">Overzicht met details</a>
-                                            </div>
-                                        </div>
-                                        <div class="btn-group flex-wrap">
-                                            <button type="button" class="mb-1 mt-1 me-1 btn btn-primary btn-md font-weight-semibold btn-py-2 px-4 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa fa-plus"></i> <span class="caret"></span></button>
-                                            <div class="dropdown-menu" role="menu" style="">
-                                                <a class="dropdown-item text-1" href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})">Contract</a>
-                                                <li class="divider"></li>
-                                                <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new {projectid = Model.ProjectId, type = "1"})">Factuur zonder contract</a> 
-                                                <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new {projectid = Model.ProjectId, type = "0"})">Factuur binnen contract</a>
-                                            </div>
-                                        </div>
-                                        <a href="@Url.Action("CalculationSettings", "Projecten" , new {projectid=Model.ProjectId })" class="mb-1 mt-1 me-1 btn btn-primary btn-md font-weight-semibold btn-py-2 px-4" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-original-title="Instellingen"><i class="fa fa-gear"></i></a>
-                                       
-                                    </div>
-                                    <div class="col-8 col-lg-auto ms-auto ml-auto mb-3 mb-lg-0">
-                                    </div>
-                                    <div class="col-4 col-lg-auto ps-lg-1 mb-3 mb-lg-0">
-                                    </div>
-                                    <div class="col-12 col-lg-auto ps-lg-1">
-                                        
-                                    </div>
-                                </div>
-                            </div>
-
-                            <table class="table table-ecommerce-simple mb-0" style="min-width: 550px;">
-                                <thead>
-                                    <tr>
-                                        <th data-sortable="false">Lot</th>
-                                        <th>Omsschrijving</th>
-                                        <th class="text-right">Budget</th>
-                                        <th class="text-right">Contract</th>
-                                        <th class="text-right">Gefactureerd</th>
-                                        <th class="text-right"><i class="fa fa-plus-minus me-2"></i>Budget - Contract</th>
-                                        <th class="text-right"><i class="fa fa-plus-minus me-2"></i>Budget - Facturatie</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var group in Model.ActivityGroups)
-                                {
-                                    var groupId = $"group-{group.ID}";
-
-
-                                        <tr class="clickable" data-bs-toggle="collapse" data-bs-target="#details-@group.ID" aria-expanded="false" aria-controls="details-@group.ID">
-                                            <td class="dt-type-string">
-                                                <i class="far fa-plus-square text-primary me-2"></i>
-                                                Deel @group.Lot
-                                            </td>
-                                            <td class="text-weight-bold">
-                                                @group.Name
-                                            </td>
-
-                                            @{
-                                                var budgetActivitySum = Model.BudgetActivities
-                                                .Where(l => l.Activity.Group.ID == group.ID)
-                                                .Sum(s => s.Price);
-
-                                                var contractSum = Model.Contracts
-                                                .SelectMany(s => s.Activities.Where(w => w.Activity.Group.ID == group.ID))
-                                                .Sum(s => s.Price);
-
-                                                var incomingInvoiceSum = Model.IncommingInvoicesActivities
-                                                .Where(l => l.Activity.Group.ID == group.ID)
-                                                .Sum(t => t.Price);
-                                            }
-
-                                            <td class="text-right dt-type-numeric" width="10%">
-                                                @String.Format("{0:C}", budgetActivitySum)
-                                            </td>
-                                            <td class="text-right dt-type-numeric" width="10%">
-                                                @String.Format("{0:C}", contractSum)
-                                            </td>
-                                            <td class="text-right dt-type-numeric" width="10%">
-                                                @String.Format("{0:C}", incomingInvoiceSum)
-                                            </td>
-
-                                            <td class="text-right dt-type-numeric @(budgetActivitySum - contractSum < 0 ? "text-danger" : "")" width="10%">
-                                                @String.Format("{0:C}", budgetActivitySum - contractSum)
-                                            </td>
-                                            <td class="text-right dt-type-numeric @(budgetActivitySum - incomingInvoiceSum < 0 ? "text-danger" : "")" width="10%">
-                                                @String.Format("{0:C}", budgetActivitySum - incomingInvoiceSum)
-                                            </td>
-                                        </tr>
-                                        @foreach (var activity in group.Activities.Where(m => Model.Contracts.Any(a => a.Activities.Any(i => i.Activity.ID == m.ID))
-                                       || Model.BudgetActivities.Any(l => l.Activity.ID == m.ID)
-                                       || Model.IncommingInvoicesActivities.Any(l => l.Activity.ID == m.ID))
-                                       .OrderBy(o => o.Name))
-                                        {
-                                            // Berekeningen van de sommen vooraf om herhaalde berekeningen te vermijden
-                                            var budgetActivitySum2 = Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
-                                            var contractSum2 = Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID))
-                                            .GroupBy(g => g.ContractId)
-                                            .Sum(s => s.Sum(t => t.Price));
-                                            var incomingInvoiceSum2 = Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
-
-                                            <tr class="collapse table-secondary" id="details-@group.ID">
-                                                <td></td>
-                                                <td>
-                                                    <a href="@Url.Action("RecalculationDetail", "Projecten", new { projectid = Model.ProjectId, activityid = activity.ID, groupid = group.ID })">@activity.Name</a>
-                                                </td>
-                                                <td class="text-right" width="10%">
-                                                    @if (Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Count() > 0)
-                                                    {
-                                                        @String.Format("{0:C}", budgetActivitySum2)
-                                                    }
-                                                </td>
-                                                <td class="text-right" width="10%">
-                                                    @String.Format("{0:C}", contractSum2)
-                                                </td>
-                                                <td class="text-right" width="10%">
-                                                    @String.Format("{0:C}", incomingInvoiceSum2)
-                                                </td>
-
-                                                @if (budgetActivitySum2 - contractSum2 >= 0)
-                                                {
-                                                    <td class="text-right" width="10%">
-                                                        @String.Format("{0:C}", budgetActivitySum2 - contractSum2)
-                                                    </td>
-                                                }
-                                                else
-                                                {
-                                                    <td class="text-right text-danger" width="10%">
-                                                        @String.Format("{0:C}", budgetActivitySum2 - contractSum2)
-                                                    </td>
-                                                }
-
-                                                @if (budgetActivitySum2 - incomingInvoiceSum2 >= 0)
-                                                {
-                                                    <td class="text-right" width="10%">
-                                                        @String.Format("{0:C}", budgetActivitySum2 - incomingInvoiceSum2)
-                                                    </td>
-                                                }
-                                                else
-                                                {
-                                                    <td class="text-right text-danger" width="10%">
-                                                        @String.Format("{0:C}", budgetActivitySum2 - incomingInvoiceSum2)
-                                                    </td>
-                                                }
-                                            </tr>
-                                        }
-                                    }
-
-                                    
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td></td>
-                                        <td></td>
-                                        <td class="text-right"></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                    <tr class="primary">
-                                        <td></td>
-                                        <td>TOTAAL</td>
-                                        <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price))</td>
-                                        <td class="text-right">@String.Format("{0:C}", Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
-                                        <td class="text-right">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
-                                        <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.Contracts.Sum(s => s.Activities.Sum(f => f.Price)))</td>
-                                        <td class="text-right">@String.Format("{0:C}", Model.BudgetActivities.Sum(s => s.Price) - Model.IncommingInvoicesActivities.Sum(s => s.Price))</td>
-                                    </tr>
-
-                                </tfoot>
-                            </table>
-
-                        </div>
-                    </div>
-
-                </div>
-            </div> *@
+         
 
         </div>
     </div>

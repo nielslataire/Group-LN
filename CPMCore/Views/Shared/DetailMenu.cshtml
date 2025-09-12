@@ -1,48 +1,11 @@
 ﻿@model Int32
-@* <li>
-    <a href="@Url.Action("Detail", "Projecten", new {projectid = Model})" class="menu-item"> Project</a>
-
-</li>
-<li>
-    <a href="@Url.Action("Recalculation", "Projecten", new  {projectid = Model})" class="menu-item">Nacalculatie</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailContracts", "Projecten", new  {projectid = Model})" class="menu-item">Contracten</a>
-</li>
-<li>
-    <a href="@Url.Action("ProjectVacationDays", "Projecten", new  {projectid = Model})" class="menu-item">Verlofdagen project</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailPhotos", "Projecten", new  {projectid = Model})" class="menu-item"> Foto's</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailNews", "Projecten", new  {projectid = Model})" class="menu-item">Nieuws</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailClients", "Projecten", new  {projectid = Model})" class="menu-item">Klanten</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailUnits", "Projecten", new  {projectid = Model})" class="menu-item">Eenheden</a>
-</li>
-<li>
-    <a href="@Url.Action("Sales", "Projecten", new  {projectid = Model})" class="menu-item">Verkoop</a>
-</li>
-<li>
-    <a href="@Url.Action("Invoicing", "Projecten", new  {projectid = Model})" class="menu-item">Facturatie</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailDocs", "Projecten", new  {projectid = Model})" class="menu-item">Documenten</a>
-</li>
-<li>
-    <a href="@Url.Action("DetailInsurances", "Projecten", new  {projectid = Model})" class="menu-item">Vezekeringen</a>
-</li> *@
 
 <div class="inner-menu-toggle">
     <a href="#" class="inner-menu-expand" data-open="inner-menu">
         Toon Menu <i class="fas fa-chevron-right"></i>
     </a>
 </div>
-<menu id="content-menu" class="inner-menu" role="menu">
+<menu id="content-menu" class="inner-menu menu-offset" role="menu">
 	<div class="nano has-scrollbar">
 		<div class="nano-content" tabindex="0" style="right: -15px;">
 
@@ -127,8 +90,8 @@
 				<h6 class="title">FINANCIEEL</h6>
 				<ul class="list-unstyled mt-3 pt-3">
 					<li>
-						<a href="@Url.Action("Sales", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "Sales" && currentController == "Projecten" ? "active" : "")">
+						<a href="@Url.Action("DetailSales", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailSales" && currentController == "Projecten" ? "active" : "")">
 							Verkoop
 						</a>
 					</li>

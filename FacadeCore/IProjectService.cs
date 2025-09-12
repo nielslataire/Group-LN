@@ -85,6 +85,7 @@ namespace FacadeCore
         GetResponse<ProjectSalesSettingsBO> GetSalesSettings(List<int> ids);
         GetResponse<ProjectSalesDataBO> GetProjectSalesData(List<int> ids);
         Response InsertUpdateSalesSettings(ProjectSalesSettingsBO salessettings);
+        Response InsertUpdateSalesText(ProjectBO project);
         Response DeleteSalesSettings(List<int> ids);
         Response DeleteSalesSettings(List<ProjectSalesSettingsBO> bos);
         //int GetProjectVatPercentage(int projectid);

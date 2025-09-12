@@ -1,0 +1,25 @@
+﻿/* ruimte onderaan zoals je al had */
+.content-with-menu .inner-body {
+    padding-bottom: 80px;
+}
+
+/* desktop/hoog scherm: override Porto's fixed balk */
+@media (min-height: 800px) and (min-width: 992px) {
+    .content-with-menu .ecommerce-form.action-buttons-fixed > .action-buttons {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: var(--menus-w, 0px) !important; /* dynamische som van menus */
+        right: 0 !important;
+        width: auto !important; /* neutraliseert theme calc(...) */
+        z-index: 3;
+    }
+}
+
+/* mobiel: volle breedte */
+@media (max-width: 991.98px) {
+    .content-with-menu .ecommerce-form.action-buttons-fixed > .action-buttons {
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+    }
+}

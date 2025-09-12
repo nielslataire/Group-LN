@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using AspNetCoreGeneratedDocument;
 using BOCore;
-using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using AspNetCoreGeneratedDocument;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
 
 namespace CPMCore.Models.Projecten
 {
@@ -1541,7 +1542,9 @@ namespace CPMCore.Models.Projecten
         public ProjectSalesModel()
         {
             _unitsgrouped = new List<GroupUnitsWithAttachedUnitsBO>();
+            _projectunits = new List<UnitWithAttachedUnitsBO>();
         }
+
         private int _projectid;
         public int ProjectId
         {
@@ -1566,6 +1569,7 @@ namespace CPMCore.Models.Projecten
                 _projectname = value;
             }
         }
+
         private List<GroupUnitsWithAttachedUnitsBO> _unitsgrouped;
         public List<GroupUnitsWithAttachedUnitsBO> UnitsGrouped
         {
@@ -1578,6 +1582,198 @@ namespace CPMCore.Models.Projecten
                 _unitsgrouped = value;
             }
         }
+        private List<UnitWithAttachedUnitsBO> _projectunits;
+        public List<UnitWithAttachedUnitsBO> ProjectUnits
+        {
+            get
+            {
+                return _projectunits;
+            }
+            set
+            {
+                _projectunits = value;
+            }
+        }
+    }
+    public class ProjectSalesSettingsModel
+    {
+        public ProjectSalesSettingsModel()
+        {
+
+        }
+
+        private int _projectid;
+        public int ProjectId
+        {
+            get
+            {
+                return _projectid;
+            }
+            set
+            {
+                _projectid = value;
+            }
+        }
+        private string? _projectname;
+        public string? ProjectName
+        {
+            get
+            {
+                return _projectname;
+            }
+            set
+            {
+                _projectname = value;
+            }
+        }
+        private ProjectSalesSettingsBO _settings;
+        public ProjectSalesSettingsBO Settings
+        {
+            get
+            {
+                return _settings;
+            }
+            set
+            {
+                _settings = value;
+            }
+        }
+        private ProjectBO _project;
+        public ProjectBO Project
+        {
+            get
+            {
+                return _project;
+            }
+            set
+            {
+                _project = value;
+            }
+        }
+
+
+    }
+
+    public class ProjectCostCalculationVM
+    {
+        public int ProjectId { get; set; }
+
+        // Percentages/instellingen
+        public decimal VatPercent { get; set; }
+        public decimal RegistrationPercent { get; set; }
+        public RegistrationType RegistrationType { get; set; }
+        public bool MixedVatRegistration { get; set; }
+
+        // Invoer bovenaan
+        public decimal FixedCertificateCost { get; set; }        // ⬅️ vaste aktekost (globaal)
+        public decimal SurveyorFee { get; set; }                 // per unit
+        public decimal ConnectionFee { get; set; }               // per unit
+        public decimal BaseDeedShare { get; set; }               // per unit
+        public decimal ParcelCost { get; set; }                  // per unit
+        public decimal MortgageRegistrationCost { get; set; }    // ⬅️ hypotheekkantoor (globaal)
+
+        public decimal VatPctCostsOther { get; set; }            // 21
+        public decimal VatPctCostsConnection { get; set; }       // = VatPercent
+
+        public List<UnitCostLineVM> Lines { get; set; } = new();
+
+        public CostTotalsVM CostTotals { get; set; } = new();
+
+        public int UnitCount => Lines?.Count ?? 0;
+
+        // … je bestaande aggregaten (Land/Build/Base/VAT/Registration) …
+
+        public decimal TotalLandBase => Lines?.Sum(x => x.LandBase) ?? 0m;
+        public decimal TotalBuildBase => Lines?.Sum(x => x.BuildBase) ?? 0m;
+        public decimal TotalLandDiscount => Lines?.Sum(x => x.LandDiscount) ?? 0m;
+        public decimal TotalBuildDiscount => Lines?.Sum(x => x.BuildDiscount) ?? 0m;
+        public decimal TotalNetLandBase => Lines?.Sum(x => x.NetLandBase) ?? 0m;
+        public decimal TotalNetBuildBase => Lines?.Sum(x => x.NetBuildBase) ?? 0m;
+        public decimal TotalBase => Lines?.Sum(x => x.BasePrice) ?? 0m;
+        public decimal TotalVatOnBase => Lines?.Sum(x => x.VatAmount) ?? 0m;
+        public decimal TotalRegistration => Lines?.Sum(x => x.RegistrationAmount) ?? 0m;
+
+        // Per-rij kosten zijn zónder notaris, vaste akte & hypo → die komen via CostTotals erbij
+        public decimal TotalCostsExcl => (Lines?.Sum(x => x.CostsExcl) ?? 0m) + (CostTotals?.NotaryExcl ?? 0m) + (CostTotals?.FixedActeExcl ?? 0m) + (CostTotals?.MortgageExcl ?? 0m);
+        public decimal TotalCostsVat => (Lines?.Sum(x => x.CostsVat) ?? 0m) + (CostTotals?.NotaryVat ?? 0m) + (CostTotals?.FixedActeVat ?? 0m) + (CostTotals?.MortgageVat ?? 0m);
+        public decimal TotalCostsIncl => TotalCostsExcl + TotalCostsVat;
+
+        // Grand total = som van alle rij-totalen + globale posten (incl btw)
+        public decimal GrandTotal => (Lines?.Sum(x => x.Total) ?? 0m) + (CostTotals?.NotaryIncl ?? 0m) + (CostTotals?.FixedActeIncl ?? 0m) + (CostTotals?.MortgageIncl ?? 0m);
+    }
+
+    public class UnitCostLineVM
+    {
+        public int UnitId { get; set; }
+        public string Code { get; set; }
+
+        public decimal LandBase { get; set; }
+        public decimal BuildBase { get; set; }
+
+        public decimal LandDiscount { get; set; }
+        public decimal BuildDiscount { get; set; }
+
+        public decimal NetLandBase => Math.Max(0m, LandBase - LandDiscount);
+        public decimal NetBuildBase => Math.Max(0m, BuildBase - BuildDiscount);
+        public decimal BasePrice => NetLandBase + NetBuildBase;
+
+        public decimal VatAmount { get; set; }
+        public decimal RegistrationAmount { get; set; }
+
+        public bool IncludePerUnitCosts { get; set; }
+
+        // Deze 4 per-unit kosten worden alleen gevuld als IncludePerUnitCosts = true
+        public decimal CostsExcl { get; set; }
+        public decimal CostsVat { get; set; }
+        public decimal CostsIncl => CostsExcl + CostsVat;
+
+        public decimal Total => BasePrice + VatAmount + RegistrationAmount + CostsIncl;
+    }
+
+    public class CostTotalsVM
+    {
+        // Globale kosten
+        public decimal NotaryExcl { get; set; }          // Notariskosten (schijven)
+        public decimal NotaryVat { get; set; }
+        public decimal NotaryIncl => NotaryExcl + NotaryVat;
+
+        public decimal FixedActeExcl { get; set; }       // Vaste aktekost (input)
+        public decimal FixedActeVat { get; set; }
+        public decimal FixedActeIncl => FixedActeExcl + FixedActeVat;
+
+        public decimal MortgageExcl { get; set; }        // Hypotheekkantoor
+        public decimal MortgageVat { get; set; }
+        public decimal MortgageIncl => MortgageExcl + MortgageVat;
+
+        // Per eenheid, samengevoegd tot totalen
+        public decimal SurveyorExcl { get; set; }
+        public decimal SurveyorVat { get; set; }
+        public decimal SurveyorIncl => SurveyorExcl + SurveyorVat;
+
+        public decimal ConnectionExcl { get; set; }
+        public decimal ConnectionVat { get; set; }
+        public decimal ConnectionIncl => ConnectionExcl + ConnectionVat;
+
+        public decimal BaseDeedExcl { get; set; }
+        public decimal BaseDeedVat { get; set; }
+        public decimal BaseDeedIncl => BaseDeedExcl + BaseDeedVat;
+
+        public decimal ParcelExcl { get; set; }
+        public decimal ParcelVat { get; set; }
+        public decimal ParcelIncl => ParcelExcl + ParcelVat;
+
+        // Totalen kosten
+        public decimal AllExcl => NotaryExcl + FixedActeExcl + MortgageExcl + SurveyorExcl + ConnectionExcl + BaseDeedExcl + ParcelExcl;
+        public decimal AllVat => NotaryVat + FixedActeVat + MortgageVat + SurveyorVat + ConnectionVat + BaseDeedVat + ParcelVat;
+        public decimal AllIncl => AllExcl + AllVat;
+    }
+
+    // Spiegel je BO-enum:
+    public enum RegistrationType
+    {
+        Vat = 0,            // enkel BTW (op grond + bouw)
+        Registration = 1,   // enkel registratierechten (op grond + bouw)
+        Mixed = 2           // BTW op bouw + registratie op grond
     }
 
     public class ProjectSalesExportModel
@@ -1785,75 +1981,61 @@ namespace CPMCore.Models.Projecten
     }
 
     // INVOICING
+    public class ProjectBillingVM
+    {
+        public int ProjectId { get; set; }
+        public int ClientAccountId { get; set; }
+
+        public string ProjectName { get; set; } = "";
+        public string ClientName { get; set; } = "";
+
+        public List<BillableUnitVM> Units { get; set; } = new();
+        public List<FreeLineVM> FreeLines { get; set; } = new();
+
+        public DateOnly InvoiceDate { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+        public DateOnly? DueDate { get; set; }
+        public string? Note { get; set; }
+    }
+
+    public class BillableUnitVM
+    {
+        public int UnitId { get; set; }
+        public string UnitName { get; set; } = "";
+        public List<BillableStageVM> Stages { get; set; } = new();
+    }
+
+    public class BillableStageVM
+    {
+        public int StageId { get; set; }
+        public int GroupId { get; set; }
+        public bool Selected { get; set; }
+        public string Label { get; set; } = "";
+        public decimal Percentage { get; set; }
+        public decimal AmountExcl { get; set; }   // berekend
+        public decimal VatRate { get; set; }      // ingevuld uit Stage.VatPercentage of project setting
+        public string? GroupName { get; set; }
+    }
+
+    public class FreeLineVM
+    {
+        public string Description { get; set; } = "";
+        public decimal Quantity { get; set; } = 1m;
+        public decimal UnitPrice { get; set; }
+        public decimal VatRate { get; set; } = 21m;
+        public string Unit { get; set; } = "st";
+    }
+
+
 
     public class ProjectInvoicingModel
     {
-        public ProjectInvoicingModel()
-        {
-            _clientaccounts = new List<ClientAccountWithInvoicableBO>();
-            _clientChangeOrders = new List<ClientAccountWithInvoicableChangeOrderBO>();
-            _clientUtilityCosts = new List<ClientUtilityCostBO>();
-        }
-        private int _projectid;
-        public int ProjectId
-        {
-            get
-            {
-                return _projectid;
-            }
-            set
-            {
-                _projectid = value;
-            }
-        }
-        private string _projectname;
-        public string ProjectName
-        {
-            get
-            {
-                return _projectname;
-            }
-            set
-            {
-                _projectname = value;
-            }
-        }
-        private List<ClientAccountWithInvoicableBO> _clientaccounts;
-        public List<ClientAccountWithInvoicableBO> ClientAccounts
-        {
-            get
-            {
-                return _clientaccounts;
-            }
-            set
-            {
-                _clientaccounts = value;
-            }
-        }
-        private List<ClientAccountWithInvoicableChangeOrderBO> _clientChangeOrders;
-        public List<ClientAccountWithInvoicableChangeOrderBO> ClientChangeOrders
-        {
-            get
-            {
-                return _clientChangeOrders;
-            }
-            set
-            {
-                _clientChangeOrders = value;
-            }
-        }
-        private List<ClientUtilityCostBO> _clientUtilityCosts;
-        public List<ClientUtilityCostBO> ClientUtilityCosts
-        {
-            get
-            {
-                return _clientUtilityCosts;
-            }
-            set
-            {
-                _clientUtilityCosts = value;
-            }
-        }
+            public int ProjectId { get; set; }
+            public string ProjectName { get; set; } = "";
+
+            public List<ClientAccountWithInvoicableBO> ClientAccounts { get; set; } = new();
+            public List<ClientAccountWithInvoicableChangeOrderBO> ClientChangeOrders { get; set; } = new();
+
+            public List<ClientUtilityCostBO> ClientUtilityCosts { get; set; } = new();
     }
 
     public class ProjectPaymentStagesModel
@@ -2521,6 +2703,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private string _projectname;
+        [ValidateNever]
         public string ProjectName
         {
             get
@@ -2545,6 +2728,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<ActivityGroupBO> _activityGroups;
+        [ValidateNever]
         public List<ActivityGroupBO> ActivityGroups
         {
             get
@@ -2557,6 +2741,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<IdNameBO> _listactivities;
+        [ValidateNever]
         public List<IdNameBO> ListActivities
         {
             get
@@ -2569,6 +2754,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<int> _selectedActivities;
+        [ValidateNever]
         public List<int> SelectedActivities
         {
             get
@@ -2580,6 +2766,7 @@ namespace CPMCore.Models.Projecten
                 _selectedActivities = value;
             }
         }
+        public decimal TotalBudget => BudgetActivities?.Sum(b => b.Price) ?? 0m;
     }
 
     public class ProjectChangeOrderModel

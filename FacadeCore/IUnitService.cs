@@ -11,11 +11,14 @@ namespace FacadeCore
     {
         // UNITS
         GetResponse<UnitBO> GetUnitById(int Id);
+        GetResponse<UnitBO> GetUnitsById(List<int> ids);
         GetResponse<UnitBO> GetUnitsByProjectId(int ProjectId);
         GetResponse<UnitBO> GetUnitsByProjectId(int ProjectId, int UnitTypeId);
         GetResponse<UnitWithDetailsBO> GetUnitsWithDetailsByProjectId(int ProjectId);
         GetResponse<UnitBO> GetUnitsByAccountId(int AccountId);
+        GetResponse<UnitWithAttachedUnitsBO> GetUnitsForSaleByProjectId(int ProjectId);
         GetResponse<GroupUnitsBO> GetGroupedUnitsByProjectId(int ProjectId);
+        GetResponse<UnitWithAttachedUnitsBO> GetUnitsWithAttachedByProjectId(int projectId);
         GetResponse<GroupUnitsWithAttachedUnitsBO> GetGroupedUnitsForSaleByProjectId(int ProjectId);
         GetResponse<GroupUnitsWithAttachedUnitsWithDetailsBO> GetGroupedUnitsForSaleWithDetailsByProjectId(int ProjectId);
         GetResponse<GroupUnitsBO> GetGroupedUnitsByAccountId(int AccountId);

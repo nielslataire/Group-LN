@@ -11,7 +11,8 @@ namespace FacadeCore
     {
         GetResponse<PostalCodeBO> GetPostalcodeById(int PostalcodeId);
         GetResponse<PostalCodeBO> GetPostalcodeByCountry(int CountryId);
-        GetResponse<PostalCodeBO> GetPostalcodeByCountryAndSearchstring(int CountryId, string Searchstring);
+        Task<GetResponse<PostalCodeBO>> GetPostalcodeByCountryAndSearchstring(int CountryId, string Searchstring);
+        
         //GetResponse<PostalCodeBO> GetPostalcodeByCountryCodeAndPostalcode(string Countrycode, string Postalcode);
     }
 }

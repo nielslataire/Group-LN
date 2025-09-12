@@ -5,6 +5,7 @@ using DALCore.Models;
 using ServiceCore.Translators;
 using DALCore.Query;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace ServiceCore
 {
@@ -57,26 +58,27 @@ namespace ServiceCore
             return response;
         }
 
-        public GetResponse<PostalCodeBO> GetPostalcodeByCountryAndSearchstring(int countryId, string searchstring)
+        public async Task<GetResponse<PostalCodeBO>> GetPostalcodeByCountryAndSearchstring(int countryId, string searchstring)
         {
             var response = new GetResponse<PostalCodeBO>();
 
             var query = PostalCodeQuery.GetCountryQuery(countryId);
             var sub = PostalCodeQuery.GetCityContainsQuery(searchstring)
-                        .Or(PostalCodeQuery.GetPostalCodeStartsWithQuery(searchstring));
+                       .Or(PostalCodeQuery.GetPostalCodeStartsWithQuery(searchstring));
 
-            var entities = _uow.PostalCodes
+            var list = await _uow.PostalCodes
                 .GetNoTracking()
-                .Where(query.And(sub));
-
-            foreach (var e in entities)
-            {
-                var bo = new PostalCodeBO
+                .Where(query.And(sub))
+                .Select(e => new PostalCodeBO
                 {
                     PostcodeId = e.PostcodeId,
                     Postcode = e.Postcode,
                     Gemeente = e.Gemeente
-                };
+                })
+                .ToListAsync(); // <— materialiseren
+
+            foreach (var bo in list)
+            {
                 response.AddValue(bo);
             }
             return response;

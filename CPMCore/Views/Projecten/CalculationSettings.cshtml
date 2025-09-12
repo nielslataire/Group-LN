@@ -1,0 +1,471 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectCalculationSettings
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+	ViewData["Title"] = Model.ProjectName + " - Budget";
+}
+@* @{
+	ViewBag.Breadcrumbs = new List<Breadcrumb>()
+	{
+		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+		new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+		new Breadcrumb("Klanten", nameof(ProjectenController.DetailClients), "Projecten", false)
+	};
+} *@
+@{
+	String urlTotal = "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link rel="stylesheet" href="~/css/detailmenuactionbuttons.css" />
+    <style>
+        /* Lovable/clean header vibe + jouw groen */
+        .page-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px
+        }
+
+        .page-title {
+            font-weight: 700;
+            font-size: 28px
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 14px;
+            box-shadow: 0 1px 2px rgba(0,0,0,.04);
+            margin-bottom: 16px
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid #eef2f4
+        }
+
+        .card-body {
+            padding: 16px
+        }
+
+        .group-row {
+            background: #f8fafb;
+            font-weight: 600
+        }
+
+        .group-total {
+            font-weight: 700
+        }
+
+        .total-badge {
+            background: #01532d;
+            color: #fff;
+            border-radius: 10px;
+            padding: 4px 10px;
+            font-weight: 700
+        }
+
+        .btn-primary {
+            background: #01532d;
+            border-color: #01532d
+        }
+
+            .btn-primary:hover {
+                filter: brightness(0.95)
+            }
+
+        .currency-input {
+            max-width: 220px
+        }
+
+        .icon-link {
+            cursor: pointer
+        }
+        /* Select2 netjes in input-group */
+        .input-group .select2-container {
+            flex: 1 1 auto; /* meerekken */
+            width: 1% !important; /* override inline width:100% van select2 */
+            min-width: 0; /* voorkomen dat hij duwt */
+        }
+
+            .input-group .select2-container .select2-selection {
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0; /* na het icon */
+                min-height: calc(2.25rem + 2px); /* match form-control hoogte */
+                display: flex;
+                align-items: center;
+                padding-top: .375rem;
+                padding-bottom: .375rem;
+            }
+
+        .input-group .select2-selection--multiple .select2-search__field {
+            margin-top: 0.2rem; /* kleine correctie meerdere tags */
+        }
+
+        #colvis-container {
+            display: flex;
+            align-items: stretch;
+        }
+
+            #colvis-container .btn {
+                border-top-left-radius: 0;
+                border-bottom-left-radius: 0; /* na de select */
+                white-space: nowrap;
+            }
+        /* Tabel lay-out: 40% | 60% | klein */
+        .table-budget {
+            table-layout: fixed;
+        }
+            /* respecteert colgroup */
+            .table-budget .col-desc {
+                width: 40%;
+            }
+
+            .table-budget .col-amount {
+                width: 55%;
+            }
+
+            .table-budget .col-actions {
+                width: 5%;
+                white-space: nowrap;
+            }
+        /* zo klein als kan */
+
+        /* Grotere, full-width bedrag-input */
+        .currency-input {
+            width: 100% !important;
+            max-width: none;
+        }
+
+        /* Zorg dat inputs in tabellen niet krimpen tot 0 bij table-layout: fixed */
+        .table-budget td .form-control {
+            min-width: 0;
+        }
+
+        .table-budget > tbody > tr:last-child > td,
+        .table-budget > tbody > tr:last-child > th {
+            border-bottom: 0 !important;
+        }
+
+
+    </style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        <aside class="detail-menu">
+            @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        </aside>
+        <div class="inner-body">
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <div class="row align-items-center">
+                            <div class="col-sm-auto d-flex align-items-center">
+                                <a href="@Url.Action("Recalculation", "Projecten", new { projectid = Model.ProjectId })" class="text-decoration-none text-reset d-flex align-items-center">
+                                    <i class="bx bx-chevron-left fs-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-sm-auto">
+                                <h1 class="fw-bold mb-0">Budget instellen</h1>
+                                <h5 class="mb-4 mt-0">Stel hier de budgetten voor alle loten in het project in </h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card card-modern">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-6"><h2 class="mb-0">Totaal Budget</h2><h4 class="mt-0 text-muted">Som van alle catergoriën</h4></div>
+                        <div class="col-6 text-end fs-1 text-primary font-weight-bold " id="TotalBudget"> @Model.TotalBudget.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("nl-BE"))</div>
+                    </div>
+                    </<div>
+                    </div>
+            @Html.HiddenFor(m => m.ProjectId)
+                 @if (Model.ListActivities.Any())
+                    {
+
+                    <div class="card card-modern mt-3">
+                      <div class="card-body">
+                        <div class="input-group flex-nowrap">
+                          <span class="input-group-text">
+                            <i class="bx bx-category"></i>
+                          </span>
+                                @{
+                                    string Slug(string s) => System.Text.RegularExpressions.Regex
+                                        .Replace(s ?? "", @"[^\w]+", "-").ToLower();
+                                }
+                                <select id="lstActivities" class="select2" multiple data-placeholder="Activiteiten toevoegen …">
+                                    @{
+                                    var grouped = Model.ListActivities
+                                    .GroupBy(x => new { Id = x.GroupId, Name = x.Group })      // ← ID + naam
+                                    .OrderBy(g => g.Key.Name);                                     // of eigen sortering
+
+                                    foreach (var g in grouped)
+                                    {
+                                        <optgroup label="@g.Key.Name" data-group-id="@g.Key.Id">
+                                            @foreach (var item in g.OrderBy(i => i.Display, StringComparer.CurrentCultureIgnoreCase))
+                                            {
+                                                var disabled = Model.SelectedActivities?.Contains(item.ID) == true;
+                                                    if (disabled)
+                                                    {
+                                                        <option value="@item.ID" data-group-id="@g.Key.Id" disabled="disabled"> @item.Display </option>
+                                                    }
+                                                    else
+                                                    {
+                                                        <option value="@item.ID" data-group-id="@g.Key.Id"> @item.Display </option>
+                                                    }
+   
+                                            }
+                                        </optgroup>
+                                    }
+                                }
+                            </select>
+
+
+                          <div id="colvis-container" class="ms-2">
+                            <button id="btnAddActivities" type="button" class="btn btn-default">Toevoegen</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                @functions {
+                    // helper op class-niveau: overal bruikbaar
+                    public static string Slug(string s)
+                    {
+                        if (string.IsNullOrWhiteSpace(s)) return "nogroep";
+                        return System.Text.RegularExpressions.Regex.Replace(s.ToLower(), @"[^\w]+", "-");
+                    }
+                }
+
+
+                <form id="FormSave" asp-action="CalculationSettings" asp-controller="Projecten" method="post" class="ecommerce-form action-buttons-fixed">
+                @Html.HiddenFor(m => m.ProjectId)
+                @Html.HiddenFor(m => m.ProjectName)
+                    @foreach (var g in Model.ActivityGroups.OrderBy(x => x.Lot))
+                    {
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="card card-modern mt-2" data-group-id="@g.ID">
+                                    <div class="card-body">
+                                        <h3 class="font-weight-semibold mb-3">@g.Name</h3>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm align-middle mb-0 table-budget">
+                                                <colgroup>
+                                                    <col class="col-desc" />
+                                                    <col class="col-amount" />
+                                                    <col class="col-actions" />
+                                                </colgroup>
+                                                <thead>
+                                                    <tr class="text-muted">
+                                                        <th>Omschrijving</th>
+                                                        <th class="text-end">Standaard bedrag (€)</th>
+                                                        <th class="text-end">Acties</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="rows-g-@g.ID">
+                                                    @foreach (var budget in Model.BudgetActivities.Where(b => b.Activity.Group.ID == g.ID).OrderBy(m => m.Activity.Name))
+                                                    {
+                                                    @await Html.PartialAsync("_BudgetActivityRow", budget)
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    <div class="row action-buttons">
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                                <i class="bx bx-save text-4 me-2"></i> Budget opslaan
+                            </button>
+                        </div>
+                        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+                            <a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+                        </div>
+
+                    </div>
+                    
+                </form>
+                    }
+                    else
+                    {
+                        <div class="card card-modern mb-4">
+                            <div class="card-body align-items-center text-center card-big-info">
+                                <div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+                                    <i class="bx bx-file"></i>
+
+                                </div>
+                                <div class="col-12 text-muted mb-3">
+                                    <h4>Nog geen budget ingesteld </h4>
+                                </div>
+                            </div>
+                        </div>
+                    }
+            </div>
+        </div>
+    </div>
+
+</div>
+</section>
+@section PageScripts {
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/js/DetailMenuActionButtons.js"></script>
+
+    <script>
+        // —————————————————  INIT  —————————————————
+        $(function () {
+            $('#lstActivities').select2({
+                theme: 'bootstrap',
+                width: '100%',
+                placeholder: $('#lstActivities').data('placeholder') || 'Selecteer de activiteiten …'
+            });
+
+            // bedrag inputs
+            initCurrency();
+
+            // start totalen
+            recalcAllTotals();
+        });
+
+        function initCurrency() {
+            $('.currency').each(function () {
+                if (!$(this).data('autonumeric')) {
+                    new AutoNumeric(this, {
+                        decimalCharacter: ',',
+                        digitGroupSeparator: '.',
+                        decimalPlaces: 2,
+                        currencySymbol: '€ ',
+                        modifyValueOnWheel: false
+                    });
+                }
+            });
+
+            $(document).off('change keyup', '.currency').on('change keyup', '.currency', function () {
+                recalcAllTotals();
+            });
+        }
+
+        // —————————————————  ADD  —————————————————
+        $('#btnAddActivities').on('click', function () {
+          const ids = $('#lstActivities').val() || [];
+          if (!ids.length) return;
+
+          const jobs = ids.map(id => {
+            return $.post('@Url.Action("AddBudgetActivity", "Projecten")', { actId: id })
+              .done(html => {
+                const $opt = $('#lstActivities option[value="'+id+'"]');
+                const gid  = $opt.data('groupId') || $opt.closest('optgroup').data('groupId');
+
+                const $rows = $('#rows-g-' + gid);
+                if ($rows.length) {
+                  $rows.append(html);
+                } else {
+                  console.warn('Geen rows-container voor groupId:', gid);
+                }
+
+                // disable in select + UI refresh
+                $opt.prop('disabled', true);
+              });
+          });
+
+          $.when.apply($, jobs).always(() => {
+            $('#lstActivities').val(null).trigger('change');
+            initCurrency();
+            recalcAllTotals();
+          });
+        });
+
+        // —————————————————  DELETE ROW  —————————————————
+        $(document).on('click', 'a.deleterow', function (e) {
+            e.preventDefault();
+            const $row = $(this).closest('tr');
+            const actId = $row.find('input[name="budgetactivities.index"]').val()
+                        || $row.find('input[name$=".Activity.ID"]').val();
+
+            // enable in select
+            $('#lstActivities option[value="'+ actId +'"]').prop('disabled', false);
+
+            $row.remove();
+            recalcAllTotals();
+        });
+
+        // —————————————————  TOTALS  —————————————————
+        function parseMoney($input){
+            const an = AutoNumeric.getAutoNumericElement($input.get(0));
+            if (an) return an.getNumber() * 1;
+            const raw = ($input.val()||'').toString().replace(/\./g,'').replace(',','.');
+            const v = parseFloat(raw);
+            return isNaN(v) ? 0 : v;
+        }
+
+        function recalcAllTotals() {
+            // per groep
+            $('[data-group-total-key]').each(function () {
+                const gkey = $(this).data('groupTotalKey');
+                let sum = 0;
+                $('#rows-' + gkey + ' input.currency').each(function () {
+                    sum += parseMoney($(this));
+                });
+                $(this).text(formatEuro(sum));
+            });
+
+            // globaal
+            let total = 0;
+            $('input.currency').each(function () { total += parseMoney($(this)); });
+            $('#TotalBudget').text(formatEuro(total));
+        }
+
+        function formatEuro(v){
+            // altijd 2 decimalen
+            return '€ ' + v.toFixed(2)
+                .replace('.', ',')                // komma als decimaal
+                .replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // punt als duizendtal
+        }
+
+                // 1 submit handler toevoegen
+        $('#FormSave').on('submit', function () {
+          $('.currency').each(function () {
+            const el = this;
+            const an = AutoNumeric.getAutoNumericElement(el);
+            let raw = '';
+
+            if (an) {
+              // kale waarde als string met '.' decimal
+              raw = an.getNumber().toString();
+            } else {
+              // fallback: alles behalve cijfers , . - weg
+              raw = ($(el).val() || '').replace(/[^\d,.\-]/g, '');
+              // duizendtallen met punten weg
+              raw = raw.replace(/\./g, '');
+              // nu heb je iets als "1234,56" of "1234.56"
+            }
+
+            // Zet naar nl-BE: komma-decimaal, geen duizendtallen
+            // (als er een punt-decimaal is, maak er komma van)
+            if (raw.indexOf('.') >= 0 && raw.indexOf(',') < 0) {
+              raw = raw.replace('.', ',');
+            }
+
+            $(el).val(raw); // dit is wat naar de server gepost wordt
+          });
+        });
+    </script>
+
+}

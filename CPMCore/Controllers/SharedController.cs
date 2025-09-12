@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BOCore;
-using CPMCore.Service; 
+using CPMCore.Service;
+using System.Linq;
 
 
 namespace CPMCore.Controllers
@@ -12,24 +13,22 @@ namespace CPMCore.Controllers
             return View();
         }
         [HttpPost]
-        public JsonResult GetPostcodesByCountry(string term, int CountryId)
+        public async Task<JsonResult> GetPostcodesByCountry(string term, int CountryId)
         {
             var pservice = ServiceFactory.GetPostalcodeService();
-            var presponse = pservice.GetPostalcodeByCountryAndSearchstring(CountryId, term);
-            List<PostalCodeBO> iList = new List<PostalCodeBO>();
-            if ((presponse.Success))
-                iList = presponse.Values;
-            List<Select2DTO> PostalcodeList = new List<Select2DTO>();
-            Select2DTO singlePostalcode;
-            foreach (PostalCodeBO selectedPostalcode in iList)
-            {
-                singlePostalcode = new Select2DTO();
-                singlePostalcode.id = (int)selectedPostalcode.PostcodeId;
-                singlePostalcode.text = selectedPostalcode.Postcode + " - " + selectedPostalcode.Gemeente;
-                PostalcodeList.Add(singlePostalcode);
-            }
+            var presponse = await pservice.GetPostalcodeByCountryAndSearchstring(CountryId, term);
 
-            return Json(PostalcodeList);
+            var postalcodeList = presponse.Success
+                ? presponse.Values.Select(x => new Select2DTO
+                {
+                    // PostcodeId lijkt nullable (je castte eerder). Gebruik veilig GetValueOrDefault()
+                    id = x.PostcodeId.GetValueOrDefault(),
+                    text = $"{x.Postcode} - {x.Gemeente}"
+                })
+                  .ToList()
+                : new List<Select2DTO>();
+
+            return Json(postalcodeList);
         }
         [HttpGet]
         public JsonResult GetPostcodeById(int id)

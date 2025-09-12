@@ -58,6 +58,7 @@ Public Class ContactController
             Return View("index", model)
         End If
     End Function
+
     Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
         Dim service = ServiceFactory.GetProjectService
         Dim response = service.GetLatestNews(4)

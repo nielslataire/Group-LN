@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Drawing;
 using System.Text.RegularExpressions;
-using CPMCore.Attributes;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -20,6 +19,7 @@ using Humanizer;
 using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
 using CPMCore.Models.Projecten;
+using SmartBreadcrumbs.Attributes;
 
 namespace CPMCore.Controllers
 {
@@ -40,6 +40,7 @@ namespace CPMCore.Controllers
             return View();
         }
         // KLANTEN
+        [Breadcrumb("Klanten", FromController = typeof(ProjectenController), FromAction = nameof(ProjectenController.Detail))]
         public ActionResult Detail(int clientId, int projectId = 0)
         {
             var referrer = Request.Headers["Referer"].ToString();
@@ -115,6 +116,8 @@ namespace CPMCore.Controllers
                 model.ChangeOrders = changeOrderResponse.Values;
             }
 
+
+
             return View(model);
         }
 
@@ -180,7 +183,7 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
-            model.ClientAccount.Id = int.Parse(response.Messages[0].Message);
+            model.ClientAccount.Id = response.InsertedId;
 
             var failedUnits = new List<string>();
             var failedConstructionValues = new List<string>();

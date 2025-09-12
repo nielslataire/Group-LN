@@ -1,0 +1,168 @@
+﻿@using BOCore
+@using System.IO
+@using System.Text.RegularExpressions
+@model CPMCore.Models.Projecten.ProjectSalesModel
+@using System.Globalization
+@{
+	var be = CultureInfo.GetCultureInfo("nl-BE");
+}
+
+
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+<link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+
+}
+
+@Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
+@if (Model.ProjectUnits.Any())
+{
+
+
+	<div class="card card-modern">
+		<div class="card-body">
+			<div class="datatables-header-footer-wrapper mt-2">
+
+                <table class="table table-responsive-md table-hover mb-0" id="datatable-units-list"
+                       style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
+
+                    <thead>
+                        <tr>
+                            <th class="noVis text-center align-middle" data-sortable="false" style="width:44px;">
+                                <div class="checkbox-custom checkbox-default">
+                                    <input type="checkbox" id="check-all-enabled">
+                                    <label for="check-all-enabled"> </label>
+                                </div>
+                            </th>
+                            <th class="noVis" data-sortable="false" style="width:40px;"></th>
+                            <th>Naam</th>
+                            <th>Type</th>
+                            <th>Verdieping</th>
+                            <th>Totaalprijs</th>
+                            <th>Grondwaarde</th>
+                            <th>Bouwwaarde</th>
+                            <th data-sortable="false">Tienduizendsten</th>
+                            <th>Prekad</th>
+                            <th>Oppervlakte</th>
+                            <th>Woonoppervlakte</th>
+                            <th class="text-end">Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var unit in Model.ProjectUnits)
+                        {
+                            var land = unit.Unit.LandValue ?? 0m;
+                            var bouw = (unit.Unit.ConstructionValues?.Sum(m => m.Value) ?? 0m);
+                            var totaal = land + bouw;
+
+                            // -- PAS AAN AAN JOUW STATUS TYPE --
+                            // Als enum:
+                            // bool isTeKoop = unit.Unit.Status == UnitStatus.ForSale;
+                            // Als string:
+                            bool isTeKoop;
+                            if (unit.Unit.ClientAccountId == null)
+                            { isTeKoop = true; }
+                            else
+                            { isTeKoop = false; }
+
+                            <tr>
+                                <td class="text-center align-middle">
+                                    @{
+                                        var chkId = $"check-unit-{unit.Unit.Id}";
+                                    }
+                                    <div class="checkbox-custom checkbox-default">
+                                        <input type="checkbox"
+                                               class="unit-check"
+                                               id="@chkId"
+                                               data-id="@unit.Unit.Id"
+                                               value="@unit.Unit.Id"
+                                               @(isTeKoop ? null : @Html.Raw("disabled"))>
+                                        <label for="@chkId"></label>
+                                    </div>
+                                </td>
+
+                                <td class="text-center align-middle">
+                                    @if (unit.Unit.IsLink)
+                                    {
+                                        <a data-toggle="collapse" data-target=".row@(unit.Unit.Id)" title="Uitklappen">
+                                            <i class="fa fa-plus"></i>
+                                        </a>
+                                    }
+                                </td>
+
+                                <td>@unit.Unit.Name</td>
+
+                                <td>@unit.Unit.Type?.Name</td>
+
+                                <td>
+                                    @if ((unit.Unit.Level ?? 0) == 0)
+                                    {
+                                        <text>Gelijkvloers</text>
+                                    }
+                                    else
+                                    {
+                                        <text>Verdieping </text>
+                                        @unit.Unit.Level
+                                    }
+                                </td>
+
+                                <td>
+                                    <span data-order="@(totaal)">
+                                        @totaal.ToString("C", be)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span data-order="@(land)">
+                                        @land.ToString("C", be)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span data-order="@(bouw)">
+                                        @bouw.ToString("C", be)
+                                    </span>
+                                </td>
+
+                                <td>@unit.Unit.Landshare</td>
+                                <td>@unit.Unit.PreKad</td>
+                                <td>@unit.Unit.GroundSurface</td>
+                                <td>@unit.Unit.Surface</td>
+
+                                <td class="text-end">
+                                    @if (unit.Unit.ClientAccountId == null)
+                                    {
+                                        <span class="badge rounded-pill bg-primary">Beschikbaar</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge rounded-pill bg-danger">Verkocht</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+
+			</div>
+		</div>
+
+	</div>
+}
+else
+{
+	<div class="card card-modern mb-4">
+		<div class="card-body align-items-center text-center card-big-info">
+			<div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+				<i class="bx bx-file"></i>
+
+			</div>
+			<div class="col-12 text-muted mb-3">
+				<h4>Er zijn geen eenheden te koop in dit project</h4>
+			</div>
+		</div>
+	</div>
+}

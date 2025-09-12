@@ -1,0 +1,42 @@
+﻿@model BOCore.InsuranceBO
+
+
+			@using (Html.BeginForm("EndInsurance", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddInsurance", enctype = "multipart/form-data" }))
+			{
+	@Html.HiddenFor(m => m.Id)
+		@Html.HiddenFor(m => m.ProjectID)
+	@Html.HiddenFor(m => m.ExtensionPeriod)
+	@Html.HiddenFor(m => m.GuaranteePeriod)
+	@Html.HiddenFor(m => m.ContractActivityID)
+	@Html.HiddenFor(m => m.InsuranceBrokerName)
+	@Html.HiddenFor(m => m.InsuranceCompany.Id)
+	@Html.HiddenFor(m => m.Period)
+	@Html.HiddenFor(m => m.Startdate)
+	@Html.HiddenFor(m => m.Type)
+
+	<section class="card">
+		<header class="card-header">
+			<h2 class="card-title">Verzekering stop zetten </h2>
+		</header>
+		<div class="card-body">
+
+				<div class="form-group">
+
+				<div class="row align-items-center  pb-3">
+					<label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">@Html.LabelFor(m => m.Enddate)</label>
+					<div class="col-md-8">
+						@Html.EditorFor(m => m.Enddate)
+					</div>
+				</div>
+				</div>		
+		</div>
+			<footer class="card-footer">
+				<div class="row">
+					<div class="col-md-12 text-end">
+					<button type="submit" class="btn btn-primary">Beëindigen</button>
+						<button class="btn btn-default modal-dismiss">Annuleren</button>
+					</div>
+				</div>
+			</footer>
+		</section>
+	}

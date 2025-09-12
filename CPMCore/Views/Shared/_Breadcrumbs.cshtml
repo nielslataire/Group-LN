@@ -1,4 +1,6 @@
-﻿@using Microsoft.AspNetCore.Mvc.Controllers;
+﻿@using Microsoft.AspNetCore.Mvc.Controllers
+@using System.Reflection
+@* @using Microsoft.AspNetCore.Mvc.Controllers;
 @using CPMCore.Attributes;
 @{
 	string projectNaam = null;
@@ -53,4 +55,112 @@
 
 		<li><span>@breadcrumbTitle</span></li>
 	}
+</ol> *@
+
+@{
+    // --- HULPFUNCTIES: haal veilige waarden uit Model / ViewBag / TempData ---
+    string GetProp(object o, string propName)
+    {
+        if (o == null) return null;
+        var p = o.GetType().GetProperty(propName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        var v = p?.GetValue(o);
+        return v?.ToString();
+    }
+
+    // Probeer meerdere bronnen voor namen
+    string projectNaam =
+        GetProp(Model, "ProjectName") ??
+        GetProp(Model, "Project?.Name") ??
+        GetProp(Model, "Project") ??                // als Model.Project al string is
+        (ViewBag.ProjectName as string) ??
+        (TempData["ProjectName"] as string);
+
+    string klantNaam =
+        GetProp(Model, "ClientName") ??
+        GetProp(Model, "CustomerName") ??
+        GetProp(Model, "Client?.DisplayName") ??
+        (ViewBag.ClientName as string) ??
+        (TempData["ClientName"] as string);
+
+    var controller = (ViewContext.RouteData.Values["controller"]?.ToString()) ?? "";
+    var action = (ViewContext.RouteData.Values["action"]?.ToString()) ?? "";
+
+    // IDs kunnen als route param of querystring komen
+    var projectId = (ViewContext.RouteData.Values["projectid"]?.ToString())
+                    ?? Context.Request.Query["projectid"].ToString();
+    var clientId = (ViewContext.RouteData.Values["clientid"]?.ToString())
+                    ?? Context.Request.Query["clientid"].ToString();
+
+    // Titel bepalen: standaard Action-naam, maar overschrijven waar gewenst
+    string breadcrumbTitle;
+    // 1) Op de hoofdpagina "Detail" wil je de projectnaam als titel
+    if (controller.Equals("Projecten", System.StringComparison.OrdinalIgnoreCase)
+        && action.Equals("Detail", System.StringComparison.OrdinalIgnoreCase)
+        && !string.IsNullOrWhiteSpace(projectNaam))
+    {
+        breadcrumbTitle = projectNaam;
+    }
+    // 2) Op klant-detail wil je klantnaam
+    else if ((controller.Equals("Klanten", System.StringComparison.OrdinalIgnoreCase)
+             || controller.Equals("Clients", System.StringComparison.OrdinalIgnoreCase))
+             && action.Equals("Detail", System.StringComparison.OrdinalIgnoreCase)
+             && !string.IsNullOrWhiteSpace(klantNaam))
+    {
+        breadcrumbTitle = klantNaam;
+    }
+    else
+    {
+        // fallback: nette versie van actionnaam
+        breadcrumbTitle = System.Text.RegularExpressions.Regex.Replace(action, "([a-z])([A-Z])", "$1 $2");
+    }
+
+    // Toon extra breadcrumb (laatste item) behalve op Home/Index
+    bool showBreadcrumb = !(controller.Equals("Home", StringComparison.OrdinalIgnoreCase)
+                            && action.Equals("Index", StringComparison.OrdinalIgnoreCase));
+}
+
+<ol class="breadcrumbs me-3">
+    <!-- Home -->
+    <li>
+        <a href="@Url.Action("Index", "Home")" title="Dashboard">
+            <i class="bx bx-home-alt"></i>
+        </a>
+    </li>
+
+    @* Controller-niveau (optioneel: toon geen controller als je rechtstreeks onder Home zit op Detail) *@
+    @if (!(controller.Equals("Projecten", StringComparison.OrdinalIgnoreCase)
+        && action.Equals("Detail", StringComparison.OrdinalIgnoreCase)))
+    {
+        <li>
+            <a href="@Url.Action("Index", controller)">@controller</a>
+        </li>
+    }
+
+    @* Project-anker als je in projectcontext zit en niet al op Detail (waar de titel zelf de projectnaam is) *@
+    @if (!string.IsNullOrEmpty(projectId)
+        && !string.IsNullOrEmpty(projectNaam)
+        && !(controller.Equals("Projecten", StringComparison.OrdinalIgnoreCase)
+        && action.Equals("Detail", StringComparison.OrdinalIgnoreCase)))
+    {
+        <li>
+            <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })">@projectNaam</a>
+        </li>
+    }
+
+    @* Optioneel: klant-anker vóór de eindtitel als je in klantencontext subpagina's hebt *@
+    @if (!string.IsNullOrEmpty(clientId)
+        && !string.IsNullOrEmpty(klantNaam)
+        && !((controller.Equals("Klanten", StringComparison.OrdinalIgnoreCase)
+        || controller.Equals("Clients", StringComparison.OrdinalIgnoreCase))
+        && action.Equals("Detail", StringComparison.OrdinalIgnoreCase)))
+    {
+        <li>
+            <a href="@Url.Action("Detail", "Klanten", new { clientid = clientId })">@klantNaam</a>
+        </li>
+    }
+
+    @if (showBreadcrumb)
+    {
+        <li><span>@breadcrumbTitle</span></li>
+    }
 </ol>

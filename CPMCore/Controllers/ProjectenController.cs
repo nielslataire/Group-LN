@@ -1,32 +1,39 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using BOCore;
+﻿using BOCore;
+using CPMCore.Documents;
+using CPMCore.Models;
+using CPMCore.Models.Klanten;
+using CPMCore.Models.Projecten;
+using CPMCore.Service;
 using DALCore;
 using FacadeCore;
-using ServiceCore;
-using CPMCore.Models;
-using CPMCore.Models.Projecten;
-using CPMCore.Models.Klanten;
-using CPMCore.Service;
-using Microsoft.AspNetCore.Identity;
-using System.Web;
-using System;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Linq;
-using System.Collections.Specialized;
-using Microsoft.Extensions.Options;
-using Rotativa.AspNetCore;
-using System.Collections;
-using Microsoft.CodeAnalysis;
-using CPMCore.Attributes;
-using Rotativa.AspNetCore.Options;
-using Microsoft.AspNetCore.Authorization;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Formats.Jpeg;
 using FluentFTP;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Options;
+using QuestPDF.Drawing;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
+using Rotativa.AspNetCore;
+using Rotativa.AspNetCore.Options;
+using ServiceCore;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
+//using CPMCore.Attributes;
+using SmartBreadcrumbs.Attributes;
+using System;
+using System.Collections;
+using System.Collections.Specialized;
+using System.Linq;
+using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Net;
+using System.Text.RegularExpressions;
+using System.Web;
 
 
 namespace CPMCore.Controllers
@@ -37,29 +44,38 @@ namespace CPMCore.Controllers
         private readonly ILogger<HomeController> _logger;
         private UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration Configuration;
+        private readonly IWebHostEnvironment _env;
+        //private readonly IInvoicePdfService _pdf;         // QuestPDF
+        //private readonly IUblService _ubl;
         // Content-types die we toelaten
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg", "image/jpg", "image/png", "image/gif"
     };
 
-        public ProjectenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration)
+        public ProjectenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env)
         {
             _userManager = userManager;
             _logger = logger;
             Configuration = configuration;
+            _env = env;
         }
 
         // ========== PROJECT DETAIL ==========
-
+        [Breadcrumb("Projecten", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
         public IActionResult Index()
         {
             return View();
         }
         [HttpGet]
-        [Breadcrumb("Info")]
+        //[Breadcrumb("Info")]
+        [Breadcrumb("Info", FromAction = "Index")]
         public ActionResult Detail(int projectid, bool EditGeneralData = false)
         {
+
+
+            //NEXT
+
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ShowProjectDetail model = new ShowProjectDetail();
             var Service = ServiceFactory.GetProjectService();
@@ -108,13 +124,30 @@ namespace CPMCore.Controllers
             var response5 = Service.GetLatestProjectDocs(5, projectid);
             if ((response5.Success))
                 model.LatestDocs = response5.Values;
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+
+            // leaf: Detail met dynamische titel + id in de link
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.Project.Name)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }               // ← zorgt voor /Projecten/Detail/{id}
+            };
+
+            ViewData["BreadcrumbNode"] = projectDetail;
+
             return View(model);
         }
 
         // ========== PROJECT DETAIL KLANTEN ==========
 
         [HttpGet]
-        [Breadcrumb("Klanten")]
+        //[Breadcrumb("Klanten")]
+        [Breadcrumb("Klanten", FromAction = "Detail")]
         public ActionResult DetailClients(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -129,20 +162,59 @@ namespace CPMCore.Controllers
                 model.ClientAccounts = model.ClientAccounts.OrderBy(m => m.Units.Where(a => a.Type.GroupId == 1).Count() > 0 ? m.Units.Where(a => a.Type.GroupId == 1).FirstOrDefault().Name : "", new ServiceCore.Helpers.AlphanumComparator()).ToList();
             model.ProjectId = projectid;
             model.ProjectName = service2.GetProjectNameById(projectid);
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }              
+            };
+            var projectKlanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }            
+            };
+            ViewData["BreadcrumbNode"] = projectKlanten;
             return View(model);
         }
 
         // ========== PROJECT DETAIL EENHEDEN ==========
 
         [HttpGet]
-        [Breadcrumb("Eenheden")]
+        //[Breadcrumb("Eenheden")]
+        [Breadcrumb("Eenheden", FromAction = "Detail")]
         public ActionResult DetailUnits(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            return View(FillDetailUnitModel(projectid));
+            DetailUnitsModel model = new DetailUnitsModel();
+            model = FillDetailUnitModel(projectid);
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectUnits = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailUnits", "Projecten", "Eenheden")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = projectUnits;
+            return View(model);
         }
         [HttpGet]
-        [Breadcrumb("Eenheid toevoegen")]
+        //[Breadcrumb("Eenheid toevoegen")]
+        [Breadcrumb("Eenheid toevoegen", FromAction = "DetailUnits")]
         public ActionResult AddUnit(int projectid)
         {
             var referrer = Request.Headers["Referer"].ToString();
@@ -176,6 +248,30 @@ namespace CPMCore.Controllers
             var responsepaymentgroups = service2.GetProjectPaymentGroupsForSelect(projectid);
             if (responsepaymentgroups.Success) model.PaymentGroups = responsepaymentgroups.Values;
             ViewBag.paymentgroups = model.PaymentGroups;
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectUnits = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailUnits", "Projecten", "Eenheden")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddUnit", "Projecten", "Eenheden toevoegen")
+            {
+                Parent = projectUnits,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
 
             return View(model);
         }
@@ -224,7 +320,8 @@ namespace CPMCore.Controllers
             }
         }
         [HttpGet]
-        [Breadcrumb("Eenheid bewerken")]
+        [Breadcrumb("Eenheid bewerken", FromAction = "DetailUnits")]
+        //[Breadcrumb("Eenheid bewerken")]
         public ActionResult EditUnit(int projectid, int unitid)
         {
             var referrer = Request.Headers["Referer"].ToString();
@@ -287,6 +384,30 @@ namespace CPMCore.Controllers
 
             model.ProjectId = model.Unit.ProjectId;
             model.ProjectName = service2.GetProjectNameById(model.Unit.ProjectId);
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectUnits = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailUnits", "Projecten", "Eenheden")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddUnit", "Projecten", model.Unit.Name + " - Bewerken")
+            {
+                Parent = projectUnits,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
 
             return View(model);
         }
@@ -550,7 +671,8 @@ namespace CPMCore.Controllers
 
         // ========== PROJECT DETAIL CONTRACTEN ==========
         [HttpGet]
-        [Breadcrumb("Leveranciers")]
+        //[Breadcrumb("Leveranciers")]
+        [Breadcrumb("Leveranciers", FromAction = "Detail")]
         public ActionResult DetailContracts(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -567,10 +689,29 @@ namespace CPMCore.Controllers
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
 
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = projectContracts;
             return View(model);
         }
         [HttpGet]
-        [Breadcrumb("Nacalculatie")]
+
+        //[Breadcrumb("Nacalculatie")]
+        [Breadcrumb("Nacalculatie", FromAction = "Detail")]
         public ActionResult Recalculation(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -588,10 +729,104 @@ namespace CPMCore.Controllers
             model.BudgetActivities = response3.Values;
             var response4 = service.GetProjectIncommingInvoicesForRecalculation(projectid);
             model.IncommingInvoicesActivities = response4.Values;
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectRecalc = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Recalculation", "Projecten", "Nacalculatie")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = projectRecalc;
+
             return View(model);
         }
         [HttpGet]
-        [Breadcrumb("Nacalculatie detail")]
+        public IActionResult PrintRecalculation(int projectid)
+        {
+            // 1) Haal het model op zoals je Recalculation-view dat ook doet
+            ProjectContractsModel model = new ProjectContractsModel();
+            var service = ServiceFactory.GetProjectService();
+            var aservice = ServiceFactory.GetActivityService();
+            model.ProjectId = projectid;
+            model.ProjectName = service.GetProjectNameById(projectid);
+            // Get Units
+            var response = aservice.GetActivityGroups();
+            model.ActivityGroups = response.Values;
+            var response2 = service.GetProjectContracts(projectid);
+            model.Contracts = response2.Values;
+            var response3 = service.GetProjectBudget(projectid);
+            model.BudgetActivities = response3.Values;
+            var response4 = service.GetProjectIncommingInvoicesForRecalculation(projectid);
+            model.IncommingInvoicesActivities = response4.Values;
+            if (model == null)
+                return NotFound();
+
+            // 2) Logo laden
+            byte[] logoBytes = null;
+            var logoPath = Path.Combine(_env.WebRootPath, "Img", "logo.png");
+            if (System.IO.File.Exists(logoPath))
+                logoBytes = System.IO.File.ReadAllBytes(logoPath);
+
+            // 3) Optioneel: Avenir registreren (indien TTF’s aanwezig)
+            //    Plaats je TTF’s in: wwwroot/fonts/avenir/
+            //    Pas bestandsnamen aan indien nodig.
+            string fontFamily = null;
+
+            var fontsRoot = Path.Combine(_env.WebRootPath, "fonts");
+            var regular = Path.Combine(fontsRoot, "Avenir-Light.ttf");
+            var bold = Path.Combine(fontsRoot, "Avenir-Heavy.ttf");
+            var italic = Path.Combine(fontsRoot, "Avenir-LightOblique.ttf");
+            var boldIt = Path.Combine(fontsRoot, "Avenir-HeavyOblique.ttf");
+
+
+            try
+            {
+                if (System.IO.File.Exists(regular))
+                    using (var stream = System.IO.File.OpenRead(regular))
+                        FontManager.RegisterFont(stream);
+
+                if (System.IO.File.Exists(bold))
+                    using (var stream = System.IO.File.OpenRead(bold))
+                        FontManager.RegisterFont(stream);
+
+                if (System.IO.File.Exists(italic))
+                    using (var stream = System.IO.File.OpenRead(italic))
+                        FontManager.RegisterFont(stream);
+
+                if (System.IO.File.Exists(boldIt))
+                    using (var stream = System.IO.File.OpenRead(boldIt))
+                        FontManager.RegisterFont(stream);
+
+                fontFamily = "Avenir";   // moet exact overeenkomen met de internal name in het TTF
+            }
+            catch
+            {
+                // fallback naar default font
+            }
+
+            // 4) Document genereren (landscape + logo + fontFamily)
+            var document = new RecalculationReportDocument(model, logoBytes, fontFamily);
+            var pdfBytes = document.GeneratePdf();
+
+            var safeProject = (model.ProjectName ?? "Project").Replace(Path.GetInvalidFileNameChars(), '_');
+            var fileName = $"Nacalculatie_{safeProject}_{DateTime.Now:yyyyMMdd}.pdf";
+
+            return File(pdfBytes, "application/pdf", fileName);
+        }
+
+        [HttpGet]
+        [Breadcrumb("Nacalculatie Detail", FromAction = "Recalculation")]
+        //[Breadcrumb("Nacalculatie detail")]
         public ActionResult RecalculationDetail(int projectId, int activityId, int groupid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -637,10 +872,38 @@ namespace CPMCore.Controllers
                 model.ContractActivities = contractActivitiesResponse.Values;
             }
 
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectId }
+            };
+            var projectRecalc = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Recalculation", "Projecten", "Nacalculatie")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectId }
+            };
+            var projectRecalcAct = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("RecalculationDetail", "Projecten", model.Activity.Name)
+            {
+                Parent = projectRecalc,
+                RouteValues = new {
+                    projectId = projectId,
+                    activityId = activityId,
+                    groupid = groupid
+                }
+            };
+            ViewData["BreadcrumbNode"] = projectRecalcAct;
+
             return View(model);
         }
         [HttpGet]
-        [Breadcrumb("Contract toevoegen")]
+        [Breadcrumb("Contract toevoegen", FromAction = "DetailContracts")]
+        //[Breadcrumb("Contract toevoegen")]
         public ActionResult AddContract(int projectid, int contractid = 0)
         {
             //Referrer
@@ -665,18 +928,35 @@ namespace CPMCore.Controllers
                     model.Contract = cresponse.Value;
             }
             model.ProjectName = service.GetProjectNameById(projectid);
-            //// Set sitemap names
-            //var node = SiteMaps.Current.CurrentNode;
-            //if ((node != null & node.ParentNode != null))
-            //{
-            //    if ((node.ParentNode.ParentNode != null && node.ParentNode.ParentNode.ParentNode != null))
-            //        node.ParentNode.ParentNode.Title = ServiceFactory.GetProjectService().GetProjectNameById(model.ProjectId);
-            //}
+
             model.Insurance.Startdate = DateOnly.FromDateTime(DateTime.Now);
             var iservice = ServiceFactory.GetInsuranceService();
             var response = iservice.GetInsuranceCompaniesForSelect();
             if (response.Success)
                 model.InsuranceCompanies = response.Values;
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContractsAdd = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddContract", "Projecten", "Toevoegen")
+            {
+                Parent = projectContracts
+            };
+            ViewData["BreadcrumbNode"] = projectContractsAdd;
+
             return View(model);
         }
         [HttpPost]
@@ -728,7 +1008,8 @@ namespace CPMCore.Controllers
                 return View(model);
         }
         [HttpGet]
-        [Breadcrumb("Contract bewerken")]
+        //[Breadcrumb("Contract bewerken")]
+        [Breadcrumb("Contract bewerken", FromAction = "DetailContracts")]
         public ActionResult EditContract(int projectid, int contractid = 0)
         {
             //Referrer
@@ -771,18 +1052,34 @@ namespace CPMCore.Controllers
                 }
             }
             model.Activities = activitiesList;
-            //// Set sitemap names
-            //var node = SiteMaps.Current.CurrentNode;
-            //if ((node != null & node.ParentNode != null))
-            //{
-            //    if ((node.ParentNode.ParentNode != null && node.ParentNode.ParentNode.ParentNode != null))
-            //        node.ParentNode.ParentNode.Title = ServiceFactory.GetProjectService().GetProjectNameById(model.ProjectId);
-            //}
             model.Insurance.Startdate = DateOnly.FromDateTime(DateTime.Now);
             var iservice = ServiceFactory.GetInsuranceService();
             var response = iservice.GetInsuranceCompaniesForSelect();
             if (response.Success)
                 model.InsuranceCompanies = response.Values;
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContractsEdit = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditContract", "Projecten", "Toevoegen")
+            {
+                Parent = projectContracts
+            };
+            ViewData["BreadcrumbNode"] = projectContractsEdit;
+
             return View(model);
         }
         [HttpPost]
@@ -970,11 +1267,135 @@ namespace CPMCore.Controllers
             ViewData["mode"] = "add";
             return PartialView("_AdditionalOrderRow", nAdditionalOrder);
         }
+        [Breadcrumb("Budget instellen", FromAction = "DetailContracts")]
+        [HttpGet]
+        public IActionResult CalculationSettings(int projectid)
+        {
+            //Referrer
+            var referrer = Request.Headers["Referer"].ToString();
+            TempData["Referrer"] = referrer;
+            //Sidebar collapse
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var model = new ProjectCalculationSettings
+            {
+                ProjectId = projectid,
+                ProjectName = ServiceFactory.GetProjectService().GetProjectNameById(projectid)
+            };
+
+            // Groups
+            var aservice = ServiceFactory.GetActivityService();
+            var groupsResp = aservice.GetActivityGroups();
+            model.ActivityGroups = groupsResp.Values?.ToList() ?? new();
+
+            // Reeds ingestelde budgetregels
+            var pservice = ServiceFactory.GetProjectService();
+            var budgetResp = pservice.GetProjectBudget(projectid);
+            model.BudgetActivities = budgetResp.Values?.ToList() ?? new();
+
+            // Select2-lijst (als optgroups)
+            var listResp = aservice.GetActivitiesForSelect();
+            if (listResp.Success)
+            {
+                model.ListActivities = listResp.Values.Select(x => new IdNameBO
+                {
+                    ID = x.ID,
+                    Display = x.Display,
+                    Group = x.Group,
+                    GroupId = x.GroupId
+                }).ToList();
+            }
+
+            // Preselecteer wat al op budget staat
+            if (model.BudgetActivities.Any())
+                model.SelectedActivities = model.BudgetActivities.Select(b => b.Activity.ID).Distinct().ToList();
+
+            ViewData["Title"] = $"Project - {model.ProjectName}";
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectRecalc = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Recalculation", "Projecten", "Nacalculatie")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectRecalcAct = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("CalculationSettings", "Projecten", "Budget instellen")
+            {
+                Parent = projectRecalc,
+                RouteValues = new
+                {
+                    projectId = projectid
+                }
+            };
+            ViewData["BreadcrumbNode"] = projectRecalcAct;
+
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult CalculationSettings(ProjectCalculationSettings model, List<BudgetActivityBO> budgetactivities)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            // ProjectId meegeven aan alle regels
+            if (budgetactivities != null)
+            {
+                // verwijder null items
+                budgetactivities = budgetactivities
+                    .Where(b => b != null)
+                    .ToList();
+
+                // projectId invullen
+                budgetactivities.ForEach(b => b.ProjectId = model.ProjectId);
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            var resp = service.InsertUpdateProjectBudgetActivities(budgetactivities ?? new(), model.ProjectId);
+
+            if (resp.Success)
+            {
+                TempData["MessageType"] = "success";
+                TempData["MessageTitle"] = "Geslaagd!";
+                TempData["Message"] = "De activiteiten zijn aan het budget toegevoegd.";
+                return RedirectToAction("Recalculation", "Projecten", new { projectid = model.ProjectId });
+            }
+
+            TempData["MessageType"] = "error";
+            TempData["MessageTitle"] = "Fout!";
+            TempData["Message"] = "De activiteiten zijn NIET aan het budget toegevoegd.";
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult AddBudgetActivity(int actId)
+        {
+            var aservice = ServiceFactory.GetActivityService();
+            var response = aservice.GetActivitybyId(actId);
+            var act = response.Value;
+
+            var budget = new BudgetActivityBO
+            {
+                Activity = act
+            };
+
+            return PartialView("_BudgetActivityRow", budget);
+        }
 
         // ========== PROJECT - INKOMENDE FACTUREN ==========
 
         [HttpGet]
-        [Breadcrumb("Inkomende factuur toevoegen")]
+        //[Breadcrumb("Inkomende factuur toevoegen")]
+        [Breadcrumb("Inkomende factuur toevoegen", FromAction = "DetailContracts")]
         public ActionResult AddIncommingInvoice(int projectid, int type, int invoiceid = 0)
         {
             //Referrer
@@ -1028,18 +1449,28 @@ namespace CPMCore.Controllers
 
             IncommingInvoiceFillInSelectList(model);
 
-            //// Set sitemap names
-            //var node = SiteMaps.Current.CurrentNode;
-            //if (node != null && node.ParentNode != null)
-            //{
-            //    if (node.ParentNode.ParentNode != null &&
-            //        node.ParentNode.ParentNode.ParentNode != null &&
-            //        node.ParentNode.ParentNode.ParentNode.ParentNode != null)
-            //    {
-            //        node.ParentNode.ParentNode.ParentNode.Title =
-            //            ServiceFactory.GetProjectService().GetProjectNameById(model.ProjectId);
-            //    }
-            //}
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddIncommingInvoice", "Projecten", "Factuur toevoegen")
+            {
+                Parent = projectContracts
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
 
             return View(model);
         }
@@ -1111,7 +1542,8 @@ namespace CPMCore.Controllers
             }
         }
         [HttpGet]
-        [Breadcrumb("Inkomende factuur bewerken")]
+        //[Breadcrumb("Inkomende factuur bewerken")]
+        [Breadcrumb("Inkomende factuur bewerken", FromAction = "DetailContracts")]
         public ActionResult EditIncommingInvoice(int projectid, int invoiceid)
         {
             // Referrer bijhouden
@@ -1169,6 +1601,30 @@ namespace CPMCore.Controllers
 
             // Selectielijsten vullen
             IncommingInvoiceFillInSelectList(model);
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditIncommingInvoice", "Projecten", "Factuur bewerken")
+            {
+                Parent = projectContracts
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
 
             return View(model);
         }
@@ -1311,7 +1767,8 @@ namespace CPMCore.Controllers
             return Redirect(Referrer.ToString());
         }
         [HttpGet]
-        [Breadcrumb("Inkomende factuur")]
+        //[Breadcrumb("Inkomende factuur")]
+        [Breadcrumb("Inkomende factuur", FromAction = "DetailContracts")]
         public ActionResult IncommingInvoiceDetail(int projectid, int invoiceid)
         {
             //Referrer
@@ -1351,6 +1808,27 @@ namespace CPMCore.Controllers
                 model.Company = response2.Value;
             }
 
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Recalculation", "Projecten", "Nacalculatie")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddIncommingInvoice", "Projecten", "Inkomende factuur")
+            {
+                Parent = projectContracts
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
 
             return View(model);
         }
@@ -1358,7 +1836,8 @@ namespace CPMCore.Controllers
         // ========== WIJZIGINGSOPDRACHTEN KLANTEN/PROJECTEN ==========
 
         [HttpGet]
-        [Breadcrumb("Wijzigingsopdracht toevoegen")]
+        [Breadcrumb("Wijzigingsopdracht toevoegen", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
+        //[Breadcrumb("Wijzigingsopdracht toevoegen")]
         public ActionResult AddChangeOrder(int projectid, int type, int clientaccountid = 0)
         {
             // 1) Veilige referrer voor je "terug"-link (enkel van dezelfde host)
@@ -1415,6 +1894,29 @@ namespace CPMCore.Controllers
             // 5) Dropdowns / selects vullen
             ChangeOrderFillInSelectList(model);
 
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectKlanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddChangeOrder", "Projecten", "Wijzingsopdracht toevoegen")
+            {
+                Parent = projectKlanten,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
             return View(model);
         }
         private const string DefaultChangeOrderConditions =
@@ -1467,7 +1969,8 @@ namespace CPMCore.Controllers
             return PartialView("_ChangeOrderDetailRow", model);
         }
         [HttpGet]
-        [Breadcrumb("Wijzigingsopdracht bewerken")]
+        //[Breadcrumb("Wijzigingsopdracht bewerken")]
+        [Breadcrumb("Wijzigingsopdracht bewerken", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
         public ActionResult EditChangeOrder(int projectid, int clientid, int coid)
         {
             // 0) Basisvalidatie
@@ -1530,6 +2033,35 @@ namespace CPMCore.Controllers
 
             // 5) Dropdowns / Selects vullen
             ChangeOrderFillInSelectList(model);
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectKlanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectKlantenDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Klanten", model.ClientName)
+            {
+                Parent = projectKlanten,
+                RouteValues = new { projectId = projectid,
+                    clientId = clientid
+                }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddChangeOrder", "Projecten", "Wijzingsopdracht bewerken")
+            {
+                Parent = projectKlantenDetail,
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
 
             return View(model);
         }
@@ -1666,7 +2198,8 @@ namespace CPMCore.Controllers
         // ========== WEERVERLET ==========
 
         [HttpGet]
-        [Breadcrumb("Weerverlet")]
+        //[Breadcrumb("Weerverlet")]
+        [Breadcrumb("Weerverlet", FromAction = "Index")]
         public ActionResult Weather()
         {
             var model = new BWDModel();
@@ -1832,7 +2365,8 @@ namespace CPMCore.Controllers
         // ========== PROJECT DETAIL FOTO'S ==========
 
         [HttpGet]
-        [Breadcrumb("Foto's")]
+        //[Breadcrumb("Foto's")]
+        [Breadcrumb("Foto's", FromAction = "Detail")]
         public ActionResult DetailPhotos(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -1850,6 +2384,26 @@ namespace CPMCore.Controllers
 
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectRecalc = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailPhotos", "Projecten", "Foto's")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = projectRecalc;
+
 
             return View(model);
         }
@@ -1985,7 +2539,8 @@ namespace CPMCore.Controllers
         // ========== PROJECT DETAIL NIEUWS ==========
 
         [HttpGet]
-        [Breadcrumb("Nieuws")]
+        [Breadcrumb("Nieuws", FromAction = "Detail")]
+        //[Breadcrumb("Nieuws")]
         public IActionResult DetailNews(int projectId)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -2001,6 +2556,28 @@ namespace CPMCore.Controllers
                               : new List<ProjectNewsBO>()
             };
             ViewData["NewsBaseUrl"] = $"{Configuration["URL:ImageWebUrl"]?.TrimEnd('/')}/pictures/News/";
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectId }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailNews", "Projecten", "Nieuws")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectId }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
+
+
             return View(model);
         }
 
@@ -2241,6 +2818,8 @@ namespace CPMCore.Controllers
         // ========== PROJECT DETAIL DOCS ==========
 
         [HttpGet]
+        [Breadcrumb("Documenten", FromAction = "Detail")]
+        //[Breadcrumb("Documenten")]
         public IActionResult DetailDocs(int projectid, int? clientaccountid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -2277,6 +2856,25 @@ namespace CPMCore.Controllers
                 else
                     model.Docs = new List<ProjectDocBO>();
             }
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailDocs", "Projecten", "Documenten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
 
             return View(model);
         }
@@ -2407,6 +3005,8 @@ namespace CPMCore.Controllers
         // ========== PROJECT DETAIL INSURANCES ==========
 
         [HttpGet]
+        //[Breadcrumb("Verzekeringen")]
+        [Breadcrumb("Verzekeringen", FromAction = "Detail")]
         public IActionResult DetailInsurances(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
@@ -2421,32 +3021,27 @@ namespace CPMCore.Controllers
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
 
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailInsurances", "Projecten", "Verzekeringen")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
             return View(model);
         }
-
-        //[HttpGet]
-        //public IActionResult ModalEditInsurance(int id)
-        //{
-        //    var viewModel = new ProjectAddInsurancesModel
-        //    {
-        //        ProjectId = id,
-        //        Insurance = new InsuranceBO() // zeker zijn dat Insurance niet null is
-        //        {
-        //            Startdate = DateOnly.FromDateTime(DateTime.Now)
-        //        }
-        //    };
-
-        //    var service = ServiceFactory.GetInsuranceService();
-        //    var cservice = ServiceFactory.GetCompanyService();
-
-        //    var cresponse = cservice.GetCompanyForSelectByActivity(142);
-        //    if (cresponse.Success) viewModel.Brokers = cresponse.Values;
-
-        //    var response = service.GetInsuranceCompaniesForSelect();
-        //    if (response.Success) viewModel.Companies = response.Values;
-
-        //    return PartialView("_ModalEditInsurance", viewModel);
-        //}
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -2480,6 +3075,7 @@ namespace CPMCore.Controllers
             return RedirectToAction("DetailInsurances", "Projecten", new { projectid = viewmodel?.Insurance?.ProjectID ?? viewmodel?.ProjectId });
         }
 
+
         [HttpGet]
         public IActionResult ModalDeleteInsurance(int id)
         {
@@ -2493,31 +3089,6 @@ namespace CPMCore.Controllers
 
             return PartialView("_ModalDeleteInsurance", viewModel);
         }
-
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //public IActionResult DeleteInsurance(int id, int projectid)
-        //{
-        //    if (id != 0 && projectid != 0)
-        //    {
-        //        var service = ServiceFactory.GetInsuranceService();
-        //        var ids = new List<int> { id };
-        //        var response = service.Delete(ids);
-
-        //        if (response.Success)
-        //        {
-        //            AddMessage("success", "De verzekering is verwijderd", "Geslaagd!");
-        //        }
-        //        else
-        //        {
-        //            AddMessage("error", "De verzekering is niet verwijderd, gelieve opnieuw te proberen of contact op te nemen met de administrator", "Fout!");
-        //        }
-
-        //        return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
-        //    }
-
-        //    return RedirectToAction("DetailInsurances", "Projecten", new { projectid });
-        //}
 
         [HttpGet]
         public IActionResult ModalEndInsurance(int id)
@@ -2535,7 +3106,7 @@ namespace CPMCore.Controllers
                     {
                         var start = viewModel.Startdate.Value;
                         viewModel.Enddate = start.AddMonths(
-                            viewModel.Period ?? 0 + viewModel.ExtensionPeriod ?? 0 + viewModel.GuaranteePeriod ?? 0
+                            (viewModel.Period ?? 0) + (viewModel.ExtensionPeriod ?? 0) + (viewModel.GuaranteePeriod ?? 0)
                         );
                     }
                     else
@@ -2545,7 +3116,7 @@ namespace CPMCore.Controllers
                 }
             }
 
-            return PartialView("ModalEndInsurance", viewModel);
+            return PartialView("_ModalStopInsurance", viewModel);
         }
 
         [HttpPost]
@@ -2599,8 +3170,653 @@ namespace CPMCore.Controllers
             return PartialView("_ModalEditInsurance", viewModel);
         }
 
+        // ========== PROJECT DETAIL SALES ==========
+
+        [HttpGet]
+        //[Breadcrumb("Verkoop")]
+        [Breadcrumb("Verkoop", FromAction = "Detail")]
+        public IActionResult DetailSales(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var model = new ProjectSalesModel();
+            var service = ServiceFactory.GetProjectService();
+            var uservice = ServiceFactory.GetUnitService();
+
+            model.ProjectId = projectid;
+            model.ProjectName = service.GetProjectNameById(projectid);
+
+            var response = uservice.GetUnitsWithAttachedByProjectId(projectid);
+            model.ProjectUnits = response.Values;
 
 
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailSales", "Projecten", "Verkoop")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult SalesListPdf(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var model = new ProjectSalesExportModel();
+            var service2 = ServiceFactory.GetProjectService();
+            var service3 = ServiceFactory.GetUnitService();
+
+            model.ProjectId = projectid;
+            model.ProjectName = service2.GetProjectNameById(projectid);
+
+            // Get Units
+            var response = service3.GetGroupedUnitsForSaleWithDetailsByProjectId(projectid);
+            model.UnitsGrouped = response.Values;
+
+            // Get SurfaceTypes
+            model.SurfaceTypes = service3.GetUniqueRoomTypesInProjectByProjectId(projectid).Values;
+
+            // PDF
+            // Belangrijk: model via constructor doorgeven
+            var pdf = new ViewAsPdf("SalesListPDF", model)
+            {
+                PageOrientation = Rotativa.AspNetCore.Options.Orientation.Landscape,
+                PageSize = Rotativa.AspNetCore.Options.Size.A3,
+                FileName = $"Verkooplijst - {model.ProjectName} {DateTime.Now:yyyyMMdd}.pdf"
+            };
+
+            // var pdfBytes = a.BuildPdf(ControllerContext); // kan, maar niet nodig om te returnen
+            return pdf;
+            // return File(pdfBytes, "application/pdf"); // alternatief
+        }
+
+        [HttpGet]
+        [Breadcrumb("Verkoopsinstellingen", FromAction = "DetailSales")]
+        //[Breadcrumb("Verkoopsinstellingen")]
+        public IActionResult SalesSettings(int projectid)
+        {
+            // 1) Veilige referrer voor je "terug"-link (enkel van dezelfde host)
+            var refHeader = Request.Headers["Referer"].ToString();
+            if (Uri.TryCreate(refHeader, UriKind.Absolute, out var refUri) &&
+                string.Equals(refUri.Host, Request.Host.Host, StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Referrer"] = refHeader;
+            }
+            var viewModel = new ProjectSalesSettingsModel();
+            if (projectid != 0)
+            {
+                viewModel.ProjectId = projectid;
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetSalesSettings(projectid);
+            if (response.Success) viewModel.Settings = response.Value;
+
+            var presponse = service.GetProjectByID(projectid);
+            if (presponse.Success) viewModel.Project = presponse.Value;
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", viewModel.Project.Name)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectSales = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailSales", "Projecten", "Verkoop")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("SalesSettings", "Projecten", "Instellingen")
+            {
+                Parent = projectSales,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        public IActionResult SalesSettings(ProjectSalesSettingsModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            var service = ServiceFactory.GetProjectService();
+
+            // Eerste bewerking
+            var response1 = service.InsertUpdateSalesSettings(model.Settings);
+
+            // Tweede bewerking
+            var response2 = service.InsertUpdateSalesText(model.Project);
+
+            // Beide resultaten samen beoordelen
+            if (response1.Success && response2.Success)
+            {
+                AddMessage("success", "De instellingen voor de verkoop zijn aangepast", "Geslaagd!");
+            }
+            else
+            {
+                AddMessage("error", "De instellingen voor de verkoop zijn NIET aangepast", "Fout!");
+            }
+
+            return RedirectToAction("DetailSales", "Projecten", new { projectid = model.ProjectId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult CalculateCosts(int projectId, [FromBody] int[] unitIds)
+        {
+            if (unitIds == null || unitIds.Length == 0)
+                return BadRequest("Geen eenheden geselecteerd.");
+
+            var ids = unitIds.Distinct().ToList();
+
+            // Settings ophalen
+            var ps = ServiceFactory.GetProjectService();
+            var settingsResp = ps.GetSalesSettings(projectId); // Response<ProjectSalesSettingsBO>
+            if (!settingsResp.Success || settingsResp.Value == null)
+                return BadRequest("Geen verkoopinstellingen gevonden.");
+            var settings = settingsResp.Value;
+
+            // Units ophalen
+            var uservice = ServiceFactory.GetUnitService();
+            var unitsResp = uservice.GetUnitsById(ids);
+            var units = unitsResp.Success && unitsResp.Values != null
+                ? unitsResp.Values.ToList()
+                : new List<UnitBO>();
+            if (units.Count == 0) return BadRequest("Geen eenheden gevonden.");
+
+            // Eerste render: kortingen 0, geen overrides (null)
+            var vm = BuildCalculationVM(projectId, settings, units, discounts: null, overrides: null);
+
+            return PartialView("_CostCalculationCard", vm);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RecalculateCosts(int projectId, [FromBody] RecalculateRequest payload)
+        {
+            if (payload == null || payload.Units == null || payload.Units.Count == 0)
+                return BadRequest("Ongeldige herberekening.");
+
+            using (var scope = HttpContext.RequestServices.CreateScope())
+            {
+                var projectService = scope.ServiceProvider.GetRequiredService<FacadeCore.IProjectService>();
+                var unitService = scope.ServiceProvider.GetRequiredService<FacadeCore.IUnitService>();
+
+                var ids = payload.Units.Select(x => x.UnitId).Distinct().ToList();
+
+                var settingsResp = projectService.GetSalesSettings(projectId);
+                if (!settingsResp.Success || settingsResp.Value == null)
+                    return BadRequest("Geen verkoopinstellingen gevonden.");
+
+                var unitsResp = unitService.GetUnitsById(ids);
+                var units = unitsResp.Success && unitsResp.Values != null
+                    ? unitsResp.Values.ToList()
+                    : new List<UnitBO>();
+                if (units.Count == 0) return BadRequest("Geen eenheden gevonden.");
+
+                var discounts = payload.Units.ToDictionary(k => k.UnitId, v => v);
+                var vm = BuildCalculationVM(projectId, settingsResp.Value, units, discounts, payload);
+
+                return PartialView("_CostCalculationCard", vm);
+            }
+
+
+           
+
+
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult PrintCalculation(int projectId, [FromBody] RecalculateRequest payload)
+        {
+            if (payload == null || payload.Units == null || payload.Units.Count == 0)
+                return BadRequest("Geen eenheden opgegeven.");
+
+            // Zorg voor verse scoped services (concurrency-safe)
+            using var scope = HttpContext.RequestServices.CreateScope();
+            var projectService = scope.ServiceProvider.GetRequiredService<FacadeCore.IProjectService>();
+            var unitService = scope.ServiceProvider.GetRequiredService<FacadeCore.IUnitService>();
+
+            var unitIds = payload.Units.Select(x => x.UnitId).Distinct().ToList();
+
+            var settingsResp = projectService.GetSalesSettings(projectId);
+            if (!settingsResp.Success || settingsResp.Value == null)
+                return BadRequest("Geen verkoopinstellingen gevonden.");
+
+            var unitsResp = unitService.GetUnitsById(unitIds);
+            var units = unitsResp.Success ? unitsResp.Values.ToList() : new List<UnitBO>();
+            if (units.Count == 0) return BadRequest("Geen eenheden gevonden.");
+
+            var discounts = payload.Units.ToDictionary(k => k.UnitId, v => v);
+            var vm = BuildCalculationVM(projectId, settingsResp.Value, units, discounts, payload);
+
+            var doc = new CostCalculationDocument(vm, $"Kostencalculatie – {vm.UnitCount} eenheid(en)");
+            var pdf = doc.GeneratePdf();
+
+            var fileName = $"Kostencalculatie_{projectId}_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+            return File(pdf, "application/pdf", fileName);
+        }
+
+        private ProjectCostCalculationVM BuildCalculationVM(
+            int projectId,
+            ProjectSalesSettingsBO settings,
+            List<UnitBO> units,
+            Dictionary<int, UnitDiscountInput> discounts,
+            RecalculateRequest overrides)
+        {
+            var vatPctBase = overrides?.VatPercent ?? settings.VatPercentage ?? 0m;
+            var regPctBase = overrides?.RegistrationPercent ?? settings.RegistrationPercentage ?? 0m;
+
+            // per-unit kosten
+            var surveyorEx = overrides?.SurveyorCost ?? settings.SurveyorCost ?? 0m;
+            var connectionEx = overrides?.ConnectionFees ?? settings.ConnectionFees ?? 0m;
+            var baseDeedEx = overrides?.BaseCertificateCost ?? settings.BaseCertificateCost ?? 0m;
+            var parcelEx = overrides?.ParcelCost ?? settings.ParcelCost ?? 0m;
+
+            // globale kosten
+            var fixedActeEx = overrides?.FixedCertificateCost ?? settings.FixedCertificateCost ?? 0m;
+            var mortgageEx = overrides?.MortageRegistrationCost ?? settings.MortageRegistrationCost ?? 0m;
+
+            var vatPctCostsOther = 21m;
+            var vatPctCostsConnection = vatPctBase;
+
+            var vm = new ProjectCostCalculationVM
+            {
+                ProjectId = projectId,
+                VatPercent = vatPctBase,
+                RegistrationPercent = regPctBase,
+                RegistrationType = (Models.Projecten.RegistrationType)settings.RegistrationType,
+                MixedVatRegistration = settings.MixedVatRegistration ?? false,
+
+                FixedCertificateCost = fixedActeEx,
+                SurveyorFee = surveyorEx,
+                ConnectionFee = connectionEx,
+                BaseDeedShare = baseDeedEx,
+                ParcelCost = parcelEx,
+                MortgageRegistrationCost = mortgageEx,
+
+                VatPctCostsOther = vatPctCostsOther,
+                VatPctCostsConnection = vatPctCostsConnection
+            };
+
+            var mode = vm.RegistrationType;
+            if (vm.MixedVatRegistration && mode != Models.Projecten.RegistrationType.Mixed) mode = Models.Projecten.RegistrationType.Mixed;
+
+            decimal totalNetLand = 0m, totalNetBuild = 0m;
+            int countIncluded = 0;
+
+            foreach (var u in units)
+            {
+                var land = u.LandValue ?? 0m;
+                var build = (u.ConstructionValues?.Sum(x => x.Value ?? 0m)) ?? 0m;
+
+                decimal landDisc = 0m, buildDisc = 0m;
+                bool include = ShouldDefaultInclude(u);
+
+                if (discounts != null && discounts.TryGetValue(u.Id, out var d))
+                {
+                    if (d.LandDiscount > 0) landDisc = Math.Min(d.LandDiscount.Value, land);
+                    if (d.BuildDiscount > 0) buildDisc = Math.Min(d.BuildDiscount.Value, build);
+                    if (d.IncludePerUnitCosts.HasValue) include = d.IncludePerUnitCosts.Value;
+                    if (d.IncludePerUnitCosts.HasValue)
+                        include = d.IncludePerUnitCosts.Value;
+                }
+
+                var netLand = Math.Max(0m, land - landDisc);
+                var netBuild = Math.Max(0m, build - buildDisc);
+                var baseSum = netLand + netBuild;
+
+                totalNetLand += netLand;
+                totalNetBuild += netBuild;
+
+                decimal vatOnBase = 0m, regOnBase = 0m;
+                switch (mode)
+                {
+                    case Models.Projecten.RegistrationType.Vat:
+                        vatOnBase = Percent(baseSum, vatPctBase); break;
+                    case Models.Projecten.RegistrationType.Registration:
+                        regOnBase = Percent(baseSum, regPctBase); break;
+                    case Models.Projecten.RegistrationType.Mixed:
+                        vatOnBase = Percent(netBuild, vatPctBase);
+                        regOnBase = Percent(netLand, regPctBase);
+                        break;
+                }
+
+                decimal costsExcl = 0m, costsVat = 0m;
+                if (include)
+                {
+                    countIncluded++;
+                    costsExcl = surveyorEx + connectionEx + baseDeedEx + parcelEx;
+                    costsVat = Percent(surveyorEx + baseDeedEx + parcelEx, vatPctCostsOther)
+                              + Percent(connectionEx, vatPctCostsConnection);
+                }
+
+                vm.Lines.Add(new UnitCostLineVM
+                {
+                    UnitId = u.Id,
+                    Code = string.IsNullOrWhiteSpace(u.Name) ? $"U{u.Id}" : u.Name,
+
+                    LandBase = land,
+                    BuildBase = build,
+                    LandDiscount = landDisc,
+                    BuildDiscount = buildDisc,
+
+                    VatAmount = vatOnBase,
+                    RegistrationAmount = regOnBase,
+
+                    IncludePerUnitCosts = include,
+                    CostsExcl = costsExcl,
+                    CostsVat = costsVat
+                });
+            }
+
+            // Globaal: notaris (schijven) + 21% btw
+            var notaryEx = CalculateNotaryFeesFromTotals(totalNetLand, totalNetBuild, mode == Models.Projecten.RegistrationType.Mixed);
+            var notaryVat = Percent(notaryEx, 21m);
+
+            // Globaal: vaste akte + hypo (21% btw)
+            var fixedActeVat = Percent(fixedActeEx, 21m);
+            var mortgageVat = Percent(mortgageEx, 21m);
+
+            // Per-unit totalen (alleen de inbegrepen rijen)
+            vm.CostTotals = new CostTotalsVM
+            {
+                NotaryExcl = notaryEx,
+                NotaryVat = notaryVat,
+                FixedActeExcl = fixedActeEx,
+                FixedActeVat = fixedActeVat,
+                MortgageExcl = mortgageEx,
+                MortgageVat = mortgageVat,
+
+                SurveyorExcl = surveyorEx * countIncluded,
+                SurveyorVat = Percent(surveyorEx, vatPctCostsOther) * countIncluded,
+
+                ConnectionExcl = connectionEx * countIncluded,
+                ConnectionVat = Percent(connectionEx, vatPctCostsConnection) * countIncluded,
+
+                BaseDeedExcl = baseDeedEx * countIncluded,
+                BaseDeedVat = Percent(baseDeedEx, vatPctCostsOther) * countIncluded,
+
+                ParcelExcl = parcelEx * countIncluded,
+                ParcelVat = Percent(parcelEx, vatPctCostsOther) * countIncluded
+            };
+
+            return vm;
+        }
+
+
+
+        // ========== PROJECT DETAIL INVOICING ==========
+
+        // GET: /Projecten/Invoicing?projectid=123
+        [HttpGet]
+        public IActionResult Invoicing(int projectid)
+        {
+            // In je bestaande code gaat dit via ServiceFactory.
+            var projectService = ServiceFactory.GetProjectService();
+            var clientService = ServiceFactory.GetClientService();
+            var unitService = ServiceFactory.GetUnitService();
+
+            var model = new ProjectInvoicingModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid)
+            };
+
+            // ===== Schijven (vordering der werken) =====
+            var respUnits = projectService.GetProjectInvoicableUnits(projectid);
+            if (respUnits.Success)
+            {
+                var accountIds = respUnits.Values.Select(v => v.Unit.ClientAccountId)
+                                                 .Where(id => id.HasValue).Select(id => id!.Value)
+                                                 .Distinct().ToList();
+
+                var respClients = clientService.GetClientAccountByIds(accountIds);
+                if (respClients.Success)
+                {
+                    foreach (var client in respClients.Values)
+                    {
+                        var group = new ClientAccountWithInvoicableBO { Client = client };
+                        foreach (var u in respUnits.Values.Where(v => v.Unit.ClientAccountId == client.Id))
+                            group.Units.Add(u);
+                        model.ClientAccounts.Add(group);
+                    }
+                }
+            }
+
+            // ===== Meer-/minwerken =====
+            var respCo = projectService.GetProjectInvoicableChangeOrders(projectid);
+            if (respCo.Success)
+            {
+                var accountIds = respCo.Values.Select(v => v.ClientAccountID).Distinct().ToList();
+                var respClients = clientService.GetClientAccountByIds(accountIds);
+                if (respClients.Success)
+                {
+                    foreach (var client in respClients.Values)
+                    {
+                        var group = new ClientAccountWithInvoicableChangeOrderBO { Client = client };
+                        foreach (var co in respCo.Values.Where(v => v.ClientAccountID == client.Id))
+                            group.ChangeOrders.Add(co);
+                        model.ClientChangeOrders.Add(group);
+                    }
+                }
+            }
+
+            // Sortering zoals je VB: op eerste woon-unitnaam (GroupId 1) anders eerste unitnaam
+            model.ClientAccounts = model.ClientAccounts
+                .OrderBy(m =>
+                {
+                    var woon = m.Units.FirstOrDefault(a => a.Unit.Type.GroupId == 1)?.Unit.Name
+                               ?? m.Units.FirstOrDefault()?.Unit.Name
+                               ?? "";
+                    return woon;
+                }, new ServiceCore.Helpers.AlphanumComparator()) // jouw bestaande comparer
+                .ToList();
+
+            //// ===== Nuts (optioneel) =====
+            //var respClientUnits = clientService.GetClientAccountsByProjectIdWithUnits(projectid);
+            //if (respClientUnits.Success)
+            //{
+            //    foreach (var client in respClientUnits.Values)
+            //    {
+            //        if (client.Units.Any(u => u.Type.GroupId == 1 || u.Type.GroupId == 4))
+            //        {
+            //            // Deze methode heb je al in jouw code
+            //            var cuc = projectService.GetClientUtilityCost(client.Client.Id, projectid); // moet ClientUtilityCostVM opleveren
+            //            if (cuc != null) model.ClientUtilityCosts.Add(cuc);
+            //        }
+            //    }
+            //}
+
+            return View(model);
+        }
+        // POST: schijven factureren
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult MakeInvoices([FromBody] MakeInvoicesRequest request)
+        {
+            if (request?.Invoices == null || request.Invoices.Count == 0)
+                return Json(new { projectid = 0 });
+
+            var clientService = ServiceFactory.GetClientService();
+            var unitService = ServiceFactory.GetUnitService();
+            var projectService = ServiceFactory.GetProjectService();
+
+            var response = new Response();
+            int projectId = 0;
+
+            // Alle betrokken klanten ophalen
+            var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
+            var clientResp = clientService.GetClientAccountByIds(clientIds);
+            var clientAccounts = clientResp.Success ? clientResp.Values : new List<ClientAccountBO>();
+
+            foreach (var client in clientAccounts)
+            {
+                var iu = new List<UnitWithStagesBO>();
+
+                // Units + stages
+                foreach (var unitId in request.Invoices.Where(i => i.ClientAccountId == client.Id).Select(i => i.Unitid).Distinct())
+                {
+                    var unitbo = new UnitWithStagesBO();
+                    var ru = unitService.GetUnitById(unitId);
+                    if (ru.Success)
+                    {
+                        unitbo.Unit = ru.Value;
+                        foreach (var item in request.Invoices.Where(i => i.Unitid == unitbo.Unit.Id))
+                        {
+                            var rStage = projectService.GetProjectPaymentStage(item.StageId);
+                            if (rStage.Success) unitbo.PaymentStages.Add(rStage.Value);
+                        }
+                        iu.Add(unitbo);
+                    }
+                }
+
+                // Project + salessettings
+                var project = new ProjectBO();
+                var settings = new ProjectSalesSettingsBO();
+                if (iu.Count > 0)
+                {
+                    var pr = projectService.GetProjectByID(iu.First().Unit.ProjectId);
+                    if (pr.Success)
+                    {
+                        project = pr.Value;
+                        var sr = projectService.GetSalesSettings(project.Id);
+                        if (sr.Success) settings = sr.Value;
+                    }
+                }
+
+                //// === JOUW bestaande factuur-constructie ===
+                //var result = MakeNewWordInvoiceFTP(client, iu, project, settings);
+                //// Bovenstaande functie genereerde vroeger een Word; vervang intern door
+                //// jouw nieuwe implementatie die InvoiceBO + Rows maakt en:
+                ////  - PDF = _pdf.Render(...)
+                ////  - UBL = _ubl.BuildUblXml(...)
+                ////  - (optioneel) _ubl.SendToPeppolAsync(...)
+
+                //if (!result.Success) response.AddError(result.Messages);
+
+                projectId = project.Id;
+            }
+
+            if (response.Success)
+            {
+                AddMessage("success", "De facturen zijn aangemaakt", "Gelukt!");
+                return Json(new { projectid = projectId });
+            }
+            else
+            {
+                AddMessage("Error", "Niet alle facturen zijn aangemaakt. Probeer opnieuw of contacteer de administrator.", "Fout!");
+                return Json(new { projectid = projectId });
+            }
+        }
+
+        // POST: meerwerken factureren
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult MakeInvoicesCO([FromBody] MakeInvoicesCoRequest request)
+        {
+            if (request?.Invoices == null || request.Invoices.Count == 0)
+                return Json(new { projectid = 0 });
+
+            var clientService = ServiceFactory.GetClientService();
+            var unitService = ServiceFactory.GetUnitService();
+            var projectService = ServiceFactory.GetProjectService();
+
+            var response = new Response();
+            int projectId = 0;
+
+            var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
+            var clientResp = clientService.GetClientAccountByIds(clientIds);
+            var clientAccounts = clientResp.Success ? clientResp.Values : new List<ClientAccountBO>();
+
+            foreach (var client in clientAccounts)
+            {
+                var respUnits = unitService.GetUnitsByAccountId(client.Id);
+                var units = respUnits.Success ? respUnits.Values : new List<UnitBO>();
+
+                var changeOrders = new List<ChangeOrderBO>();
+                foreach (var coId in request.Invoices.Where(i => i.ClientAccountId == client.Id).Select(i => i.ChangeOrderId).Distinct())
+                {
+                    var rco = projectService.GetChangeOrder(coId);
+                    if (rco.Success)
+                    {
+                        var co = rco.Value;
+                        // Filter alleen de aangevinkte details
+                        for (int i = co.Details.Count - 1; i >= 0; i--)
+                        {
+                            var keep = request.Invoices.Any(l => l.ChangeOrderDetailId == co.Details[i].Id);
+                            if (!keep) co.Details.RemoveAt(i);
+                        }
+                        changeOrders.Add(co);
+                    }
+                }
+
+                var project = new ProjectBO();
+                var settings = new ProjectSalesSettingsBO();
+                if (changeOrders.Count > 0)
+                {
+                    var pr = projectService.GetProjectByID(changeOrders.First().ProjectId);
+                    if (pr.Success)
+                    {
+                        project = pr.Value;
+                        var sr = projectService.GetSalesSettings(project.Id);
+                        if (sr.Success) settings = sr.Value;
+                    }
+                }
+
+                //var result = MakeNewWordInvoiceCOFTP(client, changeOrders, units, project, settings);
+                //if (!result.Success) response.AddError(result.Messages);
+
+                projectId = project.Id;
+            }
+
+            if (response.Success)
+            {
+                AddMessage("success", "De facturen zijn aangemaakt", "Gelukt!");
+                return Json(new { projectid = projectId });
+            }
+            else
+            {
+                AddMessage("Error", "Niet alle facturen zijn aangemaakt. Probeer opnieuw of contacteer de administrator.", "Fout!");
+                return Json(new { projectid = projectId });
+            }
+        }
+
+        // ====== DTO’s voor de JSON-body ======
+        public class MakeInvoicesRequest
+        {
+            public List<ClientAccountUnitInvoiceBO> Invoices { get; set; } = new();
+        }
+
+        public class MakeInvoicesCoRequest
+        {
+            public List<ClientAccountChangeOrderInvoiceBO> Invoices { get; set; } = new();
+        }
 
 
         //SHARED
@@ -2885,7 +4101,7 @@ namespace CPMCore.Controllers
 
         public void ScaleAndCropImage(string imagePath, int maxWidth, int maxHeight, int quality = 65)
         {
-            using (var image = Image.Load(imagePath))
+            using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
             {
                 double ratioX = (double)maxWidth / image.Width;
                 double ratioY = (double)maxHeight / image.Height;
@@ -2907,7 +4123,7 @@ namespace CPMCore.Controllers
         }
         public void ScaleImage(string imagePath, int maxWidth, int maxHeight, int quality = 65)
         {
-            using (var image = Image.Load(imagePath))
+            using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
             {
                 double ratioX = (double)maxWidth / image.Width;
                 double ratioY = (double)maxHeight / image.Height;
@@ -3105,5 +4321,92 @@ namespace CPMCore.Controllers
             }
             catch { return false; }
         }
+
+        //SALES HELPERS
+        private static decimal Percent(decimal amount, decimal pct)
+=> Math.Round(amount * (pct / 100m), 2, MidpointRounding.AwayFromZero);
+
+        private static decimal SafePos(decimal? v) => v.HasValue && v.Value > 0 ? v.Value : 0m;
+
+        private static decimal SafeLand(UnitBO u) => u.LandValue ?? 0m;
+
+        private static decimal SafeConstruction(UnitBO u) =>
+            (u.ConstructionValues?.Sum(x => x.Value ?? 0m)) ?? 0m;
+
+        private static decimal CalculateNotaryFeesFromTotals(decimal totalNetLand, decimal totalNetBuild, bool mixedVatRegistration)
+        {
+            decimal baseValue = mixedVatRegistration
+                ? (totalNetLand + totalNetBuild)
+                : (totalNetLand + (totalNetBuild / 2m));
+
+            if (baseValue <= 0m) return 0m;
+
+            var parts = new (decimal amount, decimal pct)[]
+            {
+        (  7500m, 4.56m),
+        ( 10000m, 2.85m),
+        ( 12500m, 2.28m),
+        ( 15495m, 1.71m),
+        ( 18600m, 1.14m),
+        (186000m, 0.57m),
+            };
+            const decimal pctRest = 0.057m;
+
+            decimal remaining = baseValue;
+            decimal fee = 0m;
+
+            foreach (var (amount, pct) in parts)
+            {
+                if (remaining <= 0m) break;
+                var take = Math.Min(remaining, amount);
+                fee += take * (pct / 100m);
+                remaining -= take;
+            }
+
+            if (remaining > 0m) fee += remaining * (pctRest / 100m);
+
+            return Math.Round(fee, 2, MidpointRounding.AwayFromZero);
+        }
+        private static bool ShouldDefaultInclude(UnitBO u)
+        {
+            // Zorg dat UnitBO.Type.GroupId gevuld is in je translator
+            var gid = u?.Type?.GroupId ?? 0;
+            return gid == 1 || gid == 4; // woning/appartement of commerciële ruimte
+        }
+
+    }
+}
+// Payloads voor herberekenen
+public class RecalculateRequest
+{
+    // overrides voor instellingen
+    public decimal? VatPercent { get; set; }
+    public decimal? RegistrationPercent { get; set; }
+
+    public decimal? FixedCertificateCost { get; set; }
+    public decimal? SurveyorCost { get; set; }
+    public decimal? ConnectionFees { get; set; }
+    public decimal? BaseCertificateCost { get; set; }
+    public decimal? ParcelCost { get; set; }
+    public decimal? MortageRegistrationCost { get; set; }
+
+    public List<UnitDiscountInput> Units { get; set; }
+}
+
+public class UnitDiscountInput
+{
+    public int UnitId { get; set; }
+    public decimal? LandDiscount { get; set; }
+    public decimal? BuildDiscount { get; set; }
+    public bool? IncludePerUnitCosts { get; set; }
+}
+internal static class PathExtensions
+{
+    public static string Replace(this string text, char[] invalidChars, char replacement)
+    {
+        if (string.IsNullOrEmpty(text)) return text;
+        foreach (var ch in invalidChars)
+            text = text.Replace(ch, replacement);
+        return text;
     }
 }

@@ -16,7 +16,8 @@ namespace DALCore.Models
             {
                 ID = this.ActivityId,
                 Display = this.Omschrijving ?? string.Empty,
-                Group = "Deel " + this.Group.Lot + " - " + this.Group.Name
+                Group = "Deel " + this.Group.Lot + " - " + this.Group.Name,
+                GroupId = this.Group.GroupId
             };
         }
     }

@@ -1,0 +1,76 @@
+﻿@using SmartBreadcrumbs.Nodes
+@using Microsoft.AspNetCore.Routing
+@model IEnumerable<BreadcrumbNode>
+
+@{
+    var nodes = Model?.ToList() ?? new List<BreadcrumbNode>();
+
+    // Optioneel: "Home" weghalen als je een vaste Dashboard-crumb toont
+    if (nodes.Count > 0 && string.Equals(nodes[0].Title, "Home", StringComparison.OrdinalIgnoreCase))
+    {
+        nodes.RemoveAt(0);
+    }
+
+    string ResolveUrl(BreadcrumbNode node)
+    {
+        if (node is MvcBreadcrumbNode m)
+        {
+            var dict = m.RouteValues != null
+                ? new RouteValueDictionary(m.RouteValues)
+                : new RouteValueDictionary();
+
+            // AreaName property bestaat niet altijd -> via reflection checken
+            var areaProp = m.GetType().GetProperty("AreaName");
+            var areaVal = areaProp?.GetValue(m) as string;
+            if (!string.IsNullOrWhiteSpace(areaVal)) dict["area"] = areaVal;
+
+            return Url.Action(m.Action, m.Controller, dict);
+        }
+
+        if (node is MvcControllerBreadcrumbNode mc)
+        {
+            var dict = mc.RouteValues != null
+                ? new RouteValueDictionary(mc.RouteValues)
+                : new RouteValueDictionary();
+
+            var areaProp = mc.GetType().GetProperty("AreaName");
+            var areaVal = areaProp?.GetValue(mc) as string;
+            if (!string.IsNullOrWhiteSpace(areaVal)) dict["area"] = areaVal;
+
+            // Controller node verwijst standaard naar Index
+            return Url.Action("Index", mc.Controller, dict);
+        }
+
+        return null;
+    }
+}
+
+
+<ol class="breadcrumbs me-3">
+        <li>
+            <a href="@Url.Action("Index", "Home", new { area = "" })" title="Dashboard">
+            <i class="bx bx-home-alt"></i>
+            </a>
+        </li>
+
+        @for (int i = 1; i < nodes.Count; i++)
+        {
+            var node = nodes[i];
+            var isLast = i == nodes.Count - 1;
+            var url = ResolveUrl(node);
+
+            if (!isLast && !string.IsNullOrWhiteSpace(url))
+            {
+                <li>
+                    <a href="@url">@node.Title</a>
+                </li>
+            }
+            else
+            {
+                <li>
+                    <span>@node.Title</span>
+                </li>
+            }
+        }
+    </ol>
+

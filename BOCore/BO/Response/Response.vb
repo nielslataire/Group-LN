@@ -6,18 +6,34 @@
     Public Property Messages As List(Of Message)
     Public Property InsertedId As Integer
 
+    ' Handige flags
     Public ReadOnly Property Success As Boolean
         Get
             Return Not Messages.Any(Function(a) a.Type = MessageType.Error)
         End Get
     End Property
+    Public ReadOnly Property HasErrors As Boolean
+        Get
+            Return Messages.Any(Function(a) a.Type = MessageType.Error)
+        End Get
+    End Property
+    Public ReadOnly Property HasInfos As Boolean
+        Get
+            Return Messages.Any(Function(a) a.Type = MessageType.Info)
+        End Get
+    End Property
+    Public ReadOnly Property HasWarnings As Boolean
+        Get
+            Return Messages.Any(Function(a) a.Type = MessageType.Warning)
+        End Get
+    End Property
 
+    ' --- Add helpers ---
     Public Sub AddError(message As String)
         If Messages Is Nothing Then Messages = New List(Of Message)()
         Messages.Add(New Message() With {.Type = MessageType.Error, .Message = message})
     End Sub
 
-    ' ✅ gefixt: andere naam, en voeg toe aan Me.Messages
     Public Sub AddErrors(errs As IEnumerable(Of Message))
         If errs Is Nothing Then Exit Sub
         If Messages Is Nothing Then Messages = New List(Of Message)()
@@ -29,7 +45,18 @@
         Messages.Add(New Message() With {.Type = MessageType.Success, .Message = message})
     End Sub
 
-    Public Sub AddSaveChangesResult(affectedRecords As Integer, successMessage As String, errorMessage As String)
+    Public Sub AddInfo(message As String)
+        If Messages Is Nothing Then Messages = New List(Of Message)()
+        Messages.Add(New Message() With {.Type = MessageType.Info, .Message = message})
+    End Sub
+
+    Public Sub AddWarning(message As String)
+        If Messages Is Nothing Then Messages = New List(Of Message)()
+        Messages.Add(New Message() With {.Type = MessageType.Warning, .Message = message})
+    End Sub
+
+    ' NIEUW: 0 wijzigingen => Info (géén error)
+    Public Sub AddSaveChangesResult(affectedRecords As Integer, successMessage As String, zeroMessage As String, Optional treatZeroAsInfo As Boolean = True)
         If Messages Is Nothing Then Messages = New List(Of Message)()
         If affectedRecords > 0 Then
             Messages.Add(New Message() With {
@@ -37,14 +64,26 @@
                 .Message = $"{successMessage} ({affectedRecords})"
             })
         Else
-            Messages.Add(New Message() With {
-                .Type = MessageType.Error,
-                .Message = errorMessage
-            })
+            If treatZeroAsInfo Then
+                Messages.Add(New Message() With {
+                    .Type = MessageType.Info,
+                    .Message = zeroMessage
+                })
+            Else
+                Messages.Add(New Message() With {
+                    .Type = MessageType.Error,
+                    .Message = zeroMessage
+                })
+            End If
         End If
     End Sub
 
-    ' ✅ handige helper om een child-response te mergen
+    ' Backwards compat: oude signatuur → standaard als Info behandelen
+    Public Sub AddSaveChangesResult(affectedRecords As Integer, successMessage As String, errorMessage As String)
+        AddSaveChangesResult(affectedRecords, successMessage, errorMessage, treatZeroAsInfo:=True)
+    End Sub
+
+    ' Merge helper
     Public Sub Merge(other As Response)
         If other Is Nothing Then Exit Sub
         If other.Messages IsNot Nothing AndAlso other.Messages.Count > 0 Then

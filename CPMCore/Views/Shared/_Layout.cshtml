@@ -50,7 +50,6 @@
 	<!-- GROUP LN CSS -->
 @* 	<link rel="stylesheet" href="css/groupln.css" />
 	<link rel="stylesheet" href="css/skins/skin.css" /> *@
-
 	<!-- Theme CSS -->
 	<link rel="stylesheet" href="~/css/theme.css" />
 
@@ -63,6 +62,7 @@
 
 	<!-- Head Libs -->
 	<script src="~/lib/modernizr/modernizr.js"></script>
+
 
 </head>
 <body>
@@ -292,10 +292,7 @@
 				<header class="page-header">
 					<h2 class="font-weight-bold text-6">@ViewData["Title"]</h2>
 					<div class="right-wrapper text-end">
-						@await Html.PartialAsync("_Breadcrumbs")
-
-						
-
+						@await Component.InvokeAsync("Breadcrumbs", new { viewName = "Default" })
 					</div>
 				</header>
 			@RenderBody()

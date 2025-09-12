@@ -45,6 +45,33 @@ namespace ServiceCore
             return response;
         }
 
+        public GetResponse<UnitBO> GetUnitsById(List<int> ids)
+        {
+            var response = new GetResponse<UnitBO>();
+
+            // i.p.v. GetNoTracking(): gebruik AsNoTracking() en vermijd CTE met AsSplitQuery()
+            var query = _uow.Units.GetNoTracking()               // jouw repo IQueryable<Unit>
+                              .Where(m => ids.Contains(m.Id))
+                              .AsSplitQuery();         // <— voorkomt CTE ("WITH ...") in veel gevallen
+
+            // (optioneel) als je ConstructionValues nodig hebt:
+            query = query.Include(u => u.UnitConstructionValue).Include(u => u.Type).ThenInclude(u => u.Group);
+            var sql = query.ToQueryString();
+            // log sql naar output; je zal zien waar die 'WITH' staat
+
+            var list = query.ToList();                 // materialiseer hier
+
+            foreach (var e in list)
+            {
+                var bo = new UnitBO();
+                var err = UnitTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
+            }
+
+            return response;
+        }
+
         public GetResponse<UnitBO> GetUnitsByProjectId(int projectId)
         {
             var response = new GetResponse<UnitBO>();
@@ -137,6 +164,107 @@ namespace ServiceCore
                 if (err == ErrorCode.Success) response.AddValue(bo);
                 else response.AddError(err.ToString());
             }
+            return response;
+        }
+        public GetResponse<UnitWithAttachedUnitsBO> GetUnitsWithAttachedByProjectId(int projectId)
+        {
+            var response = new GetResponse<UnitWithAttachedUnitsBO>();
+
+            var units = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId  && m.AttachedUnit == null && m.LinkedUnit == null)
+                .Include(m => m.Type)
+                .Include(m => m.UnitConstructionValue)
+                .Include(m => m.ClientAccount)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a2 => a2.InverseAttachedUnit)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.Type)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a => a.Type)
+                                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a2 => a2.InverseAttachedUnit).ThenInclude(a => a.Type)
+                .OrderBy(x => x.Name);
+
+
+            foreach (var item in units)
+            {
+                var u = new UnitWithAttachedUnitsBO();
+                var err = UnitTranslator.TranslateEntityToBO(item, u.Unit);
+                if (err != ErrorCode.Success) { response.AddError(err.ToString()); continue; }
+
+                // nested attached up to depth 3 (zoals origineel)
+                foreach (var a1 in item.InverseAttachedUnit)
+                {
+                    var au1 = new UnitBO();
+                    var e1 = UnitTranslator.TranslateEntityToBO(a1, au1);
+                    if (e1 == ErrorCode.Success) u.AttachedUnits.Add(au1);
+                    else response.AddError(e1.ToString());
+
+                    foreach (var a2 in a1.InverseAttachedUnit)
+                    {
+                        var au2 = new UnitBO();
+                        var e2 = UnitTranslator.TranslateEntityToBO(a2, au2);
+                        if (e2 == ErrorCode.Success) u.AttachedUnits.Add(au2);
+                        else response.AddError(e2.ToString());
+
+                        foreach (var a3 in a2.InverseAttachedUnit)
+                        {
+                            var au3 = new UnitBO();
+                            var e3 = UnitTranslator.TranslateEntityToBO(a3, au3);
+                            if (e3 == ErrorCode.Success) u.AttachedUnits.Add(au3);
+                            else response.AddError(e3.ToString());
+                        }
+                    }
+                }
+
+                response.AddValue(u);
+            }
+            return response;
+        }
+        public GetResponse<UnitWithAttachedUnitsBO> GetUnitsForSaleByProjectId(int projectId)
+        {
+            var response = new GetResponse<UnitWithAttachedUnitsBO>();
+
+            var units = _uow.Units.GetNoTracking()
+                .Where(m => m.ProjectId == projectId && m.ClientAccountId == null && m.AttachedUnit == null && m.LinkedUnit == null)
+                .Include(m => m.Type)
+                .Include(m => m.UnitConstructionValue)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a2 => a2.InverseAttachedUnit)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.Type)
+                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a => a.Type)
+                                .Include(m => m.InverseAttachedUnit).ThenInclude(a => a.InverseAttachedUnit).ThenInclude(a2 => a2.InverseAttachedUnit).ThenInclude(a => a.Type)
+                .OrderBy(x => x.Name);
+
+
+                foreach (var item in units)
+                {
+                    var u = new UnitWithAttachedUnitsBO();
+                    var err = UnitTranslator.TranslateEntityToBO(item, u.Unit);
+                    if (err != ErrorCode.Success) { response.AddError(err.ToString()); continue; }
+
+                    // nested attached up to depth 3 (zoals origineel)
+                    foreach (var a1 in item.InverseAttachedUnit)
+                    {
+                        var au1 = new UnitBO();
+                        var e1 = UnitTranslator.TranslateEntityToBO(a1, au1);
+                        if (e1 == ErrorCode.Success) u.AttachedUnits.Add(au1);
+                        else response.AddError(e1.ToString());
+
+                        foreach (var a2 in a1.InverseAttachedUnit)
+                        {
+                            var au2 = new UnitBO();
+                            var e2 = UnitTranslator.TranslateEntityToBO(a2, au2);
+                            if (e2 == ErrorCode.Success) u.AttachedUnits.Add(au2);
+                            else response.AddError(e2.ToString());
+
+                            foreach (var a3 in a2.InverseAttachedUnit)
+                            {
+                                var au3 = new UnitBO();
+                                var e3 = UnitTranslator.TranslateEntityToBO(a3, au3);
+                                if (e3 == ErrorCode.Success) u.AttachedUnits.Add(au3);
+                                else response.AddError(e3.ToString());
+                            }
+                        }
+                    }
+
+                    response.AddValue(u);
+                }
             return response;
         }
 
@@ -832,7 +960,12 @@ namespace ServiceCore
             }
 
             var result = _uow.SaveChanges();
-            response.AddSaveChangesResult(result, "Constructiewaarde opgeslagen", "Geen wijzigingen");
+            response.AddSaveChangesResult(
+                result,
+                successMessage: "Constructiewaarde opgeslagen",
+                zeroMessage: "Geen wijzigingen",
+                treatZeroAsInfo: true
+            );
             response.InsertedId = entity.Id;
             return response;
         }

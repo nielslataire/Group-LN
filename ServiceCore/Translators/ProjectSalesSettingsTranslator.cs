@@ -20,8 +20,7 @@ namespace ServiceCore.Translators
             bo.SettingsId = _entity.Id;
             bo.ProjectId = _entity.Projectid;
             bo.MixedVatRegistration = _entity.MixedVatregistration;
-            if (_entity.SaleVisible == null)
-                bo.SaleVisible = _entity.SaleVisible;
+            bo.SaleVisible = _entity.SaleVisible;
             if (_entity.ConnectionFees is not null)
                 bo.ConnectionFees = _entity.ConnectionFees;
             if (_entity.Vatpercentage is not null)

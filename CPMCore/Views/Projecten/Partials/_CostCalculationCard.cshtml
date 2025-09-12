@@ -1,0 +1,227 @@
+﻿@model CPMCore.Models.Projecten.ProjectCostCalculationVM
+
+
+<div class="card card-modern mt-3"
+     id="calc-card"
+     data-projectid="@Model.ProjectId"
+     data-recalc-url="@Url.Action("RecalculateCosts", "Projecten")"
+     data-print-url="@Url.Action("PrintCalculation", "Projecten")">
+
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h2 class="mb-0 ms-3 font-weight-semibold">Ramingsprijs – @Model.UnitCount @(Model.UnitCount == 1 ? "eenheid" : "eenheden")</h2>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-default" id="btnPrintPdf">
+                <i class="fa fa-file-pdf"></i> Afdrukken
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <!-- Instellingen (bewerkbaar) -->
+        <div class="bg-light p-3 rounded mb-3">
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <label class="form-label">BTW (%)</label>
+                    <input id="inp-vat" type="text" class="form-control an-percent"
+                           value="@Model.VatPercent.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Registratie (%)</label>
+                    <input id="inp-reg" type="text" class="form-control an-percent"
+                           value="@Model.RegistrationPercent.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Vaste aktekost (€)</label>
+                    <input id="inp-notary" type="text" class="form-control an-money"
+                           value="@Model.FixedCertificateCost.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Hypotheekkantoor (€)</label>
+                    <input id="inp-mortgage" type="text" class="form-control an-money"
+                           value="@Model.MortgageRegistrationCost.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Aandeel basisakte (€)</label>
+                    <input id="inp-base-deed" type="text" class="form-control an-money"
+                           value="@Model.BaseDeedShare.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Aandeel verkavelingsakte (€)</label>
+                    <input id="inp-parcel" type="text" class="form-control an-money"
+                           value="@Model.ParcelCost.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Raming Aansluitkosten (€)</label>
+                    <input id="inp-connection" type="text" class="form-control an-money"
+                           value="@Model.ConnectionFee.ToString("0.##")" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label">Landmetingskosten (€)</label>
+                    <input id="inp-surveyor" type="text" class="form-control an-money"
+                           value="@Model.SurveyorFee.ToString("0.##")" />
+                </div>
+            </div>
+            <div class="small text-muted mt-2">
+                Aansluitkosten: btw @Model.VatPctCostsConnection.ToString("0.#")%. Overige kosten (akte, landmeter,
+                basisakte, verkavelingsakte, hypotheekkantoor): btw @Model.VatPctCostsOther.ToString("0.#")%.
+            </div>
+        </div>
+
+        <!-- Detail per eenheid (géén samenvatting in de tabel) -->
+        <div class="row">
+            <div class="col-12">
+                <div class="table-responsive m-3">
+                    <table class="table table-hover mb-4" id="tbl-calc-lines">
+                        <thead>
+                            <tr>
+                                <th>Eenheid</th>
+                                <th class="text-end">Grondwaarde</th>
+                                <th class="text-end">Korting grond</th>
+                                <th class="text-end">Netto grond</th>
+                                <th class="text-end">Bouwwaarde</th>
+                                <th class="text-end">Korting bouw</th>
+                                <th class="text-end">Netto bouw</th>
+                                <th class="text-end">Basisprijs</th>
+                                <th class="text-end">BTW op basis (@Model.VatPercent.ToString("0.#")%)</th>
+                                <th class="text-end">Registratie (@Model.RegistrationPercent.ToString("0.#")%)</th>
+                                <th class="text-center">Kosten meerekenen</th>
+                                <th class="text-end">Kosten (excl)</th>
+                                <th class="text-end">BTW op kosten</th>
+                                <th class="text-end">Kosten (incl)</th>
+                                <th class="text-end">Totaal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @for (int i = 0; i < Model.Lines.Count; i++)
+                        {
+                            var ln = Model.Lines[i];
+                                <tr data-unitid="@ln.UnitId" class="align-content-center">
+                                    <td class="align-content-center">@ln.Code</td>
+                                    <td class="text-end align-content-center">@ln.LandBase.ToString("C")</td>
+                                    <td class="text-end align-content-center" style="min-width:140px;">
+                                        <input type="text" min="0" class="form-control form-control text-end land-discount an-money"
+                                           value="@ln.LandDiscount.ToString("0.##")" />
+                                </td>
+                                    <td class="text-end align-content-center">@ln.NetLandBase.ToString("C")</td>
+
+                                    <td class="text-end align-content-center">@ln.BuildBase.ToString("C")</td>
+                                    <td class="text-end align-content-center" style="min-width:140px;">
+                                        <input type="text" min="0" class="form-control form-control text-end build-discount an-money"
+                                           value="@ln.BuildDiscount.ToString("0.##")" />
+                                </td>
+                                    <td class="text-end align-content-center">@ln.NetBuildBase.ToString("C")</td>
+                                     
+                                    <td class="text-end align-content-center">@ln.BasePrice.ToString("C")</td>
+                                    <td class="text-end align-content-center">@ln.VatAmount.ToString("C")</td>
+                                    <td class="text-end align-content-center">@ln.RegistrationAmount.ToString("C")</td>
+                                    <td class="text-center">
+                                        <input type="checkbox"
+                                               class="form-check-input include-costs"
+                                               @(ln.IncludePerUnitCosts ? "checked=\"checked\"" : "") />
+                                    </td>
+                                    <td class="text-end align-content-center">@ln.CostsExcl.ToString("C")</td>
+                                    <td class="text-end align-content-center">@ln.CostsVat.ToString("C")</td>
+                                    <td class="text-end align-content-center">@ln.CostsIncl.ToString("C")</td>
+
+                                    <td class="text-end fw-bold align-content-center">@ln.Total.ToString("C")</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- Samenvatting onderaan (zoals voorheen) -->
+        <div class="bg-light p-3 rounded">
+            <div class="row pb-2 form-group "><div class="col-12 "><h3 class="font-weight-semibold">Samenvatting</h3></div></div>
+            <div class="row fs-6 form-group pb-3 ps-3">
+                <div class="col-5">
+                    <div class="row pb-1">
+                        <div class="col-6">Grondwaarde</div>
+                        <div class="col-6 text-end">@Model.TotalLandBase.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">- Korting grondwaarde</div>
+                        <div class="col-6 text-end">- @Model.TotalLandDiscount.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Totale grondwaarde</div>
+                        <div class="col-6 text-end font-weight-semibold">@Model.TotalNetLandBase.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Bouwwaarde</div>
+                        <div class="col-6 text-end">@Model.TotalBuildBase.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">- Korting bouwwaarde</div>
+                        <div class="col-6 text-end">- @Model.TotalBuildDiscount.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Totale bouwwaarde</div>
+                        <div class="col-6 text-end font-weight-semibold">@Model.TotalNetBuildBase.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Basisprijs</div>
+                        <div class="col-6 text-end font-weight-semibold">@Model.TotalBase.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">BTW op basis (@Model.VatPercent.ToString("0.#")%)</div>
+                        <div class="col-6 text-end">@Model.TotalVatOnBase.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Registratierechten (@Model.RegistrationPercent.ToString("0.#")%)</div>
+                        <div class="col-6 text-end">@Model.TotalRegistration.ToString("C")</div>
+                    </div>
+                </div>
+                <div class="col-2"></div>
+                <div class="col-5">
+                    <div class="row pb-1">
+                        <div class="col-6">Notariskosten</div>
+                        <div class="col-6 text-end">@Model.CostTotals.NotaryExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Vaste Aktekost</div>
+                        <div class="col-6 text-end">@Model.CostTotals.FixedActeExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Hypotheekkantoor</div>
+                        <div class="col-6 text-end">@Model.CostTotals.MortgageExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Aandeel basisakte</div>
+                        <div class="col-6 text-end">@Model.CostTotals.BaseDeedExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Aandeel verkavelingsakte</div>
+                        <div class="col-6 text-end">@Model.CostTotals.ParcelExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Landmeterkosten</div>
+                        <div class="col-6 text-end">@Model.CostTotals.SurveyorExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Raming aansluitkosten <span class="text-muted">(BTW @Model.VatPctCostsConnection.ToString("0.#")%)</span></div>
+                        <div class="col-6 text-end">@Model.CostTotals.ConnectionExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Totaal kosten</div>
+                        <div class="col-6 text-end font-weight-semibold">@Model.TotalCostsExcl.ToString("C")</div>
+                    </div>
+                    <div class="row pb-1">
+                        <div class="col-6">Btw op kosten</div>
+                        <div class="col-6 text-end">@Model.TotalCostsVat.ToString("C")</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row pb-2 form-group ">
+                <div class="col-6"><h3 class="font-weight-semibold">Totaal te betalen</h3></div>
+                <div class="col-6 text-end"><div class="h3 fw-bold mb-0">@Model.GrandTotal.ToString("C")</div></div>
+            </div>
+            <div class="small text-muted mt-2">
+                Aansluitkosten: btw @Model.VatPctCostsConnection.ToString("0.#")%. Overige kosten (akte, landmeter,
+                basisakte, verkavelingsakte, hypotheekkantoor): btw @Model.VatPctCostsOther.ToString("0.#")%.
+            </div>
+
+        </div>
+    </div>
+</div>

@@ -27,5 +27,14 @@
             _Group = value
         End Set
     End Property
+    Private _groupid As Integer?
+    Public Property GroupId() As Integer?
+        Get
+            Return _groupid
+        End Get
+        Set(ByVal value As Integer?)
+            _groupid = value
+        End Set
+    End Property
 
 End Class

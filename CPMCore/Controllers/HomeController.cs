@@ -1,11 +1,12 @@
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
+using BOCore;
 using CPMCore.Models;
 using CPMCore.Service;
-using BOCore;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using SmartBreadcrumbs.Attributes;
+using System.Diagnostics;
+using System.Security.Claims;
 namespace CPMCore.Controllers;
 
 [Authorize]
@@ -19,7 +20,7 @@ public class HomeController : BaseController
         _userManager = userManager;
         _logger = logger;
     }
-
+    [DefaultBreadcrumb("Dashboard")]
     public IActionResult Index()
     {
         var model = new Models.Home.HomeModel();

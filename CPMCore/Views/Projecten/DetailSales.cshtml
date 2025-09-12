@@ -1,0 +1,477 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ProjectSalesModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+	ViewData["Title"] = Model.ProjectName;
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+        .select2-container--default .select2-selection--multiple {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            height: auto;
+            min-height: 38px;
+        }
+
+        .select2-container--default .select2-selection--single {
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            height: 38px;
+            padding: 0.375rem 0.75rem;
+        }
+
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 0.2rem;
+            color: #495057;
+        }
+    </style>
+    <style>
+
+        /* Alleen deze tabel compacter maken */
+        #datatable-units-list.dataTable > thead > tr > th,
+        #datatable-units-list.dataTable > tbody > tr > td {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            line-height: 1.2 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Status-dot uit Porto: geen extra hoogte laten forceren */
+        #datatable-units-list .ecommerce-status {
+            display: inline-block;
+            margin: 0 !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Optioneel: iconen-kolom iets strakker */
+        #datatable-clients-list td.actions i {
+            line-height: 1 !important;
+        }
+
+    </style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @Html.AntiForgeryToken()
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Verkoop</h1>
+                        <h5 class="mb-4 mt-0">Bekijk hier de eenheden die te koop zijn in het project en bereken de verkoopprijs</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel" data-toggle="tooltip" title="Exporteren naar excel"><i class="fas fa-file-excel"></i></button>
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf" data-toggle="tooltip" title="PDF"><i class="fas fa-file-pdf"></i></button>
+@*                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnSettings" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></button> *@
+                        <a href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-md px-3 me-1" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></a>
+                        <button id="btnCalculate"
+                                class="btn btn-primary btn-md"
+                                data-action="@Url.Action("CalculateCosts", "Projecten")"
+                                data-projectid="@Model.ProjectId"
+                                disabled>
+                            <i class="fa fa-calculator me-2"></i> <span class="btn-label">Berekenen</span>
+                        </button>
+                    </div>
+                </div>
+                @await Html.PartialAsync("Sales", Model)
+                <div id="calcResultContainer"></div>
+@*             @await Html.PartialAsync("_ModalAddDoc", new BOCore.ProjectDocBO { ProjectId = Model.ProjectId, ClientAccountId = Model.ClientAccountId, Type = BOCore.ProjectDocType.Sales }) *@
+            </div>
+        </div>
+    </div>
+</section>
+<div id="modaldeletedoc" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-doc-container"></div>
+</div>
+<div id="modaladddoc" class="modal-block modal-block-primary mfp-hide">
+    <div id="add-doc-container"></div>
+</div>
+@section PageScripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        // =========================
+        // DataTable initialisatie
+        // =========================
+        const dt = new DataTable('#datatable-units-list', {
+          layout: {
+            topStart: {
+              buttons: [
+                {
+                  extend: 'excel',
+                  text: '<i class="fa fa-file-excel"></i>',
+                  className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                  titleAttr: 'Exporteer naar excel',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'pdf',
+                  text: '<i class="fa fa-file-pdf"></i>',
+                  className: 'btn btn-primary btn-md font-weight-semibold btn-py-2 px-4',
+                  titleAttr: 'Exporteer naar pdf',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  orientation: 'landscape',
+                  pageSize: 'A3',
+                  exportOptions: { columns: ':visible' }
+                }
+              ]
+            }
+          },
+          language: {
+            processing: "Bezig met verwerken...",
+            search: "Zoeken&nbsp;:",
+            lengthMenu: "Afficher _MENU_ &eacute;l&eacute;ments",
+            info: "Eenheid _START_ tot _END_ van de _TOTAL_ Eenheden",
+            infoEmpty: "Eenheid 0 van 0 tot 0 Eenheden",
+            infoFiltered: "(filtr&eacute; de _MAX_ &eacute;l&eacute;ments au total)",
+            infoPostFix: "",
+            loadingRecords: "Bezig met laden...",
+            zeroRecords: "Geen eenheden om weer te geven",
+            emptyTable: "Er zijn geen eenheden om weer te geven",
+            aria: {
+              sortAscending: ": klikken om aflopend te sorteren",
+              sortDescending: ": klikken om oplopend te sorteren"
+            }
+          },
+          order: [[2, 'asc'], [3, 'asc'], [1, 'asc']],
+          pageLength: 15,
+          info: false,
+          rowGroup: { dataSrc: 3 },
+
+        });
+
+        // Hide default DT buttons & search
+        $(".buttons-excel").hide();
+        $(".buttons-pdf").hide();
+        $(".dt-search").hide();
+
+        // Custom export knoppen
+        $("#btnExportExcel").on('click', function () {
+          $(".buttons-excel").trigger("click");
+        });
+        $("#btnExportPdf").on('click', function () {
+          $(".buttons-pdf").trigger("click");
+        });
+
+        // Custom search textbox
+        const oTable = $('#datatable-units-list').DataTable();
+        $('#search-term').on('keyup', function () {
+          oTable.search($(this).val()).draw();
+        });
+
+        // =========================
+        // Selectie + Berekenen
+        // =========================
+        $(function () {
+          const $btn = $('#btnCalculate');
+          const $master = $('#check-all-enabled');
+          const $container = $('#calcResultContainer');
+
+          // Gebruik data-attributes op je knop: data-action en data-projectid
+          const actionUrl = $btn.data('action') || '/Projecten/CalculateCosts';
+          const projectId = $btn.data('projectid') || (window.PROJECT_ID || 0);
+
+          // Anti-forgery token (zorg dat @Html.AntiForgeryToken() in de view staat)
+          const antiForgeryToken = $('input[name="__RequestVerificationToken"]').val();
+
+          // Set van geselecteerde IDs
+          const selectedIds = new Set();
+
+                  
+            function refreshCalcButtonLabel() {
+              const count = selectedIds.size;
+              const label = count > 0 ? `Berekenen (${count})` : 'Berekenen';
+              const $label = $btn.find('.btn-label');
+              if ($label.length) $label.text(label);   // netjes: alleen label-span bijwerken
+              else $btn.text(label);                   // fallback: hele knoptekst aanpassen
+            }
+
+          function setCalcEnabled(enabled) {
+            if (enabled) {
+              $btn.removeClass('disabled d-none')
+                  .attr('aria-disabled', 'false')
+                  .removeAttr('tabindex')
+                  .prop('disabled', false);
+            } else {
+              $btn.addClass('disabled')
+                  .attr('aria-disabled', 'true')
+                  .attr('tabindex', '-1')
+                  .prop('disabled', true);
+            }
+          }
+
+          function syncMasterCheckbox() {
+            const rowsOnPage = $(oTable.rows({ page: 'current' }).nodes());
+            const $enabled = rowsOnPage.find('.unit-check:not(:disabled)');
+            const enabledCount = $enabled.length;
+
+            if (enabledCount === 0) {
+              $master.prop({ checked: false, indeterminate: false });
+              return;
+            }
+
+            let checkedCount = 0;
+            $enabled.each(function () {
+              if (selectedIds.has(String(this.value))) checkedCount++;
+            });
+
+            if (checkedCount === 0) {
+              $master.prop({ checked: false, indeterminate: false });
+            } else if (checkedCount === enabledCount) {
+              $master.prop({ checked: true, indeterminate: false });
+            } else {
+              $master.prop({ checked: false, indeterminate: true });
+            }
+          }
+
+          function syncRowCheckboxesOnPage() {
+            $(oTable.rows({ page: 'current' }).nodes())
+              .find('.unit-check').each(function () {
+                this.checked = selectedIds.has(String(this.value));
+              });
+          }
+
+          function syncButton() {
+            setCalcEnabled(selectedIds.size > 0);
+            refreshCalcButtonLabel();
+          }
+
+          // Block click indien disabled (veiligheid)
+          $btn.on('click', function (e) {
+            if ($btn.hasClass('disabled') || $btn.attr('aria-disabled') === 'true' || $btn.prop('disabled')) {
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              return false;
+            }
+          });
+
+          // Initial sync bij laden
+          syncRowCheckboxesOnPage();
+          syncMasterCheckbox();
+          syncButton();
+
+          // Op redraw (filter/paging) checkboxen + master + button syncen
+          $('#datatable-units-list').on('draw.dt', function () {
+            syncRowCheckboxesOnPage();
+            syncMasterCheckbox();
+            syncButton();
+          });
+
+          // Rij-checkboxen togglen
+          $(document).on('change', '.unit-check', function () {
+            const id = String(this.value);
+            if (this.checked) selectedIds.add(id);
+            else selectedIds.delete(id);
+
+            syncMasterCheckbox();
+            syncButton();
+          });
+
+          // Master checkbox → alle zichtbare rij-checkboxen (enabled)
+          $master.on('change', function () {
+            const check = this.checked;
+            $(oTable.rows({ page: 'current' }).nodes())
+              .find('.unit-check:not(:disabled)').each(function () {
+                this.checked = check;
+                const id = String(this.value);
+                if (check) selectedIds.add(id);
+                else selectedIds.delete(id);
+              });
+
+            syncMasterCheckbox();
+            syncButton();
+          });
+
+          // Klik op Berekenen → POST naar CalculateCosts en injecteer partial
+          $btn.on('click', function () {
+            if (selectedIds.size === 0) return;
+
+            // laad-indicator
+            $btn.addClass('btn-loading').prop('disabled', true);
+            $container.html('<div class="text-center my-4"><div class="spinner-border" role="status"></div></div>');
+
+            // ints in array
+            const ids = Array.from(selectedIds).map(x => parseInt(x, 10)).filter(n => !isNaN(n));
+
+            fetch(`${actionUrl}?projectId=${encodeURIComponent(projectId)}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgeryToken
+              },
+              body: JSON.stringify(ids)
+            })
+            .then(async res => {
+              if (!res.ok) throw new Error(await res.text());
+              return res.text();
+            })
+            .then(html => {
+              $container.hide().html(html).fadeIn(120);
+              window.initCalcCard();
+            })
+            .catch(err => {
+              $container.html(`<div class="alert alert-danger">Fout bij berekenen: ${err.message}</div>`);
+            })
+            .finally(() => {
+              $btn.removeClass('btn-loading').prop('disabled', selectedIds.size === 0);
+            });
+          });
+        });
+    </script>
+    <script>
+        function debounce(fn, ms){ let t; return function(){ clearTimeout(t); t=setTimeout(()=>fn.apply(this, arguments), ms); }; }
+
+        window.initCalcCard = function initCalcCard(){
+          const $card = $('#calc-card');
+          if ($card.length === 0) return;
+
+          let recalcAbort;
+          const projectId = $card.data('projectid');
+          const recalcUrl = $card.data('recalc-url');
+          const token = $('input[name="__RequestVerificationToken"]').val();
+          const $container = $('#calcResultContainer');
+
+          // AutoNumeric opties
+          const moneyOpts = {
+            currencySymbol: '€ ',
+            currencySymbolPlacement: 'p',
+            decimalCharacter: ',',
+            digitGroupSeparator: '.',
+            decimalPlaces: 2,
+            selectOnFocus: true,
+            unformatOnSubmit: true,
+            modifyValueOnWheel: false
+          };
+          const percentOpts = {
+            decimalCharacter: ',',
+            digitGroupSeparator: '.',
+            decimalPlaces: 2,
+            minimumValue: '0',
+            maximumValue: '100',
+            selectOnFocus: true,
+            unformatOnSubmit: true,
+            modifyValueOnWheel: false,
+            suffixText: ' %'   // optioneel: toont " %"
+          };
+
+          // Init: alle geld/percentage inputs
+          $card.find('.an-money').each(function(){ new AutoNumeric(this, moneyOpts); });
+          $card.find('.an-percent').each(function(){ new AutoNumeric(this, percentOpts); });
+
+          // Print
+            const printUrl = $card.data('print-url');
+
+            $('#btnPrintPdf').off('click').on('click', function(){
+              const payload = collectPayload();
+
+              fetch(printUrl + '?projectId=' + encodeURIComponent(projectId), {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'RequestVerificationToken': token
+                },
+                body: JSON.stringify(payload)
+              })
+              .then(async res => {
+                if (!res.ok) throw new Error(await res.text());
+                return res.arrayBuffer();
+              })
+              .then(buf => {
+                const blob = new Blob([buf], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+
+                // Download trigger (of window.open(url) als je in nieuw tab wil tonen)
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Kostencalculatie_${projectId}_${new Date().toISOString().slice(0,19).replaceAll(':','-')}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+              })
+              .catch(err => alert('Fout bij afdrukken: ' + err.message));
+            });
+
+
+          // Helper: payload bouwen
+          function collectPayload(){
+            const getNum = sel => Number(AutoNumeric.getNumber($card.find(sel)[0]));
+
+            const overrides = {
+              vatPercent:              getNum('#inp-vat'),
+              registrationPercent:     getNum('#inp-reg'),
+              fixedCertificateCost:    getNum('#inp-notary'),
+              mortageRegistrationCost: getNum('#inp-mortgage'),
+              baseCertificateCost:     getNum('#inp-base-deed'),
+              parcelCost:              getNum('#inp-parcel'),
+              connectionFees:          getNum('#inp-connection'),
+              surveyorCost:            getNum('#inp-surveyor')
+            };
+
+            const units = [];
+            $card.find('#tbl-calc-lines tbody tr').each(function(){
+              const unitId = parseInt($(this).data('unitid'), 10);
+              if (isNaN(unitId)) return;
+              const landDisc  = Number(AutoNumeric.getNumber($(this).find('.land-discount')[0]));
+              const buildDisc = Number(AutoNumeric.getNumber($(this).find('.build-discount')[0]));
+              const include   = $(this).find('.include-costs').is(':checked');
+              units.push({ UnitId: unitId, LandDiscount: landDisc, BuildDiscount: buildDisc, IncludePerUnitCosts: include });
+            });
+
+            return Object.assign({ units }, overrides);
+          }
+         // boven in initCalcCard scope
+
+        const doRecalc = debounce(function(){
+          if (recalcAbort) recalcAbort.abort();
+          recalcAbort = new AbortController();
+
+          const payload = collectPayload();
+          fetch(recalcUrl + '?projectId=' + encodeURIComponent(projectId), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+            body: JSON.stringify(payload),
+            signal: recalcAbort.signal
+          })
+          .then(async res => {
+            if (!res.ok) throw new Error(await res.text());
+            return res.text();
+          })
+          .then(html => {
+            $container.html(html);
+            window.initCalcCard();
+          })
+          .catch(err => {
+            // genegeerde aborts stilhouden
+            if (err.name !== 'AbortError') alert('Fout bij automatisch herberekenen: ' + err.message);
+          });
+        }, 400);
+
+          // Triggers: AutoNumeric firet een eigen event; luister daarop én op input/change
+          $card.on('autoNumeric:rawValueModified input change', '.an-money, .an-percent, .land-discount, .build-discount, .include-costs', doRecalc);
+          $card.on('input change','.an-money, .an-percent, .land-discount, .build-discount', doRecalc);
+        };
+    </script>
+
+
+
+}

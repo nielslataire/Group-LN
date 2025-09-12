@@ -1,0 +1,35 @@
+﻿@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+@model BOCore.BudgetActivityBO
+
+<tr class="budget-row" data-activity-id="@Model.Activity.ID" data-group="@Model.Activity.GroupName">
+@using (Html.BeginCollectionItem("budgetactivities"))
+{
+
+    <td class="desc-cell">
+        @Model.Activity.Name
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.ProjectId)
+        @Html.HiddenFor(m => m.Activity.ID)
+        @Html.HiddenFor(m => m.Activity.Name)
+        @Html.HiddenFor(m => m.Activity.Group.ID)
+        @Html.HiddenFor(m => m.Activity.Group.Name)
+    </td>
+
+    <td class="text-end">
+    @Html.TextBoxFor(m => m.Price,
+        new {
+            @class = "form-control form-control-modern text-end currency currency-input mt-2 mb-2",
+            inputmode = "numeric",
+            autocomplete = "off"
+        })
+    </td>
+
+    <td class="text-end">
+        <a class="text-default icon-link deleterow" title="Verwijderen">
+            <i class="bx bx-trash fs-5"></i>
+        </a>
+    </td>
+
+}
+</tr>

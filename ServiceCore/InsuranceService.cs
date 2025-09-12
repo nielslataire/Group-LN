@@ -158,10 +158,23 @@ namespace ServiceCore
             else
             {
                 // ===== UPDATE (detached) =====
-                // Maak een stub met enkel de PK, laat de translator daarna de velden invullen.
-                entity = new Insurances { Id = bo.Id };          // let op: bo.Id moet != 0
-                _uow.Insurances.Attach(entity);
+                if (bo.Id == 0)
+                {
+                    response.AddError("Ongeldige Id voor update.");
+                    return response;
+                }
 
+                // 1) Kijk of er al een tracked instance bestaat en detach die
+                var local = _uow.Context.Set<Insurances>().Local.FirstOrDefault(x => x.Id == bo.Id);
+                if (local != null)
+                {
+                    _uow.Context.Entry(local).State = Microsoft.EntityFrameworkCore.EntityState.Detached;
+                }
+
+                entity = new Insurances { Id = bo.Id };   // permanente PK
+                _uow.Insurances.Attach(entity);               // Attach slechts 1 keer
+
+                // 2) Vertaal enkel scalar/FK’s (geen navigations!)
                 var err = InsuranceTranslator.TranslateBOToEntity(entity, bo, _uow);
                 if (err != ErrorCode.Success)
                 {
@@ -169,11 +182,8 @@ namespace ServiceCore
                     return response;
                 }
 
-                // Attach en markeer enkel de velden die je wil updaten
-                _uow.Insurances.Attach(entity);
-                var entry = _uow.Entry(entity);
-
-                // Markeer gericht als modified (wijzig naar jouw model waar nodig)
+                // 3) Gerichte updates markeren
+                var entry = _uow.Context.Entry(entity);
                 entry.Property("ContractActivityId").IsModified = true;
                 entry.Property("InsuranceCompanyId").IsModified = true;
                 entry.Property("Startdate").IsModified = true;
@@ -182,10 +192,6 @@ namespace ServiceCore
                 entry.Property("GuaranteePeriod").IsModified = true;
                 entry.Property("Type").IsModified = true;
                 entry.Property("Enddate").IsModified = true;
-
-                // Belangrijk: navigaties NIET invullen/markeren (voorkomt principal-gedoe)
-                // entry.Reference(x => x.ContractActivity).IsModified = false;
-                // entry.Reference(x => x.InsuranceCompany).IsModified = false;
 
                 var resultUpdate = _uow.SaveChanges();
                 response.AddSaveChangesResult(resultUpdate, "Verzekering aangepast", "Verzekering niet aangepast");

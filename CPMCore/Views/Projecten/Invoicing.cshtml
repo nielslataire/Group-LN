@@ -1,0 +1,255 @@
+﻿@model CPMCore.Models.Projecten.ProjectInvoicingModel
+@using BOCore
+
+
+@{
+    ViewData["Title"] = "Project – " + Model.ProjectName;
+}
+
+<div class="row">
+    <div class="col-12 col-lg-10">
+        <!-- Vordering der werken -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Schijven vordering der werken</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Schijf</th>
+                                <th class="text-end" style="white-space:nowrap;">Percentage</th>
+                                <th class="text-end" style="white-space:nowrap;">Factuur opmaken</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ClientAccounts)
+                            {
+                                <tr class="table-primary">
+                                    <td colspan="3" class="fw-bold">
+                                        @(item.Client.Name != null
+                                                                            ? $"{item.Client.Salutation.GetDisplayName()} {item.Client.DisplayName}"
+                                                                            : item.Client.DisplayName)
+                                </td>
+                            </tr>
+
+                                                        foreach (var iu in item.Units)
+                                {
+                                    <tr class="table-active">
+                                        <td colspan="3">
+                                            @iu.Unit.Type.Name @(" ") @iu.Unit.Name <br />
+                                        </td>
+                                    </tr>
+
+                                    foreach (var stagegroup in iu.PaymentStages.Select(x => x.GroupId).Distinct())
+                                    {
+                                        <tr class="table-secondary">
+                                            <td colspan="3">@iu.PaymentStages.First(x => x.GroupId == stagegroup).GroupName</td>
+                                        </tr>
+
+                                        foreach (var stage in iu.PaymentStages.Where(l => l.GroupId == stagegroup))
+                                        {
+                                            <tr>
+                                                <td class="text-capitalize">
+                                                    <i class="fa fa-level-down-alt me-2"></i>@stage.Name
+                                                </td>
+                                                <td class="text-end">@stage.Percentage.ToString("0.00") @Html.Raw("%")</td>
+                                                <td class="text-end">
+                                                    @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                    {
+                                                        <input type="checkbox" class="form-check-input chkInvoice"
+                                                               data-id="@stage.Id"
+                                                               data-unitid="@iu.Unit.Id"
+                                                               data-clientaccountid="@item.Client.Id" />
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Meerwerken -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Meerwerken / Minwerken</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Wijzigingsopdracht</th>
+                                <th class="text-end" style="white-space:nowrap;">Bedrag</th>
+                                <th class="text-end" style="white-space:nowrap;">Factuur opmaken</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ClientChangeOrders)
+                            {
+                                <tr class="table-primary">
+                                    <td colspan="3" class="fw-bold">
+                                        @(item.Client.Name != null
+                                                                            ? $"{item.Client.Salutation.GetDisplayName()} {item.Client.DisplayName}"
+                                                                            : item.Client.DisplayName)
+                                </td>
+                            </tr>
+
+                                                        foreach (var co in item.ChangeOrders)
+                                {
+                                    <tr class="table-active">
+                                        <td colspan="3">@co.Description<br /></td>
+                                    </tr>
+
+                                    foreach (var cod in co.Details.Where(i => i.Invoicable == true && i.Invoiced == false))
+                                    {
+                                        <tr>
+                                            <td class="text-capitalize">
+                                                <i class="fa fa-level-down-alt me-2"></i>@cod.Description
+                                            </td>
+                                            <td class="text-end">@string.Format("{0:C}", cod.Totaal)</td>
+                                            <td class="text-end">
+                                                @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                {
+                                                    <input type="checkbox" class="form-check-input chkInvoiceCO"
+                                                           data-id="@cod.Id"
+                                                           data-coid="@co.Id"
+                                                           data-clientaccountid="@item.Client.Id" />
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nuts -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Nutsaansluitingen</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Klant</th>
+                                <th class="text-end" style="white-space:nowrap;">Bedrag</th>
+                                <th class="text-end" style="white-space:nowrap;">Factuur opmaken</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.ClientUtilityCosts)
+                            {
+                                <tr class="table-active">
+                                    <td class="text-capitalize">@item.Clientname</td>
+                                    <td class="text-end">
+                                        @string.Format("{0:C}", item.UtilityCost.Sum(s => s.Price / 100m * s.Percentage))
+                                    </td>
+                                    <td class="text-end"></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar-knoppen -->
+    <div class="col-12 col-lg-2">
+        @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+        {
+            <button type="button" class="btn btn-primary w-100 mb-2" id="btnInvoicing" data-bs-toggle="tooltip" title="Facturen opmaken">
+                <i class="fa fa-euro-sign"></i> Facturen opmaken
+            </button>
+        }
+        <a class="btn btn-outline-secondary w-100 mb-2"
+           href="@Url.Action("PaymentStages", "Projecten", new { projectid = Model.ProjectId })"
+           title="Betalingsschijven">
+            <i class="fa fa-chart-pie"></i> Betalingsschijven
+        </a>
+
+        <a class="btn btn-outline-secondary w-100" data-bs-toggle="modal" data-bs-target="#modalprintinvoicelist"
+           id="btnPrintInvoiceList" title="Facturatie overzicht" data-id="@Model.ProjectId">
+            <i class="fa fa-bars"></i> Facturatie overzicht
+        </a>
+    </div>
+</div>
+
+<!-- Modal Facturatie-overzicht -->
+<div class="modal fade" id="modalprintinvoicelist" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-body" id="invoice-list-container"></div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script>
+        // Anti-forgery token voor fetch/jQuery
+        function getRequestVerificationToken() {
+            return document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+        }
+
+        document.getElementById('btnInvoicing')?.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            const list = [];
+            document.querySelectorAll('.chkInvoice:checked').forEach(chk => {
+                list.push({
+                    clientAccountId: parseInt(chk.getAttribute('data-clientaccountid')),
+                    unitId:          parseInt(chk.getAttribute('data-unitid')),
+                    stageId:         parseInt(chk.getAttribute('data-id')),
+                    companyId:       1060 // TODO: haal dit dynamisch
+                });
+            });
+
+            const listCO = [];
+            document.querySelectorAll('.chkInvoiceCO:checked').forEach(chk => {
+                listCO.push({
+                    clientAccountId:     parseInt(chk.getAttribute('data-clientaccountid')),
+                    changeOrderId:       parseInt(chk.getAttribute('data-coid')),
+                    changeOrderDetailId: parseInt(chk.getAttribute('data-id'))
+                });
+            });
+
+            const token = getRequestVerificationToken();
+            const headers = { 'Content-Type': 'application/json; charset=utf-8' };
+            if (token) headers['RequestVerificationToken'] = token;
+
+            Promise.all([
+                fetch('@Url.Action("MakeInvoices", "Projecten")', {
+                    method: 'POST', headers, body: JSON.stringify({ invoices: list })
+                }).then(r => r.json()),
+                fetch('@Url.Action("MakeInvoicesCO", "Projecten")', {
+                    method: 'POST', headers, body: JSON.stringify({ invoices: listCO })
+                }).then(r => r.json())
+            ]).then(([r1, r2]) => {
+                const pid = (r1?.projectid ?? 0) || (r2?.projectid ?? 0);
+                if (pid && pid !== 0) {
+                    window.location.href = '@Url.Action("Invoicing", "Projecten")' + '?projectid=' + pid;
+                }
+            });
+        });
+
+        document.getElementById('btnPrintInvoiceList')?.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            fetch('/Projecten/ModalPrintInvoiceList?projectid=' + id)
+                .then(r => r.text())
+                .then(html => document.getElementById('invoice-list-container').innerHTML = html);
+        });
+    </script>
+}

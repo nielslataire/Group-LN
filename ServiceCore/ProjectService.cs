@@ -1165,6 +1165,25 @@ namespace ServiceCore
             response.AddSaveChangesResult(saved, "Sales settings opgeslagen", "Sales settings niet opgeslagen");
             return response;
         }
+        public Response InsertUpdateSalesText(ProjectBO project)
+        {
+            var response = new Response();
+            if (project.Id <= 0) response.AddError("ProjectID is verplicht");
+            if (!response.Success) return response;
+
+            Project entity =  _uow.Projects.GetById(project.Id);
+
+            if (entity != null)
+            {
+                entity.CommercialTextNl = project.CommercialTextNL;
+                entity.CommercialTitleNl = project.CommercialTitleNL;
+            }
+            else response.AddError("Project not found");
+
+            var saved = _uow.SaveChanges();
+            response.AddSaveChangesResult(saved, "Project websitedata opgeslagen", "roject websitedata niet opgeslagen");
+            return response;
+        }
 
         public Response DeleteSalesSettings(List<int> ids)
         {
@@ -1460,43 +1479,47 @@ namespace ServiceCore
         {
             var response = new GetResponse<UnitWithStagesBO>();
 
+            // 1) Units eerst materialiseren (reader sluiten)
             var units = _uow.Units.GetNoTracking()
                 .Where(m =>
                     m.ProjectId == projectid &&
-                    m.UnitConstructionValue.Any(l => l.PaymentGroup.InvoicingPaymentStages.Any(i => (bool)i.Invoicable)) &&
+                    m.UnitConstructionValue.Any(l => l.PaymentGroup.InvoicingPaymentStages.Any(i => i.Invoicable == true)) &&
                     m.ClientAccountId > 0 &&
-                    m.ClientAccount.DateDeedOfSale != null);
+                    m.ClientAccount.DateDeedOfSale != null)
+                .ToList(); // <-- belangrijk
 
             foreach (var unit in units)
             {
+                // 2) Stages materialiseren per unit
                 var stages = _uow.PaymentStages.GetNoTracking()
                     .Where(m =>
-                        (bool)m.Invoicable &&
+                        m.Invoicable == true &&
                         !m.InvoicesDetails.Any(i => i.UnitId == unit.Id) &&
-                        m.Group.UnitConstructionValue.Any(l => l.UnitId == unit.Id));
+                        m.Group.UnitConstructionValue.Any(l => l.UnitId == unit.Id))
+                    .ToList(); // <-- belangrijk
 
-                if (stages.Any())
+                if (stages.Count == 0) continue;
+
+                var bo = new UnitWithStagesBO();
+                var unitBo = new UnitBO();
+
+                foreach (var stage in stages)
                 {
-                    var bo = new UnitWithStagesBO();
-                    var unitBo = new UnitBO();
-
-                    foreach (var stage in stages)
-                    {
-                        var stageBo = new ProjectPaymentStageBO();
-                        var err2 = ProjectPaymentStageTranslator.TranslateEntityToBO(stage, stageBo);
-                        if (err2 == ErrorCode.Success) bo.PaymentStages.Add(stageBo);
-                        else response.AddError(err2.ToString());
-                    }
-
-                    var err = UnitTranslator.TranslateEntityToBO(unit, unitBo);
-                    if (err == ErrorCode.Success)
-                    {
-                        bo.Unit = unitBo;
-                        response.AddValue(bo);
-                    }
-                    else response.AddError(err.ToString());
+                    var stageBo = new ProjectPaymentStageBO();
+                    var err2 = ProjectPaymentStageTranslator.TranslateEntityToBO(stage, stageBo);
+                    if (err2 == ErrorCode.Success) bo.PaymentStages.Add(stageBo);
+                    else response.AddError(err2.ToString());
                 }
+
+                var err = UnitTranslator.TranslateEntityToBO(unit, unitBo);
+                if (err == ErrorCode.Success)
+                {
+                    bo.Unit = unitBo;
+                    response.AddValue(bo);
+                }
+                else response.AddError(err.ToString());
             }
+
             return response;
         }
 

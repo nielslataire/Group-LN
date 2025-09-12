@@ -8,77 +8,39 @@ namespace CPMCore.Service
 {
     public static class ServiceFactory
     {
-        // De gedeelde (legacy) UoW voor singleton-getters.
-        // Gebruik voor transacties liever CreateUoW() en de CreateXxxService(uow) overloads.
-        private static UnitOfWorkCore _uow = new UnitOfWorkCore(new cpmRunningContext());
-
-        // Singleton velden
-        private static IAuthenticationService? _authenticationService;
-        private static IActivityService? _activityService;
-        private static IProvinceService? _provinceService;
-        private static ICompanyService? _companyService;
-        private static ICountryService? _countryService;
-        private static IPostalcodeService? _postalcodeService;
-        private static IDepartmentService? _departmentService;
-        private static IContactService? _contactService;
-        private static IProjectService? _projectService;
-        private static IUnitService? _unitService;
-        private static IClientService? _clientService;
-        private static IInvoicingService? _invoicingService;
-        private static IInsuranceService? _insuranceService;
-
-
-        // Generieke helper om duplicatie te vermijden
-        private static TService GetOrCreate<TService>(ref TService? field, Func<UnitOfWorkCore, TService> factory)
-            where TService : class
-        {
-            return field ??= factory(_uow);
-        }
-
-        // ====== Legacy singleton getters (gebruiken de gedeelde _uow) ======
-        public static IAuthenticationService GetAuthenticationService()
-            => GetOrCreate(ref _authenticationService, uow => new AuthenticationService(uow));
-
-        public static IActivityService GetActivityService()
-            => GetOrCreate(ref _activityService, uow => new ActivityService(uow));
-
-        public static IProvinceService GetProvinceService()
-            => GetOrCreate(ref _provinceService, uow => new ProvinceService(uow));
-
-        public static ICompanyService GetCompanyService()
-            => GetOrCreate(ref _companyService, uow => new CompanyService(uow));
-
-        public static ICountryService GetCountryService()
-            => GetOrCreate(ref _countryService, uow => new CountryService(uow));
-
-        public static IPostalcodeService GetPostalcodeService()
-            => GetOrCreate(ref _postalcodeService, uow => new PostalcodeService(uow));
-
-        public static IDepartmentService GetDepartmentService()
-            => GetOrCreate(ref _departmentService, uow => new DepartmentService(uow));
-
-        public static IContactService GetContactService()
-            => GetOrCreate(ref _contactService, uow => new ContactService(uow));
-
-        public static IProjectService GetProjectService()
-            => GetOrCreate(ref _projectService, uow => new ProjectService(uow));
-
-        public static IUnitService GetUnitService()
-            => GetOrCreate(ref _unitService, uow => new UnitService(uow));
-
-        public static IClientService GetClientService()
-            => GetOrCreate(ref _clientService, uow => new ClientService(uow));
-
-        public static IInvoicingService GetInvoicingService()
-            => GetOrCreate(ref _invoicingService, uow => new InvoicingService(uow));
-
-        public static IInsuranceService GetInsuranceService()
-            => GetOrCreate(ref _insuranceService, uow => new InsuranceService(uow));
-
-        // ====== Overloads voor transacties: instanties met een meegegeven UoW ======
+        // Elke call krijgt een verse UoW/DbContext
         public static UnitOfWorkCore CreateUoW()
             => new UnitOfWorkCore(new cpmRunningContext());
 
+        // ----- Non-cached getters (altijd nieuwe instance) -----
+        public static IAuthenticationService GetAuthenticationService()
+            => new AuthenticationService(CreateUoW());
+        public static IActivityService GetActivityService()
+            => new ActivityService(CreateUoW());
+        public static IProvinceService GetProvinceService()
+            => new ProvinceService(CreateUoW());
+        public static ICompanyService GetCompanyService()
+            => new CompanyService(CreateUoW());
+        public static ICountryService GetCountryService()
+            => new CountryService(CreateUoW());
+        public static IPostalcodeService GetPostalcodeService()
+            => new PostalcodeService(CreateUoW());
+        public static IDepartmentService GetDepartmentService()
+            => new DepartmentService(CreateUoW());
+        public static IContactService GetContactService()
+            => new ContactService(CreateUoW());
+        public static IProjectService GetProjectService()
+            => new ProjectService(CreateUoW());
+        public static IUnitService GetUnitService()
+            => new UnitService(CreateUoW());
+        public static IClientService GetClientService()
+            => new ClientService(CreateUoW());
+        public static IInvoicingService GetInvoicingService()
+            => new InvoicingService(CreateUoW());
+        public static IInsuranceService GetInsuranceService()
+            => new InsuranceService(CreateUoW());
+
+        // ----- Overloads met meegegeven UoW (voor transacties) -----
         public static IAuthenticationService CreateAuthenticationService(UnitOfWorkCore uow)
             => new AuthenticationService(uow);
         public static IActivityService CreateActivityService(UnitOfWorkCore uow)
@@ -106,36 +68,7 @@ namespace CPMCore.Service
         public static IInsuranceService CreateInsuranceService(UnitOfWorkCore uow)
             => new InsuranceService(uow);
 
-        // ====== Optioneel: helpers om gedeelde UoW te wisselen/cleanen ======
-        /// <summary>
-        /// Vervang de gedeelde UoW (alle toekomstige singleton-getters gaan de nieuwe UoW gebruiken).
-        /// Let op: bestaande singleton services houden hun oude UoW vast tot je ResetSingletons() aanroept.
-        /// </summary>
-        public static void ReplaceUoW(UnitOfWorkCore newUow)
-        {
-            _uow = newUow ?? throw new ArgumentNullException(nameof(newUow));
-        }
-
-        /// <summary>
-        /// Reset alle singleton service-instanties zodat ze bij de volgende GetXxxService()-aanroep
-        /// met de huidige _uow opnieuw worden aangemaakt.
-        /// </summary>
-        public static void ResetSingletons()
-        {
-            _authenticationService = null;
-            _activityService = null;
-            _provinceService = null;
-            _companyService = null;
-            _countryService = null;
-            _postalcodeService = null;
-            _departmentService = null;
-            _contactService = null;
-            _projectService = null;
-            _unitService = null;
-            _clientService = null;
-            _invoicingService = null;
-            _insuranceService = null;
-        }
+        // Transactie-helper blijft werken
         public static async Task<(UnitOfWorkCore uow, IDbContextTransaction tx)> CreateUoWWithTransactionAsync()
         {
             var uow = CreateUoW();
