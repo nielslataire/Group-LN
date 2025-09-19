@@ -24,4 +24,9 @@ namespace FacadeCore
         Response AddCompanyActivity(int companyid, int activityid);
         Response DeleteCompanyActivity(int companyid, int activityid);
     }
+
+    public interface ICompanyQueryService
+    {
+        Task<string> GetIssuerNameAsync(int issuerCompanyId, CancellationToken ct = default);
+    }
 }

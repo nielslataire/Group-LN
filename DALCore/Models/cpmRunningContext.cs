@@ -85,6 +85,24 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<Insurances> Insurances { get; set; }
 
+    public virtual DbSet<InvoiceAttachments> InvoiceAttachments { get; set; }
+
+    public virtual DbSet<InvoiceDunning> InvoiceDunning { get; set; }
+
+    public virtual DbSet<InvoiceEmailLog> InvoiceEmailLog { get; set; }
+
+    public virtual DbSet<InvoicePdfArchive> InvoicePdfArchive { get; set; }
+
+    public virtual DbSet<InvoiceRelations> InvoiceRelations { get; set; }
+
+    public virtual DbSet<InvoiceSequence> InvoiceSequence { get; set; }
+
+    public virtual DbSet<InvoiceSeries> InvoiceSeries { get; set; }
+
+    public virtual DbSet<InvoiceStatusLookup> InvoiceStatusLookup { get; set; }
+
+    public virtual DbSet<InvoiceUbl> InvoiceUbl { get; set; }
+
     public virtual DbSet<Invoices> Invoices { get; set; }
 
     public virtual DbSet<InvoicesDetails> InvoicesDetails { get; set; }
@@ -93,7 +111,17 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<InvoicingPaymentStages> InvoicingPaymentStages { get; set; }
 
+    public virtual DbSet<IssuerBankAccount> IssuerBankAccount { get; set; }
+
+    public virtual DbSet<IssuerCompany> IssuerCompany { get; set; }
+
     public virtual DbSet<MigrationHistory> MigrationHistory { get; set; }
+
+    public virtual DbSet<PaymentAllocations> PaymentAllocations { get; set; }
+
+    public virtual DbSet<PaymentTerms> PaymentTerms { get; set; }
+
+    public virtual DbSet<Payments> Payments { get; set; }
 
     public virtual DbSet<Permission> Permission { get; set; }
 
@@ -141,16 +169,18 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<Vattype> Vattype { get; set; }
 
+    public virtual DbSet<VwInvoiceBalance> VwInvoiceBalance { get; set; }
+
+    public virtual DbSet<VwInvoiceTotals> VwInvoiceTotals { get; set; }
+
     public virtual DbSet<WheaterStations> WheaterStations { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Connect Timeout=500;Encrypt=False");
+        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.UseCollation("SQL_Latin1_General_CP1_CI_AS");
-
         modelBuilder.Entity<Activity>(entity =>
         {
             entity.Property(e => e.ActivityId).HasColumnName("ActivityID");
@@ -968,30 +998,257 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_Insurances_InsuranceCompanies");
         });
 
+        modelBuilder.Entity<InvoiceAttachments>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceA__3214EC07C94BD304");
+
+            entity.Property(e => e.BlobPath)
+                .IsRequired()
+                .HasMaxLength(400);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.FileName)
+                .IsRequired()
+                .HasMaxLength(260);
+            entity.Property(e => e.MimeType).HasMaxLength(100);
+
+            entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceAttachments)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceAt__Invoi__7ADC2F5E");
+        });
+
+        modelBuilder.Entity<InvoiceDunning>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceD__3214EC0712E1406F");
+
+            entity.Property(e => e.FeeAmount).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.InterestPct).HasColumnType("decimal(9, 4)");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.SentAt).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceDunning)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceDu__Invoi__7EACC042");
+        });
+
+        modelBuilder.Entity<InvoiceEmailLog>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceE__3214EC0744B888D2");
+
+            entity.Property(e => e.CcAddress).HasMaxLength(400);
+            entity.Property(e => e.ProviderId).HasMaxLength(100);
+            entity.Property(e => e.SentAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.Status)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.Subject)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.ToAddress)
+                .IsRequired()
+                .HasMaxLength(400);
+
+            entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceEmailLog)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceEm__Invoi__770B9E7A");
+        });
+
+        modelBuilder.Entity<InvoicePdfArchive>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceP__3214EC076B9B3928");
+
+            entity.HasIndex(e => e.InvoiceId, "UQ__InvoiceP__D796AAB40FF76CA6").IsUnique();
+
+            entity.Property(e => e.GeneratedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.Pdf).IsRequired();
+            entity.Property(e => e.Sha256)
+                .HasMaxLength(64)
+                .IsUnicode(false)
+                .IsFixedLength();
+
+            entity.HasOne(d => d.Invoice).WithOne(p => p.InvoicePdfArchive)
+                .HasForeignKey<InvoicePdfArchive>(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoicePd__Invoi__0A1E72EE");
+        });
+
+        modelBuilder.Entity<InvoiceRelations>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceR__3214EC07CB49EE97");
+
+            entity.Property(e => e.RelationType)
+                .IsRequired()
+                .HasMaxLength(20);
+
+            entity.HasOne(d => d.ChildInvoice).WithMany(p => p.InvoiceRelationsChildInvoice)
+                .HasForeignKey(d => d.ChildInvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceRe__Child__733B0D96");
+
+            entity.HasOne(d => d.ParentInvoice).WithMany(p => p.InvoiceRelationsParentInvoice)
+                .HasForeignKey(d => d.ParentInvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceRe__Paren__7246E95D");
+        });
+
+        modelBuilder.Entity<InvoiceSequence>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC0753928DA7");
+
+            entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UQ__InvoiceS__F0F80679723D5DB7").IsUnique();
+
+            entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UX_InvoiceSequence_Series_Year").IsUnique();
+
+            entity.HasOne(d => d.Series).WithMany(p => p.InvoiceSequence)
+                .HasForeignKey(d => d.SeriesId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceSe__Serie__13A7DD28");
+        });
+
+        modelBuilder.Entity<InvoiceSeries>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07170E86C5");
+
+            entity.HasIndex(e => new { e.CompanyId, e.Code }, "UQ__InvoiceS__57B2D9E701310CCF").IsUnique();
+
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.Code }, "UX_InvoiceSeries_Issuer_Code")
+                .IsUnique()
+                .HasFilter("([IsActive]=(1))");
+
+            entity.Property(e => e.Code)
+                .IsRequired()
+                .HasMaxLength(20);
+            entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
+            entity.Property(e => e.Description).HasMaxLength(100);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.IssuerCompany).WithMany(p => p.InvoiceSeries)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .HasConstraintName("FK_InvoiceSeries_IssuerCompany");
+        });
+
+        modelBuilder.Entity<InvoiceStatusLookup>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07481DD686");
+
+            entity.HasIndex(e => e.Name, "UQ__InvoiceS__737584F6A33D066A").IsUnique();
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<InvoiceUbl>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceU__3214EC07758CAAB7");
+
+            entity.HasIndex(e => e.InvoiceId, "UQ__InvoiceU__D796AAB41BF664BB").IsUnique();
+
+            entity.Property(e => e.GeneratedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.PeppolDocId).HasMaxLength(100);
+            entity.Property(e => e.Profile).HasMaxLength(50);
+            entity.Property(e => e.UblVersion)
+                .IsRequired()
+                .HasMaxLength(10)
+                .HasDefaultValue("2.1");
+            entity.Property(e => e.XmlContent)
+                .IsRequired()
+                .HasColumnType("xml");
+
+            entity.HasOne(d => d.Invoice).WithOne(p => p.InvoiceUbl)
+                .HasForeignKey<InvoiceUbl>(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__InvoiceUb__Invoi__0371755F");
+        });
+
         modelBuilder.Entity<Invoices>(entity =>
         {
+            entity.HasIndex(e => e.ClientId, "IX_Invoices_ClientId");
+
+            entity.HasIndex(e => e.ClientIdClientAccount, "IX_Invoices_ClientId_ClientAccount");
+
+            entity.HasIndex(e => e.ClientIdClientContacts, "IX_Invoices_ClientId_ClientContacts");
+
+            entity.HasIndex(e => new { e.ClientId, e.ClientName }, "IX_Invoices_Client_Search");
+
+            entity.HasIndex(e => e.CompanyId, "IX_Invoices_CompanyId");
+
+            entity.HasIndex(e => new { e.CompanyId, e.StatusId, e.ExpirationDate }, "IX_Invoices_Status_Company_Expiration");
+
+            entity.HasIndex(e => e.PublicId, "UX_Invoices_PublicId")
+                .IsUnique()
+                .HasFilter("([PublicId] IS NOT NULL)");
+
             entity.Property(e => e.Adress).HasMaxLength(200);
             entity.Property(e => e.BankAccount).HasMaxLength(50);
+            entity.Property(e => e.ClientIdClientAccount)
+                .HasComputedColumnSql("(case when [ClientType]=(1) then CONVERT([int],[ClientId])  end)", true)
+                .HasColumnName("ClientId_ClientAccount");
+            entity.Property(e => e.ClientIdClientContacts)
+                .HasComputedColumnSql("(case when [ClientType]=(2) then CONVERT([int],[ClientId])  end)", true)
+                .HasColumnName("ClientId_ClientContacts");
             entity.Property(e => e.ClientName).HasMaxLength(200);
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
+            entity.Property(e => e.CurrencyCode)
+                .HasMaxLength(3)
+                .IsFixedLength();
             entity.Property(e => e.ExtraInfo).HasMaxLength(1000);
             entity.Property(e => e.Filename)
                 .IsRequired()
                 .HasMaxLength(50);
+            entity.Property(e => e.ForeignGrossTotal).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.FxRateToCompany).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
             entity.Property(e => e.PublicId).HasMaxLength(50);
+            entity.Property(e => e.QrEpcPayload).HasMaxLength(512);
+            entity.Property(e => e.RoundingAmount).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.StructuredCommOgm)
+                .HasMaxLength(20)
+                .HasColumnName("StructuredCommOGM");
             entity.Property(e => e.VatNumber).HasMaxLength(50);
+            entity.Property(e => e.VatRegime).HasMaxLength(20);
+
+            entity.HasOne(d => d.ClientIdClientAccountNavigation).WithMany(p => p.Invoices)
+                .HasForeignKey(d => d.ClientIdClientAccount)
+                .HasConstraintName("FK_Invoices_ClientAccount");
+
+            entity.HasOne(d => d.ClientIdClientContactsNavigation).WithMany(p => p.Invoices)
+                .HasForeignKey(d => d.ClientIdClientContacts)
+                .HasConstraintName("FK_Invoices_ClientContacts");
+
+            entity.HasOne(d => d.IssuerCompany).WithMany(p => p.Invoices)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .HasConstraintName("FK_Invoices_IssuerCompany");
 
             entity.HasOne(d => d.PostalCode).WithMany(p => p.Invoices)
                 .HasForeignKey(d => d.PostalCodeId)
                 .HasConstraintName("FK_Invoices_PostalCode");
+
+            entity.HasOne(d => d.ReplacementOf).WithMany(p => p.InverseReplacementOf)
+                .HasForeignKey(d => d.ReplacementOfId)
+                .HasConstraintName("FK__Invoices__Replac__0DEF03D2");
+
+            entity.HasOne(d => d.Series).WithMany(p => p.Invoices)
+                .HasForeignKey(d => d.SeriesId)
+                .HasConstraintName("FK__Invoices__Series__0C06BB60");
+
+            entity.HasOne(d => d.Status).WithMany(p => p.Invoices)
+                .HasForeignKey(d => d.StatusId)
+                .HasConstraintName("FK__Invoices__Status__0CFADF99");
         });
 
         modelBuilder.Entity<InvoicesDetails>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_InvoicesStages_1");
 
+            entity.HasIndex(e => e.InvoiceId, "IX_InvoiceDetails_Invoice");
+
+            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.DiscountPercent).HasColumnType("decimal(9, 4)");
             entity.Property(e => e.GroupName).HasMaxLength(200);
+            entity.Property(e => e.LineType).HasMaxLength(20);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.Text).HasMaxLength(200);
             entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
@@ -1041,6 +1298,69 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_InvoicingPaymentStages_InvoicingPaymentGroup");
         });
 
+        modelBuilder.Entity<IssuerBankAccount>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__IssuerBa__3214EC075DEB3F01");
+
+            entity.HasIndex(e => e.IssuerCompanyId, "IX_IssuerBankAccount_IssuerCompanyId");
+
+            entity.HasIndex(e => e.IssuerCompanyId, "UX_IssuerBankAccount_Default")
+                .IsUnique()
+                .HasFilter("([IsDefault]=(1))");
+
+            entity.Property(e => e.Bic).HasMaxLength(11);
+            entity.Property(e => e.DisplayName).HasMaxLength(100);
+            entity.Property(e => e.Iban)
+                .IsRequired()
+                .HasMaxLength(34);
+
+            entity.HasOne(d => d.IssuerCompany).WithOne(p => p.IssuerBankAccount)
+                .HasForeignKey<IssuerBankAccount>(d => d.IssuerCompanyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__IssuerBan__Issue__1C3D2329");
+        });
+
+        modelBuilder.Entity<IssuerCompany>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__IssuerCo__3214EC07F8C0F7AB");
+
+            entity.Property(e => e.AddressLine1).HasMaxLength(200);
+            entity.Property(e => e.AddressLine2).HasMaxLength(200);
+            entity.Property(e => e.City).HasMaxLength(100);
+            entity.Property(e => e.CountryCode)
+                .HasMaxLength(2)
+                .IsFixedLength();
+            entity.Property(e => e.DefaultCurrency)
+                .HasMaxLength(3)
+                .IsFixedLength();
+            entity.Property(e => e.DefaultLanguage).HasMaxLength(5);
+            entity.Property(e => e.EinvoiceEnabled).HasColumnName("EInvoiceEnabled");
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.EmailSubjectTemplate).HasMaxLength(200);
+            entity.Property(e => e.EnterpriseNumber).HasMaxLength(32);
+            entity.Property(e => e.EpcBeneficiaryName).HasMaxLength(70);
+            entity.Property(e => e.EpcBic).HasMaxLength(11);
+            entity.Property(e => e.EpcIban).HasMaxLength(34);
+            entity.Property(e => e.EpcRemittanceTemplate).HasMaxLength(140);
+            entity.Property(e => e.EpcRemittanceType).HasMaxLength(10);
+            entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.LegalName).HasMaxLength(200);
+            entity.Property(e => e.LogoPath).HasMaxLength(400);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.PostalCode).HasMaxLength(16);
+            entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
+            entity.Property(e => e.VatNumber).HasMaxLength(32);
+
+            entity.HasOne(d => d.DefaultPaymentTerm).WithMany(p => p.IssuerCompany)
+                .HasForeignKey(d => d.DefaultPaymentTermId)
+                .HasConstraintName("FK__IssuerCom__Defau__186C9245");
+        });
+
         modelBuilder.Entity<MigrationHistory>(entity =>
         {
             entity.HasKey(e => new { e.MigrationId, e.ContextKey }).HasName("PK_dbo.__MigrationHistory");
@@ -1053,6 +1373,58 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ProductVersion)
                 .IsRequired()
                 .HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<PaymentAllocations>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__PaymentA__3214EC07D74B24B8");
+
+            entity.HasIndex(e => e.InvoiceId, "IX_PaymentAllocations_Invoice");
+
+            entity.HasIndex(e => new { e.PaymentId, e.InvoiceId }, "UQ__PaymentA__D62C009275F8C313").IsUnique();
+
+            entity.Property(e => e.Amount).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.Invoice).WithMany(p => p.PaymentAllocations)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__PaymentAl__Invoi__6E765879");
+
+            entity.HasOne(d => d.Payment).WithMany(p => p.PaymentAllocations)
+                .HasForeignKey(d => d.PaymentId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__PaymentAl__Payme__6D823440");
+        });
+
+        modelBuilder.Entity<PaymentTerms>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__PaymentT__3214EC070D79F509");
+
+            entity.Property(e => e.Description).HasMaxLength(200);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<Payments>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Payments__3214EC075A6CB78C");
+
+            entity.HasIndex(e => e.StructuredComm, "IX_Payments_StructuredComm");
+
+            entity.Property(e => e.Amount).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.BankTxnId).HasMaxLength(100);
+            entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
+            entity.Property(e => e.CurrencyCode)
+                .HasMaxLength(3)
+                .IsFixedLength();
+            entity.Property(e => e.FxRateToCompany).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Method).HasMaxLength(30);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.PayerName).HasMaxLength(200);
+            entity.Property(e => e.PspReference).HasMaxLength(100);
+            entity.Property(e => e.StructuredComm).HasMaxLength(50);
         });
 
         modelBuilder.Entity<Permission>(entity =>
@@ -1493,6 +1865,29 @@ public partial class cpmRunningContext : DbContext
                 .IsRequired()
                 .HasMaxLength(50)
                 .HasColumnName("VATtext");
+        });
+
+        modelBuilder.Entity<VwInvoiceBalance>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vwInvoiceBalance");
+
+            entity.Property(e => e.Balance).HasColumnType("decimal(38, 4)");
+            entity.Property(e => e.GrossTotal).HasColumnType("decimal(38, 4)");
+            entity.Property(e => e.Paid).HasColumnType("decimal(38, 4)");
+        });
+
+        modelBuilder.Entity<VwInvoiceTotals>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vwInvoiceTotals");
+
+            entity.Property(e => e.GrossTotal).HasColumnType("decimal(38, 4)");
+            entity.Property(e => e.LinesNet).HasColumnType("decimal(38, 4)");
+            entity.Property(e => e.LinesVat).HasColumnType("decimal(38, 7)");
+            entity.Property(e => e.Rounding).HasColumnType("decimal(19, 4)");
         });
 
         modelBuilder.Entity<WheaterStations>(entity =>

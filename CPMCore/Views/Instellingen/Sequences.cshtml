@@ -1,0 +1,123 @@
+﻿@model CPMCore.Models.Instellingen.InvoiceSequencesPageVM
+@{
+    ViewData["Title"] = "Sequenties";
+
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
+    <style>
+        .bodypadding {
+            padding-bottom: 80px;
+        }
+    </style>
+}
+
+<div class="bodypadding">
+
+    <div class="row">
+        <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+            <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                <div class="row align-items-center">
+                    <div class="col-sm-auto d-flex align-items-center">
+                        <a href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = Model.IssuerId })" class="text-decoration-none text-reset d-flex align-items-center">
+                            <i class="bx bx-chevron-left fs-1"></i>
+                        </a>
+                    </div>
+                    <div class="col-sm-auto">
+                        <h1 class="fw-bold mb-0">Sequenties toevoegen</h1>
+                        <h5 class="mb-4 mt-0">Voeg hier een sequentie toe aan een nummerreeks het bedrijf </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form method="post"
+      asp-action="SequenceCreate"
+      asp-route-seriesId="@Model.SeriesId"
+      asp-route-issuerId="@Model.IssuerId">
+    @Html.AntiForgeryToken()
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern mt-4">
+                <div class="card-body">
+                    <div class="row">
+                            <div class="row align-items-center">
+                                <label class="col-md-2 control-label text-lg-end mb-0">Jaar</label>
+                                <div class="col-md-3">
+                                    <input type="number" name="fiscalYear" value="@DateTime.Now.Year" class="form-control form-control-modern" />
+                                </div>
+                                <label class="col-md-2 control-label text-lg-end mb-0">Start nummering</label>
+                                <div class="col-md-3">
+                                        <input type="number" name="startAt" value="1" class="form-control form-control-modern" />
+                                </div>
+                                <button class="btn btn-primary col-md-2">Toevoegen</button>
+                            </div>
+                    </div>
+                </div>
+            </section>
+
+
+        </div>
+    </div>
+    </form>
+
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info mt-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-list-ol"></i>
+                            <h2 class="card-big-info-title">Sequenties</h2>
+                            <p class="card-big-info-desc">Beheer jaarsequenties.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <table class="table mt-3">
+                                <thead><tr><th>Jaar</th><th>Huidig nummer</th><th class="text-end">Acties </th></tr></thead>
+                                <tbody>
+                                    @foreach (var s in Model.Items)
+                                    {
+                                        <tr>
+                                            <form method="post"
+                                                  asp-action="SequenceUpdate"
+                                                  asp-route-id="@s.Id"
+                                                  asp-route-seriesId="@Model.SeriesId"
+                                                  asp-route-issuerId="@Model.IssuerId"
+                                                  class="d-inline">
+                                            <td>@s.FiscalYear</td>
+                                            <td>
+     
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="number" name="currentNumber" value="@s.CurrentNumber"
+                                                           class="form-control form-control-sm d-inline-block" style="width:300px" />
+                                                
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Opslaan">
+                                                    <i class="fa fa-save"></i>
+                                                </button>
+                                                <button type="submit"
+                                                        onsubmit="return confirm('Deze sequentie verwijderen?');"
+                                                        formmethod="post"
+                                                        formaction="@Url.Action("SequenceDelete", "Instellingen", new { seriesId = Model.SeriesId, issuerId = Model.IssuerId, id = s.Id })"
+                                                        class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Verwijderen">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                            </td>
+                                            </form>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+        </div>
+    </div>
+
+

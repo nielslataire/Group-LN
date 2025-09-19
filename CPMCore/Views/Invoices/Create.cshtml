@@ -1,0 +1,175 @@
+﻿@model CPMCore.Models.Invoicing.InvoiceCreateVM
+@{
+    ViewData["Title"] = "Nieuwe factuur";
+}
+@section PageStyle
+{
+<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
+}
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <div class="row align-items-center">
+                <div class="col-sm-auto">
+                    <h1 class="fw-bold mb-0">Nieuwe factuur</h1>
+                    <h5 class="mb-4 mt-0">Maak een nieuwe factuur aan een klant of leverancier op</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<form method="get" asp-action="Create" class="mb-4">
+<div class="row mt-2">
+    <div class="col">
+        <section class="card card-modern">
+            <div class="card-body">
+                    <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Facturatiebedrijf</label>
+                            <select asp-for="IssuerCompanyId" asp-items="Model.Issuers" class="form-control form-control-modern"></select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Klant</label>
+                            <select id="partySelect" class="form-control form-control-modern" style="width:100%"></select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Factuurdatum</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-calendar-alt"></i>
+                                </span>
+                                <input asp-for="InvoiceDate" class="form-control form-control-modern js-datepicker" type="text" asp-format="{0:dd/MM/yyyy}" />
+                            </div>
+@*                         <input asp-for="InvoiceDate" type="date" class="form-control form-control-modern" /> *@
+                    </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Start als</label>
+                            <select asp-for="StartAs" class="form-control form-control-modern">
+                                <option value="1">Factuur (meteen uitgeven)</option>
+                                <option value="0">Draft (later afwerken)</option>
+                            </select>
+                        </div>
+                    </div> 
+                    <input type="hidden" asp-for="PartyId" />
+                    <input type="hidden" asp-for="PartyType" />
+
+            </div>
+        </section>                
+    </div>
+</div>
+
+    <h5 class="mt-4">Lijn</h5>
+    <div class="row g-2">
+        <div class="col-md-6">
+            <label class="form-label">Omschrijving</label>
+            <input name="Lines[0].Text" class="form-control form-control-modern" maxlength="200" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Bedrag</label>
+            <input name="Lines[0].Price" type="number" step="0.0001" class="form-control form-control-modern" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">BTW %</label>
+            <input name="Lines[0].VatPercentage" type="number" step="0.0001" class="form-control form-control-modern" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Korting %</label>
+            <input name="Lines[0].DiscountPercent" type="number" step="0.0001" class="form-control form-control-modern" />
+        </div>
+
+        <div class="col-md-2">
+            <label class="form-label">Unit</label>
+            <input name="Lines[0].UnitId" type="number" class="form-control form-control-modern" />
+        </div>
+        <div class="col-md-2">
+            <label class="form-label">Fase</label>
+            <input name="Lines[0].PaymentStageId" type="number" class="form-control form-control-modern" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Lijntype</label>
+            <input name="Lines[0].LineType" class="form-control form-control-modern" maxlength="20" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Groep</label>
+            <input name="Lines[0].GroupName" class="form-control form-control-modern" maxlength="200" />
+        </div>
+        <div class="col-md-2 form-check mt-4">
+            <input name="Lines[0].UtilityCost" type="checkbox" class="form-check-input" id="util0" />
+            <label for="util0" class="form-check-label">Uitzonderlijke kost</label>
+        </div>
+    </div>
+</form>
+<form asp-action="CreateDraft" method="post" class="mt-3">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="IssuerCompanyId" />
+    <input type="hidden" asp-for="InvoiceDate" />
+    <input type="hidden" asp-for="PartyId" />
+    <input type="hidden" asp-for="PartyType" />
+    <button type="submit" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Conceptfactuur aanmaken
+    </button>
+</form>
+
+
+@section PageScripts {
+  <script src="~/lib/select2/js/select2.js"></script>
+    <script src="/lib/select2/js/i18n/nl.js"></script>
+    <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
+    <script src="~/lib/bootstrap-datepicker/locales/bootstrap-datepicker.nl-BE.min.js"></script>
+  <script>
+    $(function () {
+      $('#partySelect').select2({
+        ajax: {
+          url: '@Url.Action("PartyLookup","Invoices")',
+          dataType: 'json',
+          delay: 250,
+          data: function (params) { return { term: params.term || '', take: 20 }; },
+          processResults: function (data) { return data; }
+        },
+        placeholder: 'Zoek naam…',
+        minimumInputLength: 1,
+        theme: 'bootstrap',
+        placeholder: 'Zoek de klant ...',
+        language: "nl",
+        dropdownAutoWidth: true,
+        templateResult: function (item) {
+          if (!item.id) return item.text;
+          var badge = '';
+          if (item.type === 'ClientAccount') badge = '<span class="badge bg-primary ms-2">klant</span>';
+          else if (item.type === 'ClientContact') badge = '<span class="badge bg-secondary ms-2">co-owner</span>';
+          else if (item.type === 'Supplier') badge = '<span class="badge bg-accent ms-2">leverancier</span>';
+          return $('<span>').html(badge + ' ' + item.text);
+        }
+      });
+
+      $('#partySelect').on('select2:select', function (e) {
+        const v = e.params.data.id; // bv. "ca:123"
+        const [prefix, idStr] = v.split(':');
+        let typeVal = null;
+        if (prefix === 'ca') typeVal = 1;        // ClientAccount
+        if (prefix === 'cc') typeVal = 2;        // ClientContact (co-owner)
+        if (prefix === 'su') typeVal = 3;        // Supplier (CompanyInfo)
+
+        $('input[name="PartyId"]').val(idStr || '');
+        $('input[name="PartyType"]').val(typeVal || '');
+      });
+    });
+
+  </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+        // init datepickers
+          $('.js-datepicker').datepicker({
+            format: 'dd/MM/yyyy',
+            todayHighlight: false,
+            autoclose: true,
+            language: 'nl-BE' // vereist locale-bestand hierboven
+          });
+        });
+
+    </script>
+}

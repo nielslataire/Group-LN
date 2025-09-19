@@ -1,0 +1,80 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace CPMCore.Models.Instellingen
+{
+    public class IssuerCompanyVM
+    {
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "Naam is verplicht.")]
+        [Display(Name = "Weergave naam")]
+        public string Name { get; set; }
+
+        [Display(Name = "Wettelijke naam")]
+        public string? LegalName { get; set; }
+
+        [Display(Name = "BTW-nummer")]
+        public string? VatNumber { get; set; }
+
+        [Display(Name = "Ondernemingsnr")]
+        public string? EnterpriseNumber { get; set; }
+
+        [Display(Name = "Adres")]
+        public string? AddressLine1 { get; set; }
+        public string? AddressLine2 { get; set; }
+
+        [Display(Name = "Postcode")]
+        public string? PostalCode { get; set; }
+        [Display(Name = "Gemeente")]
+        public string? City { get; set; }
+
+        [Display(Name = "Landcode")]
+        public string? CountryCode { get; set; }
+
+        [EmailAddress(ErrorMessage = "Geen geldig e-mailadres.")]
+        public string? Email { get; set; }
+        [Display(Name = "Telefoon")]
+        public string? Phone { get; set; }
+
+        [Display(Name = "Logo pad")]
+        public string? LogoPath { get; set; }
+
+        [Display(Name = "Standaard betaaltermijn")]
+        public int? DefaultPaymentTermId { get; set; }
+
+        [Display(Name = "Actief")]
+        public bool IsActive { get; set; } = true;
+        [Display(Name = "E-invoicing")]
+        public bool EInvoiceEnabled { get; set; }
+        [Display(Name = "Peppol ID")]
+        public string? PeppolParticipantId { get; set; }
+        [Display(Name = "UBL - PDF als bijlage")]
+        public bool UblAttachPdf { get; set; } = true;
+
+        [Display(Name = "Email onderwerp template")]
+        public string? EmailSubjectTemplate { get; set; }
+        [Display(Name = "Email body template")]
+        public string? EmailBodyTemplate { get; set; }
+        [Display(Name = "Factuur voettekst")]
+        public string? InvoiceFooterHtml { get; set; }
+        [Display(Name = "Standaardtaal")]
+        public string? DefaultLanguage { get; set; }   // "nl-BE"
+        [Display(Name = "Standaard valuta")]
+        public string? DefaultCurrency { get; set; }   // "EUR"
+        [Display(Name = "Patroon Factuurnummer")]
+        public string? InvoiceNumberPattern { get; set; } // "{num:0000}-{date:MM-yyyy}"
+
+        [Display(Name = "EPC QR weergeven")]
+        public bool EpcQrEnabled { get; set; }
+        [Display(Name = "Naam begunstigde")]
+        public string? EpcBeneficiaryName { get; set; }
+        [Display(Name = "IBAN")]
+        public string? EpcIban { get; set; }
+        [Display(Name = "BIC")]
+        public string? EpcBic { get; set; }
+        [Display(Name = "Overschrijving Type")]
+        public string? EpcRemittanceType { get; set; }       // 'CHAR'|'SCOR'
+        [Display(Name = "Overschrijving Template")]
+        public string? EpcRemittanceTemplate { get; set; }   // "Factuur {PublicId}"
+    }
+}

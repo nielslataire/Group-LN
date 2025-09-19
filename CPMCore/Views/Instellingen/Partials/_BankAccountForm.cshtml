@@ -1,0 +1,73 @@
+﻿@model CPMCore.Models.Instellingen.IssuerBankAccountVM
+
+<div class="row mt-2">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon fa fa-bank"></i>
+                        <h2 class="card-big-info-title">Bankrekening</h2>
+                        <p class="card-big-info-desc">Vul hier de gegevens van de bankrekening in</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="form-group row align-items-center pb-3">
+                            <label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3" asp-for="IsDefault"></label>
+                            <div class="col-lg-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBox("IsDefault", Model.IsDefault, new { data_plugin_ios_switch = "" })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="DisplayName" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="DisplayName" class="form-control form-control-modern" placeholder="Omschrijving'" />
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="Iban" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="Iban" class="form-control form-control-modern" placeholder="IBAN'" />
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="Bic" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="Bic" class="form-control form-control-modern" placeholder="BIC/SWIFT (optioneel)'" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="ValidFrom" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </span>
+                                        <input asp-for="ValidFrom" class="form-control form-control-modern js-datepicker" type="text" asp-format="{0:dd/MM/yyyy}"  />
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="ValidTo" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </span>
+                                        <input asp-for="ValidTo" class="form-control form-control-modern js-datepicker" type="text" asp-format="{0:dd/MM/yyyy}"  />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                       
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

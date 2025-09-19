@@ -15,5 +15,13 @@ namespace FacadeCore
 
         //GetResponse<InvoiceBO> GetInvoiceByID(int id);
         GetResponse<InvoiceFileBO> GetInvoiceFileByFilename(string name);
+     
+    }
+    public interface IInvoiceQueryService
+    {
+        Task<IReadOnlyList<InvoiceListItemBO>> GetAllAsync(CancellationToken ct = default);
+        //Filter op bedrijf
+        Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default);
     }
 }
+

@@ -1,0 +1,78 @@
+﻿@model CPMCore.Models.Instellingen.IssuerBankAccountVM
+@{
+    ViewData["Title"] = "Bankrekening bewerken";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
+    <style>
+        .bodypadding {
+            padding-bottom: 80px;
+        }
+    </style>
+}
+<div class="bodypadding">
+
+    <div class="row">
+        <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+            <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                <div class="row align-items-center">
+                    <div class="col-sm-auto d-flex align-items-center">
+                        <a href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = Model.IssuerCompanyId })" class="text-decoration-none text-reset d-flex align-items-center">
+                            <i class="bx bx-chevron-left fs-1"></i>
+                        </a>
+                    </div>
+                    <div class="col-sm-auto">
+                        <h1 class="fw-bold mb-0">Bankrekening toevoegen</h1>
+                        <h5 class="mb-4 mt-0">Voeg hier een bankrekening toe aan het bedrijf</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+<form method="post" asp-action="BankAccountEdit" asp-controller="Instellingen"
+          asp-route-issuerId="@Model.IssuerCompanyId" asp-route-id="@Model.Id" class="ecommerce-form action-buttons-fixed">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <partial name="_BankAccountForm" model="Model" />
+        <div class="row action-buttons">
+            <div class="col-12 col-md-auto">
+                <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                    <i class="bx bx-save text-4 me-2"></i> Bewaren
+                </button>
+            </div>
+            <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+                <a href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = Model.IssuerCompanyId })" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+            </div>
+
+        </div>
+</form>
+</div>
+@section PageScripts {
+    <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
+    <script src="~/lib/bootstrap-datepicker/locales/bootstrap-datepicker.nl-BE.min.js"></script>
+    <script src="~/lib/ios7-switch/ios7-switch.js"></script>
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          initIosSwitches();
+
+                  // init datepickers
+          $('.js-datepicker').datepicker({
+            format: 'dd/MM/yyyy',
+            todayHighlight: true,
+            autoclose: true,
+            language: 'nl-BE' // vereist locale-bestand hierboven
+          });
+        });
+        function initIosSwitches() {
+          var $els = $('[data-plugin-ios-switch]');
+          $els.each(function () {
+            var $el = $(this);
+            if (!$el.data('plugin-ios7Switch')) {
+              $el.themePluginIOS7Switch(); // Porto init
+            }
+          });
+        }
+    </script>
+}

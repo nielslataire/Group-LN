@@ -179,6 +179,26 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[InvoiceAttachments]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceDunning]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceEmailLog]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoicePdfArchive]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceRelations]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[Invoices]",
          "ObjectType": 0
       },
@@ -187,11 +207,47 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[InvoiceSequence]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceSeries]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceStatusLookup]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceUbl]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[InvoicingPaymentGroup]",
          "ObjectType": 0
       },
       {
          "Name": "[dbo].[InvoicingPaymentStages]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[IssuerBankAccount]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[IssuerCompany]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PaymentAllocations]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[Payments]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PaymentTerms]",
          "ObjectType": 0
       },
       {
@@ -289,6 +345,14 @@
       {
          "Name": "[dbo].[WheaterStations]",
          "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[vwInvoiceBalance]",
+         "ObjectType": 3
+      },
+      {
+         "Name": "[dbo].[vwInvoiceTotals]",
+         "ObjectType": 3
       }
    ],
    "UiHint": null,

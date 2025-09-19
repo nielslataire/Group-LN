@@ -57,5 +57,7 @@ public partial class ClientContacts
 
     public virtual PostalCode InvoicePostalCode { get; set; }
 
+    public virtual ICollection<Invoices> Invoices { get; set; } = new List<Invoices>();
+
     public virtual PostalCode PostalCode { get; set; }
 }

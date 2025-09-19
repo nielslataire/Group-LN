@@ -58,6 +58,13 @@ builder.Services.AddDbContext<cpmRunningContext>(options =>
 builder.Services.AddScoped<DALCore.UnitOfWorkCore, DALCore.UnitOfWorkCore>();
 builder.Services.AddScoped<FacadeCore.IProjectService, ServiceCore.ProjectService>();
 builder.Services.AddScoped<FacadeCore.IUnitService, ServiceCore.UnitService>();
+builder.Services.AddScoped<IInvoiceQueryService, InvoiceQueryService>();
+builder.Services.AddScoped<ICompanyQueryService, CompanyQueryService>();
+builder.Services.AddScoped<IIssuerCompanyService, IssuerCompanyService>();
+builder.Services.AddScoped<IIssuerBankAccountService, IssuerBankAccountService>();
+builder.Services.AddScoped<IIssuerSeriesService, IssuerSeriesService>();
+builder.Services.AddScoped<IPartyLookupService, PartyLookupService>();
+builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();
 
 builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider =>
     new SynchronizedConverter(new PdfTools())

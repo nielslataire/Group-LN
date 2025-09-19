@@ -16,3 +16,72 @@
     padding-top: 0.8rem;
     padding-bottom: 0.8rem;
 }
+
+/*kleurenpallet*/
+:root {
+    /* Jouw bestaande groen */
+    --primary: #00532C;
+    --secondary: #7A8450; /* mosgroen */
+    --info: #8A7967; /* taupe / grijsbruin */
+    /* Donker neutraal */
+    --dark: #222222;
+    /* Licht neutraal */
+    --light: #F9F9F9;
+    --custom-accent: #8B6B4A;
+}
+
+/*Badges*/
+.badge.bg-primary {
+    background-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--secondary) !important;
+    color: #fff !important;
+}
+
+.badge.bg-info {
+    background-color: var(--info) !important;
+    color: #fff !important;
+}
+
+.badge.bg-success {
+    background-color: var(--success) !important;
+    color: #fff !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--warning) !important;
+    color: #000 !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger) !important;
+    color: #fff !important;
+}
+
+.badge.bg-dark {
+    background-color: var(--dark) !important;
+    color: #fff !important;
+}
+
+.badge.bg-light {
+    background-color: var(--light) !important;
+    color: #000 !important;
+}
+.badge.bg-accent {
+    background-color: var(--custom-accent) !important;
+    color: #fff !important;
+}
+
+
+
+
+
+.form-control.form-control-modern + .select2-container--bootstrap .select2-selection--single,
+.form-control.form-control-modern + .select2-container--bootstrap .select2-selection--multiple {
+    height: 46px !important;
+    line-height: 2.3 !important; /* aanpassen zodat tekst netjes gecentreerd is */
+    padding: 6px 17px !important;
+}

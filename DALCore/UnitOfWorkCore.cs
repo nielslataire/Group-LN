@@ -56,6 +56,20 @@ namespace DALCore
         public GenericRepository<ChangeOrderDetail> ChangeOrderDetails { get; }
         public GenericRepository<Insurances> Insurances { get; }
         public GenericRepository<InsuranceCompanies> InsuranceCompanies { get; }
+        public GenericRepository<Payments> Payments { get; }
+        public GenericRepository<PaymentAllocations> PaymentAllocations { get; }
+        public GenericRepository<InvoiceStatusLookup> InvoiceStatuses { get; }
+        public GenericRepository<InvoiceSeries> InvoiceSeries { get; }
+        public GenericRepository<InvoiceSequence> InvoiceSequences { get; }
+        public GenericRepository<InvoiceRelations> InvoiceRelations { get; }
+        public GenericRepository<InvoiceEmailLog> InvoiceEmailLogs { get; }
+        public GenericRepository<InvoiceAttachments> InvoiceAttachments { get; }
+        public GenericRepository<InvoiceDunning> InvoiceDunning { get; }
+        public GenericRepository<InvoiceUbl> InvoiceUbl { get; }
+        public GenericRepository<InvoicePdfArchive> InvoicePdfArchives { get; }
+        public GenericRepository<PaymentTerms> PaymentTerms { get; }
+        public GenericRepository<IssuerCompany> IssuerCompanies { get; }
+        public GenericRepository<IssuerBankAccount> IssuerBankAccount { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -112,6 +126,20 @@ namespace DALCore
             ChangeOrderDetails = new GenericRepository<ChangeOrderDetail>(_context);
             Insurances = new GenericRepository<Insurances>(_context);
             InsuranceCompanies = new GenericRepository<InsuranceCompanies>(_context);
+            Payments = new GenericRepository<Payments>(_context);
+            PaymentAllocations = new GenericRepository<PaymentAllocations>(_context);
+            InvoiceStatuses = new GenericRepository<InvoiceStatusLookup>(_context);
+            InvoiceSeries = new GenericRepository<InvoiceSeries>(_context);
+            InvoiceSequences = new GenericRepository<InvoiceSequence>(_context);
+            InvoiceRelations = new GenericRepository<InvoiceRelations>(_context);
+            InvoiceEmailLogs = new GenericRepository<InvoiceEmailLog>(_context);
+            InvoiceAttachments = new GenericRepository<InvoiceAttachments>(_context);
+            InvoiceDunning = new GenericRepository<InvoiceDunning>(_context);
+            InvoiceUbl = new GenericRepository<InvoiceUbl>(_context);
+            InvoicePdfArchives = new GenericRepository<InvoicePdfArchive>(_context);
+            PaymentTerms = new GenericRepository<PaymentTerms>(_context);
+            IssuerCompanies = new GenericRepository<IssuerCompany>(_context);
+            IssuerBankAccount = new GenericRepository<IssuerBankAccount>(_context);
         }
 
         // Eenduidige save-methodes

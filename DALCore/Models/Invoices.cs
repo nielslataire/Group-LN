@@ -13,9 +13,9 @@ public partial class Invoices
 
     public DateOnly Date { get; set; }
 
-    public int ClientId { get; set; }
+    public int? ClientId { get; set; }
 
-    public int ClientType { get; set; }
+    public int? ClientType { get; set; }
 
     public string PublicId { get; set; }
 
@@ -39,9 +39,75 @@ public partial class Invoices
 
     public int? CompanyId { get; set; }
 
+    public int? SeriesId { get; set; }
+
+    public int? FiscalYear { get; set; }
+
+    public byte? StatusId { get; set; }
+
+    public string StructuredCommOgm { get; set; }
+
+    public decimal? RoundingAmount { get; set; }
+
+    public string CurrencyCode { get; set; }
+
+    public decimal? FxRateToCompany { get; set; }
+
+    public int? PaymentTermId { get; set; }
+
+    public DateTime? SentAt { get; set; }
+
+    public DateTime? CancelledAt { get; set; }
+
+    public int? ReplacementOfId { get; set; }
+
+    public decimal? ForeignGrossTotal { get; set; }
+
+    public string VatRegime { get; set; }
+
+    public string QrEpcPayload { get; set; }
+
+    public bool? ReverseCharge { get; set; }
+
+    public int? IssuerCompanyId { get; set; }
+
+    public int? ClientIdClientAccount { get; set; }
+
+    public int? ClientIdClientContacts { get; set; }
+
+    public virtual ClientAccount ClientIdClientAccountNavigation { get; set; }
+
+    public virtual ClientContacts ClientIdClientContactsNavigation { get; set; }
+
+    public virtual ICollection<Invoices> InverseReplacementOf { get; set; } = new List<Invoices>();
+
+    public virtual ICollection<InvoiceAttachments> InvoiceAttachments { get; set; } = new List<InvoiceAttachments>();
+
+    public virtual ICollection<InvoiceDunning> InvoiceDunning { get; set; } = new List<InvoiceDunning>();
+
+    public virtual ICollection<InvoiceEmailLog> InvoiceEmailLog { get; set; } = new List<InvoiceEmailLog>();
+
+    public virtual InvoicePdfArchive InvoicePdfArchive { get; set; }
+
+    public virtual ICollection<InvoiceRelations> InvoiceRelationsChildInvoice { get; set; } = new List<InvoiceRelations>();
+
+    public virtual ICollection<InvoiceRelations> InvoiceRelationsParentInvoice { get; set; } = new List<InvoiceRelations>();
+
+    public virtual InvoiceUbl InvoiceUbl { get; set; }
+
     public virtual ICollection<InvoicesDetails> InvoicesDetails { get; set; } = new List<InvoicesDetails>();
 
+    public virtual IssuerCompany IssuerCompany { get; set; }
+
+    public virtual ICollection<PaymentAllocations> PaymentAllocations { get; set; } = new List<PaymentAllocations>();
+
     public virtual PostalCode PostalCode { get; set; }
+
+    public virtual Invoices ReplacementOf { get; set; }
+
+    public virtual InvoiceSeries Series { get; set; }
+
+    public virtual InvoiceStatusLookup Status { get; set; }
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
 }

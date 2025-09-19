@@ -21,7 +21,7 @@ namespace ServiceCore.Translators
             bo.Filename = _entity.Filename;
             bo.Invoicedate = _entity.Date;
             bo.Id = _entity.Id;
-            bo.ClientId = _entity.ClientId;
+            bo.ClientId = (int)_entity.ClientId;
             bo.ClientType = (ClientType)_entity.ClientType;
             bo.PublicId = _entity.PublicId;
             if (_entity.ExpirationDate is not null)

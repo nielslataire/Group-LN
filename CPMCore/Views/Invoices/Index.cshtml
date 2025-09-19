@@ -1,0 +1,254 @@
+﻿@model IReadOnlyList<CPMCore.Models.Invoicing.InvoiceListItemVM>
+@{
+    ViewData["Title"] = "Facturen - " + @ViewBag.CompanyName;
+}
+@functions {
+    // Map Engelstalige status naar NL
+    string StatusNl(string s) => (s ?? "").Trim() switch
+    {
+        "Draft" => "Concept",
+        "Issued" => "Genummerd",
+        "Sent" => "Verzonden",
+        "PartiallyPaid" => "Deels betaald",
+        "Paid" => "Betaald",
+        "Overdue" => "Vervallen",
+        "Cancelled" => "Geannuleerd",
+        "" => "Onbekend",
+        _ => s // laat onbekende waarden staan
+    };
+
+    // Kies badge-stijl op basis van de NL-tekst
+    string BadgeClassNl(string nl) => (nl ?? "").ToLower() switch
+    {
+        "concept" => "badge bg-warning text-dark",
+        "genummerd" => "badge bg-secondary",
+        "verzonden" => "badge bg-primary",
+        "deels betaald" => "badge bg-info",
+        "betaald" => "badge bg-success",
+        "vervallen" => "badge bg-danger",
+        "geannuleerd" => "badge bg-dark",
+        _ => "badge bg-light text-dark"
+    };
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+
+    <style>
+
+        /* Alleen deze tabel compacter maken */
+        #datatable-invoice-list.dataTable > thead > tr > th,
+        #datatable-invoice-list.dataTable > tbody > tr > td {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            line-height: 1.2 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Status-dot uit Porto: geen extra hoogte laten forceren */
+        #datatable-invoice-list .ecommerce-status {
+            display: inline-block;
+            margin: 0 !important;
+            line-height: 1 !important;
+            vertical-align: middle !important;
+        }
+
+        /* Optioneel: iconen-kolom iets strakker */
+        #datatable-invoice-list td.actions i {
+            line-height: 1 !important;
+        }
+
+    </style>
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Facturen</h1>
+            <h5 class="mb-4 mt-0">Beheer de facturen van @ViewBag.CompanyName</h5>
+        </div>
+        <div class="col-sm-auto px-0">
+            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+             <a href="@Url.Action("Create", "Invoices")" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
+        </div>
+    </div>
+
+@if (Model.Any())
+{
+        <div class="card card-modern">
+            <div class="card-body">
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bx bx-search"></i>
+                    </span>
+                    <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+                </div>
+            </div>
+        </div>
+    <div class="card card-modern">
+        <div class="card-body">
+            <div class="datatables-header-footer-wrapper mt-2">
+
+                <table class="table table-responsive-md table-hover mb-0" id="datatable-invoice-list"
+                       style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
+
+                    <thead>
+                        <tr>
+                            <th>Factuurnr</th>
+                            <th>Klant</th>
+                            <th>Datum</th>
+                            <th>Status</th>
+                            <th class="text-end">Totaal</th>
+                            <th class="text-end">Saldo</th>
+                            <th class="text-end">Acties</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var r in Model)
+                        {
+                            <tr>
+                                <td>@(string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId)</td>
+                                <td>@r.ClientName</td>
+                                <td>@r.InvoiceDate</td>
+                                <td><span class="@BadgeClassNl(StatusNl(r.Status))">@StatusNl(r.Status)</span></td>
+                                <td class="text-end">@r.GrossTotal?.ToString("€ 0.00")</td>
+                                <td class="text-end">@r.Balance?.ToString("€ 0.00")</td>
+                                <td class="text-end">
+                                    <a class="btn btn-xs btn-default" href="@Url.Action("Detail", "Invoices", new { id = r.Id })">
+                                        Bekijken
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+}
+else
+{
+    <div class="card card-modern mb-4">
+        <div class="card-body align-items-center text-center card-big-info">
+            <div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+                <i class="bx bx-file"></i>
+
+            </div>
+            <div class="col-12 text-muted mb-3">
+                <h4>Er zijn geef facturen aangemaakt voor dit bedrijf.</h4>
+            </div>
+        </div>
+    </div>
+}
+</div>
+
+@section PageScripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        // ===== Naamgeving voor weergave =====
+        // Pas deze 2 woorden aan en alle taalregels volgen mee
+        const entity = {
+          singular: 'factuur',
+          plural: 'facturen'
+        };
+
+        // Bouw de DataTables language-teksten in NL met dynamische naamgeving
+        function buildLanguage(e) {
+          const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+          const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+
+          return {
+            processing:     "Bezig met verwerken…",
+            search:         "Zoeken:",
+            lengthMenu:     "Toon _MENU_",
+            info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+            infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
+            infoFiltered:   "(gefilterd uit _MAX_ totaal)",
+            loadingRecords: "Bezig met laden…",
+            zeroRecords:    `Geen ${e.plural} om weer te geven`,
+            emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
+            aria: {
+              sortAscending:  ": activeer om oplopend te sorteren",
+              sortDescending: ": activeer om aflopend te sorteren"
+            }
+          };
+        }
+
+        // ===== Init DataTable =====
+        const table = new DataTable('#datatable-invoice-list', {
+          order: [[3, 'asc']],
+          language: buildLanguage(entity),
+          layout: {
+            topStart: {
+              buttons: [
+                {
+                  extend: 'excel',
+                  text: '<i class="fa fa-file-excel"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar Excel',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'pdf',
+                  text: '<i class="fa fa-file-pdf"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar PDF',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  orientation: 'landscape',
+                  pageSize: 'A3',
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'colvis',
+                  text: '<i class="bx bx-filter me-2"></i><span>Alle kolommen</span>',
+                  titleAttr: 'Selecteer kolommen',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  columns: ':not(.noVis)',
+                  init: function (api, node) {
+                    // styling fix
+                    $(node).removeClass('btn-secondary').addClass('btn btn-default');
+                  }
+                }
+              ]
+            }
+          }
+        });
+
+        // ===== UI-aanpassingen / custom knoppen =====
+        // Verberg standaard knoppen/search indien je eigen UI gebruikt
+        $(".buttons-excel").hide();
+        $(".buttons-pdf").hide();
+        $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
+
+        // Koppel custom export-knoppen
+        $("#btnExportExcel").on('click', function () {
+          $(".buttons-excel").trigger("click");
+        });
+        $("#btnExportPdf").on('click', function () {
+          $(".buttons-pdf").trigger("click");
+        });
+
+        // Verplaats knoppen naar een eigen container
+        table.buttons(0, null).containers().appendTo('#colvis-container');
+
+        // ===== Custom zoekveld =====
+        $('#search-term').on('keyup', function () {
+          table.search($(this).val()).draw();
+        });
+
+
+
+    </script>
+
+}

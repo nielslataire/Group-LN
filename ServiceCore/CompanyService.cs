@@ -217,4 +217,27 @@ namespace ServiceCore
             return response;
         }
     }
+    public class CompanyQueryService : ICompanyQueryService
+    {
+        private readonly UnitOfWorkCore _uow;
+        private readonly cpmRunningContext _db;
+
+        public CompanyQueryService(UnitOfWorkCore uow)
+        {
+            _uow = uow;
+            _db = (cpmRunningContext)_uow.Context;
+        }
+
+        public async Task<string> GetIssuerNameAsync(int issuerCompanyId, CancellationToken ct = default)
+        {
+            // Werkt of je DbSet nu IssuerCompanies heet of niet: we vragen via Set<T>()
+            var name = await _db.Set<IssuerCompany>()
+                                .AsNoTracking()
+                                .Where(x => x.Id == issuerCompanyId)
+                                .Select(x => x.Name)
+                                .FirstOrDefaultAsync(ct);
+
+            return string.IsNullOrWhiteSpace(name) ? $"Bedrijf #{issuerCompanyId}" : name;
+        }
+    }
 }

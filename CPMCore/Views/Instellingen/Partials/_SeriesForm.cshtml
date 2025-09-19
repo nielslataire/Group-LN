@@ -1,0 +1,55 @@
+﻿@model CPMCore.Models.Instellingen.InvoiceSeriesVM
+
+@* Toon validatiefouten bovenaan *@
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<div class="row mt-2">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon fa fa-list-ol"></i>
+                        <h2 class="card-big-info-title">Nummerreeks</h2>
+                        <p class="card-big-info-desc">Vul hier de gegevens van de nummerreeks voor de facturen in</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="form-group row align-items-center pb-3">
+                            <label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3" asp-for="IsActive"></label>
+                            <div class="col-lg-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="Code" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="Code" class="form-control form-control-modern" placeholder="bv. 2025-A'" />
+                                    <span asp-validation-for="Code" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="Description" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="Description" class="form-control form-control-modern" placeholder="Omschrijving (optioneel)'" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3" asp-for="IsCreditNote"></label>
+                            <div class="col-lg-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.IsCreditNote, new { data_plugin_ios_switch = "" })
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

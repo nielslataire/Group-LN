@@ -1,0 +1,428 @@
+﻿@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@{
+    var terms = (System.Collections.Generic.IReadOnlyList<BOCore.PaymentTermOptionBO>)
+                ViewBag.PaymentTerms ?? new List<BOCore.PaymentTermOptionBO>();
+    var bank = (IReadOnlyList<BOCore.IssuerBankAccountBO>)ViewBag.BankAccounts ?? new List<BOCore.IssuerBankAccountBO>();
+    var series = (IReadOnlyList<BOCore.InvoiceSeriesBO>)ViewBag.InvoiceSeries ?? new List<BOCore.InvoiceSeriesBO>();
+}
+<div class="row mt-2">
+	<div class="col">
+		<section class="card card-modern card-big-info">
+			<div class="card-body">
+				<div class="row">
+					<div class="col-lg-2-5 col-xl-1-5">
+						<i class="card-big-info-icon bx bx-box"></i>
+						<h2 class="card-big-info-title">Algemene info</h2>
+						<p class="card-big-info-desc">Voeg hier de algemene info van het bedrijf in.</p>
+					</div>
+					<div class="col-lg-3-5 col-xl-4-5">
+                        <div class="form-group">
+						<div class="row align-items-center pb-3">
+							<label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Name)</label>
+							<div class="col-md-9">
+								@Html.TextBoxFor(m => m.Name, new {@class = "form-control form-control-modern", placeholder = "Weergavenaam"})
+                                <span asp-validation-for="Name" class="text-danger"></span>
+							</div>
+						</div>
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.LegalName)</label>
+                            <div class="col-md-9">
+                                @Html.TextBoxFor(m => m.LegalName, new { @class = "form-control form-control-modern", placeholder = "Wettelijke naam" })
+                            </div>
+                        </div>
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.VatNumber)</label>
+                            <div class="col-md-9">
+                                @Html.TextBoxFor(m => m.VatNumber, new { @class = "form-control form-control-modern", placeholder = "BTW-nummer" })
+                            </div>
+                        </div>
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.EnterpriseNumber)</label>
+                            <div class="col-md-9">
+                                @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "Ondernemingsnummer" })
+                            </div>
+                        </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="DefaultPaymentTermId" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <select asp-for="DefaultPaymentTermId" class="form-control form-control-modern">
+                                    <option value="">— kies —</option>
+                                    @foreach (var t in terms)
+                                    {
+                                        <option value="@t.Id">@t.Label</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3" asp-for="IsActive"></label>
+                            <div class="col-lg-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
+                                </div>
+
+                            </div>
+                        </div>
+					</div>
+                  
+				</div>
+			</div>
+		</section>
+	</div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-location-plus"></i>
+                        <h2 class="card-big-info-title">Adres</h2>
+                        <p class="card-big-info-desc">Voeg hier de adres gegevens van het bedrijf in.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="AddressLine1" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="AddressLine1" class="form-control form-control-modern" placeholder="Adres" />
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-2">
+                                    <input asp-for="PostalCode" class="form-control form-control-modern" placeholder="Postcode" />
+                                </div>
+                                <div class="col-md-6">
+                                    <input asp-for="City" class="form-control form-control-modern" placeholder="Gemeente" />
+                                </div>
+                                <div class="col-md-1">
+                                    <input asp-for="CountryCode" class="form-control form-control-modern" placeholder="BE" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="Email" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="Email" class="form-control form-control-modern" placeholder="Email" />
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="Phone" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="Phone" class="form-control form-control-modern" placeholder="Telefoon" />
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-image"></i>
+                        <h2 class="card-big-info-title">Logo</h2>
+                        <p class="card-big-info-desc">Voeg hier het logo van het bedrijf in.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="LogoPath" class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="LogoPath" class="form-control form-control-modern" placeholder="Pad naar het logo" />
+                                </div>
+                            </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-bank"></i>
+                        <h2 class="card-big-info-title">Bankrekeningen</h2>
+                        <p class="card-big-info-desc">Beheer IBAN/BIC per bedrijf. Eén rekening kan standaard zijn.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+
+                        <div class="d-flex justify-content-end mb-3">
+                            <a class="btn btn-primary"
+                               href="@Url.Action("BankAccountCreate", "Instellingen", new { issuerId = Model.Id })">
+                                <i class="fas fa-plus me-1"></i> Nieuwe rekening
+                            </a>
+                        </div>
+
+                        <table class="table table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Omschrijving</th>
+                                    <th>IBAN</th>
+                                    <th>BIC</th>
+                                    <th>Geldig</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var x in bank)
+                                {
+                                    <tr>
+                                        <td>@(string.IsNullOrWhiteSpace(x.DisplayName) ? "—" : x.DisplayName)</td>
+                                        <td>@x.Iban</td>
+                                        <td>@(string.IsNullOrWhiteSpace(x.Bic) ? "—" : x.Bic)</td>
+                                        <td>
+                                            @((x.ValidFrom?.ToString("dd/MM/yyyy") ?? "—")) – @((x.ValidTo?.ToString("dd/MM/yyyy") ?? "—"))
+                                        </td>
+                                        <td>
+                                            @if (x.IsDefault)
+                                            {
+                                                <span class="badge bg-primary">Standaard</span>
+                                            }
+                                            else
+                                            {
+
+                                                <span class="badge bg-light text-dark">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="" @Url.Action("BankAccountEdit", "Instellingen", new { issuerId = Model.Id, id = x.Id })"><i class="fa fa-edit"></i></a>
+                                            <button type="submit"
+                                                    formmethod="post"
+                                                    formaction="@Url.Action("BankAccountSetDefault", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
+                                                    class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Standaard" @(x.IsDefault ? "disabled" : "")>
+                                                <i class="fa fa-circle-check"></i>
+                                            </button>
+                                            <button type="submit"
+                                                    onsubmit="return confirm('Deze bankrekening verwijderen?');"
+                                                    formmethod="post"
+                                                    formaction="@Url.Action("BankAccountDelete", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
+                                                    class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Verwijderen">
+                                                <i class="fa fa-trash"></i>
+                                            </button>                                           
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-share-alt"></i>
+                        <h2 class="card-big-info-title">Peppol / e-invoicing</h2>
+                        <p class="card-big-info-desc">Activeer e-facturen en stel je Peppol Participant ID in.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="EInvoiceEnabled" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.EInvoiceEnabled, new { data_plugin_ios_switch = "" })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="PeppolParticipantId" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="PeppolParticipantId" class="form-control form-control-modern" placeholder="0088:..." />
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="UblAttachPdf" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.UblAttachPdf, new { data_plugin_ios_switch = "" })
+                                </div>
+                                <small class="text-muted d-block mt-1">Voeg de PDF toe als bijlage in de UBL (indien ondersteund).</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-palette"></i>
+                        <h2 class="card-big-info-title">Documentstijl & e-mail</h2>
+                        <p class="card-big-info-desc">Stel sjablonen en defaults in voor layout en e-mails.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label asp-for="DefaultLanguage" class="form-label"></label>
+                                <input asp-for="DefaultLanguage" class="form-control form-control-modern" placeholder="nl-BE" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="DefaultCurrency" class="form-label"></label>
+                                <input asp-for="DefaultCurrency" class="form-control form-control-modern" placeholder="EUR" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="InvoiceNumberPattern" class="form-label"></label>
+                                <input asp-for="InvoiceNumberPattern" class="form-control form-control-modern" placeholder="{num:0000}-{date:MM-yyyy}" />
+                            </div>
+
+                            <div class="col-12">
+                                <label asp-for="EmailSubjectTemplate" class="form-label"></label>
+                                <input asp-for="EmailSubjectTemplate" class="form-control form-control-modern" placeholder="Factuur {PublicId} van {IssuerName}" />
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="EmailBodyTemplate" class="form-label"></label>
+                                <textarea asp-for="EmailBodyTemplate" rows="5" class="form-control form-control-modern" placeholder="Beste {ClientName}, ..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="InvoiceFooterHtml" class="form-label"></label>
+                                <textarea asp-for="InvoiceFooterHtml" rows="5" class="form-control form-control-modern" placeholder="<small>…</small>"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-list-ol"></i>
+                        <h2 class="card-big-info-title">Nummerreeksen</h2>
+                        <p class="card-big-info-desc">Beheer codes en jaarsequenties.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="d-flex justify-content-end mb-3">
+                            <a class="btn btn-primary" href="@Url.Action("SeriesCreate", "Instellingen", new { issuerId = Model.Id })">
+                                <i class="fas fa-plus me-1"></i> Nieuwe reeks
+                            </a>
+                        </div>
+
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Omschrijving</th>
+                                    <th>Credit?</th>
+                                    <th>Status</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in series)
+                                {
+                                    <tr>
+                                        <td>@s.Code</td>
+                                        <td>@s.Description</td>
+                                        <td>@(s.IsCreditNote ? "Ja" : "Nee")</td>
+                                        <td>@(s.IsActive ? "Actief" : "Inactief")</td>
+                                        <td class="text-end">
+                                            <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("SeriesEdit", "Instellingen", new { issuerId = Model.Id, id = s.Id })"><i class="fa fa-edit"></i></a>
+                                            <a data-toggle="tooltip" data-placement="top" title="Sequenties" data-original-title="Sequenties" href="@Url.Action("Sequences", "Instellingen", new { seriesId = s.Id, issuerId = Model.Id })"><i class="fa fa-list-ol"></i></a>
+                                          
+                                            <button type="submit"
+                                                    onsubmit="return confirm('Deze nummerreeks verwijderen?');"
+                                                    formmethod="post"
+                                                    formaction="@Url.Action("SeriesDelete", "Instellingen", new { issuerId = Model.Id, id = s.Id })"
+                                                    class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Verwijderen">
+                                                <i class="fa fa-trash"> </i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-qr"></i>
+                        <h2 class="card-big-info-title">EPC QR</h2>
+                        <p class="card-big-info-desc">Defaults voor betaal-QR (SEPA/EPC).</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label asp-for="EpcQrEnabled" class="form-label pe-3"></label>
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.EpcQrEnabled, new { data_plugin_ios_switch = "" })
+                                </div>
+                            </div>
+                            <div class="col-md-9">
+                                <small class="text-muted">Als leeg, neem IBAN/BIC van je standaard bankrekening.</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label asp-for="EpcBeneficiaryName" class="form-label"></label>
+                                <input asp-for="EpcBeneficiaryName" class="form-control form-control-modern" placeholder="Begunstigde (juridische naam)" />
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="EpcIban" class="form-label"></label>
+                                <input asp-for="EpcIban" class="form-control form-control-modern" placeholder="BE..." />
+                            </div>
+                            <div class="col-md-3">
+                                <label asp-for="EpcBic" class="form-label"></label>
+                                <input asp-for="EpcBic" class="form-control form-control-modern" placeholder="BIC (optioneel)" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label asp-for="EpcRemittanceType" class="form-label"></label>
+                                <select asp-for="EpcRemittanceType" class="form-control form-control-modern">
+                                    <option value="">— kies —</option>
+                                    <option>CHAR</option>
+                                    <option>SCOR</option>
+                                </select>
+                            </div>
+                            <div class="col-md-9">
+                                <label asp-for="EpcRemittanceTemplate" class="form-label"></label>
+                                <input asp-for="EpcRemittanceTemplate" class="form-control form-control-modern" placeholder="bv. Factuur {PublicId}" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+</div>
+
+

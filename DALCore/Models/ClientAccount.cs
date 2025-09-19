@@ -69,6 +69,8 @@ public partial class ClientAccount
 
     public virtual PostalCode InvoicePostalCode { get; set; }
 
+    public virtual ICollection<Invoices> Invoices { get; set; } = new List<Invoices>();
+
     public virtual ClientOwnerType OwnerType { get; set; }
 
     public virtual PostalCode PostalCode { get; set; }

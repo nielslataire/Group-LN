@@ -29,6 +29,12 @@ public partial class InvoicesDetails
 
     public bool? UtilityCost { get; set; }
 
+    public decimal? DiscountPercent { get; set; }
+
+    public decimal? DiscountAmount { get; set; }
+
+    public string LineType { get; set; }
+
     public virtual Invoices Invoice { get; set; }
 
     public virtual InvoicingPaymentStages PaymentStage { get; set; }

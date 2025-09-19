@@ -1,0 +1,127 @@
+﻿@model IReadOnlyList<CPMCore.Models.Instellingen.IssuerCompanyVM>
+@{
+    ViewData["Title"] = "Instellingen - Mijn Bedrijven";
+}
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Mijn Bedrijven</h1>
+            <h5 class="mb-4 mt-0">Eigen vennootschappen voor facturatie</h5>
+        </div>
+        <div class="col-sm-auto px-0">
+            <a class="btn btn-primary" href="@Url.Action("IssuerCompaniesCreate", "Instellingen")">
+                <i class="fas fa-plus me-1"></i> Nieuw bedrijf
+            </a>
+        </div>
+    </div>
+
+    <div class="card card-modern">
+        <div class="card-body">
+            <div class="datatables-header-footer-wrapper mt-2">
+
+                <table class="table table-responsive-md table-hover mb-0" id="datatable-companies-list"
+                       style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
+
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>BTW</th>
+                            <th>Ondernemingsnr</th>
+                            <th>Adres</th>
+                            <th>Status</th>
+                            <th class="text-end">Acties</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var x in Model)
+                        {
+                            <tr>
+                                <td>@x.Name</td>
+                                <td>@x.VatNumber</td>
+                                <td>@x.EnterpriseNumber</td>
+                                <td>@x.AddressLine1, @x.PostalCode @x.City</td>
+                                <td>
+                                    @if (x.IsActive)
+                                    {
+                                        <span class="badge bg-success">Actief</span>
+                                    }
+                                    else
+                                    {
+
+                                        <span class="badge bg-secondary">Inactief</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = x.Id })"><i class="fa fa-edit"></i></a>
+                                    @if (x.IsActive)
+                                    {
+                                        <form method="post" action="@Url.Action("IssuerCompaniesDisable","Instellingen", new { id = x.Id })" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-link p-0 text-danger"
+                                                    onclick="return confirm('Dit bedrijf inactief zetten?');"
+                                                    data-toggle="tooltip" data-placement="top" title="Deactiveren">
+                                                <i class="fa fa-times"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+
+            </div>
+        </div>
+
+    </div>
+@section PageScripts
+{
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+        <script>
+            // ===== Naamgeving voor weergave =====
+            // Pas deze 2 woorden aan en alle taalregels volgen mee
+            const entity = {
+              singular: 'bedrijf',
+              plural: 'bedrijven'
+            };
+
+            // Bouw de DataTables language-teksten in NL met dynamische naamgeving
+            function buildLanguage(e) {
+              const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+              const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+
+              return {
+                processing:     "Bezig met verwerken…",
+                search:         "Zoeken:",
+                lengthMenu:     "Toon _MENU_",
+                info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+                infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
+                infoFiltered:   "(gefilterd uit _MAX_ totaal)",
+                loadingRecords: "Bezig met laden…",
+                zeroRecords:    `Geen ${e.plural} om weer te geven`,
+                emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
+                aria: {
+                  sortAscending:  ": activeer om oplopend te sorteren",
+                  sortDescending: ": activeer om aflopend te sorteren"
+                }
+              };
+            }
+
+            // ===== Init DataTable =====
+            const table = new DataTable('#datatable-companies-list', {
+              info: false,
+              ordering: false,
+              paging: false,
+              searching: false,
+              order: [[3, 'asc']],
+              language: buildLanguage(entity),
+            });
+
+
+        </script>
+
+}
