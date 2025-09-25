@@ -13,6 +13,8 @@ namespace FacadeCore
             InvoiceDraftBO bo,
             bool issueNow,
             CancellationToken ct = default);
+        Task<int> CreateDraftAsync(InvoiceDraftBO bo, CancellationToken ct = default); // <- wrapper
+
 
     }
 }

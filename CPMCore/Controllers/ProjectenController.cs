@@ -376,7 +376,11 @@ namespace CPMCore.Controllers
             var responsepaymentgroups = service2.GetProjectPaymentGroupsForSelect(projectid);
             if ((responsepaymentgroups.Success))
                 model.PaymentGroups = responsepaymentgroups.Values;
-            ViewBag.paymentgroups = model.PaymentGroups;
+
+            ViewBag.PaymentGroups = model.PaymentGroups
+            .Select(pg => new SelectListItem { Value = pg.ID.ToString(), Text = pg.Display })
+            .ToList();
+
             if (model.Unit.PaymentGroupId is not null)
                 model.SelectedPaymentGroup = model.Unit.PaymentGroupId;
             else

@@ -170,4 +170,95 @@ namespace FacadeCore
 
         Response Copyids();
     }
+
+    public interface IProjectSupplierLookupService
+    {
+        Task<IReadOnlyList<(int Id, string Name)>> SearchProjectsAsync(
+            string? term, int? clientId = null, int take = 20, CancellationToken ct = default);
+
+        Task<IReadOnlyList<(int Id, string Name)>> SearchSupplierContractsAsync(
+            string? term, int? supplierCompanyId = null, int take = 20, CancellationToken ct = default);
+
+        // Schijven (alleen klant)
+        Task<IReadOnlyList<(int Id, string Name)>> SearchStageGroupsForClientAsync(
+            int clientId, string? term, int take = 20, CancellationToken ct = default);
+
+        Task<IReadOnlyList<(int Id, string Name)>> SearchStagesAsync(
+            int groupId, string? term, int take = 50, CancellationToken ct = default);
+
+        Task<bool> AreStagesValidForClientAsync(
+            int clientId, IEnumerable<int> stageIds, CancellationToken ct = default);
+        Task<IReadOnlyList<UnitStageRow>> GetUnitsWithInvocableStagesForClientAsync(
+    int clientId, CancellationToken ct = default);
+
+        Task<IReadOnlyList<ChangeOrderRow>> GetApprovedChangeOrdersForClientAsync(
+    int clientId, int? projectId, CancellationToken ct = default);
+
+        Task<IReadOnlyList<UtilityCostRow>> GetUtilityCostsForClientAsync(
+            int clientId, int? projectId, CancellationToken ct = default);
+
+        Task<bool> HasDeedOfSaleAsync(int clientId, CancellationToken ct = default);
+
+
+
+    }
+
+    // Schijven (Stages)
+
+    public sealed record UnitStageRow(
+        int UnitId,
+        string UnitName,
+        int GroupId,
+        string GroupName,
+        int StageId,
+        string StageName,
+        decimal StagePercentage,
+        decimal BaseAmount,
+        decimal CalculatedAmount,
+        bool Invoicable,
+        string? UnitType,
+        string? ProjectName,
+        string? ProjectStreet,
+        string? ProjectHouseNumber,
+        string? ProjectCity,
+        string? UnitStreet,
+        string? UnitHouseNumber,
+        decimal UnitConstructionTotal   // totale bouwwaarde van de unit
+
+    );
+
+
+    // Wijzigingsopdrachten (Change Orders)
+    public sealed record ChangeOrderRow(
+        int ChangeOrderId,
+        int ProjectId,
+        string ProjectName,
+        string? ProjectStreet,
+        string? ProjectHouseNumber,
+        string? ProjectCity,
+        int? UnitId,
+        string? UnitName,
+        string? UnitType,
+        string Title,
+        decimal AmountExcl,
+        decimal VatPercentage
+    );
+
+    // Nutsvoorzieningen (Utility Costs)
+    public sealed record UtilityCostRow(
+        int UtilityId,
+        int ProjectId,
+        string ProjectName,
+        string? ProjectStreet,
+        string? ProjectHouseNumber,
+        string? ProjectCity,
+        int? UnitId,
+        string? UnitName,
+        string Title,
+        decimal AmountExcl,
+        decimal VatPercentage,
+        DateOnly? PeriodStart,
+        DateOnly? PeriodEnd
+    );
+
 }

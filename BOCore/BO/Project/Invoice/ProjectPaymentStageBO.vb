@@ -43,13 +43,13 @@ Public Class ProjectPaymentStageBO
             _percentage = value
         End Set
     End Property
-    Private _invoicable As Boolean?
+    Private _invoicable As Boolean
     <Display(Name:="Te Factureren")>
-    Public Property Invoicable() As Boolean?
+    Public Property Invoicable() As Boolean
         Get
             Return _invoicable
         End Get
-        Set(ByVal value As Boolean?)
+        Set(ByVal value As Boolean)
             _invoicable = value
         End Set
     End Property

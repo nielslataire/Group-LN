@@ -1,0 +1,118 @@
+﻿@model List<CPMCore.Models.Invoicing.InvoiceLineVM>
+@using System.Globalization
+
+@{
+    // groepeer (maar behoud index i voor correcte modelbinding)
+    var groups = Model.Select((line, idx) => new { line, idx })
+                      .GroupBy(x => x.line.UnitName ?? "(unit)")
+                      .OrderBy(g => g.Key)
+                      .ToList();
+    var groupIndex = 0;
+}
+
+<style>
+
+    .form-control[disabled], .form-select[disabled] {
+        background: #f8f9fa;
+        opacity: 1;
+    }
+
+    .stage-row + .stage-row {
+        border-top: 1px solid #eee;
+    }
+
+    .stage-header {
+        color: #666;
+        font-size: .9rem;
+    }
+</style>
+
+
+@foreach (var g in groups)
+{
+    var gi = groupIndex++;
+    <h3>@g.Key</h3>
+    <table class="table table-responsive-sm table-hover mb-0"
+           style="min-width: 550px;">
+
+        <thead>
+            <tr>
+                <th class="align-middle">
+                    <div class="checkbox-custom checkbox-default m-0">
+                        <input type="checkbox" id="chkAll_@gi" class="js-check-all" data-group="@gi" />
+                        <label for="chkAll_@gi">&nbsp;Alles</label>
+                    </div>
+                </th>
+                <th>Omschrijving</th>
+                <th>Percentage</th>
+                <th>Prijs</th>
+                <th class="text-end">BTW (%)</th>
+            </tr>
+        </thead>
+
+
+        <tbody>
+            @foreach (var x in g)
+            {
+                var i = x.idx; var m = x.line;
+                var checkboxId = $"stage_{gi}_{i}";
+
+                <tr class="align-middle">
+                    <td>
+                        <input type="hidden" name="Lines[@i].IsSelected" value="false" />
+                        <div class="checkbox-custom checkbox-default m-0">
+                            <input type="checkbox"
+                                   id="@checkboxId"
+                                   class="js-stage-row"
+                                   data-group="@gi"
+                                   data-unitid="@(m.UnitId?.ToString() ?? "")"
+                                   data-unittype="@m.UnitType"
+                                   data-unitname="@m.UnitName"
+                                   data-projectname="@m.ProjectName"
+                                   data-projectstreet="@m.ProjectStreet"
+                                   data-projecthouse="@m.ProjectHouseNumber"
+                                   data-projectcity="@m.ProjectCity"
+                                   data-unitstreet="@m.UnitStreet"
+                                   data-unithouse="@m.UnitHouseNumber"
+                                   data-uctotal="@m.UnitConstructionTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                   data-ownerpct="@m.OwnerPercentage.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                   name="Lines[@i].IsSelected"
+                                   value="true" />
+                            <label for="@checkboxId">&nbsp;</label>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="@m.Text" disabled />
+                                <input type="hidden" name="Lines[@i].Text" value="@m.Text" />
+                                <input type="hidden" name="Lines[@i].LineType" value="Stages" />
+                                <input type="hidden" name="Lines[@i].GroupName" value="@m.GroupName" />
+                                <input type="hidden" name="Lines[@i].UtilityCost" value="false" />
+                                @if (m.PaymentStageId.HasValue)
+                                {
+                                        <input type="hidden" name="Lines[@i].PaymentStageId" value="@m.PaymentStageId.Value" />
+                                }
+                    </td>
+                    <td>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control form-control-sm text-end"
+                                   value="@m.StagePercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                            <span class="input-group-text">%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm text-end"
+                               value="@m.Price.ToString("N2")" disabled />
+                        <input type="hidden" name="Lines[@i].Price" value="@m.Price.ToString(CultureInfo.InvariantCulture)" />
+                    </td>
+                    <td class="text-end">
+                        <input type="text" class="form-control form-control-sm text-end"
+                               value="@m.VatPercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                        <input type="hidden" name="Lines[@i].VatPercentage" value="@m.VatPercentage.ToString(CultureInfo.InvariantCulture)" />
+                    </td>
+                 
+                </tr>
+            }
+        </tbody>
+
+    </table>
+}

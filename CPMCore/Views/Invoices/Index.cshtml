@@ -72,7 +72,7 @@
         <div class="col-sm-auto px-0">
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-             <a href="@Url.Action("Create", "Invoices")" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
+            <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
         </div>
     </div>
 
@@ -141,8 +141,8 @@ else
                 <i class="bx bx-file"></i>
 
             </div>
-            <div class="col-12 text-muted mb-3">
-                <h4>Er zijn geef facturen aangemaakt voor dit bedrijf.</h4>
+            <div class="col-12 text-muted mb-3"> 
+                <h4>Er zijn geef facturen aangemaakt voor dit bedrijf. </h4>
             </div>
         </div>
     </div>
@@ -155,6 +155,29 @@ else
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
     <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
     <script>
+        (function(){
+          // delegated events vanuit de container die ALTIJD bestaat
+          const $host = $('#stagesList');
+
+          // Toggle alle rows in dezelfde groep
+          $(document).on('change', '#stagesList .js-check-all', function(){
+            const g = $(this).data('group');
+            const checked = this.checked;
+            $host.find(`.js-stage-row[data-group='${g}']`).prop('checked', checked).trigger('change');
+          });
+
+          // Sync master bij individuele toggles (en evt. totals herberekenen)
+          $(document).on('change', '#stagesList .js-stage-row', function(){
+            const g = $(this).data('group');
+            const $rows   = $host.find(`.js-stage-row[data-group='${g}']`);
+            const $master = $host.find(`.js-check-all[data-group='${g}']`);
+            const allChecked = $rows.length > 0 && $rows.filter(':checked').length === $rows.length;
+            $master.prop('checked', allChecked);
+
+            // Als je subtotaal/totals hebt, herbereken hier:
+            // recalcTotals();  // <- alleen als je earlier totals-code gebruikt
+          });
+        })();
         // ===== Naamgeving voor weergave =====
         // Pas deze 2 woorden aan en alle taalregels volgen mee
         const entity = {

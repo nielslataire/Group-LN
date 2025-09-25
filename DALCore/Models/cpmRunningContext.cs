@@ -1175,7 +1175,13 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasIndex(e => e.CompanyId, "IX_Invoices_CompanyId");
 
+            entity.HasIndex(e => e.InvoiceMode, "IX_Invoices_InvoiceMode");
+
+            entity.HasIndex(e => e.ProjectId, "IX_Invoices_ProjectId");
+
             entity.HasIndex(e => new { e.CompanyId, e.StatusId, e.ExpirationDate }, "IX_Invoices_Status_Company_Expiration");
+
+            entity.HasIndex(e => e.SupplierContractId, "IX_Invoices_SupplierContractId");
 
             entity.HasIndex(e => e.PublicId, "UX_Invoices_PublicId")
                 .IsUnique()
@@ -1195,11 +1201,10 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(3)
                 .IsFixedLength();
             entity.Property(e => e.ExtraInfo).HasMaxLength(1000);
-            entity.Property(e => e.Filename)
-                .IsRequired()
-                .HasMaxLength(50);
+            entity.Property(e => e.Filename).HasMaxLength(50);
             entity.Property(e => e.ForeignGrossTotal).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.FxRateToCompany).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.HeaderDescription).HasMaxLength(400);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
             entity.Property(e => e.PublicId).HasMaxLength(50);
             entity.Property(e => e.QrEpcPayload).HasMaxLength(512);

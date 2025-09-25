@@ -1,0 +1,93 @@
+﻿@model List<CPMCore.Models.Invoicing.InvoiceLineVM>
+@using System.Globalization
+
+<div class="border rounded p-3 mb-3 bg-light">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label d-block">Type factuur</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="UtlType" id="utlTypeAdvance" value="advance" checked>
+                <label class="form-check-label" for="utlTypeAdvance">Voorschot</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="UtlType" id="utlTypeSettlement" value="settlement">
+                <label class="form-check-label" for="utlTypeSettlement">Afrekening</label>
+            </div>
+        </div>
+        <div class="col-md-3 js-utl-advance">
+            <label class="form-label">Voorschotbedrag</label>
+            <input type="number" step="0.01" class="form-control form-control-modern" id="utlAdvanceAmount" placeholder="0,00">
+        </div>
+        <div class="col-md-2 js-utl-settle d-none">
+            <label class="form-label">Verdeelsleutel</label>
+            <input type="number" step="1" min="1" class="form-control form-control-modern" id="utlKey" value="1">
+        </div>
+        <div class="col-md-3 js-utl-settle d-none">
+            <label class="form-label">Reeds betaalde voorschotten</label>
+            <input type="number" step="0.01" class="form-control form-control-modern" id="utlAdvanceSubtract" placeholder="0,00">
+        </div>
+    </div>
+    <div class="row g-2 mt-2">
+        <div class="col text-end small">
+            <span class="me-3">Subtotaal (excl.): <strong id="utlNet">€ 0,00</strong></span>
+            <span class="me-3">BTW: <strong id="utlVat">€ 0,00</strong></span>
+            <span class="">Totaal (incl.): <strong id="utlGross">€ 0,00</strong></span>
+        </div>
+    </div>
+</div>
+
+<table class="table table-responsive-sm table-hover mb-0" style="min-width: 650px;">
+    <thead>
+        <tr>
+            <th style="width:40px;"></th>
+            <th>Omschrijving</th>
+            <th style="width:160px;" class="text-end">Bedrag (excl.)</th>
+            <th style="width:100px;" class="text-end">BTW (%)</th>
+        </tr>
+    </thead>
+    <tbody>
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            var m = Model[i];
+            var checkboxId = $"utl_{i}";
+            <tr class="align-middle">
+                <td>
+                    <input type="hidden" name="Lines[@i].IsSelected" value="false" />
+                    <div class="checkbox-custom checkbox-default m-0">
+                        <input type="checkbox"
+                               id="@checkboxId"
+                               class="js-utl-row"
+                               data-amount="@m.Price.ToString(CultureInfo.InvariantCulture)"
+                               data-vat="@m.VatPercentage.ToString(CultureInfo.InvariantCulture)"
+                               data-unitid="@(m.UnitId?.ToString() ?? "")"
+                               data-projectname="@m.ProjectName"
+                               data-projectstreet="@m.ProjectStreet"
+                               data-projecthouse="@m.ProjectHouseNumber"
+                               data-projectcity="@m.ProjectCity"
+                               data-unitstreet="@m.UnitStreet"
+                               data-unithouse="@m.UnitHouseNumber"
+                               name="Lines[@i].IsSelected" value="true" />
+                        <label for="@checkboxId">&nbsp;</label>
+                    </div>
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm" value="@m.Text" disabled />
+                    <input type="hidden" name="Lines[@i].Text" value="@m.Text" />
+                    <input type="hidden" name="Lines[@i].LineType" value="Utilities" />
+                    <input type="hidden" name="Lines[@i].GroupName" value="@m.GroupName" />
+                    @if (m.UnitId.HasValue)
+                    {
+                        <input type="hidden" name="Lines[@i].UnitId" value="@m.UnitId.Value" />
+                    }
+                </td>
+                <td class="text-end">
+                    <input type="text" class="form-control form-control-sm text-end" value="@m.Price.ToString("N2")" disabled />
+                </td>
+                <td class="text-end">
+                    <input type="text" class="form-control form-control-sm text-end" value="@m.VatPercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+

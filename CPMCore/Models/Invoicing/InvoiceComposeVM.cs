@@ -16,12 +16,24 @@ namespace CPMCore.Models.Invoicing
 
         public StartStatus StartAs { get; set; } = StartStatus.Invoice;
 
-        public List<InvoiceLineVM> Lines { get; set; } = new()
-        {
-            new InvoiceLineVM() // 1 lege lijn standaard
-        };
+        // Nieuw:
+        public InvoiceMode Mode { get; set; } = InvoiceMode.Free;
+        public string? HeaderDescription { get; set; }
 
-        // UI lijsten
+        public int? ProjectId { get; set; }
+        public int? SupplierContractId { get; set; }
+
+        // Voor vrije lijnen
+        public List<InvoiceLineVM> Lines { get; set; } = new() { new() };
+
+
+        public int? PaymentGroupId { get; set; }
+        public List<int> StageIds { get; set; } = new();
+
+
+        // UI lists
         public IEnumerable<SelectListItem> Issuers { get; set; } = Array.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> Projects { get; set; } = Array.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> SupplierContracts { get; set; } = Array.Empty<SelectListItem>();
     }
 }

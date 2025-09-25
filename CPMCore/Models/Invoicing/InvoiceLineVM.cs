@@ -2,8 +2,8 @@
 {
     public class InvoiceLineVM
     {
-
-            public string Text { get; set; } = "";
+        public bool IsSelected { get; set; }
+        public string Text { get; set; } = "";
             public decimal Price { get; set; }
             public decimal VatPercentage { get; set; }
             public decimal? DiscountPercent { get; set; }
@@ -13,6 +13,19 @@
             public string? LineType { get; set; }
             public string? GroupName { get; set; }
             public bool UtilityCost { get; set; }
-    
+
+            public string? UnitName { get; set; }
+            public decimal StagePercentage { get; set; }
+
+            public string? UnitType { get; set; }
+            public string? ProjectName { get; set; }
+            public string? ProjectStreet { get; set; }
+            public string? ProjectHouseNumber { get; set; }
+            public string? ProjectCity { get; set; }
+            public string? UnitStreet { get; set; }
+            public string? UnitHouseNumber { get; set; }
+            public decimal UnitConstructionTotal { get; set; }
+            public decimal OwnerPercentage { get; set; } = 100m; // voorlopig 100%; co-owner kan later
+
     }
 }

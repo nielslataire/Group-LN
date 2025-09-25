@@ -65,6 +65,8 @@ builder.Services.AddScoped<IIssuerBankAccountService, IssuerBankAccountService>(
 builder.Services.AddScoped<IIssuerSeriesService, IssuerSeriesService>();
 builder.Services.AddScoped<IPartyLookupService, PartyLookupService>();
 builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();
+builder.Services.AddScoped<IInvoiceNumberingService, InvoiceNumberingService>();
+builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupService>();
 
 builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider =>
     new SynchronizedConverter(new PdfTools())

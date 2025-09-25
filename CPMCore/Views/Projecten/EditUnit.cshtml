@@ -24,9 +24,19 @@
 @* 	@Html.AntiForgeryToken() *@
 	@Html.HiddenFor(m => m.Unit.Id, new {id = "unitid"})
 	@Html.HiddenFor(m => m.Unit.ClientAccountId)
+	@Html.HiddenFor(m => m.Unit.LandValue)
+	@Html.HiddenFor(m => m.Unit.LandValueSold)
+	@Html.HiddenFor(m => m.Unit.Type.Id)
+	@Html.HiddenFor(m => m.Unit.ProjectId)
+	@Html.HiddenFor(m => m.Unit.AttachedUnitsId)
+	@Html.HiddenFor(m => m.Unit.LinkedUnitId)
+	@Html.HiddenFor(m => m.Unit.Surface)
+	@Html.HiddenFor(m => m.Unit.GroundSurface)
+	@Html.HiddenFor(m => m.Unit.PaymentGroupId)
 	@Html.HiddenFor(m => m.Unit.IsLink)
 	@Html.HiddenFor(m => m.ProjectId, new {id = "projectid"})
 	@Html.HiddenFor(m => m.ProjectName, new { id = "projectname" })
+
 	<div class="row mt-2">
 		<div class="col">
 			<section class="card card-modern card-big-info">

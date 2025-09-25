@@ -1,175 +1,756 @@
-﻿@model CPMCore.Models.Invoicing.InvoiceCreateVM
+﻿@model CPMCore.Models.Invoicing.InvoiceComposeVM
 @{
     ViewData["Title"] = "Nieuwe factuur";
 }
-@section PageStyle
-{
-<link rel="stylesheet" href="~/lib/select2/css/select2.css" />
-<link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
-<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
-<link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
+    <style>
+        /* 45px hoogte */
+        .select2-container--bootstrap .select2-selection--single {
+            height: 45px;
+            line-height: 45px;
+        }
+
+        .form-control.form-control-modern {
+            height: 45px;
+        }
+
+        .select2-container--bootstrap .select2-selection__rendered {
+            line-height: 43px;
+        }
+
+        .select2-container--bootstrap .select2-selection__arrow {
+            height: 43px;
+        }
+
+        .desc-textarea {
+            resize: vertical; /* gebruiker mag (desgewenst) wat vergroten/verkleinen */
+            min-height: 48px; /* ~2 regels, sluit aan bij jouw compacte rijhoogte */
+            max-height: 160px; /* cap, zodat cards niet te groot worden */
+            white-space: pre-wrap; /* respecteert spaties/linebreaks en wrapt mooi */
+            overflow: auto;
+            background: #f8f9fa; /* disabled look consistent */
+        }
+    </style>
 }
-<div class="row">
-    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-            <div class="row align-items-center">
-                <div class="col-sm-auto">
-                    <h1 class="fw-bold mb-0">Nieuwe factuur</h1>
-                    <h5 class="mb-4 mt-0">Maak een nieuwe factuur aan een klant of leverancier op</h5>
+
+<form id="invoiceForm" asp-action="CreateDraft" method="post" class="mb-4">
+    @Html.AntiForgeryToken()
+
+    <div class="row">
+        <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+            <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                <div class="row align-items-center">
+                    <div class="col-sm-auto">
+                        <h1 class="fw-bold mb-0">Nieuwe factuur</h1>
+                        <h5 class="mb-4 mt-0">Maak een nieuwe factuur aan een klant of leverancier op </h5>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-<form method="get" asp-action="Create" class="mb-4">
-<div class="row mt-2">
-    <div class="col">
-        <section class="card card-modern">
-            <div class="card-body">
-                    <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Facturatiebedrijf</label>
-                            <select asp-for="IssuerCompanyId" asp-items="Model.Issuers" class="form-control form-control-modern"></select>
-                    </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label">Klant</label>
-                            <select id="partySelect" class="form-control form-control-modern" style="width:100%"></select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Factuurdatum</label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </span>
-                                <input asp-for="InvoiceDate" class="form-control form-control-modern js-datepicker" type="text" asp-format="{0:dd/MM/yyyy}" />
-                            </div>
-@*                         <input asp-for="InvoiceDate" type="date" class="form-control form-control-modern" /> *@
-                    </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Start als</label>
-                            <select asp-for="StartAs" class="form-control form-control-modern">
-                                <option value="1">Factuur (meteen uitgeven)</option>
-                                <option value="0">Draft (later afwerken)</option>
-                            </select>
-                        </div>
-                    </div> 
-                    <input type="hidden" asp-for="PartyId" />
-                    <input type="hidden" asp-for="PartyType" />
+    <section class="card card-modern">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Facturatiebedrijf</label>
+                    <select asp-for="IssuerCompanyId" asp-items="Model.Issuers" class="form-control form-control-modern"></select>
+                </div>
 
+                <div class="col-md-6">
+                    <label class="form-label">Klant / Leverancier</label>
+                    <select id="partySelect" class="form-control form-control-modern" style="width:100%"></select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Factuurdatum</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                        <input asp-for="InvoiceDate" class="form-control form-control-modern js-datepicker" type="text" asp-format="{0:dd/MM/yyyy}" />
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Start als</label>
+                    <select asp-for="StartAs" class="form-control form-control-modern">
+                        <option value="1">Factuur (meteen uitgeven)</option>
+                        <option value="0">Draft (later afwerken)</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Factuurmodus</label>
+                    <select asp-for="Mode" class="form-control form-control-modern">
+                        <option value="1">Vrije lijnen</option>
+                        <option value="2">Schijven</option>
+                        <option value="3">Wijzigingsopdrachten</option>
+                        <option value="4">Nutsaansluitingen</option>
+                    </select>
+                </div>
+                <div id="projectRow" class="col-md-6 mt-3">
+                    <label class="form-label">Project (optioneel indien geen contract) </label>
+                    <select id="projectSelect" class="form-control form-control-modern" style="width:100%"></select>
+                    <input type="hidden" asp-for="ProjectId" />
+                </div>
+
+                <div id="contractRow" class="col-md-6 mt-3">
+                    <label class="form-label">Leverancierscontract (optioneel)</label>
+                    <select id="contractSelect" class="form-control form-control-modern" style="width:100%"></select>
+                    <input type="hidden" asp-for="SupplierContractId" />
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label" for="HeaderDescription">Omschrijving (optioneel)</label>
+                    <textarea asp-for="HeaderDescription"
+                              class="form-control form-control-modern desc-textarea"
+                              rows="5"></textarea>
+                    <span asp-validation-for="HeaderDescription" class="text-danger"></span>
+                </div>
+               
             </div>
-        </section>                
-    </div>
-</div>
 
-    <h5 class="mt-4">Lijn</h5>
-    <div class="row g-2">
-        <div class="col-md-6">
-            <label class="form-label">Omschrijving</label>
-            <input name="Lines[0].Text" class="form-control form-control-modern" maxlength="200" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Bedrag</label>
-            <input name="Lines[0].Price" type="number" step="0.0001" class="form-control form-control-modern" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">BTW %</label>
-            <input name="Lines[0].VatPercentage" type="number" step="0.0001" class="form-control form-control-modern" />
-        </div>
-        <div class="col-md-2">
-            <label class="form-label">Korting %</label>
-            <input name="Lines[0].DiscountPercent" type="number" step="0.0001" class="form-control form-control-modern" />
-        </div>
 
-        <div class="col-md-2">
-            <label class="form-label">Unit</label>
-            <input name="Lines[0].UnitId" type="number" class="form-control form-control-modern" />
+            <!-- hidden voor party -->
+            <input type="hidden" asp-for="PartyId" />
+            <input type="hidden" asp-for="PartyType" />
         </div>
-        <div class="col-md-2">
-            <label class="form-label">Fase</label>
-            <input name="Lines[0].PaymentStageId" type="number" class="form-control form-control-modern" />
+    </section>
+    <section class="card card-modern" id="stagesBlock" style="display:none">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="row g-3 mt-2">
+                    <div class="col-12">
+                        <div id="stagesList">
+                            <!-- wordt via JS gevuld met checkboxen -->
+                            <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Schijven”.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Lijntype</label>
-            <input name="Lines[0].LineType" class="form-control form-control-modern" maxlength="20" />
+    </section>
+
+
+    <section class="card card-modern" id="stagesBlock" style="display:none">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Omschrijving</label>
+                    <input asp-for="Lines[0].Text" class="form-control form-control-modern" maxlength="200" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Bedrag</label>
+                    <input asp-for="Lines[0].Price" type="number" step="0.0001" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">BTW %</label>
+                    <input asp-for="Lines[0].VatPercentage" type="number" step="0.0001" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Korting %</label>
+                    <input asp-for="Lines[0].DiscountPercent" type="number" step="0.0001" class="form-control form-control-modern" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Unit</label>
+                    <input asp-for="Lines[0].UnitId" type="number" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Fase</label>
+                    <input asp-for="Lines[0].PaymentStageId" type="number" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Lijntype</label>
+                    <input asp-for="Lines[0].LineType" class="form-control form-control-modern" maxlength="20" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Groep</label>
+                    <input asp-for="Lines[0].GroupName" class="form-control form-control-modern" maxlength="200" />
+                </div>
+                <div class="col-md-2 form-check mt-4">
+                    <input asp-for="Lines[0].UtilityCost" type="checkbox" class="form-check-input" id="util0" />
+                    <label for="util0" class="form-check-label">Uitzonderlijke kost</label>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <label class="form-label">Groep</label>
-            <input name="Lines[0].GroupName" class="form-control form-control-modern" maxlength="200" />
+    </section>
+
+    <section class="card card-modern" id="coBlock" style="display:none">
+        <div class="card-body">
+            <div id="coList">
+                <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Wijzigingsopdrachten”.</div>
+            </div>
         </div>
-        <div class="col-md-2 form-check mt-4">
-            <input name="Lines[0].UtilityCost" type="checkbox" class="form-check-input" id="util0" />
-            <label for="util0" class="form-check-label">Uitzonderlijke kost</label>
+    </section>
+
+    <section class="card card-modern" id="utlBlock" style="display:none">
+        <div class="card-body">
+            <div id="utlList">
+                <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Nutsaansluitingen”.</div>
+            </div>
         </div>
+    </section>
+
+    <section class="card card-modern" id="freeLineBlock" style="">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Omschrijving</label>
+                    <input asp-for="Lines[0].Text" class="form-control form-control-modern" maxlength="200" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Bedrag</label>
+                    <input asp-for="Lines[0].Price" type="number" step="0.0001" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">BTW %</label>
+                    <input asp-for="Lines[0].VatPercentage" type="number" step="0.0001" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Korting %</label>
+                    <input asp-for="Lines[0].DiscountPercent" type="number" step="0.0001" class="form-control form-control-modern" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">Unit</label>
+                    <input asp-for="Lines[0].UnitId" type="number" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Fase</label>
+                    <input asp-for="Lines[0].PaymentStageId" type="number" class="form-control form-control-modern" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Lijntype</label>
+                    <input asp-for="Lines[0].LineType" class="form-control form-control-modern" maxlength="20" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Groep</label>
+                    <input asp-for="Lines[0].GroupName" class="form-control form-control-modern" maxlength="200" />
+                </div>
+                <div class="col-md-2 form-check mt-4">
+                    <input asp-for="Lines[0].UtilityCost" type="checkbox" class="form-check-input" id="util0" />
+                    <label for="util0" class="form-check-label">Uitzonderlijke kost</label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-1"></i> Opslaan
+        </button>
     </div>
 </form>
-<form asp-action="CreateDraft" method="post" class="mt-3">
-    @Html.AntiForgeryToken()
-    <input type="hidden" asp-for="IssuerCompanyId" />
-    <input type="hidden" asp-for="InvoiceDate" />
-    <input type="hidden" asp-for="PartyId" />
-    <input type="hidden" asp-for="PartyType" />
-    <button type="submit" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> Conceptfactuur aanmaken
-    </button>
-</form>
-
 
 @section PageScripts {
-  <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
     <script src="/lib/select2/js/i18n/nl.js"></script>
     <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
     <script src="~/lib/bootstrap-datepicker/locales/bootstrap-datepicker.nl-BE.min.js"></script>
-  <script>
-    $(function () {
-      $('#partySelect').select2({
-        ajax: {
-          url: '@Url.Action("PartyLookup","Invoices")',
-          dataType: 'json',
-          delay: 250,
-          data: function (params) { return { term: params.term || '', take: 20 }; },
-          processResults: function (data) { return data; }
-        },
-        placeholder: 'Zoek naam…',
-        minimumInputLength: 1,
-        theme: 'bootstrap',
-        placeholder: 'Zoek de klant ...',
-        language: "nl",
-        dropdownAutoWidth: true,
-        templateResult: function (item) {
-          if (!item.id) return item.text;
-          var badge = '';
-          if (item.type === 'ClientAccount') badge = '<span class="badge bg-primary ms-2">klant</span>';
-          else if (item.type === 'ClientContact') badge = '<span class="badge bg-secondary ms-2">co-owner</span>';
-          else if (item.type === 'Supplier') badge = '<span class="badge bg-accent ms-2">leverancier</span>';
-          return $('<span>').html(badge + ' ' + item.text);
-        }
-      });
-
-      $('#partySelect').on('select2:select', function (e) {
-        const v = e.params.data.id; // bv. "ca:123"
-        const [prefix, idStr] = v.split(':');
-        let typeVal = null;
-        if (prefix === 'ca') typeVal = 1;        // ClientAccount
-        if (prefix === 'cc') typeVal = 2;        // ClientContact (co-owner)
-        if (prefix === 'su') typeVal = 3;        // Supplier (CompanyInfo)
-
-        $('input[name="PartyId"]').val(idStr || '');
-        $('input[name="PartyType"]').val(typeVal || '');
-      });
-    });
-
-  </script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-        // init datepickers
+
+        $(function () {
+
+          // ============ helpers ============
+          const getPartyType = () => $('input[name="PartyType"]').val(); // "1","2","3" of ""
+          const getPartyId   = () => $('input[name="PartyId"]').val();
+          const isSupplier   = () => getPartyType() === '3';
+          const isCustomer   = () => getPartyType() === '1' || getPartyType() === '2';
+
+          // Alleen vrije lijnen voor leveranciers
+            function enforceModeByParty() {
+              const $mode = $('#Mode');
+              if (isSupplier()) {
+                $mode.val('1');
+                $mode.find('option[value!="1"]').prop('disabled', true).hide();
+                $('#stagesBlock').hide();
+                $('#freeLineBlock').show();   // ✅
+              } else {
+                $mode.find('option').prop('disabled', false).show();
+              }
+            }
+
+          // ============ toggles ============
+          function toggleProjectContract() {
+            if (isSupplier()) {
+              $('#projectRow').show();
+              $('#contractRow').show();
+            } else if (isCustomer()) {
+              $('#projectRow, #contractRow').hide();
+              $('#projectSelect').val(null).trigger('change'); $('input[name="ProjectId"]').val('');
+              $('#contractSelect').val(null).trigger('change'); $('input[name="SupplierContractId"]').val('');
+            } else {
+              $('#projectRow, #contractRow').hide();
+            }
+          }
+
+          function toggleStagesBlock() {
+                const mode = $('#Mode').val();
+                const showStages = (mode === '2' && isCustomer());
+                const showCO     = (mode === '3' && isCustomer());
+                const showUtl    = (mode === '4' && isCustomer());
+
+                $('#stagesBlock').toggle(showStages);
+                $('#coBlock').toggle(showCO);
+                $('#utlBlock').toggle(showUtl);
+                $('#freeLineBlock').toggle(!(showStages || showCO || showUtl));
+
+                if (showStages) loadStageLines();
+                if (showCO)     loadChangeOrderLines();
+                if (showUtl)    loadUtilityLines();
+            }
+
+          // ============ party select2 ============
+          $('#partySelect').select2({
+            ajax: {
+              url: '@Url.Action("PartyLookup", "Invoices")',
+              dataType: 'json',
+              delay: 250,
+              data: function (params) { return { term: params.term || '', take: 20 }; },
+              processResults: function (data) { return data; }
+            },
+            theme: 'bootstrap',
+            placeholder: 'Zoek de klant/leverancier ...',
+            language: "nl",
+            minimumInputLength: 1,
+            dropdownAutoWidth: true,
+            templateResult: function (item) {
+              if (!item.id) return item.text;
+              var badge = '';
+              if (item.type === 'ClientAccount') badge = '<span class="badge bg-primary me-2">klant</span>';
+              else if (item.type === 'ClientContact') badge = '<span class="badge bg-secondary me-2">co-owner</span>';
+              else if (item.type === 'Supplier') badge = '<span class="badge bg-accent me-2">leverancier</span>';
+              return $('<span>').html(badge + item.text);
+            }
+          }).on('select2:select', function (e) {
+            const v = e.params.data.id; // bv. "ca:123"
+            const parts = (v || '').split(':');
+            const prefix = parts[0], idStr = parts[1] || '';
+            let typeVal = null;
+            if (prefix === 'ca') typeVal = 1;
+            if (prefix === 'cc') typeVal = 2;
+            if (prefix === 'su') typeVal = 3;
+
+            $('input[name="PartyId"]').val(idStr);
+            $('input[name="PartyType"]').val(typeVal || '');
+
+            // reset afhankelijke velden & toggles
+            enforceModeByParty();
+            toggleProjectContract();
+            toggleStagesBlock(); // zal loadStageLines doen indien nodig
+          });
+
+          // ============ datepicker ============
           $('.js-datepicker').datepicker({
             format: 'dd/MM/yyyy',
             todayHighlight: false,
             autoclose: true,
-            language: 'nl-BE' // vereist locale-bestand hierboven
+            language: 'nl-BE'
           });
-        });
 
+          // ============ project select2 ============
+          $('#projectSelect').select2({
+            ajax: {
+              url: '@Url.Action("ProjectLookup", "Invoices")',
+              dataType: 'json',
+              delay: 250,
+              data: function (params) {
+                const clientId = isCustomer() ? (getPartyId() || null) : null;
+                return { term: params.term || '', take: 20, clientId: clientId };
+              },
+              processResults: function (data) { return data; }
+            },
+            theme: 'bootstrap',
+            placeholder: 'Zoek project ...',
+            language: "nl",
+            allowClear: true,
+            minimumInputLength: 1,
+            dropdownAutoWidth: true
+          }).on('select2:select', function (e) {
+            $('input[name="ProjectId"]').val(e.params.data.id);
+            // project en contract zijn exclusief
+            $('#contractSelect').val(null).trigger('change');
+            $('input[name="SupplierContractId"]').val('');
+            // bij schijvenmodus: refresh de lijnen op projectwijziging
+            if ($('#Mode').val() === '2' && isCustomer()) loadStageLines();
+          }).on('select2:clear', function () {
+            $('input[name="ProjectId"]').val('');
+            if ($('#Mode').val() === '2' && isCustomer()) loadStageLines();
+          });
+
+          // ============ contract select2 ============
+          $('#contractSelect').select2({
+            ajax: {
+              url: '@Url.Action("SupplierContractLookup", "Invoices")',
+              dataType: 'json',
+              delay: 250,
+              data: function (params) {
+                const supplierCompanyId = isSupplier() ? (getPartyId() || null) : null;
+                return { term: params.term || '', take: 20, supplierCompanyId: supplierCompanyId };
+              },
+              processResults: function (data) { return data; }
+            },
+            theme: 'bootstrap',
+            placeholder: 'Zoek contract (op projectnaam) ...',
+            language: "nl",
+            allowClear: true,
+            minimumInputLength: 1,
+            dropdownAutoWidth: true
+          }).on('select2:select', function (e) {
+            $('input[name="SupplierContractId"]').val(e.params.data.id);
+            // exclusief met project
+            $('#projectSelect').val(null).trigger('change');
+            $('input[name="ProjectId"]').val('');
+          }).on('select2:clear', function () {
+            $('input[name="SupplierContractId"]').val('');
+          });
+
+          // ============ Schijven-partial laden ============
+          async function loadStageLines() {
+            const partyType = getPartyType();
+            const clientId  = getPartyId();
+            const mode      = $('#Mode').val();
+
+            if (!(partyType === '1' || partyType === '2') || mode !== '2' || !clientId) {
+              $('#stagesList').empty().append('<div class="text-muted small">Kies eerst een klant en zet “Factuurmodus” op “Schijven”.</div>');
+              return;
+            }
+
+            $('#stagesList').html('<div class="text-muted">Laden…</div>');
+            try {
+              const projectId = $('input[name="ProjectId"]').val() || '';
+              const url = '@Url.Action("ComposeStageLines", "Invoices")' + `?clientId=${encodeURIComponent(clientId)}&projectId=${encodeURIComponent(projectId)}`;
+              const html = await $.get(url);
+              $('#stagesList').html(html);
+              if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection(); // ✅
+            } catch (e) {
+              console.error(e);
+              $('#stagesList').html('<div class="text-danger small">Kon schijven niet laden.</div>');
+            }
+          }
+                // ============ Wijzigingsopdrachten-partial laden ============
+                        async function loadChangeOrderLines(){
+              const clientId = getPartyId();
+              if (!clientId) { $('#coList').html('<div class="text-muted">Kies een klant…</div>'); return; }
+              $('#coList').html('<div class="text-muted">Laden…</div>');
+              try{
+                const projectId = $('input[name="ProjectId"]').val() || '';
+                const url = '@Url.Action("ComposeChangeOrderLines", "Invoices")' + `?clientId=${encodeURIComponent(clientId)}&projectId=${encodeURIComponent(projectId)}`;
+                const html = await $.get(url);
+                $('#coList').html(html);
+                if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+                if (window.updateHeaderLock) window.updateHeaderLock();
+              }catch(e){ console.error(e); $('#coList').html('<div class="text-danger small">Kon wijzigingsopdrachten niet laden.</div>'); }
+            }
+
+            // ============ Nutsaansluitingen-partial laden ============
+            async function loadUtilityLines(){
+              const clientId = getPartyId();
+              if (!clientId) { $('#utlList').html('<div class="text-muted">Kies een klant…</div>'); return; }
+              $('#utlList').html('<div class="text-muted">Laden…</div>');
+              try{
+                const projectId = $('input[name="ProjectId"]').val() || '';
+                const url = '@Url.Action("ComposeUtilityLines", "Invoices")' + `?clientId=${encodeURIComponent(clientId)}&projectId=${encodeURIComponent(projectId)}`;
+                const html = await $.get(url);
+                $('#utlList').html(html);
+                if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+                if (window.updateHeaderLock) window.updateHeaderLock();
+              }catch(e){ console.error(e); $('#utlList').html('<div class="text-danger small">Kon nutsaansluitingen niet laden.</div>'); }
+            }
+
+          // ============ form guard ============
+          $('#invoiceForm').on('submit', function (e) {
+            const partyType = getPartyType();
+            const projectId = $('input[name="ProjectId"]').val();
+            const contractId = $('input[name="SupplierContractId"]').val();
+
+            // leverancier: minstens project of contract
+            if (partyType === '3' && !projectId && !contractId) {
+              e.preventDefault();
+              alert("Kies minstens een project of een contract voor de leveranciersfactuur.");
+              return false;
+            }
+
+            // klant + schijven: minstens 1 gekozen schijflijn
+            if (isCustomer() && $('#Mode').val() === '2') {
+              const checkedLines = $('#stagesList input[type="checkbox"][name$=".IsSelected"]:checked').length;
+              if (checkedLines === 0) {
+                e.preventDefault();
+                alert("Kies minstens één schijf-lijn.");
+                return false;
+              }
+            }
+            return true;
+          });
+
+          // init toggles bij paginalaad
+          enforceModeByParty();
+          toggleProjectContract();
+          toggleStagesBlock();
+
+          // wijziging van modus moet ook stages togglen
+          $('#Mode').on('change', toggleStagesBlock);
+
+        });
     </script>
+@*     Checkboxes *@
+    <script>
+        (function(){
+          const $host = $('#stagesList');
+
+          // "Alles" per unit
+          $(document).on('change', '#stagesList .js-check-all', function(){
+            const g = $(this).data('group');
+            const checked = this.checked;
+            $host.find(`.js-stage-row[data-group='${g}']`).prop('checked', checked).trigger('change');
+          });
+
+          // Sync master checkbox & (optioneel) totals
+          $(document).on('change', '#stagesList .js-stage-row', function(){
+            const g = $(this).data('group');
+            const $rows   = $host.find(`.js-stage-row[data-group='${g}']`);
+            const $master = $host.find(`.js-check-all[data-group='${g}']`);
+            $master.prop('checked', $rows.length > 0 && $rows.filter(':checked').length === $rows.length);
+
+            // Als je subtotalen gebruikt, roep hier je recalcTotals() aan
+            // recalcTotals();
+          });
+        })();
+    </script>
+@*     Headerdescription *@
+    <script>
+        (function(){
+          const $host   = $('#stagesList');        // container van de (AJAX) partial
+          const $header = $('#HeaderDescription');  // textarea
+
+          function buildAddress(street, house){
+            street = (street || '').trim(); house = (house || '').trim();
+            if(!street) return '';
+            return house ? `${street} ${house}` : street;
+          }
+          function fmtMoney(n){
+            const f = new Intl.NumberFormat('nl-BE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+            return f.format(n || 0);
+          }
+          function fmtPct(n){
+            const f = new Intl.NumberFormat('nl-BE', { minimumFractionDigits:0, maximumFractionDigits:2 });
+            return f.format(n || 0);
+          }
+
+          // 🔒 enable/disable HeaderDescription op basis van selectie in modi 2/3/4
+          function updateHeaderLock(){
+            const anySelected =
+              $host.find('.js-stage-row:checked').length > 0 ||   // Schijven
+              $host.find('.js-co-row:checked').length    > 0 ||   // Wijzigingsopdrachten
+              $host.find('.js-utl-row:checked').length   > 0;     // Nutsaansluitingen
+
+            $header.prop('disabled', anySelected);
+          }
+
+          // 🧠 Bouw headertekst voor de actieve modus
+          function rebuildHeaderFromSelection(){
+            const mode = $('#Mode').val();
+
+            // Niets geselecteerd? Laat bestaande tekst staan en unlock.
+            if (
+              $host.find('.js-stage-row:checked, .js-co-row:checked, .js-utl-row:checked').length === 0
+            ){
+              updateHeaderLock();
+              return;
+            }
+
+            const paragraphs = [];
+
+            if(mode === '2'){ // ===== Schijven =====
+              // per unieke unit 2 zinnen
+              const units = new Map(); // key = unitId
+              $host.find('.js-stage-row:checked').each(function(){
+                const $cb = $(this), unitId = $cb.data('unitid');
+                if(!unitId) return;
+                if(!units.has(unitId)){
+                  const meta = {
+                    unitType: ($cb.data('unittype') || '').toString(),
+                    unitName: ($cb.data('unitname') || '').toString(),
+                    projectName: ($cb.data('projectname') || '').toString(),
+                    projectStreet: ($cb.data('projectstreet') || '').toString(),
+                    projectHouse: ($cb.data('projecthouse') || '').toString(),
+                    projectCity: ($cb.data('projectcity') || '').toString(),
+                    unitStreet: ($cb.data('unitstreet') || '').toString(),
+                    unitHouse: ($cb.data('unithouse') || '').toString(),
+                    unitTotal: parseFloat($cb.data('uctotal')) || 0,
+                    ownerPct: parseFloat($cb.data('ownerpct')) || 100
+                  };
+                  units.set(unitId, meta);
+                }
+              });
+
+              units.forEach(meta => {
+                const unitTypePart = meta.unitType ? (meta.unitType + ' ') : '';
+                const unitAddr = buildAddress(meta.unitStreet, meta.unitHouse);
+                const projAddr = buildAddress(meta.projectStreet, meta.projectHouse);
+                const chosenAddr = unitAddr || projAddr;
+
+                const line1 = `Voor de bouwwaarde van ${unitTypePart}${meta.unitName} in project ${meta.projectName}, ${chosenAddr} te ${meta.projectCity} ingevolge verkoopsovereenkomst.`;
+                const line2 = `${fmtPct(meta.ownerPct)} % van de bouwwaarde van ${unitTypePart}${meta.unitName} : ${fmtMoney(meta.unitTotal)}`;
+                paragraphs.push(`${line1} ${line2}`);
+              });
+            }
+            else if(mode === '3'){ // ===== Wijzigingsopdrachten =====
+              // per unieke unit 1 zin
+              const units = new Map();
+              $host.find('.js-co-row:checked').each(function(){
+                const $cb = $(this), unitId = $cb.data('unitid'); // mag leeg zijn; dan groeperen op project
+                const key = unitId || ('p:' + ($cb.data('projectname') || ''));
+                if(!units.has(key)){
+                  const meta = {
+                    unitType: ($cb.data('unittype') || '').toString(),
+                    unitName: ($cb.data('unitname') || '').toString(),
+                    projectName: ($cb.data('projectname') || '').toString(),
+                    projectStreet: ($cb.data('projectstreet') || '').toString(),
+                    projectHouse: ($cb.data('projecthouse') || '').toString(),
+                    projectCity: ($cb.data('projectcity') || '').toString(),
+                    unitStreet: ($cb.data('unitstreet') || '').toString(),
+                    unitHouse: ($cb.data('unithouse') || '').toString()
+                  };
+                  units.set(key, meta);
+                }
+              });
+
+              units.forEach(meta => {
+                const unitTypePart = meta.unitType ? (meta.unitType + ' ') : '';
+                const unitLabel = (meta.unitName ? `${unitTypePart}${meta.unitName} ` : '');
+                const unitAddr  = buildAddress(meta.unitStreet, meta.unitHouse);
+                const projAddr  = buildAddress(meta.projectStreet, meta.projectHouse);
+                const chosenAddr= unitAddr || projAddr;
+
+                const line = `Voor de meer of min werken van ${unitLabel}in project ${meta.projectName}, ${chosenAddr} ingevolge verkoopsovereenkomst.`;
+                paragraphs.push(line);
+              });
+            }
+            else if(mode === '4'){ // ===== Nutsaansluitingen =====
+              // per unieke unit/project 1 zin
+              const places = new Map();
+              $host.find('.js-utl-row:checked').each(function(){
+                const $cb = $(this);
+                const key = ($cb.data('unitid')) || ('p:' + ($cb.data('projectname') || ''));
+                if(!places.has(key)){
+                  const meta = {
+                    projectName: ($cb.data('projectname') || '').toString(),
+                    projectStreet: ($cb.data('projectstreet') || '').toString(),
+                    projectHouse: ($cb.data('projecthouse') || '').toString(),
+                    projectCity: ($cb.data('projectcity') || '').toString(),
+                    unitStreet: ($cb.data('unitstreet') || '').toString(),
+                    unitHouse: ($cb.data('unithouse') || '').toString()
+                  };
+                  places.set(key, meta);
+                }
+              });
+
+              places.forEach(meta => {
+                const unitAddr = buildAddress(meta.unitStreet, meta.unitHouse);
+                const projAddr = buildAddress(meta.projectStreet, meta.projectHouse);
+                const chosenAddr = unitAddr || projAddr;
+
+                const line = `Voor de aansluitkosten in project ${meta.projectName}, ${chosenAddr} ingevolge verkoopsovereenkomst.`;
+                paragraphs.push(line);
+              });
+            }
+
+            $header.val(paragraphs.join('\n\n'));
+            updateHeaderLock();
+          }
+
+          // === Events ===
+          // Schijven (per unitkaart al 'Alles' + individuele)
+          $(document).on('change', '#stagesList .js-stage-row', rebuildHeaderFromSelection);
+          $(document).on('change', '#stagesList .js-check-all', function(){
+            setTimeout(rebuildHeaderFromSelection, 0);
+          });
+
+          // Wijzigingsopdrachten en Nutsaansluitingen (zodra die partials er zijn)
+          $(document).on('change', '#stagesList .js-co-row, #stagesList .js-utl-row', function(){
+            rebuildHeaderFromSelection();
+          });
+
+          // Init bij paginalaad
+          updateHeaderLock();
+
+          // Exporteer voor aanroep na AJAX load
+          window.rebuildHeaderFromSelection = rebuildHeaderFromSelection;
+          window.updateHeaderLock = updateHeaderLock;
+        })();
+    </script>
+
+@*     Changeorders *@
+    <script>
+        // CO: procent → prijs
+        (function(){
+          const nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+          const $root = $('#stagesList'); // zelfde hostcontainer
+
+          function recalc($pct){
+            const base = parseFloat($pct.data('base')) || 0;
+            let pct = parseFloat($pct.val());
+            if (isNaN(pct) || pct < 0) pct = 0;
+            if (pct > 100) pct = 100;
+            const price = Math.round((base * (pct/100.0)) * 100) / 100;
+
+            const $row = $pct.closest('tr');
+            $row.find('.js-co-price-view').val(nf.format(price));
+            $row.find('.js-co-price-post').val(price.toString().replace(',', '.'));
+            $row.find('.js-co-pct-post').val(pct.toString().replace(',', '.'));
+          }
+
+          $root.on('input change', '.js-co-pct', function(){ recalc($(this)); });
+        })();
+    </script>
+
+    @*     Nutsaansluitingen *@
+    <script>
+        (function(){
+          const nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits:2, maximumFractionDigits:2 });
+          const $host = $('#stagesList');
+
+          function readCheckedSum(){
+            let sum = 0, vatPerc = 21; // neem 21% als default voor totalenweergave
+            $host.find('.js-utl-row:checked').each(function(){
+              const a = parseFloat($(this).data('amount')) || 0;
+              const v = parseFloat($(this).data('vat'));
+              if (!isNaN(v)) vatPerc = v; // laatste vat aangemerkt; pas aan naar wens
+              sum += a;
+            });
+            return { sum, vatPerc };
+          }
+
+          function recalcUtl(){
+            const type = $('input[name="UtlType"]:checked').val(); // advance | settlement
+            const { sum, vatPerc } = readCheckedSum();
+
+            let net = 0;
+            if (type === 'advance'){
+              const adv = parseFloat($('#utlAdvanceAmount').val().toString().replace(',', '.')) || 0;
+              net = Math.max(0, adv);
+              $('.js-utl-advance').removeClass('d-none'); $('.js-utl-settle').addClass('d-none');
+            } else {
+              const key = Math.max(1, parseInt($('#utlKey').val(), 10) || 1);
+              const subtract = parseFloat($('#utlAdvanceSubtract').val().toString().replace(',', '.')) || 0;
+              net = Math.max(0, (sum / key) - subtract);
+              $('.js-utl-advance').addClass('d-none'); $('.js-utl-settle').removeClass('d-none');
+            }
+
+            const vat  = net * (vatPerc/100.0);
+            const gross = net + vat;
+            $('#utlNet').text(nf.format(net));
+            $('#utlVat').text(nf.format(vat));
+            $('#utlGross').text(nf.format(gross));
+          }
+
+          $host.on('change', '.js-utl-row', recalcUtl);
+          $(document).on('input change', '#utlAdvanceAmount, #utlKey, #utlAdvanceSubtract, input[name="UtlType"]', recalcUtl);
+
+          recalcUtl();
+        })();
+    </script>
+
+
 }

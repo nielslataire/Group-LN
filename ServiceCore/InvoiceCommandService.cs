@@ -22,11 +22,18 @@ namespace ServiceCore
 
         public async Task<(int invoiceId, string? publicId)> CreateWithLinesAsync(InvoiceDraftBO bo, bool issueNow, CancellationToken ct = default)
         {
+            // 🔹 0) Schijven → lijnen genereren indien UI geen lijnen heeft gepost
+            if (bo.Mode == InvoiceMode.Stages && (bo.Lines == null || bo.Lines.Count == 0))
+                await BuildLinesForStagesAsync(bo, ct);
+
             // issuer + default term
             var issuer = await _db.IssuerCompany.FirstAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct);
             int? defaultDays = null;
             if (issuer.DefaultPaymentTermId.HasValue)
-                defaultDays = await _db.PaymentTerms.Where(t => t.Id == issuer.DefaultPaymentTermId.Value).Select(t => (int?)t.Days).FirstOrDefaultAsync(ct);
+                defaultDays = await _db.PaymentTerms
+                    .Where(t => t.Id == issuer.DefaultPaymentTermId.Value)
+                    .Select(t => (int?)t.Days)
+                    .FirstOrDefaultAsync(ct);
 
             var due = bo.ExpirationDate ?? (defaultDays.HasValue ? bo.InvoiceDate.AddDays(defaultDays.Value) : (DateOnly?)null);
 
@@ -59,7 +66,11 @@ namespace ServiceCore
                     PublicId = null,
                     ClientType = bo.CompanyId.HasValue ? null : bo.ClientType,
                     ClientId = bo.CompanyId.HasValue ? null : bo.ClientId,
-                    CompanyId = bo.CompanyId
+                    CompanyId = bo.CompanyId,
+                    InvoiceMode = (byte)bo.Mode,
+                    ProjectId = bo.ProjectId,
+                    SupplierContractId = bo.SupplierContractId,
+                    HeaderDescription = bo.HeaderDescription
                 };
                 _uow.Invoices.Add(inv);
                 await _uow.SaveChangesAsync(ct); // Id is nu bekend
@@ -67,7 +78,7 @@ namespace ServiceCore
                 // lines
                 foreach (var l in bo.Lines)
                 {
-                    // normaliseer: als enkel % is opgegeven, reken bedrag uit; als enkel bedrag is opgegeven, reken % uit
+                    // normaliseer korting
                     decimal? discAmt = l.DiscountAmount;
                     decimal? discPct = l.DiscountPercent;
 
@@ -85,11 +96,11 @@ namespace ServiceCore
                         DiscountPercent = discPct,
                         DiscountAmount = discAmt,
                         UnitId = l.UnitId,
-                        PaymentStageId = l.PaymentStageId,
+                        PaymentStageId = l.PaymentStageId,   // ← bij schijven vullen we dit in met Stage.Id
                         LineType = string.IsNullOrWhiteSpace(l.LineType) ? null : l.LineType.Trim(),
                         GroupName = string.IsNullOrWhiteSpace(l.GroupName) ? null : l.GroupName.Trim(),
                         UtilityCost = l.UtilityCost,
-                        // ConstructionValued / ChangeOrderDetailId laat ik null staan (geen info nu)
+                        // ConstructionValued / ChangeOrderDetailId blijven null
                     });
                 }
                 await _uow.SaveChangesAsync(ct);
@@ -97,8 +108,7 @@ namespace ServiceCore
                 string? publicId = null;
                 if (issueNow)
                 {
-                    // volgende stap: user kiest reeks; hier pakken we (voor nu) default reeks of 1
-                    // Laat dit even staan; in stap 3b voegen we Series-keuze toe.
+                    // default reeks kiezen (verbeteren we later met expliciete reeks-keuze)
                     var seriesId = await _db.InvoiceSeries
                         .Where(s => s.IssuerCompanyId == bo.IssuerCompanyId && s.IsActive)
                         .OrderBy(s => s.Id)
@@ -107,7 +117,13 @@ namespace ServiceCore
                         ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit bedrijf.");
 
                     var fiscalYear = bo.InvoiceDate.Year;
-                    var issue = await _num.IssueAsync(inv.Id, seriesId, new DateTime(bo.InvoiceDate.Year, bo.InvoiceDate.Month, bo.InvoiceDate.Day), fiscalYear, ct);
+                    var issue = await _num.IssueAsync(
+                        inv.Id,
+                        seriesId,
+                        new DateTime(bo.InvoiceDate.Year, bo.InvoiceDate.Month, bo.InvoiceDate.Day),
+                        fiscalYear,
+                        ct);
+
                     publicId = issue.publicId;
 
                     inv.StatusId = issuedId;
@@ -124,6 +140,63 @@ namespace ServiceCore
                 throw;
             }
         }
+
+
+        public async Task<int> CreateDraftAsync(InvoiceDraftBO bo, CancellationToken ct = default)
+        {
+            var (id, _) = await CreateWithLinesAsync(bo, issueNow: false, ct);
+            return id;
+        }
+
+        // ---------- alleen voor modus SCHIJVEN ----------
+        // Bouwt lijnen voor modus "Schijven" op basis van gekozen PaymentGroup + StageIds.
+        // - Price = 0m (rekenbasis volgt later: contract/units * percentage)
+        // - VatPercentage: Stage.VatPercentage of fallback Group.VatPercentage of 21
+        // - PaymentStageId wordt gezet naar Stage.Id (handig voor rapportering/trace)
+        private async Task BuildLinesForStagesAsync(InvoiceDraftBO bo, CancellationToken ct)
+        {
+            if (bo.StageIds == null || bo.StageIds.Count == 0)
+                return;
+
+            var stages = await (
+                from s in _db.InvoicingPaymentStages.AsNoTracking()
+                join g in _db.InvoicingPaymentGroup.AsNoTracking() on s.GroupId equals g.Id
+                where bo.StageIds.Contains(s.Id)
+                select new { s.Id, s.Name, s.Percentage, s.VatPercentage, GroupVat = g.VatPercentage, g.ProjectId }
+            ).ToListAsync(ct);
+
+            foreach (var s in stages)
+            {
+                var vat = s.VatPercentage != 0 ? s.VatPercentage : (s.GroupVat ?? 21m);
+                bo.Lines.Add(new InvoiceLineBO
+                {
+                    Text = s.Name,
+                    Price = 0m,
+                    VatPercentage = vat,
+                    PaymentStageId = s.Id
+                });
+            }
+
+            // header (eerste project als er meerdere zijn)
+            if (string.IsNullOrWhiteSpace(bo.HeaderDescription))
+            {
+                var projectId = stages.Select(x => x.ProjectId).FirstOrDefault();
+                string? projName = null;
+                if (projectId > 0)
+                    projName = await _db.Project.AsNoTracking()
+                        .Where(p => p.ProjectId == projectId)
+                        .Select(p => p.ProjectName)
+                        .FirstOrDefaultAsync(ct);
+
+                var names = string.Join(", ", stages.Select(x => x.Name));
+                bo.HeaderDescription = projName != null
+                    ? $"Voorschotfactuur – {names} – project {projName}"
+                    : $"Voorschotfactuur – {names}";
+            }
+        }
+
+
+
 
 
     }

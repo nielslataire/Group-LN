@@ -13,7 +13,7 @@ public partial class InvoicingPaymentStages
 
     public decimal Percentage { get; set; }
 
-    public bool? Invoicable { get; set; }
+    public bool Invoicable { get; set; }
 
     public int GroupId { get; set; }
 

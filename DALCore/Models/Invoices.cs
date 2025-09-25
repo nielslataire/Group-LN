@@ -75,6 +75,14 @@ public partial class Invoices
 
     public int? ClientIdClientContacts { get; set; }
 
+    public byte? InvoiceMode { get; set; }
+
+    public string HeaderDescription { get; set; }
+
+    public int? ProjectId { get; set; }
+
+    public int? SupplierContractId { get; set; }
+
     public virtual ClientAccount ClientIdClientAccountNavigation { get; set; }
 
     public virtual ClientContacts ClientIdClientContactsNavigation { get; set; }

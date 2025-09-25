@@ -27,6 +27,7 @@ namespace ServiceCore
 
             var entity = _uow.Units.GetNoTracking()
                 .Where(m => m.Id == id)
+                .Include(m => m.ClientAccount)
                 .Include(m => m.AttachedUnit)
                 .Include(m => m.LinkedUnit)
                 .Include(m => m.Project)

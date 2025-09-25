@@ -1,0 +1,89 @@
+﻿@model List<CPMCore.Models.Invoicing.InvoiceLineVM>
+@using System.Globalization
+@{
+    var groups = Model.Select((line, idx) => new { line, idx })
+                      .GroupBy(x => x.line.UnitName ?? "(unit)")
+                      .OrderBy(g => g.Key)
+                      .ToList();
+    var gi = 0;
+}
+
+@foreach (var g in groups)
+{
+    <h3>@g.Key</h3>
+    <table class="table table-responsive-sm table-hover mb-3" style="min-width: 650px;">
+        <thead>
+            <tr>
+                <th style="width:40px;"></th>
+                <th>Omschrijving</th>
+                <th style="width:140px;">% te factureren</th>
+                <th style="width:160px;" class="text-end">Prijs (excl.)</th>
+                <th style="width:100px;" class="text-end">BTW (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var x in g)
+            {
+                var i = x.idx; var m = x.line;
+                var checkboxId = $"co_{gi}_{i}";
+                <tr class="align-middle">
+                    <td>
+                        <input type="hidden" name="Lines[@i].IsSelected" value="false" />
+                        <div class="checkbox-custom checkbox-default m-0">
+                            <input type="checkbox"
+                                   id="@checkboxId"
+                                   class="js-co-row"
+                                   data-group="@gi"
+                                   data-unitid="@(m.UnitId?.ToString() ?? "")"
+                                   data-unittype="@m.UnitType"
+                                   data-unitname="@m.UnitName"
+                                   data-projectname="@m.ProjectName"
+                                   data-projectstreet="@m.ProjectStreet"
+                                   data-projecthouse="@m.ProjectHouseNumber"
+                                   data-projectcity="@m.ProjectCity"
+                                   name="Lines[@i].IsSelected"
+                                   value="true" />
+                            <label for="@checkboxId">&nbsp;</label>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control form-control-sm" value="@m.Text" disabled />
+                        <input type="hidden" name="Lines[@i].Text" value="@m.Text" />
+                        <input type="hidden" name="Lines[@i].LineType" value="ChangeOrders" />
+                        <input type="hidden" name="Lines[@i].GroupName" value="@m.GroupName" />
+                        @if (m.UnitId.HasValue)
+                        {
+                            <input type="hidden" name="Lines[@i].UnitId" value="@m.UnitId.Value" />
+                        }
+                    </td>
+                    <td>
+                        <div class="input-group input-group-sm">
+                            <input type="number" step="0.01" min="0" max="100"
+                                   class="form-control form-control-sm text-end js-co-pct"
+                                   value="100"
+                                   data-base="@m.Price.ToString(CultureInfo.InvariantCulture)"
+                                   aria-label="% te factureren" />
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <!-- optioneel posten als DiscountPercent om % te bewaren -->
+                        <input type="hidden" name="Lines[@i].DiscountPercent" value="100" class="js-co-pct-post" />
+                    </td>
+                    <td class="text-end">
+                        <input type="text" class="form-control form-control-sm text-end js-co-price-view"
+                               value="@m.Price.ToString("N2")" disabled />
+                        <input type="hidden" name="Lines[@i].Price"
+                               value="@m.Price.ToString(CultureInfo.InvariantCulture)"
+                               class="js-co-price-post" />
+                    </td>
+                    <td class="text-end">
+                        <input type="text" class="form-control form-control-sm text-end" value="@m.VatPercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                        <input type="hidden" name="Lines[@i].VatPercentage" value="@m.VatPercentage.ToString(CultureInfo.InvariantCulture)" />
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    gi++;
+}
+
+
