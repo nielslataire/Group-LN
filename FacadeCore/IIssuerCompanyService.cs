@@ -16,5 +16,22 @@ namespace FacadeCore
         Task DisableAsync(int id, CancellationToken ct = default); // soft delete: IsActive = false
 
         Task<IReadOnlyList<PaymentTermOptionBO>> GetPaymentTermOptionsAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default);
+        Task<int?> GetFirstActiveIssuerIdAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default);
+    }
+    // Lichte BO’s voor de UI-lijsten
+    public class IssuerListItemBO
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public int? DefaultPaymentTermId { get; set; }
+    }
+
+    public class PaymentTermBO
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public int Days { get; set; }
     }
 }

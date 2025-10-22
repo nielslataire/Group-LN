@@ -71,6 +71,12 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<CompanyInfo> CompanyInfo { get; set; }
 
+    public virtual DbSet<ConnectionAdvanceApplication> ConnectionAdvanceApplication { get; set; }
+
+    public virtual DbSet<ConnectionSettlement> ConnectionSettlement { get; set; }
+
+    public virtual DbSet<ConnectionSettlementSource> ConnectionSettlementSource { get; set; }
+
     public virtual DbSet<Contract> Contract { get; set; }
 
     public virtual DbSet<ContractActivity> ContractActivity { get; set; }
@@ -132,6 +138,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<Project> Project { get; set; }
 
     public virtual DbSet<ProjectBudget> ProjectBudget { get; set; }
+
+    public virtual DbSet<ProjectConnectionKey> ProjectConnectionKey { get; set; }
 
     public virtual DbSet<ProjectDocs> ProjectDocs { get; set; }
 
@@ -857,6 +865,52 @@ public partial class cpmRunningContext : DbContext
                     });
         });
 
+        modelBuilder.Entity<ConnectionAdvanceApplication>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC0730C94077");
+
+            entity.HasIndex(e => new { e.SettlementId, e.InvoiceLineId }, "UX_CAA_Settlement_Line").IsUnique();
+
+            entity.Property(e => e.AmountUsedExcl).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.InvoiceLine).WithMany(p => p.ConnectionAdvanceApplication)
+                .HasForeignKey(d => d.InvoiceLineId)
+                .HasConstraintName("FK_CAA_Line");
+
+            entity.HasOne(d => d.Settlement).WithMany(p => p.ConnectionAdvanceApplication)
+                .HasForeignKey(d => d.SettlementId)
+                .HasConstraintName("FK_CAA_Sett");
+        });
+
+        modelBuilder.Entity<ConnectionSettlement>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC07C85822FE");
+
+            entity.Property(e => e.CreatedOn).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.PeriodLabel).HasMaxLength(100);
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ConnectionSettlement)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_ConnectionSettlement_Project");
+        });
+
+        modelBuilder.Entity<ConnectionSettlementSource>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC07896BF7FA");
+
+            entity.HasIndex(e => new { e.SettlementId, e.InvoiceDetailId }, "UX_CSS_Settlement_Line").IsUnique();
+
+            entity.Property(e => e.AmountUsedExcl).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.InvoiceDetail).WithMany(p => p.ConnectionSettlementSource)
+                .HasForeignKey(d => d.InvoiceDetailId)
+                .HasConstraintName("FK_CSS_InDet");
+
+            entity.HasOne(d => d.Settlement).WithMany(p => p.ConnectionSettlementSource)
+                .HasForeignKey(d => d.SettlementId)
+                .HasConstraintName("FK_CSS_Sett");
+        });
+
         modelBuilder.Entity<Contract>(entity =>
         {
             entity.Property(e => e.Id).HasColumnName("ID");
@@ -1165,6 +1219,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Invoices>(entity =>
         {
+            entity.HasIndex(e => e.ProjectId, "IX_Invoice_Project");
+
             entity.HasIndex(e => e.ClientId, "IX_Invoices_ClientId");
 
             entity.HasIndex(e => e.ClientIdClientAccount, "IX_Invoices_ClientId_ClientAccount");
@@ -1249,6 +1305,8 @@ public partial class cpmRunningContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK_InvoicesStages_1");
 
             entity.HasIndex(e => e.InvoiceId, "IX_InvoiceDetails_Invoice");
+
+            entity.HasIndex(e => new { e.UtilityCost, e.UtilityIsAdvance }, "IX_InvoicesDetails_UtilityAdvance").HasFilter("([UtilityCost]=(1))");
 
             entity.Property(e => e.DiscountAmount).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.DiscountPercent).HasColumnType("decimal(9, 4)");
@@ -1580,6 +1638,23 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProjectBudget_Project");
+        });
+
+        modelBuilder.Entity<ProjectConnectionKey>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ProjectC__3214EC073732F72E");
+
+            entity.HasIndex(e => new { e.ProjectId, e.UnitId }, "UX_PCK_Project_Unit").IsUnique();
+
+            entity.Property(e => e.Weight).HasColumnType("decimal(18, 4)");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectConnectionKey)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_PCK_Project");
+
+            entity.HasOne(d => d.Unit).WithMany(p => p.ProjectConnectionKey)
+                .HasForeignKey(d => d.UnitId)
+                .HasConstraintName("FK_PCK_Unit");
         });
 
         modelBuilder.Entity<ProjectDocs>(entity =>

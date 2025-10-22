@@ -234,6 +234,12 @@
 
 
     <script>
+                 if ($.validator && $.validator.methods) {
+          $.validator.methods.number = function (value, element) {
+            if (this.optional(element)) return true;
+            return /^-?(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d+)?$/.test(value);
+          };
+        }
         // -------- Helpers --------
         function getNum($el) {
           const el = $el[0];
@@ -328,6 +334,13 @@
             new bootstrap.Tooltip(this);
           });
         }
+
+                $('form').on('submit', function () {
+          $(this).find('.currency-input').each(function () {
+            const an = AutoNumeric.getAutoNumericElement(this);
+            if (an) { this.value = an.getNumber(); } // “2000.00”
+          });
+        });
 
         // -------- Rij toevoegen --------
         $(document).on('click', '#btnAddRow', function () {

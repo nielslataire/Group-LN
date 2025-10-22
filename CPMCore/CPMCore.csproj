@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <None Include="package.json" />
+    <None Include="wwwroot\htmlpage.html" />
     <None Include="wwwroot\Img\admin-banner.png" />
     <None Include="wwwroot\Img\admin\jstree-dark.png" />
     <None Include="wwwroot\Img\admin\jstree.png" />

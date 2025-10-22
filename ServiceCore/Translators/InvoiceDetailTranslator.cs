@@ -1,67 +1,64 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BOCore;
+﻿using BOCore;
 using DALCore.Models;
-using DALCore;
+
 
 namespace ServiceCore.Translators
 {
-    public class InvoiceDetailTranslator
+    public static class InvoiceDetailTranslator
     {
-        internal static ErrorCode TranslateEntityToBO(InvoicesDetails _entity, InvoiceRowBO bo)
+        // Entity -> BO (InvoiceLineBO)
+        internal static ErrorCode TranslateEntityToBO(InvoicesDetails entity, InvoiceLineBO bo)
         {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
+            if (entity == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
 
-            bo.Id = _entity.Id;
-            if (_entity.Invoice is not null)
-                bo.InvoiceId = _entity.InvoiceId;
-            if (_entity.PaymentStage is not null)
-                bo.StageId = _entity.PaymentStageId;
-            if (_entity.Unit is not null)
-                bo.UnitId = _entity.UnitId;
-            if (_entity.ChangeOrderDetailId is not null)
-                bo.ChangeOrderDetailId = _entity.ChangeOrderDetailId;
-            if (_entity.ConstructionValueId is not null)
-                bo.ConstructionValueId = _entity.ConstructionValueId;
-            bo.Text = _entity.Text;
-            if (_entity.VatPercentage is not null)
-                bo.VatPercentage = _entity.VatPercentage;
-            if (_entity.Price is not null)
-                bo.Price = _entity.Price;
-            if (_entity.GroupName is not null)
-                bo.GroupName = _entity.GroupName;
-            if (!_entity.UtilityCost == null)
-                bo.UtilityCost = _entity.UtilityCost;
+            bo.Id = entity.Id;
+
+            // FK’s: 0 = niet gezet in BO-conventie
+            if (entity.PaymentStageId != null) bo.PaymentStageId = entity.PaymentStageId.Value;
+            if (entity.UnitId != null) bo.UnitId = entity.UnitId.Value;
+            if (entity.ChangeOrderDetailId != null) bo.ChangeOrderDetailId = entity.ChangeOrderDetailId.Value;
+            //if (entity.ConstructionValueId != null) bo.ConstructionValueId = entity.ConstructionValueId.Value;
+
+            bo.Text = entity.Text ?? string.Empty;
+            bo.VatPercentage = entity.VatPercentage ?? 21m;
+            bo.Price = entity.Price ?? 0m;
+            bo.DiscountPercent = entity.DiscountPercent;
+            bo.DiscountAmount = entity.DiscountAmount;
+            bo.LineType = entity.LineType;
+            bo.GroupName = entity.GroupName;
+
+            if (entity.UtilityCost != null)
+                bo.UtilityCost = entity.UtilityCost.Value;
+
+            if (entity.UtilityIsAdvance != null)
+                bo.UtilityIsAdvance = entity.UtilityIsAdvance;
+
+
             return ErrorCode.Success;
         }
-        internal static ErrorCode TranslateBOToEntity(InvoicesDetails _entity, InvoiceRowBO bo)
-        {
-            if (_entity == null)
-                return ErrorCode.EntityNull;
-            if (bo == null)
-                return ErrorCode.BoNull;
 
-            if (bo.StageId != 0)
-                _entity.PaymentStageId = bo.StageId;
-            if (bo.UnitId != 0)
-                _entity.UnitId = bo.UnitId;
-            if (bo.InvoiceId != 0)
-                _entity.InvoiceId = bo.InvoiceId;
-            if (bo.ChangeOrderDetailId != 0)
-                _entity.ChangeOrderDetailId = bo.ChangeOrderDetailId;
-            if (bo.ConstructionValueId != 0)
-                _entity.ConstructionValueId = bo.ConstructionValueId;
-            _entity.Text = bo.Text;
-            _entity.VatPercentage = bo.VatPercentage;
-            _entity.Price = bo.Price;
-            _entity.GroupName = bo.GroupName;
-            _entity.UtilityCost = bo.UtilityCost;
+        // BO (InvoiceLineBO) -> Entity
+        internal static ErrorCode TranslateBOToEntity(InvoicesDetails entity, InvoiceLineBO bo)
+        {
+            if (entity == null) return ErrorCode.EntityNull;
+            if (bo == null) return ErrorCode.BoNull;
+
+            if (bo.PaymentStageId is int psId && psId != 0) entity.PaymentStageId = psId;
+            if (bo.UnitId is int unitId && unitId != 0) entity.UnitId = unitId;
+            if (bo.ChangeOrderDetailId is int codId && codId != 0) entity.ChangeOrderDetailId = codId;
+            //if (bo.ConstructionValueId is int cvId && cvId != 0) entity.ConstructionValueId = cvId;
+
+            entity.Text = bo.Text;
+            entity.VatPercentage = bo.VatPercentage;
+            entity.Price = bo.Price;
+            entity.DiscountPercent = bo.DiscountPercent;
+            entity.DiscountAmount = bo.DiscountAmount;
+            entity.LineType = bo.LineType;
+            entity.GroupName = bo.GroupName;
+            entity.UtilityCost = bo.UtilityCost;
+            entity.UtilityIsAdvance = bo.UtilityIsAdvance;
+
 
             return ErrorCode.Success;
         }

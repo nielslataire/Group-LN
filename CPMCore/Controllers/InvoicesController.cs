@@ -3,6 +3,7 @@ using CPMCore.Models.Invoicing;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using ServiceCore;
 using System.Globalization;
 
 namespace CPMCore.Controllers
@@ -15,6 +16,7 @@ namespace CPMCore.Controllers
         private readonly IPartyLookupService _lookup;
         private readonly IInvoiceCommandService _cmd;
         private readonly IProjectSupplierLookupService _ps;
+        private readonly IIssuerCompanyService _ics;
 
         public InvoicesController(
             IInvoiceQueryService invoices,
@@ -22,7 +24,8 @@ namespace CPMCore.Controllers
             ILogger<InvoicesController> logger,
             IPartyLookupService lookup,
             IInvoiceCommandService cmd,
-            IProjectSupplierLookupService ps)
+            IProjectSupplierLookupService ps,
+            IIssuerCompanyService ics)
         {
             _invoices = invoices;
             _companies = companies;
@@ -30,6 +33,7 @@ namespace CPMCore.Controllers
             _lookup = lookup;
             _cmd = cmd;
             _ps = ps;
+            _ics = ics;
         }
 
         // LIST
@@ -56,12 +60,34 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(int? issuerId = null, CancellationToken ct = default)
         {
+            // haal alles via service
+            var issuersBo = await _ics.ListActiveIssuersAsync(ct);
+            var termsBo = await _ics.ListPaymentTermsAsync(ct);
+
+            // gekozen issuer (param of eerste actieve)
+            var selectedIssuerId = issuerId
+                ?? (await _ics.GetFirstActiveIssuerIdAsync(ct))
+                ?? 0;
+
+            // default betaaltermijn afleiden uit issuer
+            int? selectedTermId = issuersBo
+                .FirstOrDefault(x => x.Id == selectedIssuerId)?
+                .DefaultPaymentTermId;
+
             var vm = new InvoiceComposeVM
             {
-                IssuerCompanyId = issuerId ?? await _lookup.GetFirstActiveIssuerIdAsync(ct),
-                Issuers = (await _lookup.ListActiveIssuersAsync(ct))
-                            .Select(x => new SelectListItem { Value = x.Id.ToString(), Text = x.Name })
+                IssuerCompanyId = selectedIssuerId,
+                PaymentTermId = selectedTermId,
+
+                Issuers = issuersBo
+                    .Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId))
+                    .ToList(),
+
+                PaymentTerms = termsBo
+                    .Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days))
+                    .ToList()
             };
+
             return View(vm);
         }
 
@@ -177,7 +203,7 @@ namespace CPMCore.Controllers
             {
                 if (clientId <= 0) return Json(new { results = Array.Empty<object>() });
 
-                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId, ct);
+                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId,false, ct);
                 var grouped = rows
                     .GroupBy(x => new { x.UnitId, x.UnitName })
                     .Select(g => new {
@@ -211,7 +237,7 @@ namespace CPMCore.Controllers
                 if (clientId <= 0)
                     return PartialView("_StageLinesTable", new List<InvoiceLineVM>());
 
-                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId, ct);
+                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId,false, ct);
                 if (rows is null || rows.Count == 0)
                     return PartialView("_StageLinesTable", new List<InvoiceLineVM>());
 
@@ -259,98 +285,78 @@ namespace CPMCore.Controllers
 
         // LIJNEN VOOR WIJZEGINGSOPDRACHTEN AANMAKEN 
 
+        // CHANGE ORDERS – regels opbouwen voor compose
         [HttpGet]
         public async Task<IActionResult> ComposeChangeOrderLines(int clientId, int? projectId, CancellationToken ct = default)
         {
             try
             {
-                if (clientId <= 0) return PartialView("_ChangeOrderLinesTable", new List<InvoiceLineVM>());
+                if (clientId <= 0)
+                    return Content("<div class='text-muted small'>Kies eerst een klant.</div>", "text/html");
 
-                // TODO: pas aan naar jouw service/query
                 var rows = await _ps.GetApprovedChangeOrdersForClientAsync(clientId, projectId, ct);
-                // Verwacht: UnitId, UnitName, UnitType, ProjectName, ProjectStreet, ProjectHouseNumber, ProjectCity,
-                //           ChangeOrderId, Title, AmountExcl, VatPercentage
+                if (rows == null || rows.Count == 0)
+                    return Content("<div class='text-warning small'>Geen wijzigingsopdrachten gevonden om te factureren.</div>", "text/html");
 
-                var lines = rows
-                    .OrderBy(r => r.UnitName).ThenBy(r => r.Title)
-                    .Select((r, idx) => new InvoiceLineVM
+                // Map naar VM – initieel 100% → prijs vooraf invullen
+                var list = rows.Select(r =>
+                {
+                    var initialPct = 100m;
+                    var initialCalc = Math.Round(r.BaseAmountExcl * (initialPct / 100m), 2, MidpointRounding.AwayFromZero);
+
+                    return new InvoiceLineVM
                     {
                         IsSelected = false,
-                        Text = r.Title,                          // Omschrijving per lijn = titel CO
-                        Price = r.AmountExcl,                    // basisbedrag (100%)
+                        Text = r.Title,
+                        UnitPrice = r.UnitPrice,
+                        Number = r.Number,
+                        Price = initialCalc,               
                         VatPercentage = r.VatPercentage,
-                        UnitId = r.UnitId,
-                        PaymentStageId = null,
                         LineType = "ChangeOrders",
                         GroupName = "Wijzigingsopdrachten",
-                        UtilityCost = false,
-
-                        // metadata voor header
-                        UnitName = r.UnitName,
-                        UnitType = r.UnitType,
-                        ProjectName = r.ProjectName,
-                        ProjectStreet = r.ProjectStreet,
-                        ProjectHouseNumber = r.ProjectHouseNumber,
-                        ProjectCity = r.ProjectCity,
-                        UnitConstructionTotal = 0m,              // niet nodig hier
-                        OwnerPercentage = 100m
-                    })
-                    .ToList();
-
-                return PartialView("_ChangeOrderLinesTable", lines);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "ComposeChangeOrderLines failed");
-                return PartialView("_ChangeOrderLinesTable", new List<InvoiceLineVM>());
-            }
-        }
-
-
-        // LIJNEN VOOR NUTSAANSLUITINGEN AANMAKEN 
-
-        [HttpGet]
-        public async Task<IActionResult> ComposeUtilityLines(int clientId, int? projectId, CancellationToken ct = default)
-        {
-            try
-            {
-                if (clientId <= 0) return PartialView("_UtilityLinesTable", new List<InvoiceLineVM>());
-
-                // TODO: pas aan naar jouw service/query
-                var rows = await _ps.GetUtilityCostsForClientAsync(clientId, projectId, ct);
-                // Verwacht: UnitId?, UnitName?, ProjectName, ProjectStreet, ProjectHouseNumber, ProjectCity,
-                //           UtilityId, Title, AmountExcl, VatPercentage
-
-                var lines = rows
-                    .OrderBy(r => r.ProjectName).ThenBy(r => r.UnitName).ThenBy(r => r.Title)
-                    .Select(r => new InvoiceLineVM
-                    {
-                        IsSelected = false,
-                        Text = r.Title,                   // per lijn tonen we de bron (periode/titel)
-                        Price = r.AmountExcl,            // basis voor afrekening-som
-                        VatPercentage = r.VatPercentage, // default vat; bij afrekening kan je 21% afdwingen
+                        ChangeOrderId = r.ChangeOrderId,          
+                        ChangeOrderDetailId = r.ChangeOrderDetailId,
                         UnitId = r.UnitId,
-                        LineType = "Utilities",
-                        GroupName = "Nutsvoorzieningen",
-                        UtilityCost = true,
+                        StagePercentage = initialPct, 
 
-                        // metadata voor header
+                        // (optionele context)
                         UnitName = r.UnitName,
-                        ProjectName = r.ProjectName,
-                        ProjectStreet = r.ProjectStreet,
-                        ProjectHouseNumber = r.ProjectHouseNumber,
-                        ProjectCity = r.ProjectCity
-                    })
-                    .ToList();
+                        ProjectName = r.ProjectName
+                    };
+                }).ToList();
 
-                return PartialView("_UtilityLinesTable", lines);
+                // Data voor client-side berekeningen/groepering
+                // - base bedrag per DETAIL
+                ViewData["coBaseMap"] = rows.ToDictionary(x => x.ChangeOrderDetailId, x => x.BaseAmountExcl);
+                // - naam per CO (bv. koptekst)
+                ViewData["coNameMap"] = rows
+                    .GroupBy(x => x.ChangeOrderId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First().ChangeOrderDescription ?? $"Wijzigingsopdracht #{g.Key}"
+                    );
+                // - detail-ids per CO (voor master-actie)
+                ViewData["coGroupMap"] = rows
+                    .GroupBy(x => x.ChangeOrderId)
+                    .ToDictionary(g => g.Key, g => g.Select(r => r.ChangeOrderDetailId).ToList());
+                // coId -> jaar (bijv. DateAgreement.Year; anders Date.Year; anders current year)
+                ViewData["coYearMap"] = rows
+                    .GroupBy(r => r.ChangeOrderId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Select(r => r.Date?.Year).FirstOrDefault() ?? DateTime.Now.Year
+                    );
+                return PartialView("_ChangeOrderLinesTable", list);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "ComposeUtilityLines failed");
-                return PartialView("_UtilityLinesTable", new List<InvoiceLineVM>());
+                _logger.LogError(ex, "ChangeOrderLinesTable failed");
+                return Content("<div class='text-danger small'>Kon wijzigingsopdrachten niet laden.</div>", "text/html");
             }
         }
+
+
+
 
         // CREATE DRAFT (POST) – eenvoudige conceptfactuur aanmaken
         [HttpPost]
@@ -385,7 +391,7 @@ namespace CPMCore.Controllers
             return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
         }
 
-        // SAVE (POST) – create (vrije lijnen of schijven)
+        // SAVE (POST) – create (vrije lijnen, schijven, wijzigingsopdrachten)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Save(InvoiceComposeVM vm, CancellationToken ct)
@@ -403,12 +409,10 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
             }
 
-            // === Schijvenmodus: lijnen met checkbox ===
+            // === Schijven (oude fallback wanneer er geen aangevinkte lijnen gepost werden) ===
             var usingStageLines = (vm.Mode == InvoiceMode.Stages && vm.Lines != null && vm.Lines.Any());
-
             if (vm.Mode == InvoiceMode.Stages && !usingStageLines)
             {
-                // Backward-compatible guard (oude flow met StageIds)
                 if (vm.PartyType != InvoicePartyType.ClientAccount && vm.PartyType != InvoicePartyType.ClientContact)
                 {
                     AddMessage("error", "Schijvenfacturatie is enkel voor klanten.", "Factuur");
@@ -445,6 +449,8 @@ namespace CPMCore.Controllers
             else
                 (bo.CompanyId, bo.ClientType, bo.ClientId) = (null, (int)vm.PartyType, vm.PartyId);
 
+            // ===================== MODUS-AFHANKELIJKE LIJNEN =====================
+
             if (vm.Mode == InvoiceMode.Free)
             {
                 // Vrije lijnen zoals vroeger
@@ -464,7 +470,7 @@ namespace CPMCore.Controllers
             }
             else if (vm.Mode == InvoiceMode.Stages && usingStageLines)
             {
-                // ✅ NIEUWE FLOW: neem ENKEL aangevinkte schijflijnen mee
+                // Nieuwe flow: enkel aangevinkte schijflijnen mee posten
                 var selected = vm.Lines!.Where(x => x.IsSelected).ToList();
                 if (selected.Count == 0)
                 {
@@ -486,15 +492,123 @@ namespace CPMCore.Controllers
                     UtilityCost = l.UtilityCost
                 }).ToList();
 
-                // In de nieuwe flow gebruiken we StageIds niet meer
-                bo.StageIds = new List<int>();
+                bo.StageIds = new List<int>(); 
             }
+            else if (vm.Mode == InvoiceMode.ChangeOrders)
+            {
+                // ✅ Wijzigingsopdrachten – server-side herberekenen op basis van percentage (credit toegestaan)
+                if (vm.PartyType != InvoicePartyType.ClientAccount && vm.PartyType != InvoicePartyType.ClientContact)
+                {
+                    AddMessage("error", "Wijzigingsopdrachten zijn enkel voor klanten.", "Factuur");
+                    return await Create(vm.IssuerCompanyId, ct: ct);
+                }
+
+                var selected = (vm.Lines ?? Enumerable.Empty<InvoiceLineVM>())
+                               .Where(l => l.IsSelected && l.ChangeOrderDetailId.HasValue)
+                               .ToList();
+
+                if (selected.Count == 0)
+                {
+                    AddMessage("error", "Kies minstens één wijzigingsopdracht.", "Factuur");
+                    return await Create(vm.IssuerCompanyId, ct: ct);
+                }
+
+                var clientId = vm.PartyId!.Value;
+
+                // Basisinfo ophalen (incl. basisbedrag dat positief/negatief kan zijn)
+                var allRows = await _ps.GetApprovedChangeOrdersForClientAsync(clientId, vm.ProjectId, ct);
+                var byDetail = allRows.ToDictionary(x => x.ChangeOrderDetailId, x => x);
+
+                // === Servervalidator ===
+                // a) Dubbels blokkeren
+                var dup = selected.Select(s => s.ChangeOrderDetailId!.Value)
+                                  .GroupBy(id => id)
+                                  .FirstOrDefault(g => g.Count() > 1);
+                if (dup != null)
+                {
+                    AddMessage("error", "Dezelfde wijzigingsopdracht werd meermaals geselecteerd.", "Factuur");
+                    return await Create(vm.IssuerCompanyId, ct: ct);
+                }
+
+                const decimal tol = 0.005m; // 0.5 cent tolerantie tegen afronding
+                foreach (var l in selected)
+                {
+                    var detailId = l.ChangeOrderDetailId!.Value;
+
+                    if (!byDetail.TryGetValue(detailId, out var src))
+                    {
+                        AddMessage("error", "Een wijzigingsopdracht is niet (meer) factureerbaar.", "Factuur");
+                        return await Create(vm.IssuerCompanyId, ct: ct);
+                    }
+
+                    // clamp 0..100
+                    var pct = l.StagePercentage;
+                    if (pct < 0m || pct > 100m)
+                    {
+                        AddMessage("error", $"Percentage moet tussen 0 en 100 liggen (detail {detailId}).", "Factuur");
+                        return await Create(vm.IssuerCompanyId, ct: ct);
+                    }
+
+                    var remaining = src.BaseAmountExcl; // kan negatief zijn (credit)
+                    var expected = Math.Round(remaining * (pct / 100m), 2, MidpointRounding.AwayFromZero);
+
+                    // tekenconsistentie: credit blijft credit (tenzij 0)
+                    if (expected != 0m && Math.Sign(expected) != Math.Sign(remaining))
+                    {
+                        AddMessage("error", $"Teken van het bedrag komt niet overeen met het resterende saldo (detail {detailId}).", "Factuur");
+                        return await Create(vm.IssuerCompanyId, ct: ct);
+                    }
+
+                    // niet méér dan resterend saldo in absolute waarde
+                    if (Math.Abs(expected) - Math.Abs(remaining) > tol)
+                    {
+                        AddMessage("error", $"Gevraagde fractie overschrijdt het resterende saldo (detail {detailId}).", "Factuur");
+                        return await Create(vm.IssuerCompanyId, ct: ct);
+                    }
+                }
+                // === einde validator ===
+
+                // Lijnen opbouwen (negatieve bedragen zijn toegestaan → credit)
+                var boLines = new List<InvoiceLineBO>();
+                foreach (var l in selected)
+                {
+                    var detailId = l.ChangeOrderDetailId!.Value;
+                    if (!byDetail.TryGetValue(detailId, out var row)) continue;
+
+                    var pct = Math.Clamp(l.StagePercentage, 0m, 100m);
+                    var calc = Math.Round(row.BaseAmountExcl * (pct / 100m), 2, MidpointRounding.AwayFromZero);
+
+                    if (calc == 0m) continue; // niks te boeken
+
+                    boLines.Add(new InvoiceLineBO
+                    {
+                        Text = row.Title,
+                        Price = calc,                                // kan negatief zijn (credit)
+                        VatPercentage = row.VatPercentage,
+                        LineType = "ChangeOrders",
+                        GroupName = "Wijzigingsopdrachten",
+                        ChangeOrderDetailId = detailId,
+                        UnitId = row.UnitId
+                    });
+                }
+
+                if (boLines.Count == 0)
+                {
+                    AddMessage("error", "Geen geldige bedragen om te boeken (controleer percentages).", "Factuur");
+                    return await Create(vm.IssuerCompanyId, ct: ct);
+                }
+
+                bo.Lines = boLines;
+            }
+
             else
             {
-                // Oude flow (fallback): service bouwt lijnen adhv StageIds
+                // Oude schijven-flow (fallback): service bouwt lijnen adhv StageIds
                 bo.StageIds = vm.StageIds?.ToList() ?? new List<int>();
                 bo.Lines = new List<InvoiceLineBO>();
             }
+
+            // =====================================================================
 
             var (id, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: vm.StartAs == StartStatus.Invoice, ct);
 
@@ -505,6 +619,7 @@ namespace CPMCore.Controllers
 
             return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
         }
+
 
         // EDIT (voor later verder uitwerken)
         [HttpGet]
@@ -543,6 +658,8 @@ namespace CPMCore.Controllers
             // in één regel zodat je disabled input het netjes toont
             return $"{line1} {line2}";
         }
+
+  
 
     }
 }

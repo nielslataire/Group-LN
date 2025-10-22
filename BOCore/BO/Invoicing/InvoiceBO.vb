@@ -2,7 +2,7 @@
 
 Public Class InvoiceBO
     Public Sub New()
-        _rows = New List(Of InvoiceRowBO)
+        _rows = New List(Of InvoiceLineBO)
         _postalcode = New PostalCodeBO
     End Sub
     Private _id As Integer
@@ -73,12 +73,12 @@ Public Class InvoiceBO
         End Set
     End Property
 
-    Private _rows As List(Of InvoiceRowBO)
-    Public Property Rows() As List(Of InvoiceRowBO)
+    Private _rows As List(Of InvoiceLineBO)
+    Public Property Rows() As List(Of InvoiceLineBO)
         Get
             Return _rows
         End Get
-        Set(ByVal value As List(Of InvoiceRowBO))
+        Set(ByVal value As List(Of InvoiceLineBO))
             _rows = value
         End Set
     End Property

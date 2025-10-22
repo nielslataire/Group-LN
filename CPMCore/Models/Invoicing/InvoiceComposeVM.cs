@@ -5,6 +5,9 @@ using UblSharp.CommonAggregateComponents;
 
 namespace CPMCore.Models.Invoicing
 {
+    // VM-items voor dropdown rendering
+    public record IssuerItemVM(int Id, string Name, int? DefaultPaymentTermId);
+    public record PaymentTermItemVM(int Id, string Name, int Days);
     public enum StartStatus { Draft = 0, Invoice = 1 } // Invoice = meteen uitgeven
     public class InvoiceComposeVM
     {
@@ -16,12 +19,13 @@ namespace CPMCore.Models.Invoicing
 
         public StartStatus StartAs { get; set; } = StartStatus.Invoice;
 
-        // Nieuw:
         public InvoiceMode Mode { get; set; } = InvoiceMode.Free;
         public string? HeaderDescription { get; set; }
 
         public int? ProjectId { get; set; }
         public int? SupplierContractId { get; set; }
+        public int? PaymentTermId { get; set; }
+
 
         // Voor vrije lijnen
         public List<InvoiceLineVM> Lines { get; set; } = new() { new() };
@@ -32,7 +36,8 @@ namespace CPMCore.Models.Invoicing
 
 
         // UI lists
-        public IEnumerable<SelectListItem> Issuers { get; set; } = Array.Empty<SelectListItem>();
+        public IEnumerable<IssuerItemVM> Issuers { get; set; } = Enumerable.Empty<IssuerItemVM>();
+        public IEnumerable<PaymentTermItemVM> PaymentTerms { get; set; } = Enumerable.Empty<PaymentTermItemVM>();
         public IEnumerable<SelectListItem> Projects { get; set; } = Array.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> SupplierContracts { get; set; } = Array.Empty<SelectListItem>();
     }

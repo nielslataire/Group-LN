@@ -85,6 +85,8 @@ public partial class Project
 
     public virtual CompanyInfo Builder { get; set; }
 
+    public virtual ICollection<ConnectionSettlement> ConnectionSettlement { get; set; } = new List<ConnectionSettlement>();
+
     public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();
 
     public virtual ProjectPictures DefaultPicture { get; set; }
@@ -102,6 +104,8 @@ public partial class Project
     public virtual PostalCode PostalCode { get; set; }
 
     public virtual ICollection<ProjectBudget> ProjectBudget { get; set; } = new List<ProjectBudget>();
+
+    public virtual ICollection<ProjectConnectionKey> ProjectConnectionKey { get; set; } = new List<ProjectConnectionKey>();
 
     public virtual ICollection<ProjectDocs> ProjectDocs { get; set; } = new List<ProjectDocs>();
 

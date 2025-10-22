@@ -2527,94 +2527,100 @@ namespace ServiceCore
 
 
         public async Task<IReadOnlyList<UnitStageRow>> GetUnitsWithInvocableStagesForClientAsync(
-            int clientId, CancellationToken ct = default)
+            int clientId,
+            bool includeZeroOrNegative = false,           // ← zet op true om ook credit-saldi te tonen
+            CancellationToken ct = default)
         {
             if (clientId <= 0) return Array.Empty<UnitStageRow>();
 
+            // Alleen klanten met een akte-datum in het verleden
+            var today = DateOnly.FromDateTime(DateTime.Today);
+
             var hasDeed = await _db.ClientAccount
                 .AsNoTracking()
-                .AnyAsync(c => c.Id == clientId && c.DateDeedOfSale != null, ct);
+                .AnyAsync(c =>
+                    c.Id == clientId &&
+                    c.DateDeedOfSale != null &&
+                    c.DateDeedOfSale <= today, ct);
             if (!hasDeed) return Array.Empty<UnitStageRow>();
 
-            // 1) DIRECT pad
-            var directRows = await (
+            // 1) Stages ophalen (DIRECT via Unit.PaymentGroupId en INDIRECT via UnitConstructionValue.PaymentGroupId)
+            var direct = await (
                 from u in _db.Units.AsNoTracking()
                 where u.ClientAccountId == clientId && u.PaymentGroupId != null
                 join g in _db.InvoicingPaymentGroup.AsNoTracking() on u.PaymentGroupId equals g.Id
                 join s in _db.InvoicingPaymentStages.AsNoTracking() on g.Id equals s.GroupId
                 where s.Invoicable
-                select new
-                {
-                    UnitId = u.Id,
-                    UnitName = u.Name,
-                    GroupId = g.Id,
-                    GroupName = g.Name,
-                    StageId = s.Id,
-                    StageName = s.Name,
-                    StagePercentage = (decimal?)s.Percentage,
-                    Invoicable = s.Invoicable
-                }
+                select new { u.Id, u.Name, GroupId = g.Id, GroupName = g.Name, StageId = s.Id, StageName = s.Name, StagePercentage = (decimal?)s.Percentage }
             ).ToListAsync(ct);
 
-            // 2) INDIRECT pad
-            var viaCvRows = await (
+            var viaCv = await (
                 from u in _db.Units.AsNoTracking()
                 where u.ClientAccountId == clientId
                 join cv in _db.UnitConstructionValue.AsNoTracking() on u.Id equals cv.UnitId
                 join g in _db.InvoicingPaymentGroup.AsNoTracking() on cv.PaymentGroupId equals g.Id
                 join s in _db.InvoicingPaymentStages.AsNoTracking() on g.Id equals s.GroupId
                 where s.Invoicable
-                select new
-                {
-                    UnitId = u.Id,
-                    UnitName = u.Name,
-                    GroupId = g.Id,
-                    GroupName = g.Name,
-                    StageId = s.Id,
-                    StageName = s.Name,
-                    StagePercentage = (decimal?)s.Percentage,
-                    Invoicable = s.Invoicable
-                }
+                select new { u.Id, u.Name, GroupId = g.Id, GroupName = g.Name, StageId = s.Id, StageName = s.Name, StagePercentage = (decimal?)s.Percentage }
             ).ToListAsync(ct);
 
-            // 3) Merge & dedup
-            var merged = directRows
-                .Concat(viaCvRows)
-                .GroupBy(x => new { x.UnitId, x.GroupId, x.StageId })
+            var stages = direct.Concat(viaCv)
+                .GroupBy(x => new { x.Id, x.GroupId, x.StageId })
                 .Select(g => g.First())
                 .ToList();
 
-            if (merged.Count == 0) return Array.Empty<UnitStageRow>();
+            if (stages.Count == 0) return Array.Empty<UnitStageRow>();
 
-            // 4) BaseAmount per (UnitId, GroupId)
-            var unitIds = merged.Select(m => m.UnitId).Distinct().ToList();
-            var groupIds = merged.Select(m => m.GroupId).Distinct().ToList();
+            var unitIds  = stages.Select(s => s.Id).Distinct().ToList();
+            var groupIds = stages.Select(s => s.GroupId).Distinct().ToList();
+            var stageIds = stages.Select(s => s.StageId).Distinct().ToList();
 
+            // 2) Basis per (Unit,Group): som ValueSold
             var baseRows = await (
                 from cv in _db.UnitConstructionValue.AsNoTracking()
-                where unitIds.Contains(cv.UnitId)
-                   && groupIds.Contains(cv.PaymentGroupId.Value)
+                where unitIds.Contains(cv.UnitId) && cv.PaymentGroupId != null && groupIds.Contains(cv.PaymentGroupId.Value)
                 group cv by new { cv.UnitId, cv.PaymentGroupId } into g
                 select new
                 {
                     UnitId = g.Key.UnitId,
-                    GroupId = g.Key.PaymentGroupId.Value,
-                    Amount = g.Sum(x => x.ValueSold)
+                    GroupId = g.Key.PaymentGroupId!.Value,
+                    BaseAmount = g.Sum(x => (decimal)(x.ValueSold ?? 0m))
                 }
             ).ToListAsync(ct);
+            var baseLookup = baseRows.ToDictionary(k => (k.UnitId, k.GroupId), v => v.BaseAmount);
 
-            var baseLookup = baseRows.ToDictionary(k => (k.UnitId, k.GroupId), v => v.Amount);
-
-            var unitTotalRows = await (
+            // Totale bouwwaarde per unit
+            var unitTotals = await (
                 from cv in _db.UnitConstructionValue.AsNoTracking()
                 where unitIds.Contains(cv.UnitId)
                 group cv by cv.UnitId into g
-                select new { UnitId = g.Key, Total = g.Sum(x => (decimal)x.ValueSold) } // cast naar non-null
+                select new { UnitId = g.Key, Total = g.Sum(x => (decimal)(x.ValueSold ?? 0m)) }
+            ).ToDictionaryAsync(x => x.UnitId, x => x.Total, ct);
+
+            // 3) Alle CV’s per (Unit,Group) — nodig om expected per (Stage×CV) te berekenen
+            var cvRows = await (
+                from cv in _db.UnitConstructionValue.AsNoTracking()
+                where unitIds.Contains(cv.UnitId) && cv.PaymentGroupId != null && groupIds.Contains(cv.PaymentGroupId.Value)
+                select new { cv.Id, cv.UnitId, GroupId = cv.PaymentGroupId!.Value, Amount = (decimal)(cv.ValueSold ?? 0m) }
             ).ToListAsync(ct);
 
-            var unitTotals = unitTotalRows.ToDictionary(k => k.UnitId, v => v.Total);
+            var cvByUnitGroup = cvRows
+                .GroupBy(x => (x.UnitId, x.GroupId))
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            // b) Unit + Project meta (type/naam/adressen/gemeente)
+            var cvIds = cvRows.Select(x => x.Id).Distinct().ToList();
+
+            // 4) Reeds gefactureerd per (StageId, CV.Id)
+            var invoicedPairs = await (
+                from d in _db.InvoicesDetails.AsNoTracking()
+                where d.PaymentStageId != null && stageIds.Contains(d.PaymentStageId.Value)
+                    && d.ConstructionValueId != null && cvIds.Contains(d.ConstructionValueId.Value)
+                group d by new { StageId = d.PaymentStageId!.Value, CvId = d.ConstructionValueId!.Value } into g
+                select new { g.Key.StageId, g.Key.CvId, Invoiced = g.Sum(x => (decimal)(x.Price ?? 0m)) }
+            ).ToListAsync(ct);
+            var invoicedLookup = invoicedPairs.ToDictionary(k => (k.StageId, k.CvId), v => v.Invoiced);
+
+            // 5) Unit/Project meta (voor headerteksten)
             var unitMetaRows = await (
                 from u in _db.Units.AsNoTracking()
                 where unitIds.Contains(u.Id)
@@ -2622,265 +2628,240 @@ namespace ServiceCore
                 select new
                 {
                     u.Id,
-                    UnitType = u.Type.Name,                 // pas evt. propertynaam aan
-                    UnitStreet = u.Street,                 // als je deze niet hebt: laat null
-                    UnitHouse = u.Housenumber,
-                    ProjectName = p.ProjectName,
-                    ProjectStreet = p.Street,
-                    ProjectHouse = "",
-                    ProjectCity = p.PostalCode.Gemeente
+                    UnitType = u.Type.Name,
+                    UnitStreet = u.Street,
+                    UnitHouse  = u.Housenumber,
+                    ProjectName  = p.ProjectName,
+                    ProjectStreet= p.Street,
+                    ProjectCity  = p.PostalCode.Gemeente
                 }
             ).ToListAsync(ct);
-
             var unitMeta = unitMetaRows.ToDictionary(x => x.Id, x => x);
 
-            // c) Map naar UnitStageRow (voeg de nieuwe velden toe)
-            var rows = merged
-                .Select(x =>
+            // 6) Remaining per stage (som over CV’s van (expected - invoiced))
+            const decimal tol = 0.01m; // 1 cent tolerantie
+            var result = new List<UnitStageRow>();
+
+            foreach (var st in stages)
+            {
+                var pct = st.StagePercentage ?? 0m;
+                if (pct == 0m) continue;
+
+                baseLookup.TryGetValue((st.Id, st.GroupId), out var baseAmount);
+                if (!cvByUnitGroup.TryGetValue((st.Id, st.GroupId), out var cvs) || cvs.Count == 0)
+                    continue;
+
+                decimal remainingForStage = 0m;
+
+                foreach (var cv in cvs)
                 {
-                    baseLookup.TryGetValue((x.UnitId, x.GroupId), out var baseAmountNullable);
-                    var baseAmount = baseAmountNullable ?? 0m;
-                    var pct = x.StagePercentage ?? 0m;
-                    var calc = Math.Round(baseAmount * (pct / 100m), 2, MidpointRounding.AwayFromZero);
+                    var expected = Math.Round(cv.Amount * (pct / 100m), 2, MidpointRounding.AwayFromZero);
+                    invoicedLookup.TryGetValue((st.StageId, cv.Id), out var already);
+                    var rem = expected - already;      // kan positief (factureren) of negatief (credit) zijn
+                    remainingForStage += rem;
+                }
 
-                    unitMeta.TryGetValue(x.UnitId, out var meta);
-                    unitTotals.TryGetValue(x.UnitId, out var total);
+                // Filter: standaard enkel “te factureren” > tol; met includeZeroOrNegative tonen we ook 0/negatief
+                if (!includeZeroOrNegative)
+                {
+                    if (remainingForStage <= tol) continue;
+                }
+                else
+                {
+                    if (Math.Abs(remainingForStage) <= tol) continue; // exact nul → verstoppen
+                }
 
-                    return new UnitStageRow(
-                        UnitId: x.UnitId,
-                        UnitName: x.UnitName ?? string.Empty,
-                        GroupId: x.GroupId,
-                        GroupName: x.GroupName ?? string.Empty,
-                        StageId: x.StageId,
-                        StageName: x.StageName ?? string.Empty,
-                        StagePercentage: pct,
-                        BaseAmount: baseAmount,
-                        CalculatedAmount: calc,
-                        Invoicable: x.Invoicable,
+                unitMeta.TryGetValue(st.Id, out var meta);
+                unitTotals.TryGetValue(st.Id, out var unitTotal);
 
-                        UnitType: meta?.UnitType,
-                        ProjectName: meta?.ProjectName,
-                        ProjectStreet: meta?.ProjectStreet,
-                        ProjectHouseNumber: meta?.ProjectHouse,
-                        ProjectCity: meta?.ProjectCity,
-                        UnitStreet: meta?.UnitStreet,
-                        UnitHouseNumber: meta?.UnitHouse,
-                        UnitConstructionTotal: total
-                    );
-                })
-                .OrderBy(r => r.UnitName).ThenBy(r => r.GroupName).ThenBy(r => r.StageId)
+                result.Add(new UnitStageRow(
+                    UnitId: st.Id,
+                    UnitName: st.Name ?? string.Empty,
+                    GroupId: st.GroupId,
+                    GroupName: st.GroupName ?? string.Empty,
+                    StageId: st.StageId,
+                    StageName: st.StageName ?? string.Empty,
+                    StagePercentage: pct,
+                    BaseAmount: baseAmount,                                               // info
+                    CalculatedAmount: Math.Round(remainingForStage, 2, MidpointRounding.AwayFromZero), // + = factuur, − = credit
+                    Invoicable: true,                                                     // door filter hierboven
+                    UnitType: meta?.UnitType,
+                    ProjectName: meta?.ProjectName,
+                    ProjectStreet: meta?.ProjectStreet,
+                    ProjectHouseNumber: null,                                             // project heeft geen huisnr.
+                    ProjectCity: meta?.ProjectCity,
+                    UnitStreet: meta?.UnitStreet,
+                    UnitHouseNumber: meta?.UnitHouse,
+                    UnitConstructionTotal: unitTotal
+                ));
+            }
+
+            return result
+                .OrderBy(r => r.UnitName)
+                .ThenBy(r => r.GroupName)
+                .ThenBy(r => r.StageId)
                 .ToList();
-
-            return rows;
         }
+
 
         /// <summary>
         /// Geeft goedgekeurde wijzigingsopdrachten (ApprovedOn != null) terug voor de projecten/units
         /// die gekoppeld zijn aan de opgegeven klant. Filtert optioneel op projectId.
         /// </summary>
         public async Task<IReadOnlyList<ChangeOrderRow>> GetApprovedChangeOrdersForClientAsync(
-            int clientId, int? projectId, CancellationToken ct = default)
+            int clientOrCoOwnerId, int? projectId, CancellationToken ct = default)
         {
-            if (clientId <= 0) return Array.Empty<ChangeOrderRow>();
+            if (clientOrCoOwnerId <= 0) return Array.Empty<ChangeOrderRow>();
 
-            // Units van deze klant (+ option. projectfilter) en de bijhorende projecten
-            var unitQuery = _db.Units.AsNoTracking()
-                .Where(u => u.ClientAccountId == clientId);
+            // 1) Resolve hoofdklant (clientaccount óf co-owner → hoofdklant)
+            var mainClientId = await _db.ClientAccount
+                .AsNoTracking()
+                .Where(c => c.Id == clientOrCoOwnerId)
+                .Select(c => (int?)c.Id)
+                .FirstOrDefaultAsync(ct);
 
+            if (!mainClientId.HasValue)
+            {
+                mainClientId = await _db.ClientContacts
+                    .AsNoTracking()
+                    .Where(cc => cc.Id == clientOrCoOwnerId && cc.IsCoOwner && cc.ClientAccountId != null)
+                    .Select(cc => (int?)cc.ClientAccountId!)
+                    .FirstOrDefaultAsync(ct);
+            }
+
+            if (!mainClientId.HasValue) return Array.Empty<ChangeOrderRow>();
+            var clientId = mainClientId.Value;
+
+            // 2) Basisquery CO + detail
+            var q =
+                from co in _db.ChangeOrder.AsNoTracking()
+                where co.ClientAccountId == clientId
+                   && co.Invoiceable == true
+                   && co.DateAgreement != null
+                join d in _db.ChangeOrderDetail.AsNoTracking()
+                    on co.Id equals d.ChangeOrderId
+                where d.Invoicable != false                        // true of NULL
+                   && (d.Invoiced == null || d.Invoiced == false)  // nog niet (volledig) gefactureerd
+                                                                   // LEFT JOIN ContractActivity → Contract → Project
+                join ca0 in _db.ContractActivity.AsNoTracking()
+                    on co.ContractActivityId equals ca0.Id into caGrp
+                from ca in caGrp.DefaultIfEmpty()
+                join c0 in _db.Contract.AsNoTracking()
+                    on ca.ContractId equals c0.Id into cGrp
+                from c in cGrp.DefaultIfEmpty()
+                join p0 in _db.Project.AsNoTracking()
+                    on c.ProjectId equals p0.ProjectId into pGrp
+                from p in pGrp.DefaultIfEmpty()
+                select new
+                {
+                    co.Id,
+                    co.ClientAccountId,
+                    CODescription = co.Description,
+                    DetailId = d.Id,
+                    DetailDescription = d.Description,
+                    Price = d.Price,
+                    Commission = d.Commission,
+                    // NEGATIEF TOEGESTAAN: creditnota's
+                    BaseAmountExcl = (d.Invoiced == true ? 0m : ((d.Price * d.Number) + (d.Price * d.Number * d.Commission / 100))),
+                    ProjectId = (int?)c.ProjectId,
+                    ProjectName = p != null ? p.ProjectName : null,
+                    ProjectStreet = p != null ? p.Street : null,
+                    ProjectCity = p != null ? p.PostalCode.Gemeente : null,
+                    Date = co.Date,
+                    DetailNumber = d.Number,
+                    DetailUnitPrice = (d.Price) + (d.Price * d.Commission / 100)
+                };
+
+
+
+            // 6) Optionele filter op ProjectId
             if (projectId.HasValue)
-                unitQuery = unitQuery.Where(u => u.ProjectId == projectId.Value);
+                q = q.Where(x => x.ProjectId == projectId.Value);
 
-            var unitLite = await unitQuery
-                .Select(u => new { u.Id, u.Name, u.Type.Name, u.ProjectId })
+
+            var rowsRaw = await q.ToListAsync(ct);
+
+            // 7) Unitcontext (één unit van deze hoofdklant per project als hint in de UI/header)
+            var unitCtx = await _db.Units.AsNoTracking()
+                .Where(u => u.ClientAccountId == clientId)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Name,
+                    UnitTypeName = u.Type != null ? u.Type.Name : null,  // nav → string
+                    u.ProjectId
+                })
                 .ToListAsync(ct);
 
-            if (unitLite.Count == 0) return Array.Empty<ChangeOrderRow>();
+            var unitByProject = unitCtx
+                .GroupBy(u => u.ProjectId)
+                .ToDictionary(g => g.Key, g => g.First()); // pick eerste unit per project
 
-            var unitIds = unitLite.Select(x => x.Id).ToHashSet();
-            var projectIds = unitLite.Select(x => x.ProjectId).ToHashSet();
+            // 8) Materialiseren + bedragen
+            var result = rowsRaw.Select(x => new ChangeOrderRow(
+                ChangeOrderId: x.Id,
+                ChangeOrderDetailId: x.DetailId,
+                ClientAccountId: x.ClientAccountId,
+                Title: string.IsNullOrWhiteSpace(x.DetailDescription) ? x.CODescription : $"{x.CODescription} – {x.DetailDescription}",
+                BaseAmountExcl: x.BaseAmountExcl,   // kan negatief zijn
+                VatPercentage: 21m,                 // pas aan indien nodig
+                UnitId: null, UnitName: null, UnitType: null,
+                ProjectName: x.ProjectName,
+                ProjectStreet: x.ProjectStreet,
+                ProjectHouseNumber: null,
+                ProjectCity: x.ProjectCity,
+                ChangeOrderDescription: x.CODescription,
+                Date : x.Date,
+                Number : x.DetailNumber,
+                UnitPrice : x.DetailUnitPrice
+                
 
-            // Project meta (adres)
-            var projMeta = await _db.Project.AsNoTracking()
-                .Where(p => projectIds.Contains(p.Id))
-                .Select(p => new {
-                    p.Id,
-                    p.Name,
-                    p.Street,
-                    p.HouseNumber,
-                    p.City
+            )).ToList();
+
+            return result;
+        }
+
+        // rows = geselecteerde CO-lijnen met: ChangeOrderDetailId, StagePercentage (0..100), en client-side berekende Price
+        public async Task<(bool ok, string? error)> ValidateChangeOrderSelectionAsync(
+            int clientId,
+            IEnumerable<(int detailId, decimal percent, decimal postedPrice)> rows,
+            CancellationToken ct)
+        {
+            var ids = rows.Select(r => r.detailId).ToList();
+            if (ids.Count == 0) return (false, "Geen wijzigingsopdrachten geselecteerd.");
+
+            var map = await _db.ChangeOrderDetail.AsNoTracking()
+                .Where(d => ids.Contains(d.Id))
+                .Select(d => new {
+                    d.Id,
+                    Invoiced = d.Invoiced == true,
+                    BaseAmountExcl = (d.Invoiced == true ? 0m : ((d.Price) + (d.Commission)))
                 })
                 .ToDictionaryAsync(x => x.Id, x => x, ct);
 
-            // a) CO’s die aan een Unit hangen van deze klant
-            var byUnit = await (
-                from co in _db.ChangeOrder.AsNoTracking()
-                where co.ApprovedOn != null
-                   && co.UnitId != null
-                   && unitIds.Contains(co.UnitId!.Value)
-                   && (!projectId.HasValue || co.ProjectId == projectId.Value)
-                join u in _db.Units.AsNoTracking() on co.UnitId equals u.Id
-                select new
-                {
-                    co.Id,
-                    co.ProjectId,
-                    co.Title,
-                    co.AmountExcl,
-                    co.VatPercentage,
-                    UnitId = (int?)u.Id,
-                    u.Name,
-                    u.UnitType
-                }
-            ).ToListAsync(ct);
-
-            // b) CO’s op projectniveau (UnitId == null) voor projecten waar de klant units heeft
-            var byProject = await (
-                from co in _db.ChangeOrder.AsNoTracking()
-                where co.ApprovedOn != null
-                   && co.UnitId == null
-                   && projectIds.Contains(co.ProjectId)
-                   && (!projectId.HasValue || co.ProjectId == projectId.Value)
-                select new
-                {
-                    co.Id,
-                    co.ProjectId,
-                    co.Title,
-                    co.AmountExcl,
-                    co.VatPercentage,
-                    UnitId = (int?)null,
-                    Name = (string?)null,
-                    UnitType = (string?)null
-                }
-            ).ToListAsync(ct);
-
-            var merged = byUnit.Concat(byProject)
-                .OrderBy(x => x.ProjectId)
-                .ThenBy(x => x.Name)   // unitnaam nulls komen eerst; oké
-                .ThenBy(x => x.Title)
-                .ToList();
-
-            var rows = merged.Select(x =>
+            foreach (var r in rows)
             {
-                projMeta.TryGetValue(x.ProjectId, out var p);
-                return new ChangeOrderRow(
-                    ChangeOrderId: x.Id,
-                    ProjectId: x.ProjectId,
-                    ProjectName: p?.Name ?? string.Empty,
-                    ProjectStreet: p?.Street,
-                    ProjectHouseNumber: p?.HouseNumber,
-                    ProjectCity: p?.City,
-                    UnitId: x.UnitId,
-                    UnitName: x.Name,
-                    UnitType: x.UnitType,
-                    Title: x.Title,
-                    AmountExcl: x.AmountExcl,
-                    VatPercentage: x.VatPercentage
-                );
-            }).ToList();
+                if (!map.TryGetValue(r.detailId, out var src))
+                    return (false, "Onbekende wijzigingsopdracht.");
 
-            return rows;
+                if (src.Invoiced || src.BaseAmountExcl == 0m)
+                    return (false, "Wijzigingsopdracht is al volledig gefactureerd of heeft geen saldo.");
+
+                // herbereken server-side
+                var cappedPct = Math.Min(100m, Math.Max(0m, r.percent));
+                var expected = Math.Round(src.BaseAmountExcl * (cappedPct / 100m), 2, MidpointRounding.AwayFromZero);
+
+                // Teken moet overeenkomen (credit blijft credit)
+                if (Math.Sign(expected) != Math.Sign(r.postedPrice) && expected != 0m)
+                    return (false, "Teken van het bedrag klopt niet met het type (factuur/credit).");
+
+                // Niet meer dan basis in absolute waarde
+                if (Math.Abs(r.postedPrice) - Math.Abs(expected) > 0.01m)
+                    return (false, "Gevraagd bedrag overschrijdt het resterende saldo.");
+            }
+
+            return (true, null);
         }
-
-        /// <summary>
-        /// Geeft utility-kosten terug voor projecten/units van de klant. Optioneel filter op projectId.
-        /// </summary>
-        public async Task<IReadOnlyList<UtilityCostRow>> GetUtilityCostsForClientAsync(
-            int clientId, int? projectId, CancellationToken ct = default)
-        {
-            if (clientId <= 0) return Array.Empty<UtilityCostRow>();
-
-            var unitQuery = _db.Units.AsNoTracking()
-                .Where(u => u.ClientAccountId == clientId);
-
-            if (projectId.HasValue)
-                unitQuery = unitQuery.Where(u => u.ProjectId == projectId.Value);
-
-            var unitLite = await unitQuery
-                .Select(u => new { u.Id, u.Name, u.ProjectId })
-                .ToListAsync(ct);
-
-            if (unitLite.Count == 0) return Array.Empty<UtilityCostRow>();
-
-            var unitIds = unitLite.Select(x => x.Id).ToHashSet();
-            var projectIds = unitLite.Select(x => x.ProjectId).ToHashSet();
-
-            var projMeta = await _db.Project.AsNoTracking()
-                .Where(p => projectIds.Contains(p.Id))
-                .Select(p => new { p.Id, p.Name, p.Street, p.HouseNumber, p.City })
-                .ToDictionaryAsync(x => x.Id, x => x, ct);
-
-            // a) Utility op unit
-            var byUnit = await (
-                from uc in _db.UtilityCost.AsNoTracking()
-                where uc.UnitId != null
-                   && unitIds.Contains(uc.UnitId!.Value)
-                   && (!projectId.HasValue || uc.ProjectId == projectId.Value)
-                join u in _db.Units.AsNoTracking() on uc.UnitId equals u.Id
-                select new
-                {
-                    uc.Id,
-                    uc.ProjectId,
-                    uc.Title,
-                    uc.AmountExcl,
-                    uc.VatPercentage,
-                    uc.PeriodStart,
-                    uc.PeriodEnd,
-                    UnitId = (int?)u.Id,
-                    UnitName = (string?)u.Name
-                }
-            ).ToListAsync(ct);
-
-            // b) Utility op project
-            var byProject = await (
-                from uc in _db.UtilityCost.AsNoTracking()
-                where uc.UnitId == null
-                   && projectIds.Contains(uc.ProjectId)
-                   && (!projectId.HasValue || uc.ProjectId == projectId.Value)
-                select new
-                {
-                    uc.Id,
-                    uc.ProjectId,
-                    uc.Title,
-                    uc.AmountExcl,
-                    uc.VatPercentage,
-                    uc.PeriodStart,
-                    uc.PeriodEnd,
-                    UnitId = (int?)null,
-                    UnitName = (string?)null
-                }
-            ).ToListAsync(ct);
-
-            var merged = byUnit.Concat(byProject)
-                .OrderBy(x => x.ProjectId)
-                .ThenBy(x => x.UnitName)
-                .ThenBy(x => x.Title)
-                .ToList();
-
-            var rows = merged.Select(x =>
-            {
-                projMeta.TryGetValue(x.ProjectId, out var p);
-                return new UtilityCostRow(
-                    UtilityId: x.Id,
-                    ProjectId: x.ProjectId,
-                    ProjectName: p?.Name ?? string.Empty,
-                    ProjectStreet: p?.Street,
-                    ProjectHouseNumber: p?.HouseNumber,
-                    ProjectCity: p?.City,
-                    UnitId: x.UnitId,
-                    UnitName: x.UnitName,
-                    Title: x.Title,
-                    AmountExcl: x.AmountExcl,
-                    VatPercentage: x.VatPercentage,
-                    PeriodStart: x.PeriodStart,
-                    PeriodEnd: x.PeriodEnd
-                );
-            }).ToList();
-
-            return rows;
-        }
-
-
-
-
 
         public async Task<bool> HasDeedOfSaleAsync(int clientId, CancellationToken ct = default)
         {

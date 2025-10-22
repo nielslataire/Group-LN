@@ -85,6 +85,44 @@ namespace ServiceCore
                 .Select(x => new PaymentTermOptionBO { Id = x.Id, Label = x.Name })
                 .ToListAsync(ct);
         }
+        public async Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default)
+        {
+            return await _db.IssuerCompany
+                .AsNoTracking()
+                .Where(i => i.IsActive)
+                .OrderBy(i => i.Name)
+                .Select(i => new IssuerListItemBO
+                {
+                    Id = i.Id,
+                    Name = i.Name,
+                    DefaultPaymentTermId = i.DefaultPaymentTermId
+                })
+                .ToListAsync(ct);
+        }
+
+        public async Task<int?> GetFirstActiveIssuerIdAsync(CancellationToken ct = default)
+        {
+            return await _db.IssuerCompany
+                .AsNoTracking()
+                .Where(i => i.IsActive)
+                .OrderBy(i => i.Name)
+                .Select(i => (int?)i.Id)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        public async Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default)
+        {
+            return await _db.PaymentTerms
+                .AsNoTracking()
+                .OrderBy(t => t.Days)
+                .Select(t => new PaymentTermBO
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Days = t.Days
+                })
+                .ToListAsync(ct);
+        }
 
         // --------- translators ----------
         private static IssuerCompanyBO MapToBO(IssuerCompany x) => new IssuerCompanyBO

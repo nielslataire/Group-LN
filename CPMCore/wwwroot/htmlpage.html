@@ -1,0 +1,126 @@
+﻿<!doctype html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8" />
+    <title>RowReorder Basistest</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- jQuery + DataTables (CDN; zonder SRI om SRI-fouten te vermijden) -->
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/datatables.net-dt@1.13.8/css/jquery.dataTables.min.css">
+    <style>
+        td.handle {
+            cursor: grab;
+        }
+
+        .text-end {
+            text-align: right;
+        }
+
+        .d-none {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h3>RowReorder – Basistest</h3>
+
+    <table id="testReorder" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th style="width:36px;"></th>                 <!-- 0: drag handle -->
+                <th style="width:60px;">Pos</th>              <!-- 1: zichtbare positie -->
+                <th>Omschrijving</th>                         <!-- 2 -->
+                <th class="text-end">Bedrag</th>              <!-- 3 -->
+                <th class="text-end">BTW %</th>               <!-- 4 -->
+                <th class="text-end">Korting %</th>           <!-- 5 -->
+                <th class="d-none">Order</th>                 <!-- 6: verborgen volgorde (dataSrc) -->
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="handle">⋮⋮</td>
+                <td class="pos-cell">1</td>
+                <td>Testregel A</td>
+                <td class="text-end">123,45</td>
+                <td class="text-end">21</td>
+                <td class="text-end">0</td>
+                <td class="d-none order-cell">1</td>
+            </tr>
+            <tr>
+                <td class="handle">⋮⋮</td>
+                <td class="pos-cell">2</td>
+                <td>Testregel B</td>
+                <td class="text-end">50,00</td>
+                <td class="text-end">6</td>
+                <td class="text-end">5</td>
+                <td class="d-none order-cell">2</td>
+            </tr>
+            <tr>
+                <td class="handle">⋮⋮</td>
+                <td class="pos-cell">3</td>
+                <td>Testregel C</td>
+                <td class="text-end">10,00</td>
+                <td class="text-end">0</td>
+                <td class="text-end">0</td>
+                <td class="d-none order-cell">3</td>
+            </tr>
+        </tbody>
+    </table>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/datatables.net@1.13.8/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/datatables.net-rowreorder@1.3.3/js/dataTables.rowReorder.min.js"></script>
+
+
+    <script>
+        $(function () {
+            const $tbl = $('#testReorder');
+
+            const dt = $tbl.DataTable({
+                paging: false,
+                searching: false,
+                info: false,
+                ordering: true,
+                order: [[6, 'asc']],               // sorteer op verborgen order-kolom
+                rowReorder: {
+                    selector: 'td.handle',
+                    dataSrc: 6                        // kolomindex van verborgen order
+                },
+                columnDefs: [
+                    { targets: 6, visible: false },   // verberg order-kolom
+                    { targets: [0, 1, 2, 3, 4, 5], orderable: false }
+                ],
+                language: {
+                    emptyTable: 'Geen gegevens'
+                }
+            });
+
+            function renumberVisiblePositions() {
+                dt.rows({ order: 'applied' }).nodes().each(function (row, i) {
+                    // update zichtbare "Pos" kolom
+                    $(row).find('.pos-cell').text(i + 1);
+                    // update verborgen order-waarde (kolom 6) zodat sortering beklijft
+                    $(row).find('.order-cell').text(i + 1);
+                });
+            }
+
+            // bij start: netjes hernummeren (voor het geval)
+            renumberVisiblePositions();
+
+            // bij slepen: hernummer + toon in console
+            $tbl.on('row-reorder.dt', function (e, diff, edit) {
+                renumberVisiblePositions();
+                const current = [];
+                dt.rows({ order: 'applied' }).nodes().each(function (row) {
+                    current.push($(row).find('td:eq(2)').text()); // omschrijving
+                });
+                console.log('[TEST] nieuwe volgorde:', current);
+            });
+
+            // sanity: ook na tekenen/ordenen hernummeren
+            $tbl.on('draw.dt order.dt', renumberVisiblePositions);
+        });
+    </script>
+</body>
+</html>

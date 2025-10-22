@@ -35,6 +35,10 @@ public partial class InvoicesDetails
 
     public string LineType { get; set; }
 
+    public bool UtilityIsAdvance { get; set; }
+
+    public virtual ICollection<ConnectionAdvanceApplication> ConnectionAdvanceApplication { get; set; } = new List<ConnectionAdvanceApplication>();
+
     public virtual Invoices Invoice { get; set; }
 
     public virtual InvoicingPaymentStages PaymentStage { get; set; }

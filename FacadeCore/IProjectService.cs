@@ -189,13 +189,10 @@ namespace FacadeCore
         Task<bool> AreStagesValidForClientAsync(
             int clientId, IEnumerable<int> stageIds, CancellationToken ct = default);
         Task<IReadOnlyList<UnitStageRow>> GetUnitsWithInvocableStagesForClientAsync(
-    int clientId, CancellationToken ct = default);
+    int clientId, bool includeZeroOrNegative, CancellationToken ct = default);
 
         Task<IReadOnlyList<ChangeOrderRow>> GetApprovedChangeOrdersForClientAsync(
-    int clientId, int? projectId, CancellationToken ct = default);
-
-        Task<IReadOnlyList<UtilityCostRow>> GetUtilityCostsForClientAsync(
-            int clientId, int? projectId, CancellationToken ct = default);
+        int clientOrCoOwnerId, int? projectId, CancellationToken ct = default);
 
         Task<bool> HasDeedOfSaleAsync(int clientId, CancellationToken ct = default);
 
@@ -231,17 +228,22 @@ namespace FacadeCore
     // Wijzigingsopdrachten (Change Orders)
     public sealed record ChangeOrderRow(
         int ChangeOrderId,
-        int ProjectId,
-        string ProjectName,
+        int ChangeOrderDetailId,
+        int ClientAccountId,
+        string Title,                     // bv. CO.Description + " – " + Detail.Description
+        decimal BaseAmountExcl,           // (Price + Commission) - AlreadyInvoiced
+        decimal Number,
+        decimal UnitPrice,
+        decimal VatPercentage,            // uit detail of default
+        int? UnitId,                      // optioneel (context)
+        string? UnitName,
+        string? UnitType,
+        string? ProjectName,              // TODO: indien je via ContractActivity → Project joint
         string? ProjectStreet,
         string? ProjectHouseNumber,
         string? ProjectCity,
-        int? UnitId,
-        string? UnitName,
-        string? UnitType,
-        string Title,
-        decimal AmountExcl,
-        decimal VatPercentage
+        string? ChangeOrderDescription, // == co.Description (header per CO)
+        DateOnly? Date
     );
 
     // Nutsvoorzieningen (Utility Costs)

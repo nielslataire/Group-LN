@@ -151,6 +151,18 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
+
+var supportedCultures = new[] { new CultureInfo("nl-BE") };
+
+var ro = new RequestLocalizationOptions
+{
+    DefaultRequestCulture = new RequestCulture("nl-BE"),
+    SupportedCultures = supportedCultures,
+    SupportedUICultures = supportedCultures
+};
+
+app.UseRequestLocalization(ro);
+
 app.UseRouting();
 
 //TE VERWIJDEREN ALS DE BEVEILIGING MOET GETEST WORDEN

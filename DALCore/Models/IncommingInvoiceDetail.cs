@@ -23,9 +23,13 @@ public partial class IncommingInvoiceDetail
 
     public int? ActId { get; set; }
 
+    public bool IsConnectionCost { get; set; }
+
     public virtual Activity Act { get; set; }
 
     public virtual ChangeOrder ChangeOrder { get; set; }
+
+    public virtual ICollection<ConnectionSettlementSource> ConnectionSettlementSource { get; set; } = new List<ConnectionSettlementSource>();
 
     public virtual ContractActivity ContractAct { get; set; }
 

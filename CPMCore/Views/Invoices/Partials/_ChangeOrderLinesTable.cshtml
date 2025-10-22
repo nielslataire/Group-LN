@@ -1,89 +1,188 @@
 ﻿@model List<CPMCore.Models.Invoicing.InvoiceLineVM>
 @using System.Globalization
+
 @{
-    var groups = Model.Select((line, idx) => new { line, idx })
-                      .GroupBy(x => x.line.UnitName ?? "(unit)")
-                      .OrderBy(g => g.Key)
-                      .ToList();
-    var gi = 0;
+    // ViewData helpers uit je service/controller
+    var baseMap = (Dictionary<int, decimal>)ViewData["coBaseMap"];   // detailId -> base excl
+    var coNameMap = (Dictionary<int, string>)ViewData["coNameMap"];    // coId -> titel/omschrijving
+    var coGroup = (Dictionary<int, List<int>>)ViewData["coGroupMap"];// coId -> detailIds
+    var coYearMap = ViewData["coYearMap"] as Dictionary<int, int?>;
+
+    // Alle unieke CO's + nette volgorde
+    var coIds = coGroup.Keys.OrderBy(id => id).ToList();
+
+    // Indexen: bewaar originele i voor modelbinding
+    var indexed = Model.Select((line, idx) => new { line, idx }).ToList();
+
+
 }
 
-@foreach (var g in groups)
-{
-    <h3>@g.Key</h3>
-    <table class="table table-responsive-sm table-hover mb-3" style="min-width: 650px;">
-        <thead>
+<style>
+    .co-top {
+        border: 1px solid #eee;
+        border-radius: .5rem;
+    }
+
+        .co-top th, .co-top td {
+            vertical-align: middle;
+        }
+
+    .muted {
+        color: #6c757d;
+    }
+
+    .form-control[disabled], .form-select[disabled] {
+        background: #f8f9fa;
+        opacity: 1;
+    }
+</style>
+
+<!-- ====== TABEL 1: Wijzigingsopdrachten selecteren ====== -->
+<h3 class="mt-3">Wijzigingsopdrachten selecteren</h3>
+<table class="table table-hover table-responsive-sm mb-3 co-top" id="coMasterTable" style="min-width:620px">
+
+    <tbody>
+        @foreach (var coId in coIds)
+        {
+            var title = coNameMap.TryGetValue(coId, out var t) ? t : $"WO-{coId}";
+            //Nummering WO
+            var year = (coYearMap != null && coYearMap.TryGetValue(coId, out var y) && y.HasValue)
+            ? y.Value
+            : DateTime.Now.Year; // fallback als jaar niet meegegeven werd
+
+            var woCode = $"WO-{year}-{coId:D5}";
             <tr>
-                <th style="width:40px;"></th>
-                <th>Omschrijving</th>
-                <th style="width:140px;">% te factureren</th>
-                <th style="width:160px;" class="text-end">Prijs (excl.)</th>
-                <th style="width:100px;" class="text-end">BTW (%)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var x in g)
-            {
-                var i = x.idx; var m = x.line;
-                var checkboxId = $"co_{gi}_{i}";
-                <tr class="align-middle">
-                    <td>
-                        <input type="hidden" name="Lines[@i].IsSelected" value="false" />
-                        <div class="checkbox-custom checkbox-default m-0">
-                            <input type="checkbox"
-                                   id="@checkboxId"
-                                   class="js-co-row"
-                                   data-group="@gi"
-                                   data-unitid="@(m.UnitId?.ToString() ?? "")"
-                                   data-unittype="@m.UnitType"
-                                   data-unitname="@m.UnitName"
-                                   data-projectname="@m.ProjectName"
-                                   data-projectstreet="@m.ProjectStreet"
-                                   data-projecthouse="@m.ProjectHouseNumber"
-                                   data-projectcity="@m.ProjectCity"
-                                   name="Lines[@i].IsSelected"
-                                   value="true" />
-                            <label for="@checkboxId">&nbsp;</label>
-                        </div>
-                    </td>
-                    <td>
-                        <input type="text" class="form-control form-control-sm" value="@m.Text" disabled />
-                        <input type="hidden" name="Lines[@i].Text" value="@m.Text" />
-                        <input type="hidden" name="Lines[@i].LineType" value="ChangeOrders" />
-                        <input type="hidden" name="Lines[@i].GroupName" value="@m.GroupName" />
-                        @if (m.UnitId.HasValue)
-                        {
-                            <input type="hidden" name="Lines[@i].UnitId" value="@m.UnitId.Value" />
-                        }
-                    </td>
-                    <td>
-                        <div class="input-group input-group-sm">
-                            <input type="number" step="0.01" min="0" max="100"
-                                   class="form-control form-control-sm text-end js-co-pct"
-                                   value="100"
-                                   data-base="@m.Price.ToString(CultureInfo.InvariantCulture)"
-                                   aria-label="% te factureren" />
+                <td style="width:60px;" class="m-2">
+                    <div class="checkbox-custom checkbox-default m-0">
+                        <input type="checkbox"
+                               id="co_master_@coId"
+                               class="js-co-master"
+                               data-coid="@coId" />
+                        <label for="co_master_@coId">&nbsp;</label>
+                    </div>
+                </td>
+                <td class="m-2">
+                    <label class="form-label m-0" for="co_master_@coId">@woCode</label>
+                    <div class="muted small">@title</div>
+                </td>
+                <td style="width:350px" class="text-end m-2">
+                    <div class="d-flex align-items-center js-co-master-pct-wrap d-none"
+                         data-coid="@coId">
+                        <span class="me-2">Te factureren :</span>
+                        <div class="input-group input-group-sm" style="max-width:200px"> 
+                            <input type="number"
+                                   class="form-control js-co-master-pct"
+                                   data-coid="@coId"
+                                   min="0" max="100" step="0.01" value="100" />
                             <span class="input-group-text">%</span>
                         </div>
-                        <!-- optioneel posten als DiscountPercent om % te bewaren -->
-                        <input type="hidden" name="Lines[@i].DiscountPercent" value="100" class="js-co-pct-post" />
-                    </td>
-                    <td class="text-end">
-                        <input type="text" class="form-control form-control-sm text-end js-co-price-view"
-                               value="@m.Price.ToString("N2")" disabled />
-                        <input type="hidden" name="Lines[@i].Price"
-                               value="@m.Price.ToString(CultureInfo.InvariantCulture)"
-                               class="js-co-price-post" />
-                    </td>
-                    <td class="text-end">
-                        <input type="text" class="form-control form-control-sm text-end" value="@m.VatPercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
-                        <input type="hidden" name="Lines[@i].VatPercentage" value="@m.VatPercentage.ToString(CultureInfo.InvariantCulture)" />
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-    gi++;
-}
+                    </div>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- ====== TABEL 2: Details van geselecteerde CO's ====== -->
+<h3 class="mt-4">Detail Wijzigingsopdrachten</h3>
+<div id="coDetailsHost">
+    @* één blok per CO, initieel verborgen *@
+    @foreach (var coId in coIds)
+    {
+        var title = coNameMap.TryGetValue(coId, out var t) ? t : $"WO-{coId}";
+        <div class="co-block mb-3" data-coid="@coId" id="co_block_@coId" style="display:none">
+            <h4 class="muted mb-1">@title</h4>
+            <table class="table table-responsive-sm table-hover mb-0" style="min-width: 900px;">
+                <thead>
+                    <tr>
+                        <th>Omschrijving (detail)</th>
+                        <th style="width:130px">Aantal</th>
+                        <th style="width:160px">Eenheidsprijs</th>
+@*                         <th style="width:160px">Commissie (%)</th> *@
+                        <th style="width:180px">Afwijk %</th>
+                        <th style="width:140px">Prijs</th>
+                        <th class="text-end" style="width:120px">BTW (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in indexed.Where(x => (x.line.ChangeOrderId ?? 0) == coId))
+                    {
+                        var i = row.idx;
+                        var m = row.line;
+                        var baseAmt = baseMap.TryGetValue(m.ChangeOrderDetailId ?? 0, out var b) ? b : 0m;
+                        // NB: IsSelected & percentages worden via JS gezet o.b.v. master-keuze
+                        <tr class="align-middle" data-coid="@coId">
+                            <td>
+                                <input type="text" class="form-control form-control-sm" value="@m.Text" disabled />
+                                <input type="hidden" name="Lines[@i].Text" value="@m.Text" />
+                                <input type="hidden" name="Lines[@i].LineType" value="ChangeOrders" />
+                                <input type="hidden" name="Lines[@i].GroupName" value="Wijzigingsopdrachten" />
+                                <input type="hidden" name="Lines[@i].ChangeOrderId" value="@coId" />
+                                @if (m.ChangeOrderDetailId.HasValue)
+                                {
+                                    <input type="hidden" name="Lines[@i].ChangeOrderDetailId" value="@m.ChangeOrderDetailId.Value" />
+                                }
+                                @if (m.UnitId.HasValue)
+                                {
+                                    <input type="hidden" name="Lines[@i].UnitId" value="@m.UnitId.Value" />
+                                }
+
+                                <!-- toggle via JS -->
+                                <input type="hidden" name="Lines[@i].IsSelected" class="js-is-selected" value="false" />
+                            </td>
+
+                            <td>
+                                <input type="text" class="form-control form-control-sm text-end js-co-qty" value="@m.Number.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                            </td>
+
+                            <td>
+                                <input type="text" class="form-control form-control-sm text-end js-co-unitprice" value="@m.UnitPrice.ToString("N2")" disabled />
+                            </td>
+
+@*                             <td>
+                                <input type="text" class="form-control form-control-sm text-end" value="@m.CommissionPct?.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                            </td> *@
+
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">
+                                        <input type="checkbox" class="form-check-input js-co-ov" data-coid="@coId" />
+                                    </span>
+                                    <input type="number" class="form-control text-end js-co-pct"
+                                           data-base="@baseAmt.ToString(CultureInfo.InvariantCulture)"
+                                           min="0" max="100" step="0.01" value="100" disabled />
+                                    <span class="input-group-text">%</span>
+
+                                    <!-- hidden voor post -->
+                                    <input type="hidden" name="Lines[@i].StagePercentage"
+                                           class="js-co-pct-post"
+                                           value="@m.StagePercentage.ToString(CultureInfo.InvariantCulture)" />
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">€</span>
+                                    <input type="text" class="form-control form-control-sm text-end js-co-price-view"
+                                           value="@m.Price.ToString("N2")" disabled />
+                                    <input type="hidden" name="Lines[@i].Price"
+                                           class="js-co-price-post"
+                                           value="@m.Price.ToString(CultureInfo.InvariantCulture)" />
+                                </div>
+                            </td>
+
+                            <td class="text-end">
+                                <input type="text" class="form-control form-control-sm text-end"
+                                       value="@m.VatPercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
+                                <input type="hidden" name="Lines[@i].VatPercentage"
+                                       value="@m.VatPercentage.ToString(CultureInfo.InvariantCulture)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
 
 

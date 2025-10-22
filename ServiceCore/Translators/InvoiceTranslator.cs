@@ -60,7 +60,7 @@ namespace ServiceCore.Translators
             }
             foreach (var x in _entity.InvoicesDetails)
             {
-                InvoiceRowBO bou = new InvoiceRowBO();
+                InvoiceLineBO bou = new InvoiceLineBO();
                 var err = InvoiceDetailTranslator.TranslateEntityToBO(x, bou);
                 bo.Rows.Add(bou);
             }
@@ -95,10 +95,9 @@ namespace ServiceCore.Translators
             return ErrorCode.Success;
         }
 
-        private static ErrorCode HandleRows(Invoices _entity, List<InvoiceRowBO> rows)
+        private static ErrorCode HandleRows(Invoices _entity, List<InvoiceLineBO> rows)
         {
-            if ((rows.Count == 0))
-                return ErrorCode.Success;
+            if (rows == null || rows.Count == 0) return ErrorCode.Success;
             foreach (var x in rows)
             {
                 if ((x.Id == 0))
