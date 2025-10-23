@@ -1,13 +1,16 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceComposeVM
+
 @{
     ViewData["Title"] = "Nieuwe factuur";
 }
+
 @section PageStyle {
-    <link rel="stylesheet" href="~/lib/select2/css/select2.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
     <link rel="stylesheet"
           href="https://cdn.datatables.net/v/bs5/dt-2.2.2/b-3.2.2/rr-1.5.0/datatables.min.css" />
+
     <style>
         /* 45px hoogte */
         .select2-container--bootstrap .select2-selection--single {
@@ -28,12 +31,23 @@
         }
 
         .desc-textarea {
-            resize: vertical;
-            min-height: 48px;
-            max-height: 160px;
-            white-space: pre-wrap;
+            resize: vertical;          /* gebruiker mag vergroten/verkleinen */
+            min-height: 48px;          /* ~2 regels, sluit aan bij compacte rijhoogte */
+            max-height: 160px;         /* cap zodat cards niet te groot worden */
+            white-space: pre-wrap;     /* respecteert spaties/linebreaks en wrapt mooi */
             overflow: auto;
-            background: #f8f9fa;
+            background: #f8f9fa;       /* disabled look consistent */
+        }
+    </style>
+    <style>
+
+
+        /* Alleen voor de demo-tabel */
+        #rrDemoTable .reorder-handle {
+            cursor: move;
+            user-select: none;
+            text-align: center;
+            width: 36px;
         }
     </style>
 }
@@ -47,7 +61,7 @@
                 <div class="row align-items-center">
                     <div class="col-sm-auto">
                         <h1 class="fw-bold mb-0">Nieuwe factuur</h1>
-                        <h5 class="mb-4 mt-0">Maak een nieuwe factuur aan een klant of leverancier op </h5>
+                        <h5 class="mb-4 mt-0">Maak een nieuwe factuur aan een klant of leverancier op</h5>
                     </div>
                 </div>
             </div>
@@ -59,16 +73,21 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Facturatiebedrijf</label>
-                    <select id="IssuerCompanyId" name="IssuerCompanyId" class="form-control ">
+                    @* Facturatiebedrijf *@
+                    <select id="IssuerCompanyId" name="IssuerCompanyId" class="form-control">
                         @foreach (var i in Model.Issuers)
                         {
                             if (i.Id == Model.IssuerCompanyId)
                             {
-                                <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" selected="selected">@i.Name</option>
+                                <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" selected="selected">
+                                    @i.Name
+                                </option>
                             }
                             else
                             {
-                                <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")">@i.Name</option>
+                                <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")">
+                                    @i.Name
+                                </option>
                             }
                         }
                     </select>
@@ -83,7 +102,10 @@
                     <label class="form-label">Factuurdatum</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                        <input asp-for="InvoiceDate" class="form-control form-control-modern js-datepicker" type="text" asp-format="{0:dd/MM/yyyy}" />
+                        <input asp-for="InvoiceDate"
+                               class="form-control form-control-modern js-datepicker"
+                               type="text"
+                               asp-format="{0:dd/MM/yyyy}" />
                     </div>
                 </div>
 
@@ -94,6 +116,7 @@
                         <option value="0">Draft (later afwerken)</option>
                     </select>
                 </div>
+
                 <div class="col-md-3">
                     <label class="form-label">Factuurmodus</label>
                     <select asp-for="Mode" class="form-control form-control-modern">
@@ -103,25 +126,31 @@
                         <option value="4">Nutsaansluitingen</option>
                     </select>
                 </div>
+
                 <div class="col-md-3">
                     <label class="form-label">Betaaltermijn</label>
+                    @* Betaaltermijn *@
                     <select id="PaymentTermId" name="PaymentTermId" class="form-control form-control-modern">
                         @foreach (var t in Model.PaymentTerms)
                         {
                             if (Model.PaymentTermId == t.Id)
                             {
-                                <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" selected="selected">@t.Name</option>
+                                <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" selected="selected">
+                                    @t.Name
+                                </option>
                             }
                             else
                             {
-                                <option value="@t.Id" data-days="@t.Days" data-name="@t.Name">@t.Name</option>
+                                <option value="@t.Id" data-days="@t.Days" data-name="@t.Name">
+                                    @t.Name
+                                </option>
                             }
                         }
                     </select>
                 </div>
 
                 <div id="projectRow" class="col-md-6 mt-3">
-                    <label class="form-label">Project (optioneel indien geen contract) </label>
+                    <label class="form-label">Project (optioneel indien geen contract)</label>
                     <select id="projectSelect" class="form-control form-control-modern" style="width:100%"></select>
                     <input type="hidden" asp-for="ProjectId" />
                 </div>
@@ -151,6 +180,7 @@
                 <div class="row g-3 mt-2">
                     <div class="col-12">
                         <div id="stagesList">
+                            <!-- wordt via JS gevuld met checkboxen -->
                             <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Schijven”.</div>
                         </div>
                     </div>
@@ -158,6 +188,8 @@
             </div>
         </div>
     </section>
+
+    <!-- SCHIJVEN BLOCK -->
 
     <section class="card card-modern" id="coBlock" style="display:none">
         <div class="card-body">
@@ -167,6 +199,8 @@
         </div>
     </section>
 
+    <!-- NUTSAANSLUITNGEN BLOCK -->
+
     <section class="card card-modern" id="utlBlock" style="display:none">
         <div class="card-body">
             <div id="utlList">
@@ -175,87 +209,52 @@
         </div>
     </section>
 
-    <!-- ===== VRIJE LIJNEN (HTML) ===== -->
-    <section class="card card-modern" id="freeLineBlock">
+    <!-- VRIJE LIJNEN BLOCK -->
+
+    <section class="card card-modern mt-4" id="freeLineBlock">
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table align-middle" id="freeLinesTable" style="width:100%">
-                    <thead>
-                        <tr>
-                            <th style="width:36px;"></th>                             <!-- 0: drag handle -->
-                            <th>Omschrijving</th>                                     <!-- 1 -->
-                            <th style="width:140px" class="text-end">Bedrag</th>      <!-- 2 -->
-                            <th style="width:110px" class="text-end">BTW&nbsp;%</th>  <!-- 3 -->
-                            <th style="width:120px" class="text-end">Korting&nbsp;%</th><!-- 4 -->
-                            <th style="width:40px;"></th>                              <!-- 5: actie -->
-                            <th class="d-none">Model</th>                              <!-- 6: verborgen modelvelden -->
-                            <th class="d-none">Order</th>                              <!-- 7: verborgen volgorde -->
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3 class="fw-bold mb-0">Vrije lijnen</h3>
             </div>
 
+            <div class="table-responsive">
+                <table id="freeLinesTable" class="table align-middle" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th style="width:36px;"></th>   <!-- drag handle -->
+                            <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
+                            <th>Omschrijving</th>
+                            <th class="text-end" style="width:140px">Bedrag</th>
+                            <th class="text-end" style="width:110px">BTW&nbsp;%</th>
+                            <th class="text-end" style="width:50px">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
             <button type="button" class="btn btn-default mt-2" id="addFreeLine">
                 <i class="fas fa-plus me-1"></i> Regel toevoegen
             </button>
         </div>
     </section>
 
-    <!-- ===== Rij-template (exact 8 <td>'s, zelfde volgorde als thead) ===== -->
     <template id="freeLineRowTpl">
         <tr class="free-row">
-            <!-- 0: drag -->
-            <td class="drag-handle text-muted" title="Sleep om te verplaatsen">
-                <i class="fas fa-grip-vertical"></i>
-            </td>
+            <td class="reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
+            <td></td>
+            <td><input class="form-control form-control-sm js-fl-text" data-col="Text" maxlength="200" /></td>
+            <td class="text-end"><input class="form-control form-control-sm text-end js-fl-price" data-col="Price" type="text" /></td>
+            <td class="text-end"><input class="form-control form-control-sm text-end js-fl-vat" data-col="VatPercentage" type="text" /></td>
+            <td class="text-end">
+                <a data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="js-fl-del" id="editAccount"><i class="fas fa-trash"></i></a>
 
-            <!-- 1: omschrijving -->
-            <td>
-                <input class="form-control form-control-modern js-fl-text"
-                       data-col="Text" maxlength="200" />
             </td>
-
-            <!-- 2: bedrag -->
-            <td>
-                <input class="form-control form-control-modern text-end js-fl-price"
-                       data-col="Price" type="text" />
-            </td>
-
-            <!-- 3: btw -->
-            <td>
-                <input class="form-control form-control-modern text-end js-fl-vat"
-                       data-col="VatPercentage" type="text" />
-            </td>
-
-            <!-- 4: korting -->
-            <td>
-                <input class="form-control form-control-modern text-end js-fl-disc"
-                       data-col="DiscountPercent" type="text" />
-            </td>
-
-            <!-- 5: actie -->
-            <td class="text-center">
-                <button type="button" class="btn btn-light btn-sm js-fl-del" title="Verwijderen">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-
-            <!-- 6: verborgen modelvelden -->
-            <td class="d-none">
-                <input class="js-fl-hidden" data-col="UnitId" type="number" />
-                <input class="js-fl-hidden" data-col="PaymentStageId" type="number" />
-                <input class="js-fl-hidden" data-col="LineType" />
-                <input class="js-fl-hidden" data-col="GroupName" />
-                <input class="js-fl-hidden" data-col="UtilityCost" type="checkbox" />
-                <input class="js-fl-hidden" data-col="Order" type="number" />
-            </td>
-
-            <!-- 7: verborgen volgorde-waarde (door RowReorder gebruikt als dataSrc) -->
-            <td class="d-none js-order-cell">0</td>
         </tr>
     </template>
 
+    <!-- VOORBEELDFACTUUR BLOCK -->
 
     <section class="card card-modern mt-4" id="previewCard" style="display:none">
         <div class="card-body">
@@ -279,9 +278,13 @@
                     </div>
                 </div>
 
+                <!-- Omschrijving boven de tabellen -->
                 <p id="pvHeaderText" class="mt-3 mb-2 text-muted" style="white-space:pre-wrap"></p>
+
+                <!-- Container voor meerdere tabellen -->
                 <div id="pvTables" class="preview-tables"></div>
 
+                <!-- Globale totalen -->
                 <table class="table mb-0 table-borderless" style="min-width:680px">
                     <tbody>
                         <tr>
@@ -294,7 +297,7 @@
                         </tr>
                         <tr>
                             <td class="text-end fw-bold">Te betalen</td>
-                            <td class="text-end fw-bold" id="pvTotal">0,00</td>
+                            <td class="text-end fw-bold" id="pvTotal">0,00 </td>
                         </tr>
                     </tbody>
                 </table>
@@ -303,25 +306,1110 @@
     </section>
 
     <button type="submit" class="btn btn-primary">
-        <i class="fas fa-save me-1"></i> Opslaan
+        <i class="fas fa-save me-1"></i> Opslaan 
     </button>
 </form>
 
 @section PageScripts {
-    <!-- vendors -->
     <script src="~/lib/select2/js/select2.js"></script>
     <script src="/lib/select2/js/i18n/nl.js"></script>
     <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
     <script src="https://cdn.datatables.net/v/bs5/dt-2.2.2/b-3.2.2/rr-1.5.0/datatables.min.js"></script>
 
-    <!-- app scripts (let op volgorde) -->
-    <script src="~/js/invoices.util.js" asp-append-version="true"></script>
-    <script src="~/js/invoices.core.js" asp-append-version="true"></script>
-@*     <script src="~/js/invoices.freelines.js" asp-append-version="true"></script> *@
-    <script src="~/js/invoices.co.js" asp-append-version="true"></script>
-    <script src="~/js/invoices.preview.js" asp-append-version="true"></script>
+    <!-- ====== ALGEMEEN SCRIPT ====== -->
+    <script>
+        $(function () {
+            // =========================
+            // Helpers
+            // =========================
+            const $hostStages = $('#stagesList');
+            const getPartyType = () => $('input[name="PartyType"]').val(); // "1","2","3"
+            const getPartyId = () => $('input[name="PartyId"]').val();
+            const isSupplier = () => getPartyType() === '3';
+            const isCustomer = () => getPartyType() === '1' || getPartyType() === '2';
 
-    @* Laat debug UIT om dubbele events te vermijden
-    <script src="~/js/invoices.freelines.debug.js" asp-append-version="true"></script>
-    *@
+            const MODE_LABELS = {
+                '1': 'Vrije lijnen',
+                '2': 'Schijven',
+                '3': 'Wijzigingsopdrachten',
+                '4': 'Nutsaansluitingen'
+            };
+
+            function getHeader() {
+                const $hdr = $('#HeaderDescription');
+                return $hdr.length ? $hdr : $();
+            }
+
+            // Payment terms helpers
+            function getSelectedTermOption() {
+                const $opt = $('#PaymentTermId option:selected');
+                if ($opt.length === 0) return null;
+
+                const days = parseInt($opt.data('days'), 10) || 0;
+                const name = ($opt.data('name') || $opt.text() || '').toString();
+                return { days, name };
+            }
+
+            function setIssuerDefaultPaymentTerm() {
+                const $opt = $('#IssuerCompanyId option:selected');
+                const defId = $opt.data('defaultterm');
+
+                if (defId != null && defId !== '') {
+                    $('#PaymentTermId').val(String(defId));
+                    if ($('#PaymentTermId').data('select2')) $('#PaymentTermId').trigger('change.select2');
+                    $('#PaymentTermId').trigger('change');
+                }
+            }
+
+            // --- Hard reset helpers ---
+            function clearPreview() {
+                $('#pvTables').empty();
+                $('#pvSub,#pvVat,#pvTotal').text('0,00');
+                $('#pvHeaderText').text('');
+                $('#pvTitleMode').text('');
+                $('#pvMode').text('—');
+                $('#pvPayTerm').text('—');
+                $('#pvIssueDate').text('—');
+                $('#pvDueDate').text('—');
+                $('#previewCard').hide();
+            }
+
+            function clearBlocks() {
+                $('#stagesBlock, #coBlock, #utlBlock, #freeLineBlock').hide();
+                $('#stagesList').empty();
+                $('#coList').empty();
+                $('#utlList').empty();
+
+               if (window.freeLines && window.freeLines.dt) {
+                  window.freeLines.clearAll();
+                }
+
+                $('#HeaderDescription').prop('disabled', false).val('');
+            }
+
+            function hardResetUI() {
+                clearBlocks();
+                clearPreview();
+                $hostStages.find('input[type=checkbox]').prop('checked', false);
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                if (window.updateHeaderLock) window.updateHeaderLock();
+                $('#Mode').val('1');
+                $('#freeLineBlock').show();
+                if (window.freeLines) {
+                  window.freeLines.clearAll();
+                  window.freeLines.ensureOne();
+                }
+            }
+
+            // =========================
+            // UI toggles
+            // =========================
+            function enforceModeByParty() {
+                const $mode = $('#Mode');
+
+                if (isSupplier()) {
+                    $mode.val('1');
+                    $mode.find('option[value!="1"]').prop('disabled', true).hide();
+                    $('#stagesBlock, #coBlock, #utlBlock').hide();
+                    $('#freeLineBlock').show();
+                } else {
+                    $mode.find('option').prop('disabled', false).show();
+                }
+            }
+
+            function toggleProjectContract() {
+                if (isSupplier()) {
+                    $('#projectRow, #contractRow').show();
+                } else if (isCustomer()) {
+                    $('#projectRow, #contractRow').hide();
+                    $('#projectSelect').val(null).trigger('change');
+                    $('input[name="ProjectId"]').val('');
+                    $('#contractSelect').val(null).trigger('change');
+                    $('input[name="SupplierContractId"]').val('');
+                } else {
+                    $('#projectRow, #contractRow').hide();
+                }
+            }
+
+            function updateHeaderLock() {
+                const $header = getHeader();
+                if (!$header.length) return;
+
+                const anySelected =
+                    $hostStages.find('.js-stage-row:checked').length > 0 ||
+                    $hostStages.find('.js-co-row:checked').length > 0 ||
+                    $hostStages.find('.js-utl-row:checked').length > 0;
+
+                $header.prop('disabled', anySelected);
+            }
+            window.updateHeaderLock = window.updateHeaderLock || updateHeaderLock;
+
+            // =========================
+            // Partials loaders (met lege-staat)
+            // =========================
+            async function loadStageLines() {
+                const pt = getPartyType(),
+                    clientId = getPartyId();
+
+                if (!clientId || !(pt === '1' || pt === '2') || $('#Mode').val() !== '2') {
+                    $('#stagesList').html('<div class="text-muted small">Kies “Schijven”.</div>');
+                    return;
+                }
+
+                $('#stagesList').html('<div class="text-muted">Laden…</div>');
+
+                try {
+                    const projectId = $('input[name="ProjectId"]').val() || '';
+                    const url = '@Url.Action("ComposeStageLines", "Invoices")'
+                        + '?clientId=' + encodeURIComponent(clientId)
+                        + '&projectId=' + encodeURIComponent(projectId);
+
+                    const html = await $.get(url);
+                    $('#stagesList').html(html);
+
+                    if ($('#stagesList').find('.js-stage-row').length === 0) {
+                        $('#stagesList').html('<div class="alert alert-default mb-0">Geen factureerbare schijven gevonden voor deze klant/project.</div>');
+                    }
+
+                    if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+                    if (window.updateHeaderLock) window.updateHeaderLock();
+                    if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                } catch {
+                    $('#stagesList').html('<div class="text-danger small">Kon schijven niet laden.</div>');
+                }
+            }
+
+            async function loadChangeOrderLines() {
+                const pt = getPartyType(),
+                    clientId = getPartyId();
+
+                if (!clientId || !(pt === '1' || pt === '2') || $('#Mode').val() !== '3') {
+                    $('#coList').html('<div class="text-muted small">Kies “Wijzigingsopdrachten”.</div>');
+                    return;
+                }
+
+                $('#coList').html('<div class="text-muted">Laden…</div>');
+
+                try {
+                    const projectId = $('input[name="ProjectId"]').val() || '';
+                    const url = '@Url.Action("ComposeChangeOrderLines", "Invoices")'
+                        + '?clientId=' + encodeURIComponent(clientId)
+                        + '&projectId=' + encodeURIComponent(projectId);
+
+                    const html = await $.get(url);
+                    $('#coList').html(html);
+
+                    const noMasters = $('#coList').find('.js-co-master').length === 0;
+                    const noRows = $('#coList').find('.js-co-pct').length === 0;
+
+                    if (noMasters || noRows) {
+                        $('#coList').html('<div class="alert alert-default mb-0">Geen wijzigingsopdrachten gevonden om te factureren.</div>');
+                    } else {
+                        if (window.initCoUi) window.initCoUi();
+                    }
+
+                    if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+                    if (window.updateHeaderLock) window.updateHeaderLock();
+                    if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                } catch {
+                    $('#coList').html('<div class="text-danger small">Kon wijzigingsopdrachten niet laden.</div>');
+                }
+            }
+
+            async function loadUtilityLines() {
+                const clientId = getPartyId();
+
+                if (!clientId || $('#Mode').val() !== '4') {
+                    $('#utlList').html('<div class="text-muted small">Kies “Nutsaansluitingen”.</div>');
+                    return;
+                }
+
+                $('#utlList').html('<div class="text-muted">Laden…</div>');
+
+                try {
+                    const projectId = $('input[name="ProjectId"]').val() || '';
+                    const url = '@Url.Action("ComposeUtilityLines", "Invoices")'
+                        + '?clientId=' + encodeURIComponent(clientId)
+                        + '&projectId=' + encodeURIComponent(projectId);
+
+                    const html = await $.get(url);
+                    $('#utlList').html(html);
+
+                    if ($('#utlList').find('.js-utl-row').length === 0) {
+                        $('#utlList').html('<div class="alert alert-default mb-0">Geen nutsaansluitingen gevonden om te factureren.</div>');
+                    }
+
+                    if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+                    if (window.updateHeaderLock) window.updateHeaderLock();
+                    if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                } catch {
+                    $('#utlList').html('<div class="text-danger small">Kon nutsaansluitingen niet laden.</div>');
+                }
+            }
+
+            // =========================
+            // Select2 & pickers
+            // =========================
+            $('#partySelect')
+                .select2({
+                    ajax: {
+                        url: '@Url.Action("PartyLookup", "Invoices")',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({ term: params.term || '', take: 20 }),
+                        processResults: data => data
+                    },
+                    theme: 'bootstrap',
+                    language: 'nl',
+                    placeholder: 'Zoek de klant/leverancier ...',
+                    minimumInputLength: 1,
+                    dropdownAutoWidth: true,
+                    templateResult: function (item) {
+                        if (!item.id) return item.text;
+
+                        let badge = '';
+                        if (item.type === 'ClientAccount') badge = '<span class="badge bg-primary me-2">klant</span>';
+                        else if (item.type === 'ClientContact') badge = '<span class="badge bg-secondary me-2">co-owner</span>';
+                        else if (item.type === 'Supplier') badge = '<span class="badge bg-accent me-2">leverancier</span>';
+
+                        return $('<span>').html(badge + item.text);
+                    }
+                })
+                .on('select2:select', function (e) {
+                    const v = e.params.data.id || '';
+                    const [p, idStr = ''] = v.split(':');
+
+                    let typeVal = null;
+                    if (p === 'ca') typeVal = 1;
+                    if (p === 'cc') typeVal = 2;
+                    if (p === 'su') typeVal = 3;
+
+                    $('input[name="PartyId"]').val(idStr);
+                    $('input[name="PartyType"]').val(typeVal || '');
+
+                    enforceModeByParty();
+                    toggleProjectContract();
+                    hardResetUI();
+                    if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                });
+
+            $('.js-datepicker').datepicker({
+                format: 'dd/MM/yyyy',
+                todayHighlight: false,
+                autoclose: true,
+                language: 'nl-BE'
+            });
+
+            $('#projectSelect')
+                .select2({
+                    ajax: {
+                        url: '@Url.Action("ProjectLookup", "Invoices")',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({
+                            term: params.term || '',
+                            take: 20,
+                            clientId: isCustomer() ? (getPartyId() || null) : null
+                        }),
+                        processResults: data => data
+                    },
+                    theme: 'bootstrap',
+                    language: 'nl',
+                    placeholder: 'Zoek project ...',
+                    allowClear: true,
+                    minimumInputLength: 1,
+                    dropdownAutoWidth: true
+                })
+                .on('select2:select', function (e) {
+                    $('input[name="ProjectId"]').val(e.params.data.id);
+                    $('#contractSelect').val(null).trigger('change');
+                    $('input[name="SupplierContractId"]').val('');
+
+                    const m = $('#Mode').val();
+                    if (m === '2' && isCustomer()) loadStageLines();
+                    if (m === '3' && isCustomer()) loadChangeOrderLines();
+                    if (m === '4' && isCustomer()) loadUtilityLines();
+                })
+                .on('select2:clear', function () {
+                    $('input[name="ProjectId"]').val('');
+
+                    const m = $('#Mode').val();
+                    if (m === '2' && isCustomer()) loadStageLines();
+                    if (m === '3' && isCustomer()) loadChangeOrderLines();
+                    if (m === '4' && isCustomer()) loadUtilityLines();
+                });
+
+            $('#contractSelect')
+                .select2({
+                    ajax: {
+                        url: '@Url.Action("SupplierContractLookup", "Invoices")',
+                        dataType: 'json',
+                        delay: 250,
+                        data: params => ({
+                            term: params.term || '',
+                            take: 20,
+                            supplierCompanyId: isSupplier() ? (getPartyId() || null) : null
+                        }),
+                        processResults: data => data
+                    },
+                    theme: 'bootstrap',
+                    language: 'nl',
+                    placeholder: 'Zoek contract (op projectnaam) ...',
+                    allowClear: true,
+                    minimumInputLength: 1,
+                    dropdownAutoWidth: true
+                })
+                .on('select2:select', function (e) {
+                    $('input[name="SupplierContractId"]').val(e.params.data.id);
+                    $('#projectSelect').val(null).trigger('change');
+                    $('input[name="ProjectId"]').val('');
+                })
+                .on('select2:clear', function () {
+                    $('input[name="SupplierContractId"]').val('');
+                });
+
+            // Wanneer facturatiebedrijf wijzigt: hard reset + default betaaltermijn
+            $(document).on('change', '#IssuerCompanyId', function () {
+                hardResetUI();
+                setIssuerDefaultPaymentTerm();
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            });
+
+            // =========================
+            // Mode toggling & loaders
+            // =========================
+            function toggleBlocks() {
+              const mode = $('#Mode').val();
+
+              const showStages = (mode === '2' && isCustomer());
+              const showCO = (mode === '3' && isCustomer());
+              const showUtl = (mode === '4' && isCustomer());
+              const showFree = !(showStages || showCO || showUtl);
+
+              $('#stagesBlock').toggle(showStages);
+              $('#coBlock').toggle(showCO);
+              $('#utlBlock').toggle(showUtl);
+              $('#freeLineBlock').toggle(showFree);
+
+              if (showStages) loadStageLines();
+              if (showCO) loadChangeOrderLines();
+              if (showUtl) loadUtilityLines();
+
+              // 👇 als Vrije lijnen zichtbaar is: garandeer 1 lege rij
+              if (showFree && window.freeLines) {
+                window.freeLines.ensureOne();
+              }
+
+              updateHeaderLock();
+              if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            }
+
+            $('#Mode').on('change', function () {
+                clearBlocks();
+                toggleBlocks();
+                if (String($(this).val()) === '1' && window.freeLines) {
+                  // na wissel naar Vrije lijnen: exact 1 lege rij klaarzetten
+                  window.freeLines.clearAll();
+                  window.freeLines.ensureOne();
+                }
+
+            });
+
+            // =========================
+            // Delegated events in partials (incl. CO pct→prijs)
+            // =========================
+            $(document).on('change', '#stagesList .js-check-all', function () {
+                const g = $(this).data('group');
+                const checked = this.checked;
+
+                $hostStages.find(".js-stage-row[data-group='" + g + "']").prop('checked', checked).trigger('change');
+                $hostStages.find(".js-co-row[data-group='" + g + "']").prop('checked', checked).trigger('change');
+                $hostStages.find(".js-utl-row[data-group='" + g + "']").prop('checked', checked).trigger('change');
+            });
+
+            $(document).on('change', '#stagesList .js-stage-row, #stagesList .js-co-row, #stagesList .js-utl-row', function () {
+                const g = $(this).data('group');
+                const $rows = $hostStages.find("input[type='checkbox'][data-group='" + g + "']");
+                const $master = $hostStages.find(".js-check-all[data-group='" + g + "']");
+
+                const allChecked = $rows.length > 0 && $rows.filter(':checked').length === $rows.length;
+                $master.prop('checked', allChecked);
+
+                if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            });
+
+            $(document).on('input change', '#stagesList .js-co-pct', function () {
+                const $pct = $(this);
+                const base = parseFloat($pct.data('base')) || 0;
+
+                let pct = parseFloat(($pct.val() || '').toString().replace(',', '.'));
+                if (isNaN(pct) || pct < 0) pct = 0;
+                if (pct > 100) pct = 100;
+
+                const price = Math.round((base * (pct / 100.0)) * 100) / 100;
+                const $row = $pct.closest('tr');
+
+                const nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                $row.find('.js-co-price-view').val(nf.format(price));
+                $row.find('.js-co-price-post').val(price.toString().replace(',', '.'));
+                $row.find('.js-co-pct-post').val(pct.toString().replace(',', '.'));
+
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            });
+
+            // =========================
+            // Form guard
+            // =========================
+            $('#invoiceForm').on('submit', function (e) {
+                const partyType = getPartyType();
+                const projectId = $('input[name="ProjectId"]').val();
+                const contractId = $('input[name="SupplierContractId"]').val();
+                const mode = $('#Mode').val();
+
+                if (partyType === '3' && !projectId && !contractId) {
+                    e.preventDefault();
+                    alert("Kies minstens een project of een contract voor de leveranciersfactuur.");
+                    return false;
+                }
+
+                if (isCustomer() && mode === '2') {
+                    if ($('#stagesList input[type="checkbox"][name$=".IsSelected"]:checked').length === 0) {
+                        e.preventDefault();
+                        alert("Kies minstens één schijf-lijn.");
+                        return false;
+                    }
+                }
+
+                if (isCustomer() && mode === '3') {
+                    let ok = false;
+
+                    $('#stagesList .js-co-master:checked').each(function () {
+                        const g = $(this).data('group');
+
+                        $('#stagesList .js-co-pct[data-group="' + g + '"]').each(function () {
+                            const pct = parseFloat(String($(this).val() || '0').replace(',', '.')) || 0;
+                            if (pct > 0) ok = true;
+                        });
+                    });
+
+                    if (!ok) {
+                        e.preventDefault();
+                        alert("Kies minstens één wijzigingsopdracht met een percentage > 0%.");
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            // =========================
+            // Init
+            // =========================
+            enforceModeByParty();
+            toggleProjectContract();
+            hardResetUI();
+            setIssuerDefaultPaymentTerm();
+            if ($('#Mode').val() === '1' && window.freeLines) {
+              window.freeLines.ensureOne();
+            }
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        });
+    </script>
+
+    <!-- ====== FREE LINES SCRIPT ====== -->
+    <script>
+        (function () {
+          const $tbl = $('#freeLinesTable');
+
+          const dt = $tbl.DataTable({
+            paging: false,
+            searching: false,
+            info: false,
+            ordering: true,
+            order: [[1, 'asc']],                 // sorteer op verborgen "Volgorde"
+            rowReorder: {
+              selector: 'td.reorder-handle',
+              dataSrc: 1
+            },
+            columnDefs: [
+              { targets: [0, 2, 3, 4, 5], orderable: false },
+              { targets: 1, visible: false, searchable: false }
+            ],
+            autoWidth: false,
+            language: { emptyTable: 'Geen vrije lijnen' }
+          });
+
+          function cloneRow(initial = {}) {
+            const html = document.getElementById('freeLineRowTpl').innerHTML.trim();
+            const $row = $(html);
+            Object.entries(initial).forEach(([k, v]) => {
+              const $el = $row.find('[data-col="' + k + '"]');
+              if (!$el.length) return;
+              if ($el.is(':checkbox')) $el.prop('checked', !!v);
+              else $el.val(v);
+            });
+            return $row[0]; // DOM node
+          }
+
+          // Bepaal volgende volgorde-nummer (max + 1) uit de verborgen kolom
+          function getNextOrder() {
+            const data = dt.column(1, { search: 'applied' }).data();
+            let max = 0;
+            for (let i = 0; i < data.length; i++) {
+              const n = parseInt(data[i], 10) || 0;
+              if (n > max) max = n;
+            }
+            return max + 1;
+          }
+
+          function reindexFromDisplay() {
+            let i = 0;
+            dt.rows({ order: 'current' }).every(function () {
+              const rowIdx = this.index();
+              dt.cell(rowIdx, 1).data(String(++i));
+            });
+            dt.cells(null, 1).invalidate('dom');
+          }
+
+          // Controleer of de laatste zichtbare rij al leeg is (op basis van Omschrijving)
+          function lastRowIsEmpty() {
+            const nodes = dt.rows({ order: 'current' }).nodes();
+            if (!nodes.length) return false;
+            const $last = $(nodes[nodes.length - 1]);
+            const desc = ($last.find('.js-fl-text').val() || '').trim();
+            return desc === '';
+          }
+
+          // Voeg 1 lege rij ONDERAAN toe (met volgend volgnummer)
+          function addEmptyRowAtEnd() {
+            const node = cloneRow();
+            node.cells[1].textContent = String(getNextOrder()); // zet volgorde vooraf
+            dt.row.add(node).draw(false);                        // komt onderaan bij order [1,'asc']
+            reindexFromDisplay();
+          }
+
+          // --- init: start met 1 lege rij ONDERAAN (is uiteraard de eerste) ---
+          addEmptyRowAtEnd();
+
+          // Slepen → hernummeren (en volgorde-sortering behouden als die actief is)
+          $tbl.on('row-reorder.dt', function () {
+              reindexFromDisplay();
+
+              // zorg dat DataTables de nieuwe volgorde rendert
+              const curOrder = dt.order();
+              if (curOrder.length && curOrder[0][0] === 1) {
+                dt.order([1, 'asc']).draw(false);
+              } else {
+                dt.draw(false);
+              }
+
+              // ⬅️ wacht tot de redraw klaar is en dán de preview updaten
+              dt.one('draw', function () {
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+              });
+          });
+
+
+          // Klik op "Regel toevoegen" → rij ONDERAAN
+            $('#addFreeLine').on('click', function () {
+              addEmptyRowAtEnd();
+              dt.one('draw', function(){
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+              });
+            });
+
+          // Verwijderen
+            $tbl.on('click', '.js-fl-del', function () {
+              dt.row($(this).closest('tr')).remove().draw(false);
+              if (dt.rows().count() === 0) addEmptyRowAtEnd();
+              reindexFromDisplay();
+              dt.one('draw', function(){
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+              });
+            });
+
+
+          // Typen in omschrijving → als laatste rij niet leeg is, nieuwe lege rij onderaan toevoegen
+          $tbl.on('input', 'tbody .js-fl-text', function () {
+            // Bewaar huidige caret-positie zodat die niet springt
+            const active = this;
+            const selStart = typeof active.selectionStart === 'number' ? active.selectionStart : null;
+            const selEnd   = typeof active.selectionEnd   === 'number' ? active.selectionEnd   : null;
+
+            if (!lastRowIsEmpty()) {
+              addEmptyRowAtEnd();
+              // focus terugzetten
+              setTimeout(() => {
+                if (document.body.contains(active)) {
+                  active.focus();
+                  if (selStart != null && selEnd != null && typeof active.setSelectionRange === 'function') {
+                    try { active.setSelectionRange(selStart, selEnd); } catch {}
+                  }
+                }
+              }, 0);
+            }
+          });
+          // 👉 Exporteer helpers voor global gebruik
+            window.freeLines = {
+              dt,
+              addEmptyRow: addEmptyRowAtEnd,
+              clearAll: function () {
+                dt.clear().draw(false);
+                dt.one('draw', function () {
+                  if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                });
+              },
+              ensureOne: function () {
+                // als er (na clears/resets) geen rijen zijn: 1 lege rij onderaan toevoegen
+                if (dt.rows().count() === 0) {
+                  addEmptyRowAtEnd();
+                }
+              }
+            };
+            })();
+    </script>
+
+    <!-- ====== CO-SCRIPT ====== -->
+    <script>
+        (function () {
+          const $root = $('#coList');
+          const nf = new Intl.NumberFormat('nl-BE', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+
+          function clampPct(val) {
+            let n = parseFloat(String(val).replace(',', '.'));
+            if (isNaN(n)) n = 0;
+            if (n < 0) n = 0;
+            if (n > 100) n = 100;
+            return n;
+          }
+
+          function recalcRowByPctInput($pctInput) {
+            const base = parseFloat($pctInput.data('base')) || 0;
+            const pct = clampPct($pctInput.val());
+            const price = Math.round(base * (pct / 100.0) * 100) / 100;
+
+            const $row = $pctInput.closest('tr');
+            $row.find('.js-co-price-view').val(nf.format(price));
+            $row.find('.js-co-price-post').val(price.toString().replace(',', '.'));
+            $row.find('.js-co-pct-post').val(pct.toString().replace(',', '.'));
+          }
+
+          function refreshPreview() {
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+          }
+
+          $root.on('change', '.js-co-master', function () {
+            const coid = $(this).data('coid');
+            const checked = this.checked;
+
+            const $block = $('#co_block_' + coid);
+            const $wrap = $root.find('.js-co-master-pct-wrap[data-coid="' + coid + '"]');
+            const $masterPct = $root.find('.js-co-master-pct[data-coid="' + coid + '"]');
+            const masterPct = clampPct($masterPct.val());
+
+            $wrap.toggleClass('d-none', !checked);
+
+            if (checked) {
+              $block.show();
+              $block.find('.js-is-selected').val('true');
+              $block.find('.js-co-ov').each(function () {
+                const $ov = $(this);
+                const $pct = $ov.closest('.input-group').find('.js-co-pct');
+                if (!$ov.is(':checked')) {
+                  $pct.val(masterPct);
+                  recalcRowByPctInput($pct);
+                }
+              });
+            } else {
+              $block.hide();
+              $block.find('.js-is-selected').val('false');
+              $block.find('.js-co-price-view').val(nf.format(0));
+              $block.find('.js-co-price-post').val('0');
+              $block.find('.js-co-pct-post').val('0');
+            }
+
+            refreshPreview();
+          });
+
+          $root.on('input change', '.js-co-master-pct', function () {
+            const coid = $(this).data('coid');
+            const pct = clampPct($(this).val());
+            $(this).val(pct);
+
+            const $block = $('#co_block_' + coid);
+            if ($block.is(':visible')) {
+              $block.find('.js-co-ov').each(function () {
+                const $ov = $(this);
+                const $pct = $ov.closest('.input-group').find('.js-co-pct');
+                if (!$ov.is(':checked')) {
+                  $pct.val(pct);
+                  recalcRowByPctInput($pct);
+                }
+              });
+            }
+            refreshPreview();
+          });
+
+          $root.on('change', '.js-co-ov', function () {
+            const coid = $(this).data('coid');
+            const $pct = $(this).closest('.input-group').find('.js-co-pct');
+            const masterPct = clampPct($root.find('.js-co-master-pct[data-coid="' + coid + '"]').val());
+
+            if (this.checked) {
+              $pct.prop('disabled', false).focus().select();
+              recalcRowByPctInput($pct);
+            } else {
+              $pct.val(masterPct).prop('disabled', true);
+              recalcRowByPctInput($pct);
+            }
+            refreshPreview();
+          });
+
+          $root.on('input change', '.js-co-pct', function () {
+            recalcRowByPctInput($(this));
+            refreshPreview();
+          });
+
+          function initCoUi() {
+            $root.find('.js-co-master').each(function () {
+              const coid = $(this).data('coid');
+              const checked = this.checked;
+              $('#co_block_' + coid).toggle(checked);
+              $root.find('.js-co-master-pct-wrap[data-coid="' + coid + '"]').toggleClass('d-none', !checked);
+            });
+
+            $root.find('.co-block').each(function () {
+              const coid = $(this).data('coid');
+              const masterPct = clampPct($root.find('.js-co-master-pct[data-coid="' + coid + '"]').val());
+
+              $(this).find('.js-co-ov').prop('checked', false);
+              $(this).find('.js-co-pct').each(function () {
+                const $pct = $(this);
+                $pct.prop('disabled', true).val(masterPct);
+                recalcRowByPctInput($pct);
+              });
+            });
+
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+          }
+
+          window.initCoUi = initCoUi;
+        })();
+    </script>
+
+    <!-- ====== VOORBEELDFACTUUR-SCRIPT ====== -->
+    <script>
+        (function () {
+          const nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          const $card = $('#previewCard');
+          const $tables = $('#pvTables');
+          const $sub = $('#pvSub');
+          const $vat = $('#pvVat');
+          const $total = $('#pvTotal');
+
+          function readDateStr() {
+            const v = $('#InvoiceDate').val();
+            return v && v.trim() ? v.trim() : null;
+          }
+
+          function addDays(dmy, days) {
+            if (!dmy) return '—';
+            const [dd, mm, yyyy] = dmy.split('/');
+            const d = new Date(+yyyy, (+mm) - 1, +dd);
+            d.setDate(d.getDate() + days);
+            const dd2 = ('0' + d.getDate()).slice(-2);
+            const mm2 = ('0' + (d.getMonth() + 1)).slice(-2);
+            return `${dd2}/${mm2}/${d.getFullYear()}`;
+          }
+
+          function esc(s) {
+            return $('<div/>').text(s || '').html();
+          }
+
+          function readStartAsText() {
+            let v = $('#StartAs').val();
+            if (v == null) v = $('input[name="StartAs"]:checked').val();
+            v = (v ?? '').toString().toLowerCase();
+            if (v === 'invoice' || v === '1') return 'Factuur';
+            if (v === 'draft' || v === '0' || v === 'concept') return 'Concept';
+            return 'Concept';
+          }
+
+          function getSelectedTermOption() {
+            const $opt = $('#PaymentTermId option:selected');
+            if ($opt.length === 0) return null;
+            const days = parseInt($opt.data('days'), 10) || 0;
+            const name = ($opt.data('name') || $opt.text() || '').toString();
+            return { days, name };
+          }
+
+          function updateHeader() {
+            const issuerTxt = $('#IssuerCompanyId option:selected').text() || '';
+            $('#pvIssuer').text(issuerTxt || '—');
+
+            const mode = $('#Mode').val();
+            $('#pvMode').text({ '1': 'Vrije lijnen', '2': 'Schijven', '3': 'Wijzigingsopdrachten', '4': 'Nutsaansluitingen' }[mode] || '—');
+
+            const dt = readDateStr();
+            const term = getSelectedTermOption();
+
+            $('#pvIssueDate').text(dt || '—');
+            $('#pvPayTerm').text(term ? term.name : '—');
+            $('#pvDueDate').text(addDays(dt, term ? term.days : 0));
+
+            const hdr = ($('#HeaderDescription').val() || '').trim();
+            $('#pvHeaderText').text(hdr);
+
+            $('#pvStartAs').text(`${readStartAsText()}`);
+          }
+
+          function sectionTable(title) {
+            const $wrap = $(`
+              <div class="table-responsive mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h5 class="mb-2">${esc(title)}</h5>
+                </div>
+                <table class="table table-striped mb-0" style="min-width:860px">
+                  <thead>
+                    <tr>
+                      <th>Omschrijving</th>
+                      <th class="text-end" style="width:100px">Aantal</th>
+                      <th class="text-end" style="width:140px">Eenheidsprijs</th>
+                      <th class="text-end" style="width:140px">Excl. BTW</th>
+                      <th class="text-end" style="width:90px">BTW %</th>
+                      <th class="text-end" style="width:140px">BTW</th>
+                      <th class="text-end" style="width:140px">Totaal</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            `);
+
+            $tables.append($wrap);
+
+            return {
+              pushRow(desc, qty, unit, excl, vatPerc) {
+                const vatAmt = Math.round((excl * (vatPerc / 100.0)) * 100) / 100;
+                const tot = excl + vatAmt;
+                const tr = $(`
+                  <tr>
+                    <td>${esc(desc)}</td>
+                    <td class="text-end">${qty ?? '-'}</td>
+                    <td class="text-end">${unit != null ? nf.format(unit) : '-'}</td>
+                    <td class="text-end">${nf.format(excl)}</td>
+                    <td class="text-end">${vatPerc != null ? String(vatPerc).replace('.', ',') : '-'}</td>
+                    <td class="text-end">${nf.format(vatAmt)}</td>
+                    <td class="text-end">${nf.format(tot)}</td>
+                  </tr>
+                `);
+                $wrap.find('tbody').append(tr);
+                return { excl, vatAmt, tot };
+              }
+            };
+          }
+
+          function parseLocaleNumber(val) {
+            if (val == null) return 0;
+            let s = String(val).trim();
+            if (!s) return 0;
+
+            // verwijder spaties en varianten (NBSP, narrow NBSP, thin space)
+            s = s.replace(/[\s\u00A0\u202F\u2009]/g, '');
+
+            const hasComma = s.includes(',');
+            const hasDot = s.includes('.');
+
+            if (hasComma && hasDot) {
+              const lastComma = s.lastIndexOf(',');
+              const lastDot = s.lastIndexOf('.');
+              const dec = lastComma > lastDot ? ',' : '.';
+              const idx = dec === ',' ? lastComma : lastDot;
+              const left = s.slice(0, idx).replace(/[.,]/g, '');
+              const right = s.slice(idx + 1).replace(/[.,]/g, '');
+              s = left + '.' + right;
+            } else if (hasComma) {
+              s = s.replace(/\./g, '').replace(',', '.');
+            } else {
+              s = s.replace(/,/g, '');
+            }
+
+            s = s.replace(/[^\d.\-]/g, '');
+            const n = parseFloat(s);
+            return isNaN(n) ? 0 : n;
+          }
+
+          function gatherStages(section) {
+            const rows = $('#stagesList input[type="checkbox"][name$=".IsSelected"].js-stage-row:checked');
+            if (rows.length === 0) return { sub: 0, vat: 0, tot: 0, hadRows: false };
+
+            let sub = 0, vat = 0, tot = 0;
+
+            rows.each(function () {
+              const $tr = $(this).closest('tr');
+              const text = $tr.find('input[type="hidden"][name$=".Text"]').val() || '';
+              const vatP = parseFloat((
+                $tr.find('input[type="hidden"][name$=".VatPercentage"]').val() || '0'
+              ).replace(',', '.')) || 0;
+              const price = parseFloat((
+                $tr.find('input[type="hidden"][name$=".Price"]').val() || '0'
+              ).replace(',', '.')) || 0;
+
+              const r = section.pushRow(text, null, null, price, vatP);
+              sub += r.excl;
+              vat += r.vatAmt;
+              tot += r.tot;
+            });
+
+            return { sub, vat, tot, hadRows: true };
+          }
+
+          function gatherChangeOrders() {
+            let sub = 0, vat = 0, tot = 0, hadAny = false;
+
+            $('#coList .js-co-master:checked').each(function () {
+              const $master = $(this);
+              const coid = $master.data('coid');
+              const $block = $('#co_block_' + coid);
+
+              const labelText = $(`label[for="${$master.attr('id')}"]`).text();
+              const title = ($master.data('title') || labelText || `Wijzigingsopdracht #${coid}`).toString();
+
+              const sec = sectionTable(title);
+              let hasRows = false;
+
+              $block.find('.js-co-pct').each(function () {
+                const $pct = $(this);
+                const pct = parseFloat(String($pct.val() || '0').replace(',', '.')) || 0;
+                if (pct <= 0) return;
+
+                const $row = $pct.closest('tr');
+
+                const text = $row.find('input[type="hidden"][name$=".Text"]').val()
+                  || $row.find('input.form-control[disabled]').val()
+                  || '';
+
+                const vatP = parseFloat(String(
+                  $row.find('input[type="hidden"][name$=".VatPercentage"]').val() || '0'
+                ).replace(',', '.')) || 0;
+
+                const price = parseFloat(String(
+                  $row.find('.js-co-price-post').val() || '0'
+                ).replace(',', '.')) || 0;
+
+                const qty = parseLocaleNumber($row.find('.js-co-qty').val());
+                const uprice = parseLocaleNumber($row.find('.js-co-unitprice').val());
+
+                const r = sec.pushRow(text, qty, uprice, price, vatP);
+                sub += r.excl;
+                vat += r.vatAmt;
+                tot += r.tot;
+                hasRows = true;
+              });
+
+              if (!hasRows) {
+                $('#pvTables').children().last().remove();
+              } else {
+                hadAny = true;
+              }
+            });
+
+            return { sub, vat, tot, hadRows: hadAny };
+          }
+
+        function gatherFreeLines(section) {
+          if (!$('#freeLineBlock').is(':visible')) {
+            return { sub: 0, vat: 0, tot: 0, hadRows: false };
+          }
+
+          const dt = $.fn.dataTable.isDataTable('#freeLinesTable')
+            ? $('#freeLinesTable').DataTable()
+            : null;
+          if (!dt) return { sub: 0, vat: 0, tot: 0, hadRows: false };
+
+          let sub = 0, vat = 0, tot = 0, had = false;
+
+          // Pak ALLE rijen en sorteer ze op de verborgen volgorde-kolom (kolom 1)
+          const idx = dt.rows().indexes().toArray();
+          idx.sort((a, b) => {
+            const va = parseInt(dt.cell(a, 1).data(), 10) || 0;
+            const vb = parseInt(dt.cell(b, 1).data(), 10) || 0;
+            return va - vb;
+          });
+
+          // Loop in deze volgorde, haal waarden uit de DOM inputs
+          idx.forEach(i => {
+            const rowNode = dt.row(i).node();
+            const $tr = $(rowNode);
+
+            const text = ($tr.find('.js-fl-text').val() || '').trim();
+            const price = parseLocaleNumber($tr.find('.js-fl-price').val());
+            const vatP  = parseLocaleNumber($tr.find('.js-fl-vat').val());
+
+            // lege rij overslaan
+            if (!text && price === 0) return;
+
+            const r = section.pushRow(text, 1, price, price, vatP);
+            sub += r.excl;
+            vat += r.vatAmt;
+            tot += r.tot;
+            had = true;
+          });
+
+          return { sub, vat, tot, hadRows: had };
+        }
+
+          function rebuildPreview() {
+            updateHeader();
+            $tables.empty();
+
+            let sub = 0, vat = 0, tot = 0;
+            let any = false;
+
+            const secStages = sectionTable('Schijven');
+            const st = gatherStages(secStages);
+            if (!st.hadRows) $tables.children().last().remove();
+            sub += st.sub; vat += st.vat; tot += st.tot;
+            any = any || st.hadRows;
+
+            const secFree = sectionTable('Vrije lijnen');
+            const fr = gatherFreeLines(secFree);
+            if (!fr.hadRows) $tables.children().last().remove();
+            sub += fr.sub; vat += fr.vat; tot += fr.tot;
+            any = any || fr.hadRows;
+
+            const co = gatherChangeOrders();
+            sub += co.sub; vat += co.vat; tot += co.tot;
+            any = any || co.hadRows;
+
+            $sub.text(nf.format(sub));
+            $vat.text(nf.format(vat));
+            $total.text(nf.format(tot));
+
+            const hdr = ($('#HeaderDescription').val() || '').trim();
+            $card.toggle(any || hdr.length > 0);
+          }
+
+          // Triggers
+          $(document).on('change input',
+            '#IssuerCompanyId, #InvoiceDate, #HeaderDescription, #PaymentTermId, #Mode, #StartAs, input[name="StartAs"]',
+            rebuildPreview
+          );
+          $(document).on('change', '#stagesList .js-stage-row, #stagesList .js-co-row, #stagesList .js-utl-row', rebuildPreview);
+          $(document).on('change input', '#coList .js-co-master, #coList .js-co-pct, #coList .js-co-group-pct, #coList .js-co-override', rebuildPreview);
+          $(document).on('change input', '#freeLineBlock input', rebuildPreview);
+
+          // init & export
+          rebuildPreview();
+          window.rebuildInvoicePreview = rebuildPreview;
+        })();
+    </script>
+
+
+ 
 }

@@ -1,5 +1,7 @@
-﻿// invoices.util.js
-; (function (w) {
+﻿// Utilities die overal gebruikt worden
+window.InvoicesUtil = (function () {
+    const nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     function parseLocaleNumber(val) {
         if (val == null) return 0;
         let s = String(val).trim();
@@ -23,10 +25,19 @@
         return isNaN(n) ? 0 : n;
     }
 
-    w.CPM = w.CPM || {};
-    w.CPM.util = w.CPM.util || {};
-    w.CPM.util.parseLocaleNumber = parseLocaleNumber;
+    function esc(s) {
+        return $('<div/>').text(s || '').html();
+    }
 
-    // kleine helper om safe een functie aan te roepen
-    w.CPM.util.safeCall = fn => { try { if (typeof fn === 'function') fn(); } catch { } };
-})(window);
+    function addDays(dmy, days) {
+        if (!dmy) return '—';
+        const [dd, mm, yyyy] = dmy.split('/');
+        const d = new Date(+yyyy, (+mm) - 1, +dd);
+        d.setDate(d.getDate() + (days || 0));
+        const dd2 = ('0' + d.getDate()).slice(-2);
+        const mm2 = ('0' + (d.getMonth() + 1)).slice(-2);
+        return `${dd2}/${mm2}/${d.getFullYear()}`;
+    }
+
+    return { nf, parseLocaleNumber, esc, addDays };
+})();

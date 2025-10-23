@@ -1,13 +1,12 @@
-﻿// invoices.co.js
-; (() => {
+﻿// Wijzigingsopdrachten (CO) UI-logica
+(function () {
     const $root = $('#coList');
     const nf = new Intl.NumberFormat('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     function clampPct(val) {
         let n = parseFloat(String(val).replace(',', '.'));
-        if (isNaN(n) || n < 0) n = 0;
-        if (n > 100) n = 100;
-        return n;
+        if (isNaN(n)) n = 0;
+        return Math.min(100, Math.max(0, n));
     }
 
     function recalcRowByPctInput($pctInput) {
@@ -20,7 +19,9 @@
         $row.find('.js-co-pct-post').val(pct.toString().replace(',', '.'));
     }
 
-    function refreshPreview() { if (window.rebuildInvoicePreview) window.rebuildInvoicePreview(); }
+    function refreshPreview() {
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    }
 
     $root.on('change', '.js-co-master', function () {
         const coid = $(this).data('coid');
@@ -29,14 +30,18 @@
         const $wrap = $root.find('.js-co-master-pct-wrap[data-coid="' + coid + '"]');
         const $masterPct = $root.find('.js-co-master-pct[data-coid="' + coid + '"]');
         const masterPct = clampPct($masterPct.val());
+
         $wrap.toggleClass('d-none', !checked);
+
         if (checked) {
             $block.show();
             $block.find('.js-is-selected').val('true');
             $block.find('.js-co-ov').each(function () {
-                const $ov = $(this);
-                const $pct = $ov.closest('.input-group').find('.js-co-pct');
-                if (!$ov.is(':checked')) { $pct.val(masterPct); recalcRowByPctInput($pct); }
+                const $pct = $(this).closest('.input-group').find('.js-co-pct');
+                if (!$(this).is(':checked')) {
+                    $pct.val(masterPct);
+                    recalcRowByPctInput($pct);
+                }
             });
         } else {
             $block.hide();
@@ -55,9 +60,11 @@
         const $block = $('#co_block_' + coid);
         if ($block.is(':visible')) {
             $block.find('.js-co-ov').each(function () {
-                const $ov = $(this);
-                const $pct = $ov.closest('.input-group').find('.js-co-pct');
-                if (!$ov.is(':checked')) { $pct.val(pct); recalcRowByPctInput($pct); }
+                const $pct = $(this).closest('.input-group').find('.js-co-pct');
+                if (!$(this).is(':checked')) {
+                    $pct.val(pct);
+                    recalcRowByPctInput($pct);
+                }
             });
         }
         refreshPreview();
@@ -67,12 +74,20 @@
         const coid = $(this).data('coid');
         const $pct = $(this).closest('.input-group').find('.js-co-pct');
         const masterPct = clampPct($root.find('.js-co-master-pct[data-coid="' + coid + '"]').val());
-        if (this.checked) { $pct.prop('disabled', false).focus().select(); recalcRowByPctInput($pct); }
-        else { $pct.val(masterPct).prop('disabled', true); recalcRowByPctInput($pct); }
+        if (this.checked) {
+            $pct.prop('disabled', false).focus().select();
+            recalcRowByPctInput($pct);
+        } else {
+            $pct.val(masterPct).prop('disabled', true);
+            recalcRowByPctInput($pct);
+        }
         refreshPreview();
     });
 
-    $root.on('input change', '.js-co-pct', function () { recalcRowByPctInput($(this)); refreshPreview(); });
+    $root.on('input change', '.js-co-pct', function () {
+        recalcRowByPctInput($(this));
+        refreshPreview();
+    });
 
     function initCoUi() {
         $root.find('.js-co-master').each(function () {
@@ -93,7 +108,8 @@
             });
         });
 
-        refreshPreview();
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
     }
+
     window.initCoUi = initCoUi;
 })();
