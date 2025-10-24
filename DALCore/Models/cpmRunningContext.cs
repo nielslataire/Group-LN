@@ -1335,7 +1335,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
-            entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.Project).WithMany(p => p.InvoicingPaymentGroup)
                 .HasForeignKey(d => d.ProjectId)
@@ -1387,6 +1386,8 @@ public partial class cpmRunningContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__IssuerCo__3214EC07F8C0F7AB");
 
+            entity.HasIndex(e => e.DefaultVatTypeId, "IX_IssuerCompany_DefaultVatTypeId");
+
             entity.Property(e => e.AddressLine1).HasMaxLength(200);
             entity.Property(e => e.AddressLine2).HasMaxLength(200);
             entity.Property(e => e.City).HasMaxLength(100);
@@ -1422,6 +1423,10 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.DefaultPaymentTerm).WithMany(p => p.IssuerCompany)
                 .HasForeignKey(d => d.DefaultPaymentTermId)
                 .HasConstraintName("FK__IssuerCom__Defau__186C9245");
+
+            entity.HasOne(d => d.DefaultVatType).WithMany(p => p.IssuerCompany)
+                .HasForeignKey(d => d.DefaultVatTypeId)
+                .HasConstraintName("FK_IssuerCompany_DefaultVatType");
         });
 
         modelBuilder.Entity<MigrationHistory>(entity =>
@@ -1935,11 +1940,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Vattype>(entity =>
         {
-            entity
-                .HasNoKey()
-                .ToTable("VATtype");
+            entity.ToTable("VATtype");
 
-            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.Property(e => e.Vatpercentage).HasColumnName("VATpercentage");
             entity.Property(e => e.Vattext)
                 .IsRequired()

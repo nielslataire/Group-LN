@@ -164,7 +164,23 @@
             const $tr = $(dt.row(i).node());
             const text = ($tr.find('.js-fl-text').val() || '').trim();
             const price = parseLocaleNumber($tr.find('.js-fl-price').val());
-            const vatP = parseLocaleNumber($tr.find('.js-fl-vat').val());
+            let vatP;
+
+            // 1) per-rij select (voorkeur)
+            const $sel = $tr.find('.js-fl-vat-select');
+            if ($sel.length) {
+                const $opt = $sel.find('option:selected');
+                vatP = parseFloat(String(($opt.data('pct') ?? '0')).replace(',', '.')) || 0;
+            } else {
+                // 2) fallback voor oudere markup
+                vatP = parseLocaleNumber($tr.find('.js-fl-vat').val());
+            }
+
+            // 3) laatste fallback: globaal BTW-type
+            if (isNaN(vatP)) {
+                vatP = parseFloat(String($('#VatTypeId option:selected').data('pct') || '0').replace(',', '.')) || 0;
+            }
+
             if (!text && price === 0) return;
             const r = section.pushRow(text, 1, price, price, vatP);
             sub += r.excl; vat += r.vatAmt; tot += r.tot; had = true;
@@ -210,7 +226,8 @@
     );
     $(document).on('change', '#stagesList .js-stage-row, #stagesList .js-co-row, #stagesList .js-utl-row', rebuildPreview);
     $(document).on('change input', '#coList .js-co-master, #coList .js-co-pct, #coList .js-co-group-pct, #coList .js-co-override', rebuildPreview);
-    $(document).on('change input', '#freeLineBlock input', rebuildPreview);
+    $(document).on('change input', '#freeLineBlock input, #freeLineBlock select', rebuildPreview);
+
 
     // Init + export
     rebuildPreview();

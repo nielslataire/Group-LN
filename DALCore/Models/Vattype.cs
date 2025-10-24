@@ -12,4 +12,6 @@ public partial class Vattype
     public int Vatpercentage { get; set; }
 
     public string Vattext { get; set; }
+
+    public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
 }

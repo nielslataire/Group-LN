@@ -6,8 +6,10 @@ using UblSharp.CommonAggregateComponents;
 namespace CPMCore.Models.Invoicing
 {
     // VM-items voor dropdown rendering
-    public record IssuerItemVM(int Id, string Name, int? DefaultPaymentTermId);
+    public record IssuerItemVM(int Id, string Name, int? DefaultPaymentTermId, int? DefaultVatTypeId);
     public record PaymentTermItemVM(int Id, string Name, int Days);
+    public record VatTypeVM (int Id, int VATpercentage, string VATtext);
+
     public enum StartStatus { Draft = 0, Invoice = 1 } // Invoice = meteen uitgeven
     public class InvoiceComposeVM
     {
@@ -25,12 +27,14 @@ namespace CPMCore.Models.Invoicing
         public int? ProjectId { get; set; }
         public int? SupplierContractId { get; set; }
         public int? PaymentTermId { get; set; }
+        public int? VatTypeId { get; set; }
+        public List<VatTypeVM> VatTypes { get; set; } = new();
 
 
         // Voor vrije lijnen
         public List<InvoiceLineVM> Lines { get; set; } = new() { new() };
 
-
+        // Voor Schijven
         public int? PaymentGroupId { get; set; }
         public List<int> StageIds { get; set; } = new();
 

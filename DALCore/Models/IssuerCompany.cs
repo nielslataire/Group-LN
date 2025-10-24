@@ -69,7 +69,11 @@ public partial class IssuerCompany
 
     public string EpcRemittanceTemplate { get; set; }
 
+    public int? DefaultVatTypeId { get; set; }
+
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
+
+    public virtual Vattype DefaultVatType { get; set; }
 
     public virtual ICollection<InvoiceSeries> InvoiceSeries { get; set; } = new List<InvoiceSeries>();
 

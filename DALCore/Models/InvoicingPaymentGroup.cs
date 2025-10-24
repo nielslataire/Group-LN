@@ -13,7 +13,7 @@ public partial class InvoicingPaymentGroup
 
     public int ProjectId { get; set; }
 
-    public decimal? VatPercentage { get; set; }
+    public int? VatTypeId { get; set; }
 
     public virtual ICollection<InvoicingPaymentStages> InvoicingPaymentStages { get; set; } = new List<InvoicingPaymentStages>();
 

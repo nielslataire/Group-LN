@@ -6,6 +6,40 @@ $(function () {
     const isSupplier = () => getPartyType() === '3';
     const isCustomer = () => getPartyType() === '1' || getPartyType() === '2';
 
+    // --- Helpers: defaults op basis van issuer ---
+    async function fetchIssuerDefaults(issuerId) {
+        try {
+            const url = window.InvoicesEndpoints.issuerDefaults + '?issuerId=' + encodeURIComponent(issuerId);
+            return await $.getJSON(url); // { defaultPaymentTermId, defaultVatTypeId }
+        } catch {
+            return { defaultPaymentTermId: null, defaultVatTypeId: null };
+        }
+    }
+
+    function setPaymentTermIfPresent(termId) {
+        if (termId != null && termId !== '') {
+            $('#PaymentTermId').val(String(termId));
+            if ($('#PaymentTermId').data('select2')) $('#PaymentTermId').trigger('change.select2');
+            $('#PaymentTermId').trigger('change');
+        }
+    }
+
+    function setVatTypeIfPresent(vatTypeId) {
+        if (vatTypeId != null && vatTypeId !== '') {
+            $('#VatTypeId').val(String(vatTypeId));
+            if ($('#VatTypeId').data('select2')) $('#VatTypeId').trigger('change.select2');
+            $('#VatTypeId').trigger('change');
+        }
+    }
+
+
+    async function applyIssuerDefaultsFromServer() {
+        const issuerId = $('#IssuerCompanyId').val();
+        if (!issuerId) return;
+        const d = await fetchIssuerDefaults(issuerId);
+        setPaymentTermIfPresent(d.defaultPaymentTermId);
+        setVatTypeIfPresent(d.defaultVatTypeId);
+    }
     function getHeader() {
         const $hdr = $('#HeaderDescription');
         return $hdr.length ? $hdr : $();
@@ -17,16 +51,6 @@ $(function () {
         const days = parseInt($opt.data('days'), 10) || 0;
         const name = ($opt.data('name') || $opt.text() || '').toString();
         return { days, name };
-    }
-
-    function setIssuerDefaultPaymentTerm() {
-        const $opt = $('#IssuerCompanyId option:selected');
-        const defId = $opt.data('defaultterm');
-        if (defId != null && defId !== '') {
-            $('#PaymentTermId').val(String(defId));
-            if ($('#PaymentTermId').data('select2')) $('#PaymentTermId').trigger('change.select2');
-            $('#PaymentTermId').trigger('change');
-        }
     }
 
     function clearPreview() {
@@ -107,8 +131,9 @@ $(function () {
         $('#stagesList').html('<div class="text-muted">Laden…</div>');
         try {
             const projectId = $('input[name="ProjectId"]').val() || '';
-            const url = $('#stagesList').data('compose-url') // zet desnoods via data-attr
-                || ('@Url.Action("ComposeStageLines", "Invoices")' + '?clientId=' + encodeURIComponent(clientId) + '&projectId=' + encodeURIComponent(projectId));
+            const url = window.InvoicesEndpoints.composeStageLines
+                + '?clientId=' + encodeURIComponent(clientId)
+                + '&projectId=' + encodeURIComponent(projectId);
             const html = await $.get(url);
             $('#stagesList').html(html);
             if ($('#stagesList').find('.js-stage-row').length === 0) {
@@ -131,8 +156,9 @@ $(function () {
         $('#coList').html('<div class="text-muted">Laden…</div>');
         try {
             const projectId = $('input[name="ProjectId"]').val() || '';
-            const url = $('#coList').data('compose-url')
-                || ('@Url.Action("ComposeChangeOrderLines", "Invoices")' + '?clientId=' + encodeURIComponent(clientId) + '&projectId=' + encodeURIComponent(projectId));
+            const url = window.InvoicesEndpoints.composeChangeOrderLines
+                + '?clientId=' + encodeURIComponent(clientId)
+                + '&projectId=' + encodeURIComponent(projectId);
             const html = await $.get(url);
             $('#coList').html(html);
             const noMasters = $('#coList').find('.js-co-master').length === 0;
@@ -159,8 +185,9 @@ $(function () {
         $('#utlList').html('<div class="text-muted">Laden…</div>');
         try {
             const projectId = $('input[name="ProjectId"]').val() || '';
-            const url = $('#utlList').data('compose-url')
-                || ('@Url.Action("ComposeUtilityLines", "Invoices")' + '?clientId=' + encodeURIComponent(clientId) + '&projectId=' + encodeURIComponent(projectId));
+            const url = window.InvoicesEndpoints.composeUtilityLines
+                + '?clientId=' + encodeURIComponent(clientId)
+                + '&projectId=' + encodeURIComponent(projectId);
             const html = await $.get(url);
             $('#utlList').html(html);
             if ($('#utlList').find('.js-utl-row').length === 0) {
@@ -199,7 +226,7 @@ $(function () {
     $('#partySelect')
         .select2({
             ajax: {
-                url: '@Url.Action("PartyLookup", "Invoices")',
+                url: window.InvoicesEndpoints.partyLookup,
                 dataType: 'json',
                 delay: 250,
                 data: params => ({ term: params.term || '', take: 20 }),
@@ -244,7 +271,7 @@ $(function () {
     $('#projectSelect')
         .select2({
             ajax: {
-                url: '@Url.Action("ProjectLookup", "Invoices")',
+                url: window.InvoicesEndpoints.projectLookup,
                 dataType: 'json',
                 delay: 250,
                 data: params => ({
@@ -280,7 +307,7 @@ $(function () {
     $('#contractSelect')
         .select2({
             ajax: {
-                url: '@Url.Action("SupplierContractLookup", "Invoices")',
+                url: window.InvoicesEndpoints.supplierContractLookup,
                 dataType: 'json',
                 delay: 250,
                 data: params => ({
@@ -306,11 +333,28 @@ $(function () {
         });
 
     // Facturatiebedrijf wijzigt
-    $(document).on('change', '#IssuerCompanyId', function () {
+    $(document).on('change', '#IssuerCompanyId', async function () {
         hardResetUI();
-        setIssuerDefaultPaymentTerm();
+        await applyIssuerDefaultsFromServer();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
     });
+
+    // BTW-type wijziging → zet BTW% op lege vrije-lijnen velden
+    $(document).on('change', '#VatTypeId', function () {
+        const pct = parseFloat(String($('#VatTypeId option:selected').data('pct') || '0').replace(',', '.')) || 0;
+        if (window.freeLines && window.freeLines.dt) {
+            window.freeLines.dt.rows().every(function () {
+                const $tr = $(this.node());
+                const $vat = $tr.find('.js-fl-vat');
+                const val = ($vat.val() || '').trim();
+                if (val === '' || val === '0' || isNaN(parseFloat(val.replace(',', '.')))) {
+                    $vat.val(String(pct));
+                }
+            });
+        }
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
+
 
     // Mode toggling
     $('#Mode').on('change', function () {

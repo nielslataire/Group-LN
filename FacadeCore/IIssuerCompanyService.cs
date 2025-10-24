@@ -19,6 +19,7 @@ namespace FacadeCore
         Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default);
         Task<int?> GetFirstActiveIssuerIdAsync(CancellationToken ct = default);
         Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(CancellationToken ct = default);
     }
     // Lichte BO’s voor de UI-lijsten
     public class IssuerListItemBO
@@ -26,6 +27,7 @@ namespace FacadeCore
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public int? DefaultPaymentTermId { get; set; }
+        public int? DefaultVatTypeId { get; set; }
     }
 
     public class PaymentTermBO
@@ -33,5 +35,11 @@ namespace FacadeCore
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public int Days { get; set; }
+    }
+    public class VatTypeBO
+    {
+        public int Id { get; set; }
+        public int VATPercentage { get; set; }
+        public string VATText { get; set; } ="";
     }
 }

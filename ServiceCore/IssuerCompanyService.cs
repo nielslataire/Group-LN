@@ -95,7 +95,8 @@ namespace ServiceCore
                 {
                     Id = i.Id,
                     Name = i.Name,
-                    DefaultPaymentTermId = i.DefaultPaymentTermId
+                    DefaultPaymentTermId = i.DefaultPaymentTermId,
+                    DefaultVatTypeId = i.DefaultVatTypeId
                 })
                 .ToListAsync(ct);
         }
@@ -120,6 +121,19 @@ namespace ServiceCore
                     Id = t.Id,
                     Name = t.Name,
                     Days = t.Days
+                })
+                .ToListAsync(ct);
+        }
+        public async Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(CancellationToken ct = default)
+        {
+            return await _db.Vattype
+                .AsNoTracking()
+                .OrderBy(t => t.Vatpercentage)
+                .Select(t => new VatTypeBO
+                {
+                    Id = t.Id,
+                    VATPercentage = t.Vatpercentage,
+                    VATText = t.Vattext
                 })
                 .ToListAsync(ct);
         }

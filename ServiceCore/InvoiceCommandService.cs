@@ -162,7 +162,7 @@ namespace ServiceCore
                 from s in _db.InvoicingPaymentStages.AsNoTracking()
                 join g in _db.InvoicingPaymentGroup.AsNoTracking() on s.GroupId equals g.Id
                 where bo.StageIds.Contains(s.Id)
-                select new { s.Id, s.Name, s.Percentage, s.VatPercentage, GroupVat = g.VatPercentage, g.ProjectId }
+                select new { s.Id, s.Name, s.Percentage, s.VatPercentage, GroupVat = g.VatTypeId, g.ProjectId }
             ).ToListAsync(ct);
 
             foreach (var s in stages)

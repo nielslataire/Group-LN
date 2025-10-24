@@ -63,6 +63,7 @@ namespace CPMCore.Controllers
             // haal alles via service
             var issuersBo = await _ics.ListActiveIssuersAsync(ct);
             var termsBo = await _ics.ListPaymentTermsAsync(ct);
+            var VatsBo = await _ics.ListVatTypeAsync(ct);
 
             // gekozen issuer (param of eerste actieve)
             var selectedIssuerId = issuerId
@@ -74,17 +75,28 @@ namespace CPMCore.Controllers
                 .FirstOrDefault(x => x.Id == selectedIssuerId)?
                 .DefaultPaymentTermId;
 
+            // default vattype afleiden uit issuer
+            int? selectedVatId = issuersBo
+                .FirstOrDefault(x => x.Id == selectedIssuerId)?
+                .DefaultVatTypeId;
+
+
             var vm = new InvoiceComposeVM
             {
                 IssuerCompanyId = selectedIssuerId,
                 PaymentTermId = selectedTermId,
+                VatTypeId = selectedVatId,
 
                 Issuers = issuersBo
-                    .Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId))
+                    .Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId))
                     .ToList(),
 
                 PaymentTerms = termsBo
                     .Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days))
+                    .ToList(),
+
+                VatTypes = VatsBo
+                    .Select(t => new VatTypeVM(t.Id, t.VATPercentage, t.VATText))
                     .ToList()
             };
 
@@ -226,6 +238,26 @@ namespace CPMCore.Controllers
                 _logger.LogError(ex, "ClientUnitStages failed");
                 return Json(new { results = Array.Empty<object>() });
             }
+        }
+
+        // ISSUER DEFAULTS (AJAX)
+
+        [HttpGet]
+        public async Task<IActionResult> IssuerDefaults(int issuerId, CancellationToken ct = default)
+        {
+            // Haal issuers via service
+            var issuers = await _ics.ListActiveIssuersAsync(ct);
+
+            var issuer = issuers.FirstOrDefault(x => x.Id == issuerId);
+
+            // Als je liever 404 terugstuurt als de issuer niet bestaat:
+            // if (issuer == null) return NotFound();
+
+            return Json(new
+            {
+                defaultPaymentTermId = issuer?.DefaultPaymentTermId,
+                defaultVatTypeId = issuer?.DefaultVatTypeId
+            });
         }
 
         // LIJNEN VOOR SCHIJVEN AANMAKEN 

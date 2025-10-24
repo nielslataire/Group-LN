@@ -13,18 +13,80 @@
         language: { emptyTable: 'Geen vrije lijnen' }
     });
 
+    const { nf, parseLocaleNumber } = window.InvoicesUtil || {
+        nf: new Intl.NumberFormat('nl-BE'),
+        parseLocaleNumber: s => {
+            if (s == null) return 0;
+            s = String(s).trim();
+            if (!s) return 0;
+            // NL/BE: . = thousands, , = decimal
+            s = s.replace(/\./g, '').replace(',', '.');
+            const x = parseFloat(s);
+            return isNaN(x) ? 0 : x;
+        }
+    };
+    function formatPriceInput($input) {
+        const raw = $input.val();
+        // Leeg laten als leeg
+        if (raw == null || String(raw).trim() === '') { return; }
+        const num = parseLocaleNumber(raw);
+        $input.val(nf.format(num));
+    }
     function cloneRow(initial = {}) {
         const html = document.getElementById('freeLineRowTpl').innerHTML.trim();
         const $row = $(html);
+
+        // BTW-select vullen + default kiezen (globaal), tenzij initial.VatTypeId/Percentage is meegegeven
+        const $vatSel = $row.find('.js-fl-vat-select');
+        fillVatOptions($vatSel);
+
+        if (initial.VatTypeId != null) {
+            $vatSel.val(String(initial.VatTypeId));
+        } else if (initial.VatPercentage != null) {
+            // kies de optie met matching percentage
+            let matched = false;
+            $vatSel.children('option').each(function () {
+                const pct = parseFloat(String($(this).data('pct') || '0').replace(',', '.')) || 0;
+                if (pct === Number(initial.VatPercentage)) { $vatSel.val($(this).val()); matched = true; return false; }
+            });
+            if (!matched) setRowVatToGlobal($row);
+        } else {
+            setRowVatToGlobal($row);
+        }
+
+        // overige initiële velden
         Object.entries(initial).forEach(([k, v]) => {
             const $el = $row.find('[data-col="' + k + '"]');
             if (!$el.length) return;
             if ($el.is(':checkbox')) $el.prop('checked', !!v);
             else $el.val(v);
         });
+
         return $row[0];
     }
 
+
+    function fillVatOptions($sel) {
+        $sel.empty();
+        $('#VatTypeId option').each(function () {
+            // we kopiëren value + data-pct + tekst
+            const $opt = $('<option>')
+                .val($(this).val())
+                .attr('data-pct', $(this).data('pct'))
+                .text($(this).text());
+            $sel.append($opt);
+        });
+    }
+
+
+    function setRowVatToGlobal($row) {
+        const globalId = String($('#VatTypeId').val() || '');
+        const $sel = $row.find('.js-fl-vat-select');
+        if ($sel.length) {
+            if ($sel.children('option').length === 0) fillVatOptions($sel);
+            $sel.val(globalId);
+        }
+    }
     function getNextOrder() {
         const data = dt.column(1, { search: 'applied' }).data();
         let max = 0;
@@ -47,6 +109,12 @@
         const node = cloneRow();
         node.cells[1].textContent = String(getNextOrder());
         dt.row.add(node).draw(false);
+        // direct na draw: bedragveld formatteren (blijft leeg als leeg)
+        dt.one('draw', function () {
+            const $last = $(dt.rows({ order: 'current' }).nodes()).last();
+            $last.find('.js-fl-price').each(function () { formatPriceInput($(this)); });
+        });
+
         reindexFromDisplay();
     }
 
@@ -99,6 +167,57 @@
             }, 0);
         }
     });
+    // helper: is een rij "leeg" (geen omschrijving en geen bedrag)?
+    function rowIsEmpty($tr) {
+        const txt = ($tr.find('.js-fl-text').val() || '').trim();
+        const price = ($tr.find('.js-fl-price').val() || '').trim();
+        return txt === '' && price === '';
+    }
+
+    // Globale BTW-type wijzigt -> pas alle lege vrije-lijn-rijen aan
+    $(document).on('change', '#VatTypeId', function () {
+        if (!(window.freeLines && window.freeLines.dt)) return;
+        const dt = window.freeLines.dt;
+
+        dt.rows().every(function () {
+            const $tr = $(this.node());
+            if (rowIsEmpty($tr)) setRowVatToGlobal($tr);
+        });
+
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
+
+    // Bedrag formatten wanneer gebruiker klaar is
+    $tbl.on('blur change', 'tbody .js-fl-price', function () {
+        formatPriceInput($(this));
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
+    // Na elke draw: alle zichtbare bedragen netjes formatteren
+    $tbl.on('draw.dt', function () {
+        $tbl.find('tbody .js-fl-price').each(function () {
+            formatPriceInput($(this));
+        });
+    });
+    // optioneel: alleen toegestane tekens tijdens input
+    $tbl.on('input', 'tbody .js-fl-price', function () {
+        let v = $(this).val();
+        // laat cijfers, punten en komma's toe; verwijder overige
+        v = v.replace(/[^\d.,]/g, '');
+        // niet meerdere komma's
+        const parts = v.split(',');
+        if (parts.length > 2) {
+            v = parts.shift() + ',' + parts.join('');
+        }
+        $(this).val(v);
+    });
+    // wijzig je per-lijn btw → meteen preview heropbouwen
+    $tbl.on('change', 'tbody .js-fl-vat', function () {
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
+
+
+
+
 
     // Exporteer minimale API voor andere modules
     window.freeLines = {
