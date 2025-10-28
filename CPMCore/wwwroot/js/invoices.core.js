@@ -411,6 +411,8 @@ $(function () {
             });
             if (!ok) { e.preventDefault(); alert("Kies minstens één wijzigingsopdracht met een percentage > 0%."); return false; }
         }
+
+        prepareFreeLinesForPost($(this));
         return true;
     });
 
@@ -422,3 +424,88 @@ $(function () {
     if ($('#Mode').val() === '1' && window.freeLines) { window.freeLines.ensureOne(); }
     if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
 });
+
+function prepareFreeLinesForPost($form) {
+    const $host = $('#freeLinesHidden');
+    if ($host.length === 0) return;
+
+    $host.empty();
+
+    if ($('#Mode').val() !== '1') return;
+
+    if (!$.fn.dataTable || !$.fn.dataTable.isDataTable || !$.fn.dataTable.isDataTable('#freeLinesTable')) return;
+
+    const parseLocaleNumber = (window.InvoicesUtil && window.InvoicesUtil.parseLocaleNumber)
+        ? window.InvoicesUtil.parseLocaleNumber
+        : function (val) {
+            if (val == null) return 0;
+            let s = String(val).trim();
+            if (!s) return 0;
+            s = s.replace(/[\s\u00A0\u202F\u2009]/g, '');
+            const hasComma = s.includes(','), hasDot = s.includes('.');
+            if (hasComma && hasDot) {
+                const lc = s.lastIndexOf(','), ld = s.lastIndexOf('.');
+                const dec = lc > ld ? ',' : '.';
+                const idx = dec === ',' ? lc : ld;
+                const left = s.slice(0, idx).replace(/[.,]/g, '');
+                const right = s.slice(idx + 1).replace(/[.,]/g, '');
+                s = left + '.' + right;
+            } else if (hasComma) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                s = s.replace(/,/g, '');
+            }
+            s = s.replace(/[^\d.\-]/g, '');
+            const n = parseFloat(s);
+            return isNaN(n) ? 0 : n;
+        };
+
+    const dt = $('#freeLinesTable').DataTable();
+    const indexes = dt.rows().indexes().toArray();
+    indexes.sort((a, b) => {
+        const va = parseInt(dt.cell(a, 1).data(), 10) || 0;
+        const vb = parseInt(dt.cell(b, 1).data(), 10) || 0;
+        return va - vb;
+    });
+
+    let postIndex = 0;
+
+    const addHidden = (base, field, value) => {
+        $('<input>', { type: 'hidden', name: `${base}.${field}`, value }).appendTo($host);
+    };
+
+    indexes.forEach(i => {
+        const $tr = $(dt.row(i).node());
+        const text = ($tr.find('.js-fl-text').val() || '').trim();
+        const priceVal = parseLocaleNumber($tr.find('.js-fl-price').val());
+
+        let vatPct = NaN;
+        const $sel = $tr.find('.js-fl-vat-select');
+        if ($sel.length) {
+            const $opt = $sel.find('option:selected');
+            const pctData = $opt.data('pct');
+            vatPct = parseFloat(String(pctData != null ? pctData : $opt.text()).replace(',', '.'));
+        }
+        if (isNaN(vatPct)) {
+            const fallback = $('#VatTypeId option:selected').data('pct');
+            vatPct = parseFloat(String(fallback != null ? fallback : '0').replace(',', '.')) || 0;
+        }
+
+        if (!text && priceVal === 0) return;
+
+        const base = `Lines[${postIndex}]`;
+        addHidden(base, 'Text', text);
+        addHidden(base, 'Price', priceVal.toFixed(2));
+        addHidden(base, 'VatPercentage', isNaN(vatPct) ? '0' : vatPct.toString());
+        addHidden(base, 'IsSelected', 'true');
+        addHidden(base, 'LineType', 'Free');
+        addHidden(base, 'GroupName', 'Vrije lijnen');
+        addHidden(base, 'UtilityCost', 'false');
+
+        postIndex += 1;
+    });
+
+    if (postIndex === 0) {
+        $host.empty();
+    }
+}
