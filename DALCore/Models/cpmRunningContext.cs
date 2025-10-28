@@ -1335,6 +1335,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
+            entity.Property(e => e.VatPercentage).HasColumnType("decimal(5, 2)");
 
             entity.HasOne(d => d.Project).WithMany(p => p.InvoicingPaymentGroup)
                 .HasForeignKey(d => d.ProjectId)

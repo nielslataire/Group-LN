@@ -49,7 +49,7 @@
     </style>
 }
 
-<form id="invoiceForm" asp-action="CreateDraft" method="post" class="mb-4">
+<form id="invoiceForm" asp-action="Save" asp-controller="Invoices" method="post" class="ecommerce-form action-buttons-fixed">
     @Html.AntiForgeryToken()
 
     <div class="row">
@@ -64,271 +64,288 @@
             </div>
         </div>
     </div>
+    <div class="row mt-2">
+        <div class="col">
+                    <section class="card card-modern">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Facturatiebedrijf</label>
+                            @* Facturatiebedrijf *@
+                            <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control">
+                                @foreach (var i in Model.Issuers)
+                                {
+                                    if (i.Id == Model.IssuerCompanyId)
+                                    {
+                                        <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")"  selected="selected">
+                                            @i.Name
+                                        </option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "" )" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")">
+                                            @i.Name
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
 
-    <section class="card card-modern">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Facturatiebedrijf</label>
-                    @* Facturatiebedrijf *@
-                    <select id="IssuerCompanyId" name="IssuerCompanyId" class="form-control">
-                        @foreach (var i in Model.Issuers)
-                        {
-                            if (i.Id == Model.IssuerCompanyId)
-                            {
-                                <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")"  selected="selected">
-                                    @i.Name
-                                </option>
-                            }
-                            else
-                            {
-                                <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "" )" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")">
-                                    @i.Name
-                                </option>
-                            }
-                        }
-                    </select>
-                </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Klant / Leverancier</label>
+                            <select id="partySelect" class="form-control form-control-modern" style="width:100%"></select>
+                        </div>
 
-                <div class="col-md-6">
-                    <label class="form-label">Klant / Leverancier</label>
-                    <select id="partySelect" class="form-control form-control-modern" style="width:100%"></select>
-                </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Factuurdatum</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input asp-for="InvoiceDate"
+                                       class="form-control form-control-modern js-datepicker"
+                                       type="text"
+                                       asp-format="{0:dd/MM/yyyy}" />
+                            </div>
+                        </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">Factuurdatum</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                        <input asp-for="InvoiceDate"
-                               class="form-control form-control-modern js-datepicker"
-                               type="text"
-                               asp-format="{0:dd/MM/yyyy}" />
-                    </div>
-                </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Start als</label>
+                            <select asp-for="StartAs" class="form-control form-control-modern">
+                                <option value="1">Factuur (meteen uitgeven)</option>
+                                <option value="0">Draft (later afwerken)</option>
+                            </select>
+                        </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">Start als</label>
-                    <select asp-for="StartAs" class="form-control form-control-modern">
-                        <option value="1">Factuur (meteen uitgeven)</option>
-                        <option value="0">Draft (later afwerken)</option>
-                    </select>
-                </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Factuurmodus</label>
+                            <select asp-for="Mode" class="form-control form-control-modern">
+                                <option value="1">Vrije lijnen</option>
+                                <option value="2">Schijven</option>
+                                <option value="3">Wijzigingsopdrachten</option>
+                                <option value="4">Nutsaansluitingen</option>
+                            </select>
+                        </div>
 
-                <div class="col-md-3">
-                    <label class="form-label">Factuurmodus</label>
-                    <select asp-for="Mode" class="form-control form-control-modern">
-                        <option value="1">Vrije lijnen</option>
-                        <option value="2">Schijven</option>
-                        <option value="3">Wijzigingsopdrachten</option>
-                        <option value="4">Nutsaansluitingen</option>
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label">Betaaltermijn</label>
-                    @* Betaaltermijn *@
-                    <select id="PaymentTermId" name="PaymentTermId" class="form-control form-control-modern">
-                        @foreach (var t in Model.PaymentTerms)
-                        {
-                            if (Model.PaymentTermId == t.Id)
-                            {
-                                <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" selected="selected">
-                                    @t.Name
-                                </option>
-                            }
-                            else
-                            {
-                                <option value="@t.Id" data-days="@t.Days" data-name="@t.Name">
-                                    @t.Name
-                                </option>
-                            }
-                        }
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">BTW-tarief (standaard)</label>
-                    <select id="VatTypeId" name="VatTypeId" class="form-control form-control-modern">
-                        @foreach (var v in Model.VatTypes)
-                        {
-                            if (Model.VatTypeId == v.Id)
-                            {
-                                <option value="@v.Id" data-pct="@v.VATpercentage" selected="selected">
-                                    @v.VATtext
-                                </option>
-                            }
-                            else
-                            {
-                                <option value="@v.Id" data-pct="@v.VATpercentage">
-                                    @v.VATtext
-                                </option>
-                            }
+                        <div class="col-md-3">
+                            <label class="form-label">Betaaltermijn</label>
+                            @* Betaaltermijn *@
+                            <select asp-for="PaymentTermId" id="PaymentTermId" name="PaymentTermId" class="form-control form-control-modern">
+                                @foreach (var t in Model.PaymentTerms)
+                                {
+                                    if (Model.PaymentTermId == t.Id)
+                                    {
+                                        <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" selected="selected">
+                                            @t.Name
+                                        </option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@t.Id" data-days="@t.Days" data-name="@t.Name">
+                                            @t.Name
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">BTW-tarief (standaard)</label>
+                            <select asp-for="VatTypeId" id="VatTypeId" name="VatTypeId" class="form-control form-control-modern">
+                                @foreach (var v in Model.VatTypes)
+                                {
+                                    if (Model.VatTypeId == v.Id)
+                                    {
+                                        <option value="@v.Id" data-pct="@v.VATpercentage" selected="selected">
+                                            @v.VATtext
+                                        </option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@v.Id" data-pct="@v.VATpercentage">
+                                            @v.VATtext
+                                        </option>
+                                    }
                             
-                        }
-                    </select>
-                </div>
-                <div id="projectRow" class="col-md-6 mt-3">
-                    <label class="form-label">Project (optioneel indien geen contract)</label>
-                    <select id="projectSelect" class="form-control form-control-modern" style="width:100%"></select>
-                    <input type="hidden" asp-for="ProjectId" />
-                </div>
+                                }
+                            </select>
+                        </div>
+                        <div id="projectRow" class="col-md-6 mt-3">
+                            <label class="form-label">Project (optioneel indien geen contract)</label>
+                            <select id="projectSelect" class="form-control form-control-modern" style="width:100%"></select>
+                            <input type="hidden" asp-for="ProjectId" />
+                        </div>
 
-                <div id="contractRow" class="col-md-6 mt-3">
-                    <label class="form-label">Leverancierscontract (optioneel)</label>
-                    <select id="contractSelect" class="form-control form-control-modern" style="width:100%"></select>
-                    <input type="hidden" asp-for="SupplierContractId" />
-                </div>
+                        <div id="contractRow" class="col-md-6 mt-3">
+                            <label class="form-label">Leverancierscontract (optioneel)</label>
+                            <select id="contractSelect" class="form-control form-control-modern" style="width:100%"></select>
+                            <input type="hidden" asp-for="SupplierContractId" />
+                        </div>
 
-                <div class="col-md-12">
-                    <label class="form-label" for="HeaderDescription">Omschrijving (optioneel)</label>
-                    <textarea asp-for="HeaderDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
-                    <span asp-validation-for="HeaderDescription" class="text-danger"></span>
-                </div>
-            </div>
+                        <div class="col-md-12">
+                            <label class="form-label" for="HeaderDescription">Omschrijving (optioneel)</label>
+                            <textarea asp-for="HeaderDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
+                            <span asp-validation-for="HeaderDescription" class="text-danger"></span>
+                        </div>
+                    </div>
 
-            <!-- hidden voor party -->
-            <input type="hidden" asp-for="PartyId" />
-            <input type="hidden" asp-for="PartyType" />
+                    <!-- hidden voor party -->
+                    <input type="hidden" asp-for="PartyId" />
+                    <input type="hidden" asp-for="PartyType" />
+                </div>
+            </section>
         </div>
-    </section>
-
-    <!-- SCHIJVEN BLOCK -->
-
-    <section class="card card-modern" id="stagesBlock" style="display:none">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="row g-3 mt-2">
-                    <div class="col-12">
-                        <div id="stagesList">
-                            <!-- wordt via JS gevuld met checkboxen -->
-                            <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Schijven”.</div>
+    </div>
+    <!-- HOOFDRIJ 1 -->
+    <div class="row mt-2 mb-4">
+        <div class="col">
+            <!-- SCHIJVEN BLOCK -->
+            <section class="card card-modern mb-4" id="stagesBlock" style="display:none">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div id="stagesList">
+                                <!-- wordt via JS gevuld met checkboxen -->
+                                <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Schijven”.</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </section>
+            </section>
 
-    <!-- WIJZIGINGSOPDRACHTEN BLOCK -->
-
-    <section class="card card-modern" id="coBlock" style="display:none">
-        <div class="card-body">
-            <div id="coList">
-                <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Wijzigingsopdrachten”.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- NUTSAANSLUITNGEN BLOCK -->
-
-    <section class="card card-modern" id="utlBlock" style="display:none">
-        <div class="card-body">
-            <div id="utlList">
-                <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Nutsaansluitingen”.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- VRIJE LIJNEN BLOCK -->
-
-    <section class="card card-modern mt-4" id="freeLineBlock">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <h3 class="fw-bold mb-0">Vrije lijnen</h3>
-            </div>
-
-            <div class="table-responsive">
-                <table id="freeLinesTable" class="table align-middle" style="width:100%">
-                    <thead>
-                        <tr>
-                            <th style="width:36px;"></th>   <!-- drag handle -->
-                            <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
-                            <th>Omschrijving</th>
-                            <th class="text-end" style="width:140px">Bedrag</th>
-                            <th class="text-end" style="width:200px">BTW&nbsp;%</th>
-                            <th class="text-end" style="width:50px">Acties</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-
-                    </tbody>
-                </table>
-            </div>
-            <button type="button" class="btn btn-default mt-2" id="addFreeLine">
-                <i class="fas fa-plus me-1"></i> Regel toevoegen 
-            </button>
-        </div>
-    </section>
-
-    <template id="freeLineRowTpl">
-        <tr class="free-row">
-            <td class="reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
-            <td></td>
-            <td><input class="form-control form-control-sm js-fl-text" data-col="Text" maxlength="200" /></td>
-            <td class="text-end"><input class="form-control form-control-sm text-end js-fl-price" data-col="Price" type="text" /></td>
-            <td class="text-end">
-                <select class="form-select form-select-sm js-fl-vat-select" data-col="VatPercentage"></select>
-            </td>
-            <td class="text-end">
-                <a data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="js-fl-del" id="editAccount"><i class="fas fa-trash"></i></a>
-
-            </td>
-        </tr>
-    </template>
-
-    <!-- VOORBEELDFACTUUR BLOCK -->
-
-    <section class="card card-modern mt-4" id="previewCard" style="display:none">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h3 class="fw-bold mb-0">Voorbeeld factuur</h3>
-                <button type="button" class="btn btn-default btn-sm" disabled>
-                    <i class="fas fa-file-download me-1"></i> Download PDF
-                </button>
-            </div>
-
-            <div class="border rounded p-3 bg-white">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h3 class="mb-0" id="pvStartAs">Factuur (nog niet opgeslagen)</h3>
-                        <h4 class="text-muted" id="pvIssuer">—</h4>
-                    </div>
-                    <div class="text-end small">
-                        <div><span class="text-muted">Uitgiftedatum:</span> <span id="pvIssueDate">—</span></div>
-                        <div><span class="text-muted">Vervaldatum:</span> <span id="pvDueDate">—</span></div>
-                        <div><span class="text-muted">Betalingstermijn:</span> <span id="pvPayTerm">-</span></div>
+            <!-- WIJZIGINGSOPDRACHTEN BLOCK -->
+            <section class="card card-modern mb-4" id="coBlock" style="display:none">
+                <div class="card-body">
+                    <div id="coList">
+                        <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Wijzigingsopdrachten”.</div>
                     </div>
                 </div>
+            </section>
 
-                <!-- Omschrijving boven de tabellen -->
-                <p id="pvHeaderText" class="mt-3 mb-2 text-muted" style="white-space:pre-wrap"></p>
+            <!-- NUTSAANSLUITINGEN BLOCK -->
+            <section class="card card-modern mb-4" id="utlBlock" style="display:none">
+                <div class="card-body">
+                    <div id="utlList">
+                        <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Nutsaansluitingen”.</div>
+                    </div>
+                </div>
+            </section>
 
-                <!-- Container voor meerdere tabellen -->
-                <div id="pvTables" class="preview-tables"></div>
+            <!-- VRIJE LIJNEN BLOCK -->
+            <section class="card card-modern mb-0 " id="freeLineBlock">
+                <div class="card-body pb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="fw-bold mb-0">Vrije lijnen</h3>
+                    </div>
 
-                <!-- Globale totalen -->
-                <table class="table mb-0 table-borderless" style="min-width:680px">
-                    <tbody>
-                        <tr>
-                            <td class="text-end fw-semibold">Subtotaal</td>
-                            <td class="text-end fw-semibold" id="pvSub" style="width:160px">0,00</td>
-                        </tr>
-                        <tr>
-                            <td class="text-end fw-semibold">BTW</td>
-                            <td class="text-end fw-semibold" id="pvVat">0,00</td>
-                        </tr>
-                        <tr>
-                            <td class="text-end fw-bold">Te betalen</td>
-                            <td class="text-end fw-bold" id="pvTotal">0,00 </td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <div class="table-responsive mt-3 mb-0">
+                        <table id="freeLinesTable" class="table align-middle" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th style="width:36px;"></th>   <!-- drag handle -->
+                                    <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
+                                    <th>Omschrijving</th>
+                                    <th class="text-end" style="width:140px">Bedrag</th>
+                                    <th class="text-end" style="width:200px">BTW&nbsp;%</th>
+                                    <th class="text-end" style="width:50px">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+
+                    <button type="button" class="btn btn-default mt-2 mb-0" id="addFreeLine">
+                        <i class="fas fa-plus me-1"></i> Regel toevoegen
+                    </button>
+                </div>
+            </section>
+
+            <!-- Template + Hidden -->
+            <template id="freeLineRowTpl">
+                <tr class="free-row">
+                    <td class="reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
+                    <td></td>
+                    <td><input class="form-control form-control-sm js-fl-text" data-col="Text" maxlength="200" /></td>
+                    <td class="text-end"><input class="form-control form-control-sm text-end js-fl-price" data-col="Price" type="text" /></td>
+                    <td class="text-end">
+                        <select class="form-select form-select-sm js-fl-vat-select" data-col="VatPercentage"></select>
+                    </td>
+                    <td class="text-end">
+                        <a data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="js-fl-del" id="editAccount"><i class="fas fa-trash"></i></a>
+                    </td>
+                </tr>
+            </template>
+            <div id="freeLinesHidden" class="d-none"></div>
+        </div>
+    </div>
+
+    <!-- HOOFDRIJ 2 -->
+    <div class="row mt-5">
+        <div class="col">
+            <!-- VOORBEELDFACTUUR BLOCK -->
+            <section class="card card-modern mb-4" id="previewCard" style="display:none">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="fw-bold mb-0">Voorbeeld factuur</h3>
+                        <button type="button" class="btn btn-default btn-sm" disabled>
+                            <i class="fas fa-file-download me-1"></i> Download PDF
+                        </button>
+                    </div>
+
+                    <div class="border rounded p-3 bg-white">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h3 class="mb-0" id="pvStartAs">Factuur (nog niet opgeslagen)</h3>
+                                <h4 class="text-muted" id="pvIssuer">—</h4>
+                            </div>
+                            <div class="text-end small">
+                                <div><span class="text-muted">Uitgiftedatum:</span> <span id="pvIssueDate">—</span></div>
+                                <div><span class="text-muted">Vervaldatum:</span> <span id="pvDueDate">—</span></div>
+                                <div><span class="text-muted">Betalingstermijn:</span> <span id="pvPayTerm">-</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Omschrijving boven de tabellen -->
+                        <p id="pvHeaderText" class="mt-3 mb-2 text-muted" style="white-space:pre-wrap"></p>
+
+                        <!-- Container voor meerdere tabellen -->
+                        <div id="pvTables" class="preview-tables"></div>
+
+                        <!-- Globale totalen -->
+                        <table class="table mb-0 table-borderless" style="min-width:680px">
+                            <tbody>
+                                <tr>
+                                    <td class="text-end fw-semibold">Subtotaal</td>
+                                    <td class="text-end fw-semibold" id="pvSub" style="width:160px">0,00</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end fw-semibold">BTW</td>
+                                    <td class="text-end fw-semibold" id="pvVat">0,00</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-end fw-bold">Te betalen</td>
+                                    <td class="text-end fw-bold" id="pvTotal">0,00</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ACTIEKNOPPEN -->
+            <div class="row action-buttons">
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                        <i class="bx bx-save text-4 me-2"></i> Opslaan
+                    </button>
+                </div>
+                <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+                    <a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+                </div>
             </div>
         </div>
-    </section>
+    </div>
 
-    <button type="submit" class="btn btn-primary">
-        <i class="fas fa-save me-1"></i> Opslaan 
-    </button>
+@*     <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save me-1"></i> Opslaan
+    </button> *@
 </form>
 
 @section PageScripts {

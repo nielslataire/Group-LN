@@ -1,14 +1,15 @@
 ﻿using BOCore;
-using FacadeCore;
 using DALCore;
 using DALCore.Models;
 using DALCore.Query;
+using FacadeCore;
+using Microsoft.EntityFrameworkCore;
 using ServiceCore.Translators;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
 
 namespace ServiceCore
 {
@@ -16,9 +17,14 @@ namespace ServiceCore
     {
         private readonly UnitOfWorkCore _uow;
         private readonly cpmRunningContext _db;
-        private readonly IInvoiceNumberingService _num; 
+        private readonly IInvoiceNumberingService _num;
 
-        public InvoiceCommandService(UnitOfWorkCore uow) { _uow = uow; _db = (cpmRunningContext)uow.Context; }
+        public InvoiceCommandService(UnitOfWorkCore uow, IInvoiceNumberingService num)
+        {
+            _uow = uow;
+            _db = (cpmRunningContext)uow.Context;
+            _num = num;
+        }
 
         public async Task<(int invoiceId, string? publicId)> CreateWithLinesAsync(InvoiceDraftBO bo, bool issueNow, CancellationToken ct = default)
         {
@@ -128,6 +134,8 @@ namespace ServiceCore
 
                     inv.StatusId = issuedId;
                     inv.PublicId = publicId;
+                    inv.SeriesId = seriesId;
+                    inv.FiscalYear = fiscalYear;
                     await _uow.SaveChangesAsync(ct);
                 }
 
@@ -148,6 +156,103 @@ namespace ServiceCore
             return id;
         }
 
+        public async Task DeleteAsync(int invoiceId, CancellationToken ct = default)
+        {
+            await using var tx = await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                var invoice = await _db.Invoices
+                    .Include(i => i.IssuerCompany)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                InvoiceSequence? sequence = null;
+                int? invoiceNumber = null;
+
+                if (invoice.SeriesId is int seriesId && invoice.FiscalYear is int fiscalYear && !string.IsNullOrWhiteSpace(invoice.PublicId))
+                {
+                    sequence = await _db.InvoiceSequence
+                        .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
+
+                    invoiceNumber = ExtractSequenceNumber(invoice);
+
+                    if (sequence != null)
+                    {
+                        if (!invoiceNumber.HasValue)
+                            throw new InvalidOperationException("Factuurnummer kon niet bepaald worden; verwijderen is niet mogelijk.");
+
+                        if (sequence.CurrentNumber > invoiceNumber.Value)
+                            throw new InvalidOperationException("Factuur is niet de laatste in de reeks en kan niet verwijderd worden.");
+                    }
+                }
+
+                var hasPayments = await _db.PaymentAllocations.AnyAsync(p => p.InvoiceId == invoiceId, ct);
+                if (hasPayments)
+                    throw new InvalidOperationException("Factuur heeft betalingen en kan niet verwijderd worden.");
+
+                var hasReplacements = await _db.Invoices.AnyAsync(i => i.ReplacementOfId == invoiceId, ct);
+                if (hasReplacements)
+                    throw new InvalidOperationException("Factuur heeft opvolgers en kan niet verwijderd worden.");
+
+                var detailRows = await _db.InvoicesDetails
+                    .Where(d => d.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (detailRows.Count > 0)
+                    _db.InvoicesDetails.RemoveRange(detailRows);
+
+                var relations = await _db.InvoiceRelations
+                    .Where(r => r.ParentInvoiceId == invoiceId || r.ChildInvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (relations.Count > 0)
+                    _db.InvoiceRelations.RemoveRange(relations);
+
+                var emailLogs = await _db.InvoiceEmailLog
+                    .Where(e => e.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (emailLogs.Count > 0)
+                    _db.InvoiceEmailLog.RemoveRange(emailLogs);
+
+                var dunnings = await _db.InvoiceDunning
+                    .Where(d => d.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (dunnings.Count > 0)
+                    _db.InvoiceDunning.RemoveRange(dunnings);
+
+                var attachments = await _db.InvoiceAttachments
+                    .Where(a => a.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (attachments.Count > 0)
+                    _db.InvoiceAttachments.RemoveRange(attachments);
+
+                var pdfArchives = await _db.InvoicePdfArchive
+                    .Where(p => p.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (pdfArchives.Count > 0)
+                    _db.InvoicePdfArchive.RemoveRange(pdfArchives);
+
+                var ublDocs = await _db.InvoiceUbl
+                    .Where(u => u.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (ublDocs.Count > 0)
+                    _db.InvoiceUbl.RemoveRange(ublDocs);
+
+                _uow.Invoices.Remove(invoice);
+
+                if (sequence != null && invoiceNumber.HasValue && sequence.CurrentNumber == invoiceNumber.Value)
+                {
+                    sequence.CurrentNumber = Math.Max(0, invoiceNumber.Value - 1);
+                }
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(tx, ct);
+            }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(tx, ct);
+                throw;
+            }
+        }
+
         // ---------- alleen voor modus SCHIJVEN ----------
         // Bouwt lijnen voor modus "Schijven" op basis van gekozen PaymentGroup + StageIds.
         // - Price = 0m (rekenbasis volgt later: contract/units * percentage)
@@ -162,7 +267,7 @@ namespace ServiceCore
                 from s in _db.InvoicingPaymentStages.AsNoTracking()
                 join g in _db.InvoicingPaymentGroup.AsNoTracking() on s.GroupId equals g.Id
                 where bo.StageIds.Contains(s.Id)
-                select new { s.Id, s.Name, s.Percentage, s.VatPercentage, GroupVat = g.VatTypeId, g.ProjectId }
+                select new { s.Id, s.Name, s.Percentage, s.VatPercentage, GroupVat = g.VatPercentage, g.ProjectId }
             ).ToListAsync(ct);
 
             foreach (var s in stages)
@@ -195,7 +300,40 @@ namespace ServiceCore
             }
         }
 
+        private static int? ExtractSequenceNumber(Invoices invoice)
+        {
+            if (invoice == null) return null;
+            if (string.IsNullOrWhiteSpace(invoice.PublicId)) return null;
 
+            var pattern = invoice.IssuerCompany?.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
+            if (string.IsNullOrWhiteSpace(pattern)) pattern = "{num:0000}/{date:yyyy}";
+
+            var escaped = Regex.Escape(pattern);
+            var numberRegex = "(?<num>\\d+)";
+
+            var numMatch = Regex.Match(pattern, "\\{num:(0+)\\}", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+            if (numMatch.Success)
+            {
+                escaped = escaped.Replace(Regex.Escape(numMatch.Value), numberRegex);
+            }
+            else
+            {
+                escaped = escaped.Replace(Regex.Escape("{num:0000}"), numberRegex);
+            }
+
+            var dateTime = invoice.Date.ToDateTime(new TimeOnly(0, 0));
+            escaped = escaped.Replace(Regex.Escape("{date:yyyy}"), Regex.Escape(dateTime.ToString("yyyy")));
+            escaped = escaped.Replace(Regex.Escape("{date:MM-yyyy}"), Regex.Escape(dateTime.ToString("MM-yyyy")));
+
+            var match = Regex.Match(invoice.PublicId, "^" + escaped + "$", RegexOptions.CultureInvariant);
+            if (!match.Success)
+                return null;
+
+            if (int.TryParse(match.Groups["num"].Value, out var number))
+                return number;
+
+            return null;
+        }
 
 
 
