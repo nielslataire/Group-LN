@@ -98,7 +98,7 @@ namespace CPMCore.Controllers
                 DisplayId = string.IsNullOrWhiteSpace(row.PublicId) ? $"[{row.Id}]" : row.PublicId,
                 ClientName = row.ClientName,
                 InvoiceDate = row.InvoiceDate,
-                Status = TranslateStatus(row.Status)
+                Status = TranslateStatus(row.StatusName)
             };
 
             return PartialView("Modals/_ModalDeleteInvoice", vm);
