@@ -30,13 +30,28 @@
             height: 43px;
         }
 
+/*         .select2-container.select2-party-select {
+            width: 100% !important;
+        }
+
+        .select2-container--bootstrap.select2-party-select .select2-selection--single {
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 0.3rem;
+            border: 1px solid #ced4da;
+            background-color: #fff;
+        }
+
+        .select2-container--bootstrap.select2-party-select .select2-selection__rendered {
+            padding-left: 0;
+        } */
         .desc-textarea {
             resize: vertical;          /* gebruiker mag vergroten/verkleinen */
             min-height: 48px;          /* ~2 regels, sluit aan bij compacte rijhoogte */
             max-height: 160px;         /* cap zodat cards niet te groot worden */
             white-space: pre-wrap;     /* respecteert spaties/linebreaks en wrapt mooi */
             overflow: auto;
-            background: #f8f9fa;       /* disabled look consistent */
         }
     </style>
     <style>
@@ -204,6 +219,11 @@
                             <label class="form-label" for="DetailDescription">Detailomschrijving</label>
                             <textarea asp-for="DetailDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
                             <span asp-validation-for="DetailDescription" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label" for="FooterDescription">Footer</label>
+                            <textarea asp-for="FooterDescription" class="form-control form-control-modern desc-textarea" rows="4"></textarea>
+                            <span asp-validation-for="FooterDescription" class="text-danger"></span>
                         </div>
                     </div>
 

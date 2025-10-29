@@ -18,5 +18,10 @@ namespace FacadeCore
 
     }
 
-    public record PartyLookupItem(InvoicePartyType Type, int Id, string Name, string? Hint = null);
+    public record PartyLookupItem(
+        InvoicePartyType Type,
+        int Id,
+        string Name,
+        string? Hint = null,
+        string? DisplayName = null);
 }

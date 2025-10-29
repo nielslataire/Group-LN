@@ -24,6 +24,7 @@ namespace CPMCore.Models.Invoicing
         public InvoiceMode Mode { get; set; } = InvoiceMode.Free;
         public string? HeaderDescription { get; set; }
         public string? DetailDescription { get; set; }
+        public string? FooterDescription { get; set; }
 
         public int? ProjectId { get; set; }
         public int? SupplierContractId { get; set; }

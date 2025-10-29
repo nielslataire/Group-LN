@@ -4,6 +4,7 @@ using DALCore.Models;
 using DALCore.Query;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
+using ServiceCore.Helpers;
 using ServiceCore.Translators;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
@@ -44,7 +45,7 @@ namespace ServiceCore
             var clientsRaw = await _db.ClientAccount.AsNoTracking()
                 .Where(x => term == "" || EF.Functions.Like(x.Name, like))
                 .OrderBy(x => x.Name)
-                .Select(x => new { x.Id, Display = x.Name })
+                .Select(x => new { x.Id, x.Name, x.CompanyName, x.Salutation })
                 .Take(take)
                 .ToListAsync(ct);
 
@@ -55,7 +56,7 @@ namespace ServiceCore
                         || EF.Functions.Like(x.Forename, like)
                         || EF.Functions.Like(x.Forename + " " + x.Name, like)))
                 .OrderBy(x => x.Name)
-                .Select(x => new { x.Id, Display = x.Forename + " " + x.Name })
+                .Select(x => new { x.Id, x.Salutation, x.Forename, x.Name, x.CompanyName })
                 .Take(take)
                 .ToListAsync(ct);
 
@@ -67,16 +68,80 @@ namespace ServiceCore
                 .ToListAsync(ct);
 
             // 2) Pas NA ToListAsync omzetten naar jouw record/DTO
-            var clients = clientsRaw.Select(x => new PartyLookupItem(InvoicePartyType.ClientAccount, x.Id, x.Display, null));
-            var contacts = contactsRaw.Select(x => new PartyLookupItem(InvoicePartyType.ClientContact, x.Id, x.Display, null));
-            var suppliers = suppliersRaw.Select(x => new PartyLookupItem(InvoicePartyType.Supplier, x.Id, x.Display, null));
+            var clients = clientsRaw.Select(x =>
+            {
+                var company = string.IsNullOrWhiteSpace(x.CompanyName) ? null : x.CompanyName.Trim();
+                var baseName = !string.IsNullOrWhiteSpace(x.Name)
+                    ? x.Name.Trim()
+                    : (company ?? string.Empty);
+
+                var salutation = FormatSalutation(x.Salutation);
+                var displayParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(salutation)) displayParts.Add(salutation);
+                if (!string.IsNullOrWhiteSpace(baseName)) displayParts.Add(baseName);
+
+                var display = displayParts.Count > 0
+                    ? string.Join(" ", displayParts)
+                    : (company ?? string.Empty);
+
+                var hint = !string.IsNullOrWhiteSpace(baseName)
+                    && company != null
+                    && !string.Equals(baseName, company, StringComparison.OrdinalIgnoreCase)
+                        ? company
+                        : null;
+
+                return new PartyLookupItem(
+                    InvoicePartyType.ClientAccount,
+                    x.Id,
+                    baseName,
+                    hint,
+                    display);
+            });
+
+            var contacts = contactsRaw.Select(x =>
+            {
+                var company = string.IsNullOrWhiteSpace(x.CompanyName) ? null : x.CompanyName.Trim();
+
+                var personalParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(x.Forename)) personalParts.Add(x.Forename.Trim());
+                if (!string.IsNullOrWhiteSpace(x.Name)) personalParts.Add(x.Name.Trim());
+
+                var baseName = personalParts.Count > 0
+                    ? string.Join(" ", personalParts)
+                    : (company ?? string.Empty);
+
+                var salutation = FormatSalutation(x.Salutation);
+                var displayParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(salutation)) displayParts.Add(salutation);
+                if (!string.IsNullOrWhiteSpace(baseName)) displayParts.Add(baseName);
+
+                var display = displayParts.Count > 0
+                    ? string.Join(" ", displayParts)
+                    : (company ?? string.Empty);
+
+                var hint = company != null && personalParts.Count > 0
+                    ? company
+                    : null;
+
+                return new PartyLookupItem(
+                    InvoicePartyType.ClientContact,
+                    x.Id,
+                    baseName,
+                    hint,
+                    display);
+            });
+
+            var suppliers = suppliersRaw.Select(x =>
+                new PartyLookupItem(InvoicePartyType.Supplier, x.Id, x.Display, null, x.Display));
+
 
             return clients.Concat(contacts).Concat(suppliers)
                           .OrderBy(x => x.Name)
                           .Take(take)
                           .ToList();
         }
-
+        private static string? FormatSalutation(string? value)
+            => SalutationDisplayHelper.ToDisplayString(value);
 
     }
 }

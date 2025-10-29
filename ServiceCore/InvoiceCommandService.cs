@@ -4,6 +4,7 @@ using DALCore.Models;
 using DALCore.Query;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
+using ServiceCore.Helpers;
 using ServiceCore.Translators;
 using System.Collections.Generic;
 using System.Globalization;
@@ -70,6 +71,7 @@ namespace ServiceCore
             var detailText = Clean(bo.DetailDescription);
             var bankAccount = Clean(issuerBankAccountIban);
             var invoiceText = headerText ?? detailText;
+            var footerText = Clean(bo.FooterDescription);
 
             // status ids
             var draftId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Draft").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)1;
@@ -98,7 +100,7 @@ namespace ServiceCore
                     Adress = party.Address,
                     PostalCodeId = party.PostalCodeId,
                     VatNumber = party.VatNumber,
-                    ExtraInfo = party.ExtraInfo,
+                    ExtraInfo = footerText ?? party.ExtraInfo,
                     BankAccount = bankAccount,
                     PaymentTermId = bo.PaymentTermId
                 };
@@ -377,8 +379,16 @@ namespace ServiceCore
                     ? (client.InvoicePostalCodeId ?? client.PostalCodeId)
                     : client.PostalCodeId;
 
-                var name = !string.IsNullOrWhiteSpace(client.Name)
-                    ? client.Name
+                var nameParts = new List<string>();
+                var salutation = FormatSalutation(client.Salutation);
+                if (!string.IsNullOrWhiteSpace(salutation)) nameParts.Add(salutation);
+                if (!string.IsNullOrWhiteSpace(client.Name))
+                    nameParts.Add(client.Name.Trim());
+                else if (!string.IsNullOrWhiteSpace(client.CompanyName))
+                    nameParts.Add(client.CompanyName.Trim());
+
+                var name = nameParts.Count > 0
+                    ? string.Join(" ", nameParts)
                     : client.CompanyName;
 
                 return new PartySnapshot(
@@ -398,7 +408,8 @@ namespace ServiceCore
                     ?? throw new InvalidOperationException("Contact niet gevonden.");
 
                 var nameParts = new List<string>();
-                if (!string.IsNullOrWhiteSpace(contact.Salutation)) nameParts.Add(contact.Salutation.Trim());
+                var salutation = FormatSalutation(contact.Salutation);
+                if (!string.IsNullOrWhiteSpace(salutation)) nameParts.Add(salutation);
                 if (!string.IsNullOrWhiteSpace(contact.Name)) nameParts.Add(contact.Name.Trim());
                 if (!string.IsNullOrWhiteSpace(contact.Forename)) nameParts.Add(contact.Forename.Trim());
                 var displayName = nameParts.Count > 0
@@ -460,6 +471,10 @@ namespace ServiceCore
 
         private static int? NormalizePostalCodeId(int? value)
             => value.HasValue && value.Value > 0 ? value : null;
+
+        private static string? FormatSalutation(string? value)
+      => SalutationDisplayHelper.ToDisplayString(value);
+
 
         private sealed record PartySnapshot(
             string? ClientName,

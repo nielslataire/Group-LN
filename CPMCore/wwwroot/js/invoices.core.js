@@ -164,7 +164,8 @@ $(function () {
         if (window.freeLines && window.freeLines.dt) {
             window.freeLines.clearAll(); // alle vrije lijnen leeg + redraw
         }
-        $('#HeaderDescription').prop('disabled', false).val('');
+        $('#HeaderDescription, #DetailDescription').prop('disabled', false).val('');
+        $('#FooterDescription').val('');
     }
 
     function hardResetUI() {
@@ -207,12 +208,14 @@ $(function () {
 
     function updateHeaderLock() {
         const $header = getHeader();
-        if (!$header.length) return;
+        const $detail = $('#DetailDescription');
         const anySelected =
             $hostStages.find('.js-stage-row:checked').length > 0 ||
             $hostStages.find('.js-co-row:checked').length > 0 ||
             $hostStages.find('.js-utl-row:checked').length > 0;
-        $header.prop('disabled', anySelected);
+        const lock = ($('#Mode').val() !== '1') && anySelected;
+        if ($header.length) $header.prop('disabled', lock);
+        if ($detail.length) $detail.prop('disabled', lock);
     }
     window.updateHeaderLock = window.updateHeaderLock || updateHeaderLock;
 
@@ -332,7 +335,7 @@ $(function () {
     }
 
     // Select2 & pickers
-    $('#partySelect')
+$('#partySelect')
         .select2({
             ajax: {
                 url: window.InvoicesEndpoints.partyLookup,
@@ -348,11 +351,37 @@ $(function () {
             dropdownAutoWidth: true,
             templateResult: function (item) {
                 if (!item.id) return item.text;
-                let badge = '';
-                if (item.type === 'ClientAccount') badge = '<span class="badge bg-primary me-2">klant</span>';
-                else if (item.type === 'ClientContact') badge = '<span class="badge bg-secondary me-2">co-owner</span>';
-                else if (item.type === 'Supplier') badge = '<span class="badge bg-accent me-2">leverancier</span>';
-                return $('<span>').html(badge + item.text);
+
+                const badgeInfo = {
+                    ClientAccount: { text: 'klant', cls: 'bg-primary' },
+                    ClientContact: { text: 'co-owner', cls: 'bg-secondary' },
+                    Supplier: { text: 'leverancier', cls: 'bg-accent' }
+                }[item.type];
+
+                const $container = $('<div class="d-flex align-items-center w-100"></div>');
+
+                if (badgeInfo) {
+                    $container.append(
+                        $('<span>').addClass(`badge ${badgeInfo.cls} me-2`).text(badgeInfo.text)
+                    );
+                }
+
+                const label = item.display || item.text || '';
+                $container.append(
+                    $('<span class="flex-grow-1 text-truncate"></span>').text(label)
+                );
+
+                if (item.hint) {
+                    $container.append(
+                        $('<span class="text-muted ms-2 small text-truncate"></span>').text(item.hint)
+                    );
+                }
+
+                return $container;
+            },
+            templateSelection: function (item) {
+                if (!item.id) return item.text;
+                return item.display || item.text || item.name || '';
             }
         })
         .on('select2:select', function (e) {

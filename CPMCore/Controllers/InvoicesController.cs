@@ -48,7 +48,10 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> Index(int issuerCompanyId)
         {
             var bos = await _invoices.GetByCompanyAsync(issuerCompanyId);
-            var vms = bos.Select(x => new InvoiceListItemVM
+            var vms = bos
+            .OrderByDescending(x => x.InvoiceDate)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new InvoiceListItemVM
             {
                 Id = x.Id,
                 PublicId = x.PublicId,
@@ -184,17 +187,25 @@ namespace CPMCore.Controllers
         {
             var rows = await _lookup.SearchPartiesAsync(term ?? "", take, ct);
 
-            var results = rows.Select(x => new
+            var results = rows.Select(x =>
             {
-                id = x.Type switch
+                var display = string.IsNullOrWhiteSpace(x.DisplayName) ? x.Name : x.DisplayName;
+
+                return new
                 {
-                    InvoicePartyType.ClientAccount => $"ca:{x.Id}",
-                    InvoicePartyType.ClientContact => $"cc:{x.Id}",
-                    InvoicePartyType.Supplier => $"su:{x.Id}",
-                    _ => $"x:{x.Id}"
-                },
-                text = x.Name,
-                type = x.Type.ToString()
+                    id = x.Type switch
+                    {
+                        InvoicePartyType.ClientAccount => $"ca:{x.Id}",
+                        InvoicePartyType.ClientContact => $"cc:{x.Id}",
+                        InvoicePartyType.Supplier => $"su:{x.Id}",
+                        _ => $"x:{x.Id}"
+                    },
+                    text = display,
+                    display,
+                    name = x.Name,
+                    hint = x.Hint,
+                    type = x.Type.ToString()
+                };
             });
 
             return Json(new { results });
@@ -578,7 +589,9 @@ namespace CPMCore.Controllers
                 SupplierContractId = vm.SupplierContractId,
                 PaymentGroupId = vm.PaymentGroupId,
                 IssuerBankAccountId = vm.IssuerBankAccountId,
-                PaymentTermId = vm.PaymentTermId
+                PaymentTermId = vm.PaymentTermId,
+                FooterDescription = vm.FooterDescription
+
             };
 
             if (vm.PartyType == InvoicePartyType.Supplier)
