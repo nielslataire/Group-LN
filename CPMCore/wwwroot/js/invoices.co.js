@@ -21,6 +21,7 @@
 
     function refreshPreview() {
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        if (window.updateSaveButtonState) window.updateSaveButtonState();
     }
 
     $root.on('change', '.js-co-master', function () {
@@ -109,6 +110,7 @@
         });
 
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        if (window.updateSaveButtonState) window.updateSaveButtonState();
     }
 
     window.initCoUi = initCoUi;

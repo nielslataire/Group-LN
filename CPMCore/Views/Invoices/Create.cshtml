@@ -166,6 +166,17 @@
                         }
                     </select>
                 </div>
+                <div class="col-md-3">
+                    <label class="form-label">Rekeningnummer</label>
+                    <select asp-for="IssuerBankAccountId"
+                            id="IssuerBankAccountId"
+                            class="form-control form-control-modern"
+                            asp-items="Model.IssuerBankAccounts"
+                            @(Model.IssuerBankAccounts is System.Collections.Generic.ICollection<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> coll && coll.Count > 0 ? "" : "disabled")>
+                        <option value="">-- Kies een rekening --</option>
+                    </select>
+                    <span asp-validation-for="IssuerBankAccountId" class="text-danger"></span>
+                </div>
                 <div id="projectRow" class="col-md-6 mt-3">
                     <label class="form-label">Project (optioneel indien geen contract)</label>
                     <select id="projectSelect" class="form-control form-control-modern" style="width:100%"></select>
@@ -182,6 +193,11 @@
                     <label class="form-label" for="HeaderDescription">Omschrijving (optioneel)</label>
                     <textarea asp-for="HeaderDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
                     <span asp-validation-for="HeaderDescription" class="text-danger"></span>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label" for="DetailDescription">Detailomschrijving</label>
+                    <textarea asp-for="DetailDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
+                    <span asp-validation-for="DetailDescription" class="text-danger"></span>
                 </div>
             </div>
 
@@ -230,7 +246,7 @@
 
     <!-- VRIJE LIJNEN BLOCK -->
 
-    <section class="card card-modern mt-4" id="freeLineBlock">
+    <section class="card card-modern mt-4" id="freeLineBlock" style="display:none">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h3 class="fw-bold mb-0">Vrije lijnen</h3>
@@ -328,7 +344,7 @@
 
     <div id="freeLinesHidden" class="d-none"></div>
 
-    <button type="submit" class="btn btn-primary">
+    <button type="submit" class="btn btn-primary" id="saveInvoiceBtn" disabled>
         <i class="fas fa-save me-1"></i> Opslaan
     </button>
 </form>
@@ -346,7 +362,8 @@
           composeStageLines: '@Url.Action("ComposeStageLines", "Invoices")',
           composeChangeOrderLines: '@Url.Action("ComposeChangeOrderLines", "Invoices")',
           composeUtilityLines: '@Url.Action("ComposeUtilityLines", "Invoices")',
-          issuerDefaults: '@Url.Action("IssuerDefaults", "Invoices")'
+          issuerDefaults: '@Url.Action("IssuerDefaults", "Invoices")',
+          issuerBankAccounts: '@Url.Action("IssuerBankAccounts", "Invoices")'
         };
     </script>
 

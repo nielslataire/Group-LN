@@ -46,18 +46,31 @@ namespace ServiceCore
 
             var due = bo.ExpirationDate ?? (defaultDays.HasValue ? bo.InvoiceDate.AddDays(defaultDays.Value) : (DateOnly?)null);
 
-            // check partij (zacht, FK’s doen de rest)
-            if (bo.CompanyId.HasValue)
-                await _db.CompanyInfo.FirstAsync(s => s.CompanyId == bo.CompanyId.Value, ct);
+            string? issuerBankAccountIban = null;
+            if (bo.IssuerBankAccountId is int bankAccountId)
+            {
+                issuerBankAccountIban = await _db.IssuerBankAccount
+                    .Where(x => x.Id == bankAccountId && x.IssuerCompanyId == bo.IssuerCompanyId)
+                    .Select(x => x.Iban)
+                    .FirstOrDefaultAsync(ct);
+
+                if (issuerBankAccountIban is null)
+                    throw new InvalidOperationException("Geselecteerd rekeningnummer hoort niet bij dit facturatiebedrijf.");
+            }
             else
             {
-                if (bo.ClientType is 1)
-                    await _db.ClientAccount.FirstAsync(c => c.Id == bo.ClientId, ct);
-                else if (bo.ClientType is 2)
-                    await _db.ClientContacts.FirstAsync(c => c.Id == bo.ClientId, ct);
-                else
-                    throw new InvalidOperationException("Kies een klant (type 1/2) of leverancier.");
+                issuerBankAccountIban = await _db.IssuerBankAccount
+                    .Where(x => x.IssuerCompanyId == bo.IssuerCompanyId && x.IsDefault)
+                    .Select(x => x.Iban)
+                    .FirstOrDefaultAsync(ct);
             }
+
+            var party = await ResolvePartySnapshotAsync(bo, ct);
+
+            var headerText = Clean(bo.HeaderDescription);
+            var detailText = Clean(bo.DetailDescription);
+            var bankAccount = Clean(issuerBankAccountIban);
+            var invoiceText = headerText ?? detailText;
 
             // status ids
             var draftId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Draft").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)1;
@@ -79,7 +92,16 @@ namespace ServiceCore
                     InvoiceMode = (byte)bo.Mode,
                     ProjectId = bo.ProjectId,
                     SupplierContractId = bo.SupplierContractId,
-                    HeaderDescription = bo.HeaderDescription
+                    HeaderDescription = headerText,
+                    Text = invoiceText,
+                    DetailText = detailText,
+                    ClientName = party.ClientName,
+                    Adress = party.Address,
+                    PostalCodeId = party.PostalCodeId,
+                    VatNumber = party.VatNumber,
+                    ExtraInfo = party.ExtraInfo,
+                    BankAccount = bankAccount,
+                    PaymentTermId = bo.PaymentTermId
                 };
                 _uow.Invoices.Add(inv);
                 await _uow.SaveChangesAsync(ct); // Id is nu bekend
@@ -315,6 +337,136 @@ namespace ServiceCore
                     : $"Voorschotfactuur – {names}";
             }
         }
+
+        private async Task<PartySnapshot> ResolvePartySnapshotAsync(InvoiceDraftBO bo, CancellationToken ct)
+        {
+            if (bo.CompanyId.HasValue)
+            {
+                var supplier = await _db.CompanyInfo
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.CompanyId == bo.CompanyId.Value, ct)
+                    ?? throw new InvalidOperationException("Leverancier niet gevonden.");
+
+                return new PartySnapshot(
+                    Clean(supplier.BedrijfsNaam),
+                    Clean(ComposeAddress(supplier.Straat, supplier.Huisnummer, supplier.Toevoeging, supplier.Busnummer)),
+                    NormalizePostalCodeId(supplier.PostCodeId),
+                    Clean(supplier.Ondernemingsnummer),
+                    Clean(supplier.Opmerkingen)
+                );
+            }
+
+            if (bo.ClientType is (int)InvoicePartyType.ClientAccount)
+            {
+                var client = await _db.ClientAccount
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == bo.ClientId, ct)
+                    ?? throw new InvalidOperationException("Klant niet gevonden.");
+
+                var useInvoiceAddress = client.InvoiceAddress == true;
+                var street = useInvoiceAddress && !string.IsNullOrWhiteSpace(client.InvoiceStreet)
+                    ? client.InvoiceStreet
+                    : client.Street;
+                var house = useInvoiceAddress && !string.IsNullOrWhiteSpace(client.InvoiceHousenumber)
+                    ? client.InvoiceHousenumber
+                    : client.Housenumber;
+                var box = useInvoiceAddress && !string.IsNullOrWhiteSpace(client.InvoiceBusnumber)
+                    ? client.InvoiceBusnumber
+                    : client.Busnumber;
+                var postalCodeId = useInvoiceAddress
+                    ? (client.InvoicePostalCodeId ?? client.PostalCodeId)
+                    : client.PostalCodeId;
+
+                var name = !string.IsNullOrWhiteSpace(client.Name)
+                    ? client.Name
+                    : client.CompanyName;
+
+                return new PartySnapshot(
+                    Clean(name),
+                    Clean(ComposeAddress(street, house, null, box)),
+                    NormalizePostalCodeId(postalCodeId),
+                    Clean(client.Vatnumber),
+                    Clean(client.InvoiceExtra)
+                );
+            }
+
+            if (bo.ClientType is (int)InvoicePartyType.ClientContact)
+            {
+                var contact = await _db.ClientContacts
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == bo.ClientId, ct)
+                    ?? throw new InvalidOperationException("Contact niet gevonden.");
+
+                var nameParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(contact.Salutation)) nameParts.Add(contact.Salutation.Trim());
+                if (!string.IsNullOrWhiteSpace(contact.Name)) nameParts.Add(contact.Name.Trim());
+                if (!string.IsNullOrWhiteSpace(contact.Forename)) nameParts.Add(contact.Forename.Trim());
+                var displayName = nameParts.Count > 0
+                    ? string.Join(" ", nameParts)
+                    : contact.CompanyName;
+
+                var useInvoiceAddress = contact.InvoiceAddress == true;
+                var street = useInvoiceAddress && !string.IsNullOrWhiteSpace(contact.InvoiceStreet)
+                    ? contact.InvoiceStreet
+                    : contact.Street;
+                var house = useInvoiceAddress && !string.IsNullOrWhiteSpace(contact.InvoiceHousenumber)
+                    ? contact.InvoiceHousenumber
+                    : contact.Housenumber;
+                var box = useInvoiceAddress && !string.IsNullOrWhiteSpace(contact.InvoiceBusnumber)
+                    ? contact.InvoiceBusnumber
+                    : contact.Busnumber;
+                var postalCodeId = useInvoiceAddress
+                    ? (contact.InvoicePostalCodeId ?? contact.PostalCodeId)
+                    : contact.PostalCodeId;
+
+                return new PartySnapshot(
+                    Clean(displayName),
+                    Clean(ComposeAddress(street, house, null, box)),
+                    NormalizePostalCodeId(postalCodeId),
+                    Clean(contact.Vatnumber),
+                    null
+                );
+            }
+
+            throw new InvalidOperationException("Kies een klant (type 1/2) of leverancier.");
+        }
+
+        private static string? ComposeAddress(string? street, string? houseNumber, string? addition, string? box)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(street))
+                parts.Add(street.Trim());
+
+            var houseParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(houseNumber))
+                houseParts.Add(houseNumber.Trim());
+            if (!string.IsNullOrWhiteSpace(addition))
+                houseParts.Add(addition.Trim());
+            if (houseParts.Count > 0)
+                parts.Add(string.Join("", houseParts));
+
+            if (!string.IsNullOrWhiteSpace(box))
+                parts.Add($"bus {box.Trim()}");
+
+            if (parts.Count == 0)
+                return null;
+
+            return string.Join(" ", parts);
+        }
+
+        private static string? Clean(string? value)
+            => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static int? NormalizePostalCodeId(int? value)
+            => value.HasValue && value.Value > 0 ? value : null;
+
+        private sealed record PartySnapshot(
+            string? ClientName,
+            string? Address,
+            int? PostalCodeId,
+            string? VatNumber,
+            string? ExtraInfo);
 
         private static readonly Regex PatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
