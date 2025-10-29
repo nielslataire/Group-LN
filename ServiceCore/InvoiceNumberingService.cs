@@ -114,6 +114,17 @@ namespace ServiceCore
 
         private static readonly Regex PatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+        private static readonly IReadOnlyDictionary<string, Func<DateTime, CultureInfo, string>> DateTokenResolvers =
+            new Dictionary<string, Func<DateTime, CultureInfo, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MM"] = static (d, c) => d.ToString("MM", c),
+                ["MMM"] = static (d, c) => d.ToString("MMM", c),
+                ["MMMM"] = static (d, c) => d.ToString("MMMM", c),
+                ["yy"] = static (d, c) => d.ToString("yy", c),
+                ["yyyy"] = static (d, c) => d.ToString("yyyy", c),
+                ["MM-yyyy"] = static (d, c) => d.ToString("MM-yyyy", c),
+            };
+
         private static string FormatPattern(string? pattern, int num, DateTime date)
         {
             if (string.IsNullOrWhiteSpace(pattern))
@@ -128,7 +139,7 @@ namespace ServiceCore
                 builder.Append(pattern, cursor, token.Index - cursor);
 
                 var type = token.Groups[1].Value;
-                var format = token.Groups[2].Value;
+                var format = token.Groups[2].Value?.Trim();
 
                 if (type.Equals("num", StringComparison.OrdinalIgnoreCase))
                 {
@@ -148,7 +159,18 @@ namespace ServiceCore
                 {
                     try
                     {
-                        builder.Append(date.ToString(format, culture));
+                        if (!string.IsNullOrEmpty(format) && DateTokenResolvers.TryGetValue(format, out var resolver))
+                        {
+                            builder.Append(resolver(date, culture));
+                        }
+                        else if (!string.IsNullOrWhiteSpace(format))
+                        {
+                            builder.Append(date.ToString(format, culture));
+                        }
+                        else
+                        {
+                            builder.Append(date.ToString(culture));
+                        }
                     }
                     catch (FormatException)
                     {

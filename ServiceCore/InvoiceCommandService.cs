@@ -318,6 +318,17 @@ namespace ServiceCore
 
         private static readonly Regex PatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+        private static readonly IReadOnlyDictionary<string, Func<DateTime, CultureInfo, string>> DateTokenResolvers =
+            new Dictionary<string, Func<DateTime, CultureInfo, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MM"] = static (d, c) => d.ToString("MM", c),
+                ["MMM"] = static (d, c) => d.ToString("MMM", c),
+                ["MMMM"] = static (d, c) => d.ToString("MMMM", c),
+                ["yy"] = static (d, c) => d.ToString("yy", c),
+                ["yyyy"] = static (d, c) => d.ToString("yyyy", c),
+                ["MM-yyyy"] = static (d, c) => d.ToString("MM-yyyy", c),
+            };
+
         private static int? ExtractSequenceNumber(Invoices invoice)
         {
             if (invoice == null) return null;
@@ -344,7 +355,7 @@ namespace ServiceCore
                 expression.Append(Regex.Escape(pattern.Substring(cursor, token.Index - cursor)));
 
                 var type = token.Groups[1].Value;
-                var format = token.Groups[2].Value;
+                var format = token.Groups[2].Value?.Trim();
 
                 if (type.Equals("num", StringComparison.OrdinalIgnoreCase))
                 {
@@ -361,7 +372,19 @@ namespace ServiceCore
                 {
                     try
                     {
-                        var formattedDate = dateTime.ToString(format, culture);
+                        string formattedDate;
+                        if (!string.IsNullOrEmpty(format) && DateTokenResolvers.TryGetValue(format, out var resolver))
+                        {
+                            formattedDate = resolver(dateTime, culture);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(format))
+                        {
+                            formattedDate = dateTime.ToString(format, culture);
+                        }
+                        else
+                        {
+                            formattedDate = dateTime.ToString(culture);
+                        }
                         expression.Append(Regex.Escape(formattedDate));
                     }
                     catch (FormatException)
