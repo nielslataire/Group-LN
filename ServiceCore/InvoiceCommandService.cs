@@ -164,12 +164,12 @@ namespace ServiceCore
                     await _uow.SaveChangesAsync(ct);
                 }
 
-                await _uow.CommitTransactionAsync(_uow.CurrentTransaction!, ct);
+                await _uow.CommitTransactionAsync(tx, ct);
                 return (inv.Id, publicId);
             }
             catch
             {
-                await _uow.RollbackTransactionAsync(_uow.CurrentTransaction!, ct);
+                await _uow.RollbackTransactionAsync(tx, ct);
                 throw;
             }
         }
