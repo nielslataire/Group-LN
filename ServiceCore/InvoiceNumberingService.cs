@@ -26,16 +26,23 @@ namespace ServiceCore
            CancellationToken ct = default)
         {
             // 1) roep stored proc aan
-            var nextParam = new SqlParameter
+            var seriesParam = new SqlParameter("@SeriesId", System.Data.SqlDbType.Int)
             {
-                ParameterName = "@Next",
-                SqlDbType = System.Data.SqlDbType.Int,
+                Value = seriesId
+            };
+            var fiscalParam = new SqlParameter("@FiscalYear", System.Data.SqlDbType.Int)
+            {
+                Value = fiscalYear
+            };
+            var nextParam = new SqlParameter("@Next", System.Data.SqlDbType.Int)
+            {
                 Direction = System.Data.ParameterDirection.Output
             };
 
             await _db.Database.ExecuteSqlRawAsync(
-                "EXEC dbo.spInvoice_NextNumber @SeriesId={0}, @FiscalYear={1}, @Next OUT",
-                new object[] { seriesId, fiscalYear, nextParam }, ct);
+                "EXEC dbo.spInvoice_NextNumber @SeriesId, @FiscalYear, @Next OUTPUT",
+                new[] { seriesParam, fiscalParam, nextParam },
+                ct);
 
             var number = (int)nextParam.Value;
 
