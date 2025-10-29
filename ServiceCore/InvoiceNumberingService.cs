@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ServiceCore
 {
@@ -26,48 +27,83 @@ namespace ServiceCore
            CancellationToken ct = default)
         {
             // 1) zoek of maak de sequentie en verhoog ze transactioneel
-            await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-
-            var sequence = await _db.InvoiceSequence
-                .FirstOrDefaultAsync(x => x.SeriesId == seriesId && x.FiscalYear == fiscalYear, ct);
-
-            int number;
-            if (sequence == null)
+            var ownsTransaction = _db.Database.CurrentTransaction == null;
+            IDbContextTransaction? startedTx = null;
+            if (ownsTransaction)
             {
-                number = 1;
-                sequence = new InvoiceSequence
+                startedTx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            }
+
+            try
+            {
+                InvoiceSequence? sequence;
+                if (ownsTransaction)
                 {
-                    SeriesId = seriesId,
-                    FiscalYear = fiscalYear,
-                    CurrentNumber = number
-                };
-                _uow.InvoiceSequences.Add(sequence);
+                    sequence = await _db.InvoiceSequence
+                        .FromSqlRaw(
+                            "SELECT TOP (1) * FROM InvoiceSequence WITH (UPDLOCK, HOLDLOCK) WHERE SeriesId = {0} AND FiscalYear = {1}",
+                            seriesId,
+                            fiscalYear)
+                        .AsTracking()
+                        .FirstOrDefaultAsync(ct);
+                }
+                else
+                {
+                    sequence = await _db.InvoiceSequence
+                        .FirstOrDefaultAsync(x => x.SeriesId == seriesId && x.FiscalYear == fiscalYear, ct);
+                }
+
+                int number;
+                if (sequence == null)
+                {
+                    number = 1;
+                    sequence = new InvoiceSequence
+                    {
+                        SeriesId = seriesId,
+                        FiscalYear = fiscalYear,
+                        CurrentNumber = number
+                    };
+                    _uow.InvoiceSequences.Add(sequence);
+                }
+                else
+                {
+                    number = sequence.CurrentNumber + 1;
+                    sequence.CurrentNumber = number;
+                }
+
+                await _uow.SaveChangesAsync(ct);
+
+                if (ownsTransaction && startedTx is not null)
+                    await startedTx.CommitAsync(ct);
+
+                // 2) format volgens pattern van issuer
+                var issuer = await _db.Invoices
+                    .Include(i => i.IssuerCompany)
+                    .Where(i => i.Id == invoiceId)
+                    .Select(i => i.IssuerCompany)
+                    .FirstAsync(ct);
+
+                var pattern = issuer.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
+                var formatted = FormatPattern(pattern, number, invoiceDate);
+
+                // 3) opslaan op factuur
+                var invoice = await _db.Invoices.FirstAsync(i => i.Id == invoiceId, ct);
+                invoice.PublicId = formatted;
+                await _uow.SaveChangesAsync(ct);
+
+                return (formatted, number);
             }
-            else
+            catch
             {
-                number = sequence.CurrentNumber + 1;
-                sequence.CurrentNumber = number;
+                if (ownsTransaction && startedTx is not null)
+                    await startedTx.RollbackAsync(ct);
+                throw;
             }
-
-            await _uow.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-
-            // 2) format volgens pattern van issuer
-            var issuer = await _db.Invoices
-                .Include(i => i.IssuerCompany)
-                .Where(i => i.Id == invoiceId)
-                .Select(i => i.IssuerCompany)
-                .FirstAsync(ct);
-
-            var pattern = issuer.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
-            var formatted = FormatPattern(pattern, number, invoiceDate);
-
-            // 3) opslaan op factuur
-            var invoice = await _db.Invoices.FirstAsync(i => i.Id == invoiceId, ct);
-            invoice.PublicId = formatted;
-            await _uow.SaveChangesAsync(ct);
-
-            return (formatted, number);
+            finally
+            {
+                if (ownsTransaction && startedTx is not null)
+                    await startedTx.DisposeAsync();
+            }
         }
 
         private static string FormatPattern(string pattern, int num, DateTime date)
