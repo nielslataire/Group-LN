@@ -18,7 +18,12 @@ namespace ServiceCore
         private readonly cpmRunningContext _db;
         private readonly IInvoiceNumberingService _num; 
 
-        public InvoiceCommandService(UnitOfWorkCore uow) { _uow = uow; _db = (cpmRunningContext)uow.Context; }
+        public InvoiceCommandService(UnitOfWorkCore uow, IInvoiceNumberingService num)
+        {
+            _uow = uow;
+            _db = (cpmRunningContext)uow.Context;
+            _num = num;
+        }
 
         public async Task<(int invoiceId, string? publicId)> CreateWithLinesAsync(InvoiceDraftBO bo, bool issueNow, CancellationToken ct = default)
         {
