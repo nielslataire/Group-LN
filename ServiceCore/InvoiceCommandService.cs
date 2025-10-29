@@ -9,6 +9,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 
@@ -314,6 +316,8 @@ namespace ServiceCore
             }
         }
 
+        private static readonly Regex PatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
         private static int? ExtractSequenceNumber(Invoices invoice)
         {
             if (invoice == null) return null;
@@ -322,33 +326,66 @@ namespace ServiceCore
             return ExtractSequenceNumber(pattern, invoice.PublicId, invoice.Date);
         }
 
-        private static int? ExtractSequenceNumber(string pattern, string? publicId, DateOnly invoiceDate)
+        private static int? ExtractSequenceNumber(string? pattern, string? publicId, DateOnly invoiceDate)
         {
-            if (string.IsNullOrWhiteSpace(publicId)) return null;
-            if (string.IsNullOrWhiteSpace(pattern)) pattern = "{num:0000}/{date:yyyy}";
-
-            var escaped = Regex.Escape(pattern);
-            var numberRegex = "(?<num>\\d+)";
-
-            var numMatch = Regex.Match(pattern, "\\{num:(0+)\\}", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-            if (numMatch.Success)
-            {
-                escaped = escaped.Replace(Regex.Escape(numMatch.Value), numberRegex);
-            }
-            else
-            {
-                escaped = escaped.Replace(Regex.Escape("{num:0000}"), numberRegex);
-            }
-
-            var dateTime = invoiceDate.ToDateTime(new TimeOnly(0, 0));
-            escaped = escaped.Replace(Regex.Escape("{date:yyyy}"), Regex.Escape(dateTime.ToString("yyyy")));
-            escaped = escaped.Replace(Regex.Escape("{date:MM-yyyy}"), Regex.Escape(dateTime.ToString("MM-yyyy")));
-
-            var match = Regex.Match(publicId, "^" + escaped + "$", RegexOptions.CultureInvariant);
-            if (!match.Success)
+            if (string.IsNullOrWhiteSpace(publicId))
                 return null;
 
-            if (int.TryParse(match.Groups["num"].Value, out var number))
+            if (string.IsNullOrWhiteSpace(pattern))
+                pattern = "{num:0000}/{date:yyyy}";
+
+            var expression = new StringBuilder();
+            var cursor = 0;
+            var dateTime = invoiceDate.ToDateTime(TimeOnly.MinValue);
+
+            foreach (Match token in PatternTokenRegex.Matches(pattern))
+            {
+                expression.Append(Regex.Escape(pattern.Substring(cursor, token.Index - cursor)));
+
+                var type = token.Groups[1].Value;
+                var format = token.Groups[2].Value;
+
+                if (type.Equals("num", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrWhiteSpace(format) && format.All(c => c == '0'))
+                    {
+                        expression.Append($@"(?<num>\d{{{format.Length}}})");
+                    }
+                    else
+                    {
+                        expression.Append(@"(?<num>\d+)");
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        var formattedDate = dateTime.ToString(format, CultureInfo.InvariantCulture);
+                        expression.Append(Regex.Escape(formattedDate));
+                    }
+                    catch (FormatException)
+                    {
+                        expression.Append(Regex.Escape(dateTime.ToString("yyyy", CultureInfo.InvariantCulture)));
+                    }
+                }
+
+                cursor = token.Index + token.Length;
+            }
+
+            if (cursor < pattern.Length)
+                expression.Append(Regex.Escape(pattern.Substring(cursor)));
+
+            var match = Regex.Match(publicId, "^" + expression + "$", RegexOptions.CultureInvariant);
+            if (!match.Success)
+            {
+                var fallback = Regex.Match(publicId, @"(\d+)(?!.*\d)");
+                if (fallback.Success && int.TryParse(fallback.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var alt))
+                    return alt;
+
+                return null;
+            }
+
+            if (int.TryParse(match.Groups["num"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
                 return number;
 
             return null;

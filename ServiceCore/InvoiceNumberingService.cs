@@ -4,10 +4,14 @@ using DALCore;
 using DALCore.Models;
 using DALCore.Query;
 using ServiceCore.Translators;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -108,13 +112,56 @@ namespace ServiceCore
             }
         }
 
-        private static string FormatPattern(string pattern, int num, DateTime date)
+        private static readonly Regex PatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static string FormatPattern(string? pattern, int num, DateTime date)
         {
-            // simpele replace; je kunt dit uitbreiden
-            return pattern
-                .Replace("{num:0000}", num.ToString("0000"))
-                .Replace("{date:yyyy}", date.Year.ToString())
-                .Replace("{date:MM-yyyy}", date.ToString("MM-yyyy"));
+            if (string.IsNullOrWhiteSpace(pattern))
+                pattern = "{num:0000}/{date:yyyy}";
+
+            var builder = new StringBuilder();
+            var cursor = 0;
+
+            foreach (Match token in PatternTokenRegex.Matches(pattern))
+            {
+                builder.Append(pattern, cursor, token.Index - cursor);
+
+                var type = token.Groups[1].Value;
+                var format = token.Groups[2].Value;
+
+                if (type.Equals("num", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var fmt = string.IsNullOrWhiteSpace(format) ? null : format;
+                        builder.Append(fmt is null
+                            ? num.ToString(CultureInfo.InvariantCulture)
+                            : num.ToString(fmt, CultureInfo.InvariantCulture));
+                    }
+                    catch (FormatException)
+                    {
+                        builder.Append(num.ToString(CultureInfo.InvariantCulture));
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        builder.Append(date.ToString(format, CultureInfo.InvariantCulture));
+                    }
+                    catch (FormatException)
+                    {
+                        builder.Append(date.ToString("yyyy", CultureInfo.InvariantCulture));
+                    }
+                }
+
+                cursor = token.Index + token.Length;
+            }
+
+            if (cursor < pattern.Length)
+                builder.Append(pattern, cursor, pattern.Length - cursor);
+
+            return builder.ToString();
         }
 
     }
