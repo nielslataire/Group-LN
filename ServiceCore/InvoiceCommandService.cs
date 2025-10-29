@@ -337,6 +337,7 @@ namespace ServiceCore
             var expression = new StringBuilder();
             var cursor = 0;
             var dateTime = invoiceDate.ToDateTime(TimeOnly.MinValue);
+            var culture = CultureInfo.CurrentCulture;
 
             foreach (Match token in PatternTokenRegex.Matches(pattern))
             {
@@ -360,12 +361,12 @@ namespace ServiceCore
                 {
                     try
                     {
-                        var formattedDate = dateTime.ToString(format, CultureInfo.InvariantCulture);
+                        var formattedDate = dateTime.ToString(format, culture);
                         expression.Append(Regex.Escape(formattedDate));
                     }
                     catch (FormatException)
                     {
-                        expression.Append(Regex.Escape(dateTime.ToString("yyyy", CultureInfo.InvariantCulture)));
+                        expression.Append(Regex.Escape(dateTime.ToString("yyyy", culture)));
                     }
                 }
 
@@ -385,7 +386,7 @@ namespace ServiceCore
                 return null;
             }
 
-            if (int.TryParse(match.Groups["num"].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+            if (int.TryParse(match.Groups["num"].Value, NumberStyles.Integer, CultureInfo.CurrentCulture, out var number))
                 return number;
 
             return null;

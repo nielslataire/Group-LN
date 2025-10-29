@@ -121,6 +121,7 @@ namespace ServiceCore
 
             var builder = new StringBuilder();
             var cursor = 0;
+            var culture = CultureInfo.CurrentCulture;
 
             foreach (Match token in PatternTokenRegex.Matches(pattern))
             {
@@ -135,23 +136,23 @@ namespace ServiceCore
                     {
                         var fmt = string.IsNullOrWhiteSpace(format) ? null : format;
                         builder.Append(fmt is null
-                            ? num.ToString(CultureInfo.InvariantCulture)
-                            : num.ToString(fmt, CultureInfo.InvariantCulture));
+                            ? num.ToString(culture)
+                            : num.ToString(fmt, culture));
                     }
                     catch (FormatException)
                     {
-                        builder.Append(num.ToString(CultureInfo.InvariantCulture));
+                        builder.Append(num.ToString(culture));
                     }
                 }
                 else
                 {
                     try
                     {
-                        builder.Append(date.ToString(format, CultureInfo.InvariantCulture));
+                        builder.Append(date.ToString(format, culture));
                     }
                     catch (FormatException)
                     {
-                        builder.Append(date.ToString("yyyy", CultureInfo.InvariantCulture));
+                        builder.Append(date.ToString("yyyy", culture));
                     }
                 }
 
