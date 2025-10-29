@@ -6,7 +6,9 @@ using FacadeCore;
 using Microsoft.EntityFrameworkCore;
 using ServiceCore.Translators;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,18 +45,31 @@ namespace ServiceCore
 
             var due = bo.ExpirationDate ?? (defaultDays.HasValue ? bo.InvoiceDate.AddDays(defaultDays.Value) : (DateOnly?)null);
 
-            // check partij (zacht, FK’s doen de rest)
-            if (bo.CompanyId.HasValue)
-                await _db.CompanyInfo.FirstAsync(s => s.CompanyId == bo.CompanyId.Value, ct);
+            string? issuerBankAccountIban = null;
+            if (bo.IssuerBankAccountId is int bankAccountId)
+            {
+                issuerBankAccountIban = await _db.IssuerBankAccount
+                    .Where(x => x.Id == bankAccountId && x.IssuerCompanyId == bo.IssuerCompanyId)
+                    .Select(x => x.Iban)
+                    .FirstOrDefaultAsync(ct);
+
+                if (issuerBankAccountIban is null)
+                    throw new InvalidOperationException("Geselecteerd rekeningnummer hoort niet bij dit facturatiebedrijf.");
+            }
             else
             {
-                if (bo.ClientType is 1)
-                    await _db.ClientAccount.FirstAsync(c => c.Id == bo.ClientId, ct);
-                else if (bo.ClientType is 2)
-                    await _db.ClientContacts.FirstAsync(c => c.Id == bo.ClientId, ct);
-                else
-                    throw new InvalidOperationException("Kies een klant (type 1/2) of leverancier.");
+                issuerBankAccountIban = await _db.IssuerBankAccount
+                    .Where(x => x.IssuerCompanyId == bo.IssuerCompanyId && x.IsDefault)
+                    .Select(x => x.Iban)
+                    .FirstOrDefaultAsync(ct);
             }
+
+            var party = await ResolvePartySnapshotAsync(bo, ct);
+
+            var headerText = Clean(bo.HeaderDescription);
+            var detailText = Clean(bo.DetailDescription);
+            var bankAccount = Clean(issuerBankAccountIban);
+            var invoiceText = headerText ?? detailText;
 
             // status ids
             var draftId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Draft").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)1;
@@ -76,7 +91,16 @@ namespace ServiceCore
                     InvoiceMode = (byte)bo.Mode,
                     ProjectId = bo.ProjectId,
                     SupplierContractId = bo.SupplierContractId,
-                    HeaderDescription = bo.HeaderDescription
+                    HeaderDescription = headerText,
+                    Text = invoiceText,
+                    DetailText = detailText,
+                    ClientName = party.ClientName,
+                    Adress = party.Address,
+                    PostalCodeId = party.PostalCodeId,
+                    VatNumber = party.VatNumber,
+                    ExtraInfo = party.ExtraInfo,
+                    BankAccount = bankAccount,
+                    PaymentTermId = bo.PaymentTermId
                 };
                 _uow.Invoices.Add(inv);
                 await _uow.SaveChangesAsync(ct); // Id is nu bekend
@@ -168,13 +192,14 @@ namespace ServiceCore
 
                 InvoiceSequence? sequence = null;
                 int? invoiceNumber = null;
+                string pattern = invoice.IssuerCompany?.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
 
                 if (invoice.SeriesId is int seriesId && invoice.FiscalYear is int fiscalYear && !string.IsNullOrWhiteSpace(invoice.PublicId))
                 {
                     sequence = await _db.InvoiceSequence
                         .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
 
-                    invoiceNumber = ExtractSequenceNumber(invoice);
+                    invoiceNumber = ExtractSequenceNumber(pattern, invoice.PublicId, invoice.Date);
 
                     if (sequence != null)
                     {
@@ -182,6 +207,18 @@ namespace ServiceCore
                             throw new InvalidOperationException("Factuurnummer kon niet bepaald worden; verwijderen is niet mogelijk.");
 
                         if (sequence.CurrentNumber > invoiceNumber.Value)
+                            throw new InvalidOperationException("Factuur is niet de laatste in de reeks en kan niet verwijderd worden.");
+
+                        var higherNumbers = await _db.Invoices
+                            .Where(i => i.SeriesId == seriesId && i.FiscalYear == fiscalYear && i.Id != invoiceId && i.PublicId != null)
+                            .Select(i => new { i.PublicId, i.Date })
+                            .ToListAsync(ct);
+
+                        if (higherNumbers.Any(o =>
+                        {
+                            var otherNumber = ExtractSequenceNumber(pattern, o.PublicId!, o.Date);
+                            return otherNumber.HasValue && otherNumber.Value > invoiceNumber.Value;
+                        }))
                             throw new InvalidOperationException("Factuur is niet de laatste in de reeks en kan niet verwijderd worden.");
                     }
                 }
@@ -253,6 +290,7 @@ namespace ServiceCore
             }
         }
 
+
         // ---------- alleen voor modus SCHIJVEN ----------
         // Bouwt lijnen voor modus "Schijven" op basis van gekozen PaymentGroup + StageIds.
         // - Price = 0m (rekenbasis volgt later: contract/units * percentage)
@@ -300,40 +338,236 @@ namespace ServiceCore
             }
         }
 
+        private async Task<PartySnapshot> ResolvePartySnapshotAsync(InvoiceDraftBO bo, CancellationToken ct)
+        {
+            if (bo.CompanyId.HasValue)
+            {
+                var supplier = await _db.CompanyInfo
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.CompanyId == bo.CompanyId.Value, ct)
+                    ?? throw new InvalidOperationException("Leverancier niet gevonden.");
+
+                return new PartySnapshot(
+                    Clean(supplier.BedrijfsNaam),
+                    Clean(ComposeAddress(supplier.Straat, supplier.Huisnummer, supplier.Toevoeging, supplier.Busnummer)),
+                    NormalizePostalCodeId(supplier.PostCodeId),
+                    Clean(supplier.Ondernemingsnummer),
+                    Clean(supplier.Opmerkingen)
+                );
+            }
+
+            if (bo.ClientType is (int)InvoicePartyType.ClientAccount)
+            {
+                var client = await _db.ClientAccount
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == bo.ClientId, ct)
+                    ?? throw new InvalidOperationException("Klant niet gevonden.");
+
+                var useInvoiceAddress = client.InvoiceAddress == true;
+                var street = useInvoiceAddress && !string.IsNullOrWhiteSpace(client.InvoiceStreet)
+                    ? client.InvoiceStreet
+                    : client.Street;
+                var house = useInvoiceAddress && !string.IsNullOrWhiteSpace(client.InvoiceHousenumber)
+                    ? client.InvoiceHousenumber
+                    : client.Housenumber;
+                var box = useInvoiceAddress && !string.IsNullOrWhiteSpace(client.InvoiceBusnumber)
+                    ? client.InvoiceBusnumber
+                    : client.Busnumber;
+                var postalCodeId = useInvoiceAddress
+                    ? (client.InvoicePostalCodeId ?? client.PostalCodeId)
+                    : client.PostalCodeId;
+
+                var name = !string.IsNullOrWhiteSpace(client.Name)
+                    ? client.Name
+                    : client.CompanyName;
+
+                return new PartySnapshot(
+                    Clean(name),
+                    Clean(ComposeAddress(street, house, null, box)),
+                    NormalizePostalCodeId(postalCodeId),
+                    Clean(client.Vatnumber),
+                    Clean(client.InvoiceExtra)
+                );
+            }
+
+            if (bo.ClientType is (int)InvoicePartyType.ClientContact)
+            {
+                var contact = await _db.ClientContacts
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.Id == bo.ClientId, ct)
+                    ?? throw new InvalidOperationException("Contact niet gevonden.");
+
+                var nameParts = new List<string>();
+                if (!string.IsNullOrWhiteSpace(contact.Salutation)) nameParts.Add(contact.Salutation.Trim());
+                if (!string.IsNullOrWhiteSpace(contact.Name)) nameParts.Add(contact.Name.Trim());
+                if (!string.IsNullOrWhiteSpace(contact.Forename)) nameParts.Add(contact.Forename.Trim());
+                var displayName = nameParts.Count > 0
+                    ? string.Join(" ", nameParts)
+                    : contact.CompanyName;
+
+                var useInvoiceAddress = contact.InvoiceAddress == true;
+                var street = useInvoiceAddress && !string.IsNullOrWhiteSpace(contact.InvoiceStreet)
+                    ? contact.InvoiceStreet
+                    : contact.Street;
+                var house = useInvoiceAddress && !string.IsNullOrWhiteSpace(contact.InvoiceHousenumber)
+                    ? contact.InvoiceHousenumber
+                    : contact.Housenumber;
+                var box = useInvoiceAddress && !string.IsNullOrWhiteSpace(contact.InvoiceBusnumber)
+                    ? contact.InvoiceBusnumber
+                    : contact.Busnumber;
+                var postalCodeId = useInvoiceAddress
+                    ? (contact.InvoicePostalCodeId ?? contact.PostalCodeId)
+                    : contact.PostalCodeId;
+
+                return new PartySnapshot(
+                    Clean(displayName),
+                    Clean(ComposeAddress(street, house, null, box)),
+                    NormalizePostalCodeId(postalCodeId),
+                    Clean(contact.Vatnumber),
+                    null
+                );
+            }
+
+            throw new InvalidOperationException("Kies een klant (type 1/2) of leverancier.");
+        }
+
+        private static string? ComposeAddress(string? street, string? houseNumber, string? addition, string? box)
+        {
+            var parts = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(street))
+                parts.Add(street.Trim());
+
+            var houseParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(houseNumber))
+                houseParts.Add(houseNumber.Trim());
+            if (!string.IsNullOrWhiteSpace(addition))
+                houseParts.Add(addition.Trim());
+            if (houseParts.Count > 0)
+                parts.Add(string.Join("", houseParts));
+
+            if (!string.IsNullOrWhiteSpace(box))
+                parts.Add($"bus {box.Trim()}");
+
+            if (parts.Count == 0)
+                return null;
+
+            return string.Join(" ", parts);
+        }
+
+        private static string? Clean(string? value)
+            => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static int? NormalizePostalCodeId(int? value)
+            => value.HasValue && value.Value > 0 ? value : null;
+
+        private sealed record PartySnapshot(
+            string? ClientName,
+            string? Address,
+            int? PostalCodeId,
+            string? VatNumber,
+            string? ExtraInfo);
+
+        private static readonly Regex PatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly IReadOnlyDictionary<string, Func<DateTime, CultureInfo, string>> DateTokenResolvers =
+            new Dictionary<string, Func<DateTime, CultureInfo, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MM"] = static (d, c) => d.ToString("MM", c),
+                ["MMM"] = static (d, c) => d.ToString("MMM", c),
+                ["MMMM"] = static (d, c) => d.ToString("MMMM", c),
+                ["yy"] = static (d, c) => d.ToString("yy", c),
+                ["yyyy"] = static (d, c) => d.ToString("yyyy", c),
+                ["MM-yyyy"] = static (d, c) => d.ToString("MM-yyyy", c),
+            };
+
         private static int? ExtractSequenceNumber(Invoices invoice)
         {
             if (invoice == null) return null;
-            if (string.IsNullOrWhiteSpace(invoice.PublicId)) return null;
 
             var pattern = invoice.IssuerCompany?.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
-            if (string.IsNullOrWhiteSpace(pattern)) pattern = "{num:0000}/{date:yyyy}";
+            return ExtractSequenceNumber(pattern, invoice.PublicId, invoice.Date);
+        }
 
-            var escaped = Regex.Escape(pattern);
-            var numberRegex = "(?<num>\\d+)";
-
-            var numMatch = Regex.Match(pattern, "\\{num:(0+)\\}", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-            if (numMatch.Success)
-            {
-                escaped = escaped.Replace(Regex.Escape(numMatch.Value), numberRegex);
-            }
-            else
-            {
-                escaped = escaped.Replace(Regex.Escape("{num:0000}"), numberRegex);
-            }
-
-            var dateTime = invoice.Date.ToDateTime(new TimeOnly(0, 0));
-            escaped = escaped.Replace(Regex.Escape("{date:yyyy}"), Regex.Escape(dateTime.ToString("yyyy")));
-            escaped = escaped.Replace(Regex.Escape("{date:MM-yyyy}"), Regex.Escape(dateTime.ToString("MM-yyyy")));
-
-            var match = Regex.Match(invoice.PublicId, "^" + escaped + "$", RegexOptions.CultureInvariant);
-            if (!match.Success)
+        private static int? ExtractSequenceNumber(string? pattern, string? publicId, DateOnly invoiceDate)
+        {
+            if (string.IsNullOrWhiteSpace(publicId))
                 return null;
 
-            if (int.TryParse(match.Groups["num"].Value, out var number))
+            if (string.IsNullOrWhiteSpace(pattern))
+                pattern = "{num:0000}/{date:yyyy}";
+
+            var expression = new StringBuilder();
+            var cursor = 0;
+            var dateTime = invoiceDate.ToDateTime(TimeOnly.MinValue);
+            var culture = CultureInfo.CurrentCulture;
+
+            foreach (Match token in PatternTokenRegex.Matches(pattern))
+            {
+                expression.Append(Regex.Escape(pattern.Substring(cursor, token.Index - cursor)));
+
+                var type = token.Groups[1].Value;
+                var format = token.Groups[2].Value?.Trim();
+
+                if (type.Equals("num", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!string.IsNullOrWhiteSpace(format) && format.All(c => c == '0'))
+                    {
+                        expression.Append($@"(?<num>\d{{{format.Length}}})");
+                    }
+                    else
+                    {
+                        expression.Append(@"(?<num>\d+)");
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        string formattedDate;
+                        if (!string.IsNullOrEmpty(format) && DateTokenResolvers.TryGetValue(format, out var resolver))
+                        {
+                            formattedDate = resolver(dateTime, culture);
+                        }
+                        else if (!string.IsNullOrWhiteSpace(format))
+                        {
+                            formattedDate = dateTime.ToString(format, culture);
+                        }
+                        else
+                        {
+                            formattedDate = dateTime.ToString(culture);
+                        }
+                        expression.Append(Regex.Escape(formattedDate));
+                    }
+                    catch (FormatException)
+                    {
+                        expression.Append(Regex.Escape(dateTime.ToString("yyyy", culture)));
+                    }
+                }
+
+                cursor = token.Index + token.Length;
+            }
+
+            if (cursor < pattern.Length)
+                expression.Append(Regex.Escape(pattern.Substring(cursor)));
+
+            var match = Regex.Match(publicId, "^" + expression + "$", RegexOptions.CultureInvariant);
+            if (!match.Success)
+            {
+                var fallback = Regex.Match(publicId, @"(\d+)(?!.*\d)");
+                if (fallback.Success && int.TryParse(fallback.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var alt))
+                    return alt;
+
+                return null;
+            }
+
+            if (int.TryParse(match.Groups["num"].Value, NumberStyles.Integer, CultureInfo.CurrentCulture, out var number))
                 return number;
 
             return null;
         }
+
+
 
 
 

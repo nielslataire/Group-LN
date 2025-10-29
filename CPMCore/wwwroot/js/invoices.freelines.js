@@ -65,6 +65,9 @@
         return $row[0];
     }
 
+    function notifyStateChange() {
+        if (window.updateSaveButtonState) window.updateSaveButtonState();
+    }
 
     function fillVatOptions($sel) {
         $sel.empty();
@@ -116,6 +119,7 @@
         });
 
         reindexFromDisplay();
+        notifyStateChange();
     }
 
     function lastRowIsEmpty() {
@@ -140,6 +144,7 @@
     $('#addFreeLine').on('click', function () {
         addEmptyRowAtEnd();
         dt.one('draw', function () { if (window.rebuildInvoicePreview) window.rebuildInvoicePreview(); });
+        notifyStateChange();
     });
 
     // Verwijderen
@@ -148,6 +153,7 @@
         if (dt.rows().count() === 0) addEmptyRowAtEnd();
         reindexFromDisplay();
         dt.one('draw', function () { if (window.rebuildInvoicePreview) window.rebuildInvoicePreview(); });
+        notifyStateChange();
     });
 
     // Typen in omschrijving → trailing lege rij
@@ -166,6 +172,7 @@
                 }
             }, 0);
         }
+        notifyStateChange();
     });
     // helper: is een rij "leeg" (geen omschrijving en geen bedrag)?
     function rowIsEmpty($tr) {
@@ -191,6 +198,7 @@
     $tbl.on('blur change', 'tbody .js-fl-price', function () {
         formatPriceInput($(this));
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        notifyStateChange();
     });
     // Na elke draw: alle zichtbare bedragen netjes formatteren
     $tbl.on('draw.dt', function () {
@@ -209,6 +217,7 @@
             v = parts.shift() + ',' + parts.join('');
         }
         $(this).val(v);
+        notifyStateChange();
     });
     // wijzig je per-lijn btw → meteen preview heropbouwen
     $tbl.on('change', 'tbody .js-fl-vat', function () {
@@ -226,9 +235,11 @@
         clearAll: function () {
             dt.clear().draw(false);
             dt.one('draw', function () { if (window.rebuildInvoicePreview) window.rebuildInvoicePreview(); });
+            notifyStateChange();
         },
         ensureOne: function () {
             if (dt.rows().count() === 0) addEmptyRowAtEnd();
+            notifyStateChange();
         }
     };
 })();

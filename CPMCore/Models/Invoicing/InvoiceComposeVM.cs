@@ -23,11 +23,13 @@ namespace CPMCore.Models.Invoicing
 
         public InvoiceMode Mode { get; set; } = InvoiceMode.Free;
         public string? HeaderDescription { get; set; }
+        public string? DetailDescription { get; set; }
 
         public int? ProjectId { get; set; }
         public int? SupplierContractId { get; set; }
         public int? PaymentTermId { get; set; }
         public int? VatTypeId { get; set; }
+        public int? IssuerBankAccountId { get; set; }
         public List<VatTypeVM> VatTypes { get; set; } = new();
 
 
@@ -44,5 +46,6 @@ namespace CPMCore.Models.Invoicing
         public IEnumerable<PaymentTermItemVM> PaymentTerms { get; set; } = Enumerable.Empty<PaymentTermItemVM>();
         public IEnumerable<SelectListItem> Projects { get; set; } = Array.Empty<SelectListItem>();
         public IEnumerable<SelectListItem> SupplierContracts { get; set; } = Array.Empty<SelectListItem>();
+        public IEnumerable<SelectListItem> IssuerBankAccounts { get; set; } = Array.Empty<SelectListItem>();
     }
 }

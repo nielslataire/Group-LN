@@ -5,6 +5,8 @@ $(function () {
     const getPartyId = () => $('input[name="PartyId"]').val();
     const isSupplier = () => getPartyType() === '3';
     const isCustomer = () => getPartyType() === '1' || getPartyType() === '2';
+    const $saveBtn = $('#saveInvoiceBtn');
+    const hasParty = () => !!getPartyId();
 
     // --- Helpers: defaults op basis van issuer ---
     async function fetchIssuerDefaults(issuerId) {
@@ -40,6 +42,95 @@ $(function () {
         setPaymentTermIfPresent(d.defaultPaymentTermId);
         setVatTypeIfPresent(d.defaultVatTypeId);
     }
+
+    async function loadIssuerBankAccounts(issuerId) {
+        const $select = $('#IssuerBankAccountId');
+        if ($select.length === 0) return;
+
+        $select.empty();
+        const placeholder = $('<option>').val('').text('-- Kies een rekening --');
+        $select.append(placeholder);
+
+        if (!issuerId) {
+            $select.prop('disabled', true);
+            return;
+        }
+
+        try {
+            const url = window.InvoicesEndpoints.issuerBankAccounts + '?issuerId=' + encodeURIComponent(issuerId);
+            const payload = await $.getJSON(url);
+            const items = (payload && payload.results) ? payload.results : [];
+            const defaultId = payload && payload.defaultId != null ? String(payload.defaultId) : null;
+
+            if (items.length === 0) {
+                placeholder.text('Geen rekeningen gevonden');
+                $select.prop('disabled', true);
+            } else {
+                items.forEach(item => {
+                    const opt = new Option(item.text, item.id);
+                    if (defaultId && String(item.id) === defaultId) {
+                        opt.selected = true;
+                    }
+                    $select.append(opt);
+                });
+                $select.prop('disabled', false);
+                if (defaultId) {
+                    $select.val(defaultId);
+                } else {
+                    const first = items[0];
+                    $select.val(first ? String(first.id) : '');
+                }
+            }
+        } catch {
+            placeholder.text('Kon rekeningen niet laden');
+            $select.prop('disabled', true);
+        }
+    }
+
+    async function refreshIssuerDefaults() {
+        const issuerId = $('#IssuerCompanyId').val();
+        await applyIssuerDefaultsFromServer();
+        await loadIssuerBankAccounts(issuerId);
+    }
+
+    function anyFreeLinesFilled() {
+        if (!window.freeLines || !window.freeLines.dt) return false;
+        let has = false;
+        window.freeLines.dt.rows().every(function () {
+            const $tr = $(this.node());
+            const text = ($tr.find('.js-fl-text').val() || '').trim();
+            const price = ($tr.find('.js-fl-price').val() || '').trim();
+            if (text !== '' || price !== '') { has = true; return false; }
+        });
+        return has;
+    }
+
+    function anyStageSelected() {
+        return $('#stagesList input[type="checkbox"][name$=".IsSelected"]:checked').length > 0;
+    }
+
+    function anyChangeOrderSelected() {
+        return $('#coList .js-co-master:checked').length > 0;
+    }
+
+    function anyUtilitySelected() {
+        return $('#utlList .js-utl-row:checked').length > 0;
+    }
+
+    function updateSaveButtonState() {
+        if (!$saveBtn.length) return;
+        const mode = $('#Mode').val();
+        let allow = false;
+        if (mode === '1') allow = anyFreeLinesFilled();
+        else if (mode === '2') allow = anyStageSelected();
+        else if (mode === '3') allow = anyChangeOrderSelected();
+        else if (mode === '4') allow = anyUtilitySelected();
+
+        const enabled = hasParty() && allow;
+        $saveBtn.prop('disabled', !enabled);
+    }
+    window.updateSaveButtonState = window.updateSaveButtonState || updateSaveButtonState;
+
     function getHeader() {
         const $hdr = $('#HeaderDescription');
         return $hdr.length ? $hdr : $();
@@ -85,6 +176,8 @@ $(function () {
         $('#Mode').val('1');
         $('#freeLineBlock').show();
         if (window.freeLines) { window.freeLines.clearAll(); window.freeLines.ensureOne(); }
+        toggleBlocks();
+        updateSaveButtonState();
     }
 
     function enforceModeByParty() {
@@ -97,6 +190,7 @@ $(function () {
         } else {
             $mode.find('option').prop('disabled', false).show();
         }
+        toggleBlocks();
     }
 
     function toggleProjectContract() {
@@ -142,8 +236,10 @@ $(function () {
             if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
             if (window.updateHeaderLock) window.updateHeaderLock();
             if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            updateSaveButtonState();
         } catch {
             $('#stagesList').html('<div class="text-danger small">Kon schijven niet laden.</div>');
+            updateSaveButtonState();
         }
     }
 
@@ -171,8 +267,10 @@ $(function () {
             if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
             if (window.updateHeaderLock) window.updateHeaderLock();
             if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            updateSaveButtonState();
         } catch {
             $('#coList').html('<div class="text-danger small">Kon wijzigingsopdrachten niet laden.</div>');
+            updateSaveButtonState();
         }
     }
 
@@ -196,12 +294,22 @@ $(function () {
             if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
             if (window.updateHeaderLock) window.updateHeaderLock();
             if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            updateSaveButtonState();
         } catch {
             $('#utlList').html('<div class="text-danger small">Kon nutsaansluitingen niet laden.</div>');
+            updateSaveButtonState();
         }
     }
 
     function toggleBlocks() {
+        if (!hasParty()) {
+            $('#stagesBlock, #coBlock, #utlBlock, #freeLineBlock').hide();
+            updateHeaderLock();
+            updateSaveButtonState();
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            return;
+        }
+
         const mode = $('#Mode').val();
         const showStages = (mode === '2' && isCustomer());
         const showCO = (mode === '3' && isCustomer());
@@ -220,6 +328,7 @@ $(function () {
 
         updateHeaderLock();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        updateSaveButtonState();
     }
 
     // Select2 & pickers
@@ -335,7 +444,7 @@ $(function () {
     // Facturatiebedrijf wijzigt
     $(document).on('change', '#IssuerCompanyId', async function () {
         hardResetUI();
-        await applyIssuerDefaultsFromServer();
+        await refreshIssuerDefaults();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
     });
 
@@ -383,6 +492,7 @@ $(function () {
         $master.prop('checked', allChecked);
         if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        updateSaveButtonState();
     });
 
     // Form guard

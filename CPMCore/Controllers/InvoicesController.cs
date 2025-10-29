@@ -22,6 +22,7 @@ namespace CPMCore.Controllers
         private readonly IInvoiceCommandService _cmd;
         private readonly IProjectSupplierLookupService _ps;
         private readonly IIssuerCompanyService _ics;
+        private readonly IIssuerBankAccountService _bank;
 
         public InvoicesController(
             IInvoiceQueryService invoices,
@@ -30,7 +31,8 @@ namespace CPMCore.Controllers
             IPartyLookupService lookup,
             IInvoiceCommandService cmd,
             IProjectSupplierLookupService ps,
-            IIssuerCompanyService ics)
+            IIssuerCompanyService ics,
+            IIssuerBankAccountService bank)
         {
             _invoices = invoices;
             _companies = companies;
@@ -39,6 +41,7 @@ namespace CPMCore.Controllers
             _cmd = cmd;
             _ps = ps;
             _ics = ics;
+            _bank = bank;
         }
 
         // LIST
@@ -107,6 +110,7 @@ namespace CPMCore.Controllers
             return PartialView("Modals/_ModalDeleteInvoice", vm);
         }
 
+
         // CREATE (GET)
         [HttpGet]
         public async Task<IActionResult> Create(int? issuerId = null, CancellationToken ct = default)
@@ -120,6 +124,14 @@ namespace CPMCore.Controllers
             var selectedIssuerId = issuerId
                 ?? (await _ics.GetFirstActiveIssuerIdAsync(ct))
                 ?? 0;
+
+            var accountsBo = selectedIssuerId > 0
+                ? await _bank.ListByIssuerAsync(selectedIssuerId, ct)
+                : Array.Empty<IssuerBankAccountBO>();
+
+            var defaultAccountId = accountsBo
+                .FirstOrDefault(x => x.IsDefault)?.Id
+                ?? accountsBo.Select(x => (int?)x.Id).FirstOrDefault();
 
             // default betaaltermijn afleiden uit issuer
             int? selectedTermId = issuersBo
@@ -148,6 +160,18 @@ namespace CPMCore.Controllers
 
                 VatTypes = VatsBo
                     .Select(t => new VatTypeVM(t.Id, t.VATPercentage, t.VATText))
+                    .ToList(),
+
+                IssuerBankAccountId = defaultAccountId,
+                IssuerBankAccounts = accountsBo
+                    .Select(a => new SelectListItem
+                    {
+                        Value = a.Id.ToString(),
+                        Text = string.IsNullOrWhiteSpace(a.DisplayName)
+                            ? a.Iban
+                            : $"{a.DisplayName} ({a.Iban})",
+                        Selected = defaultAccountId.HasValue && a.Id == defaultAccountId.Value
+                    })
                     .ToList()
             };
 
@@ -310,6 +334,33 @@ namespace CPMCore.Controllers
                 defaultVatTypeId = issuer?.DefaultVatTypeId
             });
         }
+
+        [HttpGet]
+        public async Task<IActionResult> IssuerBankAccounts(int issuerId, CancellationToken ct = default)
+        {
+            if (issuerId <= 0)
+                return Json(new { results = Array.Empty<object>(), defaultId = (int?)null });
+
+            var accounts = await _bank.ListByIssuerAsync(issuerId, ct);
+
+            var defaultAccount = accounts.FirstOrDefault(a => a.IsDefault) ?? accounts.FirstOrDefault();
+
+            var results = accounts.Select(a => new
+            {
+                id = a.Id,
+                text = string.IsNullOrWhiteSpace(a.DisplayName)
+                    ? a.Iban
+                    : $"{a.DisplayName} ({a.Iban})",
+                isDefault = a.IsDefault
+            }).ToList();
+
+            return Json(new
+            {
+                results,
+                defaultId = defaultAccount?.Id
+            });
+        }
+
 
         // LIJNEN VOOR SCHIJVEN AANMAKEN 
         [HttpGet]
@@ -522,9 +573,12 @@ namespace CPMCore.Controllers
                 InvoiceDate = vm.InvoiceDate,
                 Mode = vm.Mode,
                 HeaderDescription = vm.HeaderDescription,
+                DetailDescription = vm.DetailDescription,
                 ProjectId = vm.ProjectId,
                 SupplierContractId = vm.SupplierContractId,
-                PaymentGroupId = vm.PaymentGroupId
+                PaymentGroupId = vm.PaymentGroupId,
+                IssuerBankAccountId = vm.IssuerBankAccountId,
+                PaymentTermId = vm.PaymentTermId
             };
 
             if (vm.PartyType == InvoicePartyType.Supplier)
