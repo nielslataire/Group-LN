@@ -4,7 +4,9 @@ using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using ServiceCore;
+using System;
 using System.Globalization;
+using System.Threading;
 
 namespace CPMCore.Controllers
 {
@@ -54,6 +56,29 @@ namespace CPMCore.Controllers
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerCompanyId);
             ViewBag.CompanyId = issuerCompanyId;
             return View(vms);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id, int issuerCompanyId, CancellationToken ct = default)
+        {
+            try
+            {
+                await _cmd.DeleteAsync(id, ct);
+                AddMessage("success", "Factuur verwijderd.", "Factuur");
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Delete invoice {InvoiceId} blocked", id);
+                AddMessage("error", ex.Message, "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Delete invoice {InvoiceId} failed", id);
+                AddMessage("error", "Factuur kon niet verwijderd worden.", "Factuur");
+            }
+
+            return RedirectToAction(nameof(Index), new { issuerCompanyId });
         }
 
         // CREATE (GET)

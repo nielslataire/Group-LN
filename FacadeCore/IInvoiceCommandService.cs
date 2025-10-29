@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using BOCore;
 
@@ -14,6 +15,8 @@ namespace FacadeCore
             bool issueNow,
             CancellationToken ct = default);
         Task<int> CreateDraftAsync(InvoiceDraftBO bo, CancellationToken ct = default); // <- wrapper
+
+        Task DeleteAsync(int invoiceId, CancellationToken ct = default);
 
 
     }

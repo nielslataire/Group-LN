@@ -119,9 +119,20 @@
                                 <td class="text-end">@r.GrossTotal?.ToString("€ 0.00")</td>
                                 <td class="text-end">@r.Balance?.ToString("€ 0.00")</td>
                                 <td class="text-end">
-                                    <a class="btn btn-xs btn-default" href="@Url.Action("Detail", "Invoices", new { id = r.Id })">
+                                    <a class="btn btn-xs btn-default me-1" href="@Url.Action("Detail", "Invoices", new { id = r.Id })">
                                         Bekijken
                                     </a>
+                                    <form asp-action="Delete"
+                                          method="post"
+                                          asp-route-id="@r.Id"
+                                          asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                          class="d-inline-block"
+                                          onsubmit="return confirm('Weet je zeker dat je deze factuur wilt verwijderen?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-xs btn-danger" title="Verwijderen">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
                                 </td>
                             </tr>
                         }

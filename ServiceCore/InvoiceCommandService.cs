@@ -4,6 +4,7 @@ using DALCore;
 using DALCore.Models;
 using DALCore.Query;
 using ServiceCore.Translators;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -151,6 +152,77 @@ namespace ServiceCore
         {
             var (id, _) = await CreateWithLinesAsync(bo, issueNow: false, ct);
             return id;
+        }
+
+        public async Task DeleteAsync(int invoiceId, CancellationToken ct = default)
+        {
+            await using var tx = await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                var invoice = await _db.Invoices
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                var hasPayments = await _db.PaymentAllocations.AnyAsync(p => p.InvoiceId == invoiceId, ct);
+                if (hasPayments)
+                    throw new InvalidOperationException("Factuur heeft betalingen en kan niet verwijderd worden.");
+
+                var hasReplacements = await _db.Invoices.AnyAsync(i => i.ReplacementOfId == invoiceId, ct);
+                if (hasReplacements)
+                    throw new InvalidOperationException("Factuur heeft opvolgers en kan niet verwijderd worden.");
+
+                var detailRows = await _db.InvoicesDetails
+                    .Where(d => d.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (detailRows.Count > 0)
+                    _db.InvoicesDetails.RemoveRange(detailRows);
+
+                var relations = await _db.InvoiceRelations
+                    .Where(r => r.ParentInvoiceId == invoiceId || r.ChildInvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (relations.Count > 0)
+                    _db.InvoiceRelations.RemoveRange(relations);
+
+                var emailLogs = await _db.InvoiceEmailLog
+                    .Where(e => e.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (emailLogs.Count > 0)
+                    _db.InvoiceEmailLog.RemoveRange(emailLogs);
+
+                var dunnings = await _db.InvoiceDunning
+                    .Where(d => d.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (dunnings.Count > 0)
+                    _db.InvoiceDunning.RemoveRange(dunnings);
+
+                var attachments = await _db.InvoiceAttachments
+                    .Where(a => a.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (attachments.Count > 0)
+                    _db.InvoiceAttachments.RemoveRange(attachments);
+
+                var pdfArchives = await _db.InvoicePdfArchive
+                    .Where(p => p.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (pdfArchives.Count > 0)
+                    _db.InvoicePdfArchive.RemoveRange(pdfArchives);
+
+                var ublDocs = await _db.InvoiceUbl
+                    .Where(u => u.InvoiceId == invoiceId)
+                    .ToListAsync(ct);
+                if (ublDocs.Count > 0)
+                    _db.InvoiceUbl.RemoveRange(ublDocs);
+
+                _uow.Invoices.Remove(invoice);
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(tx, ct);
+            }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(tx, ct);
+                throw;
+            }
         }
 
         // ---------- alleen voor modus SCHIJVEN ----------
