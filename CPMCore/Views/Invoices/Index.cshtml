@@ -122,17 +122,13 @@
                                     <a class="btn btn-xs btn-default me-1" href="@Url.Action("Detail", "Invoices", new { id = r.Id })">
                                         Bekijken
                                     </a>
-                                    <form asp-action="Delete"
-                                          method="post"
-                                          asp-route-id="@r.Id"
-                                          asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                          class="d-inline-block"
-                                          onsubmit="return confirm('Weet je zeker dat je deze factuur wilt verwijderen?');">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-xs btn-danger" title="Verwijderen">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    <a href="#ModalDeleteInvoice"
+                                       class="btn btn-xs btn-danger deleteInvoice"
+                                       data-id="@r.Id"
+                                       data-issuer="@ViewBag.CompanyId"
+                                       title="Verwijderen">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
                                 </td>
                             </tr>
                         }
@@ -159,6 +155,10 @@ else
         </div>
     </div>
 }
+</div>
+
+<div id="ModalDeleteInvoice" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-invoice-container"></div>
 </div>
 
 
@@ -197,6 +197,28 @@ else
           singular: 'factuur',
           plural: 'facturen'
         };
+
+        $(document).on('click', '.deleteInvoice', function (ev) {
+            ev.preventDefault();
+            const id = $(this).data('id');
+            const issuerId = $(this).data('issuer');
+            const url = '@Url.Action("ModalDelete", "Invoices")';
+            $('#delete-invoice-container').html('<div class="p-3 text-muted">Laden…</div>');
+            $.get(url, { id: id, issuerCompanyId: issuerId })
+                .done(function (html) {
+                    $('#delete-invoice-container').html(html);
+                })
+                .fail(function () {
+                    $('#delete-invoice-container').html('<div class="p-3 text-danger">Kon factuur niet laden.</div>');
+                });
+
+            $.magnificPopup.open({
+                items: {
+                    src: '#ModalDeleteInvoice',
+                    type: 'inline'
+                }
+            });
+        });
 
         // Bouw de DataTables language-teksten in NL met dynamische naamgeving
         function buildLanguage(e) {

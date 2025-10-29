@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 
 namespace ServiceCore
@@ -134,6 +135,8 @@ namespace ServiceCore
 
                     inv.StatusId = issuedId;
                     inv.PublicId = publicId;
+                    inv.SeriesId = seriesId;
+                    inv.FiscalYear = fiscalYear;
                     await _uow.SaveChangesAsync(ct);
                 }
 
@@ -160,8 +163,29 @@ namespace ServiceCore
             try
             {
                 var invoice = await _db.Invoices
+                    .Include(i => i.IssuerCompany)
                     .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                InvoiceSequence? sequence = null;
+                int? invoiceNumber = null;
+
+                if (invoice.SeriesId is int seriesId && invoice.FiscalYear is int fiscalYear && !string.IsNullOrWhiteSpace(invoice.PublicId))
+                {
+                    sequence = await _db.InvoiceSequence
+                        .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
+
+                    invoiceNumber = ExtractSequenceNumber(invoice);
+
+                    if (sequence != null)
+                    {
+                        if (!invoiceNumber.HasValue)
+                            throw new InvalidOperationException("Factuurnummer kon niet bepaald worden; verwijderen is niet mogelijk.");
+
+                        if (sequence.CurrentNumber > invoiceNumber.Value)
+                            throw new InvalidOperationException("Factuur is niet de laatste in de reeks en kan niet verwijderd worden.");
+                    }
+                }
 
                 var hasPayments = await _db.PaymentAllocations.AnyAsync(p => p.InvoiceId == invoiceId, ct);
                 if (hasPayments)
@@ -214,6 +238,11 @@ namespace ServiceCore
                     _db.InvoiceUbl.RemoveRange(ublDocs);
 
                 _uow.Invoices.Remove(invoice);
+
+                if (sequence != null && invoiceNumber.HasValue && sequence.CurrentNumber == invoiceNumber.Value)
+                {
+                    sequence.CurrentNumber = Math.Max(0, invoiceNumber.Value - 1);
+                }
 
                 await _uow.SaveChangesAsync(ct);
                 await _uow.CommitTransactionAsync(tx, ct);
@@ -272,9 +301,40 @@ namespace ServiceCore
             }
         }
 
+        private static int? ExtractSequenceNumber(Invoices invoice)
+        {
+            if (invoice == null) return null;
+            if (string.IsNullOrWhiteSpace(invoice.PublicId)) return null;
 
+            var pattern = invoice.IssuerCompany?.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
+            if (string.IsNullOrWhiteSpace(pattern)) pattern = "{num:0000}/{date:yyyy}";
 
+            var escaped = Regex.Escape(pattern);
+            var numberRegex = "(?<num>\\d+)";
 
+            var numMatch = Regex.Match(pattern, "\\{num:(0+)\\}", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+            if (numMatch.Success)
+            {
+                escaped = escaped.Replace(Regex.Escape(numMatch.Value), numberRegex);
+            }
+            else
+            {
+                escaped = escaped.Replace(Regex.Escape("{num:0000}"), numberRegex);
+            }
+
+            var dateTime = invoice.Date.ToDateTime(new TimeOnly(0, 0));
+            escaped = escaped.Replace(Regex.Escape("{date:yyyy}"), Regex.Escape(dateTime.ToString("yyyy")));
+            escaped = escaped.Replace(Regex.Escape("{date:MM-yyyy}"), Regex.Escape(dateTime.ToString("MM-yyyy")));
+
+            var match = Regex.Match(invoice.PublicId, "^" + escaped + "$", RegexOptions.CultureInvariant);
+            if (!match.Success)
+                return null;
+
+            if (int.TryParse(match.Groups["num"].Value, out var number))
+                return number;
+
+            return null;
+        }
 
     }
 

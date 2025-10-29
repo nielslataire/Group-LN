@@ -6,7 +6,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using ServiceCore;
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace CPMCore.Controllers
 {
@@ -79,6 +81,27 @@ namespace CPMCore.Controllers
             }
 
             return RedirectToAction(nameof(Index), new { issuerCompanyId });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ModalDelete(int id, int issuerCompanyId, CancellationToken ct = default)
+        {
+            var rows = await _invoices.GetByCompanyAsync(issuerCompanyId, ct);
+            var row = rows.FirstOrDefault(r => r.Id == id);
+            if (row == null)
+                return Content("<div class='p-3 text-danger'>Factuur niet gevonden.</div>", "text/html");
+
+            var vm = new InvoiceDeleteConfirmVM
+            {
+                Id = row.Id,
+                IssuerCompanyId = issuerCompanyId,
+                DisplayId = string.IsNullOrWhiteSpace(row.PublicId) ? $"[{row.Id}]" : row.PublicId,
+                ClientName = row.ClientName,
+                InvoiceDate = row.InvoiceDate,
+                Status = TranslateStatus(row.Status)
+            };
+
+            return PartialView("Modals/_ModalDeleteInvoice", vm);
         }
 
         // CREATE (GET)
@@ -697,6 +720,21 @@ namespace CPMCore.Controllers
             TempData["Message"] = message;
             TempData["MessageType"] = messagetype;
             TempData["MessageTitle"] = messagetitle;
+        }
+
+        private static string TranslateStatus(string? status)
+        {
+            return (status ?? string.Empty).Trim() switch
+            {
+                "Draft" => "Concept",
+                "Issued" => "Genummerd",
+                "Sent" => "Verzonden",
+                "PartiallyPaid" => "Deels betaald",
+                "Paid" => "Betaald",
+                "Overdue" => "Vervallen",
+                "Cancelled" => "Geannuleerd",
+                _ => string.IsNullOrWhiteSpace(status) ? "Onbekend" : status
+            };
         }
         private static string BuildAddress(string? street, string? house) =>
     string.IsNullOrWhiteSpace(street) ? "" : (street + (string.IsNullOrWhiteSpace(house) ? "" : $" {house}")).Trim();

@@ -89,6 +89,8 @@ namespace ServiceCore
                 // 3) opslaan op factuur
                 var invoice = await _db.Invoices.FirstAsync(i => i.Id == invoiceId, ct);
                 invoice.PublicId = formatted;
+                invoice.SeriesId = seriesId;
+                invoice.FiscalYear = fiscalYear;
                 await _uow.SaveChangesAsync(ct);
 
                 return (formatted, number);
