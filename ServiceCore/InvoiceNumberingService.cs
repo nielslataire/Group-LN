@@ -8,8 +8,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace ServiceCore
 {
@@ -25,26 +25,32 @@ namespace ServiceCore
            int invoiceId, int seriesId, DateTime invoiceDate, int fiscalYear,
            CancellationToken ct = default)
         {
-            // 1) roep stored proc aan
-            var seriesParam = new SqlParameter("@SeriesId", System.Data.SqlDbType.Int)
-            {
-                Value = seriesId
-            };
-            var fiscalParam = new SqlParameter("@FiscalYear", System.Data.SqlDbType.Int)
-            {
-                Value = fiscalYear
-            };
-            var nextParam = new SqlParameter("@Next", System.Data.SqlDbType.Int)
-            {
-                Direction = System.Data.ParameterDirection.Output
-            };
+            // 1) zoek of maak de sequentie en verhoog ze transactioneel
+            await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-            await _db.Database.ExecuteSqlRawAsync(
-                "EXEC dbo.spInvoice_NextNumber @SeriesId, @FiscalYear, @Next OUTPUT",
-                new[] { seriesParam, fiscalParam, nextParam },
-                ct);
+            var sequence = await _db.InvoiceSequence
+                .FirstOrDefaultAsync(x => x.SeriesId == seriesId && x.FiscalYear == fiscalYear, ct);
 
-            var number = (int)nextParam.Value;
+            int number;
+            if (sequence == null)
+            {
+                number = 1;
+                sequence = new InvoiceSequence
+                {
+                    SeriesId = seriesId,
+                    FiscalYear = fiscalYear,
+                    CurrentNumber = number
+                };
+                _uow.InvoiceSequences.Add(sequence);
+            }
+            else
+            {
+                number = sequence.CurrentNumber + 1;
+                sequence.CurrentNumber = number;
+            }
+
+            await _uow.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
 
             // 2) format volgens pattern van issuer
             var issuer = await _db.Invoices
