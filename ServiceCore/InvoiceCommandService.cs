@@ -169,13 +169,14 @@ namespace ServiceCore
 
                 InvoiceSequence? sequence = null;
                 int? invoiceNumber = null;
+                string pattern = invoice.IssuerCompany?.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
 
                 if (invoice.SeriesId is int seriesId && invoice.FiscalYear is int fiscalYear && !string.IsNullOrWhiteSpace(invoice.PublicId))
                 {
                     sequence = await _db.InvoiceSequence
                         .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
 
-                    invoiceNumber = ExtractSequenceNumber(invoice);
+                    invoiceNumber = ExtractSequenceNumber(pattern, invoice.PublicId, invoice.Date);
 
                     if (sequence != null)
                     {
@@ -183,6 +184,18 @@ namespace ServiceCore
                             throw new InvalidOperationException("Factuurnummer kon niet bepaald worden; verwijderen is niet mogelijk.");
 
                         if (sequence.CurrentNumber > invoiceNumber.Value)
+                            throw new InvalidOperationException("Factuur is niet de laatste in de reeks en kan niet verwijderd worden.");
+
+                        var higherNumbers = await _db.Invoices
+                            .Where(i => i.SeriesId == seriesId && i.FiscalYear == fiscalYear && i.Id != invoiceId && i.PublicId != null)
+                            .Select(i => new { i.PublicId, i.Date })
+                            .ToListAsync(ct);
+
+                        if (higherNumbers.Any(o =>
+                        {
+                            var otherNumber = ExtractSequenceNumber(pattern, o.PublicId!, o.Date);
+                            return otherNumber.HasValue && otherNumber.Value > invoiceNumber.Value;
+                        }))
                             throw new InvalidOperationException("Factuur is niet de laatste in de reeks en kan niet verwijderd worden.");
                     }
                 }
@@ -304,9 +317,14 @@ namespace ServiceCore
         private static int? ExtractSequenceNumber(Invoices invoice)
         {
             if (invoice == null) return null;
-            if (string.IsNullOrWhiteSpace(invoice.PublicId)) return null;
 
             var pattern = invoice.IssuerCompany?.InvoiceNumberPattern ?? "{num:0000}/{date:yyyy}";
+            return ExtractSequenceNumber(pattern, invoice.PublicId, invoice.Date);
+        }
+
+        private static int? ExtractSequenceNumber(string pattern, string? publicId, DateOnly invoiceDate)
+        {
+            if (string.IsNullOrWhiteSpace(publicId)) return null;
             if (string.IsNullOrWhiteSpace(pattern)) pattern = "{num:0000}/{date:yyyy}";
 
             var escaped = Regex.Escape(pattern);
@@ -322,11 +340,11 @@ namespace ServiceCore
                 escaped = escaped.Replace(Regex.Escape("{num:0000}"), numberRegex);
             }
 
-            var dateTime = invoice.Date.ToDateTime(new TimeOnly(0, 0));
+            var dateTime = invoiceDate.ToDateTime(new TimeOnly(0, 0));
             escaped = escaped.Replace(Regex.Escape("{date:yyyy}"), Regex.Escape(dateTime.ToString("yyyy")));
             escaped = escaped.Replace(Regex.Escape("{date:MM-yyyy}"), Regex.Escape(dateTime.ToString("MM-yyyy")));
 
-            var match = Regex.Match(invoice.PublicId, "^" + escaped + "$", RegexOptions.CultureInvariant);
+            var match = Regex.Match(publicId, "^" + escaped + "$", RegexOptions.CultureInvariant);
             if (!match.Success)
                 return null;
 
