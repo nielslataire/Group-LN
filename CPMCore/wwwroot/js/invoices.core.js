@@ -473,6 +473,15 @@ function prepareFreeLinesForPost($form) {
     const addHidden = (base, field, value) => {
         $('<input>', { type: 'hidden', name: `${base}.${field}`, value }).appendTo($host);
     };
+    const addIndexMarker = idx => {
+        $('<input>', { type: 'hidden', name: 'Lines.index', value: idx }).appendTo($host);
+    };
+    const formatDecimal = (val, digits = 2) => {
+        if (val == null || Number.isNaN(val)) {
+            return (0).toFixed(digits).replace('.', ',');
+        }
+        return Number(val).toFixed(digits).replace('.', ',');
+    };
 
     indexes.forEach(i => {
         const $tr = $(dt.row(i).node());
@@ -494,9 +503,10 @@ function prepareFreeLinesForPost($form) {
         if (!text && priceVal === 0) return;
 
         const base = `Lines[${postIndex}]`;
+        addIndexMarker(postIndex);
         addHidden(base, 'Text', text);
-        addHidden(base, 'Price', priceVal.toFixed(2));
-        addHidden(base, 'VatPercentage', isNaN(vatPct) ? '0' : vatPct.toString());
+        addHidden(base, 'Price', formatDecimal(priceVal));
+        addHidden(base, 'VatPercentage', formatDecimal(isNaN(vatPct) ? 0 : vatPct));
         addHidden(base, 'IsSelected', 'true');
         addHidden(base, 'LineType', 'Free');
         addHidden(base, 'GroupName', 'Vrije lijnen');

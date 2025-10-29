@@ -49,7 +49,7 @@
     </style>
 }
 
-<form id="invoiceForm" asp-action="Save" method="post" class="mb-4">
+<form id="invoiceForm" asp-controller="Invoices" asp-action="Save" method="post" class="mb-4">
     @Html.AntiForgeryToken()
 
     <div class="row">
@@ -71,7 +71,7 @@
                 <div class="col-md-6">
                     <label class="form-label">Facturatiebedrijf</label>
                     @* Facturatiebedrijf *@
-                    <select id="IssuerCompanyId" name="IssuerCompanyId" class="form-control">
+                    <select asp-for="IssuerCompanyId" id="IssuerCompanyId" class="form-control">
                         @foreach (var i in Model.Issuers)
                         {
                             if (i.Id == Model.IssuerCompanyId)
@@ -127,7 +127,7 @@
                 <div class="col-md-3">
                     <label class="form-label">Betaaltermijn</label>
                     @* Betaaltermijn *@
-                    <select id="PaymentTermId" name="PaymentTermId" class="form-control form-control-modern">
+                    <select asp-for="PaymentTermId" id="PaymentTermId" class="form-control form-control-modern">
                         @foreach (var t in Model.PaymentTerms)
                         {
                             if (Model.PaymentTermId == t.Id)
@@ -147,7 +147,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">BTW-tarief (standaard)</label>
-                    <select id="VatTypeId" name="VatTypeId" class="form-control form-control-modern">
+                    <select asp-for="VatTypeId" id="VatTypeId" class="form-control form-control-modern">
                         @foreach (var v in Model.VatTypes)
                         {
                             if (Model.VatTypeId == v.Id)
