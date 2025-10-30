@@ -1,0 +1,27 @@
+﻿@model CPMCore.Models.Invoicing.InvoiceDetailVM
+@{
+    ViewData["Title"] = "Factuur verzenden";
+    var issuerId = ViewBag.CompanyId as int?;
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="fw-bold mb-1">Factuur verzenden</h1>
+        <p class="text-muted mb-0">@(Model.PublicId ?? $"Factuur #{Model.Id}")</p>
+    </div>
+    <div class="col-auto align-self-start">
+        <a class="btn btn-outline-secondary" asp-action="Index" asp-route-issuerCompanyId="@issuerId">Terug naar overzicht</a>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <p class="mb-0">De functionaliteit om facturen vanuit deze pagina te verzenden wordt later verder uitgewerkt. In tussentijd kan je de factuur downloaden en handmatig doorsturen.</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Snelle acties</h5>
+        <a class="btn btn-outline-primary me-2" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-1"></i> Download PDF</a>
+        <a class="btn btn-outline-secondary" asp-action="Detail" asp-route-id="@Model.Id" asp-route-issuerCompanyId="@issuerId">Bekijk factuur</a>
+    </div>
+</div>

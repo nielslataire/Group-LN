@@ -1,14 +1,17 @@
 ﻿using BOCore;
 using CPMCore.Models.Invoicing;
+using CPMCore.Documents;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Collections.Generic;
 using ServiceCore;
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using QuestPDF.Fluent;
 
 
 namespace CPMCore.Controllers
@@ -67,6 +70,73 @@ namespace CPMCore.Controllers
             return View(vms);
         }
 
+        //DETAIL FACTUUR
+        [HttpGet]
+        public async Task<IActionResult> Detail(int id, int? issuerCompanyId = null, CancellationToken ct = default)
+        {
+            var detail = await _invoices.GetDetailAsync(id, ct);
+            if (detail == null)
+            {
+                AddMessage("error", "Factuur niet gevonden.", "Factuur");
+                return issuerCompanyId.HasValue
+                    ? RedirectToAction(nameof(Index), new { issuerCompanyId })
+                    : RedirectToAction(nameof(Index));
+            }
+
+            var vm = MapDetail(detail);
+            var issuerId = issuerCompanyId ?? detail.IssuerCompanyId;
+
+            if (issuerId > 0)
+            {
+                ViewBag.CompanyId = issuerId;
+                ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
+            }
+
+            return View(vm);
+        }
+
+        //PDF EXPORT VAN FACTUUR
+        [HttpGet]
+        public async Task<IActionResult> Pdf(int id, CancellationToken ct = default)
+        {
+            var detail = await _invoices.GetDetailAsync(id, ct);
+            if (detail == null)
+                return NotFound();
+
+            var vm = MapDetail(detail);
+            var document = new InvoiceDocument(vm);
+            var bytes = document.GeneratePdf();
+            var fileName = string.IsNullOrWhiteSpace(vm.PublicId)
+                ? $"Factuur_{vm.Id}.pdf"
+                : $"{vm.PublicId}.pdf";
+
+            return File(bytes, "application/pdf", fileName);
+        }
+
+        //FACTUUR VERZENDEN (GET)
+        [HttpGet]
+        public async Task<IActionResult> Send(int id, int? issuerCompanyId = null, CancellationToken ct = default)
+        {
+            var detail = await _invoices.GetDetailAsync(id, ct);
+            if (detail == null)
+            {
+                AddMessage("error", "Factuur niet gevonden.", "Factuur");
+                return issuerCompanyId.HasValue
+                    ? RedirectToAction(nameof(Index), new { issuerCompanyId })
+                    : RedirectToAction(nameof(Index));
+            }
+
+            var vm = MapDetail(detail);
+            var issuerId = issuerCompanyId ?? detail.IssuerCompanyId;
+            if (issuerId > 0)
+            {
+                ViewBag.CompanyId = issuerId;
+                ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
+            }
+
+            return View(vm);
+        }
+
         // DELETE (POST)
 
         [HttpPost]
@@ -113,6 +183,32 @@ namespace CPMCore.Controllers
             return PartialView("Modals/_ModalDeleteInvoice", vm);
         }
 
+        //VAN DRAFT NAAR DEFINITIEF
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Issue(int id, int issuerCompanyId, CancellationToken ct = default)
+        {
+            try
+            {
+                var publicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
+                if (!string.IsNullOrWhiteSpace(publicId))
+                    AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
+                else
+                    AddMessage("success", "Factuur definitief gemaakt.", "Factuur");
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Issue invoice {InvoiceId} blocked", id);
+                AddMessage("error", ex.Message, "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Issue invoice {InvoiceId} failed", id);
+                AddMessage("error", "Factuur kon niet definitief gemaakt worden.", "Factuur");
+            }
+
+            return RedirectToAction(nameof(Index), new { issuerCompanyId });
+        }
 
         // CREATE (GET)
         [HttpGet]
@@ -785,6 +881,92 @@ namespace CPMCore.Controllers
         }
 
         // ========== helper ==========
+        private InvoiceDetailVM MapDetail(InvoiceDetailBO bo)
+        {
+            if (bo == null) throw new ArgumentNullException(nameof(bo));
+
+            var vm = new InvoiceDetailVM
+            {
+                Id = bo.Id,
+                PublicId = string.IsNullOrWhiteSpace(bo.PublicId) ? null : bo.PublicId,
+                InvoiceDate = bo.InvoiceDate,
+                ExpirationDate = bo.ExpirationDate,
+                Status = TranslateStatus(bo.StatusName),
+                BankAccount = bo.BankAccount,
+                HeaderText = NormalizeMultiline(bo.HeaderText),
+                DetailText = NormalizeMultiline(bo.DetailText),
+                ExtraInfo = NormalizeMultiline(bo.ExtraInfo),
+                TotalExclVat = RoundCurrency(bo.TotalExclVat),
+                TotalVat = RoundCurrency(bo.TotalVat),
+                TotalInclVat = RoundCurrency(bo.TotalInclVat),
+                PaidAmount = bo.PaidAmount,
+                Balance = bo.Balance
+            };
+
+            vm.Issuer = new InvoicePartyVM
+            {
+                Name = bo.IssuerName,
+                LegalName = bo.IssuerLegalName,
+                VatNumber = bo.IssuerVatNumber,
+                AddressLine1 = bo.IssuerAddressLine1,
+                AddressLine2 = bo.IssuerAddressLine2,
+                PostalCode = bo.IssuerPostalCode,
+                City = bo.IssuerCity,
+                Country = bo.IssuerCountryCode,
+                Email = bo.IssuerEmail,
+                Phone = bo.IssuerPhone
+            };
+
+            vm.Client = new InvoicePartyVM
+            {
+                Name = bo.ClientName,
+                VatNumber = bo.ClientVatNumber,
+                AddressLine1 = bo.ClientAddress,
+                PostalCode = bo.ClientPostalCode,
+                City = bo.ClientCity,
+                Country = bo.ClientCountryName
+            };
+
+            vm.Lines = bo.Lines.Select(MapDetailLine).ToList();
+            return vm;
+        }
+
+        private static InvoiceDetailLineVM MapDetailLine(InvoiceLineBO line)
+        {
+            if (line == null) throw new ArgumentNullException(nameof(line));
+
+            var discount = line.DiscountAmount
+                ?? (line.DiscountPercent.HasValue
+                    ? Math.Round(line.Price * (line.DiscountPercent.Value / 100m), 2, MidpointRounding.AwayFromZero)
+                    : 0m);
+
+            var net = line.Price - discount;
+            var vat = Math.Round(net * (line.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+            var gross = net + vat;
+
+            return new InvoiceDetailLineVM
+            {
+                Text = line.Text ?? string.Empty,
+                GroupName = line.GroupName,
+                VatRate = line.VatPercentage,
+                NetAmount = RoundCurrency(net),
+                VatAmount = RoundCurrency(vat),
+                GrossAmount = RoundCurrency(gross),
+                DiscountAmount = discount != 0 ? RoundCurrency(discount) : (decimal?)null,
+                DiscountPercent = line.DiscountPercent
+            };
+        }
+
+        private static decimal RoundCurrency(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+        private static string? NormalizeMultiline(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return text;
+
+            var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n');
+            return normalized.Replace("\n", Environment.NewLine);
+        }
         public void AddMessage(string messagetype, string message, string messagetitle)
         {
             TempData["Message"] = message;

@@ -172,6 +172,113 @@ namespace ServiceCore
             return await result.ToListAsync(ct);
         }
 
+        public async Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default)
+        {
+            var invoice = await _db.Invoices
+                .AsNoTracking()
+                .Include(i => i.InvoicesDetails)
+                .Include(i => i.PostalCode)
+                    .ThenInclude(pc => pc.Country)
+                .Include(i => i.PostalCode)
+                    .ThenInclude(pc => pc.Provincie)
+                .Include(i => i.IssuerCompany)
+                .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
+
+            if (invoice == null)
+                return null;
+
+            var statusName = await _db.InvoiceStatusLookup
+                .AsNoTracking()
+                .Where(s => s.Id == invoice.StatusId)
+                .Select(s => s.Name)
+                .FirstOrDefaultAsync(ct);
+
+            var detail = NewDetailBo(invoice, statusName);
+
+            foreach (var detailRow in invoice.InvoicesDetails)
+            {
+                var line = new InvoiceLineBO();
+                InvoiceDetailTranslator.TranslateEntityToBO(detailRow, line);
+                detail.Lines.Add(line);
+            }
+
+            await PopulateTotalsAsync(detail, invoiceId, ct);
+
+            return detail;
+        }
+
+        private static InvoiceDetailBO NewDetailBo(Invoices invoice, string statusName)
+        {
+            var postal = invoice.PostalCode;
+            var issuer = invoice.IssuerCompany;
+
+            return new InvoiceDetailBO
+            {
+                Id = invoice.Id,
+                PublicId = invoice.PublicId,
+                InvoiceDate = invoice.Date,
+                ExpirationDate = invoice.ExpirationDate,
+                StatusName = statusName,
+                IssuerCompanyId = issuer?.Id ?? 0,
+                IssuerName = issuer?.Name,
+                IssuerLegalName = issuer?.LegalName,
+                IssuerVatNumber = issuer?.VatNumber,
+                IssuerAddressLine1 = issuer?.AddressLine1,
+                IssuerAddressLine2 = issuer?.AddressLine2,
+                IssuerPostalCode = issuer?.PostalCode,
+                IssuerCity = issuer?.City,
+                IssuerCountryCode = issuer?.CountryCode,
+                IssuerEmail = issuer?.Email,
+                IssuerPhone = issuer?.Phone,
+                ClientName = invoice.ClientName,
+                ClientAddress = invoice.Adress,
+                ClientPostalCode = postal?.Postcode,
+                ClientCity = postal?.Gemeente,
+                ClientCountryName = postal?.Country?.LandNaam,
+                ClientVatNumber = invoice.VatNumber,
+                BankAccount = invoice.BankAccount,
+                ExtraInfo = invoice.ExtraInfo,
+                HeaderText = invoice.HeaderDescription,
+                DetailText = invoice.DetailText,
+            };
+        }
+
+        private async Task PopulateTotalsAsync(InvoiceDetailBO detail, int invoiceId, CancellationToken ct)
+        {
+            decimal totalExcl = 0m;
+            decimal totalVat = 0m;
+
+            foreach (var line in detail.Lines)
+            {
+                var discount = line.DiscountAmount
+                    ?? (line.DiscountPercent.HasValue
+                        ? Math.Round(line.Price * (line.DiscountPercent.Value / 100m), 2, MidpointRounding.AwayFromZero)
+                        : 0m);
+
+                var net = line.Price - discount;
+                var vat = Math.Round(net * (line.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+
+                totalExcl += net;
+                totalVat += vat;
+            }
+
+            detail.TotalExclVat = Math.Round(totalExcl, 2, MidpointRounding.AwayFromZero);
+            detail.TotalVat = Math.Round(totalVat, 2, MidpointRounding.AwayFromZero);
+            detail.TotalInclVat = Math.Round(detail.TotalExclVat + detail.TotalVat, 2, MidpointRounding.AwayFromZero);
+
+            var balance = await _db.VwInvoiceBalance
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == invoiceId, ct);
+
+            if (balance != null)
+            {
+                detail.PaidAmount = balance.Paid;
+                detail.Balance = balance.Balance;
+                if (balance.GrossTotal.HasValue)
+                    detail.TotalInclVat = balance.GrossTotal.Value;
+            }
+        }
+
     }
 
 }

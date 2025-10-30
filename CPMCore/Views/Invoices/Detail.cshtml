@@ -1,0 +1,204 @@
+﻿@model CPMCore.Models.Invoicing.InvoiceDetailVM
+@{
+    ViewData["Title"] = Model.PublicId ?? $"Factuur #{Model.Id}";
+    var issuerId = ViewBag.CompanyId as int?;
+}
+
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="fw-bold mb-1">@ViewData["Title"]</h1>
+        <p class="text-muted mb-0">Status: <span class="badge bg-secondary">@Model.Status</span></p>
+        <p class="text-muted">Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy") @if (Model.ExpirationDate.HasValue){
+        <span class="ms-2">| Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")</span>
+                }
+</p>
+    </div>
+    <div class="col-auto align-self-start">
+        <div class="btn-group" role="group">
+            <a class="btn btn-outline-primary" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-1"></i> Download PDF</a>
+            <a class="btn btn-outline-secondary" asp-action="Index" asp-route-issuerCompanyId="@issuerId">Terug naar overzicht</a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Factuurverstrekker</h5>
+            </div>
+            <div class="card-body">
+                <strong>@(Model.Issuer.LegalName ?? Model.Issuer.Name)</strong><br />
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.AddressLine1))
+                {
+                    @Model.Issuer.AddressLine1
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.AddressLine2))
+                {
+                    @Model.Issuer.AddressLine2
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.PostalCode) || !string.IsNullOrWhiteSpace(Model.Issuer.City))
+                {
+                    <text>@Model.Issuer.PostalCode @Model.Issuer.City</text>
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.Country))
+                {
+                    @Model.Issuer.Country
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.VatNumber))
+                {
+                    <span>BTW: @Model.Issuer.VatNumber</span>
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.Email))
+                {
+                    <span>Email: @Model.Issuer.Email</span>
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Issuer.Phone))
+                {
+                    <span>Tel: @Model.Issuer.Phone</span>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Geadresseerde</h5>
+            </div>
+            <div class="card-body">
+                <strong>@Model.Client.Name</strong><br />
+                @if (!string.IsNullOrWhiteSpace(Model.Client.AddressLine1))
+                {
+                    @Model.Client.AddressLine1
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Client.PostalCode) || !string.IsNullOrWhiteSpace(Model.Client.City))
+                {
+                    <text>@Model.Client.PostalCode @Model.Client.City</text>
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Client.Country))
+                {
+                    @Model.Client.Country
+                
+                    <br />
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Client.VatNumber))
+                {
+                    <span>BTW: @Model.Client.VatNumber</span>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.HeaderText) || !string.IsNullOrWhiteSpace(Model.DetailText))
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(Model.HeaderText))
+            {
+                <p class="mb-2">@Model.HeaderText</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.DetailText))
+            {
+                <p class="mb-0" style="white-space:pre-line;">@Model.DetailText</p>
+            }
+        </div>
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Overzicht lijnen</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-striped mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Omschrijving</th>
+                        <th>Groep</th>
+                        <th class="text-end">Excl. btw</th>
+                        <th class="text-end">BTW %</th>
+                        <th class="text-end">BTW bedrag</th>
+                        <th class="text-end">Totaal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Model.Lines)
+                    {
+                        <tr>
+                            <td>@line.Text</td>
+                            <td>@line.GroupName</td>
+                            <td class="text-end">@line.NetAmount.ToString("€ 0.00")</td>
+                            <td class="text-end">@line.VatRate.ToString("0.##") %</td>
+                            <td class="text-end">@line.VatAmount.ToString("€ 0.00")</td>
+                            <td class="text-end">@line.GrossAmount.ToString("€ 0.00")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="p-3">
+            <div class="row g-2 justify-content-end">
+                <div class="col-auto text-end">
+                    <div>Totaal excl. btw</div>
+                    <div>BTW</div>
+                    <div class="fw-bold">Totaal incl. btw</div>
+                    @if (Model.PaidAmount.HasValue)
+                    {
+                        <div>Reeds betaald</div>
+                    }
+                    @if (Model.Balance.HasValue)
+                    {
+                        <div>Openstaand saldo</div>
+                    }
+                </div>
+                <div class="col-auto text-end">
+                    <div>@Model.TotalExclVat.ToString("€ 0.00")</div>
+                    <div>@Model.TotalVat.ToString("€ 0.00")</div>
+                    <div class="fw-bold">@Model.TotalInclVat.ToString("€ 0.00")</div>
+                    @if (Model.PaidAmount.HasValue)
+                    {
+                        <div>@Model.PaidAmount.Value.ToString("€ 0.00")</div>
+                    }
+                    @if (Model.Balance.HasValue)
+                    {
+                        <div>@Model.Balance.Value.ToString("€ 0.00")</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.BankAccount) || !string.IsNullOrWhiteSpace(Model.ExtraInfo))
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            @if (!string.IsNullOrWhiteSpace(Model.BankAccount))
+            {
+                <p class="mb-1"><strong>Rekeningnummer:</strong> @Model.BankAccount</p>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.ExtraInfo))
+            {
+                <p class="mb-0" style="white-space:pre-line;">@Model.ExtraInfo</p>
+            }
+        </div>
+    </div>
+}

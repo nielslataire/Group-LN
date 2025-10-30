@@ -15,7 +15,9 @@ namespace FacadeCore
             bool issueNow,
             CancellationToken ct = default);
         Task<int> CreateDraftAsync(InvoiceDraftBO bo, CancellationToken ct = default);
+        Task<string> IssueDraftAsync(int invoiceId, int? seriesId = null, DateOnly? issueDate = null, CancellationToken ct = default);
         Task DeleteAsync(int invoiceId, CancellationToken ct = default);
+
 
 
     }

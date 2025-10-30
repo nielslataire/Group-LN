@@ -182,6 +182,88 @@ namespace ServiceCore
             return id;
         }
 
+        public async Task<string> IssueDraftAsync(int invoiceId, int? seriesId = null, DateOnly? issueDate = null, CancellationToken ct = default)
+        {
+            await using var tx = await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                var invoice = await _db.Invoices
+                    .Include(i => i.IssuerCompany)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                var draftId = await _db.InvoiceStatusLookup
+                    .Where(s => s.Name == "Draft")
+                    .Select(s => (byte?)s.Id)
+                    .FirstOrDefaultAsync(ct)
+                    ?? (byte)1;
+
+                var issuedId = await _db.InvoiceStatusLookup
+                    .Where(s => s.Name == "Numbered")
+                    .Select(s => (byte?)s.Id)
+                    .FirstOrDefaultAsync(ct);
+
+                if (!issuedId.HasValue)
+                {
+                    issuedId = await _db.InvoiceStatusLookup
+                        .Where(s => s.Name == "Issued")
+                        .Select(s => (byte?)s.Id)
+                        .FirstOrDefaultAsync(ct)
+                        ?? throw new InvalidOperationException("Status 'Issued' niet geconfigureerd.");
+                }
+
+                if (invoice.StatusId != draftId)
+                    throw new InvalidOperationException("Alleen conceptfacturen kunnen definitief gemaakt worden.");
+
+                var finalDate = issueDate ?? invoice.Date;
+                if (finalDate == default)
+                    finalDate = DateOnly.FromDateTime(DateTime.Today);
+
+                if (invoice.Date != finalDate)
+                    invoice.Date = finalDate;
+
+                var issuerId = invoice.IssuerCompanyId
+                    ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
+
+                int chosenSeriesId;
+                if (seriesId.HasValue)
+                {
+                    var belongsToIssuer = await _db.InvoiceSeries
+                        .AnyAsync(s => s.Id == seriesId.Value && s.IssuerCompanyId == issuerId && s.IsActive, ct);
+
+                    if (!belongsToIssuer)
+                        throw new InvalidOperationException("Geselecteerde reeks hoort niet bij dit facturatiebedrijf of is niet actief.");
+
+                    chosenSeriesId = seriesId.Value;
+                }
+                else
+                {
+                    chosenSeriesId = await _db.InvoiceSeries
+                        .Where(s => s.IssuerCompanyId == issuerId && s.IsActive)
+                        .OrderBy(s => s.Id)
+                        .Select(s => (int?)s.Id)
+                        .FirstOrDefaultAsync(ct)
+                        ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit bedrijf.");
+                }
+
+                await _uow.SaveChangesAsync(ct);
+
+                var issueDateTime = new DateTime(finalDate.Year, finalDate.Month, finalDate.Day);
+                var (publicId, _) = await _num.IssueAsync(invoice.Id, chosenSeriesId, issueDateTime, finalDate.Year, ct);
+
+                invoice.StatusId = issuedId.Value;
+                await _uow.SaveChangesAsync(ct);
+
+                await _uow.CommitTransactionAsync(tx, ct);
+                return publicId;
+            }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(tx, ct);
+                throw;
+            }
+        }
+
         public async Task DeleteAsync(int invoiceId, CancellationToken ct = default)
         {
             await using var tx = await _uow.BeginTransactionAsync(ct);

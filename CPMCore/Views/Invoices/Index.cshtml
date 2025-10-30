@@ -29,6 +29,16 @@
         "geannuleerd" => "badge bg-dark",
         _ => "badge bg-light text-dark"
     };
+    bool StatusIn(string? status, params string[] codes)
+    {
+        if (string.IsNullOrWhiteSpace(status)) return false;
+        foreach (var code in codes)
+        {
+            if (string.Equals(status, code, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+        return false;
+    }
 }
 @section PageStyle
 {
@@ -118,18 +128,88 @@
                                 <td><span class="@BadgeClassNl(StatusNl(r.Status))">@StatusNl(r.Status)</span></td>
                                 <td class="text-end">@r.GrossTotal?.ToString("€ 0.00")</td>
                                 <td class="text-end">@r.Balance?.ToString("€ 0.00")</td>
-                                <td class="text-end">
-                                        <a class="btn btn-xs btn-default me-1" href="@Url.Action("Detail", "Invoices", new { id = r.Id })">
-                                            Bekijken
-                                        </a>
-                                        <a href="#ModalDeleteInvoice"
-                                           class="deleteInvoice"
-                                           data-id="@r.Id"
-                                           data-issuer="@ViewBag.CompanyId"
-                                           data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                            <i class="fas fa-trash"></i>
-                                        </a>
-                                </td>
+                                    <td class="text-end">
+                                        @if (StatusIn(r.Status, "Draft"))
+                                        {
+                                            <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
+                                               asp-action="Edit"
+                                               asp-route-id="@r.Id">
+                                                <i class="fa-regular fa-pen-to-square"></i>
+                                            </a>
+                                            <form asp-action="Issue"
+                                                  asp-controller="Invoices"
+                                                  method="post"
+                                                  class="d-inline">
+                                                <input type="hidden" name="id" value="@r.Id" />
+                                                <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
+                                                <button type="submit" class="btn btn-xs btn-success me-1">
+                                                    Definitief
+                                                </button>
+                                            </form>
+                                            <a href="#ModalDeleteInvoice"
+                                               class="deleteInvoice"
+                                               data-id="@r.Id"
+                                               data-issuer="@ViewBag.CompanyId"
+                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        }
+                                        else if (StatusIn(r.Status, "Numbered"))
+                                        {
+                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                               asp-action="Detail"
+                                               asp-route-id="@r.Id"
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                               asp-action="Pdf"
+                                               asp-route-id="@r.Id"
+                                               target="_blank">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                            <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                               asp-action="Send"
+                                               asp-route-id="@r.Id"
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </a>
+                                            @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                            {
+                                                <a href="#ModalDeleteInvoice"
+                                                   class="deleteInvoice"
+                                                   data-id="@r.Id"
+                                                   data-issuer="@ViewBag.CompanyId"
+                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            }
+                                        }
+                                        else if (StatusIn(r.Status, "Issued", "Sent", "Paid"))
+                                        {
+                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                               asp-action="Detail"
+                                               asp-route-id="@r.Id"
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                               asp-action="Pdf"
+                                               asp-route-id="@r.Id"
+                                               target="_blank">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                               asp-action="Detail"
+                                               asp-route-id="@r.Id"
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        }
+                                    </td>
                             </tr>
                         }
                     </tbody>
