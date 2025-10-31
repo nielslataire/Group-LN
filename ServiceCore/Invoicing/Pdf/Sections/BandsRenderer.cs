@@ -16,29 +16,42 @@ public sealed class BandsRenderer : ISectionRenderer
     public void DrawBackground(PageDescriptor page, LayoutConfig layout)
     {
         var bands = layout.Page?.Bands;
-        if (bands == null) return;
+        if (bands == null)
+            return;
 
-        // Belangrijk: Background maar 1x nemen en hergebruiken
-        var bg = page.Background();
+        var topBand = bands.Top;
+        var bottomBand = bands.Bottom;
 
-        // TOP band – full bleed
-        if (bands.Top is { Height: > 0 } top)
+        var hasTopBand = topBand is { Height: > 0 };
+        var hasBottomBand = bottomBand is { Height: > 0 };
+
+        if (!hasTopBand && !hasBottomBand)
+            return;
+
+        page.Background().Element(container =>
         {
-            var color = string.IsNullOrWhiteSpace(top.Color) ? "#FFFFFF" : top.Color;
-            bg.Element(e => e
-                .AlignTop()
-                .Height(top.Height)
-                .Background(color));
-        }
+            container.Column(column =>
+            {
+                if (hasTopBand)
+                {
+                    var color = string.IsNullOrWhiteSpace(topBand!.Color) ? "#FFFFFF" : topBand.Color;
 
-        // BOTTOM band – full bleed
-        if (bands.Bottom is { Height: > 0 } bottom)
-        {
-            var color = string.IsNullOrWhiteSpace(bottom.Color) ? "#FFFFFF" : bottom.Color;
-            bg.Element(e => e
-                .AlignBottom()
-                .Height(bottom.Height)
-                .Background(color));
-        }
+                    column.Item()
+                        .Height(topBand.Height)
+                        .Background(color);
+                }
+
+                column.Item().Expand();
+
+                if (hasBottomBand)
+                {
+                    var color = string.IsNullOrWhiteSpace(bottomBand!.Color) ? "#FFFFFF" : bottomBand.Color;
+
+                    column.Item()
+                        .Height(bottomBand.Height)
+                        .Background(color);
+                }
+            });
+        });
     }
 }
