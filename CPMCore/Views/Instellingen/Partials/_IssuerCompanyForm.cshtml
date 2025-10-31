@@ -271,6 +271,72 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-file"></i>
+                        <h2 class="card-big-info-title">Factuurlay-out</h2>
+                        <p class="card-big-info-desc">Beheer de JSON-gestuurde QuestPDF lay-out per bedrijf.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label asp-for="TemplateKey" class="form-label"></label>
+                                <select asp-for="TemplateKey" class="form-control form-control-modern js-template-key">
+                                    <option value="layoutA">Layout A (Group LN / BCO)</option>
+                                    <option value="layoutB">Layout B (Home-Estate)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="BrandPrimaryColor" class="form-label"></label>
+                                <input type="color"
+                                       id="BrandPrimaryColor"
+                                       name="BrandPrimaryColor"
+                                       class="form-control form-control-modern form-control-color js-brand-primary"
+                                       value="@(string.IsNullOrWhiteSpace(Model?.BrandPrimaryColor) ? "#01532d" : Model.BrandPrimaryColor)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="BrandSecondaryColor" class="form-label"></label>
+                                <input type="color"
+                                       id="BrandSecondaryColor"
+                                       name="BrandSecondaryColor"
+                                       class="form-control form-control-modern form-control-color js-brand-secondary"
+                                       value="@(string.IsNullOrWhiteSpace(Model?.BrandSecondaryColor) ? "#6b7280" : Model.BrandSecondaryColor)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="FontFamily" class="form-label"></label>
+                                <input asp-for="FontFamily" class="form-control form-control-modern" placeholder="Inter" />
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="FooterLegalText" class="form-label"></label>
+                                <textarea asp-for="FooterLegalText" rows="3" class="form-control form-control-modern"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="TemplateJson" class="form-label"></label>
+                                <textarea asp-for="TemplateJson" rows="16" class="form-control form-control-modern font-monospace js-template-json" placeholder="{&#x0a;  &quot;version&quot;: 1&#x0a;}"></textarea>
+                                <small class="text-muted">Wijzig de JSON en valideer lokaal met het schema. Voorbeeld: {{Invoice.PublicId}}.</small>
+                                <span asp-validation-for="TemplateJson" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="invoice-layout-preview-id" class="form-label">Factuur voor preview</label>
+                                <input type="number" min="1" id="invoice-layout-preview-id" class="form-control form-control-modern js-preview-invoice" placeholder="Factuur ID" />
+                                <small class="text-muted">Gebruik een bestaande factuur-id om een voorbeeld te genereren.</small>
+                            </div>
+                            <div class="col-md-8 d-flex align-items-end justify-content-end gap-2">
+                                <button type="button" class="btn btn-secondary js-layout-preview" data-preview-url="@Url.Content("~/Admin/InvoiceLayout/Preview")">Preview PDF</button>
+                                <button type="button" class="btn btn-light border js-layout-reset">Reset naar standaard</button>
+                            </div>
+                        </div>
+                        <div id="invoice-layout-error" class="alert alert-danger d-none mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
                         <i class="card-big-info-icon bx bx-palette"></i>
                         <h2 class="card-big-info-title">Documentstijl & e-mail</h2>
                         <p class="card-big-info-desc">Stel sjablonen en defaults in voor layout en e-mails.</p>
@@ -426,3 +492,15 @@
 </div>
 
 
+@if (ViewBag.InvoiceLayoutDefaultsJson != null)
+{
+    <script type="application/json" id="invoice-layout-defaults">
+        @Html.Raw(ViewBag.InvoiceLayoutDefaultsJson)
+    </script>
+}
+@if (ViewBag.InvoiceLayoutSchemaJson != null)
+{
+    <script type="application/json" id="invoice-layout-schema">
+        @Html.Raw(ViewBag.InvoiceLayoutSchemaJson)
+    </script>
+}

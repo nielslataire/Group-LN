@@ -1391,6 +1391,8 @@ public partial class cpmRunningContext : DbContext
 
             entity.Property(e => e.AddressLine1).HasMaxLength(200);
             entity.Property(e => e.AddressLine2).HasMaxLength(200);
+            entity.Property(e => e.BrandPrimaryColor).HasMaxLength(7);
+            entity.Property(e => e.BrandSecondaryColor).HasMaxLength(7);
             entity.Property(e => e.City).HasMaxLength(100);
             entity.Property(e => e.CountryCode)
                 .HasMaxLength(2)
@@ -1408,6 +1410,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.EpcIban).HasMaxLength(34);
             entity.Property(e => e.EpcRemittanceTemplate).HasMaxLength(140);
             entity.Property(e => e.EpcRemittanceType).HasMaxLength(10);
+            entity.Property(e => e.FontFamily).HasMaxLength(100);
             entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LegalName).HasMaxLength(200);
@@ -1418,6 +1421,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(16);
+            entity.Property(e => e.TemplateKey).HasMaxLength(64);
             entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
             entity.Property(e => e.VatNumber).HasMaxLength(32);
 

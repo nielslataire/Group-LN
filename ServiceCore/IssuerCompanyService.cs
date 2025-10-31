@@ -154,6 +154,12 @@ namespace ServiceCore
             Email = x.Email,
             Phone = x.Phone,
             LogoPath = x.LogoPath,
+            TemplateKey = x.TemplateKey,
+            TemplateJson = x.TemplateJson,
+            BrandPrimaryColor = x.BrandPrimaryColor,
+            BrandSecondaryColor = x.BrandSecondaryColor,
+            FontFamily = x.FontFamily,
+            LogoBytes = x.LogoBytes,
             DefaultPaymentTermId = x.DefaultPaymentTermId,
             IsActive = x.IsActive,
             EInvoiceEnabled = x.EinvoiceEnabled,
@@ -171,6 +177,8 @@ namespace ServiceCore
             EpcBic = x.EpcBic,
             EpcRemittanceType = x.EpcRemittanceType,
             EpcRemittanceTemplate = x.EpcRemittanceTemplate,
+            FooterLegalText = x.FooterLegalText,
+            PeppolEnabled = x.PeppolEnabled,
         };
 
         private static IssuerCompany MapToEntity(IssuerCompanyBO bo, IssuerCompany e)
@@ -187,6 +195,12 @@ namespace ServiceCore
             e.Email = bo.Email?.Trim();
             e.Phone = bo.Phone?.Trim();
             e.LogoPath = bo.LogoPath?.Trim();
+            e.TemplateKey = bo.TemplateKey?.Trim();
+            e.TemplateJson = bo.TemplateJson;
+            e.BrandPrimaryColor = bo.BrandPrimaryColor;
+            e.BrandSecondaryColor = bo.BrandSecondaryColor;
+            e.FontFamily = bo.FontFamily;
+            e.LogoBytes = bo.LogoBytes;
             e.DefaultPaymentTermId = bo.DefaultPaymentTermId;
             e.IsActive = bo.IsActive;
             e.EinvoiceEnabled = bo.EInvoiceEnabled;
@@ -204,6 +218,8 @@ namespace ServiceCore
             e.EpcBic = bo.EpcBic?.ToUpperInvariant();
             e.EpcRemittanceType = bo.EpcRemittanceType;
             e.EpcRemittanceTemplate = bo.EpcRemittanceTemplate;
+            e.FooterLegalText = bo.FooterLegalText;
+            e.PeppolEnabled = bo.PeppolEnabled;
             return e;
         }
     }

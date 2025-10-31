@@ -71,6 +71,22 @@ public partial class IssuerCompany
 
     public int? DefaultVatTypeId { get; set; }
 
+    public string TemplateKey { get; set; }
+
+    public string TemplateJson { get; set; }
+
+    public string BrandPrimaryColor { get; set; }
+
+    public string BrandSecondaryColor { get; set; }
+
+    public string FontFamily { get; set; }
+
+    public byte[] LogoBytes { get; set; }
+
+    public string FooterLegalText { get; set; }
+
+    public bool PeppolEnabled { get; set; }
+
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
 
     public virtual Vattype DefaultVatType { get; set; }

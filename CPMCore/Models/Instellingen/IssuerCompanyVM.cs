@@ -39,6 +39,23 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Logo pad")]
         public string? LogoPath { get; set; }
 
+        [Display(Name = "Sjabloon sleutel")]
+        public string? TemplateKey { get; set; }
+
+        [Display(Name = "Sjabloon JSON")]
+        public string? TemplateJson { get; set; }
+
+        [Display(Name = "Primaire kleur")]
+        public string? BrandPrimaryColor { get; set; }
+
+        [Display(Name = "Secundaire kleur")]
+        public string? BrandSecondaryColor { get; set; }
+
+        [Display(Name = "Lettertype")]
+        public string? FontFamily { get; set; }
+
+        public byte[]? LogoBytes { get; set; }
+
         [Display(Name = "Standaard betaaltermijn")]
         public int? DefaultPaymentTermId { get; set; }
 
@@ -63,6 +80,12 @@ namespace CPMCore.Models.Instellingen
         public string? DefaultCurrency { get; set; }   // "EUR"
         [Display(Name = "Patroon Factuurnummer")]
         public string? InvoiceNumberPattern { get; set; } // "{num:0000}-{date:MM-yyyy}"
+
+        [Display(Name = "Juridische footer")]
+        public string? FooterLegalText { get; set; }
+
+        [Display(Name = "Peppol actief")]
+        public bool PeppolEnabled { get; set; }
 
         [Display(Name = "EPC QR weergeven")]
         public bool EpcQrEnabled { get; set; }

@@ -1,11 +1,13 @@
 ﻿using BOCore;
 using CPMCore.Models.Invoicing;
 using CPMCore.Documents;
+using CPMCore.Extensions;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using ServiceCore;
+using ServiceCore.Invoicing.Pdf;
 using System;
 using System.Globalization;
 using System.Linq;
@@ -26,6 +28,7 @@ namespace CPMCore.Controllers
         private readonly IProjectSupplierLookupService _ps;
         private readonly IIssuerCompanyService _ics;
         private readonly IIssuerBankAccountService _bank;
+        private readonly IInvoicePdfService _pdf;
 
         public InvoicesController(
             IInvoiceQueryService invoices,
@@ -35,7 +38,8 @@ namespace CPMCore.Controllers
             IInvoiceCommandService cmd,
             IProjectSupplierLookupService ps,
             IIssuerCompanyService ics,
-            IIssuerBankAccountService bank)
+            IIssuerBankAccountService bank,
+            IInvoicePdfService pdf)
         {
             _invoices = invoices;
             _companies = companies;
@@ -45,6 +49,7 @@ namespace CPMCore.Controllers
             _ps = ps;
             _ics = ics;
             _bank = bank;
+            _pdf = pdf;
         }
 
         // LIST
@@ -103,12 +108,15 @@ namespace CPMCore.Controllers
             if (detail == null)
                 return NotFound();
 
-            var vm = MapDetail(detail);
-            var document = new InvoiceDocument(vm);
-            var bytes = document.GeneratePdf();
-            var fileName = string.IsNullOrWhiteSpace(vm.PublicId)
-                ? $"Factuur_{vm.Id}.pdf"
-                : $"{vm.PublicId}.pdf";
+            var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
+            if (issuer == null)
+                return NotFound();
+
+            var dto = detail.ToInvoiceDto();
+            var bytes = _pdf.Render(dto, issuer);
+            var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
+                ? $"Factuur_{dto.Id}.pdf"
+                : $"{dto.PublicId}.pdf";
 
             return File(bytes, "application/pdf", fileName);
         }
@@ -955,6 +963,15 @@ namespace CPMCore.Controllers
                 DiscountAmount = discount != 0 ? RoundCurrency(discount) : (decimal?)null,
                 DiscountPercent = line.DiscountPercent
             };
+        }
+
+        private static string? CombineAddress(string? line1, string? line2)
+        {
+            if (string.IsNullOrWhiteSpace(line1))
+                return line2;
+            if (string.IsNullOrWhiteSpace(line2))
+                return line1;
+            return $"{line1}, {line2}";
         }
 
         private static decimal RoundCurrency(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);

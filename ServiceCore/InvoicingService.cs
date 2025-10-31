@@ -230,6 +230,7 @@ namespace ServiceCore
                 IssuerCountryCode = issuer?.CountryCode,
                 IssuerEmail = issuer?.Email,
                 IssuerPhone = issuer?.Phone,
+                StructuredMessage = invoice.StructuredCommOgm,
                 ClientName = invoice.ClientName,
                 ClientAddress = invoice.Adress,
                 ClientPostalCode = postal?.Postcode,

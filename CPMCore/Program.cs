@@ -14,6 +14,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Rotativa.AspNetCore;
 using ServiceCore;
+using ServiceCore.Invoicing.Pdf;
+using ServiceCore.Invoicing.Pdf.Sections;
 using SmartBreadcrumbs;
 using SmartBreadcrumbs.Extensions;
 using System.Data.SqlClient;
@@ -68,6 +70,25 @@ builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();
 builder.Services.AddScoped<IInvoiceNumberingService, InvoiceNumberingService>();
 builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupService>();
 
+
+builder.Services.AddSingleton<TemplateInterpolator>();
+builder.Services.AddSingleton<BandsRenderer>();
+builder.Services.AddSingleton<ISectionRenderer>(sp => sp.GetRequiredService<BandsRenderer>());
+builder.Services.AddSingleton<ISectionRenderer, HeaderRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, HeadlineRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, PartiesRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, LinesTableRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, TotalsRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, PaymentRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, LegalRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, FooterRenderer>();
+builder.Services.AddSingleton<SectionRendererFactory>(sp => new SectionRendererFactory(sp.GetServices<ISectionRenderer>()));
+builder.Services.AddSingleton<IInvoiceTemplate>(sp => new JsonInvoiceTemplate("layoutA", sp.GetRequiredService<SectionRendererFactory>(), sp.GetRequiredService<BandsRenderer>()));
+builder.Services.AddSingleton<IInvoiceTemplate>(sp => new JsonInvoiceTemplate("layoutB", sp.GetRequiredService<SectionRendererFactory>(), sp.GetRequiredService<BandsRenderer>()));
+builder.Services.AddSingleton<IInvoiceTemplateRegistry, InvoiceTemplateRegistry>();
+builder.Services.AddSingleton<IEpcQrService, EpcQrService>();
+builder.Services.AddSingleton<IStructuredReferenceService, StructuredReferenceService>();
+builder.Services.AddScoped<IInvoicePdfService, InvoicePdfService>();
 builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider =>
     new SynchronizedConverter(new PdfTools())
 );

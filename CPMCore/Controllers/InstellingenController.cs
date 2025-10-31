@@ -11,10 +11,19 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
-using System.Diagnostics;
-using System.Security.Claims;
-using System.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Schema;
+using ServiceCore.Invoicing.Pdf.Templates;
+using System.Data.SqlClient;
+using System.Diagnostics;
+using System.Linq;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Collections.Generic;
+
 namespace CPMCore.Controllers;
 
 
@@ -26,6 +35,20 @@ public class InstellingenController : BaseController
     private readonly IIssuerCompanyService _issuers;
     private readonly IIssuerBankAccountService _bank;
     private readonly IIssuerSeriesService _series;
+
+    private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    private static readonly string LayoutDefaultsJson =
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            layoutA = DefaultLayouts.LayoutA,
+        layoutB = DefaultLayouts.LayoutB
+    }, LayoutSerializerOptions);
+
+    private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
     public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series)
     {
@@ -112,6 +135,12 @@ public class InstellingenController : BaseController
             Email = x.Email,
             Phone = x.Phone,
             LogoPath = x.LogoPath,
+            TemplateKey = x.TemplateKey,
+            TemplateJson = x.TemplateJson,
+            BrandPrimaryColor = x.BrandPrimaryColor,
+            BrandSecondaryColor = x.BrandSecondaryColor,
+            FontFamily = x.FontFamily,
+            LogoBytes = x.LogoBytes,
             DefaultPaymentTermId = x.DefaultPaymentTermId,
             IsActive = x.IsActive,
             EInvoiceEnabled = x.EInvoiceEnabled,
@@ -129,6 +158,8 @@ public class InstellingenController : BaseController
             EpcBic = x.EpcBic,
             EpcRemittanceType = x.EpcRemittanceType,
             EpcRemittanceTemplate = x.EpcRemittanceTemplate,
+            FooterLegalText = x.FooterLegalText,
+            PeppolEnabled = x.PeppolEnabled,
 
         }).ToList();
 
@@ -176,6 +207,7 @@ public class InstellingenController : BaseController
 
         ViewData["BreadcrumbNode"] = InstellingenNewIssuer;
 
+        PopulateInvoiceLayoutViewData();
         return View(new IssuerCompanyVM());
     }
 
@@ -184,9 +216,11 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> IssuerCompaniesCreate(IssuerCompanyVM vm)
     {
+        ValidateTemplateJson(vm.TemplateJson);
         if (!ModelState.IsValid)
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
+            PopulateInvoiceLayoutViewData();
             return View(vm);
         }
 
@@ -204,6 +238,12 @@ public class InstellingenController : BaseController
             Email = vm.Email,
             Phone = vm.Phone,
             LogoPath = vm.LogoPath,
+            TemplateKey = vm.TemplateKey,
+            TemplateJson = vm.TemplateJson,
+            BrandPrimaryColor = vm.BrandPrimaryColor,
+            BrandSecondaryColor = vm.BrandSecondaryColor,
+            FontFamily = vm.FontFamily,
+            LogoBytes = vm.LogoBytes,
             DefaultPaymentTermId = vm.DefaultPaymentTermId,
             IsActive = vm.IsActive,
             EInvoiceEnabled = vm.EInvoiceEnabled,
@@ -215,6 +255,8 @@ public class InstellingenController : BaseController
             DefaultLanguage = vm.DefaultLanguage,
             DefaultCurrency = vm.DefaultCurrency,
             InvoiceNumberPattern = vm.InvoiceNumberPattern,
+            FooterLegalText = vm.FooterLegalText,
+            PeppolEnabled = vm.PeppolEnabled,
             EpcQrEnabled = vm.EpcQrEnabled,
             EpcBeneficiaryName = vm.EpcBeneficiaryName,
             EpcIban = vm.EpcIban,
@@ -256,6 +298,12 @@ public class InstellingenController : BaseController
             Email = bo.Email,
             Phone = bo.Phone,
             LogoPath = bo.LogoPath,
+            TemplateKey = bo.TemplateKey,
+            TemplateJson = bo.TemplateJson,
+            BrandPrimaryColor = bo.BrandPrimaryColor,
+            BrandSecondaryColor = bo.BrandSecondaryColor,
+            FontFamily = bo.FontFamily,
+            LogoBytes = bo.LogoBytes,
             DefaultPaymentTermId = bo.DefaultPaymentTermId,
             IsActive = bo.IsActive,
             EInvoiceEnabled = bo.EInvoiceEnabled,
@@ -267,6 +315,8 @@ public class InstellingenController : BaseController
             DefaultLanguage = bo.DefaultLanguage,
             DefaultCurrency = bo.DefaultCurrency,
             InvoiceNumberPattern = bo.InvoiceNumberPattern,
+            FooterLegalText = bo.FooterLegalText,
+            PeppolEnabled = bo.PeppolEnabled,
             EpcQrEnabled = bo.EpcQrEnabled,
             EpcBeneficiaryName = bo.EpcBeneficiaryName,
             EpcIban = bo.EpcIban,
@@ -292,6 +342,7 @@ public class InstellingenController : BaseController
 
         ViewData["BreadcrumbNode"] = InstellingenEditIssuer;
 
+        PopulateInvoiceLayoutViewData();
         return View(vm);
     }
 
@@ -301,11 +352,13 @@ public class InstellingenController : BaseController
     public async Task<IActionResult> IssuerCompaniesEdit(int id, IssuerCompanyVM vm)
     {
         if (id != vm.Id) return BadRequest();
+        ValidateTemplateJson(vm.TemplateJson);
         if (!ModelState.IsValid)
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
             ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
             ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
+            PopulateInvoiceLayoutViewData();
             return View(vm);
         }
 
@@ -324,6 +377,12 @@ public class InstellingenController : BaseController
             Email = vm.Email,
             Phone = vm.Phone,
             LogoPath = vm.LogoPath,
+            TemplateKey = vm.TemplateKey,
+            TemplateJson = vm.TemplateJson,
+            BrandPrimaryColor = vm.BrandPrimaryColor,
+            BrandSecondaryColor = vm.BrandSecondaryColor,
+            FontFamily = vm.FontFamily,
+            LogoBytes = vm.LogoBytes,
             DefaultPaymentTermId = vm.DefaultPaymentTermId,
             IsActive = vm.IsActive,
             EInvoiceEnabled = vm.EInvoiceEnabled,
@@ -335,6 +394,8 @@ public class InstellingenController : BaseController
             DefaultLanguage = vm.DefaultLanguage,
             DefaultCurrency = vm.DefaultCurrency,
             InvoiceNumberPattern = vm.InvoiceNumberPattern,
+            FooterLegalText = vm.FooterLegalText,
+            PeppolEnabled = vm.PeppolEnabled,
             EpcQrEnabled = vm.EpcQrEnabled,
             EpcBeneficiaryName = vm.EpcBeneficiaryName,
             EpcIban = vm.EpcIban,
@@ -585,6 +646,37 @@ public class InstellingenController : BaseController
         }
 
         return RedirectToAction("Sequences", new { seriesId, issuerId });
+    }
+
+    private void PopulateInvoiceLayoutViewData()
+    {
+        ViewBag.InvoiceLayoutDefaultsJson = LayoutDefaultsJson;
+        ViewBag.InvoiceLayoutSchemaJson = LayoutSchemaJson;
+    }
+
+    private void ValidateTemplateJson(string? templateJson)
+    {
+        if (string.IsNullOrWhiteSpace(templateJson))
+            return;
+
+        try
+        {
+            var token = JToken.Parse(templateJson);
+            var schema = LayoutSchemaProvider.GetSchema();
+
+            IList<ValidationError> errors;   // <-- expliciet type kiezen
+            if (!token.IsValid(schema, out errors))
+            {
+                var message = string.Join("; ", errors.Select(e => e.Message));
+                ModelState.AddModelError(nameof(IssuerCompanyVM.TemplateJson),
+                    $"Layout JSON ongeldig: {message}");
+            }
+
+        }
+        catch (JsonReaderException ex)
+        {
+            ModelState.AddModelError(nameof(IssuerCompanyVM.TemplateJson), $"Layout JSON is niet geldig: {ex.Message}");
+        }
     }
 
     //HELPERS

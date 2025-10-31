@@ -1,0 +1,196 @@
+﻿<script src="https://cdn.jsdelivr.net/npm/ajv@8/dist/ajv.min.js" crossorigin="anonymous"></script>
+<script>
+    (function () {
+        const defaultsElement = document.getElementById('invoice-layout-defaults');
+        if (!defaultsElement) {
+            return;
+        }
+
+        let defaults = {};
+        try {
+            defaults = JSON.parse(defaultsElement.textContent || '{}');
+        } catch (err) {
+            console.warn('Kon lay-out defaults niet parsen', err);
+        }
+
+        let schema = null;
+        const schemaElement = document.getElementById('invoice-layout-schema');
+        if (schemaElement) {
+            try {
+                schema = JSON.parse(schemaElement.textContent || '{}');
+            } catch (err) {
+                console.warn('Kon lay-out schema niet parsen', err);
+            }
+        }
+
+        const form = document.querySelector('.ecommerce-form');
+        const templateTextarea = document.querySelector('.js-template-json');
+        const templateKeySelect = document.querySelector('.js-template-key');
+        const previewButton = document.querySelector('.js-layout-preview');
+        const resetButton = document.querySelector('.js-layout-reset');
+        const previewInvoiceInput = document.querySelector('.js-preview-invoice');
+        const errorBox = document.getElementById('invoice-layout-error');
+        const issuerIdInput = form ? form.querySelector('input[name="Id"]') : null;
+        const tokenInput = form ? form.querySelector('input[name="__RequestVerificationToken"]') : null;
+        const primaryInput = document.getElementById('BrandPrimaryColor');
+        const secondaryInput = document.getElementById('BrandSecondaryColor');
+        const fontInput = form ? form.querySelector('input[name="FontFamily"]') : null;
+        const footerInput = form ? form.querySelector('textarea[name="FooterLegalText"]') : null;
+        const epcCheckbox = form ? form.querySelector('input[name="EpcQrEnabled"][type="checkbox"]') : null;
+
+        if (!templateTextarea || !templateKeySelect) {
+            return;
+        }
+
+        let validate = null;
+        if (schema && typeof Ajv === 'function') {
+            const ajv = new Ajv({ allErrors: true });
+            validate = ajv.compile(schema);
+        }
+
+        function setError(message) {
+            if (!errorBox) {
+                return;
+            }
+            if (!message) {
+                errorBox.classList.add('d-none');
+                errorBox.textContent = '';
+            } else {
+                errorBox.classList.remove('d-none');
+                errorBox.textContent = message;
+            }
+        }
+
+        function validateLayout() {
+            const value = templateTextarea.value.trim();
+            if (!value) {
+                setError(null);
+                return true;
+            }
+
+            let parsed;
+            try {
+                parsed = JSON.parse(value);
+            } catch (err) {
+                setError('JSON is ongeldig: ' + err.message);
+                return false;
+            }
+
+            if (validate && !validate(parsed)) {
+                const messages = (validate.errors || []).map(function (e) {
+                    return e.message || 'Ongeldige waarde';
+                });
+                setError('Schema validatie mislukt: ' + messages.join(', '));
+                return false;
+            }
+
+            setError(null);
+            return true;
+        }
+
+        templateTextarea.addEventListener('input', validateLayout);
+
+        if (resetButton) {
+            resetButton.addEventListener('click', function () {
+                const key = templateKeySelect.value || 'layoutA';
+                if (defaults && defaults[key]) {
+                    templateTextarea.value = defaults[key];
+                    templateTextarea.dispatchEvent(new Event('input'));
+                }
+            });
+        }
+
+        if (previewButton) {
+            previewButton.addEventListener('click', async function () {
+                if (!validateLayout()) {
+                    return;
+                }
+
+                if (!issuerIdInput || !issuerIdInput.value) {
+                    setError('Bewaar het bedrijf en kies een factuur voordat je een preview maakt.');
+                    return;
+                }
+
+                if (!previewInvoiceInput || !previewInvoiceInput.value) {
+                    setError('Geef een factuur-id op voor de preview.');
+                    return;
+                }
+
+                setError(null);
+
+                const url = previewButton.getAttribute('data-preview-url');
+                if (!url) {
+                    return;
+                }
+
+                const formData = new FormData();
+                if (tokenInput) {
+                    formData.append('__RequestVerificationToken', tokenInput.value);
+                }
+                formData.append('IssuerCompanyId', issuerIdInput.value);
+                formData.append('InvoiceId', previewInvoiceInput.value);
+                formData.append('TemplateKey', templateKeySelect.value || '');
+                formData.append('TemplateJson', templateTextarea.value);
+                if (primaryInput) {
+                    formData.append('BrandPrimaryColor', primaryInput.value || '');
+                }
+                if (secondaryInput) {
+                    formData.append('BrandSecondaryColor', secondaryInput.value || '');
+                }
+                if (fontInput) {
+                    formData.append('FontFamily', fontInput.value || '');
+                }
+                if (footerInput) {
+                    formData.append('FooterLegalText', footerInput.value || '');
+                }
+                if (epcCheckbox) {
+                    formData.append('EpcQrEnabled', epcCheckbox.checked ? 'true' : 'false');
+                }
+
+                previewButton.disabled = true;
+                previewButton.classList.add('disabled');
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const text = await response.text();
+                        let message = 'Preview mislukt.';
+                        try {
+                            const parsedError = JSON.parse(text);
+                            if (parsedError && parsedError.message) {
+                                message = parsedError.message;
+                            }
+                        } catch (err) {
+                            if (text) {
+                                message = text;
+                            }
+                        }
+                        setError(message);
+                        return;
+                    }
+
+                    const blob = await response.blob();
+                    const objectUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = objectUrl;
+                    link.download = 'factuur-preview.pdf';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(objectUrl);
+                } catch (err) {
+                    setError('Preview kon niet geladen worden: ' + err);
+                } finally {
+                    previewButton.disabled = false;
+                    previewButton.classList.remove('disabled');
+                }
+            });
+        }
+
+        validateLayout();
+    })();
+</script>
