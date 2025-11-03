@@ -43,7 +43,9 @@ namespace ServiceCore
                     CountryCode = x.CountryCode,
                     Email = x.Email,
                     Phone = x.Phone,
+                    Phone2 = x.Phone2,
                     LogoPath = x.LogoPath,
+                    Website = x.Website,
                     DefaultPaymentTermId = x.DefaultPaymentTermId,
                     IsActive = x.IsActive
                 })
@@ -153,7 +155,9 @@ namespace ServiceCore
             CountryCode = x.CountryCode,
             Email = x.Email,
             Phone = x.Phone,
+            Phone2 = x.Phone2,
             LogoPath = x.LogoPath,
+            Website = x.Website,
             TemplateKey = x.TemplateKey,
             TemplateJson = x.TemplateJson,
             BrandPrimaryColor = x.BrandPrimaryColor,
@@ -194,7 +198,9 @@ namespace ServiceCore
             e.CountryCode = bo.CountryCode?.Trim();
             e.Email = bo.Email?.Trim();
             e.Phone = bo.Phone?.Trim();
+            e.Phone2 = bo.Phone2?.Trim();
             e.LogoPath = bo.LogoPath?.Trim();
+            e.Website = bo.Website?.Trim();
             e.TemplateKey = bo.TemplateKey?.Trim();
             e.TemplateJson = bo.TemplateJson;
             e.BrandPrimaryColor = bo.BrandPrimaryColor;

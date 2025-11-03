@@ -87,6 +87,10 @@ public partial class IssuerCompany
 
     public bool PeppolEnabled { get; set; }
 
+    public string Phone2 { get; set; }
+
+    public string Website { get; set; }
+
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
 
     public virtual Vattype DefaultVatType { get; set; }

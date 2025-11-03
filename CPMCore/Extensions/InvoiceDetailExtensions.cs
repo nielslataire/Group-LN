@@ -23,6 +23,7 @@ public static class InvoiceDetailExtensions
             Status = bo.StatusName,
             BankAccount = bo.BankAccount,
             StructuredMessage = bo.StructuredMessage,
+            ExtraInfo = bo.ExtraInfo,
             Issuer = new PartyDto
             {
                 Name = bo.IssuerName,

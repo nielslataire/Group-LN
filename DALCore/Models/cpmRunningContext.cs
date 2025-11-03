@@ -1420,10 +1420,12 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(200);
             entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
             entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.Phone2).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(16);
             entity.Property(e => e.TemplateKey).HasMaxLength(64);
             entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
             entity.Property(e => e.VatNumber).HasMaxLength(32);
+            entity.Property(e => e.Website).HasMaxLength(200);
 
             entity.HasOne(d => d.DefaultPaymentTerm).WithMany(p => p.IssuerCompany)
                 .HasForeignKey(d => d.DefaultPaymentTermId)

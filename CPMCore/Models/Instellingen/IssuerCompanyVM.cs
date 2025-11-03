@@ -35,6 +35,10 @@ namespace CPMCore.Models.Instellingen
         public string? Email { get; set; }
         [Display(Name = "Telefoon")]
         public string? Phone { get; set; }
+        [Display(Name = "Telefoon 2")]
+        public string? Phone2 { get; set; }
+        [Display(Name = "Website")]
+        public string? Website { get; set; }
 
         [Display(Name = "Logo pad")]
         public string? LogoPath { get; set; }

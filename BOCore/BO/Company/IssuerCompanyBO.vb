@@ -11,7 +11,9 @@
     Public Property CountryCode As String
     Public Property Email As String
     Public Property Phone As String
+    Public Property Phone2 As String
     Public Property LogoPath As String
+    Public Property Website As String
     Public Property TemplateKey As String
     Public Property TemplateJson As String
     Public Property BrandPrimaryColor As String

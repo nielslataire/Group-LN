@@ -7,6 +7,7 @@ using DALCore.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using FacadeCore;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Razor;
@@ -18,6 +19,7 @@ using ServiceCore.Invoicing.Pdf;
 using ServiceCore.Invoicing.Pdf.Sections;
 using SmartBreadcrumbs;
 using SmartBreadcrumbs.Extensions;
+using System.IO;
 using System.Data.SqlClient;
 using System.Globalization;
 using System.Reflection;
@@ -74,6 +76,7 @@ builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupS
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();
 builder.Services.AddSingleton<ISectionRenderer>(sp => sp.GetRequiredService<BandsRenderer>());
+builder.Services.AddSingleton<ISectionRenderer, DefaultHeaderRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, HeaderRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, HeadlineRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, PartiesRenderer>();
@@ -82,6 +85,7 @@ builder.Services.AddSingleton<ISectionRenderer, TotalsRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, PaymentRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, LegalRenderer>();
 builder.Services.AddSingleton<ISectionRenderer, FooterRenderer>();
+builder.Services.AddSingleton<ISectionRenderer, DefaultFooterRenderer>();
 builder.Services.AddSingleton<SectionRendererFactory>(sp => new SectionRendererFactory(sp.GetServices<ISectionRenderer>()));
 builder.Services.AddSingleton<IInvoiceTemplate>(sp => new JsonInvoiceTemplate("layoutA", sp.GetRequiredService<SectionRendererFactory>(), sp.GetRequiredService<BandsRenderer>()));
 builder.Services.AddSingleton<IInvoiceTemplate>(sp => new JsonInvoiceTemplate("layoutB", sp.GetRequiredService<SectionRendererFactory>(), sp.GetRequiredService<BandsRenderer>()));
@@ -155,7 +159,7 @@ builder.Services.AddBreadcrumbs(Assembly.GetExecutingAssembly(), options =>
 //QUESTPDF
 
 QuestPDF.Settings.License = LicenseType.Community;
-
+RegisterAvenirFonts(builder.Environment);
 
 var app = builder.Build();
 
@@ -198,6 +202,46 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+void RegisterAvenirFonts(IWebHostEnvironment environment)
+{
+    try
+    {
+        var fontsDirectory = Path.Combine(environment.ContentRootPath, "wwwroot", "fonts");
+        if (!Directory.Exists(fontsDirectory))
+            return;
+
+        var fontFiles = new[]
+        {
+            "Avenir-Book.ttf",
+            "Avenir-BookOblique.ttf",
+            "Avenir-Black.ttf",
+            "Avenir-BlackOblique.ttf",
+            "Avenir-Heavy.ttf",
+            "Avenir-HeavyOblique.ttf",
+            "Avenir-Medium.ttf",
+            "Avenir-MediumOblique.ttf",
+            "Avenir-Light.ttf",
+            "Avenir-LightOblique.ttf",
+            "Avenir-Oblique.ttf",
+            "Avenir-Roman.ttf"
+        };
+
+        foreach (var fontFile in fontFiles)
+        {
+            var fontPath = Path.Combine(fontsDirectory, fontFile);
+            if (!File.Exists(fontPath))
+                continue;
+
+            using var stream = File.OpenRead(fontPath);
+            FontManager.RegisterFont(stream);
+        }
+    }
+    catch
+    {
+        // ignored: fall back to default QuestPDF font configuration
+    }
+}
 
 //app.MapRazorPages();
 

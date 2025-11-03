@@ -11,7 +11,7 @@ public static class DefaultLayouts
     public const string LayoutA = @"{
   ""version"": 1,
   ""page"": {
-    ""margin"": 30,
+    ""margin"": 36,
     ""bands"": {
       ""top"": {
         ""height"": 24,
@@ -25,34 +25,14 @@ public static class DefaultLayouts
   },
   ""theme"": {
     ""primary"": ""#01532d"",
-    ""secondary"": ""#6b7280"",
-    ""fontFamily"": ""Inter"",
+    ""secondary"": ""#111111"",
+    ""fontFamily"": ""Avenir"",
     ""logoSource"": ""db:IssuerCompany.LogoBytes""
   },
   ""sections"": [
     {
-      ""type"": ""header"",
-      ""visible"": true,
-      ""left"": [
-        ""{{IssuerCompany.Name}}"",
-        ""{{IssuerCompany.AddressLine}}"",
-        ""{{IssuerCompany.Postal}} {{IssuerCompany.City}}"",
-        ""BTW: {{IssuerCompany.VAT}}"",
-        ""IBAN {{IssuerCompany.IBAN}}  BIC {{IssuerCompany.BIC}}""
-      ],
-      ""right"": {
-        ""image"": ""theme:logo"",
-        ""width"": 120
-      }
-    },
-    {
-      ""type"": ""headline"",
-      ""visible"": true,
-      ""title"": ""FACTUUR {{Invoice.PublicId}}"",
-      ""meta"": [
-        ""Datum: {{Invoice.IssueDate:dd/MM/yyyy}}"",
-        ""Vervaldatum: {{Invoice.DueDate:dd/MM/yyyy}}""
-      ]
+     ""type"": ""defaultHeader"",
+      ""visible"": true
     },
     {
       ""type"": ""parties"",
@@ -156,10 +136,8 @@ public static class DefaultLayouts
       ""size"": 8
     },
     {
-      ""type"": ""footer"",
-      ""visible"": true,
-      ""center"": ""{{IssuerCompany.Website}} | {{IssuerCompany.Email}}"",
-      ""size"": 8
+      ""type"": ""defaultFooter"",
+      ""visible"": true
     }
   ]
 }";
@@ -171,7 +149,7 @@ public static class DefaultLayouts
   ""theme"": {
     ""primary"": ""#f1971b"",
     ""secondary"": ""#4b5563"",
-    ""fontFamily"": ""Inter"",
+    ""fontFamily"": ""Avenir"",
     ""logoSource"": ""db:IssuerCompany.LogoBytes""
   },
   ""sections"": [

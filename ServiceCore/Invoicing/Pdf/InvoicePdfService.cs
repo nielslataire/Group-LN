@@ -10,6 +10,8 @@ using System;
 using System.Linq;
 using System.Linq.Dynamic.Core.Tokenizer;
 using Newtonsoft.Json.Schema;
+using System.Collections.Generic;
+using System.Globalization;
 
 namespace ServiceCore.Invoicing.Pdf;
 
@@ -69,7 +71,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
         var theme = layout.Theme ?? new ThemeConfig();
         var primary = !string.IsNullOrWhiteSpace(theme.Primary) ? theme.Primary : company.BrandPrimaryColor;
         var secondary = !string.IsNullOrWhiteSpace(theme.Secondary) ? theme.Secondary : company.BrandSecondaryColor;
-        var fontFamily = !string.IsNullOrWhiteSpace(company.FontFamily) ? company.FontFamily : theme.FontFamily;
+        const string fontFamily = "Avenir";
         var logo = ResolveLogo(theme.LogoSource, company);
 
         byte[]? qr = null;
@@ -121,9 +123,10 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 Country = dto.Issuer.Country ?? company.CountryCode,
                 Email = dto.Issuer.Email ?? company.Email,
                 Phone = dto.Issuer.Phone ?? company.Phone,
+                Phone2 = dto.Issuer.Phone2 ?? company.Phone2,
                 IBAN = dto.Issuer.BankAccount ?? company.EpcIban,
                 BIC = dto.Issuer.Bic ?? company.EpcBic,
-                Website = dto.Issuer.Website
+                Website = dto.Issuer.Website ?? company.Website
             },
             Client = new CompanyVm
             {
@@ -146,8 +149,11 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 BankAccount = dto.BankAccount,
                 Iban = dto.Issuer.BankAccount ?? company.EpcIban,
                 Bic = dto.Issuer.Bic ?? company.EpcBic,
-                QrEnabled = company.EpcQrEnabled
+                QrEnabled = company.EpcQrEnabled,
+                Terms = BuildPaymentTerms(dto)
             },
+            VatSummary = BuildVatSummary(dto),
+            ExtraInfo = dto.ExtraInfo,
             Lines = dto.Lines.Select(line => new InvoiceLineVm
             {
                 Key = line.Key,
@@ -186,7 +192,69 @@ public sealed class InvoicePdfService : IInvoicePdfService
             ? _structured.CreateOgm(trimmed)
             : _structured.CreateRf(trimmed);
     }
+    private static IReadOnlyList<VatRateSummaryVm> BuildVatSummary(InvoiceDto dto)
+    {
+        if (dto == null)
+            return Array.Empty<VatRateSummaryVm>();
 
+        if (dto.Lines == null || dto.Lines.Count == 0)
+        {
+            return new[]
+            {
+                new VatRateSummaryVm
+                {
+                    Rate = 0m,
+                    Net = dto.Totals?.Excl ?? 0m,
+                    Vat = dto.Totals?.Vat ?? 0m
+                }
+            };
+        }
+
+        var summaries = dto.Lines
+            .GroupBy(line => line.Vat)
+            .OrderBy(group => group.Key)
+            .Select(group =>
+            {
+                var net = group.Sum(line => RoundCurrency(line.UnitPrice * line.Quantity));
+                var gross = group.Sum(line => RoundCurrency(line.Total));
+                var vat = RoundCurrency(gross - net);
+                return new VatRateSummaryVm
+                {
+                    Rate = group.Key,
+                    Net = net,
+                    Vat = vat
+                };
+            })
+            .ToList();
+
+        if (summaries.Count == 0)
+        {
+            summaries.Add(new VatRateSummaryVm
+            {
+                Rate = 0m,
+                Net = dto.Totals?.Excl ?? 0m,
+                Vat = dto.Totals?.Vat ?? 0m
+            });
+        }
+
+        return summaries;
+    }
+
+    private static string? BuildPaymentTerms(InvoiceDto dto)
+    {
+        if (dto?.DueDate is not { } due)
+            return null;
+
+        var issue = dto.IssueDate;
+        var days = due.DayNumber - issue.DayNumber;
+        if (days > 0)
+            return $"Te betalen binnen {days} dagen (vóór {due:dd/MM/yyyy})";
+
+        return $"Te betalen vóór {due:dd/MM/yyyy}";
+    }
+
+    private static decimal RoundCurrency(decimal value)
+        => Math.Round(value, 2, MidpointRounding.AwayFromZero);
     private static string? CombineAddress(string? line1, string? line2)
     {
         if (string.IsNullOrWhiteSpace(line1))

@@ -15,43 +15,43 @@ public sealed class BandsRenderer : ISectionRenderer
 
     public void DrawBackground(PageDescriptor page, LayoutConfig layout)
     {
-        var bands = layout.Page?.Bands;
-        if (bands == null)
-            return;
+        //var bands = layout.Page?.Bands;
+        //if (bands == null)
+        //    return;
 
-        var topBand = bands.Top;
-        var bottomBand = bands.Bottom;
+        //var topBand = bands.Top;
+        //var bottomBand = bands.Bottom;
 
-        var hasTopBand = topBand is { Height: > 0 };
-        var hasBottomBand = bottomBand is { Height: > 0 };
+        //var hasTopBand = topBand is { Height: > 0 };
+        //var hasBottomBand = bottomBand is { Height: > 0 };
 
-        if (!hasTopBand && !hasBottomBand)
-            return;
+        //if (!hasTopBand && !hasBottomBand)
+        //    return;
 
-        page.Background().Element(container =>
-        {
-            container.Column(column =>
-            {
-                if (hasTopBand)
-                {
-                    var color = string.IsNullOrWhiteSpace(topBand!.Color) ? "#FFFFFF" : topBand.Color;
+        //page.Background().Element(container =>
+        //{
+        //    container.Column(column =>
+        //    {
+        //        if (hasTopBand)
+        //        {
+        //            var color = string.IsNullOrWhiteSpace(topBand!.Color) ? "#FFFFFF" : topBand.Color;
 
-                    column.Item()
-                        .Height(topBand.Height)
-                        .Background(color);
-                }
+        //            column.Item()
+        //                .Height(topBand.Height)
+        //                .Background(color);
+        //        }
 
-                column.Item().Expand();
+        //        column.Item().Expand();
 
-                if (hasBottomBand)
-                {
-                    var color = string.IsNullOrWhiteSpace(bottomBand!.Color) ? "#FFFFFF" : bottomBand.Color;
+        //        if (hasBottomBand)
+        //        {
+        //            var color = string.IsNullOrWhiteSpace(bottomBand!.Color) ? "#FFFFFF" : bottomBand.Color;
 
-                    column.Item()
-                        .Height(bottomBand.Height)
-                        .Background(color);
-                }
-            });
-        });
+        //            column.Item()
+        //                .Height(bottomBand.Height)
+        //                .Background(color);
+        //        }
+        //    });
+        //});
     }
 }

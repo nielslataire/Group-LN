@@ -13,6 +13,8 @@ public class InvoiceVm
     public TotalsVm Totals { get; init; } = new();
     public PaymentVm Payment { get; init; } = new();
     public IReadOnlyList<InvoiceLineVm> Lines { get; init; } = Array.Empty<InvoiceLineVm>();
+    public IReadOnlyList<VatRateSummaryVm> VatSummary { get; init; } = Array.Empty<VatRateSummaryVm>();
+    public string? ExtraInfo { get; init; }
 }
 
 public sealed class InvoiceInfoVm
@@ -35,6 +37,7 @@ public sealed class CompanyVm
     public string? Country { get; init; }
     public string? Email { get; init; }
     public string? Phone { get; init; }
+    public string? Phone2 { get; init; }
     public string? IBAN { get; init; }
     public string? BIC { get; init; }
     public string? Website { get; init; }
@@ -65,6 +68,15 @@ public sealed class PaymentVm
     public string? Iban { get; init; }
     public string? Bic { get; init; }
     public bool QrEnabled { get; init; }
+    public string? Terms { get; init; }
+}
+
+public sealed class VatRateSummaryVm
+{
+    public decimal Rate { get; init; }
+    public decimal Net { get; init; }
+    public decimal Vat { get; init; }
+    public decimal Total => Net + Vat;
 }
 
 public sealed class InvoiceLineVm

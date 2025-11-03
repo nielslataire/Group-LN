@@ -63,7 +63,7 @@ public class ThemeConfig
 
     [JsonProperty("fontFamily")]
     public string? FontFamily { get; set; }
-        = "Inter";
+        = "Avenir";
 
     [JsonProperty("logoSource")]
     public string? LogoSource { get; set; }
@@ -99,6 +99,10 @@ public sealed class HeaderSectionConfig : SectionConfig
     [JsonProperty("right")]
     public HeaderRightConfig? Right { get; set; }
         = new HeaderRightConfig();
+}
+
+public sealed class DefaultHeaderSectionConfig : SectionConfig
+{
 }
 
 public sealed class HeaderRightConfig
@@ -265,6 +269,7 @@ internal sealed class SectionConfigConverter : JsonConverter
         SectionConfig target = type switch
         {
             "header" => new HeaderSectionConfig(),
+            "defaultHeader" => new DefaultHeaderSectionConfig(),
             "headline" => new HeadlineSectionConfig(),
             "parties" => new PartiesSectionConfig(),
             "linesTable" => new LinesTableSectionConfig(),
@@ -272,6 +277,7 @@ internal sealed class SectionConfigConverter : JsonConverter
             "payment" => new PaymentSectionConfig(),
             "legal" => new LegalSectionConfig(),
             "footer" => new FooterSectionConfig(),
+            "defaultFooter" => new FooterSectionConfig(),
             "bands" => new BandsSectionConfig(),
             _ => new UnknownSectionConfig(type)
         };
