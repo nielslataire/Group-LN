@@ -75,16 +75,23 @@ public sealed class InvoicePdfService : IInvoicePdfService
         var logo = ResolveLogo(theme.LogoSource, company);
 
         byte[]? qr = null;
-        if (company.EpcQrEnabled && !string.IsNullOrWhiteSpace(company.EpcBeneficiaryName)
-            && !string.IsNullOrWhiteSpace(company.EpcIban)
-            && !string.IsNullOrWhiteSpace(structuredMessage))
+        if (company.EpcQrEnabled)
         {
-            qr = _qrService.CreatePng(
-                company.EpcBeneficiaryName,
-                company.EpcIban,
-                company.EpcBic ?? string.Empty,
-                invoice.Totals.Incl,
-                structuredMessage ?? string.Empty);
+            if (!string.IsNullOrWhiteSpace(invoice.QrPayload))
+            {
+                qr = _qrService.CreatePngFromPayload(invoice.QrPayload);
+            }
+            else if (!string.IsNullOrWhiteSpace(company.EpcBeneficiaryName)
+                && !string.IsNullOrWhiteSpace(company.EpcIban)
+                && !string.IsNullOrWhiteSpace(structuredMessage))
+            {
+                qr = _qrService.CreatePng(
+                    company.EpcBeneficiaryName,
+                    company.EpcIban,
+                    company.EpcBic ?? string.Empty,
+                    invoice.Totals.Incl,
+                    structuredMessage ?? string.Empty);
+            }
         }
 
         return new TemplateContext
@@ -149,7 +156,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 BankAccount = dto.BankAccount,
                 Iban = dto.Issuer.BankAccount ?? company.EpcIban,
                 Bic = dto.Issuer.Bic ?? company.EpcBic,
-                QrEnabled = company.EpcQrEnabled,
+                QrEnabled = company.EpcQrEnabled && (!string.IsNullOrWhiteSpace(structuredMessage ?? dto.StructuredMessage) || !string.IsNullOrWhiteSpace(dto.QrPayload)),
                 Terms = BuildPaymentTerms(dto)
             },
             VatSummary = BuildVatSummary(dto),

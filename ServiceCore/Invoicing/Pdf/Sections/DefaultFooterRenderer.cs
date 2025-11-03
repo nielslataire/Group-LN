@@ -15,7 +15,8 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 {
     private const float PointsPerMillimeter = 72f / 25.4f;
     private static readonly CultureInfo Culture = CultureInfo.GetCultureInfo("nl-BE");
-    private static readonly Color BorderColor = Colors.Black;
+    private static readonly string DefaultPrimaryColor = Colors.Black;
+    private static readonly string DefaultSecondaryColor = Colors.Grey.Darken2;
 
     public string SectionType => "defaultFooter";
 
@@ -25,19 +26,21 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             return;
 
         column.Item()
-                    .ExtendVertical()
-                    .AlignBottom()
-                    .Height(Mm(60f))
-                    .Column(col =>
-                    {
-                        col.Spacing(Mm(4f));
-                        col.Item()
-                           .AlignRight()
-                           .MinimalBox()                // krimpt tot minimale inhoudsbreedte
-                           .Element(c => ComposeVatSummary(c, vm, ctx));
-                        col.Item().Element(container => ComposePaymentSection(container, vm));
-                        col.Item().Element(container => ComposeContactSection(container, vm));
-                    });
+           .ExtendVertical()
+            .AlignBottom()
+            .Column(col =>
+            {
+                col.Spacing(Mm(4f));
+                col.Item()
+                    .AlignRight()
+                    .MinimalBox()                // krimpt tot minimale inhoudsbreedte
+                    .Element(c => ComposeVatSummary(c, vm, ctx));
+                col.Item().Element(container => ComposePaymentSection(container, vm, ctx));
+                col.Item()
+                    .Element(container => container
+                        .PaddingTop(Mm(6f))
+                        .Element(inner => ComposeContactSection(inner, vm)));
+            });
     }
 
     private static void ComposeVatSummary(IContainer container, InvoiceVm vm, TemplateContext ctx)
@@ -48,44 +51,49 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
         }).ToList();
 
         var primary = string.IsNullOrWhiteSpace(ctx.PrimaryColorHex)
-            ? Colors.Black
-            : Color.FromHex(ctx.PrimaryColorHex);
+            ? DefaultPrimaryColor
+            : ctx.PrimaryColorHex!;
+        var borderColor = string.IsNullOrWhiteSpace(ctx.SecondaryColorHex)
+            ? DefaultSecondaryColor
+            : ctx.SecondaryColorHex!;
+
+        var maxVatColumnWidth = summaries.Count <= 4 ? Mm(32f) : (float?)null;
 
         container.Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(Mm(26f));
+                columns.RelativeColumn(0.6f);
                 foreach (var _ in summaries)
-                    columns.ConstantColumn(Mm(40f));
-                columns.ConstantColumn(Mm(40f));
+                    columns.RelativeColumn();
+                columns.RelativeColumn(1.2f);
             });
 
             AddLabelCell(table.Cell(), "BTW-tarief", TextHorizontalAlignment.Left);
             foreach (var summary in summaries)
-                AddHeaderCell(table.Cell(), FormatRate(summary.Rate), primary, TextHorizontalAlignment.Left);
-            AddHeaderCell(table.Cell(), "Totaal", primary, TextHorizontalAlignment.Right);
+                AddHeaderCell(table.Cell(), FormatRate(summary.Rate), primary, borderColor, TextHorizontalAlignment.Left, maxVatColumnWidth);
+            AddHeaderCell(table.Cell(), "Totaal", primary, borderColor, TextHorizontalAlignment.Right);
 
             AddLabelCell(table.Cell(), "MVH", TextHorizontalAlignment.Left);
             foreach (var summary in summaries)
-                AddValueCell(table.Cell(), FormatCurrency(summary.Net), TextHorizontalAlignment.Left);
-            AddValueCell(table.Cell(), FormatCurrency(summaries.Sum(s => s.Net)), TextHorizontalAlignment.Right);
+                AddValueCell(table.Cell(), FormatCurrency(summary.Net), borderColor, TextHorizontalAlignment.Left, FontWeight.Normal, maxVatColumnWidth);
+            AddValueCell(table.Cell(), FormatCurrency(summaries.Sum(s => s.Net)), borderColor, TextHorizontalAlignment.Right);
 
             AddLabelCell(table.Cell(), "BTW", TextHorizontalAlignment.Left);
             foreach (var summary in summaries)
-                AddValueCell(table.Cell(), FormatCurrency(summary.Vat), TextHorizontalAlignment.Left);
-            AddValueCell(table.Cell(), FormatCurrency(summaries.Sum(s => s.Vat)), TextHorizontalAlignment.Right);
+                AddValueCell(table.Cell(), FormatCurrency(summary.Vat), borderColor, TextHorizontalAlignment.Left, FontWeight.Normal, maxVatColumnWidth);
+            AddValueCell(table.Cell(), FormatCurrency(summaries.Sum(s => s.Vat)), borderColor, TextHorizontalAlignment.Right);
 
             AddLabelCell(table.Cell(), string.Empty, TextHorizontalAlignment.Left);
             foreach (var _ in summaries)
-                AddEmptyValueCell(table.Cell());
+                AddEmptyValueCell(table.Cell(), maxVatColumnWidth);
             var invoiceTotal = vm.Totals?.Incl ?? summaries.Sum(s => s.Total);
-            AddValueCell(table.Cell(), FormatCurrency(invoiceTotal),TextHorizontalAlignment.Right, FontWeight.Bold);
+            AddValueCell(table.Cell(), FormatCurrency(invoiceTotal), borderColor, TextHorizontalAlignment.Right, FontWeight.Bold);
         });
     }
 
 
-    private static void ComposePaymentSection(IContainer container, InvoiceVm vm)
+    private static void ComposePaymentSection(IContainer container, InvoiceVm vm, TemplateContext ctx)
     {
         var dueDateText = FormatDate(vm.Invoice.DueDate);
         var paymentDate = string.IsNullOrWhiteSpace(dueDateText) ? "—" : dueDateText;
@@ -95,68 +103,121 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             : !string.IsNullOrWhiteSpace(vm.Payment?.BankAccount)
                 ? vm.Payment!.BankAccount
                 : vm.IssuerCompany.IBAN;
-        var accountText = string.IsNullOrWhiteSpace(account) ? "—" : account;
+        var formattedAccount = FormatBankAccount(account);
+        var accountText = string.IsNullOrWhiteSpace(formattedAccount) ? "—" : formattedAccount!;
 
-        var structured = string.IsNullOrWhiteSpace(vm.Payment?.Structured)
-            ? "—"
-            : vm.Payment!.Structured!;
+        var structured = !string.IsNullOrWhiteSpace(ctx.StructuredMessage)
+            ? ctx.StructuredMessage
+            : vm.Payment?.Structured;
+        var structuredText = string.IsNullOrWhiteSpace(structured) ? "—" : structured!;
 
-        var line = $"Te betalen voor {paymentDate} op rekening {accountText} met gestructureerde mededeling {structured}";
-
-        container.Column(col =>
-        {
-            col.Item().Text(text =>
-            {
-                var span = text.Span(line);
-                span.FontSize(9);
-                ApplyFont(span);
-            });
-
-            if (!string.IsNullOrWhiteSpace(vm.ExtraInfo))
-            {
-                col.Item().Text(text =>
-                {
-                    var span = text.Span(vm.ExtraInfo);
-                    span.FontSize(7);
-                    span.Italic();
-                    ApplyFont(span);
-                });
-            }
-        });
-    }
-
-    private static void ComposeContactSection(IContainer container, InvoiceVm vm)
-    {
-        var iban = vm.Payment?.Iban ?? vm.IssuerCompany.IBAN;
+        var primaryColor = string.IsNullOrWhiteSpace(ctx.PrimaryColorHex)
+            ? DefaultPrimaryColor
+            : ctx.PrimaryColorHex!;
 
         container.Row(row =>
         {
-            row.RelativeItem().Element(col => ComposeContactColumn(col, new[]
+            row.Spacing(Mm(5f));
+
+            row.RelativeItem().Column(col =>
+            {
+                col.Item().Text(text =>
+                {
+                    var prefix = text.Span($"Te betalen voor {paymentDate} op rekening ");
+                    prefix.FontSize(9);
+                    prefix.Bold();
+                    ApplyFont(prefix);
+
+                    var accountSpan = text.Span(accountText);
+                    accountSpan.FontSize(9);
+                    accountSpan.Bold();
+                    if (!string.IsNullOrWhiteSpace(formattedAccount))
+                        accountSpan.FontColor(primaryColor);
+                    ApplyFont(accountSpan);
+
+                    var suffix = text.Span($" met gestructureerde mededeling {structuredText}");
+                    suffix.FontSize(9);
+                    suffix.Bold();
+                    ApplyFont(suffix);
+                });
+
+                if (!string.IsNullOrWhiteSpace(vm.ExtraInfo))
+                {
+                    col.Item().Text(text =>
+                    {
+                        var span = text.Span(vm.ExtraInfo);
+                        span.FontSize(7);
+                        span.Italic();
+                        ApplyFont(span);
+                    });
+                }
+            });
+
+            if (vm.Payment?.QrEnabled == true && ctx.EpcQrPng is { Length: > 0 })
+            {
+                row.ConstantItem(Mm(35f))
+                    .AlignRight()
+                    .Image(ctx.EpcQrPng);
+            }
+        });
+    }
+    private static void ComposeContactSection(IContainer container, InvoiceVm vm)
+    {
+        var iban = vm.Payment?.Iban ?? vm.IssuerCompany.IBAN;
+        var formattedIban = FormatBankAccount(iban);
+
+        var columns = new (IEnumerable<string?> Lines, TextHorizontalAlignment Align, bool Flexible)[]
+        {
+            (new[]
             {
                 vm.IssuerCompany.AddressLine,
                 FormatPostalCity(vm.IssuerCompany.Postal, vm.IssuerCompany.City)
-            }));
-
-            row.RelativeItem().Element(col => ComposeContactColumn(col, new[]
+            }, TextHorizontalAlignment.Left, false),
+            (new[]
             {
                 vm.IssuerCompany.Phone,
                 vm.IssuerCompany.Phone2
-            }));
-
-            row.RelativeItem().Element(col => ComposeContactColumn(col, new[]
+            }, TextHorizontalAlignment.Left, false),
+            (new[]
             {
                 vm.IssuerCompany.Email,
                 vm.IssuerCompany.Website
-            }));
-
-            row.RelativeItem().Element(col => ComposeContactColumn(col, new[]
+            }, TextHorizontalAlignment.Left, false),
+            (new[]
             {
                 FormatCompanyVat(vm.IssuerCompany.Name, vm.IssuerCompany.VAT),
-                iban
-            }));
+                formattedIban
+            }, TextHorizontalAlignment.Right, true)
+        };
+
+        container.Row(row =>
+        {
+            row.Spacing(Mm(5f));
+
+            foreach (var column in columns)
+            {
+                var lines = column.Lines
+                    .Where(l => !string.IsNullOrWhiteSpace(l))
+                    .Select(l => l!.Trim())
+                    .ToList();
+                if (lines.Count == 0)
+                    continue;
+
+                if (column.Flexible)
+                {
+                    row.RelativeItem().Element(col => ComposeContactColumn(col, lines, column.Align));
+                }
+                else
+                {
+                    row.AutoItem()
+                        .Element(col => col
+                            .MinimalBox()
+                            .Element(inner => ComposeContactColumn(inner, lines, column.Align)));
+                }
+            }
         });
     }
-    private static void ComposeContactColumn(IContainer container, IEnumerable<string?> lines)
+    private static void ComposeContactColumn(IContainer container, IEnumerable<string> lines, TextHorizontalAlignment align)
     {
         container.Column(col =>
         {
@@ -164,7 +225,21 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             {
                 col.Item().Text(text =>
                 {
-                    var span = text.Span(!string.IsNullOrWhiteSpace(line) ? line : "—");
+                    switch (align)
+                    {
+                        case TextHorizontalAlignment.Center:
+                            text.AlignCenter();
+                            break;
+                        case TextHorizontalAlignment.Right:
+                            text.AlignRight();
+                            break;
+                        default:
+                            text.AlignLeft();
+                            break;
+                    }
+
+                    var span = text.Span(line);
+                    span.FontSize(6.5f);
                     ApplyFont(span);
                 });
             }
@@ -224,15 +299,19 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
     }
 
     private static void AddHeaderCell(
-        ITableCellContainer cell,
-        string text,
-        string background,
-        TextHorizontalAlignment align)
+         ITableCellContainer cell,
+         string text,
+         string background,
+         string borderColor,
+         TextHorizontalAlignment align,
+         float? maxWidth = null)
     {
         cell.Element(c =>
         {
-            c.Background(background)
-             .Border(0.25f).BorderColor(BorderColor)
+            var container = maxWidth.HasValue ? c.MaxWidth(maxWidth.Value) : c;
+
+            container.Background(background)
+             .Border(0.25f).BorderColor(borderColor)
              .Padding(3)
              .PaddingLeft(7)
              .PaddingRight(7)
@@ -256,17 +335,22 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
     }
 
     private static void AddValueCell(
-        ITableCellContainer cell,
-        string text,
-        TextHorizontalAlignment align = TextHorizontalAlignment.Right, FontWeight weight = FontWeight.Normal)
+          ITableCellContainer cell,
+          string text,
+          string borderColor,
+          TextHorizontalAlignment align = TextHorizontalAlignment.Right,
+          FontWeight weight = FontWeight.Normal,
+          float? maxWidth = null)
     {
         cell.Element(c =>
         {
-            c.Border(0.25f)
-                .BorderColor(BorderColor)
+            var container = maxWidth.HasValue ? c.MaxWidth(maxWidth.Value) : c;
+
+            container.Border(0.25f)
+                .BorderColor(borderColor)
                 .Padding(3)
-                 .PaddingLeft(7)
-                 .PaddingRight(7)
+                .PaddingLeft(7)
+                .PaddingRight(7)
                 .Text(t =>
                 {
                     // (optioneel) tekstregels zelf ook uitlijnen
@@ -285,11 +369,12 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
                 });
         });
     }
-    private static void AddEmptyValueCell(ITableCellContainer cell)
+    private static void AddEmptyValueCell(ITableCellContainer cell, float? maxWidth = null)
     {
         cell.Element(c =>
         {
-            c.Padding(3);
+            var container = maxWidth.HasValue ? c.MaxWidth(maxWidth.Value) : c;
+            container.Padding(3);
         });
     }
 
@@ -319,6 +404,25 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
         if (string.IsNullOrWhiteSpace(vat))
             return name;
         return $"{name} - {vat}";
+    }
+
+    private static string? FormatBankAccount(string? account)
+    {
+        if (string.IsNullOrWhiteSpace(account))
+            return null;
+
+        var normalized = new string(account.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+
+        if (normalized.StartsWith("BE", StringComparison.Ordinal) &&
+            normalized.Length == 16 &&
+            normalized.Skip(2).All(char.IsDigit))
+        {
+            var checkDigits = normalized.Substring(2, 2);
+            var remainder = normalized.Substring(4);
+            return $"BE{checkDigits} {remainder.Substring(0, 4)} {remainder.Substring(4, 4)} {remainder.Substring(8, 4)}";
+        }
+
+        return account.Trim();
     }
     private static string FormatDate(DateOnly? date)
         => date.HasValue ? date.Value.ToString("dd/MM/yyyy", Culture) : string.Empty;

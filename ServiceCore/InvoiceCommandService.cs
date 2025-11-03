@@ -6,6 +6,7 @@ using FacadeCore;
 using Microsoft.EntityFrameworkCore;
 using ServiceCore.Helpers;
 using ServiceCore.Translators;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -102,12 +103,17 @@ namespace ServiceCore
                     VatNumber = party.VatNumber,
                     ExtraInfo = footerText ?? party.ExtraInfo,
                     BankAccount = bankAccount,
-                    PaymentTermId = bo.PaymentTermId
+                    PaymentTermId = bo.PaymentTermId,
+                    StructuredCommOgm = null,
+                    QrEpcPayload = null
                 };
                 _uow.Invoices.Add(inv);
                 await _uow.SaveChangesAsync(ct); // Id is nu bekend
 
                 // lines
+                bo.Lines ??= new List<InvoiceLineBO>();
+                decimal totalExcl = 0m;
+                decimal totalVat = 0m;
                 foreach (var l in bo.Lines)
                 {
                     // normaliseer korting
@@ -118,6 +124,11 @@ namespace ServiceCore
                         discAmt = Math.Round(l.Price * (discPct.Value / 100m), 4, MidpointRounding.AwayFromZero);
                     else if (discAmt.HasValue && !discPct.HasValue && l.Price != 0)
                         discPct = Math.Round((discAmt.Value / l.Price) * 100m, 4, MidpointRounding.AwayFromZero);
+
+                    var net = l.Price - (discAmt ?? 0m);
+                    var vat = Math.Round(net * (l.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+                    totalExcl += net;
+                    totalVat += vat;
 
                     _uow.InvoiceDetails.Add(new InvoicesDetails
                     {
@@ -135,6 +146,7 @@ namespace ServiceCore
                         // ConstructionValued / ChangeOrderDetailId blijven null
                     });
                 }
+                var grossTotal = Math.Round(totalExcl + totalVat, 2, MidpointRounding.AwayFromZero);
                 await _uow.SaveChangesAsync(ct);
 
                 string? publicId = null;
@@ -162,6 +174,18 @@ namespace ServiceCore
                     inv.PublicId = publicId;
                     inv.SeriesId = seriesId;
                     inv.FiscalYear = fiscalYear;
+
+                    var structuredMessage = GenerateStructuredMessage(inv.FiscalYear ?? fiscalYear, issue.currentNumber);
+                    inv.StructuredCommOgm = structuredMessage;
+
+                    var qrPayload = BuildQrPayload(
+                        issuer,
+                        string.IsNullOrWhiteSpace(bankAccount) ? issuer.EpcIban : bankAccount,
+                        issuer.EpcBic,
+                        grossTotal,
+                        structuredMessage);
+                    inv.QrEpcPayload = qrPayload;
+
                     await _uow.SaveChangesAsync(ct);
                 }
 
@@ -249,9 +273,22 @@ namespace ServiceCore
                 await _uow.SaveChangesAsync(ct);
 
                 var issueDateTime = new DateTime(finalDate.Year, finalDate.Month, finalDate.Day);
-                var (publicId, _) = await _num.IssueAsync(invoice.Id, chosenSeriesId, issueDateTime, finalDate.Year, ct);
+                var (publicId, currentNumber) = await _num.IssueAsync(invoice.Id, chosenSeriesId, issueDateTime, finalDate.Year, ct);
 
                 invoice.StatusId = issuedId.Value;
+                var structuredMessage = GenerateStructuredMessage(invoice.FiscalYear ?? finalDate.Year, currentNumber);
+                invoice.StructuredCommOgm = structuredMessage;
+
+                var grossTotal = await CalculateGrossTotalAsync(invoice.Id, ct);
+                var issuer = invoice.IssuerCompany;
+                invoice.QrEpcPayload = issuer != null
+                    ? BuildQrPayload(
+                        issuer,
+                        Clean(invoice.BankAccount) ?? issuer.EpcIban,
+                        issuer.EpcBic,
+                        grossTotal,
+                        structuredMessage)
+                    : null;
                 await _uow.SaveChangesAsync(ct);
 
                 await _uow.CommitTransactionAsync(tx, ct);
@@ -550,6 +587,131 @@ namespace ServiceCore
 
         private static string? Clean(string? value)
             => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static string? GenerateStructuredMessage(int fiscalYear, int sequenceNumber)
+        {
+            if (sequenceNumber <= 0)
+                return null;
+
+            var yearDigits = Math.Abs(fiscalYear % 10000);
+            var numberDigits = Math.Abs(sequenceNumber % 1_000_000);
+            var baseDigits = $"{yearDigits:0000}{numberDigits:000000}";
+            return FormatBelgianStructuredMessage(baseDigits);
+        }
+
+        private static string? FormatBelgianStructuredMessage(string baseDigits)
+        {
+            if (string.IsNullOrWhiteSpace(baseDigits) || baseDigits.Length != 10)
+                return null;
+            if (!baseDigits.All(char.IsDigit))
+                return null;
+
+            var number = long.Parse(baseDigits, CultureInfo.InvariantCulture);
+            var checksum = 97 - (number % 97);
+            if (checksum == 0)
+                checksum = 97;
+
+            var combined = $"{baseDigits}{checksum:00}";
+            return $"+++{combined[..3]}/{combined.Substring(3, 4)}/{combined[^5..]}+++";
+        }
+
+        private async Task<decimal> CalculateGrossTotalAsync(int invoiceId, CancellationToken ct)
+        {
+            var lines = await _db.InvoicesDetails
+                .Where(d => d.InvoiceId == invoiceId)
+                .Select(d => new
+                {
+                    d.Price,
+                    d.DiscountAmount,
+                    d.DiscountPercent,
+                    d.VatPercentage
+                })
+                .ToListAsync(ct);
+
+            if (lines.Count == 0)
+                return 0m;
+
+            decimal totalExcl = 0m;
+            decimal totalVat = 0m;
+
+            foreach (var line in lines)
+            {
+                var price = line.Price ?? 0m;
+                var discountAmount = line.DiscountAmount;
+                if (!discountAmount.HasValue && line.DiscountPercent.HasValue)
+                {
+                    discountAmount = Math.Round(
+                        price * (line.DiscountPercent.Value / 100m),
+                        4,
+                        MidpointRounding.AwayFromZero);
+                }
+
+                var net = price - (discountAmount ?? 0m);
+                var vatRate = line.VatPercentage ?? 0m;
+                var vat = Math.Round(net * (vatRate / 100m), 2, MidpointRounding.AwayFromZero);
+                totalExcl += net;
+                totalVat += vat;
+            }
+
+            return Math.Round(totalExcl + totalVat, 2, MidpointRounding.AwayFromZero);
+        }
+
+        private static string? BuildQrPayload(
+            IssuerCompany issuer,
+            string? iban,
+            string? bic,
+            decimal amount,
+            string? structuredMessage)
+        {
+            if (issuer == null || !issuer.EpcQrEnabled)
+                return null;
+            if (string.IsNullOrWhiteSpace(issuer.EpcBeneficiaryName))
+                return null;
+            if (string.IsNullOrWhiteSpace(iban))
+                return null;
+            if (string.IsNullOrWhiteSpace(structuredMessage))
+                return null;
+            if (amount <= 0m)
+                return null;
+
+            var builder = new StringBuilder();
+            builder.AppendLine("BCD");
+            builder.AppendLine("001");
+            builder.AppendLine("1");
+            builder.AppendLine("SCT");
+            builder.AppendLine((bic ?? string.Empty).Trim().ToUpperInvariant());
+            builder.AppendLine(TrimValue(issuer.EpcBeneficiaryName, 70));
+            builder.AppendLine(NormalizeIban(iban));
+            builder.AppendLine($"EUR{amount.ToString("0.00", CultureInfo.InvariantCulture)}");
+            builder.AppendLine();
+            builder.AppendLine(TrimValue(structuredMessage, 140));
+            return builder.ToString();
+        }
+
+        private static string NormalizeIban(string iban)
+        {
+            var sb = new StringBuilder();
+            foreach (var ch in iban)
+            {
+                if (!char.IsWhiteSpace(ch))
+                    sb.Append(char.ToUpperInvariant(ch));
+            }
+            return sb.ToString();
+        }
+
+        private static string TrimValue(string value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var cleaned = value
+                .Replace("\r", string.Empty)
+                .Replace("\n", " ")
+                .Replace("\t", " ")
+                .Trim();
+
+            return cleaned.Length <= maxLength ? cleaned : cleaned.Substring(0, maxLength);
+        }
 
         private static int? NormalizePostalCodeId(int? value)
             => value.HasValue && value.Value > 0 ? value : null;

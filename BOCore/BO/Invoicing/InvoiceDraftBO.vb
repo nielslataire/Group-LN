@@ -16,6 +16,7 @@
     Public Property HeaderDescription As String
     Public Property DetailDescription As String
     Public Property FooterDescription As String
+
     Public Property Lines As List(Of InvoiceLineBO) = New List(Of InvoiceLineBO)()
 
     Public Property PaymentGroupId As Integer?

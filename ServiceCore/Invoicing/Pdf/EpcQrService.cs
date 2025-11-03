@@ -16,6 +16,14 @@ namespace ServiceCore.Invoicing.Pdf
                 throw new ArgumentException("Creditor name required", nameof(creditorName));
 
             var payload = BuildPayload(creditorName, iban, bic, amount, remittance);
+            return CreatePngFromPayload(payload);
+        }
+
+        public byte[] CreatePngFromPayload(string payload)
+        {
+            if (string.IsNullOrWhiteSpace(payload))
+                throw new ArgumentException("Payload required", nameof(payload));
+
             using var generator = new QRCodeGenerator();
             using var data = generator.CreateQrCode(payload, QRCodeGenerator.ECCLevel.M);
             var qr = new PngByteQRCode(data);

@@ -24,6 +24,7 @@ public class InvoiceDto
     public string? BankAccount { get; set; }
     public string? StructuredMessage { get; set; }
     public string? ExtraInfo { get; set; }
+    public string? QrPayload { get; set; }
 
     public TotalsDto Totals { get; set; } = new();
     public IReadOnlyList<InvoiceLineDto> Lines { get; set; } = Array.Empty<InvoiceLineDto>();

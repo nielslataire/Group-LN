@@ -231,6 +231,7 @@ namespace ServiceCore
                 IssuerEmail = issuer?.Email,
                 IssuerPhone = issuer?.Phone,
                 StructuredMessage = invoice.StructuredCommOgm,
+                QrPayLoad = invoice.QrEpcPayload,
                 ClientName = invoice.ClientName,
                 ClientAddress = invoice.Adress,
                 ClientPostalCode = postal?.Postcode,

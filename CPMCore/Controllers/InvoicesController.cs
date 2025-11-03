@@ -695,6 +695,7 @@ namespace CPMCore.Controllers
                 IssuerBankAccountId = vm.IssuerBankAccountId,
                 PaymentTermId = vm.PaymentTermId,
                 FooterDescription = vm.FooterDescription
+                
 
             };
 
