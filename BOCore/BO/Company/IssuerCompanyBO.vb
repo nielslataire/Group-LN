@@ -44,4 +44,8 @@
     Public Property EpcRemittanceType As String   ' "CHAR" | "SCOR"
     Public Property EpcRemittanceTemplate As String   ' bv. "Factuur {PublicId}"
 
+    Public Property CompanyLegalFormId As Integer?
+    Public Property CompanyLegalFormName As String
+    Public Property CompanyLegalFormAbbreviation As String
+
 End Class

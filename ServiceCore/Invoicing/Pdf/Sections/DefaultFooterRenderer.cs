@@ -26,14 +26,15 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             return;
 
         column.Item()
-           .ExtendVertical()
+            .ExtendVertical()
             .AlignBottom()
             .Column(col =>
             {
                 col.Spacing(Mm(4f));
                 col.Item()
                     .AlignRight()
-                    .MinimalBox()                // krimpt tot minimale inhoudsbreedte
+                    .Shrink()
+/*                    .MinimalBox() */               // krimpt tot minimale inhoudsbreedte
                     .Element(c => ComposeVatSummary(c, vm, ctx));
                 col.Item().Element(container => ComposePaymentSection(container, vm, ctx));
                 col.Item()
@@ -57,16 +58,39 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             ? DefaultSecondaryColor
             : ctx.SecondaryColorHex!;
 
-        var maxVatColumnWidth = summaries.Count <= 4 ? Mm(32f) : (float?)null;
+        var useFixedWidth = summaries.Count <= 4;
+        var labelColumnWidth = Mm(20f);
+        var vatColumnWidth = Mm(32f);
+        var totalColumnWidth = Mm(32f);
+        var maxVatColumnWidth = useFixedWidth ? vatColumnWidth : (float?)null;
+        var tableWidth = useFixedWidth
+            ? labelColumnWidth + (summaries.Count * vatColumnWidth) + totalColumnWidth
+            : (float?)null;
 
-        container.Table(table =>
+        var tableContainer = container.AlignRight();
+        if (tableWidth.HasValue)
+            tableContainer = tableContainer.Width(tableWidth.Value);
+        else
+            tableContainer = tableContainer.Shrink();
+
+        tableContainer.Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(0.6f);
-                foreach (var _ in summaries)
-                    columns.RelativeColumn();
-                columns.RelativeColumn(1.2f);
+                if (useFixedWidth)
+                {
+                    columns.ConstantColumn(labelColumnWidth);
+                    foreach (var _ in summaries)
+                        columns.ConstantColumn(vatColumnWidth);
+                    columns.ConstantColumn(totalColumnWidth);
+                }
+                else
+                {
+                    columns.RelativeColumn(0.6f);
+                    foreach (var _ in summaries)
+                        columns.RelativeColumn();
+                    columns.RelativeColumn(1.2f);
+                }
             });
 
             AddLabelCell(table.Cell(), "BTW-tarief", TextHorizontalAlignment.Left);
@@ -155,7 +179,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
             if (vm.Payment?.QrEnabled == true && ctx.EpcQrPng is { Length: > 0 })
             {
-                row.ConstantItem(Mm(35f))
+                row.ConstantItem(Mm(32f))
                     .AlignRight()
                     .Image(ctx.EpcQrPng);
             }
@@ -163,7 +187,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
     }
     private static void ComposeContactSection(IContainer container, InvoiceVm vm)
     {
-        var iban = vm.Payment?.Iban ?? vm.IssuerCompany.IBAN;
+        var iban = vm.IssuerCompany.DefaultIban ?? vm.Payment?.Iban ?? vm.IssuerCompany.IBAN;
         var formattedIban = FormatBankAccount(iban);
 
         var columns = new (IEnumerable<string?> Lines, TextHorizontalAlignment Align, bool Flexible)[]
@@ -185,7 +209,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             }, TextHorizontalAlignment.Left, false),
             (new[]
             {
-                FormatCompanyVat(vm.IssuerCompany.Name, vm.IssuerCompany.VAT),
+                FormatCompanyVat(vm.IssuerCompany.Name, vm.IssuerCompany.VAT, vm.IssuerCompany.LegalFormAbbreviation),
                 formattedIban
             }, TextHorizontalAlignment.Right, true)
         };
@@ -397,13 +421,29 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
         return $"{postal} {city}";
     }
 
-    private static string? FormatCompanyVat(string? name, string? vat)
+    private static string? FormatCompanyVat(string? name, string? vat, string? legalFormAbbreviation)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        var displayName = AppendLegalForm(name, legalFormAbbreviation);
+
+        if (string.IsNullOrWhiteSpace(displayName))
             return vat;
         if (string.IsNullOrWhiteSpace(vat))
-            return name;
-        return $"{name} - {vat}";
+            return displayName;
+        return $"{displayName} - {vat}";
+    }
+
+    private static string? AppendLegalForm(string? name, string? legalFormAbbreviation)
+    {
+        var trimmedName = string.IsNullOrWhiteSpace(name) ? null : name.Trim();
+        var trimmedForm = string.IsNullOrWhiteSpace(legalFormAbbreviation) ? null : legalFormAbbreviation.Trim();
+
+        if (string.IsNullOrWhiteSpace(trimmedName))
+            return trimmedForm;
+
+        if (string.IsNullOrWhiteSpace(trimmedForm))
+            return trimmedName;
+
+        return $"{trimmedName} {trimmedForm}";
     }
 
     private static string? FormatBankAccount(string? account)

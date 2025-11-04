@@ -91,6 +91,10 @@ public partial class IssuerCompany
 
     public string Website { get; set; }
 
+    public int? CompanyLegalFormId { get; set; }
+
+    public virtual CompanyLegalForm CompanyLegalForm { get; set; }
+
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
 
     public virtual Vattype DefaultVatType { get; set; }

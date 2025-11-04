@@ -133,7 +133,10 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 Phone2 = dto.Issuer.Phone2 ?? company.Phone2,
                 IBAN = dto.Issuer.BankAccount ?? company.EpcIban,
                 BIC = dto.Issuer.Bic ?? company.EpcBic,
-                Website = dto.Issuer.Website ?? company.Website
+                Website = dto.Issuer.Website ?? company.Website,
+                LegalFormAbbreviation = dto.Issuer.LegalFormAbbreviation ?? company.CompanyLegalFormAbbreviation,
+                DefaultIban = dto.Issuer.BankAccount ?? company.EpcIban,
+                DefaultBic = dto.Issuer.Bic ?? company.EpcBic
             },
             Client = new CompanyVm
             {

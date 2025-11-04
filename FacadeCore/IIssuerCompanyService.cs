@@ -20,6 +20,7 @@ namespace FacadeCore
         Task<int?> GetFirstActiveIssuerIdAsync(CancellationToken ct = default);
         Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default);
         Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default);
     }
     // Lichte BO’s voor de UI-lijsten
     public class IssuerListItemBO

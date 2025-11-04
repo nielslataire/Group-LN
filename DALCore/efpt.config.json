@@ -147,6 +147,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[CompanyLegalForm]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ConnectionAdvanceApplication]",
          "ObjectType": 0
       },

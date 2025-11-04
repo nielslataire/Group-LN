@@ -40,6 +40,10 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Website")]
         public string? Website { get; set; }
 
+        [Display(Name = "Vennootschapsvorm")]
+        public int? CompanyLegalFormId { get; set; }
+        public string? CompanyLegalFormAbbreviation { get; set; }
+
         [Display(Name = "Logo pad")]
         public string? LogoPath { get; set; }
 

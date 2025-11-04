@@ -22,6 +22,9 @@ Public Class InvoiceDetailBO
     Public Property IssuerCountryCode As String
     Public Property IssuerEmail As String
     Public Property IssuerPhone As String
+    Public Property IssuerDefaultIban As String
+    Public Property IssuerDefaultBic As String
+    Public Property IssuerLegalFormAbbreviation As String
     Public Property StructuredMessage As String
     Public Property QrPayLoad As String
 

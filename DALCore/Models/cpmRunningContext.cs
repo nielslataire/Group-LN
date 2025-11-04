@@ -71,6 +71,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<CompanyInfo> CompanyInfo { get; set; }
 
+    public virtual DbSet<CompanyLegalForm> CompanyLegalForm { get; set; }
+
     public virtual DbSet<ConnectionAdvanceApplication> ConnectionAdvanceApplication { get; set; }
 
     public virtual DbSet<ConnectionSettlement> ConnectionSettlement { get; set; }
@@ -865,6 +867,19 @@ public partial class cpmRunningContext : DbContext
                     });
         });
 
+        modelBuilder.Entity<CompanyLegalForm>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CompanyL__3214EC07F60BE2E3");
+
+            entity.Property(e => e.Abbreviation)
+                .IsRequired()
+                .HasMaxLength(16);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+        });
+
         modelBuilder.Entity<ConnectionAdvanceApplication>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC0730C94077");
@@ -1426,6 +1441,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
             entity.Property(e => e.VatNumber).HasMaxLength(32);
             entity.Property(e => e.Website).HasMaxLength(200);
+
+            entity.HasOne(d => d.CompanyLegalForm).WithMany(p => p.IssuerCompany)
+                .HasForeignKey(d => d.CompanyLegalFormId)
+                .HasConstraintName("FK_IssuerCompany_CompanyLegalForm");
 
             entity.HasOne(d => d.DefaultPaymentTerm).WithMany(p => p.IssuerCompany)
                 .HasForeignKey(d => d.DefaultPaymentTermId)

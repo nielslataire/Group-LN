@@ -41,6 +41,9 @@ public sealed class CompanyVm
     public string? IBAN { get; init; }
     public string? BIC { get; init; }
     public string? Website { get; init; }
+    public string? LegalFormAbbreviation { get; init; }
+    public string? DefaultIban { get; init; }
+    public string? DefaultBic { get; init; }
 }
 
 public sealed class ProjectVm

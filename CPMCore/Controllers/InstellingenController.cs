@@ -189,6 +189,7 @@ public class InstellingenController : BaseController
         // Use the referrer URL as needed
         TempData["Referrer"] = referrer;
         ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
+        ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
 
 
 
@@ -222,6 +223,7 @@ public class InstellingenController : BaseController
         if (!ModelState.IsValid)
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
+            ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
             PopulateInvoiceLayoutViewData();
             return View(vm);
         }
@@ -267,6 +269,7 @@ public class InstellingenController : BaseController
             EpcBic = vm.EpcBic,
             EpcRemittanceType = vm.EpcRemittanceType,
             EpcRemittanceTemplate = vm.EpcRemittanceTemplate,
+            CompanyLegalFormId = vm.CompanyLegalFormId,
         };
         await _issuers.CreateAsync(bo);
         AddMessage("success", "Mijn bedrijf " + vm.Name + " toegevoegd.", "Geslaagd!");
@@ -286,6 +289,7 @@ public class InstellingenController : BaseController
         ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
         ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
         ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
+        ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
 
         var vm = new IssuerCompanyVM
         {
@@ -329,6 +333,8 @@ public class InstellingenController : BaseController
             EpcBic = bo.EpcBic,
             EpcRemittanceType = bo.EpcRemittanceType,
             EpcRemittanceTemplate = bo.EpcRemittanceTemplate,
+            CompanyLegalFormId = bo.CompanyLegalFormId,
+            CompanyLegalFormAbbreviation = bo.CompanyLegalFormAbbreviation,
         };
 
         //BREADCRUMBS
@@ -364,6 +370,7 @@ public class InstellingenController : BaseController
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
             ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
             ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
+            ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
             PopulateInvoiceLayoutViewData();
             return View(vm);
         }
@@ -410,6 +417,7 @@ public class InstellingenController : BaseController
             EpcBic = vm.EpcBic,
             EpcRemittanceType = vm.EpcRemittanceType,
             EpcRemittanceTemplate = vm.EpcRemittanceTemplate,
+            CompanyLegalFormId = vm.CompanyLegalFormId,
         };
         await _issuers.UpdateAsync(bo);
 

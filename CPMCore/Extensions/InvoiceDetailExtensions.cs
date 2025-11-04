@@ -35,7 +35,10 @@ public static class InvoiceDetailExtensions
                 City = bo.IssuerCity,
                 Country = bo.IssuerCountryCode,
                 Email = bo.IssuerEmail,
-                Phone = bo.IssuerPhone
+                Phone = bo.IssuerPhone,
+                BankAccount = bo.IssuerDefaultIban,
+                Bic = bo.IssuerDefaultBic,
+                LegalFormAbbreviation = bo.IssuerLegalFormAbbreviation
             },
             Client = new PartyDto
             {

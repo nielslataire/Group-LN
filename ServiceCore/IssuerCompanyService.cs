@@ -47,14 +47,20 @@ namespace ServiceCore
                     LogoPath = x.LogoPath,
                     Website = x.Website,
                     DefaultPaymentTermId = x.DefaultPaymentTermId,
-                    IsActive = x.IsActive
+                    IsActive = x.IsActive,
+                    CompanyLegalFormId = x.CompanyLegalFormId,
+                    CompanyLegalFormName = x.CompanyLegalForm != null ? x.CompanyLegalForm.Name : null,
+                    CompanyLegalFormAbbreviation = x.CompanyLegalForm != null ? x.CompanyLegalForm.Abbreviation : null
                 })
                 .ToListAsync(ct);
         }
 
         public async Task<IssuerCompanyBO> GetAsync(int id, CancellationToken ct = default)
         {
-            var e = await _db.IssuerCompany.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
+            var e = await _db.IssuerCompany
+                .AsNoTracking()
+                .Include(x => x.CompanyLegalForm)
+                .FirstOrDefaultAsync(x => x.Id == id, ct);
             return e == null ? null : MapToBO(e);
         }
 
@@ -139,6 +145,21 @@ namespace ServiceCore
                 })
                 .ToListAsync(ct);
         }
+        public async Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default)
+        {
+            return await _db.CompanyLegalForm
+                .AsNoTracking()
+                .Where(f => f.IsActive)
+                .OrderBy(f => f.Name)
+                .Select(f => new CompanyLegalFormBO
+                {
+                    Id = f.Id,
+                    Name = f.Name,
+                    Abbreviation = f.Abbreviation,
+                    IsActive = f.IsActive
+                })
+                .ToListAsync(ct);
+        }
 
         // --------- translators ----------
         private static IssuerCompanyBO MapToBO(IssuerCompany x) => new IssuerCompanyBO
@@ -183,6 +204,9 @@ namespace ServiceCore
             EpcRemittanceTemplate = x.EpcRemittanceTemplate,
             FooterLegalText = x.FooterLegalText,
             PeppolEnabled = x.PeppolEnabled,
+            CompanyLegalFormId = x.CompanyLegalFormId,
+            CompanyLegalFormName = x.CompanyLegalForm?.Name,
+            CompanyLegalFormAbbreviation = x.CompanyLegalForm?.Abbreviation
         };
 
         private static IssuerCompany MapToEntity(IssuerCompanyBO bo, IssuerCompany e)
@@ -226,6 +250,7 @@ namespace ServiceCore
             e.EpcRemittanceTemplate = bo.EpcRemittanceTemplate;
             e.FooterLegalText = bo.FooterLegalText;
             e.PeppolEnabled = bo.PeppolEnabled;
+            e.CompanyLegalFormId = bo.CompanyLegalFormId;
             return e;
         }
     }

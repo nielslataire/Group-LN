@@ -182,6 +182,9 @@ namespace ServiceCore
                 .Include(i => i.PostalCode)
                     .ThenInclude(pc => pc.Provincie)
                 .Include(i => i.IssuerCompany)
+                .ThenInclude(ic => ic.IssuerBankAccount)
+                .Include(i => i.IssuerCompany)
+                    .ThenInclude(ic => ic.CompanyLegalForm)
                 .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
 
             if (invoice == null)
@@ -230,6 +233,9 @@ namespace ServiceCore
                 IssuerCountryCode = issuer?.CountryCode,
                 IssuerEmail = issuer?.Email,
                 IssuerPhone = issuer?.Phone,
+                IssuerDefaultIban = issuer?.IssuerBankAccount?.Iban,
+                IssuerDefaultBic = issuer?.IssuerBankAccount?.Bic,
+                IssuerLegalFormAbbreviation = issuer?.CompanyLegalForm?.Abbreviation,
                 StructuredMessage = invoice.StructuredCommOgm,
                 QrPayLoad = invoice.QrEpcPayload,
                 ClientName = invoice.ClientName,

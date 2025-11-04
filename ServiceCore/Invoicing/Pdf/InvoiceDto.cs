@@ -46,6 +46,7 @@ public sealed class PartyDto
     public string? BankAccount { get; set; }
     public string? Bic { get; set; }
     public string? Website { get; set; }
+    public string? LegalFormAbbreviation { get; set; }
 }
 
 public sealed class ProjectInfoDto
