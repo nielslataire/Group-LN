@@ -224,20 +224,27 @@
                                             }
                                         </td>
                                         <td class="text-end">
-                                            <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="" @Url.Action("BankAccountEdit", "Instellingen", new { issuerId = Model.Id, id = x.Id })"><i class="fa fa-edit"></i></a>
-                                            <button type="submit"
-                                                    formmethod="post"
-                                                    formaction="@Url.Action("BankAccountSetDefault", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
-                                                    class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Standaard" @(x.IsDefault ? "disabled" : "")>
+                                            <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("BankAccountEdit", "Instellingen", new { issuerId = Model.Id, id = x.Id })"><i class="fa fa-edit"></i></a>
+                                            <button type="button"
+                                                    class="btn btn-link p-0 d-inline js-bank-account-action"
+                                                    data-toggle="tooltip"
+                                                    data-placement="top"
+                                                    title="Standaard"
+                                                    data-action="set-default"
+                                                    data-url="@Url.Action("BankAccountSetDefault", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
+                                                    @(x.IsDefault ? "disabled" : "")>
                                                 <i class="fa fa-circle-check"></i>
                                             </button>
-                                            <button type="submit"
-                                                    onsubmit="return confirm('Deze bankrekening verwijderen?');"
-                                                    formmethod="post"
-                                                    formaction="@Url.Action("BankAccountDelete", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
-                                                    class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Verwijderen">
+                                            <button type="button"
+                                                    class="btn btn-link p-0 d-inline js-bank-account-action"
+                                                    data-toggle="tooltip"
+                                                    data-placement="top"
+                                                    title="Verwijderen"
+                                                    data-action="delete"
+                                                    data-confirm="Deze bankrekening verwijderen?"
+                                                    data-url="@Url.Action("BankAccountDelete", "Instellingen", new { issuerId = Model.Id, id = x.Id })">
                                                 <i class="fa fa-trash"></i>
-                                            </button>                                           
+                                            </button>
                                         </td>
                                     </tr>
                                 }

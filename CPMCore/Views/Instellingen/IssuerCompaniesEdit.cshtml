@@ -54,17 +54,61 @@
     <partial name="Partials/_IssuerLayoutScripts" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-          initIosSwitches();
+           initIosSwitches();
+           initBankAccountActions();
         });
 
         function initIosSwitches() {
-          var $els = $('[data-plugin-ios-switch]');
-          $els.each(function () {
-            var $el = $(this);
-            if (!$el.data('plugin-ios7Switch')) {
-              $el.themePluginIOS7Switch(); // Porto init
-            }
-          });
-        }
+               var $els = $('[data-plugin-ios-switch]');
+               $els.each(function () {
+                   var $el = $(this);
+                   if (!$el.data('plugin-ios7Switch')) {
+                       $el.themePluginIOS7Switch(); // Porto init
+                   }
+               });
+           }
+
+           function initBankAccountActions() {
+               var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+               var tokenValue = tokenInput ? tokenInput.value : null;
+
+               function postWithToken(url) {
+                   if (!url) {
+                       return;
+                   }
+
+                   var form = document.createElement('form');
+                   form.method = 'post';
+                   form.action = url;
+                   form.style.display = 'none';
+
+                   if (tokenValue) {
+                       var tokenField = document.createElement('input');
+                       tokenField.type = 'hidden';
+                       tokenField.name = '__RequestVerificationToken';
+                       tokenField.value = tokenValue;
+                       form.appendChild(tokenField);
+                   }
+
+                   document.body.appendChild(form);
+                   form.submit();
+               }
+
+               document.querySelectorAll('.js-bank-account-action').forEach(function (button) {
+                   button.addEventListener('click', function (event) {
+                       if (button.disabled) {
+                           return;
+                       }
+
+                       var confirmMessage = button.getAttribute('data-confirm');
+                       if (confirmMessage && !window.confirm(confirmMessage)) {
+                           return;
+                       }
+
+                       var url = button.getAttribute('data-url');
+                       postWithToken(url);
+                   });
+               });
+           }
     </script>
 }

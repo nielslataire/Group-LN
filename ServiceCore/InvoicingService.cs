@@ -196,7 +196,25 @@ namespace ServiceCore
                 .Select(s => s.Name)
                 .FirstOrDefaultAsync(ct);
 
-            var detail = NewDetailBo(invoice, statusName);
+            string? defaultIban = null;
+            string? defaultBic = null;
+
+            if (invoice.IssuerCompanyId.HasValue)
+            {
+                var issuerDefaults = await _db.IssuerBankAccount
+                    .AsNoTracking()
+                    .Where(a => a.IssuerCompanyId == invoice.IssuerCompanyId && a.IsDefault)
+                    .Select(a => new { a.Iban, a.Bic })
+                    .FirstOrDefaultAsync(ct);
+
+                if (issuerDefaults != null)
+                {
+                    defaultIban = issuerDefaults.Iban;
+                    defaultBic = issuerDefaults.Bic;
+                }
+            }
+
+            var detail = NewDetailBo(invoice, statusName, defaultIban, defaultBic);
 
             foreach (var detailRow in invoice.InvoicesDetails)
             {
@@ -210,10 +228,12 @@ namespace ServiceCore
             return detail;
         }
 
-        private static InvoiceDetailBO NewDetailBo(Invoices invoice, string statusName)
+        private static InvoiceDetailBO NewDetailBo(Invoices invoice, string statusName, string? defaultIban, string? defaultBic)
         {
             var postal = invoice.PostalCode;
             var issuer = invoice.IssuerCompany;
+            var issuerIban = defaultIban ?? issuer?.IssuerBankAccount?.Iban;
+            var issuerBic = defaultBic ?? issuer?.IssuerBankAccount?.Bic;
 
             return new InvoiceDetailBO
             {
@@ -233,8 +253,8 @@ namespace ServiceCore
                 IssuerCountryCode = issuer?.CountryCode,
                 IssuerEmail = issuer?.Email,
                 IssuerPhone = issuer?.Phone,
-                IssuerDefaultIban = issuer?.IssuerBankAccount?.Iban,
-                IssuerDefaultBic = issuer?.IssuerBankAccount?.Bic,
+                IssuerDefaultIban = issuerIban,
+                IssuerDefaultBic = issuerBic,
                 IssuerLegalFormAbbreviation = issuer?.CompanyLegalForm?.Abbreviation,
                 StructuredMessage = invoice.StructuredCommOgm,
                 QrPayLoad = invoice.QrEpcPayload,

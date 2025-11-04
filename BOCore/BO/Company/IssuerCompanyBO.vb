@@ -48,4 +48,7 @@
     Public Property CompanyLegalFormName As String
     Public Property CompanyLegalFormAbbreviation As String
 
+    Public Property DefaultBankAccountIban As String
+    Public Property DefaultBankAccountBic As String
+
 End Class

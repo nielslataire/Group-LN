@@ -109,6 +109,12 @@ public sealed class InvoicePdfService : IInvoicePdfService
 
     private static InvoiceVm Map(InvoiceDto dto, IssuerCompanyBO company, string? structuredMessage)
     {
+        var defaultIban = !string.IsNullOrWhiteSpace(company.DefaultBankAccountIban)
+            ? company.DefaultBankAccountIban
+            : dto.Issuer.BankAccount;
+        var defaultBic = !string.IsNullOrWhiteSpace(company.DefaultBankAccountBic)
+            ? company.DefaultBankAccountBic
+            : dto.Issuer.Bic;
         return new InvoiceVm
         {
             Invoice = new InvoiceInfoVm
@@ -131,12 +137,12 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 Email = dto.Issuer.Email ?? company.Email,
                 Phone = dto.Issuer.Phone ?? company.Phone,
                 Phone2 = dto.Issuer.Phone2 ?? company.Phone2,
-                IBAN = dto.Issuer.BankAccount ?? company.EpcIban,
-                BIC = dto.Issuer.Bic ?? company.EpcBic,
+                IBAN = dto.Issuer.BankAccount ?? defaultIban ?? company.EpcIban,
+                BIC = dto.Issuer.Bic ?? defaultBic ?? company.EpcBic,
                 Website = dto.Issuer.Website ?? company.Website,
                 LegalFormAbbreviation = dto.Issuer.LegalFormAbbreviation ?? company.CompanyLegalFormAbbreviation,
-                DefaultIban = dto.Issuer.BankAccount ?? company.EpcIban,
-                DefaultBic = dto.Issuer.Bic ?? company.EpcBic
+                DefaultIban = defaultIban ?? company.EpcIban,
+                DefaultBic = defaultBic ?? company.EpcBic
             },
             Client = new CompanyVm
             {
@@ -157,7 +163,9 @@ public sealed class InvoicePdfService : IInvoicePdfService
             {
                 Structured = structuredMessage ?? dto.StructuredMessage,
                 BankAccount = dto.BankAccount,
-                Iban = dto.Issuer.BankAccount ?? company.EpcIban,
+                Iban = !string.IsNullOrWhiteSpace(dto.BankAccount)
+                    ? dto.BankAccount
+                    : dto.Issuer.BankAccount ?? company.EpcIban,
                 Bic = dto.Issuer.Bic ?? company.EpcBic,
                 QrEnabled = company.EpcQrEnabled && (!string.IsNullOrWhiteSpace(structuredMessage ?? dto.StructuredMessage) || !string.IsNullOrWhiteSpace(dto.QrPayload)),
                 Terms = BuildPaymentTerms(dto)

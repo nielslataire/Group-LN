@@ -25,43 +25,64 @@ namespace ServiceCore
 
         public async Task<IReadOnlyList<IssuerCompanyBO>> GetAllAsync(CancellationToken ct = default)
         {
+            var defaultAccounts = _db.IssuerBankAccount
+                .AsNoTracking()
+                .Where(a => a.IsDefault);
+
             return await _db.IssuerCompany
                 .AsNoTracking()
                 .OrderByDescending(x => x.IsActive)
                 .ThenBy(x => x.Name)
+                .GroupJoin(
+                    defaultAccounts,
+                    company => company.Id,
+                    account => account.IssuerCompanyId,
+                    (company, accounts) => new { company, accounts })
+                .SelectMany(x => x.accounts.DefaultIfEmpty(), (x, account) => new { x.company, account })
                 .Select(x => new IssuerCompanyBO
                 {
-                    Id = x.Id,
-                    Name = x.Name,
-                    LegalName = x.LegalName,
-                    VatNumber = x.VatNumber,
-                    EnterpriseNumber = x.EnterpriseNumber,
-                    AddressLine1 = x.AddressLine1,
-                    AddressLine2 = x.AddressLine2,
-                    PostalCode = x.PostalCode,
-                    City = x.City,
-                    CountryCode = x.CountryCode,
-                    Email = x.Email,
-                    Phone = x.Phone,
-                    Phone2 = x.Phone2,
-                    LogoPath = x.LogoPath,
-                    Website = x.Website,
-                    DefaultPaymentTermId = x.DefaultPaymentTermId,
-                    IsActive = x.IsActive,
-                    CompanyLegalFormId = x.CompanyLegalFormId,
-                    CompanyLegalFormName = x.CompanyLegalForm != null ? x.CompanyLegalForm.Name : null,
-                    CompanyLegalFormAbbreviation = x.CompanyLegalForm != null ? x.CompanyLegalForm.Abbreviation : null
+                    Id = x.company.Id,
+                    Name = x.company.Name,
+                    LegalName = x.company.LegalName,
+                    VatNumber = x.company.VatNumber,
+                    EnterpriseNumber = x.company.EnterpriseNumber,
+                    AddressLine1 = x.company.AddressLine1,
+                    AddressLine2 = x.company.AddressLine2,
+                    PostalCode = x.company.PostalCode,
+                    City = x.company.City,
+                    CountryCode = x.company.CountryCode,
+                    Email = x.company.Email,
+                    Phone = x.company.Phone,
+                    Phone2 = x.company.Phone2,
+                    LogoPath = x.company.LogoPath,
+                    Website = x.company.Website,
+                    DefaultPaymentTermId = x.company.DefaultPaymentTermId,
+                    IsActive = x.company.IsActive,
+                    CompanyLegalFormId = x.company.CompanyLegalFormId,
+                    CompanyLegalFormName = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Name : null,
+                    CompanyLegalFormAbbreviation = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Abbreviation : null,
+                    DefaultBankAccountIban = x.account != null ? x.account.Iban : null,
+                    DefaultBankAccountBic = x.account != null ? x.account.Bic : null
                 })
                 .ToListAsync(ct);
         }
 
         public async Task<IssuerCompanyBO> GetAsync(int id, CancellationToken ct = default)
         {
-            var e = await _db.IssuerCompany
+            var entity = await _db.IssuerCompany
                 .AsNoTracking()
                 .Include(x => x.CompanyLegalForm)
                 .FirstOrDefaultAsync(x => x.Id == id, ct);
-            return e == null ? null : MapToBO(e);
+
+            if (entity == null)
+                return null;
+
+            var defaultAccount = await _db.IssuerBankAccount
+                .AsNoTracking()
+                .Where(a => a.IssuerCompanyId == id && a.IsDefault)
+                .FirstOrDefaultAsync(ct);
+
+            return MapToBO(entity, defaultAccount);
         }
 
         public async Task<int> CreateAsync(IssuerCompanyBO bo, CancellationToken ct = default)
@@ -162,52 +183,59 @@ namespace ServiceCore
         }
 
         // --------- translators ----------
-        private static IssuerCompanyBO MapToBO(IssuerCompany x) => new IssuerCompanyBO
+        private static IssuerCompanyBO MapToBO(IssuerCompany x, IssuerBankAccount? defaultAccount = null)
         {
-            Id = x.Id,
-            Name = x.Name,
-            LegalName = x.LegalName,
-            VatNumber = x.VatNumber,
-            EnterpriseNumber = x.EnterpriseNumber,
-            AddressLine1 = x.AddressLine1,
-            AddressLine2 = x.AddressLine2,
-            PostalCode = x.PostalCode,
-            City = x.City,
-            CountryCode = x.CountryCode,
-            Email = x.Email,
-            Phone = x.Phone,
-            Phone2 = x.Phone2,
-            LogoPath = x.LogoPath,
-            Website = x.Website,
-            TemplateKey = x.TemplateKey,
-            TemplateJson = x.TemplateJson,
-            BrandPrimaryColor = x.BrandPrimaryColor,
-            BrandSecondaryColor = x.BrandSecondaryColor,
-            FontFamily = x.FontFamily,
-            LogoBytes = x.LogoBytes,
-            DefaultPaymentTermId = x.DefaultPaymentTermId,
-            IsActive = x.IsActive,
-            EInvoiceEnabled = x.EinvoiceEnabled,
-            PeppolParticipantId = x.PeppolParticipantId,
-            UblAttachPdf = x.UblAttachPdf,
-            EmailSubjectTemplate = x.EmailSubjectTemplate,
-            EmailBodyTemplate = x.EmailBodyTemplate,
-            InvoiceFooterHtml = x.InvoiceFooterHtml,
-            DefaultLanguage = x.DefaultLanguage,
-            DefaultCurrency = x.DefaultCurrency,
-            InvoiceNumberPattern = x.InvoiceNumberPattern,
-            EpcQrEnabled = x.EpcQrEnabled,
-            EpcBeneficiaryName = x.EpcBeneficiaryName,
-            EpcIban = x.EpcIban,
-            EpcBic = x.EpcBic,
-            EpcRemittanceType = x.EpcRemittanceType,
-            EpcRemittanceTemplate = x.EpcRemittanceTemplate,
-            FooterLegalText = x.FooterLegalText,
-            PeppolEnabled = x.PeppolEnabled,
-            CompanyLegalFormId = x.CompanyLegalFormId,
-            CompanyLegalFormName = x.CompanyLegalForm?.Name,
-            CompanyLegalFormAbbreviation = x.CompanyLegalForm?.Abbreviation
-        };
+            var account = defaultAccount ?? x.IssuerBankAccount;
+
+            return new IssuerCompanyBO
+            {
+                Id = x.Id,
+                Name = x.Name,
+                LegalName = x.LegalName,
+                VatNumber = x.VatNumber,
+                EnterpriseNumber = x.EnterpriseNumber,
+                AddressLine1 = x.AddressLine1,
+                AddressLine2 = x.AddressLine2,
+                PostalCode = x.PostalCode,
+                City = x.City,
+                CountryCode = x.CountryCode,
+                Email = x.Email,
+                Phone = x.Phone,
+                Phone2 = x.Phone2,
+                LogoPath = x.LogoPath,
+                Website = x.Website,
+                TemplateKey = x.TemplateKey,
+                TemplateJson = x.TemplateJson,
+                BrandPrimaryColor = x.BrandPrimaryColor,
+                BrandSecondaryColor = x.BrandSecondaryColor,
+                FontFamily = x.FontFamily,
+                LogoBytes = x.LogoBytes,
+                DefaultPaymentTermId = x.DefaultPaymentTermId,
+                IsActive = x.IsActive,
+                EInvoiceEnabled = x.EinvoiceEnabled,
+                PeppolParticipantId = x.PeppolParticipantId,
+                UblAttachPdf = x.UblAttachPdf,
+                EmailSubjectTemplate = x.EmailSubjectTemplate,
+                EmailBodyTemplate = x.EmailBodyTemplate,
+                InvoiceFooterHtml = x.InvoiceFooterHtml,
+                DefaultLanguage = x.DefaultLanguage,
+                DefaultCurrency = x.DefaultCurrency,
+                InvoiceNumberPattern = x.InvoiceNumberPattern,
+                EpcQrEnabled = x.EpcQrEnabled,
+                EpcBeneficiaryName = x.EpcBeneficiaryName,
+                EpcIban = x.EpcIban,
+                EpcBic = x.EpcBic,
+                EpcRemittanceType = x.EpcRemittanceType,
+                EpcRemittanceTemplate = x.EpcRemittanceTemplate,
+                FooterLegalText = x.FooterLegalText,
+                PeppolEnabled = x.PeppolEnabled,
+                CompanyLegalFormId = x.CompanyLegalFormId,
+                CompanyLegalFormName = x.CompanyLegalForm?.Name,
+                CompanyLegalFormAbbreviation = x.CompanyLegalForm?.Abbreviation,
+                DefaultBankAccountIban = account?.Iban,
+                DefaultBankAccountBic = account?.Bic
+            };
+        }
 
         private static IssuerCompany MapToEntity(IssuerCompanyBO bo, IssuerCompany e)
         {
