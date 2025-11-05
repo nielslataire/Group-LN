@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace CPMCore.Models.Instellingen
 {
@@ -46,6 +47,8 @@ namespace CPMCore.Models.Instellingen
 
         [Display(Name = "Logo pad")]
         public string? LogoPath { get; set; }
+        [Display(Name = "Logo")]
+        public IFormFile? LogoUpload { get; set; }
 
         [Display(Name = "Sjabloon sleutel")]
         public string? TemplateKey { get; set; }

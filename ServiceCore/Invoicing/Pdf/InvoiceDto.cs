@@ -25,6 +25,8 @@ public class InvoiceDto
     public string? StructuredMessage { get; set; }
     public string? ExtraInfo { get; set; }
     public string? QrPayload { get; set; }
+    public string? HeaderDescription { get; set; }
+    public string? DetailDescription { get; set; }
 
     public TotalsDto Totals { get; set; } = new();
     public IReadOnlyList<InvoiceLineDto> Lines { get; set; } = Array.Empty<InvoiceLineDto>();
@@ -71,6 +73,11 @@ public sealed class InvoiceLineDto
 {
     public string Key { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
+    public string? LineType { get; set; }
+    public string? GroupName { get; set; }
+    public int? UnitId { get; set; }
+    public int? PaymentStageId { get; set; }
+    public int? ChangeOrderDetailId { get; set; }
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal Vat { get; set; }

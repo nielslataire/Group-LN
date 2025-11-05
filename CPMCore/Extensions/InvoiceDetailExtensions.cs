@@ -25,6 +25,8 @@ public static class InvoiceDetailExtensions
             StructuredMessage = bo.StructuredMessage,
             ExtraInfo = bo?.ExtraInfo,
             QrPayload = bo.QrPayLoad,
+            HeaderDescription = bo.HeaderText,
+            DetailDescription = bo.DetailText,
             Issuer = new PartyDto
             {
                 Name = bo.IssuerName,
@@ -78,6 +80,11 @@ public static class InvoiceDetailExtensions
         {
             Key = line.Id.ToString(CultureInfo.InvariantCulture),
             Description = line.Text ?? string.Empty,
+            LineType = line.LineType,
+            GroupName = line.GroupName,
+            UnitId = line.UnitId,
+            PaymentStageId = line.PaymentStageId,
+            ChangeOrderDetailId = line.ChangeOrderDetailId,
             Quantity = 1,
             UnitPrice = RoundCurrency(net),
             Vat = line.VatPercentage,

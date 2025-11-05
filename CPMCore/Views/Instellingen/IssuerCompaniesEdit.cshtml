@@ -31,7 +31,7 @@
     </div>
 </div>
 
-    <form asp-route="Instellingen_IssuerCompanies_Edit" method="post" class="ecommerce-form action-buttons-fixed" asp-route-id="@Model.Id">
+    <form asp-route="Instellingen_IssuerCompanies_Edit" method="post" class="ecommerce-form action-buttons-fixed" asp-route-id="@Model.Id" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="Id" />
     <partial name="_IssuerCompanyForm" model="Model" />

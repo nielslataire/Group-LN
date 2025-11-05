@@ -172,10 +172,17 @@ public sealed class InvoicePdfService : IInvoicePdfService
             },
             VatSummary = BuildVatSummary(dto),
             ExtraInfo = dto.ExtraInfo,
+            HeaderDescription = dto.HeaderDescription,
+            DetailDescription = dto.DetailDescription,
             Lines = dto.Lines.Select(line => new InvoiceLineVm
             {
                 Key = line.Key,
                 Description = line.Description,
+                LineType = line.LineType,
+                GroupName = line.GroupName,
+                UnitId = line.UnitId,
+                PaymentStageId = line.PaymentStageId,
+                ChangeOrderDetailId = line.ChangeOrderDetailId,
                 Quantity = line.Quantity,
                 UnitPrice = line.UnitPrice,
                 Vat = line.Vat,

@@ -159,12 +159,24 @@
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
 
-                            <div class="form-group row align-items-center pb-3">
-                                <label asp-for="LogoPath" class="col-md-3 control-label text-lg-end mb-0"></label>
-                                <div class="col-md-9">
-                                    <input asp-for="LogoPath" class="form-control form-control-modern" placeholder="Pad naar het logo" />
-                                </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="LogoUpload" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="LogoUpload" class="form-control form-control-modern" type="file" accept="image/*" />
+                                @Html.HiddenFor(m => m.LogoPath)
+                                @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+                                {
+                                    <small class="text-muted d-block mt-1">Huidig bestand: @Model.LogoPath</small>
+                                }
+                                @if (Model.LogoBytes != null && Model.LogoBytes.Length > 0)
+                                {
+                                    var base64 = System.Convert.ToBase64String(Model.LogoBytes);
+                                    <div class="mt-2">
+                                        <img src="data:image/png;base64,@base64" alt="Huidig logo" class="img-fluid" style="max-height: 120px;" />
+                                    </div>
+                                }
                             </div>
+                        </div>
 
                     </div>
                 </div>

@@ -36,7 +36,7 @@ public static class DefaultLayouts
     },
     {
       ""type"": ""parties"",
-      ""visible"": true,
+      ""visible"": false,
       ""columns"": [
         {
           ""title"": ""Klant"",
@@ -71,7 +71,7 @@ public static class DefaultLayouts
           ""key"": ""Quantity"",
           ""label"": ""Aantal"",
           ""width"": ""60"",
-          ""align"": ""right""
+          ""align"": ""left""
         },
         {
           ""key"": ""UnitPrice"",
@@ -100,7 +100,7 @@ public static class DefaultLayouts
     },
     {
       ""type"": ""totals"",
-      ""visible"": true,
+      ""visible"": false,
       ""layout"": ""right"",
       ""rows"": [
         {
@@ -121,7 +121,7 @@ public static class DefaultLayouts
     },
     {
       ""type"": ""payment"",
-      ""visible"": true,
+      ""visible"": false,
       ""showStructuredMessage"": true,
       ""structuredLabel"": ""Gestructureerde mededeling"",
       ""structuredValue"": ""{{Payment.Structured}}"",
@@ -131,7 +131,7 @@ public static class DefaultLayouts
     },
     {
       ""type"": ""legal"",
-      ""visible"": true,
+      ""visible"": false,
       ""text"": ""{{IssuerCompany.FooterLegalText}}"",
       ""size"": 8
     },

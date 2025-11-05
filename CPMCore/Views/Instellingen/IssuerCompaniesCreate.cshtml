@@ -32,7 +32,7 @@
 </div>
 
 
-<form asp-action="IssuerCompaniesCreate" asp-controller="Instellingen" method="post" class="ecommerce-form action-buttons-fixed">
+    <form asp-action="IssuerCompaniesCreate" asp-controller="Instellingen" method="post" class="ecommerce-form action-buttons-fixed" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <partial name="_IssuerCompanyForm" model="Model" />
     <div class="row action-buttons">

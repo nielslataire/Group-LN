@@ -15,6 +15,8 @@ public class InvoiceVm
     public IReadOnlyList<InvoiceLineVm> Lines { get; init; } = Array.Empty<InvoiceLineVm>();
     public IReadOnlyList<VatRateSummaryVm> VatSummary { get; init; } = Array.Empty<VatRateSummaryVm>();
     public string? ExtraInfo { get; init; }
+    public string? HeaderDescription { get; init; }
+    public string? DetailDescription { get; init; }
 }
 
 public sealed class InvoiceInfoVm
@@ -86,6 +88,11 @@ public sealed class InvoiceLineVm
 {
     public string Key { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
+    public string? LineType { get; init; }
+    public string? GroupName { get; init; }
+    public int? UnitId { get; init; }
+    public int? PaymentStageId { get; init; }
+    public int? ChangeOrderDetailId { get; init; }
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }
     public decimal Vat { get; init; }

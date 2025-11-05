@@ -24,7 +24,7 @@
         "genummerd" => "badge bg-secondary",
         "verzonden" => "badge bg-primary",
         "deels betaald" => "badge bg-info",
-        "betaald" => "badge bg-success",
+        "betaald" => "badge badge-paid",
         "vervallen" => "badge bg-danger",
         "geannuleerd" => "badge bg-dark",
         _ => "badge bg-light text-dark"
@@ -69,6 +69,11 @@
         /* Optioneel: iconen-kolom iets strakker */
         #datatable-invoice-list td.actions i {
             line-height: 1 !important;
+        }
+
+        .badge-paid {
+            background-color: #198754;
+            color: #fff;
         }
 
     </style>
@@ -119,6 +124,9 @@
                     </thead>
 
                     <tbody>
+                            @{
+                                var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
+                            }
                         @foreach (var r in Model)
                         {
                             <tr>
@@ -154,7 +162,7 @@
                                                 <i class="fas fa-trash"></i>
                                             </a>
                                         }
-                                        else if (StatusIn(r.Status, "Numbered"))
+                                        else if (StatusIn(r.Status, "Issued", "Numbered"))
                                         {
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
@@ -168,14 +176,14 @@
                                                target="_blank">
                                                 <i class="fas fa-file-pdf"></i>
                                             </a>
-                                            <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
-                                               asp-action="Send"
-                                               asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
-                                                <i class="fas fa-paper-plane"></i>
-                                            </a>
-                                            @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                            @if (canManageInvoices)
                                             {
+                                                <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                                   asp-action="Send"
+                                                   asp-route-id="@r.Id"
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </a>
                                                 <a href="#ModalDeleteInvoice"
                                                    class="deleteInvoice"
                                                    data-id="@r.Id"
@@ -185,7 +193,7 @@
                                                 </a>
                                             }
                                         }
-                                        else if (StatusIn(r.Status, "Issued", "Sent", "Paid"))
+                                        else if (StatusIn(r.Status, "Sent", "Paid"))
                                         {
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
@@ -347,18 +355,8 @@ else
                   orientation: 'landscape',
                   pageSize: 'A3',
                   exportOptions: { columns: ':visible' }
-                },
-                {
-                  extend: 'colvis',
-                  text: '<i class="bx bx-filter me-2"></i><span>Alle kolommen</span>',
-                  titleAttr: 'Selecteer kolommen',
-                  attr: { "data-bs-toggle": "tooltip" },
-                  columns: ':not(.noVis)',
-                  init: function (api, node) {
-                    // styling fix
-                    $(node).removeClass('btn-secondary').addClass('btn btn-default');
-                  }
                 }
+               
               ]
             }
           }

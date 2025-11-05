@@ -19,6 +19,7 @@ using ServiceCore.Invoicing.Pdf.Templates;
 using System.Data.SqlClient;
 using System.Diagnostics;
 using System.Linq;
+using System.IO;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -227,6 +228,13 @@ public class InstellingenController : BaseController
             PopulateInvoiceLayoutViewData();
             return View(vm);
         }
+        if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
+        {
+            using var ms = new MemoryStream();
+            await vm.LogoUpload.CopyToAsync(ms);
+            vm.LogoBytes = ms.ToArray();
+            vm.LogoPath = vm.LogoUpload.FileName;
+        }
 
         var bo = new IssuerCompanyBO
         {
@@ -373,6 +381,28 @@ public class InstellingenController : BaseController
             ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
             PopulateInvoiceLayoutViewData();
             return View(vm);
+        }
+        if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
+        {
+            using var ms = new MemoryStream();
+            await vm.LogoUpload.CopyToAsync(ms);
+            vm.LogoBytes = ms.ToArray();
+            if (string.IsNullOrWhiteSpace(vm.LogoPath))
+            {
+                vm.LogoPath = vm.LogoUpload.FileName;
+            }
+        }
+        else
+        {
+            var existing = await _issuers.GetAsync(vm.Id);
+            if (existing != null)
+            {
+                vm.LogoBytes ??= existing.LogoBytes;
+                if (string.IsNullOrWhiteSpace(vm.LogoPath))
+                {
+                    vm.LogoPath = existing.LogoPath;
+                }
+            }
         }
 
         var bo = new IssuerCompanyBO

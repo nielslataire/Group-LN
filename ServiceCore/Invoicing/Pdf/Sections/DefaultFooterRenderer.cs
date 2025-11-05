@@ -112,7 +112,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
             foreach (var _ in summaries)
                 AddEmptyValueCell(table.Cell(), maxVatColumnWidth);
             var invoiceTotal = vm.Totals?.Incl ?? summaries.Sum(s => s.Total);
-            AddValueCell(table.Cell(), FormatCurrency(invoiceTotal), borderColor, TextHorizontalAlignment.Right, FontWeight.Bold);
+            AddTotalCell(table.Cell(), FormatCurrency(invoiceTotal), borderColor, TextHorizontalAlignment.Right, FontWeight.Bold);
         });
     }
 
@@ -388,6 +388,41 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
                     var span = t.Span(text);
                     ApplyFont(span);
                     span.FontSize(8);
+                    if (weight == FontWeight.Bold)
+                        span.Bold();
+                });
+        });
+    }
+    private static void AddTotalCell(
+      ITableCellContainer cell,
+      string text,
+      string borderColor,
+      TextHorizontalAlignment align = TextHorizontalAlignment.Right,
+      FontWeight weight = FontWeight.Normal,
+      float? maxWidth = null)
+    {
+        cell.Element(c =>
+        {
+            var container = maxWidth.HasValue ? c.MaxWidth(maxWidth.Value) : c;
+
+            container.Border(0.25f)
+                .BorderColor(borderColor)
+                .Padding(3)
+                .PaddingLeft(7)
+                .PaddingRight(7)
+                .Text(t =>
+                {
+                    // (optioneel) tekstregels zelf ook uitlijnen
+                    switch (align)
+                    {
+                        case TextHorizontalAlignment.Left: t.AlignLeft(); break;
+                        case TextHorizontalAlignment.Center: t.AlignCenter(); break;
+                        case TextHorizontalAlignment.Right: t.AlignRight(); break;
+                    }
+
+                    var span = t.Span(text);
+                    ApplyFont(span);
+                    span.FontSize(11);
                     if (weight == FontWeight.Bold)
                         span.Bold();
                 });
