@@ -57,18 +57,29 @@ namespace CPMCore.Controllers
         {
             var bos = await _invoices.GetByCompanyAsync(issuerCompanyId);
             var vms = bos
-            .OrderByDescending(x => x.InvoiceDate)
-            .ThenByDescending(x => x.Id)
-            .Select(x => new InvoiceListItemVM
+            .Select(x =>
             {
-                Id = x.Id,
-                PublicId = x.PublicId,
-                ClientName = x.ClientName,
-                InvoiceDate = x.InvoiceDate,
-                Status = x.StatusName,
-                GrossTotal = x.GrossTotal,
-                Balance = x.Balance
-            }).ToList();
+                var parts = ParseInvoicePublicId(x.PublicId);
+                var sortValue = BuildInvoiceSortValue(x.InvoiceDate, parts.Number, parts.Month, parts.Year, x.Id);
+
+                return new InvoiceListItemVM
+                {
+                    Id = x.Id,
+                    PublicId = x.PublicId,
+                    ClientName = x.ClientName,
+                    InvoiceDate = x.InvoiceDate,
+                    Status = x.StatusName,
+                    GrossTotal = x.GrossTotal,
+                    Balance = x.Balance,
+                    InvoiceNumber = parts.Number,
+                    InvoiceMonth = parts.Month,
+                    InvoiceYear = parts.Year,
+                    InvoiceSortValue = sortValue
+                };
+            })
+                .OrderByDescending(x => x.InvoiceSortValue)
+                .ThenByDescending(x => x.Id)
+                .ToList();
 
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerCompanyId);
             ViewBag.CompanyId = issuerCompanyId;
@@ -976,6 +987,61 @@ namespace CPMCore.Controllers
         }
 
         private static decimal RoundCurrency(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);
+
+        private static (int? Number, int? Month, int? Year) ParseInvoicePublicId(string? publicId)
+        {
+            if (string.IsNullOrWhiteSpace(publicId))
+                return (null, null, null);
+
+            var parts = publicId
+                .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            int? ParsePart(int index)
+            {
+                if (index >= parts.Length)
+                    return null;
+
+                return int.TryParse(parts[index], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+                    ? value
+                    : (int?)null;
+            }
+
+            var number = ParsePart(0);
+            var month = ParsePart(1);
+            var year = ParsePart(2);
+
+            return (number, month, year);
+        }
+
+        private static long BuildInvoiceSortValue(DateOnly invoiceDate, int? number, int? month, int? year, int fallbackId)
+        {
+            if (year.HasValue)
+                return ComposeSortValue(year.Value, month, number);
+
+            var fallbackSequence = (invoiceDate.DayNumber % 1_000_000) * 10 + Math.Abs(fallbackId % 10);
+            return ComposeSortValue(invoiceDate.Year, invoiceDate.Month, fallbackSequence);
+        }
+
+        private static long ComposeSortValue(int year, int? month, int? number)
+        {
+            var monthValue = Clamp(month, 0, 999);
+            var numberValue = Clamp(number, 0, 999_999);
+            return (long)year * 1_000_000_000L + (long)monthValue * 1_000_000L + numberValue;
+        }
+
+        private static int Clamp(int? value, int min, int max)
+        {
+            if (!value.HasValue)
+                return min;
+
+            if (value.Value < min)
+                return min;
+
+            if (value.Value > max)
+                return max;
+
+            return value.Value;
+        }
 
         private static string? NormalizeMultiline(string? text)
         {

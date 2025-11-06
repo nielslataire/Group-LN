@@ -76,6 +76,15 @@
             color: #fff;
         }
 
+        .dropdown-item-form {
+            margin: 0;
+        }
+
+        .dropdown-menu .dropdown-item.d-flex i {
+            width: 1.25rem;
+            text-align: center;
+        }
+
     </style>
 }
 
@@ -106,7 +115,7 @@
         </div>
     <div class="card card-modern">
         <div class="card-body">
-            <div class="datatables-header-footer-wrapper mt-2">
+            <div class="datatables-header-footer-wrapper  mt-2">
 
                 <table class="table table-responsive-md table-hover mb-0" id="datatable-invoice-list"
                        style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
@@ -127,22 +136,27 @@
                             @{
                                 var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
                             }
-                        @foreach (var r in Model)
-                        {
-                            <tr>
-                                <td>@(string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId)</td>
-                                <td>@r.ClientName</td>
-                                <td>@r.InvoiceDate</td>
-                                <td><span class="@BadgeClassNl(StatusNl(r.Status))">@StatusNl(r.Status)</span></td>
-                                <td class="text-end">@r.GrossTotal?.ToString("€ 0.00")</td>
-                                <td class="text-end">@r.Balance?.ToString("€ 0.00")</td>
+                            @foreach (var r in Model)
+                            {
+                                var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
+                                var isDraft = StatusIn(r.Status, "Draft");
+                                var isIssued = StatusIn(r.Status, "Issued", "Numbered");
+                                var isSentOrPaid = StatusIn(r.Status, "Sent", "Paid");
+
+                                <tr>
+                                    <td data-order="@r.InvoiceSortValue">@displayId</td>
+                                    <td>@r.ClientName</td>
+                                    <td>@r.InvoiceDate</td>
+                                    <td><span class="@BadgeClassNl(StatusNl(r.Status))">@StatusNl(r.Status)</span></td>
+                                    <td class="text-end">@r.GrossTotal?.ToString("€ 0.00")</td>
+                                    <td class="text-end">@r.Balance?.ToString("€ 0.00")</td>
                                     <td class="text-end">
                                         @if (StatusIn(r.Status, "Draft"))
                                         {
                                             <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
                                                asp-action="Edit"
                                                asp-route-id="@r.Id">
-                                                <i class="fa-regular fa-pen-to-square"></i>
+                                                <i class="fa-regular fa-pen-to-square fa-lg"></i>
                                             </a>
                                             <form asp-action="Issue"
                                                   asp-controller="Invoices"
@@ -159,7 +173,7 @@
                                                data-id="@r.Id"
                                                data-issuer="@ViewBag.CompanyId"
                                                data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash fa-lg"></i>
                                             </a>
                                         }
                                         else if (StatusIn(r.Status, "Issued", "Numbered"))
@@ -168,13 +182,13 @@
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
                                                asp-route-issuerCompanyId="@ViewBag.CompanyId">
-                                                <i class="fas fa-eye"></i>
+                                                <i class="fas fa-eye fa-lg"></i>
                                             </a>
                                             <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                asp-action="Pdf"
                                                asp-route-id="@r.Id"
                                                target="_blank">
-                                                <i class="fas fa-file-pdf"></i>
+                                                <i class="fas fa-file-pdf fa-lg"></i>
                                             </a>
                                             @if (canManageInvoices)
                                             {
@@ -182,14 +196,14 @@
                                                    asp-action="Send"
                                                    asp-route-id="@r.Id"
                                                    asp-route-issuerCompanyId="@ViewBag.CompanyId">
-                                                    <i class="fas fa-paper-plane"></i>
+                                                    <i class="fas fa-paper-plane fa-lg"></i>
                                                 </a>
                                                 <a href="#ModalDeleteInvoice"
                                                    class="deleteInvoice"
                                                    data-id="@r.Id"
                                                    data-issuer="@ViewBag.CompanyId"
                                                    data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                    <i class="fas fa-trash"></i>
+                                                    <i class="fas fa-trash fa-lg"></i>
                                                 </a>
                                             }
                                         }
@@ -199,13 +213,13 @@
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
                                                asp-route-issuerCompanyId="@ViewBag.CompanyId">
-                                                <i class="fas fa-eye"></i>
+                                                <i class="fas fa-eye fa-lg"></i>
                                             </a>
                                             <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                asp-action="Pdf"
                                                asp-route-id="@r.Id"
                                                target="_blank">
-                                                <i class="fas fa-file-pdf"></i>
+                                                <i class="fas fa-file-pdf fa-lg"></i>
                                             </a>
                                         }
                                         else
@@ -214,13 +228,13 @@
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
                                                asp-route-issuerCompanyId="@ViewBag.CompanyId">
-                                                <i class="fas fa-eye"></i>
+                                                <i class="fas fa-eye fa-lg"></i>
                                             </a>
                                         }
                                     </td>
-                            </tr>
-                        }
-                    </tbody>
+                                </tr>
+                            }
+                        </tbody>
 
                 </table>
 
@@ -333,7 +347,7 @@ else
 
         // ===== Init DataTable =====
         const table = new DataTable('#datatable-invoice-list', {
-          order: [[3, 'asc']],
+          order: [[0, 'desc']],
           language: buildLanguage(entity),
           layout: {
             topStart: {
@@ -359,7 +373,10 @@ else
                
               ]
             }
-          }
+          },
+          columnDefs: [
+            { targets: -1, orderable: false, searchable: false }
+          ]
         });
 
         // ===== UI-aanpassingen / custom knoppen =====
