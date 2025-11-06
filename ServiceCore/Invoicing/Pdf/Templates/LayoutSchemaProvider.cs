@@ -16,6 +16,7 @@ namespace ServiceCore.Invoicing.Pdf.Templates
                   "type": "object",
                   "properties": {
                     "margin": { "type": ["number", "integer"] },
+                    "backgroundImage": { "type": "string" },
                     "bands": {
                       "type": "object",
                       "properties": {

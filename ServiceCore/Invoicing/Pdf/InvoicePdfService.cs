@@ -73,6 +73,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
         var secondary = !string.IsNullOrWhiteSpace(theme.Secondary) ? theme.Secondary : company.BrandSecondaryColor;
         const string fontFamily = "Avenir";
         var logo = ResolveLogo(theme.LogoSource, company);
+        var backgroundImage = ResolveImageAsset(layout.Page?.BackgroundImage, company);
 
         byte[]? qr = null;
         if (company.EpcQrEnabled)
@@ -103,6 +104,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
             FooterLegalText = company.FooterLegalText,
             StructuredMessage = structuredMessage,
             EpcQrPng = qr,
+            PageBackgroundImage = backgroundImage,
             Layout = layout
         };
     }
@@ -194,11 +196,46 @@ public sealed class InvoicePdfService : IInvoicePdfService
 
     private static byte[]? ResolveLogo(string? logoSource, IssuerCompanyBO company)
     {
-        if (string.IsNullOrWhiteSpace(logoSource))
-            return company.LogoBytes;
+        return ResolveImageAsset(logoSource, company) ?? company.LogoBytes;
+    }
 
-        if (logoSource.Equals("db:IssuerCompany.LogoBytes", StringComparison.OrdinalIgnoreCase))
-            return company.LogoBytes;
+    private static byte[]? ResolveImageAsset(string? source, IssuerCompanyBO company)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return null;
+
+        if (source.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            var commaIndex = source.IndexOf(',', StringComparison.Ordinal);
+            if (commaIndex >= 0 && commaIndex < source.Length - 1)
+            {
+                var base64 = source[(commaIndex + 1)..];
+                try
+                {
+                    return Convert.FromBase64String(base64);
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
+            return null;
+        }
+
+        if (source.StartsWith("db:", StringComparison.OrdinalIgnoreCase))
+        {
+            var key = source[3..];
+            if (key.Equals("IssuerCompany.LogoBytes", StringComparison.OrdinalIgnoreCase))
+                return company.LogoBytes;
+        }
+
+        if (source.StartsWith("theme:", StringComparison.OrdinalIgnoreCase))
+        {
+            var key = source[6..];
+            if (key.Equals("logo", StringComparison.OrdinalIgnoreCase))
+                return company.LogoBytes;
+        }
 
         return null;
     }

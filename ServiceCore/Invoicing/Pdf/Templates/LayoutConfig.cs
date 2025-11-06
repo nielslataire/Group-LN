@@ -25,6 +25,10 @@ public class PageConfig
     [JsonProperty("margin")]
     public float Margin { get; set; } = 30f;
 
+    [JsonProperty("backgroundImage")]
+    public string? BackgroundImage { get; set; }
+        = null;
+
     [JsonProperty("bands")]
     public PageBandsConfig? Bands { get; set; }
         = new PageBandsConfig();

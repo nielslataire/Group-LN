@@ -13,45 +13,46 @@ public sealed class BandsRenderer : ISectionRenderer
         // bands worden vóór content getekend via DrawBackground
     }
 
-    public void DrawBackground(PageDescriptor page, LayoutConfig layout)
+    public void DrawBackground(PageDescriptor page, LayoutConfig layout, TemplateContext ctx)
     {
-        //var bands = layout.Page?.Bands;
-        //if (bands == null)
-        //    return;
+        var bands = layout.Page?.Bands;
 
-        //var topBand = bands.Top;
-        //var bottomBand = bands.Bottom;
+        page.Background()
+            .Element(c => c       // let op: één ketting op 'c'
+                .Extend()
+                .Layers(layers =>
+                {
+                    layers.PrimaryLayer();
 
-        //var hasTopBand = topBand is { Height: > 0 };
-        //var hasBottomBand = bottomBand is { Height: > 0 };
+                    if (ctx.PageBackgroundImage is { Length: > 0 })
+                    {
+                        layers.Layer()
+                            .Extend()
+                            .Image(ctx.PageBackgroundImage)
+                            .FitArea();
+                    }
 
-        //if (!hasTopBand && !hasBottomBand)
-        //    return;
+                    if (bands?.Top is { Height: > 0 } top)
+                    {
+                        var color = string.IsNullOrWhiteSpace(top.Color) ? "#FFFFFF" : top.Color;
 
-        //page.Background().Element(container =>
-        //{
-        //    container.Column(column =>
-        //    {
-        //        if (hasTopBand)
-        //        {
-        //            var color = string.IsNullOrWhiteSpace(topBand!.Color) ? "#FFFFFF" : topBand.Color;
+                        layers.Layer()
+                            .AlignTop()
+                            .Height(top.Height)
+                            .Background(color);
+                    }
 
-        //            column.Item()
-        //                .Height(topBand.Height)
-        //                .Background(color);
-        //        }
+                    if (bands?.Bottom is { Height: > 0 } bottom)
+                    {
+                        var color = string.IsNullOrWhiteSpace(bottom.Color) ? "#FFFFFF" : bottom.Color;
 
-        //        column.Item().Expand();
-
-        //        if (hasBottomBand)
-        //        {
-        //            var color = string.IsNullOrWhiteSpace(bottomBand!.Color) ? "#FFFFFF" : bottomBand.Color;
-
-        //            column.Item()
-        //                .Height(bottomBand.Height)
-        //                .Background(color);
-        //        }
-        //    });
-        //});
+                        layers.Layer()
+                            .AlignBottom()
+                            .Height(bottom.Height)
+                            .Background(color);
+                    }
+                }));
     }
+
+
 }

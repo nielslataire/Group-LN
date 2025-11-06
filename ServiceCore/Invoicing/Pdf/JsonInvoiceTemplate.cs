@@ -43,8 +43,8 @@ public sealed class JsonInvoiceTemplate : NamedInvoiceTemplate
                 return s;
             });
 
-            // Background bands are temporarily disabled due to QuestPDF rendering issues.
-            // _bandsRenderer.DrawBackground(page, layout);
+
+            _bandsRenderer.DrawBackground(page, layout, ctx);
 
             page.Content().Element(content =>
             {

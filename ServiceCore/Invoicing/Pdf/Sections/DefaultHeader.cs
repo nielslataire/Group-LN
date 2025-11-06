@@ -32,14 +32,22 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
         {
             left.Spacing(4);
 
-            left.Item().Height(Mm(45)).Element(container =>
+            // LOGO (vast kader 45x45 mm, geen overflow)
+            left.Item().Height(Mm(45)).Element(c =>
             {
                 if (ctx.Logo is { Length: > 0 })
                 {
-                    container.AlignLeft().AlignMiddle().Image(ctx.Logo);
+                    c.AlignLeft()
+                     .Element(box => box
+                         .Width(Mm(45))
+                         .Height(Mm(45))
+                         .AlignMiddle()
+                         .Image(ctx.Logo)
+                         .FitArea());
                 }
             });
 
+            // INFO
             left.Item().Height(Mm(35)).Column(info =>
             {
                 info.Spacing(2);
@@ -60,7 +68,6 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
                     span.FontColor(ctx.PrimaryColorHex ?? "#000000");
                     span.Black();
                     ApplyFont(span);
-                    
                 });
 
                 if (!string.IsNullOrWhiteSpace(vm.Client.VAT))
@@ -71,6 +78,7 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
             });
         });
     }
+
 
     private static void RenderRightColumn(RowDescriptor row, InvoiceVm vm, TemplateContext ctx)
     {

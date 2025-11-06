@@ -11,5 +11,6 @@ public sealed class TemplateContext
     public string? FooterLegalText { get; init; }
     public string? StructuredMessage { get; init; }
     public byte[]? EpcQrPng { get; init; }
+    public byte[]? PageBackgroundImage { get; init; }
     public LayoutConfig? Layout { get; init; }
 }
