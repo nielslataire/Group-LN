@@ -49,7 +49,8 @@ public static class InvoiceDetailExtensions
                 AddressLine1 = bo.ClientAddress,
                 PostalCode = bo.ClientPostalCode,
                 City = bo.ClientCity,
-                Country = bo.ClientCountryName
+                Country = bo.ClientCountryName,
+                Email = bo.ClientEmail
             },
             Totals = new TotalsDto
             {

@@ -15,6 +15,16 @@ public class TemplateInterpolator
 
     public string Interpolate(string? template, InvoiceVm vm)
     {
+        return Interpolate(template, (object)vm);
+    }
+
+    public string Interpolate(string? template, object model)
+    {
+        return InterpolateInternal(template, model);
+    }
+
+    private string InterpolateInternal(string? template, object? model)
+    {
         if (string.IsNullOrWhiteSpace(template))
             return string.Empty;
 
@@ -40,7 +50,7 @@ public class TemplateInterpolator
                 expr = expr[..colonIndex].Trim();
             }
 
-            var value = ResolvePath(vm, expr);
+            var value = ResolvePath(model, expr);
             if (value == null)
                 return string.Empty;
 
@@ -94,7 +104,7 @@ public class TemplateInterpolator
         return value;
     }
 
-    private static object? ResolvePath(object root, string path)
+    private static object? ResolvePath(object? root, string path)
     {
         if (root == null || string.IsNullOrWhiteSpace(path))
             return null;

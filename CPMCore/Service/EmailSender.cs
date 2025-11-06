@@ -1,4 +1,8 @@
-﻿using System.Net;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
 using System.Net.Mail;
 using System.Threading.Tasks;
 
@@ -6,8 +10,16 @@ namespace CPMCore.Service
 {
     public interface IEmailSender
     {
-        Task SendEmailAsync(string toEmail, string subject, string htmlMessage);
+        Task SendEmailAsync(
+            string toEmail,
+            string subject,
+            string htmlMessage,
+            IEnumerable<EmailAttachment>? attachments = null,
+            string? cc = null);
     }
+
+    public sealed record EmailAttachment(string FileName, byte[] Content, string ContentType);
+
     public class SmtpEmailSender : IEmailSender
     {
         private readonly string _smtpServer = "smtp.office365.com";
@@ -23,8 +35,16 @@ namespace CPMCore.Service
                         ?? throw new ArgumentNullException("EmailSettings:SmtpPass");
         }
 
-        public async Task SendEmailAsync(string toEmail, string subject, string htmlMessage)
+        public async Task SendEmailAsync(
+            string toEmail,
+            string subject,
+            string htmlMessage,
+            IEnumerable<EmailAttachment>? attachments = null,
+            string? cc = null)
         {
+            if (string.IsNullOrWhiteSpace(toEmail))
+                throw new ArgumentException("To e-mail is verplicht.", nameof(toEmail));
+
             var message = new MailMessage
             {
                 From = new MailAddress(_smtpUser),
@@ -34,6 +54,27 @@ namespace CPMCore.Service
             };
 
             message.To.Add(new MailAddress(toEmail));
+
+            if (!string.IsNullOrWhiteSpace(cc))
+            {
+                foreach (var address in cc.Split(new[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    message.CC.Add(new MailAddress(address));
+                }
+            }
+
+            if (attachments != null)
+            {
+                foreach (var attachment in attachments.Where(a => a != null))
+                {
+                    if (attachment.Content == null || string.IsNullOrWhiteSpace(attachment.FileName))
+                        continue;
+
+                    var stream = new MemoryStream(attachment.Content, writable: false);
+                    var mailAttachment = new Attachment(stream, attachment.FileName, attachment.ContentType);
+                    message.Attachments.Add(mailAttachment);
+                }
+            }
 
             using var client = new SmtpClient(_smtpServer, _smtpPort)
             {

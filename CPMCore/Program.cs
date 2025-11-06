@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Rotativa.AspNetCore;
 using ServiceCore;
+using ServiceCore.Invoicing;
 using ServiceCore.Invoicing.Pdf;
 using ServiceCore.Invoicing.Pdf.Sections;
 using SmartBreadcrumbs;
@@ -25,6 +26,8 @@ using System.Globalization;
 using System.Reflection;
 using QuestPDF.Infrastructure;
 using QuestPDF.Drawing;
+using CPMCore.Services.Peppol;
+using System.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,6 +74,14 @@ builder.Services.AddScoped<IPartyLookupService, PartyLookupService>();
 builder.Services.AddScoped<IInvoiceCommandService, InvoiceCommandService>();
 builder.Services.AddScoped<IInvoiceNumberingService, InvoiceNumberingService>();
 builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupService>();
+builder.Services.AddScoped<IInvoiceCommunicationService, InvoiceCommunicationService>();
+builder.Services.AddScoped<IInvoiceUblBuilder, InvoiceUblBuilder>();
+builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(client =>
+{
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddHttpClient<IPeppolSender, PeppolSender>();
 
 
 builder.Services.AddSingleton<TemplateInterpolator>();

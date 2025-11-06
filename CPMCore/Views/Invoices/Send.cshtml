@@ -1,27 +1,326 @@
-﻿@model CPMCore.Models.Invoicing.InvoiceDetailVM
+﻿@model CPMCore.Models.Invoicing.InvoiceSendVM
 @{
     ViewData["Title"] = "Factuur verzenden";
     var issuerId = ViewBag.CompanyId as int?;
+    var hasEnterpriseIdentifier = !string.IsNullOrWhiteSpace(Model.ClientVatNumber) || !string.IsNullOrWhiteSpace(Model.ClientEnterpriseNumber);
 }
 
 <div class="row mb-4">
     <div class="col">
         <h1 class="fw-bold mb-1">Factuur verzenden</h1>
-        <p class="text-muted mb-0">@(Model.PublicId ?? $"Factuur #{Model.Id}")</p>
+        <p class="text-muted mb-3">@(Model.PublicId ?? $"Factuur #{Model.InvoiceId}")</p>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-primary-subtle text-primary fw-semibold">Peppol BIS Billing 3.0</span>
+            <span class="badge bg-secondary-subtle text-secondary fw-semibold">UBL/EN16931</span>
+            <span class="badge bg-light text-body-secondary border">PDF + UBL bijlage</span>
+            @if (Model.CanSendViaPeppol && Model.PeppolAccountFound)
+            {
+                <span class="badge bg-success-subtle text-success fw-semibold">Peppol-kanaal beschikbaar</span>
+            }
+            else
+            {
+                <span class="badge bg-warning-subtle text-warning fw-semibold">Peppol controle vereist</span>
+            }
+        </div>
     </div>
     <div class="col-auto align-self-start">
         <a class="btn btn-outline-secondary" asp-action="Index" asp-route-issuerCompanyId="@issuerId">Terug naar overzicht</a>
     </div>
 </div>
+<div class="row">
+    <div class="col-lg-8">
+        <form asp-action="Send" method="post" asp-route-issuerCompanyId="@Model.IssuerCompanyId" class="mb-4">
+            @Html.AntiForgeryToken()
+            <input asp-for="InvoiceId" type="hidden" />
+            <input asp-for="IssuerCompanyId" type="hidden" />
+            <input asp-for="PublicId" type="hidden" />
+            <input asp-for="PeppolParticipantId" type="hidden" />
+            <input asp-for="PeppolAccountFound" type="hidden" />
+            <input asp-for="ExistingUblProfile" type="hidden" />
+            <input asp-for="ExistingUblVersion" type="hidden" />
 
-<div class="alert alert-info">
-    <p class="mb-0">De functionaliteit om facturen vanuit deze pagina te verzenden wordt later verder uitgewerkt. In tussentijd kan je de factuur downloaden en handmatig doorsturen.</p>
-</div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
-<div class="card">
-    <div class="card-body">
-        <h5 class="card-title">Snelle acties</h5>
-        <a class="btn btn-outline-primary me-2" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-1"></i> Download PDF</a>
-        <a class="btn btn-outline-secondary" asp-action="Detail" asp-route-id="@Model.Id" asp-route-issuerCompanyId="@issuerId">Bekijk factuur</a>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="card-title mb-1">E-mail versturen</h5>
+                    <p class="text-muted small mb-0">Controleer de ontvangersgegevens en kies de gewenste verzendkanalen.</p>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="To" class="form-label"></label>
+                            <input asp-for="To" class="form-control" autocomplete="email" placeholder="klant@bedrijf.be" />
+                            <span asp-validation-for="To" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Cc" class="form-label"></label>
+                            <input asp-for="Cc" class="form-control" autocomplete="email" placeholder="team@bedrijf.be" />
+                            <span asp-validation-for="Cc" class="text-danger"></span>
+                            <small class="form-text text-muted">Gebruik komma of puntkomma om meerdere adressen te scheiden.</small>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Subject" class="form-label"></label>
+                            <input asp-for="Subject" class="form-control" />
+                            <span asp-validation-for="Subject" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Body" class="form-label"></label>
+                            <textarea asp-for="Body" rows="8" class="form-control"></textarea>
+                            <span asp-validation-for="Body" class="text-danger"></span>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex justify-content-between flex-wrap align-items-center mb-3">
+                        <div>
+                            <h6 class="text-uppercase text-muted fw-semibold mb-1">Bijlagen</h6>
+                            <p class="mb-0 text-muted small">De ontvanger krijgt steeds de PDF en het UBL-bestand volgens Peppol BIS Billing 3.0.</p>
+                        </div>
+                    </div>
+
+                    <div class="row g-4 align-items-start">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="AttachPdf" class="form-check-input" />
+                                <label asp-for="AttachPdf" class="form-check-label fw-semibold"></label>
+                            </div>
+                            <div class="small text-muted">Genereert de opgemaakte factuur in PDF-formaat voor de klant.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="AttachUbl" class="form-check-input" />
+                                <label asp-for="AttachUbl" class="form-check-label fw-semibold"></label>
+                            </div>
+                            <div class="small text-muted">Voegt het UBL-bestand toe dat voldoet aan EN16931 (Peppol BIS Billing 3.0).</div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-4 mb-0">
+                        <strong>Tip:</strong> De UBL bevat alle gegevens volgens de Peppol BIS Billing 3.0-specificaties en is klaar voor automatische verwerking bij de ontvanger.
+                    </div>
+
+                    <hr class="my-4" />
+
+                    @if (Model.CanSendViaPeppol)
+                    {
+                        <div class="rounded border p-3 bg-success-subtle">
+                            <div class="form-check form-switch mb-1">
+                                <input asp-for="SendToPeppol" class="form-check-input" />
+                                <label asp-for="SendToPeppol" class="form-check-label fw-semibold"></label>
+                            </div>
+                            <div class="small text-success">@Model.PeppolStatusMessage</div>
+                            @if (!hasEnterpriseIdentifier)
+                            {
+                                <div class="small text-muted mt-2">Vul een geldig ondernemings- of btw-nummer in bij de klantgegevens om Peppol te kunnen gebruiken.</div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning mb-0">
+                            <div class="fw-semibold mb-1">Peppol niet beschikbaar</div>
+                            <div>@Model.PeppolStatusMessage</div>
+                            @if (!hasEnterpriseIdentifier)
+                            {
+                                <div class="small text-muted mt-2">Peppol-verificatie vereist een ondernemingsnummer of btw-nummer bij de klant.</div>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="card-footer bg-white border-0 pt-0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div class="btn-group" role="group" aria-label="Downloads">
+                            <a class="btn btn-outline-primary" asp-action="Pdf" asp-route-id="@Model.InvoiceId" target="_blank" rel="noopener">Bekijk PDF</a>
+                            <a class="btn btn-outline-primary" asp-action="Ubl" asp-route-id="@Model.InvoiceId">Download UBL</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg">Verzenden</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Factuurdetails</h5>
+                <span class="badge bg-light text-body-secondary">@Model.Currency</span>
+            </div>
+            <div class="card-body pb-0">
+                <p class="text-muted small mb-0">Uitgever</p>
+                <p class="fw-semibold mb-3">@Model.IssuerName</p>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Factuur</span>
+                    <span>@(Model.PublicId ?? Model.InvoiceId.ToString())</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Datum</span>
+                    <span>@Model.InvoiceDate.ToString("dd/MM/yyyy")</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Klant</span>
+                    <span class="text-end">@Model.ClientName</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Bedrag excl.</span>
+                    <span>@Model.TotalExclVat.ToString("€ 0.00")</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">BTW</span>
+                    <span>@Model.TotalVat.ToString("€ 0.00")</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Totaal</span>
+                    <span class="fw-bold">@Model.TotalInclVat.ToString("€ 0.00")</span>
+                </li>
+                @if (!string.IsNullOrWhiteSpace(Model.BankAccount))
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">IBAN</span>
+                        <span class="fw-semibold">@Model.BankAccount</span>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Klantgegevens</h5>
+                @if (hasEnterpriseIdentifier)
+                {
+                    <span class="badge bg-success-subtle text-success">Onderneming</span>
+                }
+                else
+                {
+                    <span class="badge bg-warning-subtle text-warning">Privé</span>
+                }
+            </div>
+            <div class="list-group list-group-flush">
+                <div class="list-group-item">
+                    <div class="text-muted small mb-1">E-mailadres</div>
+                    <div>@(string.IsNullOrWhiteSpace(Model.ClientEmail) ? "-" : Model.ClientEmail)</div>
+                </div>
+                <div class="list-group-item">
+                    <div class="text-muted small mb-1">BTW-nummer</div>
+                    <div>@(string.IsNullOrWhiteSpace(Model.ClientVatNumber) ? "-" : Model.ClientVatNumber)</div>
+                </div>
+                <div class="list-group-item">
+                    <div class="text-muted small mb-1">Ondernemingsnummer</div>
+                    <div>@(string.IsNullOrWhiteSpace(Model.ClientEnterpriseNumber) ? "-" : Model.ClientEnterpriseNumber)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-0 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Peppol</h5>
+                <span class="badge @(Model.CanSendViaPeppol && Model.PeppolAccountFound ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning")">
+                    @(Model.CanSendViaPeppol && Model.PeppolAccountFound ? "Beschikbaar" : "Niet beschikbaar")
+                </span>
+            </div>
+            <div class="card-body">
+                <p class="mb-2 small text-muted">Controle op Peppol-directory</p>
+                <p class="mb-3">@Model.PeppolStatusMessage</p>
+                <dl class="row mb-0">
+                    <dt class="col-6">Participant ID</dt>
+                    <dd class="col-6">@(Model.PeppolParticipantId ?? "-")</dd>
+                    <dt class="col-6">Issuer ID</dt>
+                    <dd class="col-6">@(Model.IssuerPeppolId ?? "-")</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="card-title mb-0">UBL</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.ExistingUblGeneratedAt.HasValue)
+                {
+                    <p class="mb-1"><strong>Gegenereerd op:</strong> @Model.ExistingUblGeneratedAt.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                    <p class="mb-1"><strong>Versie:</strong> @(Model.ExistingUblVersion ?? "-")</p>
+                    <p class="mb-3"><strong>Profiel:</strong> @(Model.ExistingUblProfile ?? "-")</p>
+                    @if (Model.ExistingUblSentViaPeppol)
+                    {
+                        <p class="mb-1"><strong>Verzonden via Peppol:</strong> Ja</p>
+                        <p class="mb-0"><strong>Document ID:</strong> @Model.ExistingUblDocumentId</p>
+                    }
+                    else
+                    {
+                        <p class="mb-0 text-muted">Nog niet via Peppol verzonden.</p>
+                    }
+                }
+                else
+                {
+                    <p class="mb-0 text-muted">Er is nog geen UBL-document opgeslagen voor deze factuur.</p>
+                }
+            </div>
+            <div class="card-footer bg-white border-0 pt-0">
+                <a class="btn btn-outline-primary w-100" asp-action="Ubl" asp-route-id="@Model.InvoiceId">UBL downloaden</a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="card-title mb-0">Laatste verzending</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.LastEmailSentAt.HasValue)
+                {
+                    <p class="mb-1"><strong>Datum:</strong> @Model.LastEmailSentAt.Value.ToString("dd/MM/yyyy HH:mm")</p>
+                    <p class="mb-0 text-muted">Controleer hieronder de verzendgeschiedenis voor details.</p>
+                }
+                else
+                {
+                    <p class="mb-0 text-muted">Deze factuur werd nog niet per e-mail verzonden.</p>
+                }
+            </div>
+        </div>
     </div>
 </div>
+
+@if (Model.EmailLogs.Count > 0)
+{
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white border-0 pb-0">
+            <h5 class="card-title mb-0">Verzendgeschiedenis</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Datum</th>
+                            <th>Ontvanger</th>
+                            <th>CC</th>
+                            <th>Onderwerp</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.EmailLogs)
+                        {
+                            <tr>
+                                <td>@log.SentAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@log.To</td>
+                                <td>@(string.IsNullOrWhiteSpace(log.Cc) ? "-" : log.Cc)</td>
+                                <td>@log.Subject</td>
+                                <td>
+                                    <span class="badge bg-light text-body-secondary">@log.Status</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <partial name="_ValidationScriptsPartial" />
+}

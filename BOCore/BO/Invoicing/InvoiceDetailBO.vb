@@ -34,6 +34,8 @@ Public Class InvoiceDetailBO
     Public Property ClientCity As String
     Public Property ClientCountryName As String
     Public Property ClientVatNumber As String
+    Public Property ClientEnterpriseNumber As String
+    Public Property ClientEmail As String
 
     Public Property BankAccount As String
     Public Property ExtraInfo As String

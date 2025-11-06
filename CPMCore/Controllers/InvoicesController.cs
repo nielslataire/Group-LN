@@ -1,19 +1,24 @@
 ﻿using BOCore;
-using CPMCore.Models.Invoicing;
 using CPMCore.Documents;
 using CPMCore.Extensions;
+using CPMCore.Models.Invoicing;
+using CPMCore.Service;
+using CPMCore.Services.Peppol;
+using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using System.Collections.Generic;
+using QuestPDF.Fluent;
 using ServiceCore;
+using ServiceCore.Invoicing;
 using ServiceCore.Invoicing.Pdf;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using QuestPDF.Fluent;
 
 
 namespace CPMCore.Controllers
@@ -29,6 +34,12 @@ namespace CPMCore.Controllers
         private readonly IIssuerCompanyService _ics;
         private readonly IIssuerBankAccountService _bank;
         private readonly IInvoicePdfService _pdf;
+        private readonly IInvoiceCommunicationService _communication;
+        private readonly IInvoiceUblBuilder _ublBuilder;
+        private readonly IEmailSender _emailSender;
+        private readonly TemplateInterpolator _templateInterpolator;
+        private readonly IPeppolDirectoryClient _peppolDirectory;
+        private readonly IPeppolSender _peppolSender;
 
         public InvoicesController(
             IInvoiceQueryService invoices,
@@ -39,7 +50,13 @@ namespace CPMCore.Controllers
             IProjectSupplierLookupService ps,
             IIssuerCompanyService ics,
             IIssuerBankAccountService bank,
-            IInvoicePdfService pdf)
+            IInvoicePdfService pdf,
+            IInvoiceCommunicationService communication,
+            IInvoiceUblBuilder ublBuilder,
+            IEmailSender emailSender,
+            TemplateInterpolator templateInterpolator,
+            IPeppolDirectoryClient peppolDirectory,
+            IPeppolSender peppolSender)
         {
             _invoices = invoices;
             _companies = companies;
@@ -50,6 +67,12 @@ namespace CPMCore.Controllers
             _ics = ics;
             _bank = bank;
             _pdf = pdf;
+            _communication = communication;
+            _ublBuilder = ublBuilder;
+            _emailSender = emailSender;
+            _templateInterpolator = templateInterpolator;
+            _peppolDirectory = peppolDirectory;
+            _peppolSender = peppolSender;
         }
 
         // LIST
@@ -132,6 +155,27 @@ namespace CPMCore.Controllers
             return File(bytes, "application/pdf", fileName);
         }
 
+        //UBL EXPORT VAN FACTUUR
+        [HttpGet]
+        public async Task<IActionResult> Ubl(int id, CancellationToken ct = default)
+        {
+            var detail = await _invoices.GetDetailAsync(id, ct);
+            if (detail == null)
+                return NotFound();
+
+            var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
+            if (issuer == null)
+                return NotFound();
+
+            var document = _ublBuilder.Build(detail, issuer);
+            var fileName = string.IsNullOrWhiteSpace(document.FileName)
+                ? $"{detail.PublicId ?? detail.Id.ToString(CultureInfo.InvariantCulture)}.xml"
+                : document.FileName;
+            var bytes = Encoding.UTF8.GetBytes(document.Xml);
+
+            return File(bytes, "application/xml", fileName);
+        }
+
         //FACTUUR VERZENDEN (GET)
         [HttpGet]
         public async Task<IActionResult> Send(int id, int? issuerCompanyId = null, CancellationToken ct = default)
@@ -145,19 +189,169 @@ namespace CPMCore.Controllers
                     : RedirectToAction(nameof(Index));
             }
 
-            var vm = MapDetail(detail);
-            var issuerId = issuerCompanyId ?? detail.IssuerCompanyId;
+            var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
+            if (issuer == null)
+            {
+                AddMessage("error", "Factuur verstrekker niet gevonden.", "Factuur");
+                return issuerCompanyId.HasValue
+                    ? RedirectToAction(nameof(Index), new { issuerCompanyId })
+                    : RedirectToAction(nameof(Index));
+            }
+
+            var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: true, checkPeppol: true, ct);
+
+            var issuerId = issuerCompanyId ?? issuer.Id;
             if (issuerId > 0)
             {
-                ViewBag.CompanyId = issuerId;
-                ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
+                await SetIssuerViewBagsAsync(issuerId, ct);
             }
 
             return View(vm);
         }
 
-        // DELETE (POST)
+        //FACTUUR VERZENDEN (POST)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Send(InvoiceSendVM form, CancellationToken ct = default)
+        {
+            if (!ModelState.IsValid)
+            {
+                // fall through to populate later
+            }
 
+            var detail = await _invoices.GetDetailAsync(form.InvoiceId, ct);
+            if (detail == null)
+            {
+                AddMessage("error", "Factuur niet gevonden.", "Factuur");
+                return RedirectToAction(nameof(Index));
+            }
+
+            var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
+            if (issuer == null)
+            {
+                AddMessage("error", "Factuur verstrekker niet gevonden.", "Factuur");
+                return RedirectToAction(nameof(Index));
+            }
+
+            var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: false, checkPeppol: true, ct);
+            vm.To = form.To;
+            vm.Cc = form.Cc;
+            vm.Subject = form.Subject;
+            vm.Body = form.Body;
+            vm.AttachPdf = form.AttachPdf;
+            vm.AttachUbl = form.AttachUbl;
+            vm.SendToPeppol = form.SendToPeppol && vm.CanSendViaPeppol;
+
+            await SetIssuerViewBagsAsync(vm.IssuerCompanyId, ct);
+
+            if (!ModelState.IsValid)
+                return View(vm);
+
+            if (string.IsNullOrWhiteSpace(vm.To))
+            {
+                ModelState.AddModelError(nameof(vm.To), "E-mailadres is verplicht.");
+                return View(vm);
+            }
+
+            if (!vm.AttachPdf && !vm.AttachUbl)
+            {
+                ModelState.AddModelError(string.Empty, "Selecteer minstens één bijlage.");
+                return View(vm);
+            }
+
+            var attachments = new List<EmailAttachment>();
+            var dto = detail.ToInvoiceDto();
+            var ublDocument = _ublBuilder.Build(detail, issuer);
+
+            if (vm.AttachPdf)
+            {
+                var pdfBytes = _pdf.Render(dto, issuer);
+                var pdfName = string.IsNullOrWhiteSpace(dto.PublicId)
+                    ? $"Factuur_{dto.Id}.pdf"
+                    : $"{dto.PublicId}.pdf";
+                attachments.Add(new EmailAttachment(pdfName, pdfBytes, "application/pdf"));
+            }
+
+            if (vm.AttachUbl)
+            {
+                attachments.Add(new EmailAttachment(
+                    string.IsNullOrWhiteSpace(ublDocument.FileName) ? $"{dto.PublicId ?? dto.Id.ToString()}_invoice.xml" : ublDocument.FileName,
+                    Encoding.UTF8.GetBytes(ublDocument.Xml),
+                    "application/xml"));
+            }
+
+            try
+            {
+                await _emailSender.SendEmailAsync(vm.To, vm.Subject, vm.Body, attachments, vm.Cc);
+                await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
+                {
+                    InvoiceId = detail.Id,
+                    ToAddress = vm.To,
+                    CcAddress = vm.Cc,
+                    Subject = vm.Subject,
+                    ProviderId = Guid.NewGuid().ToString(),
+                    SentAt = DateTime.UtcNow,
+                    Status = "Sent"
+                }, ct);
+                AddMessage("success", "E-mail verzonden.", "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Send invoice email {InvoiceId} failed", detail.Id);
+                AddMessage("error", "E-mail kon niet verzonden worden.", "Factuur");
+                ModelState.AddModelError(string.Empty, "E-mail kon niet verzonden worden. Probeer opnieuw.");
+                return View(vm);
+            }
+
+            await _communication.SaveInvoiceUblAsync(new InvoiceUblBO
+            {
+                InvoiceId = detail.Id,
+                XmlContent = ublDocument.Xml,
+                UblVersion = ublDocument.UblVersion,
+                Profile = ublDocument.Profile,
+                GeneratedAt = ublDocument.GeneratedAt,
+                SentViaPeppol = false,
+                PeppolDocId = null
+            }, ct);
+
+            if (vm.SendToPeppol && vm.CanSendViaPeppol)
+            {
+                var participantId = vm.PeppolParticipantId
+                    ?? detail.ClientVatNumber
+                    ?? detail.ClientEnterpriseNumber;
+
+                if (!string.IsNullOrWhiteSpace(participantId))
+                {
+                    var result = await _peppolSender.SendAsync(participantId, ublDocument.Xml, ct);
+                    if (result.Success)
+                    {
+                        await _communication.SaveInvoiceUblAsync(new InvoiceUblBO
+                        {
+                            InvoiceId = detail.Id,
+                            XmlContent = ublDocument.Xml,
+                            UblVersion = ublDocument.UblVersion,
+                            Profile = ublDocument.Profile,
+                            GeneratedAt = ublDocument.GeneratedAt,
+                            SentViaPeppol = true,
+                            PeppolDocId = result.DocumentId
+                        }, ct);
+                        AddMessage("success", "Factuur verzonden via Peppol.", "Factuur");
+                    }
+                    else
+                    {
+                        AddMessage("warning", string.IsNullOrWhiteSpace(result.Message) ? "Peppol verzending mislukt." : result.Message, "Factuur");
+                    }
+                }
+                else
+                {
+                    AddMessage("warning", "Geen geldig Peppol-ID beschikbaar.", "Factuur");
+                }
+            }
+
+            return RedirectToAction(nameof(Send), new { id = detail.Id, issuerCompanyId = vm.IssuerCompanyId });
+        }
+
+        // DELETE (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id, int issuerCompanyId, CancellationToken ct = default)
@@ -944,7 +1138,8 @@ namespace CPMCore.Controllers
                 AddressLine1 = bo.ClientAddress,
                 PostalCode = bo.ClientPostalCode,
                 City = bo.ClientCity,
-                Country = bo.ClientCountryName
+                Country = bo.ClientCountryName,
+                Email = bo.ClientEmail
             };
 
             vm.Lines = bo.Lines.Select(MapDetailLine).ToList();
@@ -984,6 +1179,189 @@ namespace CPMCore.Controllers
             if (string.IsNullOrWhiteSpace(line2))
                 return line1;
             return $"{line1}, {line2}";
+        }
+
+        private async Task<InvoiceSendVM> CreateSendViewModelAsync(InvoiceDetailBO detail, IssuerCompanyBO issuer, bool includeDefaults, bool checkPeppol, CancellationToken ct)
+        {
+            var vm = new InvoiceSendVM
+            {
+                InvoiceId = detail.Id,
+                IssuerCompanyId = issuer.Id,
+                PublicId = string.IsNullOrWhiteSpace(detail.PublicId) ? null : detail.PublicId,
+                InvoiceDate = detail.InvoiceDate,
+                ClientName = detail.ClientName ?? string.Empty,
+                ClientVatNumber = detail.ClientVatNumber,
+                ClientEnterpriseNumber = detail.ClientEnterpriseNumber,
+                ClientEmail = detail.ClientEmail,
+                TotalExclVat = RoundCurrency(detail.TotalExclVat),
+                TotalVat = RoundCurrency(detail.TotalVat),
+                TotalInclVat = RoundCurrency(detail.TotalInclVat),
+                IssuerName = issuer.Name ?? string.Empty,
+                IssuerEmail = issuer.Email,
+                IssuerPeppolEnabled = issuer.PeppolEnabled,
+                IssuerPeppolId = issuer.PeppolParticipantId,
+                BankAccount = !string.IsNullOrWhiteSpace(detail.BankAccount)
+                    ? detail.BankAccount
+                    : issuer.DefaultBankAccountIban ?? issuer.EpcIban,
+                Currency = !string.IsNullOrWhiteSpace(issuer.DefaultCurrency) ? issuer.DefaultCurrency : "EUR",
+                AttachPdf = true,
+                AttachUbl = true
+            };
+
+            if (includeDefaults)
+            {
+                vm.To = detail.ClientEmail ?? string.Empty;
+                var templateModel = BuildEmailTemplateModel(detail, issuer, vm.BankAccount, vm.Currency);
+
+                var subjectTemplate = issuer.EmailSubjectTemplate;
+                if (!string.IsNullOrWhiteSpace(subjectTemplate))
+                {
+                    var rendered = _templateInterpolator.Interpolate(subjectTemplate, templateModel).Trim();
+                    vm.Subject = !string.IsNullOrWhiteSpace(rendered)
+                        ? rendered
+                        : $"Factuur {vm.PublicId ?? detail.Id.ToString(CultureInfo.InvariantCulture)}";
+                }
+                else
+                {
+                    vm.Subject = $"Factuur {vm.PublicId ?? detail.Id.ToString(CultureInfo.InvariantCulture)}";
+                }
+
+                var bodyTemplate = issuer.EmailBodyTemplate;
+                if (!string.IsNullOrWhiteSpace(bodyTemplate))
+                {
+                    var rendered = _templateInterpolator.Interpolate(bodyTemplate, templateModel).Trim();
+                    vm.Body = !string.IsNullOrWhiteSpace(rendered)
+                        ? rendered
+                        : BuildDefaultEmailBody(detail, issuer, vm.Currency, vm.BankAccount);
+                }
+                else
+                {
+                    vm.Body = BuildDefaultEmailBody(detail, issuer, vm.Currency, vm.BankAccount);
+                }
+            }
+
+            var logs = await _communication.GetEmailLogsAsync(detail.Id, ct);
+            vm.EmailLogs = logs
+                .Select(log => new InvoiceEmailLogItemVM
+                {
+                    SentAt = log.SentAt,
+                    To = log.ToAddress,
+                    Cc = log.CcAddress,
+                    Subject = log.Subject,
+                    Status = log.Status
+                })
+                .ToList();
+            vm.LastEmailSentAt = logs.FirstOrDefault()?.SentAt;
+
+            var ubl = await _communication.GetInvoiceUblAsync(detail.Id, ct);
+            if (ubl != null)
+            {
+                vm.ExistingUblGeneratedAt = ubl.GeneratedAt;
+                vm.ExistingUblSentViaPeppol = ubl.SentViaPeppol;
+                vm.ExistingUblDocumentId = ubl.PeppolDocId;
+                vm.ExistingUblProfile = ubl.Profile;
+                vm.ExistingUblVersion = ubl.UblVersion;
+            }
+
+            if (checkPeppol)
+            {
+                if (issuer.PeppolEnabled && !string.IsNullOrWhiteSpace(issuer.PeppolParticipantId))
+                {
+                    var lookupId = detail.ClientVatNumber ?? detail.ClientEnterpriseNumber;
+                    if (!string.IsNullOrWhiteSpace(lookupId))
+                    {
+                        var participant = await _peppolDirectory.FindParticipantAsync(lookupId, ct);
+                        if (participant != null)
+                        {
+                            vm.PeppolAccountFound = true;
+                            vm.PeppolParticipantId = participant.ParticipantId;
+                            vm.PeppolStatusMessage = $"Peppol-account gevonden: {participant.Name ?? participant.ParticipantId}";
+                        }
+                        else
+                        {
+                            vm.PeppolStatusMessage = "Geen Peppol-account gevonden.";
+                        }
+                    }
+                    else
+                    {
+                        vm.PeppolStatusMessage = "Geen ondernemings- of btw-nummer beschikbaar.";
+                    }
+
+                    vm.CanSendViaPeppol = vm.PeppolAccountFound;
+                    if (includeDefaults)
+                        vm.SendToPeppol = vm.PeppolAccountFound;
+                }
+                else
+                {
+                    vm.PeppolStatusMessage = "Peppol is niet geactiveerd voor dit bedrijf.";
+                    vm.CanSendViaPeppol = false;
+                }
+            }
+
+            return vm;
+        }
+
+        private async Task SetIssuerViewBagsAsync(int issuerId, CancellationToken ct)
+        {
+            ViewBag.CompanyId = issuerId;
+            ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
+        }
+
+        private object BuildEmailTemplateModel(InvoiceDetailBO detail, IssuerCompanyBO issuer, string? bankAccount, string currency)
+        {
+            return new
+            {
+                Invoice = new
+                {
+                    detail.Id,
+                    detail.PublicId,
+                    IssueDate = detail.InvoiceDate,
+                    DueDate = detail.ExpirationDate,
+                    TotalExcl = detail.TotalExclVat,
+                    TotalVat = detail.TotalVat,
+                    TotalIncl = detail.TotalInclVat
+                },
+                Client = new
+                {
+                    Name = detail.ClientName,
+                    VatNumber = detail.ClientVatNumber,
+                    Email = detail.ClientEmail
+                },
+                Issuer = new
+                {
+                    issuer.Name,
+                    issuer.LegalName,
+                    issuer.Email,
+                    issuer.Phone
+                },
+                Payment = new
+                {
+                    BankAccount = bankAccount,
+                    Currency = currency
+                }
+            };
+        }
+
+        private static string BuildDefaultEmailBody(InvoiceDetailBO detail, IssuerCompanyBO issuer, string currency, string? bankAccount)
+        {
+            var culture = CultureInfo.GetCultureInfo("nl-BE");
+            var amount = detail.TotalInclVat.ToString("C", culture);
+            var builder = new StringBuilder();
+            builder.AppendLine($"Beste {detail.ClientName ?? "klant"},");
+            builder.AppendLine();
+            builder.AppendLine($"In de bijlage vind je factuur {detail.PublicId ?? detail.Id.ToString(CultureInfo.InvariantCulture)} met een totaalbedrag van {amount}.");
+            if (detail.ExpirationDate.HasValue)
+            {
+                builder.AppendLine($"Gelieve dit bedrag te voldoen vóór {detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue):dd/MM/yyyy}.");
+            }
+            if (!string.IsNullOrWhiteSpace(bankAccount))
+            {
+                builder.AppendLine($"Betaling kan via {bankAccount}.");
+            }
+            builder.AppendLine();
+            builder.AppendLine("Met vriendelijke groeten,");
+            builder.AppendLine(issuer.Name ?? string.Empty);
+            return builder.ToString();
         }
 
         private static decimal RoundCurrency(decimal value) => Math.Round(value, 2, MidpointRounding.AwayFromZero);

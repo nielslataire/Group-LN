@@ -175,20 +175,29 @@ namespace ServiceCore
         public async Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default)
         {
             var invoice = await _db.Invoices
-                .AsNoTracking()
-                .Include(i => i.InvoicesDetails)
-                .Include(i => i.PostalCode)
-                    .ThenInclude(pc => pc.Country)
-                .Include(i => i.PostalCode)
-                    .ThenInclude(pc => pc.Provincie)
-                .Include(i => i.IssuerCompany)
-                .ThenInclude(ic => ic.IssuerBankAccount)
-                .Include(i => i.IssuerCompany)
-                    .ThenInclude(ic => ic.CompanyLegalForm)
-                .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
+                           .AsNoTracking()
+                           .Include(i => i.InvoicesDetails)
+                           .Include(i => i.PostalCode)
+                               .ThenInclude(pc => pc.Country)
+                           .Include(i => i.PostalCode)
+                               .ThenInclude(pc => pc.Provincie)
+                           .Include(i => i.IssuerCompany)
+                               .ThenInclude(ic => ic.IssuerBankAccount)
+                           .Include(i => i.IssuerCompany)
+                               .ThenInclude(ic => ic.CompanyLegalForm)
+                           .Include(i => i.ClientIdClientContactsNavigation)
+                           .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
 
             if (invoice == null)
                 return null;
+
+            CompanyInfo? company = null;
+            if (invoice.CompanyId.HasValue)
+            {
+                company = await _db.CompanyInfo
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.CompanyId == invoice.CompanyId.Value, ct);
+            }
 
             var statusName = await _db.InvoiceStatusLookup
                 .AsNoTracking()
@@ -214,7 +223,7 @@ namespace ServiceCore
                 }
             }
 
-            var detail = NewDetailBo(invoice, statusName, defaultIban, defaultBic);
+            var detail = NewDetailBo(invoice, statusName, defaultIban, defaultBic, company);
 
             foreach (var detailRow in invoice.InvoicesDetails)
             {
@@ -228,7 +237,7 @@ namespace ServiceCore
             return detail;
         }
 
-        private static InvoiceDetailBO NewDetailBo(Invoices invoice, string statusName, string? defaultIban, string? defaultBic)
+        private static InvoiceDetailBO NewDetailBo(Invoices invoice, string statusName, string? defaultIban, string? defaultBic, CompanyInfo? company)
         {
             var postal = invoice.PostalCode;
             var issuer = invoice.IssuerCompany;
@@ -264,6 +273,8 @@ namespace ServiceCore
                 ClientCity = postal?.Gemeente,
                 ClientCountryName = postal?.Country?.LandNaam,
                 ClientVatNumber = invoice.VatNumber,
+                ClientEnterpriseNumber = company?.Ondernemingsnummer,
+                ClientEmail = invoice.ClientIdClientContactsNavigation?.Email ?? company?.Email,
                 BankAccount = invoice.BankAccount,
                 ExtraInfo = invoice.ExtraInfo,
                 HeaderText = invoice.HeaderDescription,
