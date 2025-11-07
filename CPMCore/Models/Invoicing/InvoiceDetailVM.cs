@@ -22,6 +22,8 @@ namespace CPMCore.Models.Invoicing
         public decimal? PaidAmount { get; set; }
         public decimal? Balance { get; set; }
         public IReadOnlyList<InvoiceDetailLineVM> Lines { get; set; } = Array.Empty<InvoiceDetailLineVM>();
+        public IReadOnlyList<InvoiceEmailLogItemVM> EmailLogs { get; set; } = Array.Empty<InvoiceEmailLogItemVM>();
+        public DateTime? LastEmailSentAt { get; set; }
     }
 
     public class InvoicePartyVM

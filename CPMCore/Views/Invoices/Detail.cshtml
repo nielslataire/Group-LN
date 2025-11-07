@@ -1,28 +1,81 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceDetailVM
+@using System.Linq
+@using System.Globalization
 @{
-    ViewData["Title"] = Model.PublicId ?? $"Factuur #{Model.Id}";
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
     var issuerId = ViewBag.CompanyId as int?;
+    var issuerName = (ViewBag.CompanyName as string) ?? Model.Issuer.LegalName ?? Model.Issuer.Name;
+    var displayId = string.IsNullOrWhiteSpace(Model.PublicId) ? $"Factuur #{Model.Id}" : Model.PublicId;
+    ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName) ? displayId : $"{issuerName} - {displayId}";
+}
+@functions {
+    string StatusNl(string s) => (s ?? "").Trim() switch
+    {
+        "Draft" => "Concept",
+        "Issued" => "Genummerd",
+        "Sent" => "Verzonden",
+        "PartiallyPaid" => "Deels betaald",
+        "Paid" => "Betaald",
+        "Overdue" => "Vervallen",
+        "Cancelled" => "Geannuleerd",
+        "" => "Onbekend",
+        _ => s
+    };
+
+    string BadgeClassNl(string nl) => (nl ?? "").ToLower() switch
+    {
+        "concept" => "badge bg-warning text-dark",
+        "genummerd" => "badge bg-secondary",
+        "verzonden" => "badge bg-primary",
+        "deels betaald" => "badge bg-info",
+        "betaald" => "badge bg-success",
+        "vervallen" => "badge bg-danger",
+        "geannuleerd" => "badge bg-dark",
+        _ => "badge bg-light text-dark"
+    };
 }
 
-<div class="row mb-4">
-    <div class="col">
-        <h1 class="fw-bold mb-1">@ViewData["Title"]</h1>
-        <p class="text-muted mb-0">Status: <span class="badge bg-secondary">@Model.Status</span></p>
-        <p class="text-muted">Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy") @if (Model.ExpirationDate.HasValue){
-        <span class="ms-2">| Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")</span>
-                }
-</p>
-    </div>
-    <div class="col-auto align-self-start">
-        <div class="btn-group" role="group">
-            <a class="btn btn-outline-primary" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-1"></i> Download PDF</a>
-            <a class="btn btn-outline-secondary" asp-action="Index" asp-route-issuerCompanyId="@issuerId">Terug naar overzicht</a>
+@section PageStyle
+{
+    <style>
+        .invoice-lines-table th,
+        .invoice-lines-table td {
+            padding-left: 18pt;
+            padding-right: 18pt;
+        }
+    </style>
+}
+
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <div class="row align-items-center">
+                <div class="col-sm-auto d-flex align-items-center">
+                    <a asp-action="Index" asp-route-issuerCompanyId="@issuerId" class="text-decoration-none text-reset d-flex align-items-center">
+                        <i class="bx bx-chevron-left fs-1"></i>
+                    </a>
+                </div>
+                <div class="col">
+                    <h1 class="fw-bold mb-0">@Model.PublicId</h1>
+                    <h5 class="mb-4 mt-0">van @Model.Issuer.Name aan @Model.Client.Name </h5>
+                  
+                </div>
+               
+            </div>
+        </div>
+        <div class="col-auto align-self-start">
+            <div class="btn-group" role="group">
+                <a class="btn btn-default btn-md px-3" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-2"></i> Download PDF</a>
+               
+            </div>
         </div>
     </div>
 </div>
 
+
 <div class="row">
-    <div class="col-lg-6 mb-3">
+    <div class="col-lg-4 mb-3">
         <div class="card h-100">
             <div class="card-header">
                 <h5 class="card-title mb-0">Factuurverstrekker</h5>
@@ -47,12 +100,7 @@
                 
                     <br />
                 }
-                @if (!string.IsNullOrWhiteSpace(Model.Issuer.Country))
-                {
-                    @Model.Issuer.Country
-                
-                    <br />
-                }
+               
                 @if (!string.IsNullOrWhiteSpace(Model.Issuer.VatNumber))
                 {
                     <span>BTW: @Model.Issuer.VatNumber</span>
@@ -72,7 +120,7 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-6 mb-3">
+    <div class="col-lg-4 mb-3">
         <div class="card h-100">
             <div class="card-header">
                 <h5 class="card-title mb-0">Geadresseerde</h5>
@@ -104,11 +152,29 @@
             </div>
         </div>
     </div>
+    <div class="col-lg-4 mb-3">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Details</h5>
+            </div>
+            <div class="card-body">
+                Factuurnummer: <strong>@Model.PublicId</strong><br />
+                Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy")<br />
+                Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")<br />
+                Status: <span class="badge bg-secondary">@Model.Status</span>
+
+             
+            </div>
+        </div>
+    </div>
 </div>
 
 @if (!string.IsNullOrWhiteSpace(Model.HeaderText) || !string.IsNullOrWhiteSpace(Model.DetailText))
 {
     <div class="card mb-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Omschrijving</h5>
+        </div>
         <div class="card-body">
             @if (!string.IsNullOrWhiteSpace(Model.HeaderText))
             {
@@ -128,7 +194,7 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped mb-0">
+            <table class="table table-striped mb-0 invoice-lines-table">
                 <thead class="table-light">
                     <tr>
                         <th>Omschrijving</th>
@@ -145,10 +211,10 @@
                         <tr>
                             <td>@line.Text</td>
                             <td>@line.GroupName</td>
-                            <td class="text-end">@line.NetAmount.ToString("€ 0.00")</td>
-                            <td class="text-end">@line.VatRate.ToString("0.##") %</td>
-                            <td class="text-end">@line.VatAmount.ToString("€ 0.00")</td>
-                            <td class="text-end">@line.GrossAmount.ToString("€ 0.00")</td>
+                            <td class="text-end">@line.NetAmount.ToString("C", culture)</td>
+                            <td class="text-end">@line.VatRate.ToString("0.##", culture) %</td>
+                            <td class="text-end">@line.VatAmount.ToString("C", culture)</td>
+                            <td class="text-end">@line.GrossAmount.ToString("C", culture)</td>
                         </tr>
                     }
                 </tbody>
@@ -170,16 +236,16 @@
                     }
                 </div>
                 <div class="col-auto text-end">
-                    <div>@Model.TotalExclVat.ToString("€ 0.00")</div>
-                    <div>@Model.TotalVat.ToString("€ 0.00")</div>
-                    <div class="fw-bold">@Model.TotalInclVat.ToString("€ 0.00")</div>
+                    <div>@Model.TotalExclVat.ToString("C", culture)</div>
+                    <div>@Model.TotalVat.ToString("C", culture)</div>
+                    <div class="fw-bold">@Model.TotalInclVat.ToString("C", culture)</div>
                     @if (Model.PaidAmount.HasValue)
                     {
-                        <div>@Model.PaidAmount.Value.ToString("€ 0.00")</div>
+                        <div>@Model.PaidAmount.Value.ToString("C", culture)</div>
                     }
                     @if (Model.Balance.HasValue)
                     {
-                        <div>@Model.Balance.Value.ToString("€ 0.00")</div>
+                        <div>@Model.Balance.Value.ToString("C", culture)</div>
                     }
                 </div>
             </div>
@@ -202,3 +268,51 @@
         </div>
     </div>
 }
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Verzendgeschiedenis</h5>
+        @if (Model.LastEmailSentAt.HasValue)
+        {
+            <span class="badge bg-success-subtle text-success">Laatst op @Model.LastEmailSentAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+        }
+        else
+        {
+            <span class="badge bg-light text-body-secondary">Nog geen e-mails</span>
+        }
+    </div>
+    <div class="card-body p-0">
+        @if (Model.EmailLogs.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-nowrap">Datum</th>
+                            <th>Ontvanger</th>
+                            <th>CC</th>
+                            <th>Onderwerp</th>
+                            <th class="text-nowrap">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.EmailLogs.OrderByDescending(l => l.SentAt))
+                        {
+                            <tr>
+                                <td>@log.SentAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@log.To</td>
+                                <td>@(string.IsNullOrWhiteSpace(log.Cc) ? "-" : log.Cc)</td>
+                                <td class="text-break">@log.Subject</td>
+                                <td><span class="badge bg-light text-body-secondary">@log.Status</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="p-3 text-muted">Er zijn nog geen e-mailverzendingen geregistreerd voor deze factuur.</div>
+        }
+    </div>
+</div>

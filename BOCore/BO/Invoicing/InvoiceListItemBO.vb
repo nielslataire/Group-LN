@@ -8,5 +8,6 @@
     Public Property GrossTotal As Decimal?
     Public Property Paid As Decimal
     Public Property Balance As Decimal?
+    Public Property IsCreditNote As Boolean
 
 End Class

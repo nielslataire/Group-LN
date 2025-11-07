@@ -20,12 +20,13 @@ using System.Text;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
+using SmartBreadcrumbs.Nodes;
 
 namespace CPMCore.Controllers
 {
     public class InvoicesController : Controller
     {
+        private const string ControllerName = "Invoices";
         private readonly IInvoiceQueryService _invoices;
         private readonly ICompanyQueryService _companies;
         private readonly ILogger<InvoicesController> _logger;
@@ -98,6 +99,7 @@ namespace CPMCore.Controllers
                     InvoiceNumber = parts.Number,
                     InvoiceMonth = parts.Month,
                     InvoiceYear = parts.Year,
+                    IsCreditNote = DetermineCreditNote(x.IsCreditNote, x.StatusName, x.GrossTotal),
                     InvoiceSortValue = sortValue
                 };
             })
@@ -107,6 +109,7 @@ namespace CPMCore.Controllers
 
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerCompanyId);
             ViewBag.CompanyId = issuerCompanyId;
+            SetIndexBreadcrumb(issuerCompanyId, ViewBag.CompanyName as string);
             return View(vms);
         }
 
@@ -124,6 +127,19 @@ namespace CPMCore.Controllers
             }
 
             var vm = MapDetail(detail);
+            var emailLogs = await _communication.GetEmailLogsAsync(detail.Id, ct);
+            var logItems = emailLogs
+                .Select(log => new InvoiceEmailLogItemVM
+                {
+                    SentAt = log.SentAt,
+                    To = log.ToAddress,
+                    Cc = log.CcAddress,
+                    Subject = log.Subject,
+                    Status = log.Status
+                })
+                .ToList();
+            vm.EmailLogs = logItems;
+            vm.LastEmailSentAt = logItems.FirstOrDefault()?.SentAt;
             var issuerId = issuerCompanyId ?? detail.IssuerCompanyId;
 
             if (issuerId > 0)
@@ -131,6 +147,9 @@ namespace CPMCore.Controllers
                 ViewBag.CompanyId = issuerId;
                 ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
             }
+            var companyDisplay = (ViewBag.CompanyName as string) ?? vm.Issuer.LegalName ?? vm.Issuer.Name;
+            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            SetDetailBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
 
             return View(vm);
         }
@@ -179,7 +198,7 @@ namespace CPMCore.Controllers
 
         //FACTUUR VERZENDEN (GET)
         [HttpGet]
-        public async Task<IActionResult> Send(int id, int? issuerCompanyId = null, CancellationToken ct = default)
+        public async Task<IActionResult> Send(int id, int? issuerCompanyId = null, string? mode = null, CancellationToken ct = default)
         {
             var detail = await _invoices.GetDetailAsync(id, ct);
             if (detail == null)
@@ -199,14 +218,17 @@ namespace CPMCore.Controllers
                     : RedirectToAction(nameof(Index));
             }
 
-            var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: true, checkPeppol: true, ct);
+            var formMode = ParseSendMode(mode);
+            var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: true, checkPeppol: true, formMode, ct);
 
             var issuerId = issuerCompanyId ?? issuer.Id;
             if (issuerId > 0)
             {
                 await SetIssuerViewBagsAsync(issuerId, ct);
             }
-
+            var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
+            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            SetSendBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
             return View(vm);
         }
 
@@ -215,6 +237,9 @@ namespace CPMCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Send(InvoiceSendVM form, CancellationToken ct = default)
         {
+            var submitMode = Request?.Form?["submitMode"].ToString();
+            var isCopyRequest = form.IsCopyRequest || string.Equals(submitMode, "copy", StringComparison.OrdinalIgnoreCase);
+            form.IsCopyRequest = isCopyRequest;
             if (!ModelState.IsValid)
             {
                 // fall through to populate later
@@ -234,7 +259,15 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: false, checkPeppol: true, ct);
+            var formMode = isCopyRequest ? InvoiceSendFormMode.Copy : InvoiceSendFormMode.Standard;
+            if (isCopyRequest)
+            {
+                form.AttachPdf = true;
+                form.AttachUbl = false;
+                form.SendToPeppol = false;
+            }
+
+            var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: false, checkPeppol: true, formMode, ct);
             vm.To = form.To;
             vm.Cc = form.Cc;
             vm.Subject = form.Subject;
@@ -242,8 +275,13 @@ namespace CPMCore.Controllers
             vm.AttachPdf = form.AttachPdf;
             vm.AttachUbl = form.AttachUbl;
             vm.SendToPeppol = form.SendToPeppol && vm.CanSendViaPeppol;
+            vm.IsCopyRequest = isCopyRequest;
+            vm.ForcePdfOnly = isCopyRequest;
 
             await SetIssuerViewBagsAsync(vm.IssuerCompanyId, ct);
+            var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
+            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            SetSendBreadcrumb(vm.IssuerCompanyId, companyDisplay, vm.InvoiceId, detailTitle);
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -280,7 +318,7 @@ namespace CPMCore.Controllers
                     Encoding.UTF8.GetBytes(ublDocument.Xml),
                     "application/xml"));
             }
-
+            var sentAtUtc = DateTime.UtcNow;
             try
             {
                 await _emailSender.SendEmailAsync(vm.To, vm.Subject, vm.Body, attachments, vm.Cc);
@@ -291,9 +329,10 @@ namespace CPMCore.Controllers
                     CcAddress = vm.Cc,
                     Subject = vm.Subject,
                     ProviderId = Guid.NewGuid().ToString(),
-                    SentAt = DateTime.UtcNow,
+                    SentAt = sentAtUtc,
                     Status = "Sent"
                 }, ct);
+                await _cmd.MarkAsSentAsync(detail.Id, sentAtUtc, ct);
                 AddMessage("success", "E-mail verzonden.", "Factuur");
             }
             catch (Exception ex)
@@ -349,7 +388,7 @@ namespace CPMCore.Controllers
                 }
             }
 
-            return RedirectToAction(nameof(Send), new { id = detail.Id, issuerCompanyId = vm.IssuerCompanyId });
+            return RedirectToAction(nameof(Send), new { id = detail.Id, issuerCompanyId = vm.IssuerCompanyId, mode = isCopyRequest ? "copy" : null });
         }
 
         // DELETE (POST)
@@ -1144,6 +1183,7 @@ namespace CPMCore.Controllers
             };
 
             vm.Lines = bo.Lines.Select(MapDetailLine).ToList();
+            vm.IsCreditNote = DetermineCreditNote(bo.IsCreditNote, bo.StatusName, bo.TotalInclVat);
             return vm;
         }
 
@@ -1182,7 +1222,7 @@ namespace CPMCore.Controllers
             return $"{line1}, {line2}";
         }
 
-        private async Task<InvoiceSendVM> CreateSendViewModelAsync(InvoiceDetailBO detail, IssuerCompanyBO issuer, bool includeDefaults, bool checkPeppol, CancellationToken ct)
+        private async Task<InvoiceSendVM> CreateSendViewModelAsync(InvoiceDetailBO detail, IssuerCompanyBO issuer, bool includeDefaults, bool checkPeppol, InvoiceSendFormMode mode, CancellationToken ct)
         {
             var vm = new InvoiceSendVM
             {
@@ -1212,9 +1252,19 @@ namespace CPMCore.Controllers
                 AttachUbl = detail.AttachUblByDefault
             };
 
+            vm.IsCopyRequest = mode == InvoiceSendFormMode.Copy;
+            vm.ForcePdfOnly = vm.IsCopyRequest;
+
+            if (vm.IsCopyRequest)
+            {
+                vm.AttachPdf = true;
+                vm.AttachUbl = false;
+                vm.SendToPeppol = false;
+            }
+
             if (includeDefaults)
             {
-                vm.To = detail.ClientEmail ?? string.Empty;
+                vm.To = detail.ClientEmail?.Trim() ?? string.Empty;
                 var templateModel = BuildEmailTemplateModel(detail, issuer, vm.BankAccount, vm.Currency);
 
                 var subjectTemplate = issuer.EmailSubjectTemplate;
@@ -1241,6 +1291,10 @@ namespace CPMCore.Controllers
                 else
                 {
                     vm.Body = BuildDefaultEmailBody(detail, issuer, vm.Currency, vm.BankAccount);
+                }
+                if (vm.IsCopyRequest && !string.IsNullOrWhiteSpace(vm.Subject))
+                {
+                    vm.Subject = $"Kopie - {vm.Subject}";
                 }
             }
 
@@ -1292,7 +1346,7 @@ namespace CPMCore.Controllers
                     }
 
                     vm.CanSendViaPeppol = vm.PeppolAccountFound;
-                    if (includeDefaults)
+                    if (includeDefaults && !vm.IsCopyRequest)
                         vm.SendToPeppol = vm.PeppolAccountFound;
                 }
                 else
@@ -1305,10 +1359,81 @@ namespace CPMCore.Controllers
             return vm;
         }
 
+        private static InvoiceSendFormMode ParseSendMode(string? mode)
+        {
+            return string.Equals(mode, "copy", StringComparison.OrdinalIgnoreCase)
+                ? InvoiceSendFormMode.Copy
+                : InvoiceSendFormMode.Standard;
+        }
+
+
         private async Task SetIssuerViewBagsAsync(int issuerId, CancellationToken ct)
         {
             ViewBag.CompanyId = issuerId;
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerId, ct);
+        }
+
+        private static string BuildInvoiceDisplayTitle(string? issuerName, string? publicId, int invoiceId)
+        {
+            var displayId = string.IsNullOrWhiteSpace(publicId)
+                ? $"Factuur #{invoiceId}"
+                : publicId.Trim();
+            var issuerDisplay = string.IsNullOrWhiteSpace(issuerName) ? null : issuerName.Trim();
+
+            return issuerDisplay is null
+                ? displayId
+                : $"{issuerDisplay} - {displayId}";
+        }
+
+        private static MvcBreadcrumbNode CreateHomeNode()
+        {
+            return new MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        }
+
+        private MvcBreadcrumbNode CreateIndexNode(int issuerId, string? companyName)
+        {
+            var home = CreateHomeNode();
+            var title = string.IsNullOrWhiteSpace(companyName) ? "Facturen" : $"Facturen - {companyName.Trim()}";
+            var index = new MvcBreadcrumbNode(nameof(Index), ControllerName, title)
+            {
+                Parent = home,
+                RouteValues = issuerId > 0 ? new { issuerCompanyId = issuerId } : null
+            };
+            return index;
+        }
+
+        private void SetIndexBreadcrumb(int issuerId, string? companyName)
+        {
+            ViewData["BreadcrumbNode"] = CreateIndexNode(issuerId, companyName);
+        }
+
+        private void SetDetailBreadcrumb(int issuerId, string? companyName, int invoiceId, string detailTitle)
+        {
+            var index = CreateIndexNode(issuerId, companyName);
+            var title = string.IsNullOrWhiteSpace(detailTitle) ? "Factuur detail" : detailTitle;
+            var detail = new MvcBreadcrumbNode(nameof(Detail), ControllerName, title)
+            {
+                Parent = index,
+                RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
+            };
+            ViewData["BreadcrumbNode"] = detail;
+        }
+
+        private void SetSendBreadcrumb(int issuerId, string? companyName, int invoiceId, string detailTitle)
+        {
+            var index = CreateIndexNode(issuerId, companyName);
+            var title = string.IsNullOrWhiteSpace(detailTitle) ? "Factuur detail" : detailTitle;
+            var detail = new MvcBreadcrumbNode(nameof(Detail), ControllerName, title)
+            {
+                Parent = index,
+                RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
+            };
+            var send = new MvcBreadcrumbNode(nameof(Send), ControllerName, "Verzenden")
+            {
+                Parent = detail,
+                RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
+            };
+            ViewData["BreadcrumbNode"] = send;
         }
 
         private object BuildEmailTemplateModel(InvoiceDetailBO detail, IssuerCompanyBO issuer, string? bankAccount, string currency)
@@ -1475,6 +1600,19 @@ namespace CPMCore.Controllers
                 _ => string.IsNullOrWhiteSpace(status) ? "Onbekend" : status
             };
         }
+        private static bool DetermineCreditNote(bool isCreditSeries, string? status, decimal? totalInclVat)
+        {
+            if (isCreditSeries)
+                return true;
+
+            if (!string.IsNullOrWhiteSpace(status) && status.Contains("credit", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (totalInclVat.HasValue && totalInclVat.Value < 0m)
+                return true;
+
+            return false;
+        }
         private static string BuildAddress(string? street, string? house) =>
     string.IsNullOrWhiteSpace(street) ? "" : (street + (string.IsNullOrWhiteSpace(house) ? "" : $" {house}")).Trim();
 
@@ -1493,7 +1631,11 @@ namespace CPMCore.Controllers
             return $"{line1} {line2}";
         }
 
-  
+        public enum InvoiceSendFormMode
+        {
+            Standard,
+            Copy
+        }
 
     }
 }

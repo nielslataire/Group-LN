@@ -50,6 +50,7 @@ Public Class InvoiceDetailBO
     Public Property TotalInclVat As Decimal
     Public Property PaidAmount As Decimal?
     Public Property Balance As Decimal?
+    Public Property IsCreditNote As Boolean
 
     Public Property Lines As List(Of InvoiceLineBO)
 End Class

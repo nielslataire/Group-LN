@@ -1,8 +1,16 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceSendVM
+@using System.Globalization
 @{
     ViewData["Title"] = "Factuur verzenden";
     var issuerId = ViewBag.CompanyId as int?;
     var hasEnterpriseIdentifier = !string.IsNullOrWhiteSpace(Model.ClientVatNumber) || !string.IsNullOrWhiteSpace(Model.ClientEnterpriseNumber);
+    var isCopyMode = Model.IsCopyRequest;
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/summernote/summernote-bs5.css" />
 }
 
 <div class="row mb-4">
@@ -21,6 +29,18 @@
             {
                 <span class="badge bg-warning-subtle text-warning fw-semibold">Peppol controle vereist</span>
             }
+            @if (Model.LastEmailSentAt.HasValue)
+            {
+                <span class="badge bg-success-subtle text-success fw-semibold">Laatst verzonden op @Model.LastEmailSentAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+            }
+            else
+            {
+                <span class="badge bg-light text-body-secondary border fw-semibold">Nog niet verzonden</span>
+            }
+            @if (isCopyMode)
+            {
+                <span class="badge bg-info-subtle text-info fw-semibold">Kopie-modus</span>
+            }
         </div>
     </div>
     <div class="col-auto align-self-start">
@@ -38,6 +58,7 @@
             <input asp-for="PeppolAccountFound" type="hidden" />
             <input asp-for="ExistingUblProfile" type="hidden" />
             <input asp-for="ExistingUblVersion" type="hidden" />
+            <input asp-for="IsCopyRequest" type="hidden" />
 
             <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
@@ -91,18 +112,25 @@
                             <div>Deze relatie verwacht digitale facturen. Laat de UBL-bijlage actief en verstuur indien mogelijk via Peppol.</div>
                         </div>
                     }
+                    @if (Model.ForcePdfOnly)
+                    {
+                        <div class="alert alert-info mb-3">
+                            <div class="fw-semibold mb-1">Kopie versturen</div>
+                            <div>In kopie-modus wordt enkel de PDF-bijlage meegestuurd en is Peppol uitgeschakeld.</div>
+                        </div>
+                    }
 
                     <div class="row g-4 align-items-start">
                         <div class="col-md-6">
                             <div class="form-check form-switch">
-                                <input asp-for="AttachPdf" class="form-check-input" />
+                                <input asp-for="AttachPdf" class="form-check-input" disabled="@(Model.ForcePdfOnly ? "disabled" : null)" />
                                 <label asp-for="AttachPdf" class="form-check-label fw-semibold"></label>
                             </div>
                             <div class="small text-muted">Genereert de opgemaakte factuur in PDF-formaat voor de klant.</div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-check form-switch">
-                                <input asp-for="AttachUbl" class="form-check-input" />
+                                <input asp-for="AttachUbl" class="form-check-input" disabled="@(Model.ForcePdfOnly ? "disabled" : null)" />
                                 <label asp-for="AttachUbl" class="form-check-label fw-semibold"></label>
                             </div>
                             <div class="small text-muted">Voegt het UBL-bestand toe dat voldoet aan EN16931 (Peppol BIS Billing 3.0).</div>
@@ -123,7 +151,7 @@
                     {
                         <div class="rounded border p-3 bg-success-subtle">
                             <div class="form-check form-switch mb-1">
-                                <input asp-for="SendToPeppol" class="form-check-input" />
+                                <input asp-for="SendToPeppol" class="form-check-input" disabled="@(Model.ForcePdfOnly ? "disabled" : null)" />
                                 <label asp-for="SendToPeppol" class="form-check-label fw-semibold"></label>
                             </div>
                             <div class="small text-success">@Model.PeppolStatusMessage</div>
@@ -148,10 +176,17 @@
                 <div class="card-footer bg-white border-0 pt-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div class="btn-group" role="group" aria-label="Downloads">
-                            <a class="btn btn-outline-primary" asp-action="Pdf" asp-route-id="@Model.InvoiceId" target="_blank" rel="noopener">Bekijk PDF</a>
-                            <a class="btn btn-outline-primary" asp-action="Ubl" asp-route-id="@Model.InvoiceId">Download UBL</a>
+                            <a class="btn btn-outline-primary" asp-action="Pdf" asp-route-id="@Model.InvoiceId" target="_blank" rel="noopener"><i class="bx bx-show me-1"></i> Bekijk PDF</a>
+                            <a class="btn btn-outline-primary" asp-action="Ubl" asp-route-id="@Model.InvoiceId"><i class="bx bx-download me-1"></i> Download UBL</a>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-lg">Verzenden</button>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-outline-secondary btn-lg" name="submitMode" value="copy" id="sendCopyBtn">
+                                <i class="bx bx-copy-alt me-1"></i> Verstuur kopie
+                            </button>
+                            <button type="submit" class="btn btn-primary btn-lg" name="submitMode" value="standard" id="sendPrimaryBtn">
+                                <i class="bx bx-send me-1"></i> Verzenden
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,43 +198,31 @@
                 <h5 class="card-title mb-0">Factuurdetails</h5>
                 <span class="badge bg-light text-body-secondary">@Model.Currency</span>
             </div>
-            <div class="card-body pb-0">
-                <p class="text-muted small mb-0">Uitgever</p>
-                <p class="fw-semibold mb-3">@Model.IssuerName</p>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p class="text-muted small mb-0">Uitgever</p>
+                    <p class="fw-semibold mb-0">@Model.IssuerName</p>
+                </div>
+                <dl class="row g-2 mb-0 small align-items-center">
+                    <dt class="col-6 text-muted">Factuur</dt>
+                    <dd class="col-6 mb-0 text-end">@(Model.PublicId ?? Model.InvoiceId.ToString())</dd>
+                    <dt class="col-6 text-muted">Datum</dt>
+                    <dd class="col-6 mb-0 text-end">@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</dd>
+                    <dt class="col-6 text-muted">Klant</dt>
+                    <dd class="col-6 mb-0 text-end">@Model.ClientName</dd>
+                    <dt class="col-6 text-muted">Bedrag excl.</dt>
+                    <dd class="col-6 mb-0 text-end">@Model.TotalExclVat.ToString("C", culture)</dd>
+                    <dt class="col-6 text-muted">BTW</dt>
+                    <dd class="col-6 mb-0 text-end">@Model.TotalVat.ToString("C", culture)</dd>
+                    <dt class="col-6 text-muted">Totaal</dt>
+                    <dd class="col-6 mb-0 text-end fw-bold">@Model.TotalInclVat.ToString("C", culture)</dd>
+                    @if (!string.IsNullOrWhiteSpace(Model.BankAccount))
+                    {
+                        <dt class="col-6 text-muted">IBAN</dt>
+                        <dd class="col-6 mb-0 text-end fw-semibold">@Model.BankAccount</dd>
+                    }
+                </dl>
             </div>
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">Factuur</span>
-                    <span>@(Model.PublicId ?? Model.InvoiceId.ToString())</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">Datum</span>
-                    <span>@Model.InvoiceDate.ToString("dd/MM/yyyy")</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">Klant</span>
-                    <span class="text-end">@Model.ClientName</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">Bedrag excl.</span>
-                    <span>@Model.TotalExclVat.ToString("€ 0.00")</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">BTW</span>
-                    <span>@Model.TotalVat.ToString("€ 0.00")</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="text-muted">Totaal</span>
-                    <span class="fw-bold">@Model.TotalInclVat.ToString("€ 0.00")</span>
-                </li>
-                @if (!string.IsNullOrWhiteSpace(Model.BankAccount))
-                {
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span class="text-muted">IBAN</span>
-                        <span class="fw-semibold">@Model.BankAccount</span>
-                    </li>
-                }
-            </ul>
         </div>
 
         <div class="card shadow-sm border-0 mb-4">
@@ -338,5 +361,23 @@
 
 @section PageScripts
 {
+    <script src="~/lib/summernote/summernote-bs5.js"></script>
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const copyBtn = document.getElementById('sendCopyBtn');
+            const primaryBtn = document.getElementById('sendPrimaryBtn');
+            const copyField = document.getElementById('IsCopyRequest');
+
+            if (copyBtn && primaryBtn && copyField) {
+                copyBtn.addEventListener('click', function () {
+                    copyField.value = 'true';
+                });
+
+                primaryBtn.addEventListener('click', function () {
+                    copyField.value = 'false';
+                });
+            }
+        });
+    </script>
 }

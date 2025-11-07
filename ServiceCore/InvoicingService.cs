@@ -186,6 +186,8 @@ namespace ServiceCore
                            .Include(i => i.IssuerCompany)
                                .ThenInclude(ic => ic.CompanyLegalForm)
                            .Include(i => i.ClientIdClientContactsNavigation)
+                           .Include(i => i.ClientIdClientAccountNavigation)
+                               .ThenInclude(ca => ca.ClientContacts)
                            .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
 
             if (invoice == null)
@@ -251,6 +253,27 @@ namespace ServiceCore
                 invoiceEmail = company?.InvoiceEmail;
             if (string.IsNullOrWhiteSpace(invoiceEmail))
                 invoiceEmail = contact?.Email ?? company?.Email;
+            if (string.IsNullOrWhiteSpace(invoiceEmail))
+            {
+                var accountContacts = invoice.ClientIdClientAccountNavigation?.ClientContacts;
+                if (accountContacts != null && accountContacts.Count > 0)
+                {
+                    invoiceEmail = accountContacts
+                        .Select(c => c.InvoiceEmail)
+                        .FirstOrDefault(e => !string.IsNullOrWhiteSpace(e));
+
+                    if (string.IsNullOrWhiteSpace(invoiceEmail))
+                    {
+                        invoiceEmail = accountContacts
+                            .Select(c => c.Email)
+                            .FirstOrDefault(e => !string.IsNullOrWhiteSpace(e));
+                    }
+                }
+            }
+
+            invoiceEmail = string.IsNullOrWhiteSpace(invoiceEmail)
+                ? null
+                : invoiceEmail.Trim();
 
             var requiresDigital = contact?.RequiresDigitalInvoice
                 ?? company?.RequiresDigitalInvoice

@@ -410,6 +410,52 @@ namespace ServiceCore
                 throw;
             }
         }
+        public async Task MarkAsSentAsync(int invoiceId, DateTime sentAtUtc, CancellationToken ct = default)
+        {
+            await using var tx = await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                var invoice = await _db.Invoices
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                invoice.SentAt = sentAtUtc;
+
+                var sentStatusId = await _db.InvoiceStatusLookup
+                    .Where(s => s.Name == "Sent")
+                    .Select(s => (byte?)s.Id)
+                    .FirstOrDefaultAsync(ct);
+
+                if (sentStatusId.HasValue)
+                {
+                    string? currentStatusName = null;
+
+                    if (invoice.StatusId.HasValue)
+                    {
+                        currentStatusName = await _db.InvoiceStatusLookup
+                            .Where(s => s.Id == invoice.StatusId)
+                            .Select(s => s.Name)
+                            .FirstOrDefaultAsync(ct);
+                    }
+
+                    if (string.IsNullOrWhiteSpace(currentStatusName)
+                        || string.Equals(currentStatusName, "Issued", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(currentStatusName, "Numbered", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(currentStatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+                    {
+                        invoice.StatusId = sentStatusId.Value;
+                    }
+                }
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(tx, ct);
+            }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(tx, ct);
+                throw;
+            }
+        }
 
 
         // ---------- alleen voor modus SCHIJVEN ----------

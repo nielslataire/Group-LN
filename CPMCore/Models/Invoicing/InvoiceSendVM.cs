@@ -128,6 +128,11 @@ namespace CPMCore.Models.Invoicing
 
         [BindNever]
         public string? ExistingUblVersion { get; set; }
+
+        [BindNever]
+        public bool ForcePdfOnly { get; set; }
+
+        public bool IsCopyRequest { get; set; }
     }
 
     public class InvoiceEmailLogItemVM
