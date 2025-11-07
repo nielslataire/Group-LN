@@ -53,6 +53,12 @@ public partial class CompanyInfo
 
     public string Gemeente { get; set; }
 
+    public string InvoiceEmail { get; set; }
+
+    public bool RequiresDigitalInvoice { get; set; }
+
+    public bool AttachUblByDefault { get; set; }
+
     public virtual ICollection<CompanyContacts> CompanyContacts { get; set; } = new List<CompanyContacts>();
 
     public virtual ICollection<CompanyDepartments> CompanyDepartments { get; set; } = new List<CompanyDepartments>();

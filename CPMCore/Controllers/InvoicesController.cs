@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -1193,6 +1194,9 @@ namespace CPMCore.Controllers
                 ClientVatNumber = detail.ClientVatNumber,
                 ClientEnterpriseNumber = detail.ClientEnterpriseNumber,
                 ClientEmail = detail.ClientEmail,
+                RequiresDigitalInvoice = detail.RequiresDigitalInvoice,
+                DefaultAttachUbl = detail.AttachUblByDefault,
+                IsSupplier = detail.IsSupplier,
                 TotalExclVat = RoundCurrency(detail.TotalExclVat),
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),
@@ -1205,7 +1209,7 @@ namespace CPMCore.Controllers
                     : issuer.DefaultBankAccountIban ?? issuer.EpcIban,
                 Currency = !string.IsNullOrWhiteSpace(issuer.DefaultCurrency) ? issuer.DefaultCurrency : "EUR",
                 AttachPdf = true,
-                AttachUbl = true
+                AttachUbl = detail.AttachUblByDefault
             };
 
             if (includeDefaults)
@@ -1337,7 +1341,8 @@ namespace CPMCore.Controllers
                 Payment = new
                 {
                     BankAccount = bankAccount,
-                    Currency = currency
+                    Currency = currency,
+                    StructuredMessage = detail.StructuredMessage
                 }
             };
         }
@@ -1345,22 +1350,43 @@ namespace CPMCore.Controllers
         private static string BuildDefaultEmailBody(InvoiceDetailBO detail, IssuerCompanyBO issuer, string currency, string? bankAccount)
         {
             var culture = CultureInfo.GetCultureInfo("nl-BE");
-            var amount = detail.TotalInclVat.ToString("C", culture);
+            var amount = WebUtility.HtmlEncode(detail.TotalInclVat.ToString("C", culture));
+            var invoiceId = WebUtility.HtmlEncode(detail.PublicId ?? detail.Id.ToString(CultureInfo.InvariantCulture));
+            var clientName = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(detail.ClientName) ? "klant" : detail.ClientName);
             var builder = new StringBuilder();
-            builder.AppendLine($"Beste {detail.ClientName ?? "klant"},");
-            builder.AppendLine();
-            builder.AppendLine($"In de bijlage vind je factuur {detail.PublicId ?? detail.Id.ToString(CultureInfo.InvariantCulture)} met een totaalbedrag van {amount}.");
+            _ = currency;
+
+            builder.Append("<p>Beste ");
+            builder.Append(clientName);
+            builder.Append(",</p>");
+
+            builder.Append("<p>In de bijlage vind je factuur ");
+            builder.Append(invoiceId);
+            builder.Append(" met een totaalbedrag van <strong>");
+            builder.Append(amount);
+            builder.Append("</strong>.");
+
             if (detail.ExpirationDate.HasValue)
             {
-                builder.AppendLine($"Gelieve dit bedrag te voldoen vóór {detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue):dd/MM/yyyy}.");
+                var dueDate = detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy", culture);
+                builder.Append(" Gelieve dit bedrag te voldoen vóór ");
+                builder.Append(WebUtility.HtmlEncode(dueDate));
+                builder.Append('.');
             }
+
+            builder.Append("</p>");
+
             if (!string.IsNullOrWhiteSpace(bankAccount))
             {
-                builder.AppendLine($"Betaling kan via {bankAccount}.");
+                builder.Append("<p>Betaling kan via <strong>");
+                builder.Append(WebUtility.HtmlEncode(bankAccount));
+                builder.Append("</strong>.</p>");
             }
-            builder.AppendLine();
-            builder.AppendLine("Met vriendelijke groeten,");
-            builder.AppendLine(issuer.Name ?? string.Empty);
+
+            builder.Append("<p>Met vriendelijke groeten,<br/>");
+            builder.Append(WebUtility.HtmlEncode(issuer.Name ?? string.Empty));
+            builder.Append("</p>");
+
             return builder.ToString();
         }
 

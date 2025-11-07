@@ -66,7 +66,11 @@
                         </div>
                         <div class="col-12">
                             <label asp-for="Body" class="form-label"></label>
-                            <textarea asp-for="Body" rows="8" class="form-control"></textarea>
+                            <textarea asp-for="Body"
+                                      rows="8"
+                                      class="form-control"
+                                      data-plugin-summernote
+                                      data-plugin-options='{"height":240,"toolbar":[["style",["bold","italic","underline","clear"]],["para",["ul","ol","paragraph"]],["insert",["link"]],["view",["codeview"]]]}'></textarea>
                             <span asp-validation-for="Body" class="text-danger"></span>
                         </div>
                     </div>
@@ -79,6 +83,14 @@
                             <p class="mb-0 text-muted small">De ontvanger krijgt steeds de PDF en het UBL-bestand volgens Peppol BIS Billing 3.0.</p>
                         </div>
                     </div>
+
+                    @if (Model.RequiresDigitalInvoice)
+                    {
+                        <div class="alert alert-warning mb-3">
+                            <div class="fw-semibold mb-1">Digitale facturatie vereist</div>
+                            <div>Deze relatie verwacht digitale facturen. Laat de UBL-bijlage actief en verstuur indien mogelijk via Peppol.</div>
+                        </div>
+                    }
 
                     <div class="row g-4 align-items-start">
                         <div class="col-md-6">
@@ -94,6 +106,10 @@
                                 <label asp-for="AttachUbl" class="form-check-label fw-semibold"></label>
                             </div>
                             <div class="small text-muted">Voegt het UBL-bestand toe dat voldoet aan EN16931 (Peppol BIS Billing 3.0).</div>
+                            @if (Model.DefaultAttachUbl)
+                            {
+                                <div class="small text-muted mt-1">UBL-bijlage staat standaard aan voor deze relatie.</div>
+                            }
                         </div>
                     </div>
 

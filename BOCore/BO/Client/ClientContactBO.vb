@@ -131,6 +131,38 @@ Public Class ClientContactBO
             m_Email = value
         End Set
     End Property
+    Private m_invoiceEmail As String
+    <EmailAddress>
+    <UIHint("Email")>
+    <Display(Name:="Facturatie e-mail")>
+    Public Property InvoiceEmail() As String
+        Get
+            Return m_invoiceEmail
+        End Get
+        Set(ByVal value As String)
+            m_invoiceEmail = value
+        End Set
+    End Property
+    Private m_requiresDigitalInvoice As Boolean
+    <Display(Name:="Digitale facturatie verplicht")>
+    Public Property RequiresDigitalInvoice() As Boolean
+        Get
+            Return m_requiresDigitalInvoice
+        End Get
+        Set(ByVal value As Boolean)
+            m_requiresDigitalInvoice = value
+        End Set
+    End Property
+    Private m_attachUblByDefault As Boolean
+    <Display(Name:="UBL standaard bijvoegen")>
+    Public Property AttachUblByDefault() As Boolean
+        Get
+            Return m_attachUblByDefault
+        End Get
+        Set(ByVal value As Boolean)
+            m_attachUblByDefault = value
+        End Set
+    End Property
     Private m_iscoowner As Boolean
     Public Property IsCoOwner() As Boolean
         Get

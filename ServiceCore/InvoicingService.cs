@@ -243,6 +243,26 @@ namespace ServiceCore
             var issuer = invoice.IssuerCompany;
             var issuerIban = defaultIban ?? issuer?.IssuerBankAccount?.Iban;
             var issuerBic = defaultBic ?? issuer?.IssuerBankAccount?.Bic;
+            var contact = invoice.ClientIdClientContactsNavigation;
+            var isSupplier = invoice.CompanyId.HasValue;
+
+            string? invoiceEmail = contact?.InvoiceEmail;
+            if (string.IsNullOrWhiteSpace(invoiceEmail))
+                invoiceEmail = company?.InvoiceEmail;
+            if (string.IsNullOrWhiteSpace(invoiceEmail))
+                invoiceEmail = contact?.Email ?? company?.Email;
+
+            var requiresDigital = contact?.RequiresDigitalInvoice
+                ?? company?.RequiresDigitalInvoice
+                ?? false;
+            if (isSupplier)
+                requiresDigital = true;
+
+            var attachUbl = contact?.AttachUblByDefault
+                ?? company?.AttachUblByDefault
+                ?? requiresDigital;
+            if (isSupplier)
+                attachUbl = true;
 
             return new InvoiceDetailBO
             {
@@ -274,7 +294,10 @@ namespace ServiceCore
                 ClientCountryName = postal?.Country?.LandNaam,
                 ClientVatNumber = invoice.VatNumber,
                 ClientEnterpriseNumber = company?.Ondernemingsnummer,
-                ClientEmail = invoice.ClientIdClientContactsNavigation?.Email ?? company?.Email,
+                ClientEmail = invoiceEmail,
+                RequiresDigitalInvoice = requiresDigital,
+                AttachUblByDefault = attachUbl,
+                IsSupplier = isSupplier,
                 BankAccount = invoice.BankAccount,
                 ExtraInfo = invoice.ExtraInfo,
                 HeaderText = invoice.HeaderDescription,

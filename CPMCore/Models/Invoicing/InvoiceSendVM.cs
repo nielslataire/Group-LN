@@ -36,6 +36,15 @@ namespace CPMCore.Models.Invoicing
         public string? ClientEmail { get; set; }
 
         [BindNever]
+        public bool RequiresDigitalInvoice { get; set; }
+
+        [BindNever]
+        public bool DefaultAttachUbl { get; set; }
+
+        [BindNever]
+        public bool IsSupplier { get; set; }
+
+        [BindNever]
         public decimal TotalExclVat { get; set; }
 
         [BindNever]

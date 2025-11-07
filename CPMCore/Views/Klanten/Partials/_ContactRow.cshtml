@@ -49,6 +49,29 @@
                                 })
                         </div>
                     </div>
+                <div class="row align-items-center mt-3">
+                    <div class="col-lg-6 col-xl-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bx bx-envelope-open"></i>
+                            </span>
+                            @Html.TextBoxFor(m => m.InvoiceEmail, new { placeholder = "Facturatie e-mail", @class = "form-control form-control-modern", type = "email" })
+                        </div>
+                        <small class="text-muted">Leeg laten om het algemene e-mailadres te gebruiken.</small>
+                    </div>
+                    <div class="col-lg-3 col-xl-3">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.RequiresDigitalInvoice, new { @class = "form-check-input" })
+                            <label class="form-check-label" for="@Html.IdFor(m => m.RequiresDigitalInvoice)">Digitale facturatie</label>
+                        </div>
+                    </div>
+                    <div class="col-lg-3 col-xl-3">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.AttachUblByDefault, new { @class = "form-check-input" })
+                            <label class="form-check-label" for="@Html.IdFor(m => m.AttachUblByDefault)">UBL bijlage</label>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
         </section>

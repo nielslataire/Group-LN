@@ -36,6 +36,9 @@ Public Class InvoiceDetailBO
     Public Property ClientVatNumber As String
     Public Property ClientEnterpriseNumber As String
     Public Property ClientEmail As String
+    Public Property RequiresDigitalInvoice As Boolean
+    Public Property AttachUblByDefault As Boolean
+    Public Property IsSupplier As Boolean
 
     Public Property BankAccount As String
     Public Property ExtraInfo As String

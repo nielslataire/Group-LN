@@ -429,5 +429,56 @@
 		}
 		});
 	</script>
+	<script>
+		 @if (User?.Identity?.IsAuthenticated ?? false)
+		{
+			<text>
+					 (function () {
+						const keepAliveUrl = '@Url.Action("KeepAlive", "Account")';
+						if (!keepAliveUrl) {
+							return;
+						}
+
+						const intervalMs = 5 * 60 * 1000; // 5 minuten
+						let timeoutId = null;
+
+						function queuePing() {
+							if (timeoutId) {
+								window.clearTimeout(timeoutId);
+							}
+
+							timeoutId = window.setTimeout(sendPing, intervalMs);
+						}
+
+						function sendPing() {
+							fetch(keepAliveUrl, {
+								method: 'GET',
+								credentials: 'same-origin',
+								cache: 'no-store',
+								headers: {
+									'X-Requested-With': 'XMLHttpRequest'
+								}
+							})
+								.catch(function () { return null; })
+								.then(queuePing);
+						}
+
+						document.addEventListener('visibilitychange', function () {
+							if (document.visibilityState === 'visible') {
+								queuePing();
+							} else if (timeoutId) {
+								window.clearTimeout(timeoutId);
+								timeoutId = null;
+							}
+						});
+
+						queuePing();
+					})();
+			
+			</text>
+			
+		}
+	</script>
+
 </body>
 </html>

@@ -213,6 +213,13 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult KeepAlive()
+        {
+            return NoContent();
+        }
+
+        [HttpGet]
         public IActionResult ForgotPasswordConfirmation()
         {
             return View();

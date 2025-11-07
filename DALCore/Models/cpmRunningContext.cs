@@ -656,6 +656,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Forename).HasMaxLength(200);
             entity.Property(e => e.Housenumber).HasMaxLength(10);
             entity.Property(e => e.InvoiceBusnumber).HasMaxLength(10);
+            entity.Property(e => e.InvoiceEmail).HasMaxLength(300);
             entity.Property(e => e.InvoiceHousenumber).HasMaxLength(10);
             entity.Property(e => e.InvoicePostalCodeId).HasColumnName("InvoicePostalCodeID");
             entity.Property(e => e.InvoiceStreet).HasMaxLength(250);
@@ -802,6 +803,7 @@ public partial class cpmRunningContext : DbContext
             entity.HasKey(e => e.CompanyId);
 
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
+            entity.Property(e => e.AttachUblByDefault).HasDefaultValue(true);
             entity.Property(e => e.Bank).HasMaxLength(50);
             entity.Property(e => e.BedrijfsNaam).HasMaxLength(250);
             entity.Property(e => e.Busnummer).HasMaxLength(50);
@@ -813,11 +815,13 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(50)
                 .HasColumnName("GSM");
             entity.Property(e => e.Huisnummer).HasMaxLength(50);
+            entity.Property(e => e.InvoiceEmail).HasMaxLength(300);
             entity.Property(e => e.LandCode).HasMaxLength(3);
             entity.Property(e => e.Ondernemingsnummer).HasMaxLength(50);
             entity.Property(e => e.PostCodeId).HasColumnName("PostCodeID");
             entity.Property(e => e.Postcode).HasMaxLength(50);
             entity.Property(e => e.RegistratieNr).HasMaxLength(50);
+            entity.Property(e => e.RequiresDigitalInvoice).HasDefaultValue(true);
             entity.Property(e => e.Straat).HasMaxLength(250);
             entity.Property(e => e.Telefoon1).HasMaxLength(50);
             entity.Property(e => e.Telefoon2).HasMaxLength(50);

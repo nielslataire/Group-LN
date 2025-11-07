@@ -21,6 +21,7 @@ namespace ServiceCore.Translators
             bo.Housenumber = entity.Housenumber;
             bo.Busnumber = entity.Busnumber;
             bo.Email = entity.Email;
+            bo.InvoiceEmail = entity.InvoiceEmail;
             bo.IsCoOwner = entity.IsCoOwner;
             bo.Phone = entity.Phone;
             bo.Cellphone = entity.Cellphone;
@@ -37,7 +38,8 @@ namespace ServiceCore.Translators
                 // optioneel: default zetten, of niets doen als je BO nullable enum gebruikt
                 // bo.Salutation = Salutation.None;  // only if you have such value
             }
-
+            bo.RequiresDigitalInvoice = entity.RequiresDigitalInvoice;
+            bo.AttachUblByDefault = entity.AttachUblByDefault;
             bo.VATnumber = entity.Vatnumber;
             bo.CompanyName = entity.CompanyName;
             bo.InvoiceAddress = entity.InvoiceAddress;
@@ -109,6 +111,7 @@ namespace ServiceCore.Translators
             entity.Housenumber = bo.Housenumber;
             entity.Busnumber = bo.Busnumber;
             entity.Email = bo.Email;
+            entity.InvoiceEmail = string.IsNullOrWhiteSpace(bo.InvoiceEmail) ? null : bo.InvoiceEmail.Trim();
             entity.IsCoOwner = bo.IsCoOwner;
 
             if (!string.IsNullOrEmpty(bo.Cellphone))
@@ -131,6 +134,8 @@ namespace ServiceCore.Translators
             entity.InvoiceStreet = bo.InvoiceStreet;
             entity.InvoiceHousenumber = bo.InvoiceHousenumber;
             entity.InvoiceBusnumber = bo.InvoiceBusnumber;
+            entity.RequiresDigitalInvoice = bo.RequiresDigitalInvoice;
+            entity.AttachUblByDefault = bo.AttachUblByDefault;
 
             // PostcodeId’s (0 => null)
             if (bo.Postalcode != null && bo.Postalcode.PostcodeId.HasValue && bo.Postalcode.PostcodeId.Value != 0)

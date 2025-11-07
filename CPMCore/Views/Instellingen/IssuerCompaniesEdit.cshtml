@@ -5,6 +5,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/css/detailmenuactionbuttons.css" />
+    <link rel="stylesheet" href="~/lib/summernote/summernote-bs5.css" />
     <style>
         .bodypadding {
             padding-bottom: 80px;
@@ -50,12 +51,16 @@
 </div>
 @section PageScripts {
     <script src="~/lib/ios7-switch/ios7-switch.js"></script>
+    <script src="~/lib/summernote/summernote-bs5.js"></script>
     <partial name="_ValidationScriptsPartial" />
     <partial name="Partials/_IssuerLayoutScripts" />
     <script>
         document.addEventListener('DOMContentLoaded', function () {
            initIosSwitches();
            initBankAccountActions();
+        });
+        $(document).ready(function() {
+          $('#summernote').summernote();
         });
 
         function initIosSwitches() {

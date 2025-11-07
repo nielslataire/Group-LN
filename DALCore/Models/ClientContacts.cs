@@ -51,6 +51,12 @@ public partial class ClientContacts
 
     public int? InvoicePostalCodeId { get; set; }
 
+    public string InvoiceEmail { get; set; }
+
+    public bool RequiresDigitalInvoice { get; set; }
+
+    public bool AttachUblByDefault { get; set; }
+
     public virtual ClientAccount ClientAccount { get; set; }
 
     public virtual ClientOwnerType CoOwnerType { get; set; }
