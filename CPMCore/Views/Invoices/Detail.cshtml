@@ -21,7 +21,7 @@
         "" => "Onbekend",
         _ => s
     };
-
+    string DocumentType(bool isCreditNote) => isCreditNote ? "Creditnota" : "Factuur";
     string BadgeClassNl(string nl) => (nl ?? "").ToLower() switch
     {
         "concept" => "badge bg-warning text-dark",
@@ -58,7 +58,7 @@
                 </div>
                 <div class="col">
                     <h1 class="fw-bold mb-0">@Model.PublicId</h1>
-                    <h5 class="mb-4 mt-0">van @Model.Issuer.Name aan @Model.Client.Name </h5>
+                    <h5 class="mb-4 mt-0">@DocumentType(Model.IsCreditNote) van @Model.Issuer.Name aan @Model.Client.Name </h5>
                   
                 </div>
                
@@ -155,10 +155,10 @@
     <div class="col-lg-4 mb-3">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">Details</h5>
+                <h5 class="card-title mb-0">@DocumentType(Model.IsCreditNote) Details</h5>
             </div>
             <div class="card-body">
-                Factuurnummer: <strong>@Model.PublicId</strong><br />
+                Documentnummer: <strong>@Model.PublicId</strong><br />
                 Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy")<br />
                 Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")<br />
                 Status: <span class="badge bg-secondary">@Model.Status</span>

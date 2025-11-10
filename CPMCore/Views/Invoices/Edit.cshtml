@@ -1,14 +1,273 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceEditVM
+@using System.Globalization
 @{
-    ViewData["Title"] = Model.PublicId ?? $"Concept #{Model.InvoiceId}";
+    var culture = CultureInfo.GetCultureInfo("nl-BE");
+    var issuerName = (ViewBag.CompanyName as string) ?? Model.IssuerName;
+    var isDraft = Model.IsDraft;
+    var limitedEdit = Model.IsLimitedEdit;
+    if (ViewData["Title"] == null)
+    {
+        ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName)
+            ? Model.DisplayId
+            : $"{issuerName} - {Model.DisplayId}";
+    }
 }
-<h1 class="fw-bold mb-2">@ViewData["Title"]</h1>
-<p class="text-muted">Factuur-ID: @Model.InvoiceId</p>
 
-<div class="alert alert-info">
-    Dit is een tijdelijke Edit-pagina. In stap 3 voegen we headerbewerkingen, lijnen en de “Nummeren” actie toe.
-</div>
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css" />
+    <style>
+        .desc-textarea {
+            resize: vertical;
+            min-height: 48px;
+            max-height: 220px;
+            white-space: pre-wrap;
+            overflow: auto;
+        }
 
-<div class="d-flex gap-2">
-    <a asp-action="Create" class="btn btn-outline-secondary">Nieuwe factuur</a>
-</div>
+        .summary-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        .line-desc {
+            min-height: 42px;
+        }
+
+        .table-lines td,
+        .table-lines th {
+            vertical-align: middle;
+        }
+    </style>
+}
+
+<form asp-action="Edit" method="post" class="ecommerce-form action-buttons-fixed">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="InvoiceId" />
+    <input type="hidden" asp-for="IssuerCompanyId" />
+    <input type="hidden" asp-for="StatusCode" />
+
+    @if (!isDraft)
+    {
+        <input type="hidden" asp-for="ExpirationDate" />
+        <input type="hidden" asp-for="BankAccount" />
+    }
+
+    <div class="row">
+        <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+            <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                <div class="row align-items-center">
+                    <div class="col-sm-auto">
+                        <h1 class="fw-bold mb-0">@ViewData["Title"]</h1>
+                        <h5 class="mb-4 mt-0">
+                            @(isDraft
+                                                        ? "Werk de conceptfactuur af voordat je ze definitief maakt."
+                                                        : "Pas de omschrijvingen van deze uitgegeven factuur aan.")
+                        </h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (limitedEdit)
+    {
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="bx bx-info-circle text-4 me-2"></i>
+            <div>
+                Deze factuur is definitief. Enkel de algemene omschrijvingen en lijnomschrijvingen kunnen nog aangepast worden.
+            </div>
+        </div>
+    }
+
+    <div class="row mt-2">
+        <div class="col">
+            <section class="card card-modern mb-4">
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Documenttype</span>
+                            <div class="fw-semibold">@Model.DocumentType</div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Status</span>
+                            <div class="fw-semibold">@Model.StatusLabel</div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Factuurdatum</span>
+                            <div class="fw-semibold">@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Klant</span>
+                            <div class="fw-semibold">@Model.ClientName</div>
+                        </div>
+                    </div>
+                    <div class="row g-4 mt-1">
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Totaal excl. btw</span>
+                            <div class="fw-semibold">@Model.TotalExclVat.ToString("N2", culture)</div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">BTW</span>
+                            <div class="fw-semibold">@Model.TotalVat.ToString("N2", culture)</div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Te betalen</span>
+                            <div class="fw-bold">@Model.TotalInclVat.ToString("N2", culture)</div>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <span class="summary-label">Rekening</span>
+                            <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.BankAccount) ? "—" : Model.BankAccount)</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <div class="col">
+            <section class="card card-modern">
+                <div class="card-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                    <div class="row g-3">
+                        @if (isDraft)
+                        {
+                            <div class="col-md-4">
+                                <label class="form-label" asp-for="ExpirationDate"></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bx bx-calendar"></i></span>
+                                    <input asp-for="ExpirationDate"
+                                           class="form-control form-control-modern js-datepicker"
+                                           type="text"
+                                           asp-format="{0:dd/MM/yyyy}" />
+                                </div>
+                                <span asp-validation-for="ExpirationDate" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label" asp-for="BankAccount"></label>
+                                <input asp-for="BankAccount" class="form-control form-control-modern" />
+                                <span asp-validation-for="BankAccount" class="text-danger"></span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="col-md-4">
+                                <label class="form-label">Vervaldatum</label>
+                                <div class="form-control-plaintext fw-semibold">
+                                    @(Model.ExpirationDate.HasValue? Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture) : "—")
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Bankrekening</label>
+                                <div class="form-control-plaintext fw-semibold">@(string.IsNullOrWhiteSpace(Model.BankAccount) ? "—" : Model.BankAccount)</div>
+                            </div>
+                        }
+
+                        <div class="col-12">
+                            <label class="form-label" asp-for="HeaderDescription"></label>
+                            <textarea asp-for="HeaderDescription" class="form-control form-control-modern desc-textarea" rows="4"></textarea>
+                            <span asp-validation-for="HeaderDescription" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" asp-for="DetailDescription"></label>
+                            <textarea asp-for="DetailDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
+                            <span asp-validation-for="DetailDescription" class="text-danger"></span>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" asp-for="FooterDescription"></label>
+                            <textarea asp-for="FooterDescription" class="form-control form-control-modern desc-textarea" rows="4"></textarea>
+                            <span asp-validation-for="FooterDescription" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Lijnomschrijvingen</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Lines != null && Model.Lines.Count > 0)
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-striped table-lines mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="min-width: 240px;">Omschrijving</th>
+                                        <th class="text-nowrap">BTW %</th>
+                                        <th class="text-end text-nowrap">Netto</th>
+                                        <th class="text-end text-nowrap">BTW</th>
+                                        <th class="text-end text-nowrap">Bruto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < Model.Lines.Count; i++)
+                                    {
+                                        <tr>
+                                            <td class="align-top">
+                                                <input type="hidden" asp-for="Lines[i].LineId" />
+                                                <textarea asp-for="Lines[i].Text" class="form-control form-control-modern desc-textarea line-desc" rows="3"></textarea>
+                                                <span asp-validation-for="Lines[i].Text" class="text-danger"></span>
+                                                @if (!string.IsNullOrWhiteSpace(Model.Lines[i].GroupName))
+                                                {
+                                                    <div class="text-muted small mt-1">@Model.Lines[i].GroupName</div>
+                                                }
+                                            </td>
+                                            <td class="text-nowrap">@Model.Lines[i].VatRate.ToString("N2", culture)</td>
+                                            <td class="text-end">@Model.Lines[i].NetAmount.ToString("N2", culture)</td>
+                                            <td class="text-end">@Model.Lines[i].VatAmount.ToString("N2", culture)</td>
+                                            <td class="text-end">@Model.Lines[i].GrossAmount.ToString("N2", culture)</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">Geen lijnen gevonden voor deze factuur.</div>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row action-buttons mt-4">
+        <div class="col-12 col-md-auto">
+            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                <i class="bx bx-save text-4 me-2"></i> Opslaan
+            </button>
+        </div>
+        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+            <a asp-action="Detail"
+               asp-route-id="@Model.InvoiceId"
+               asp-route-issuerCompanyId="@(ViewBag.CompanyId ?? Model.IssuerCompanyId)"
+               class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+        </div>
+    </div>
+</form>
+
+@section PageScripts {
+    @if (isDraft)
+    {
+        <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
+        <script>
+            (function ($) {
+                $('.js-datepicker').datepicker({
+                    format: 'dd/mm/yyyy',
+                    autoclose: true,
+                    todayHighlight: true,
+                    orientation: 'bottom'
+                });
+            })(jQuery);
+        </script>
+    }
+}

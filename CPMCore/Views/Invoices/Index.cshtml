@@ -31,6 +31,7 @@
         "geannuleerd" => "badge bg-dark",
         _ => "badge bg-light text-dark"
     };
+    string DocumentType(bool isCreditNote) => isCreditNote ? "Creditnota" : "Factuur";
     bool StatusIn(string? status, params string[] codes)
     {
         if (string.IsNullOrWhiteSpace(status)) return false;
@@ -142,6 +143,7 @@
                     <thead>
                         <tr>
                             <th>Factuurnr</th>
+                                <th>Type</th>
                             <th>Klant</th>
                             <th>Datum</th>
                             <th>Status</th>
@@ -162,9 +164,11 @@
                                 var isDraft = StatusIn(r.Status, "Draft");
                                 var isIssued = StatusIn(r.Status, "Issued", "Numbered");
                                 var isSentOrPaid = StatusIn(r.Status, "Sent", "Paid");
+                                var typeLabel = DocumentType(r.IsCreditNote);
 
                                 <tr>
                                     <td data-order="@r.InvoiceSortValue">@displayId</td>
+                                    <td>@typeLabel</td>
                                     <td>@r.ClientName</td>
                                     <td>@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
                                     <td><span class="@BadgeClassNl(StatusNl(r.Status))">@StatusNl(r.Status)</span></td>

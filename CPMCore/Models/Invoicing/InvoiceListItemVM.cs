@@ -12,6 +12,7 @@
         public int? InvoiceNumber { get; set; }
         public int? InvoiceMonth { get; set; }
         public int? InvoiceYear { get; set; }
+        public bool IsCreditNote { get; set; }
         public long InvoiceSortValue { get; set; }
     }
 }

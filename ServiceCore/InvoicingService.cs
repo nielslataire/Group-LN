@@ -124,6 +124,9 @@ namespace ServiceCore
                 join s in _db.Set<InvoiceStatusLookup>().AsNoTracking()
                     on i.StatusId equals s.Id into sj
                 from st in sj.DefaultIfEmpty()
+                join seriesLookup in _db.InvoiceSeries.AsNoTracking()
+                on i.SeriesId equals seriesLookup.Id into seriesJoin
+                from series in seriesJoin.DefaultIfEmpty()
                 orderby i.Date descending
                 select new InvoiceListItemBO
                 {
@@ -134,7 +137,8 @@ namespace ServiceCore
                     StatusId = i.StatusId,
                     StatusName = st != null ? st.Name : null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
-                    Balance = (decimal?)bal.Balance ?? 0m
+                    Balance = (decimal?)bal.Balance ?? 0m,
+                    IsCreditNote = series != null && series.IsCreditNote
                 };
 
             return await query.ToListAsync(ct);
@@ -188,6 +192,7 @@ namespace ServiceCore
                            .Include(i => i.ClientIdClientContactsNavigation)
                            .Include(i => i.ClientIdClientAccountNavigation)
                                .ThenInclude(ca => ca.ClientContacts)
+                               .Include(i => i.Series)
                            .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
 
             if (invoice == null)
@@ -325,6 +330,7 @@ namespace ServiceCore
                 ExtraInfo = invoice.ExtraInfo,
                 HeaderText = invoice.HeaderDescription,
                 DetailText = invoice.DetailText,
+                IsCreditNote = invoice.Series?.IsCreditNote ?? false,
             };
         }
 

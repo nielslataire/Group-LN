@@ -456,6 +456,70 @@ namespace ServiceCore
                 throw;
             }
         }
+        public async Task UpdateAsync(InvoiceUpdateBO bo, CancellationToken ct = default)
+        {
+            if (bo == null) throw new ArgumentNullException(nameof(bo));
+            if (bo.InvoiceId <= 0) throw new ArgumentOutOfRangeException(nameof(bo.InvoiceId));
+
+            await using var tx = await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                var invoice = await _db.Invoices
+                    .FirstOrDefaultAsync(i => i.Id == bo.InvoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                var header = Clean(bo.HeaderDescription);
+                var detail = Clean(bo.DetailDescription);
+                var footer = Clean(bo.FooterDescription);
+                var bank = Clean(bo.BankAccount);
+
+                invoice.HeaderDescription = header;
+                invoice.DetailText = detail;
+                invoice.Text = header ?? detail;
+                invoice.ExtraInfo = footer;
+
+                if (bo.IsDraft)
+                {
+                    invoice.BankAccount = bank;
+                    invoice.ExpirationDate = bo.ExpirationDate;
+                }
+
+                if (bo.Lines != null && bo.Lines.Count > 0)
+                {
+                    var lineUpdates = bo.Lines
+                        .Where(l => l != null && l.LineId > 0)
+                        .GroupBy(l => l.LineId)
+                        .ToDictionary(g => g.Key, g => Clean(g.First().Text) ?? string.Empty);
+
+                    if (lineUpdates.Count > 0)
+                    {
+                        var ids = lineUpdates.Keys.ToList();
+                        var entities = await _db.InvoicesDetails
+                            .Where(d => d.InvoiceId == bo.InvoiceId && ids.Contains(d.Id))
+                            .ToListAsync(ct);
+
+                        foreach (var entity in entities)
+                        {
+                            if (!lineUpdates.TryGetValue(entity.Id, out var text))
+                                continue;
+
+                            if (text.Length > 200)
+                                text = text.Substring(0, 200);
+
+                            entity.Text = text;
+                        }
+                    }
+                }
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(tx, ct);
+            }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(tx, ct);
+                throw;
+            }
+        }
 
 
         // ---------- alleen voor modus SCHIJVEN ----------

@@ -1121,17 +1121,75 @@ namespace CPMCore.Controllers
         }
 
 
-        // EDIT (voor later verder uitwerken)
+        // EDIT
         [HttpGet]
-        public IActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, CancellationToken ct = default)
         {
-            var inv = new InvoiceEditVM();
-            if (inv == null)
+            var detail = await _invoices.GetDetailAsync(id, ct);
+            if (detail == null)
             {
                 AddMessage("error", "Factuur niet gevonden.", "Factuur");
-                return RedirectToAction(nameof(Create));
+                return issuerCompanyId.HasValue
+                    ? RedirectToAction(nameof(Index), new { issuerCompanyId })
+                    : RedirectToAction(nameof(Index));
             }
-            return View(inv);
+
+            var vm = MapEdit(detail);
+            await ConfigureEditContextAsync(detail, ct);
+            return View(vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(InvoiceEditVM vm, CancellationToken ct)
+        {
+            if (vm == null)
+                return RedirectToAction(nameof(Index));
+
+            var detail = await _invoices.GetDetailAsync(vm.InvoiceId, ct);
+            if (detail == null)
+            {
+                AddMessage("error", "Factuur niet gevonden.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var invalidVm = BuildEditViewModel(detail, vm);
+                await ConfigureEditContextAsync(detail, ct);
+                return View(invalidVm);
+            }
+
+            var update = new InvoiceUpdateBO
+            {
+                InvoiceId = vm.InvoiceId,
+                HeaderDescription = vm.HeaderDescription ?? string.Empty,
+                DetailDescription = vm.DetailDescription ?? string.Empty,
+                FooterDescription = vm.FooterDescription ?? string.Empty,
+                BankAccount = vm.BankAccount ?? string.Empty,
+                ExpirationDate = vm.ExpirationDate
+            };
+
+            try
+            {
+                await _cmd.UpdateAsync(update, ct);
+                AddMessage("success", "Factuur bijgewerkt.", "Factuur");
+                return RedirectToAction(nameof(Detail), new { id = vm.InvoiceId, issuerCompanyId = detail.IssuerCompanyId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Update invoice {InvoiceId} blocked", vm.InvoiceId);
+                AddMessage("error", ex.Message, "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Update invoice {InvoiceId} failed", vm.InvoiceId);
+                AddMessage("error", "Factuur kon niet bijgewerkt worden.", "Factuur");
+            }
+
+            var hydrated = BuildEditViewModel(detail, vm);
+            await ConfigureEditContextAsync(detail, ct);
+            return View(hydrated);
         }
 
         // ========== helper ==========
@@ -1185,6 +1243,63 @@ namespace CPMCore.Controllers
             vm.Lines = bo.Lines.Select(MapDetailLine).ToList();
             vm.IsCreditNote = DetermineCreditNote(bo.IsCreditNote, bo.StatusName, bo.TotalInclVat);
             return vm;
+        }
+        private InvoiceEditVM MapEdit(InvoiceDetailBO detail)
+        {
+            if (detail == null) throw new ArgumentNullException(nameof(detail));
+
+            return new InvoiceEditVM
+            {
+                InvoiceId = detail.Id,
+                IssuerCompanyId = detail.IssuerCompanyId,
+                IssuerName = detail.IssuerLegalName ?? detail.IssuerName,
+                PublicId = string.IsNullOrWhiteSpace(detail.PublicId) ? null : detail.PublicId,
+                InvoiceDate = detail.InvoiceDate,
+                ExpirationDate = detail.ExpirationDate,
+                ClientName = detail.ClientName,
+                StatusLabel = TranslateStatus(detail.StatusName),
+                HeaderDescription = NormalizeMultiline(detail.HeaderText),
+                DetailDescription = NormalizeMultiline(detail.DetailText),
+                FooterDescription = NormalizeMultiline(detail.ExtraInfo),
+                BankAccount = detail.BankAccount,
+                TotalExclVat = RoundCurrency(detail.TotalExclVat),
+                TotalVat = RoundCurrency(detail.TotalVat),
+                TotalInclVat = RoundCurrency(detail.TotalInclVat),
+                IsCreditNote = DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat)
+            };
+        }
+
+        private InvoiceEditVM BuildEditViewModel(InvoiceDetailBO detail, InvoiceEditVM posted)
+        {
+            var vm = MapEdit(detail);
+
+            if (posted != null)
+            {
+                vm.HeaderDescription = posted.HeaderDescription;
+                vm.DetailDescription = posted.DetailDescription;
+                vm.FooterDescription = posted.FooterDescription;
+                vm.BankAccount = posted.BankAccount;
+                vm.ExpirationDate = posted.ExpirationDate;
+            }
+
+            return vm;
+        }
+
+        private async Task ConfigureEditContextAsync(InvoiceDetailBO detail, CancellationToken ct)
+        {
+            var issuerId = detail.IssuerCompanyId;
+            if (issuerId > 0)
+                await SetIssuerViewBagsAsync(issuerId, ct);
+            else
+                ViewBag.CompanyId = issuerId;
+
+            var companyDisplay = (ViewBag.CompanyName as string)
+                ?? detail.IssuerLegalName
+                ?? detail.IssuerName;
+
+            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            SetEditBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
+            ViewData["Title"] = detailTitle;
         }
 
         private static InvoiceDetailLineVM MapDetailLine(InvoiceLineBO line)
@@ -1434,6 +1549,24 @@ namespace CPMCore.Controllers
                 RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
             };
             ViewData["BreadcrumbNode"] = send;
+        }
+        private void SetEditBreadcrumb(int issuerId, string? companyName, int invoiceId, string detailTitle)
+        {
+            var index = CreateIndexNode(issuerId, companyName);
+            var title = string.IsNullOrWhiteSpace(detailTitle) ? "Factuur detail" : detailTitle;
+            var detail = new MvcBreadcrumbNode(nameof(Detail), ControllerName, title)
+            {
+                Parent = index,
+                RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
+            };
+
+            var edit = new MvcBreadcrumbNode(nameof(Edit), ControllerName, "Bewerken")
+            {
+                Parent = detail,
+                RouteValues = issuerId > 0 ? new { id = invoiceId, issuerCompanyId = issuerId } : new { id = invoiceId }
+            };
+
+            ViewData["BreadcrumbNode"] = edit;
         }
 
         private object BuildEmailTemplateModel(InvoiceDetailBO detail, IssuerCompanyBO issuer, string? bankAccount, string currency)

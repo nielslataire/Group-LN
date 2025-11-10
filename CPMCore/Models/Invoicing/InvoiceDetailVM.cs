@@ -20,6 +20,7 @@ namespace CPMCore.Models.Invoicing
         public decimal TotalVat { get; set; }
         public decimal TotalInclVat { get; set; }
         public decimal? PaidAmount { get; set; }
+        public bool IsCreditNote { get; set; }
         public decimal? Balance { get; set; }
         public IReadOnlyList<InvoiceDetailLineVM> Lines { get; set; } = Array.Empty<InvoiceDetailLineVM>();
         public IReadOnlyList<InvoiceEmailLogItemVM> EmailLogs { get; set; } = Array.Empty<InvoiceEmailLogItemVM>();
