@@ -437,8 +437,7 @@ namespace CPMCore.Controllers
         }
 
         //VAN DRAFT NAAR DEFINITIEF
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpGet]
         public async Task<IActionResult> Issue(int id, int issuerCompanyId, CancellationToken ct = default)
         {
             try
@@ -885,46 +884,29 @@ namespace CPMCore.Controllers
             return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
         }
 
-        // SAVE (POST) – create (vrije lijnen, schijven, wijzigingsopdrachten)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Save(InvoiceComposeVM vm, CancellationToken ct)
+        private async Task<InvoiceDraftBO> BuildInvoiceDraftBoAsync(InvoiceComposeVM vm, CancellationToken ct)
         {
+            if (vm == null)
+                throw new ArgumentNullException(nameof(vm));
+
             if (vm.IssuerCompanyId <= 0 || vm.PartyId is null || vm.PartyType is null)
-            {
-                AddMessage("error", "Vul issuer en afnemer in.", "Factuur");
-                return await Create(vm.IssuerCompanyId, ct: ct);
-            }
+                throw new InvalidOperationException("Vul issuer en afnemer in.");
 
-            // leveranciersguard: minstens project of contract
             if (vm.PartyType == InvoicePartyType.Supplier && vm.ProjectId is null && vm.SupplierContractId is null)
-            {
-                AddMessage("error", "Kies een project of een contract voor de leveranciersfactuur.", "Factuur");
-                return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
-            }
+                throw new InvalidOperationException("Kies een project of een contract voor de leveranciersfactuur.");
 
-            // === Schijven (oude fallback wanneer er geen aangevinkte lijnen gepost werden) ===
-            var usingStageLines = (vm.Mode == InvoiceMode.Stages && vm.Lines != null && vm.Lines.Any());
+            var usingStageLines = vm.Mode == InvoiceMode.Stages && vm.Lines != null && vm.Lines.Any();
             if (vm.Mode == InvoiceMode.Stages && !usingStageLines)
             {
                 if (vm.PartyType != InvoicePartyType.ClientAccount && vm.PartyType != InvoicePartyType.ClientContact)
-                {
-                    AddMessage("error", "Schijvenfacturatie is enkel voor klanten.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Schijvenfacturatie is enkel voor klanten.");
 
                 if (vm.StageIds == null || vm.StageIds.Count == 0)
-                {
-                    AddMessage("error", "Kies minstens één schijf.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Kies minstens één schijf.");
 
                 var ok = await _ps.AreStagesValidForClientAsync(vm.PartyId.Value, vm.StageIds, ct);
                 if (!ok)
-                {
-                    AddMessage("error", "Een of meer gekozen schijven horen niet bij deze klant of zijn niet factureerbaar.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Een of meer gekozen schijven horen niet bij deze klant of zijn niet factureerbaar.");
             }
 
             var bo = new InvoiceDraftBO
@@ -940,20 +922,15 @@ namespace CPMCore.Controllers
                 IssuerBankAccountId = vm.IssuerBankAccountId,
                 PaymentTermId = vm.PaymentTermId,
                 FooterDescription = vm.FooterDescription
-                
-
             };
 
             if (vm.PartyType == InvoicePartyType.Supplier)
                 (bo.CompanyId, bo.ClientType, bo.ClientId) = (vm.PartyId, null, null);
             else
-                (bo.CompanyId, bo.ClientType, bo.ClientId) = (null, (int)vm.PartyType, vm.PartyId);
-
-            // ===================== MODUS-AFHANKELIJKE LIJNEN =====================
+                (bo.CompanyId, bo.ClientType, bo.ClientId) = (null, (int?)vm.PartyType, vm.PartyId);
 
             if (vm.Mode == InvoiceMode.Free)
             {
-                // Vrije lijnen zoals vroeger
                 bo.Lines = vm.Lines?.Select(l => new InvoiceLineBO
                 {
                     Text = l.Text,
@@ -970,13 +947,9 @@ namespace CPMCore.Controllers
             }
             else if (vm.Mode == InvoiceMode.Stages && usingStageLines)
             {
-                // Nieuwe flow: enkel aangevinkte schijflijnen mee posten
                 var selected = vm.Lines!.Where(x => x.IsSelected).ToList();
                 if (selected.Count == 0)
-                {
-                    AddMessage("error", "Kies minstens één schijf-lijn.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Kies minstens één schijf-lijn.");
 
                 bo.Lines = selected.Select(l => new InvoiceLineBO
                 {
@@ -992,98 +965,69 @@ namespace CPMCore.Controllers
                     UtilityCost = l.UtilityCost
                 }).ToList();
 
-                bo.StageIds = new List<int>(); 
+                bo.StageIds = new List<int>();
             }
             else if (vm.Mode == InvoiceMode.ChangeOrders)
             {
-                // ✅ Wijzigingsopdrachten – server-side herberekenen op basis van percentage (credit toegestaan)
                 if (vm.PartyType != InvoicePartyType.ClientAccount && vm.PartyType != InvoicePartyType.ClientContact)
-                {
-                    AddMessage("error", "Wijzigingsopdrachten zijn enkel voor klanten.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Wijzigingsopdrachten zijn enkel voor klanten.");
 
                 var selected = (vm.Lines ?? Enumerable.Empty<InvoiceLineVM>())
-                               .Where(l => l.IsSelected && l.ChangeOrderDetailId.HasValue)
-                               .ToList();
+                    .Where(l => l.IsSelected && l.ChangeOrderDetailId.HasValue)
+                    .ToList();
 
                 if (selected.Count == 0)
-                {
-                    AddMessage("error", "Kies minstens één wijzigingsopdracht.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Kies minstens één wijzigingsopdracht.");
 
                 var clientId = vm.PartyId!.Value;
-
-                // Basisinfo ophalen (incl. basisbedrag dat positief/negatief kan zijn)
                 var allRows = await _ps.GetApprovedChangeOrdersForClientAsync(clientId, vm.ProjectId, ct);
                 var byDetail = allRows.ToDictionary(x => x.ChangeOrderDetailId, x => x);
 
-                // === Servervalidator ===
-                // a) Dubbels blokkeren
                 var dup = selected.Select(s => s.ChangeOrderDetailId!.Value)
-                                  .GroupBy(id => id)
-                                  .FirstOrDefault(g => g.Count() > 1);
+                    .GroupBy(id => id)
+                    .FirstOrDefault(g => g.Count() > 1);
                 if (dup != null)
-                {
-                    AddMessage("error", "Dezelfde wijzigingsopdracht werd meermaals geselecteerd.", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Dezelfde wijzigingsopdracht werd meermaals geselecteerd.");
 
-                const decimal tol = 0.005m; // 0.5 cent tolerantie tegen afronding
+                const decimal tol = 0.005m;
                 foreach (var l in selected)
                 {
                     var detailId = l.ChangeOrderDetailId!.Value;
 
                     if (!byDetail.TryGetValue(detailId, out var src))
-                    {
-                        AddMessage("error", "Een wijzigingsopdracht is niet (meer) factureerbaar.", "Factuur");
-                        return await Create(vm.IssuerCompanyId, ct: ct);
-                    }
+                        throw new InvalidOperationException("Een wijzigingsopdracht is niet (meer) factureerbaar.");
 
-                    // clamp 0..100
                     var pct = l.StagePercentage;
                     if (pct < 0m || pct > 100m)
-                    {
-                        AddMessage("error", $"Percentage moet tussen 0 en 100 liggen (detail {detailId}).", "Factuur");
-                        return await Create(vm.IssuerCompanyId, ct: ct);
-                    }
+                        throw new InvalidOperationException($"Percentage moet tussen 0 en 100 liggen (detail {detailId}).");
 
-                    var remaining = src.BaseAmountExcl; // kan negatief zijn (credit)
+                    var remaining = src.BaseAmountExcl;
                     var expected = Math.Round(remaining * (pct / 100m), 2, MidpointRounding.AwayFromZero);
 
-                    // tekenconsistentie: credit blijft credit (tenzij 0)
                     if (expected != 0m && Math.Sign(expected) != Math.Sign(remaining))
-                    {
-                        AddMessage("error", $"Teken van het bedrag komt niet overeen met het resterende saldo (detail {detailId}).", "Factuur");
-                        return await Create(vm.IssuerCompanyId, ct: ct);
-                    }
+                        throw new InvalidOperationException($"Teken van het bedrag komt niet overeen met het resterende saldo (detail {detailId}).");
 
-                    // niet méér dan resterend saldo in absolute waarde
                     if (Math.Abs(expected) - Math.Abs(remaining) > tol)
-                    {
-                        AddMessage("error", $"Gevraagde fractie overschrijdt het resterende saldo (detail {detailId}).", "Factuur");
-                        return await Create(vm.IssuerCompanyId, ct: ct);
-                    }
+                        throw new InvalidOperationException($"Gevraagde fractie overschrijdt het resterende saldo (detail {detailId}).");
                 }
-                // === einde validator ===
 
-                // Lijnen opbouwen (negatieve bedragen zijn toegestaan → credit)
                 var boLines = new List<InvoiceLineBO>();
                 foreach (var l in selected)
                 {
                     var detailId = l.ChangeOrderDetailId!.Value;
-                    if (!byDetail.TryGetValue(detailId, out var row)) continue;
+                    if (!byDetail.TryGetValue(detailId, out var row))
+                        continue;
 
                     var pct = Math.Clamp(l.StagePercentage, 0m, 100m);
                     var calc = Math.Round(row.BaseAmountExcl * (pct / 100m), 2, MidpointRounding.AwayFromZero);
 
-                    if (calc == 0m) continue; // niks te boeken
+                    if (calc == 0m)
+                        continue;
 
                     boLines.Add(new InvoiceLineBO
                     {
                         Text = row.Title,
-                        Price = calc,                                // kan negatief zijn (credit)
+                        Price = calc,
                         VatPercentage = row.VatPercentage,
                         LineType = "ChangeOrders",
                         GroupName = "Wijzigingsopdrachten",
@@ -1093,37 +1037,45 @@ namespace CPMCore.Controllers
                 }
 
                 if (boLines.Count == 0)
-                {
-                    AddMessage("error", "Geen geldige bedragen om te boeken (controleer percentages).", "Factuur");
-                    return await Create(vm.IssuerCompanyId, ct: ct);
-                }
+                    throw new InvalidOperationException("Geen geldige bedragen om te boeken (controleer percentages).");
 
                 bo.Lines = boLines;
             }
-
             else
             {
-                // Oude schijven-flow (fallback): service bouwt lijnen adhv StageIds
                 bo.StageIds = vm.StageIds?.ToList() ?? new List<int>();
                 bo.Lines = new List<InvoiceLineBO>();
             }
 
-            // =====================================================================
+            return bo;
+        }
 
-            var (id, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: vm.StartAs == StartStatus.Invoice, ct);
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Save(InvoiceComposeVM vm, CancellationToken ct)
+        {
+            try
+            {
+                var bo = await BuildInvoiceDraftBoAsync(vm, ct);
+                var (id, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: vm.StartAs == StartStatus.Invoice, ct);
 
-            if (publicId != null)
-                AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
-            else
-                AddMessage("success", "Conceptfactuur opgeslagen.", "Factuur");
+                if (publicId != null)
+                    AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
+                else
+                    AddMessage("success", "Conceptfactuur opgeslagen.", "Factuur");
 
-            return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+                return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                AddMessage("error", ex.Message, "Factuur");
+                return await Create(vm.IssuerCompanyId, ct: ct);
+            }
         }
 
 
-        // EDIT
         [HttpGet]
-        public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, CancellationToken ct = default)
+        public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, string? returnUrl = null, CancellationToken ct = default)
         {
             var detail = await _invoices.GetDetailAsync(id, ct);
             if (detail == null)
@@ -1134,7 +1086,19 @@ namespace CPMCore.Controllers
                     : RedirectToAction(nameof(Index));
             }
 
+            var resolvedReturnUrl = DetermineReturnUrl(returnUrl);
+            if (resolvedReturnUrl == null)
+                resolvedReturnUrl = DetermineReturnUrl(Request.Headers["Referer"].ToString());
+
+            if (string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+            {
+                var draftVm = await BuildDraftEditViewModelAsync(detail, null, resolvedReturnUrl, ct);
+                await ConfigureEditContextAsync(detail, ct);
+                return View("EditDraft", draftVm);
+            }
+
             var vm = MapEdit(detail);
+            vm.ReturnUrl = resolvedReturnUrl;
             await ConfigureEditContextAsync(detail, ct);
             return View(vm);
         }
@@ -1153,9 +1117,17 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
             }
 
+            var resolvedReturnUrl = DetermineReturnUrl(vm.ReturnUrl);
+            if (resolvedReturnUrl == null)
+                resolvedReturnUrl = DetermineReturnUrl(Request.Headers["Referer"].ToString());
+
+            if (string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+                return RedirectToAction(nameof(Edit), new { id = vm.InvoiceId, issuerCompanyId = detail.IssuerCompanyId, returnUrl = resolvedReturnUrl });
+
             if (!ModelState.IsValid)
             {
                 var invalidVm = BuildEditViewModel(detail, vm);
+                invalidVm.ReturnUrl = resolvedReturnUrl;
                 await ConfigureEditContextAsync(detail, ct);
                 return View(invalidVm);
             }
@@ -1167,13 +1139,32 @@ namespace CPMCore.Controllers
                 DetailDescription = vm.DetailDescription ?? string.Empty,
                 FooterDescription = vm.FooterDescription ?? string.Empty,
                 BankAccount = vm.BankAccount ?? string.Empty,
-                ExpirationDate = vm.ExpirationDate
+                ExpirationDate = vm.ExpirationDate,
+                IsDraft = string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase)
             };
+
+            if (vm.Lines != null && vm.Lines.Count > 0)
+            {
+                foreach (var line in vm.Lines)
+                {
+                    if (line == null || line.LineId <= 0)
+                        continue;
+
+                    update.Lines.Add(new InvoiceLineUpdateBO
+                    {
+                        LineId = line.LineId,
+                        Text = line.Text ?? string.Empty
+                    });
+                }
+            }
 
             try
             {
                 await _cmd.UpdateAsync(update, ct);
                 AddMessage("success", "Factuur bijgewerkt.", "Factuur");
+                if (!string.IsNullOrEmpty(resolvedReturnUrl))
+                    return LocalRedirect(resolvedReturnUrl);
+
                 return RedirectToAction(nameof(Detail), new { id = vm.InvoiceId, issuerCompanyId = detail.IssuerCompanyId });
             }
             catch (InvalidOperationException ex)
@@ -1188,11 +1179,209 @@ namespace CPMCore.Controllers
             }
 
             var hydrated = BuildEditViewModel(detail, vm);
+            hydrated.ReturnUrl = resolvedReturnUrl;
             await ConfigureEditContextAsync(detail, ct);
             return View(hydrated);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateDraft(InvoiceDraftEditVM vm, CancellationToken ct)
+        {
+            if (vm == null || vm.InvoiceId <= 0)
+                return RedirectToAction(nameof(Index));
+
+            var detail = await _invoices.GetDetailAsync(vm.InvoiceId, ct);
+            if (detail == null)
+            {
+                AddMessage("error", "Factuur niet gevonden.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
+            }
+
+            var resolvedReturnUrl = DetermineReturnUrl(vm.ReturnUrl);
+            if (resolvedReturnUrl == null)
+                resolvedReturnUrl = DetermineReturnUrl(Request.Headers["Referer"].ToString());
+
+            if (!string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+            {
+                AddMessage("error", "Deze factuur is niet langer een concept en kan niet volledig bewerkt worden.", "Factuur");
+                if (!string.IsNullOrEmpty(resolvedReturnUrl))
+                    return LocalRedirect(resolvedReturnUrl);
+
+                return RedirectToAction(nameof(Detail), new { id = vm.InvoiceId, issuerCompanyId = detail.IssuerCompanyId });
+            }
+
+            if (!ModelState.IsValid)
+            {
+                var invalidVm = await BuildDraftEditViewModelAsync(detail, vm, resolvedReturnUrl, ct);
+                await ConfigureEditContextAsync(detail, ct);
+                return View("EditDraft", invalidVm);
+            }
+
+            try
+            {
+                var bo = await BuildInvoiceDraftBoAsync(vm, ct);
+                await _cmd.UpdateDraftAsync(vm.InvoiceId, bo, ct);
+                AddMessage("success", "Conceptfactuur bijgewerkt.", "Factuur");
+                if (!string.IsNullOrEmpty(resolvedReturnUrl))
+                    return LocalRedirect(resolvedReturnUrl);
+
+                return RedirectToAction(nameof(Detail), new { id = vm.InvoiceId, issuerCompanyId = detail.IssuerCompanyId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Update draft invoice {InvoiceId} blocked", vm.InvoiceId);
+                AddMessage("error", ex.Message, "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Update draft invoice {InvoiceId} failed", vm.InvoiceId);
+                AddMessage("error", "Conceptfactuur kon niet bijgewerkt worden.", "Factuur");
+            }
+
+            var hydratedDraft = await BuildDraftEditViewModelAsync(detail, vm, resolvedReturnUrl, ct);
+            await ConfigureEditContextAsync(detail, ct);
+            return View("EditDraft", hydratedDraft);
+        }
+
         // ========== helper ==========
+        private async Task<InvoiceDraftEditVM> BuildDraftEditViewModelAsync(InvoiceDetailBO detail, InvoiceDraftEditVM? posted, string? returnUrl, CancellationToken ct)
+        {
+            if (detail == null) throw new ArgumentNullException(nameof(detail));
+
+            var issuersBo = await _ics.ListActiveIssuersAsync(ct);
+            var termsBo = await _ics.ListPaymentTermsAsync(ct);
+            var vatBo = await _ics.ListVatTypeAsync(ct);
+
+            var selectedIssuerId = posted?.IssuerCompanyId > 0 ? posted!.IssuerCompanyId : detail.IssuerCompanyId;
+            var accountsBo = selectedIssuerId > 0
+                ? await _bank.ListByIssuerAsync(selectedIssuerId, ct)
+                : Array.Empty<IssuerBankAccountBO>();
+
+            var vm = new InvoiceDraftEditVM
+            {
+                InvoiceId = detail.Id,
+                IssuerCompanyId = selectedIssuerId,
+                IssuerName = detail.IssuerLegalName ?? detail.IssuerName,
+                StatusLabel = TranslateStatus(detail.StatusName),
+                PublicId = string.IsNullOrWhiteSpace(detail.PublicId) ? null : detail.PublicId,
+                InvoiceDate = posted?.InvoiceDate ?? detail.InvoiceDate,
+                ExpirationDate = detail.ExpirationDate,
+                StartAs = StartStatus.Draft,
+                Mode = posted?.Mode ?? detail.InvoiceMode ?? InvoiceMode.Free,
+                HeaderDescription = posted?.HeaderDescription ?? NormalizeMultiline(detail.HeaderText),
+                DetailDescription = posted?.DetailDescription ?? NormalizeMultiline(detail.DetailText),
+                FooterDescription = posted?.FooterDescription ?? NormalizeMultiline(detail.ExtraInfo),
+                PaymentTermId = posted?.PaymentTermId ?? detail.PaymentTermId,
+                ProjectId = posted?.ProjectId ?? detail.ProjectId,
+                SupplierContractId = posted?.SupplierContractId ?? detail.SupplierContractId,
+                PaymentGroupId = posted?.PaymentGroupId,
+                VatTypeId = posted?.VatTypeId,
+                IssuerBankAccountId = posted?.IssuerBankAccountId,
+                PartyId = posted?.PartyId,
+                PartyType = posted?.PartyType,
+                PartyDisplayName = posted?.PartyDisplayName ?? detail.ClientName,
+                PartyLookupValue = posted?.PartyLookupValue,
+                Lines = posted?.Lines != null ? posted.Lines.ToList() : MapLinesForCompose(detail.Lines),
+                StageIds = posted?.StageIds != null ? new List<int>(posted.StageIds) : new List<int>(),
+                TotalExclVat = RoundCurrency(detail.TotalExclVat),
+                TotalVat = RoundCurrency(detail.TotalVat),
+                TotalInclVat = RoundCurrency(detail.TotalInclVat),
+                BankAccountIban = detail.BankAccount,
+                VatTypes = vatBo.Select(t => new VatTypeVM(t.Id, t.VATPercentage, t.VATText)).ToList(),
+                Issuers = issuersBo.Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId)).ToList(),
+                PaymentTerms = termsBo.Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days)).ToList()
+            };
+
+            if (vm.PartyId is null || vm.PartyType is null)
+            {
+                if (detail.CompanyId.HasValue)
+                {
+                    vm.PartyId = detail.CompanyId;
+                    vm.PartyType = InvoicePartyType.Supplier;
+                }
+                else if (detail.ClientType.HasValue && detail.ClientId.HasValue)
+                {
+                    vm.PartyId = detail.ClientId;
+                    vm.PartyType = detail.ClientType.Value switch
+                    {
+                        1 => InvoicePartyType.ClientAccount,
+                        2 => InvoicePartyType.ClientContact,
+                        _ => vm.PartyType
+                    };
+                }
+            }
+
+            vm.PartyLookupValue ??= BuildPartyLookupValue(vm.PartyType, vm.PartyId);
+            if (string.IsNullOrWhiteSpace(vm.PartyDisplayName))
+                vm.PartyDisplayName = detail.ClientName;
+
+            if (!vm.VatTypeId.HasValue && vm.VatTypes.Any())
+            {
+                var firstLine = vm.Lines?.FirstOrDefault();
+                if (firstLine != null)
+                {
+                    var match = vm.VatTypes.FirstOrDefault(v => Math.Abs(v.VATpercentage - firstLine.VatPercentage) < 0.001m);
+                    if (match != null)
+                        vm.VatTypeId = match.Id;
+                }
+            }
+
+            if (!vm.IssuerBankAccountId.HasValue && !string.IsNullOrWhiteSpace(detail.BankAccount))
+            {
+                var matchAccount = accountsBo.FirstOrDefault(a => string.Equals(a.Iban, detail.BankAccount, StringComparison.OrdinalIgnoreCase));
+                if (matchAccount != null)
+                    vm.IssuerBankAccountId = matchAccount.Id;
+            }
+
+            vm.IssuerBankAccounts = accountsBo
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(a.DisplayName) ? a.Iban : $"{a.DisplayName} ({a.Iban})",
+                    Selected = vm.IssuerBankAccountId.HasValue && vm.IssuerBankAccountId.Value == a.Id
+                })
+                .ToList();
+
+            vm.ReturnUrl = DetermineReturnUrl(posted?.ReturnUrl ?? returnUrl);
+            return vm;
+        }
+
+        private static List<InvoiceLineVM> MapLinesForCompose(IEnumerable<InvoiceLineBO> lines)
+        {
+            if (lines == null)
+                return new List<InvoiceLineVM>();
+
+            return lines.Select(l => new InvoiceLineVM
+            {
+                Text = l.Text ?? string.Empty,
+                Price = l.Price,
+                VatPercentage = l.VatPercentage,
+                DiscountPercent = l.DiscountPercent,
+                DiscountAmount = l.DiscountAmount,
+                UnitId = l.UnitId,
+                PaymentStageId = l.PaymentStageId,
+                LineType = l.LineType,
+                GroupName = l.GroupName,
+                UtilityCost = l.UtilityCost,
+                ChangeOrderDetailId = l.ChangeOrderDetailId,
+                IsSelected = true
+            }).ToList();
+        }
+
+        private static string? BuildPartyLookupValue(InvoicePartyType? type, int? id)
+        {
+            if (!type.HasValue || !id.HasValue)
+                return null;
+
+            return type.Value switch
+            {
+                InvoicePartyType.ClientAccount => $"ca:{id.Value}",
+                InvoicePartyType.ClientContact => $"cc:{id.Value}",
+                InvoicePartyType.Supplier => $"su:{id.Value}",
+                _ => null
+            };
+        }
         private InvoiceDetailVM MapDetail(InvoiceDetailBO bo)
         {
             if (bo == null) throw new ArgumentNullException(nameof(bo));
@@ -1258,6 +1447,7 @@ namespace CPMCore.Controllers
                 ExpirationDate = detail.ExpirationDate,
                 ClientName = detail.ClientName,
                 StatusLabel = TranslateStatus(detail.StatusName),
+                StatusCode = detail.StatusName ?? string.Empty,
                 HeaderDescription = NormalizeMultiline(detail.HeaderText),
                 DetailDescription = NormalizeMultiline(detail.DetailText),
                 FooterDescription = NormalizeMultiline(detail.ExtraInfo),
@@ -1265,7 +1455,8 @@ namespace CPMCore.Controllers
                 TotalExclVat = RoundCurrency(detail.TotalExclVat),
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),
-                IsCreditNote = DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat)
+                IsCreditNote = DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat),
+                Lines = (detail.Lines ?? Enumerable.Empty<InvoiceLineBO>()).Select(MapLineForEdit).ToList()
             };
         }
 
@@ -1280,10 +1471,24 @@ namespace CPMCore.Controllers
                 vm.FooterDescription = posted.FooterDescription;
                 vm.BankAccount = posted.BankAccount;
                 vm.ExpirationDate = posted.ExpirationDate;
+                if (posted.Lines != null && posted.Lines.Count > 0 && vm.Lines != null && vm.Lines.Count > 0)
+                {
+                    var byId = vm.Lines.ToDictionary(l => l.LineId);
+                    foreach (var line in posted.Lines)
+                    {
+                        if (line == null || line.LineId <= 0)
+                            continue;
+
+                        if (byId.TryGetValue(line.LineId, out var target))
+                            target.Text = line.Text;
+                    }
+                }
             }
 
+            vm.ReturnUrl = DetermineReturnUrl(posted?.ReturnUrl) ?? vm.ReturnUrl;
             return vm;
         }
+
 
         private async Task ConfigureEditContextAsync(InvoiceDetailBO detail, CancellationToken ct)
         {
@@ -1302,7 +1507,7 @@ namespace CPMCore.Controllers
             ViewData["Title"] = detailTitle;
         }
 
-        private static InvoiceDetailLineVM MapDetailLine(InvoiceLineBO line)
+        private static InvoiceLineEditVM MapLineForEdit(InvoiceLineBO line)
         {
             if (line == null) throw new ArgumentNullException(nameof(line));
 
@@ -1315,8 +1520,9 @@ namespace CPMCore.Controllers
             var vat = Math.Round(net * (line.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
             var gross = net + vat;
 
-            return new InvoiceDetailLineVM
+            return new InvoiceLineEditVM
             {
+                LineId = line.Id,
                 Text = line.Text ?? string.Empty,
                 GroupName = line.GroupName,
                 VatRate = line.VatPercentage,
@@ -1328,6 +1534,23 @@ namespace CPMCore.Controllers
             };
         }
 
+        private static InvoiceDetailLineVM MapDetailLine(InvoiceLineBO line)
+        {
+            var editLine = MapLineForEdit(line);
+            return new InvoiceDetailLineVM
+            {
+                Text = editLine.Text,
+                GroupName = editLine.GroupName,
+                VatRate = editLine.VatRate,
+                NetAmount = editLine.NetAmount,
+                VatAmount = editLine.VatAmount,
+                GrossAmount = editLine.GrossAmount,
+                DiscountAmount = editLine.DiscountAmount,
+                DiscountPercent = editLine.DiscountPercent
+            };
+        }
+
+
         private static string? CombineAddress(string? line1, string? line2)
         {
             if (string.IsNullOrWhiteSpace(line1))
@@ -1335,6 +1558,38 @@ namespace CPMCore.Controllers
             if (string.IsNullOrWhiteSpace(line2))
                 return line1;
             return $"{line1}, {line2}";
+        }
+        private string? DetermineReturnUrl(string? returnUrl)
+        {
+            var normalized = NormalizeReturnUrl(returnUrl);
+            if (string.IsNullOrWhiteSpace(normalized))
+                return null;
+
+            if (normalized.StartsWith("/Invoices/Edit", StringComparison.OrdinalIgnoreCase)
+                || normalized.StartsWith("/Invoices/EditDraft", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return normalized;
+        }
+
+        private string? NormalizeReturnUrl(string? returnUrl)
+        {
+            if (string.IsNullOrWhiteSpace(returnUrl))
+                return null;
+
+            if (Url.IsLocalUrl(returnUrl))
+                return returnUrl;
+
+            if (Uri.TryCreate(returnUrl, UriKind.Absolute, out var absolute))
+            {
+                var path = absolute.PathAndQuery;
+                if (Url.IsLocalUrl(path))
+                    return path;
+            }
+
+            return null;
         }
 
         private async Task<InvoiceSendVM> CreateSendViewModelAsync(InvoiceDetailBO detail, IssuerCompanyBO issuer, bool includeDefaults, bool checkPeppol, InvoiceSendFormMode mode, CancellationToken ct)

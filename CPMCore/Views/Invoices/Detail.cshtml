@@ -6,7 +6,11 @@
     var issuerId = ViewBag.CompanyId as int?;
     var issuerName = (ViewBag.CompanyName as string) ?? Model.Issuer.LegalName ?? Model.Issuer.Name;
     var displayId = string.IsNullOrWhiteSpace(Model.PublicId) ? $"Factuur #{Model.Id}" : Model.PublicId;
+    var isDraft = string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase);
+    var isIssued = string.Equals(Model.Status, "Issued", StringComparison.OrdinalIgnoreCase) || string.Equals(Model.Status, "Genummerd", StringComparison.OrdinalIgnoreCase);
+    var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
     ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName) ? displayId : $"{issuerName} - {displayId}";
+    var detailReturnUrl = Url.Action("Detail", "Invoices", new { id = Model.Id, issuerCompanyId = issuerId });
 }
 @functions {
     string StatusNl(string s) => (s ?? "").Trim() switch
@@ -34,7 +38,6 @@
         _ => "badge bg-light text-dark"
     };
 }
-
 @section PageStyle
 {
     <style>
@@ -66,7 +69,28 @@
         </div>
         <div class="col-auto align-self-start">
             <div class="btn-group" role="group">
-                <a class="btn btn-default btn-md px-3" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-2"></i> Download PDF</a>
+                @if (canManageInvoices)
+                {
+                    <a class="btn btn-default btn-md px-3 me-1"
+                       asp-action="Edit"
+                       asp-route-id="@Model.Id"
+                       asp-route-issuerCompanyId="@issuerId"
+                       asp-route-returnUrl="@(detailReturnUrl ?? string.Empty)">
+                        <i class="bx @(isDraft ? "bx-pencil" : "bx-lock") me-2"></i>
+                        Bewerken
+                    </a>
+                }
+                @if (canManageInvoices && isIssued)
+                {
+                    <a class="btn btn-primary btn-md px-3 me-1"
+                       asp-action="Send"
+                       asp-route-id="@Model.Id"
+                       asp-route-issuerCompanyId="@issuerId">
+                        <i class="bx bx-send me-2"></i>
+                        Verzenden
+                    </a>
+                }
+                <a class="btn btn-default btn-md px-3" asp-action="Pdf" asp-route-id="@Model.Id" target="_blank"><i class="fas fa-file-pdf me-2"></i>Download</a>
                
             </div>
         </div>

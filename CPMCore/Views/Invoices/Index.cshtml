@@ -3,6 +3,9 @@
 @{
     var culture = CultureInfo.GetCultureInfo("nl-BE");
     ViewData["Title"] = "Facturen - " + @ViewBag.CompanyName;
+    var currentPath = Context.Request.Path.ToString();
+    var currentQuery = Context.Request.QueryString.ToString();
+    var returnUrl = string.Concat(currentPath, currentQuery);
 }
 @functions {
     // Map Engelstalige status naar NL
@@ -160,14 +163,14 @@
                             }
                             @foreach (var r in Model)
                             {
-                                var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
                                 var isDraft = StatusIn(r.Status, "Draft");
+                                var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
+                                var shownId = isDraft ? string.Empty : displayId;
                                 var isIssued = StatusIn(r.Status, "Issued", "Numbered");
-                                var isSentOrPaid = StatusIn(r.Status, "Sent", "Paid");
                                 var typeLabel = DocumentType(r.IsCreditNote);
 
                                 <tr>
-                                    <td data-order="@r.InvoiceSortValue">@displayId</td>
+                                    <td data-order="@r.InvoiceSortValue">@(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))</td>
                                     <td>@typeLabel</td>
                                     <td>@r.ClientName</td>
                                     <td>@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
@@ -179,39 +182,71 @@
                                         {
                                             <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
                                                asp-action="Edit"
-                                               asp-route-id="@r.Id">
+                                               asp-route-id="@r.Id"
+                                               asp-route-returnUrl="@returnUrl"
+                                               class="ms-1 me-1">
                                                 <i class="bx bx-pencil fs-5"></i>
+                                                <span class="visually-hidden">Bewerken</span>
                                             </a>
-                                            <form asp-action="Issue"
+                                                <a data-placement="top" title="Details" data-original-title="Details"
+                                                   asp-action="Detail"
+                                                   asp-route-id="@r.Id"
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                   class="ms-1 me-1">
+                                                    <i class="bx bx-show fs-5"></i>
+                                                    <span class="visually-hidden">Details</span>
+                                                </a>
+                                            <a data-placement="top" title="Nummeren" data-original-title="Nummeren"
+                                               asp-action="Issue"
+                                               asp-route-id="@r.Id"
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                               class="ms-1 me-1">
+                                                <i class="bx bx-lock fs-5"> </i>
+                                                <span class="visually-hidden">Nummeren</span>
+                                            </a>
+                                            @* <form asp-action="Issue"
                                                   asp-controller="Invoices"
                                                   method="post"
                                                   class="d-inline">
                                                 <input type="hidden" name="id" value="@r.Id" />
                                                 <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
-                                                <button type="submit" class="btn btn-xs btn-success me-1">
-                                                    Definitief
+                                                <button type="submit" class="btn btn-xs btn-success me-1" title="Definitief maken">
+                                                    <i class="bx bx-lock fs-5"></i>
+                                                    <span class="visually-hidden">Definitief</span>
                                                 </button>
-                                            </form>
+                                            </form> *@
                                             <a href="#ModalDeleteInvoice"
                                                class="deleteInvoice"
                                                data-id="@r.Id"
                                                data-issuer="@ViewBag.CompanyId"
-                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="ms-1 me-1">
                                                 <i class="bx bx-trash fs-5"></i>
                                             </a>
                                         }
                                         else if (StatusIn(r.Status, "Issued", "Numbered"))
                                         {
+                                            @if (isAdminUser)
+                                            {
+                                                <a data-placement="top" title="Beperkt bewerken" data-original-title="Bewerken"
+                                                   asp-action="Edit"
+                                                   asp-route-id="@r.Id"
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                   asp-route-returnUrl="@returnUrl"
+                                                   class="ms-1 me-1">
+                                                    <i class="bx bx-pencil fs-5"></i>
+                                                    <span class="visually-hidden">Bewerken</span>
+                                                </a>
+                                            }
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
                                                 <i class="bx bx-show fs-5"></i>
                                             </a>
                                             <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                asp-action="Pdf"
                                                asp-route-id="@r.Id"
-                                               target="_blank">
+                                               target="_blank" class="ms-1 me-1">
                                                 <i class="fa-regular fa-file-pdf  fs-5"></i>
                                             </a>
                                             @if (canManageInvoices)
@@ -219,14 +254,14 @@
                                                 <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
                                                    asp-action="Send"
                                                    asp-route-id="@r.Id"
-                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
                                                     <i class="bx bx-send fs-5"></i>
                                                 </a>
                                                 <a href="#ModalDeleteInvoice"
                                                    class="deleteInvoice"
                                                    data-id="@r.Id"
                                                    data-issuer="@ViewBag.CompanyId"
-                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="ms-1 me-1">
                                                     <i class="bx bx-trash fs-5"></i>
                                                 </a>
                                             }
@@ -236,13 +271,13 @@
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
                                                 <i class="bx bx-show fs-5"></i>
                                             </a>
                                             <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                asp-action="Pdf"
                                                asp-route-id="@r.Id"
-                                               target="_blank">
+                                               target="_blank" class="ms-1 me-1">
                                                 <i class="fa-regular fa-file-pdf  fs-5"></i>
                                             </a>
                                             @if (isAdminUser)
@@ -251,7 +286,7 @@
                                                    class="deleteInvoice"
                                                    data-id="@r.Id"
                                                    data-issuer="@ViewBag.CompanyId"
-                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="ms-1 me-1">
                                                     <i class="bx bx-trash fs-5"></i>
                                                 </a>
                                             }
@@ -261,13 +296,13 @@
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
-                                                <i class="bx bx-show fs-5"></i>
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                <i class="bx bx-show fs-5"> </i>
                                             </a>
                                             <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                asp-action="Pdf"
                                                asp-route-id="@r.Id"
-                                               target="_blank">
+                                               target="_blank" class="ms-1 me-1">
                                                 <i class="fa-regular fa-file-pdf  fs-5"></i>
                                             </a>
                                         }
@@ -276,7 +311,7 @@
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
                                                asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
                                                 <i class="bx bx-show fs-5"></i>
                                             </a>
                                         }

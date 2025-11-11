@@ -39,6 +39,7 @@ namespace CPMCore.Models.Invoicing
         public decimal TotalInclVat { get; set; }
 
         public List<InvoiceLineEditVM> Lines { get; set; } = new();
+        public string? ReturnUrl { get; set; }
 
         public string DisplayId => string.IsNullOrWhiteSpace(PublicId)
             ? $"Factuur #{InvoiceId}"

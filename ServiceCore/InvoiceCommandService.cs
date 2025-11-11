@@ -520,6 +520,140 @@ namespace ServiceCore
                 throw;
             }
         }
+        public async Task UpdateDraftAsync(int invoiceId, InvoiceDraftBO bo, CancellationToken ct = default)
+        {
+            if (invoiceId <= 0) throw new ArgumentOutOfRangeException(nameof(invoiceId));
+            if (bo == null) throw new ArgumentNullException(nameof(bo));
+
+            if (bo.Mode == InvoiceMode.Stages && (bo.Lines == null || bo.Lines.Count == 0))
+                await BuildLinesForStagesAsync(bo, ct);
+
+            await using var tx = await _uow.BeginTransactionAsync(ct);
+            try
+            {
+                var invoice = await _db.Invoices
+                    .Include(i => i.InvoicesDetails)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                var statusName = await _db.InvoiceStatusLookup
+                    .Where(s => s.Id == invoice.StatusId)
+                    .Select(s => s.Name)
+                    .FirstOrDefaultAsync(ct)
+                    ?? string.Empty;
+
+                if (!string.Equals(statusName, "Draft", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Alleen conceptfacturen kunnen volledig bewerkt worden.");
+
+                var issuer = await _db.IssuerCompany
+                    .FirstOrDefaultAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct)
+                    ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden of niet actief.");
+
+                int? defaultDays = null;
+                if (issuer.DefaultPaymentTermId.HasValue)
+                    defaultDays = await _db.PaymentTerms
+                        .Where(t => t.Id == issuer.DefaultPaymentTermId.Value)
+                        .Select(t => (int?)t.Days)
+                        .FirstOrDefaultAsync(ct);
+
+                var due = bo.ExpirationDate ?? (defaultDays.HasValue ? bo.InvoiceDate.AddDays(defaultDays.Value) : (DateOnly?)null);
+
+                string? issuerBankAccountIban = null;
+                if (bo.IssuerBankAccountId is int bankAccountId)
+                {
+                    issuerBankAccountIban = await _db.IssuerBankAccount
+                        .Where(x => x.Id == bankAccountId && x.IssuerCompanyId == bo.IssuerCompanyId)
+                        .Select(x => x.Iban)
+                        .FirstOrDefaultAsync(ct);
+
+                    if (issuerBankAccountIban is null)
+                        throw new InvalidOperationException("Geselecteerd rekeningnummer hoort niet bij dit facturatiebedrijf.");
+                }
+                else
+                {
+                    issuerBankAccountIban = await _db.IssuerBankAccount
+                        .Where(x => x.IssuerCompanyId == bo.IssuerCompanyId && x.IsDefault)
+                        .Select(x => x.Iban)
+                        .FirstOrDefaultAsync(ct);
+                }
+
+                var party = await ResolvePartySnapshotAsync(bo, ct);
+
+                var headerText = Clean(bo.HeaderDescription);
+                var detailText = Clean(bo.DetailDescription);
+                var footerText = Clean(bo.FooterDescription);
+                var bankAccount = Clean(issuerBankAccountIban);
+                var invoiceText = headerText ?? detailText;
+
+                invoice.IssuerCompanyId = bo.IssuerCompanyId;
+                invoice.Date = bo.InvoiceDate;
+                invoice.ExpirationDate = due;
+                invoice.ClientType = bo.CompanyId.HasValue ? null : bo.ClientType;
+                invoice.ClientId = bo.CompanyId.HasValue ? null : bo.ClientId;
+                invoice.CompanyId = bo.CompanyId;
+                invoice.InvoiceMode = (byte)bo.Mode;
+                invoice.ProjectId = bo.ProjectId;
+                invoice.SupplierContractId = bo.SupplierContractId;
+                invoice.HeaderDescription = headerText;
+                invoice.DetailText = detailText;
+                invoice.Text = invoiceText;
+                invoice.ClientName = party.ClientName;
+                invoice.Adress = party.Address;
+                invoice.PostalCodeId = party.PostalCodeId;
+                invoice.VatNumber = party.VatNumber;
+                invoice.ExtraInfo = footerText ?? party.ExtraInfo;
+                invoice.BankAccount = bankAccount;
+                invoice.PaymentTermId = bo.PaymentTermId;
+                invoice.StructuredCommOgm = null;
+                invoice.QrEpcPayload = null;
+                invoice.SeriesId = null;
+                invoice.FiscalYear = null;
+
+                if (invoice.InvoicesDetails.Any())
+                    _db.InvoicesDetails.RemoveRange(invoice.InvoicesDetails);
+
+                await _uow.SaveChangesAsync(ct);
+
+                bo.Lines ??= new List<InvoiceLineBO>();
+
+                foreach (var l in bo.Lines)
+                {
+                    decimal? discAmt = l.DiscountAmount;
+                    decimal? discPct = l.DiscountPercent;
+
+                    if (discPct.HasValue && !discAmt.HasValue)
+                        discAmt = Math.Round(l.Price * (discPct.Value / 100m), 4, MidpointRounding.AwayFromZero);
+                    else if (discAmt.HasValue && !discPct.HasValue && l.Price != 0)
+                        discPct = Math.Round((discAmt.Value / l.Price) * 100m, 4, MidpointRounding.AwayFromZero);
+
+                    _uow.InvoiceDetails.Add(new InvoicesDetails
+                    {
+                        InvoiceId = invoice.Id,
+                        Text = (l.Text ?? string.Empty).Trim().Length > 200
+                            ? (l.Text ?? string.Empty).Trim().Substring(0, 200)
+                            : (l.Text ?? string.Empty).Trim(),
+                        Price = l.Price,
+                        VatPercentage = l.VatPercentage,
+                        DiscountPercent = discPct,
+                        DiscountAmount = discAmt,
+                        UnitId = l.UnitId,
+                        PaymentStageId = l.PaymentStageId,
+                        LineType = string.IsNullOrWhiteSpace(l.LineType) ? null : l.LineType.Trim(),
+                        GroupName = string.IsNullOrWhiteSpace(l.GroupName) ? null : l.GroupName.Trim(),
+                        UtilityCost = l.UtilityCost,
+                        ChangeOrderDetailId = l.ChangeOrderDetailId
+                    });
+                }
+
+                await _uow.SaveChangesAsync(ct);
+                await _uow.CommitTransactionAsync(tx, ct);
+            }
+            catch
+            {
+                await _uow.RollbackTransactionAsync(tx, ct);
+                throw;
+            }
+        }
 
 
         // ---------- alleen voor modus SCHIJVEN ----------

@@ -331,6 +331,13 @@ namespace ServiceCore
                 HeaderText = invoice.HeaderDescription,
                 DetailText = invoice.DetailText,
                 IsCreditNote = invoice.Series?.IsCreditNote ?? false,
+                ClientId = invoice.ClientId,
+                ClientType = invoice.ClientType,
+                CompanyId = invoice.CompanyId,
+                InvoiceMode = invoice.InvoiceMode.HasValue ? (InvoiceMode?)invoice.InvoiceMode.Value : null,
+                ProjectId = invoice.ProjectId,
+                SupplierContractId = invoice.SupplierContractId,
+                PaymentTermId = invoice.PaymentTermId,
             };
         }
 

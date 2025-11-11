@@ -19,7 +19,7 @@ namespace FacadeCore
         Task DeleteAsync(int invoiceId, CancellationToken ct = default);
         Task MarkAsSentAsync(int invoiceId, DateTime sentAtUtc, CancellationToken ct = default);
         Task UpdateAsync(InvoiceUpdateBO bo, CancellationToken ct = default);
-
+        Task UpdateDraftAsync(int invoiceId, InvoiceDraftBO bo, CancellationToken ct = default);
 
     }
 }

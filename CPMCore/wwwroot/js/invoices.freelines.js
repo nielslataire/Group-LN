@@ -56,6 +56,7 @@
 
         // overige initiële velden
         Object.entries(initial).forEach(([k, v]) => {
+            if (k === 'VatTypeId' || k === 'VatPercentage') return;
             const $el = $row.find('[data-col="' + k + '"]');
             if (!$el.length) return;
             if ($el.is(':checkbox')) $el.prop('checked', !!v);
@@ -121,6 +122,26 @@
         reindexFromDisplay();
         notifyStateChange();
     }
+    function loadInitialRows(rows) {
+        if (!Array.isArray(rows)) return;
+        dt.clear();
+        rows.forEach((row, idx) => {
+            const node = cloneRow({
+                Text: row.text,
+                Price: row.price != null ? nf.format(row.price) : '',
+                VatTypeId: row.vatTypeId,
+                VatPercentage: row.vatPercentage
+            });
+            node.cells[1].textContent = String(idx + 1);
+            dt.row.add(node);
+        });
+        dt.draw(false);
+        reindexFromDisplay();
+        dt.one('draw', function () {
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        });
+        notifyStateChange();
+    }
 
     function lastRowIsEmpty() {
         const nodes = dt.rows({ order: 'current' }).nodes();
@@ -129,8 +150,15 @@
         return (($last.find('.js-fl-text').val() || '').trim() === '');
     }
 
-    // Init: 1 lege rij
-    addEmptyRowAtEnd();
+    const initialLines = window.InitialInvoice && Array.isArray(window.InitialInvoice.lines)
+        ? window.InitialInvoice.lines
+        : null;
+
+    if (initialLines && initialLines.length > 0) {
+        loadInitialRows(initialLines);
+    } else {
+        addEmptyRowAtEnd();
+    }
 
     // Drag → hernummeren + preview na redraw
     $tbl.on('row-reorder.dt', function () {
@@ -240,6 +268,14 @@
         ensureOne: function () {
             if (dt.rows().count() === 0) addEmptyRowAtEnd();
             notifyStateChange();
+        },
+        loadInitial: function (rows) {
+            loadInitialRows(rows);
         }
     };
+
+    if (Array.isArray(window.pendingInitialLines) && window.pendingInitialLines.length > 0) {
+        loadInitialRows(window.pendingInitialLines);
+        window.pendingInitialLines = null;
+    }
 })();

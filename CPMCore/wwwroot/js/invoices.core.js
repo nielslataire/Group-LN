@@ -1,5 +1,9 @@
 ﻿// Pagina-initialisatie, select2/pickers, mode-toggling, resets
 $(function () {
+    const rawEditingFlag = window.InvoiceIsEditing;
+    const isEditing = (rawEditingFlag === true)
+        || (rawEditingFlag === 1)
+        || (typeof rawEditingFlag === 'string' && rawEditingFlag.toLowerCase() === 'true');
     const $hostStages = $('#stagesList');
     const getPartyType = () => $('input[name="PartyType"]').val(); // "1","2","3"
     const getPartyId = () => $('input[name="PartyId"]').val();
@@ -41,6 +45,24 @@ $(function () {
         const d = await fetchIssuerDefaults(issuerId);
         setPaymentTermIfPresent(d.defaultPaymentTermId);
         setVatTypeIfPresent(d.defaultVatTypeId);
+    }
+    function setIssuerDefaultPaymentTerm() {
+        const $issuer = $('#IssuerCompanyId');
+        if ($issuer.length === 0) return;
+
+        const $selected = $issuer.find('option:selected');
+        if ($selected.length === 0) return;
+
+        const termId = $selected.data('defaultterm');
+        const vatTypeId = $selected.data('defaultvattype');
+
+        setPaymentTermIfPresent(termId);
+        setVatTypeIfPresent(vatTypeId);
+
+        const issuerId = $selected.val();
+        if (issuerId) {
+            loadIssuerBankAccounts(issuerId);
+        }
     }
 
     async function loadIssuerBankAccounts(issuerId) {
@@ -384,7 +406,11 @@ $('#partySelect')
                 return item.display || item.text || item.name || '';
             }
         })
-        .on('select2:select', function (e) {
+    .on('select2:select', function (e) {
+        if (window.skipPartySelectOnce) {
+            window.skipPartySelectOnce = false;
+            return;
+        }
             const v = e.params.data.id || '';
             const [p, idStr = ''] = v.split(':');
             let typeVal = null;
@@ -392,7 +418,17 @@ $('#partySelect')
             if (p === 'cc') typeVal = 2;
             if (p === 'su') typeVal = 3;
             $('input[name="PartyId"]').val(idStr);
-            $('input[name="PartyType"]').val(typeVal || '');
+        $('input[name="PartyType"]').val(typeVal || '');
+        if (window.skipPartySelectOnce) {
+            window.skipPartySelectOnce = false;
+            if (window.InvoiceIsEditing === true) {
+                enforceModeByParty();
+                toggleProjectContract();
+                if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+                if (window.updateSaveButtonState) window.updateSaveButtonState();
+                return;
+            }
+        }
             enforceModeByParty();
             toggleProjectContract();
             hardResetUI();
@@ -557,10 +593,16 @@ $('#partySelect')
     // Init
     enforceModeByParty();
     toggleProjectContract();
-    hardResetUI();
-    setIssuerDefaultPaymentTerm();
-    if ($('#Mode').val() === '1' && window.freeLines) { window.freeLines.ensureOne(); }
-    if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    if (isEditing) {
+        toggleBlocks();
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        if (window.updateSaveButtonState) window.updateSaveButtonState();
+    } else {
+        hardResetUI();
+        setIssuerDefaultPaymentTerm();
+        if ($('#Mode').val() === '1' && window.freeLines) { window.freeLines.ensureOne(); }
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    }
 });
 
 function prepareFreeLinesForPost($form) {

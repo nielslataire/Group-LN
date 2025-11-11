@@ -52,5 +52,13 @@ Public Class InvoiceDetailBO
     Public Property Balance As Decimal?
     Public Property IsCreditNote As Boolean
 
+    Public Property ClientId As Integer?
+    Public Property ClientType As Integer?
+    Public Property CompanyId As Integer?
+    Public Property InvoiceMode As InvoiceMode?
+    Public Property ProjectId As Integer?
+    Public Property SupplierContractId As Integer?
+    Public Property PaymentTermId As Integer?
+
     Public Property Lines As List(Of InvoiceLineBO)
 End Class

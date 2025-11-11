@@ -49,6 +49,7 @@
     <input type="hidden" asp-for="InvoiceId" />
     <input type="hidden" asp-for="IssuerCompanyId" />
     <input type="hidden" asp-for="StatusCode" />
+    <input type="hidden" asp-for="ReturnUrl" />
 
     @if (!isDraft)
     {
@@ -247,10 +248,18 @@
             </button>
         </div>
         <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-            <a asp-action="Detail"
-               asp-route-id="@Model.InvoiceId"
-               asp-route-issuerCompanyId="@(ViewBag.CompanyId ?? Model.IssuerCompanyId)"
-               class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+            @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
+            {
+                <a href="@Model.ReturnUrl"
+                   class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+            }
+            else
+            {
+                <a asp-action="Detail"
+                   asp-route-id="@Model.InvoiceId"
+                   asp-route-issuerCompanyId="@(ViewBag.CompanyId ?? Model.IssuerCompanyId)"
+                   class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+            }
         </div>
     </div>
 </form>
