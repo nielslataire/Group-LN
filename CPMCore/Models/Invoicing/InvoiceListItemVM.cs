@@ -6,7 +6,7 @@
         public string PublicId { get; set; }
         public string ClientName { get; set; }
         public DateOnly InvoiceDate { get; set; }
-        public string Status { get; set; }
+        public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
         public decimal? GrossTotal { get; set; }
         public decimal? Balance { get; set; }
         public int? InvoiceNumber { get; set; }
@@ -14,5 +14,6 @@
         public int? InvoiceYear { get; set; }
         public bool IsCreditNote { get; set; }
         public long InvoiceSortValue { get; set; }
+        public string StatusLabel => Status.GetDisplayName();
     }
 }

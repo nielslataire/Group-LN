@@ -93,7 +93,7 @@ namespace CPMCore.Controllers
                     PublicId = x.PublicId,
                     ClientName = x.ClientName,
                     InvoiceDate = x.InvoiceDate,
-                    Status = x.StatusName,
+                    Status = TranslateStatus(x.StatusName),
                     GrossTotal = x.GrossTotal,
                     Balance = x.Balance,
                     InvoiceNumber = parts.Number,
@@ -1263,7 +1263,7 @@ namespace CPMCore.Controllers
                 InvoiceId = detail.Id,
                 IssuerCompanyId = selectedIssuerId,
                 IssuerName = detail.IssuerLegalName ?? detail.IssuerName,
-                StatusLabel = TranslateStatus(detail.StatusName),
+                Status = TranslateStatus(detail.StatusName),
                 PublicId = string.IsNullOrWhiteSpace(detail.PublicId) ? null : detail.PublicId,
                 InvoiceDate = posted?.InvoiceDate ?? detail.InvoiceDate,
                 ExpirationDate = detail.ExpirationDate,
@@ -1446,8 +1446,7 @@ namespace CPMCore.Controllers
                 InvoiceDate = detail.InvoiceDate,
                 ExpirationDate = detail.ExpirationDate,
                 ClientName = detail.ClientName,
-                StatusLabel = TranslateStatus(detail.StatusName),
-                StatusCode = detail.StatusName ?? string.Empty,
+                Status = TranslateStatus(detail.StatusName),
                 HeaderDescription = NormalizeMultiline(detail.HeaderText),
                 DetailDescription = NormalizeMultiline(detail.DetailText),
                 FooterDescription = NormalizeMultiline(detail.ExtraInfo),
@@ -1974,20 +1973,7 @@ namespace CPMCore.Controllers
             TempData["MessageType"] = messagetype;
             TempData["MessageTitle"] = messagetitle;
         }
-        private static string TranslateStatus(string? status)
-        {
-            return (status ?? string.Empty).Trim() switch
-            {
-                "Draft" => "Concept",
-                "Issued" => "Genummerd",
-                "Sent" => "Verzonden",
-                "PartiallyPaid" => "Deels betaald",
-                "Paid" => "Betaald",
-                "Overdue" => "Vervallen",
-                "Cancelled" => "Geannuleerd",
-                _ => string.IsNullOrWhiteSpace(status) ? "Onbekend" : status
-            };
-        }
+        private static InvoiceStatus TranslateStatus(string? status) => InvoiceStatusExtensions.FromCode(status);
         private static bool DetermineCreditNote(bool isCreditSeries, string? status, decimal? totalInclVat)
         {
             if (isCreditSeries)

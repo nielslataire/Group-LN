@@ -383,4 +383,13 @@ Public Class ProjectBO
             _projecttype = value
         End Set
     End Property
+    Private _clientcount As Integer
+    Public Property ClientCount() As Integer
+        Get
+            Return _clientcount
+        End Get
+        Set(ByVal value As Integer)
+            _clientcount = value
+        End Set
+    End Property
 End Class

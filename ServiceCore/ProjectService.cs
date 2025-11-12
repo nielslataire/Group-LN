@@ -75,16 +75,19 @@ namespace ServiceCore
             public int Id { get; set; }
             public string Name { get; set; }
             public int Status { get; set; }
+            public string StatusName { get; set; }
             public string Location { get; set; }
             public string DefaultPic { get; set; }
             public string DefaultPicCaption { get; set; }
             public DateOnly? DeliveryDate { get; set; }
+            public DateOnly? StartDateConstruction { get; set; }
             public string CommercialTitleNl { get; set; }
             public string CommercialTextNl { get; set; }
             public string Slug { get; set; }
             public string UserId { get; set; }
             public int? BuilderId { get; set; }
             public int ProjectType { get; set; }
+            public int ClientCount { get; set; }
         }
 
         public GetResponse<ProjectBO> GetProjectsForList(
@@ -98,16 +101,19 @@ namespace ServiceCore
                     Id = m.ProjectId,
                     Name = m.ProjectName,
                     Status = m.Status.StatusId,
+                    StatusName = m.Status.StatusName,
                     Location = m.PostalCode.Gemeente,
                     DefaultPic = m.DefaultPicture.Name,
                     DefaultPicCaption = m.DefaultPicture.Caption,
                     DeliveryDate = m.DeliveryDate,
+                    StartDateConstruction = m.StartDateConstruction,
                     CommercialTitleNl = m.CommercialTitleNl,
                     CommercialTextNl = m.CommercialTextNl,
                     Slug = m.Slug,
                     UserId = m.AspNetUserId,
                     BuilderId = m.BuilderId,
-                    ProjectType = m.ProjectType
+                    ProjectType = m.ProjectType,
+                    ClientCount = m.Units.Count(u => u.ClientAccountId != null)
                 });
 
             if (Type != 0) q = q.Where(m => m.ProjectType == (int)Type);
@@ -126,7 +132,10 @@ namespace ServiceCore
                     ProjectType = (ProjectType)e.ProjectType
                 };
                 bo.Status.Id = e.Status;
+                bo.Status.Name = e.StatusName;
                 bo.Postalcode.Gemeente = e.Location;
+                bo.StartDateConstruction = e.StartDateConstruction;
+                bo.ClientCount = e.ClientCount;
 
                 if (TrimCommercialText && (e.CommercialTextNl?.Length ?? 0) > 150)
                     bo.CommercialTextNL = e.CommercialTextNl.Substring(0, 150) + " ...";
@@ -1094,19 +1103,41 @@ namespace ServiceCore
                 var livingCount = living.Count();
                 var livingSold = living.Where(i => i.ClientAccountId != null).Count();
 
-                // Sommen expliciet en veilig haakjes geven
-                decimal valueForSale = u.Where(m => m.ClientAccountId == null)
-                    .Select(m =>
-                        (m.LandValue ?? 0)
-                        + (m.UnitConstructionValue.Sum(x => (decimal?)x.Value) ?? 0)
-                    ).Sum();
+                // 🔹 Bereken valueForSale via subquery
+                var valueForSale = (
+                    from unit in u
+                    where unit.ClientAccountId == null
+                    select (
+                        (unit.LandValue ?? 0m) +
+                        (_uow.UnitConstructionValues.GetNoTracking()
+                            .Where(v => v.UnitId == unit.Id)
+                            .Sum(v => (decimal?)v.Value) ?? 0m)
+                    )
+                ).DefaultIfEmpty(0m).Sum();
 
-                decimal valueSold = u
-                    .Select(m =>
-                        (m.LandValueSold ?? 0)
-                        + (m.UnitConstructionValue.Sum(x => (decimal?)x.ValueSold) ?? 0)
-                    ).Sum();
+                // 🔹 Bereken valueSold via subquery
+                var valueSold = (
+                    from unit in u
+                    select (
+                        (unit.LandValueSold ?? 0m) +
+                        (_uow.UnitConstructionValues.GetNoTracking()
+                            .Where(v => v.UnitId == unit.Id)
+                            .Sum(v => (decimal?)v.ValueSold) ?? 0m)
+                    )
+                ).DefaultIfEmpty(0m).Sum();
 
+                // 🔹 Startprijs = minimum bouwsom + grond (enkel voor onverkopte units)
+                var startingPrice = (
+                    from unit in u
+                    where unit.ClientAccountId == null
+                          && (unit.Type.GroupId == 1 || unit.Type.GroupId == 4)
+                    let totalConst = _uow.UnitConstructionValues.GetNoTracking()
+                        .Where(v => v.UnitId == unit.Id)
+                        .Sum(v => (decimal?)v.Value) ?? 0m
+                    select totalConst + (unit.LandValue ?? 0m)
+                ).DefaultIfEmpty(0m).Min();
+
+                // 📊 Resterende berekeningen
                 decimal percentageLiving = livingCount != 0
                     ? (decimal)(livingSold / (double)livingCount * 100)
                     : 100;
@@ -1118,13 +1149,6 @@ namespace ServiceCore
                 int numApts = u.Count(m => m.Type.Id == 1);
                 int numHouses = u.Count(m => m.Type.Id == 2);
                 int numCommercial = u.Count(m => m.Type.Id == 10);
-
-                // Startprijs: Min( Bouwsom + Grond )
-                decimal startingPrice = u.Where(i => i.ClientAccountId == null && (i.Type.GroupId == 1 || i.Type.GroupId == 4))
-                    .Select(i => (i.UnitConstructionValue.Where(v => v.UnitId == i.Id).Sum(v => (decimal?)v.Value) ?? 0)
-                                 + (i.LandValue ?? 0))
-                    .DefaultIfEmpty(0)
-                    .Min();
 
                 response.AddValue(new ProjectSalesDataBO
                 {
@@ -1141,8 +1165,10 @@ namespace ServiceCore
                     StartingPrice = startingPrice
                 });
             }
+
             return response;
         }
+
 
         public Response InsertUpdateSalesSettings(ProjectSalesSettingsBO salessettings)
         {

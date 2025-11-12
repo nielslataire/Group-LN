@@ -1,40 +1,30 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceDetailVM
 @using System.Linq
 @using System.Globalization
+@using CPMCore.Models.Invoicing
 @{
     var culture = CultureInfo.GetCultureInfo("nl-BE");
     var issuerId = ViewBag.CompanyId as int?;
     var issuerName = (ViewBag.CompanyName as string) ?? Model.Issuer.LegalName ?? Model.Issuer.Name;
     var displayId = string.IsNullOrWhiteSpace(Model.PublicId) ? $"Factuur #{Model.Id}" : Model.PublicId;
-    var isDraft = string.Equals(Model.Status, "Draft", StringComparison.OrdinalIgnoreCase);
-    var isIssued = string.Equals(Model.Status, "Issued", StringComparison.OrdinalIgnoreCase) || string.Equals(Model.Status, "Genummerd", StringComparison.OrdinalIgnoreCase);
+    var isDraft = Model.Status == InvoiceStatus.Draft;
+    var isIssued = Model.Status == InvoiceStatus.Issued;
     var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
     ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName) ? displayId : $"{issuerName} - {displayId}";
     var detailReturnUrl = Url.Action("Detail", "Invoices", new { id = Model.Id, issuerCompanyId = issuerId });
 }
 @functions {
-    string StatusNl(string s) => (s ?? "").Trim() switch
-    {
-        "Draft" => "Concept",
-        "Issued" => "Genummerd",
-        "Sent" => "Verzonden",
-        "PartiallyPaid" => "Deels betaald",
-        "Paid" => "Betaald",
-        "Overdue" => "Vervallen",
-        "Cancelled" => "Geannuleerd",
-        "" => "Onbekend",
-        _ => s
-    };
+
     string DocumentType(bool isCreditNote) => isCreditNote ? "Creditnota" : "Factuur";
-    string BadgeClassNl(string nl) => (nl ?? "").ToLower() switch
+    string BadgeClass(InvoiceStatus status) => status switch
     {
-        "concept" => "badge bg-warning text-dark",
-        "genummerd" => "badge bg-secondary",
-        "verzonden" => "badge bg-primary",
-        "deels betaald" => "badge bg-info",
-        "betaald" => "badge bg-success",
-        "vervallen" => "badge bg-danger",
-        "geannuleerd" => "badge bg-dark",
+        InvoiceStatus.Draft => "badge bg-warning text-dark",
+        InvoiceStatus.Issued => "badge bg-secondary",
+        InvoiceStatus.Sent => "badge bg-primary",
+        InvoiceStatus.PartiallyPaid => "badge bg-info",
+        InvoiceStatus.Paid => "badge bg-success",
+        InvoiceStatus.Overdue => "badge bg-danger",
+        InvoiceStatus.Cancelled => "badge bg-dark",
         _ => "badge bg-light text-dark"
     };
 }
@@ -185,7 +175,7 @@
                 Documentnummer: <strong>@Model.PublicId</strong><br />
                 Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy")<br />
                 Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")<br />
-                Status: <span class="badge bg-secondary">@Model.Status</span>
+                Status: <span class="@BadgeClass(Model.Status)">@Model.StatusLabel</span>
 
              
             </div>

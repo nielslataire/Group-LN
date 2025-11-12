@@ -59,7 +59,7 @@ namespace CPMCore.Documents
                     col.Item().Text($"Factuurdatum: {_invoice.InvoiceDate:dd/MM/yyyy}").FontSize(9);
                     if (_invoice.ExpirationDate.HasValue)
                         col.Item().Text($"Vervaldatum: {_invoice.ExpirationDate:dd/MM/yyyy}").FontSize(9);
-                    col.Item().Text($"Status: {_invoice.Status}").FontSize(9);
+                    col.Item().Text($"Status: {_invoice.StatusLabel}").FontSize(9);
                 });
             });
         }

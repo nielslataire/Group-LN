@@ -239,6 +239,7 @@ namespace CPMCore.Models.Projecten
         public ShowProjectsModel()
         {
             _projects = new List<ProjectBO>();
+            _salesData = new Dictionary<int, ProjectSalesDataBO>();
         }
         private List<ProjectBO> _projects;
         public List<ProjectBO> Projects
@@ -262,6 +263,18 @@ namespace CPMCore.Models.Projecten
             set
             {
                 _statuses = value;
+            }
+        }
+        private Dictionary<int, ProjectSalesDataBO> _salesData;
+        public Dictionary<int, ProjectSalesDataBO> SalesData
+        {
+            get
+            {
+                return _salesData;
+            }
+            set
+            {
+                _salesData = value;
             }
         }
     }

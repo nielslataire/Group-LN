@@ -6,7 +6,8 @@ namespace CPMCore.Models.Invoicing
     {
         public int InvoiceId { get; set; }
         public string? PublicId { get; set; }
-        public string StatusLabel { get; set; } = string.Empty;
+        public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
+        public string StatusLabel => Status.GetDisplayName();
         public string? IssuerName { get; set; }
         public string? PartyDisplayName { get; set; }
         public string? PartyLookupValue { get; set; }

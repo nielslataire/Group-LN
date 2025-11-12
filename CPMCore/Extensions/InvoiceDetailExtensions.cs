@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using BOCore;
 using ServiceCore.Invoicing.Pdf;
+using CPMCore.Models.Invoicing;
 
 namespace CPMCore.Extensions;
 
@@ -20,7 +21,7 @@ public static class InvoiceDetailExtensions
             PublicId = string.IsNullOrWhiteSpace(bo.PublicId) ? null : bo.PublicId,
             IssueDate = bo.InvoiceDate,
             DueDate = bo.ExpirationDate,
-            Status = bo.StatusName,
+            Status = InvoiceStatusExtensions.FromCode(bo.StatusName).GetDisplayName(),
             BankAccount = bo.BankAccount,
             StructuredMessage = bo.StructuredMessage,
             ExtraInfo = bo?.ExtraInfo,

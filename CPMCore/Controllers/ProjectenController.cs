@@ -65,8 +65,85 @@ namespace CPMCore.Controllers
         [Breadcrumb("Projecten", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
         public IActionResult Index()
         {
-            return View();
+            var model = new ShowProjectsModel();
+            var service = ServiceFactory.GetProjectService();
+
+            var response = service.GetProjectsForList();
+            if (response.Success && response.Values is not null)
+            {
+                model.Projects = response.Values
+                    .OrderByDescending(m => m.DeliveryDate == null)
+                    .ThenByDescending(m => m.DeliveryDate)
+                    .ToList();
+
+                var ids = model.Projects.Select(p => p.Id).ToList();
+                if (ids.Count > 0)
+                {
+                    var salesResponse = service.GetProjectSalesData(ids);
+                    if (salesResponse.Success && salesResponse.Values is not null)
+                    {
+                        model.SalesData = salesResponse.Values
+                            .GroupBy(v => v.ProjectId)
+                            .ToDictionary(g => g.Key, g => g.First());
+                    }
+                }
+            }
+
+            var statusResponse = service.GetStatuses();
+            if (statusResponse.Success && statusResponse.Values is not null)
+            {
+                model.Statuses = statusResponse.Values;
+            }
+
+            ViewData["Title"] = "Projecten - Alle";
+            ViewData["SubTitle"] = "Alle projecten";
+            ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
+
+            return View(model);
         }
+
+        [HttpGet]
+        [Breadcrumb("Eigen projecten", FromAction = nameof(Index))]
+        public IActionResult ProjectsByUserId(string userId)
+        {
+            var model = new ShowProjectsModel();
+            var service = ServiceFactory.GetProjectService();
+
+            var response = service.GetProjectsForList(0, 0, userId);
+            if (response.Success && response.Values is not null)
+            {
+                model.Projects = response.Values
+                    .OrderByDescending(m => m.DeliveryDate == null)
+                    .ThenByDescending(m => m.DeliveryDate)
+                    .ToList();
+
+                var ids = model.Projects.Select(p => p.Id).ToList();
+                if (ids.Count > 0)
+                {
+                    var salesResponse = service.GetProjectSalesData(ids);
+                    if (salesResponse.Success && salesResponse.Values is not null)
+                    {
+                        model.SalesData = salesResponse.Values
+                            .GroupBy(v => v.ProjectId)
+                            .ToDictionary(g => g.Key, g => g.First());
+                    }
+                }
+            }
+
+            var statusResponse = service.GetStatuses();
+            if (statusResponse.Success && statusResponse.Values is not null)
+            {
+                model.Statuses = statusResponse.Values;
+            }
+
+            ViewData["Title"] = "Projecten - Alle";
+            ViewData["SubTitle"] = "Alle projecten";
+            ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
+
+            return View("Index", model);
+        }
+
+
         [HttpGet]
         //[Breadcrumb("Info")]
         [Breadcrumb("Info", FromAction = "Index")]

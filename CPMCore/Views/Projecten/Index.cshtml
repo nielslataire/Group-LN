@@ -1,0 +1,166 @@
+﻿@using CPMCore.Controllers
+@using CPMCore.Models
+@using BOCore
+@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.ShowProjectsModel
+
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+    {
+        new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+        new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", false)
+    };
+    ViewData["Title"] = ViewData["Title"] ?? "Projecten";
+    string imageUrl = string.Empty;
+}
+
+
+    <div class="row justify-content-between align-items-center mb-4">
+        <div class="col-sm-auto">
+            <h1 class="font-weight-bold mb-0">@ViewData["SubTitle"]</h1>
+        <p class="mb-0">@ViewData["SubTitleText"]</p>
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <div class="btn-group flex-wrap" role="group" aria-label="Project filters">
+            <a class="btn btn-outline-primary filter-link active" data-filter="*" href="#">Toon alles</a>
+            @if (Model.Statuses != null)
+            {
+                foreach (var status in Model.Statuses)
+                {
+                    <a class="btn btn-outline-primary filter-link" data-filter=".Status@status.Id" href="#">@status.Name</a>
+                }
+            }
+        </div>
+    </div>
+
+<div class="row row-gutter-sm" id="project-grid">
+    @if (Model.Projects != null && Model.Projects.Any())
+    {
+        foreach (var project in Model.Projects)
+        {
+            ProjectSalesDataBO projectSalesData = null;
+            var hasSalesData = Model.SalesData != null && Model.SalesData.TryGetValue(project.Id, out projectSalesData);
+            var statusName = !string.IsNullOrWhiteSpace(project.Status?.Name)
+            ? project.Status.Name
+            : Model.Statuses?.FirstOrDefault(s => s.Id == project.Status?.Id)?.Name;
+            var clientCount = project.ClientCount > 0
+            ? project.ClientCount
+            : (hasSalesData ? projectSalesData.LivingUnitsSold : 0);
+            var soldPercentageValue = hasSalesData ? projectSalesData.PercentageSold : 0m;
+            var soldPercentageRounded = Math.Round(soldPercentageValue, 1);
+            var soldPercentageText = soldPercentageRounded.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+            var startDateText = project.StartDateConstruction?.ToString("dd/MM/yyyy");
+            var deliveryDateText = project.DeliveryDate?.ToString("dd/MM/yyyy");
+            var startDateDisplay = !string.IsNullOrEmpty(startDateText) ? startDateText : "-";
+
+            <div class="col-sm-6 col-lg-4 col-xl-3 mb-4 filteritem Status@project.Status.Id">
+                <div class="card card-modern card-modern-alt-padding h-100">
+                    <div class="image-frame-wrapper position-relative">
+                        @if (!string.IsNullOrWhiteSpace(statusName))
+                        {
+                            <span class="badge bg-primary text-uppercase small fw-semibold position-absolute top-0 start-0 m-3">@statusName</span>
+                        }
+                        <a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id }))">
+                            @if (project.DefaultPicture?.Name is null)
+                            {
+                                imageUrl = "~/img/no_image.jpg";
+                            }
+                            else
+                            {
+                                imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
+                            }
+                            <img src="@Url.Content(imageUrl)" class="card-img-top" alt="@project.Name" />
+                        </a>
+                    </div>
+                    <div class="card-body bg-light">
+                        <h4 class="text-4 line-height-2 mt-0 mb-1">
+                            <a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id }))" class="ecommerce-sidebar-link text-color-dark text-color-hover-primary text-decoration-none">
+                                @project.Name
+                            </a>
+                        </h4>
+                        @if (!string.IsNullOrWhiteSpace(project.CommercialTitleNL))
+                        {
+                            <div class="text-muted mb-1">@project.CommercialTitleNL</div>
+                        }
+                        <div class="d-flex align-items-center text-muted mb-1">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            <span>@project.Postalcode?.Gemeente</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(startDateText) || !string.IsNullOrEmpty(deliveryDateText))
+                        {
+                            <div class="text-muted mb-1 d-flex align-items-center">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                <div>
+                                    <span>Start: @startDateDisplay</span>
+                                    @if (!string.IsNullOrEmpty(deliveryDateText))
+                                    {
+                                        <span class="ms-1">tot @deliveryDateText</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        <div class="text-muted mb-2 d-flex align-items-center">
+                            <i class="fas fa-users me-2"></i>
+                            <span>Aantal klanten: @clientCount</span>
+                        </div>
+                        <div class="mb-2 d-none">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Voortgang</span>
+                                <span class="fw-bold">0%</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                        @if (User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("Sales") || User.IsInRole("Verkoop"))
+                        {
+                            <div>
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Percentage verkocht</span>
+                                    <span class="fw-bold">@soldPercentageRounded.ToString("0.##")%</span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: @soldPercentageText%;" aria-valuenow="@soldPercentageText" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="col-12">
+            <div class="alert alert-default" role="alert">
+                Er zijn momenteel geen projecten beschikbaar.
+            </div>
+        </div>
+    }
+</div>
+
+
+@section PageScripts
+{
+    <script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            var $grid = $('#project-grid').isotope({
+                itemSelector: '.filteritem',
+                layoutMode: 'fitRows'
+            });
+
+            $('.filter-link').on('click', function (e) {
+                e.preventDefault();
+                var filterValue = $(this).data('filter');
+                $grid.isotope({ filter: filterValue });
+
+                $('.filter-link').removeClass('active');
+                $(this).addClass('active');
+            });
+        });
+    </script>
+}

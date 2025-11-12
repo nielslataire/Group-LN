@@ -15,8 +15,8 @@ namespace CPMCore.Models.Invoicing
         public DateOnly? ExpirationDate { get; set; }
 
         public string? ClientName { get; set; }
-        public string StatusLabel { get; set; } = string.Empty;
-        public string StatusCode { get; set; } = string.Empty;
+        public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
+        public string StatusLabel => Status.GetDisplayName();
         public bool IsCreditNote { get; set; }
 
         [Display(Name = "Omschrijving (optioneel)")]
@@ -47,7 +47,7 @@ namespace CPMCore.Models.Invoicing
 
         public string DocumentType => IsCreditNote ? "Creditnota" : "Factuur";
 
-        public bool IsDraft => string.Equals(StatusCode, "Draft", StringComparison.OrdinalIgnoreCase);
+        public bool IsDraft => Status == InvoiceStatus.Draft;
         public bool IsLimitedEdit => !IsDraft;
     }
 }

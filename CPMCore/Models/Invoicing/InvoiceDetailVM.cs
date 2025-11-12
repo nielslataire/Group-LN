@@ -9,7 +9,7 @@ namespace CPMCore.Models.Invoicing
         public string? PublicId { get; set; }
         public DateOnly InvoiceDate { get; set; }
         public DateOnly? ExpirationDate { get; set; }
-        public string Status { get; set; } = string.Empty;
+        public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
         public InvoicePartyVM Issuer { get; set; } = new();
         public InvoicePartyVM Client { get; set; } = new();
         public string? BankAccount { get; set; }
@@ -25,6 +25,7 @@ namespace CPMCore.Models.Invoicing
         public IReadOnlyList<InvoiceDetailLineVM> Lines { get; set; } = Array.Empty<InvoiceDetailLineVM>();
         public IReadOnlyList<InvoiceEmailLogItemVM> EmailLogs { get; set; } = Array.Empty<InvoiceEmailLogItemVM>();
         public DateTime? LastEmailSentAt { get; set; }
+        public string StatusLabel => Status.GetDisplayName();
     }
 
     public class InvoicePartyVM
