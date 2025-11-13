@@ -1,0 +1,267 @@
+﻿@using System.Globalization
+@using System.Linq
+@model CPMCore.Models.Leveranciers.SupplierIndexViewModel
+
+@{
+    ViewData["Title"] ??= "Leveranciers";
+    var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
+    var groupedActivities = Model.Activities
+        .GroupBy(a => string.IsNullOrWhiteSpace(a.GroupName) ? "Overige" : a.GroupName!)
+        .OrderBy(g => g.Key)
+        .ToList();
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+        div.dt-buttons .btn.buttons-colvis::after {
+            font-family: "Font Awesome 6 Free";
+            content: "\f078";
+            font-weight: 900;
+            font-size: 0.85rem;
+            vertical-align: middle;
+            border: none;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
+            transform: rotate(180deg);
+        }
+
+        #datatable-suppliers.dataTable > thead > tr > th,
+        #datatable-suppliers.dataTable > tbody > tr > td {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            line-height: 1.2 !important;
+            vertical-align: middle !important;
+        }
+
+        #datatable-suppliers td.actions i {
+            line-height: 1 !important;
+        }
+
+        .select2-container--bootstrap .select2-selection--single,
+        .select2-container--bootstrap .select2-selection--multiple {
+            min-height: 38px;
+        }
+
+            .select2-container--bootstrap .select2-selection--multiple .select2-selection__rendered {
+                padding: 0.3rem;
+            }
+    </style>
+}
+
+<div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+        <h1 class="font-weight-bold mb-0 mt-0">Leveranciers</h1>
+        <h5 class="mb-4 mt-0">Beheer en doorzoek alle leveranciers</h5>
+    </div>
+</div>
+
+<div class="card card-modern mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label class="form-label mb-1" for="supplier-search">Zoek leverancier</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bx bx-search"></i>
+                    </span>
+                    <select id="supplier-search" class="form-control select2" data-placeholder="Zoek op naam..." style="width: 100%;">
+                        <option></option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label mb-1" for="activity-filter">Filter op activiteit</label>
+                <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bx bx-filter-alt"></i>
+                    </span>
+                    <select id="activity-filter" class="form-control select2" multiple data-placeholder="Alle activiteiten" style="width: 100%;">
+                        <option></option>
+                        @foreach (var group in groupedActivities)
+                        {
+                            <optgroup label="@group.Key">
+                                @foreach (var activity in group.OrderBy(a => a.Name))
+                                {
+                                    <option value="@activity.Id">@activity.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card card-modern">
+    <div class="card-body">
+        <div class="datatables-header-footer-wrapper mt-2">
+            <div class="datatable-header d-flex justify-content-end mb-3" id="colvis-container"></div>
+            <table class="table table-responsive-md table-hover mb-0" id="datatable-suppliers" style="min-width: 720px;">
+                <thead>
+                    <tr>
+                        <th>Bedrijfsnaam</th>
+                        <th>Ondernemingsnummer</th>
+                        <th>GSM (indien niet telefoon)</th>
+                        <th>Email</th>
+                        <th>Totaal aantal contracten</th>
+                        <th>Totaal bedrag contracten</th>
+                        <th class="d-none">ActivityIds</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var supplier in Model.Suppliers)
+                    {
+                        var phone = supplier.PrimaryPhone;
+                        var activityData = string.Join(",", supplier.ActivityIds);
+                        <tr>
+                            <td>@supplier.Name</td>
+                            <td>@(string.IsNullOrWhiteSpace(supplier.EnterpriseNumber) ? "-" : supplier.EnterpriseNumber)</td>
+                            <td>@(string.IsNullOrWhiteSpace(phone) ? "-" : phone)</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(supplier.Email))
+                                {
+                                    <a href="mailto:@supplier.Email">@supplier.Email</a>
+                                }
+                                else
+                                {
+                                    @:- 
+                                }
+                            </td>
+                            <td>@supplier.ContractCount</td>
+                            <td>@supplier.TotalContractAmount.ToString("C", currencyCulture)</td>
+                            <td class="d-none">@activityData</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        (function () {
+            const entity = {
+                singular: 'leverancier',
+                plural: 'leveranciers'
+            };
+
+            function buildLanguage(e) {
+                const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+                const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+
+                return {
+                    processing: "Bezig met verwerken…",
+                    search: "Zoeken:",
+                    lengthMenu: "Toon _MENU_",
+                    info: `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+                    infoEmpty: `${capSing} 0 tot 0 van 0 ${capPlur}`,
+                    infoFiltered: "(gefilterd uit _MAX_ totaal)",
+                    loadingRecords: "Bezig met laden…",
+                    zeroRecords: `Geen ${e.plural} om weer te geven`,
+                    emptyTable: `Er zijn geen ${e.plural} om weer te geven`,
+                    aria: {
+                        sortAscending: ": activeer om oplopend te sorteren",
+                        sortDescending: ": activeer om aflopend te sorteren"
+                    }
+                };
+            }
+
+            let selectedActivityIds = [];
+
+            $.fn.dataTable.ext.search.push(function (settings, data) {
+                if (settings.nTable.id !== 'datatable-suppliers') {
+                    return true;
+                }
+
+                if (!selectedActivityIds.length) {
+                    return true;
+                }
+
+                const rowActivities = (data[data.length - 1] || '').split(',').filter(Boolean);
+
+                if (!rowActivities.length) {
+                    return false;
+                }
+
+                return selectedActivityIds.every(id => rowActivities.includes(id));
+            });
+
+            const table = new DataTable('#datatable-suppliers', {
+                order: [[0, 'asc']],
+                language: buildLanguage(entity),
+                columnDefs: [
+                    { targets: -1, visible: false, searchable: false }
+                ],
+                layout: {
+                    topStart: {
+                        buttons: [
+                            {
+                                extend: 'colvis',
+                                text: '<i class="bx bx-filter me-2"></i><span>Kolommen</span>',
+                                titleAttr: 'Selecteer kolommen',
+                                attr: { "data-bs-toggle": "tooltip" },
+                                columns: ':not(.noVis)',
+                                init: function (api, node) {
+                                    $(node).removeClass('btn-secondary').addClass('btn btn-default');
+                                }
+                            }
+                        ]
+                    }
+                }
+            });
+
+            $(".dt-search").hide();
+            table.buttons(0, null).containers().appendTo('#colvis-container');
+
+            const supplierLookupUrl = '@Url.Action("Lookup", "Leveranciers")';
+
+            $('#supplier-search').select2({
+                theme: 'bootstrap',
+                placeholder: 'Zoek op naam…',
+                allowClear: true,
+                width: '100%',
+                language: 'nl',
+                minimumInputLength: 1,
+                ajax: {
+                    url: supplierLookupUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: params => ({ term: params.term }),
+                    processResults: data => ({ results: data.results ?? [] })
+                }
+            })
+                .on('select2:select', function (e) {
+                    const item = e.params.data;
+                    table.search(item && item.text ? item.text : '').draw();
+                })
+                .on('select2:clear', function () {
+                    table.search('').draw();
+                });
+
+            $('#activity-filter').select2({
+                theme: 'bootstrap',
+                placeholder: 'Alle activiteiten',
+                allowClear: true,
+                closeOnSelect: false,
+                width: '100%',
+                language: 'nl'
+            }).on('change', function () {
+                selectedActivityIds = $(this).val() || [];
+                table.draw();
+            });
+        })();
+    </script>
+}

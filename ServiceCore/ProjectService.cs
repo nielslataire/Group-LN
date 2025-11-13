@@ -1092,52 +1092,55 @@ namespace ServiceCore
         public GetResponse<ProjectSalesDataBO> GetProjectSalesData(List<int> ids)
         {
             var response = new GetResponse<ProjectSalesDataBO>();
-            var units = _uow.Units.GetNoTracking().Where(u => ids.Contains(u.ProjectId));
+
+            // Haal alle units van de betrokken projecten in één query
+            var units = _uow.Units.GetNoTracking()
+                .Where(u => ids.Contains(u.ProjectId))
+                .Select(u => new
+                {
+                    u.Id,
+                    u.ProjectId,
+                    u.ClientAccountId,
+                    u.AttachedUnit,
+                    u.LinkedUnit,
+                    u.Type,
+                    u.LandValue,
+                    u.LandValueSold,
+                    UnitConstructionValues = u.UnitConstructionValue.Select(v => new
+                    {
+                        v.Value,
+                        v.ValueSold
+                    })
+                })
+                .AsEnumerable(); // vanaf hier client-side evaluatie
 
             foreach (var pid in ids)
             {
-                // filter 1x per project
-                var u = units.Where(m => m.ProjectId == pid && m.AttachedUnit == null && m.LinkedUnit == null);
+                // Filter 1x per project
+                var u = units
+                    .Where(m => m.ProjectId == pid && m.AttachedUnit == null && m.LinkedUnit == null)
+                    .ToList();
 
-                var living = u.Where(i => i.Type.GroupId == 1 || i.Type.GroupId == 4);
-                var livingCount = living.Count();
-                var livingSold = living.Where(i => i.ClientAccountId != null).Count();
+                var living = u.Where(i => i.Type.GroupId == 1 || i.Type.GroupId == 4).ToList();
+                var livingCount = living.Count;
+                var livingSold = living.Count(i => i.ClientAccountId != null);
 
-                // 🔹 Bereken valueForSale via subquery
-                var valueForSale = (
-                    from unit in u
-                    where unit.ClientAccountId == null
-                    select (
-                        (unit.LandValue ?? 0m) +
-                        (_uow.UnitConstructionValues.GetNoTracking()
-                            .Where(v => v.UnitId == unit.Id)
-                            .Sum(v => (decimal?)v.Value) ?? 0m)
-                    )
-                ).DefaultIfEmpty(0m).Sum();
+                // 💰 Totale waarde te koop (grond + bouwsom)
+                decimal valueForSale = u
+                    .Where(m => m.ClientAccountId == null)
+                    .Select(m =>
+                        (m.LandValue ?? 0m) +
+                        (m.UnitConstructionValues.Sum(x => (decimal?)x.Value) ?? 0m))
+                    .Sum();
 
-                // 🔹 Bereken valueSold via subquery
-                var valueSold = (
-                    from unit in u
-                    select (
-                        (unit.LandValueSold ?? 0m) +
-                        (_uow.UnitConstructionValues.GetNoTracking()
-                            .Where(v => v.UnitId == unit.Id)
-                            .Sum(v => (decimal?)v.ValueSold) ?? 0m)
-                    )
-                ).DefaultIfEmpty(0m).Sum();
+                // 💰 Totale waarde verkocht (grond + bouwsom verkocht)
+                decimal valueSold = u
+                    .Select(m =>
+                        (m.LandValueSold ?? 0m) +
+                        (m.UnitConstructionValues.Sum(x => (decimal?)x.ValueSold) ?? 0m))
+                    .Sum();
 
-                // 🔹 Startprijs = minimum bouwsom + grond (enkel voor onverkopte units)
-                var startingPrice = (
-                    from unit in u
-                    where unit.ClientAccountId == null
-                          && (unit.Type.GroupId == 1 || unit.Type.GroupId == 4)
-                    let totalConst = _uow.UnitConstructionValues.GetNoTracking()
-                        .Where(v => v.UnitId == unit.Id)
-                        .Sum(v => (decimal?)v.Value) ?? 0m
-                    select totalConst + (unit.LandValue ?? 0m)
-                ).DefaultIfEmpty(0m).Min();
-
-                // 📊 Resterende berekeningen
+                // 📊 Percentages
                 decimal percentageLiving = livingCount != 0
                     ? (decimal)(livingSold / (double)livingCount * 100)
                     : 100;
@@ -1146,9 +1149,19 @@ namespace ServiceCore
                     ? (decimal)(valueSold / (valueSold + valueForSale) * 100)
                     : 100;
 
+                // 🏘️ Aantallen
                 int numApts = u.Count(m => m.Type.Id == 1);
                 int numHouses = u.Count(m => m.Type.Id == 2);
                 int numCommercial = u.Count(m => m.Type.Id == 10);
+
+                // 💶 Startprijs (minimale som van grond + bouw)
+                decimal startingPrice = u
+                    .Where(i => i.ClientAccountId == null && (i.Type.GroupId == 1 || i.Type.GroupId == 4))
+                    .Select(i =>
+                        (i.UnitConstructionValues.Sum(v => (decimal?)v.Value) ?? 0m)
+                        + (i.LandValue ?? 0m))
+                    .DefaultIfEmpty(0m)
+                    .Min();
 
                 response.AddValue(new ProjectSalesDataBO
                 {
@@ -1168,6 +1181,7 @@ namespace ServiceCore
 
             return response;
         }
+
 
 
         public Response InsertUpdateSalesSettings(ProjectSalesSettingsBO salessettings)

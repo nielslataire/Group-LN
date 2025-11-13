@@ -1,6 +1,6 @@
-﻿@using CPMCore.Controllers
+﻿@using BOCore
+@using CPMCore.Controllers
 @using CPMCore.Models
-@using BOCore
 @using Microsoft.Extensions.Configuration
 @inject IConfiguration Configuration
 @model CPMCore.Models.Projecten.ShowProjectsModel
@@ -11,123 +11,163 @@
         new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
         new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", false)
     };
+
     ViewData["Title"] = ViewData["Title"] ?? "Projecten";
     string imageUrl = string.Empty;
 }
 
+@section PageStyle {
+    <style>
+        .project-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
 
-    <div class="row justify-content-between align-items-center mb-4">
-        <div class="col-sm-auto">
-            <h1 class="font-weight-bold mb-0">@ViewData["SubTitle"]</h1>
-        <p class="mb-0">@ViewData["SubTitleText"]</p>
-        </div>
-    </div>
-
-    <div class="mb-4">
-        <div class="btn-group flex-wrap" role="group" aria-label="Project filters">
-            <a class="btn btn-outline-primary filter-link active" data-filter="*" href="#">Toon alles</a>
-            @if (Model.Statuses != null)
-            {
-                foreach (var status in Model.Statuses)
-                {
-                    <a class="btn btn-outline-primary filter-link" data-filter=".Status@status.Id" href="#">@status.Name</a>
-                }
+            .project-card .card-body {
+                flex: 1 1 auto;
+                display: flex;
+                flex-direction: column;
             }
-        </div>
-    </div>
 
-<div class="row row-gutter-sm" id="project-grid">
+        .project-details {
+            flex: 1 1 auto;
+        }
+
+        .project-detail-row {
+            display: flex;
+            column-gap: .75rem;
+        }
+
+        .detail-icon {
+            width: 2rem;
+            text-align: center;
+        }
+    </style>
+}
+
+<div class="row justify-content-between align-items-center mb-4">
+    <div class="col-sm-auto">
+        <h1 class="font-weight-bold mb-0">@ViewData["SubTitle"]</h1>
+        <p class="mb-0">@ViewData["SubTitleText"]</p>
+    </div>
+</div>
+
+<div class="card card-modern mb-3">
+    <div class="card-body">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bx bx-search"></i></span>
+            <input id="search-term"
+                   type="text"
+                   class="form-control form-control-modern me-2"
+                   placeholder="Zoek op projectnaam of gemeente ...">
+            <div id="colvis-container">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bx bx-filter"></i></span>
+                    <select id="status-filter-select"
+                            class="form-control form-control-modern">
+                        <option value="*">Alle projecten</option>
+                        @if (Model.Statuses != null)
+                        {
+                            foreach (var status in Model.Statuses)
+                            {
+                                <option value=".status-@status.Id">@status.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+            </div>
+            
+        </div>
+            
+    </div>
+</div>
+
+<!-- 🔥 Enige filterbron = selectbox → GEEN toolbar meer -->
+<div class="row mg-files" id="project-grid">
     @if (Model.Projects != null && Model.Projects.Any())
     {
         foreach (var project in Model.Projects)
         {
             ProjectSalesDataBO projectSalesData = null;
+            Model.SalesData?.TryGetValue(project.Id, out projectSalesData);
             var hasSalesData = Model.SalesData != null && Model.SalesData.TryGetValue(project.Id, out projectSalesData);
-            var statusName = !string.IsNullOrWhiteSpace(project.Status?.Name)
-            ? project.Status.Name
-            : Model.Statuses?.FirstOrDefault(s => s.Id == project.Status?.Id)?.Name;
-            var clientCount = project.ClientCount > 0
-            ? project.ClientCount
-            : (hasSalesData ? projectSalesData.LivingUnitsSold : 0);
-            var soldPercentageValue = hasSalesData ? projectSalesData.PercentageSold : 0m;
-            var soldPercentageRounded = Math.Round(soldPercentageValue, 1);
-            var soldPercentageText = soldPercentageRounded.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-            var startDateText = project.StartDateConstruction?.ToString("dd/MM/yyyy");
-            var deliveryDateText = project.DeliveryDate?.ToString("dd/MM/yyyy");
-            var startDateDisplay = !string.IsNullOrEmpty(startDateText) ? startDateText : "-";
 
-            <div class="col-sm-6 col-lg-4 col-xl-3 mb-4 filteritem Status@project.Status.Id">
-                <div class="card card-modern card-modern-alt-padding h-100">
+            var statusName = !string.IsNullOrWhiteSpace(project.Status?.Name) ? project.Status.Name : Model.Statuses?.FirstOrDefault(s => s.Id == project.Status?.Id)?.Name; 
+            var clientCount = project.ClientCount > 0 ? project.ClientCount : (hasSalesData ? projectSalesData.LivingUnitsSold : 0); 
+            var soldPercentageValue = hasSalesData ? projectSalesData.PercentageSold : 0m; 
+            var soldPercentageRounded = Math.Round(soldPercentageValue, 1); 
+            var soldPercentageDisplay = soldPercentageRounded.ToString("0.##"); 
+            var soldPercentageClamped = Math.Min(100m, Math.Max(0m, soldPercentageValue)); 
+            var soldPercentageStyleText = soldPercentageClamped.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture); 
+            var startDateText = project.StartDateConstruction?.ToString("dd/MM/yyyy"); 
+            var deliveryDateText = project.DeliveryDate?.ToString("dd/MM/yyyy"); 
+            var startDateDisplay = !string.IsNullOrEmpty(startDateText) ? startDateText : "-";
+            var statusId = project.Status?.Id ?? 0;
+            if (project.DefaultPicture?.Name is null)
+                imageUrl = "~/img/no_image.jpg";
+            else
+                imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
+
+            <div class="isotope-item status-@statusId col-sm-12 col-md-4 col-lg-2 mb-4">
+                <div class="card card-modern h-100 project-card">
                     <div class="image-frame-wrapper position-relative">
                         @if (!string.IsNullOrWhiteSpace(statusName))
                         {
-                            <span class="badge bg-primary text-uppercase small fw-semibold position-absolute top-0 start-0 m-3">@statusName</span>
+                            <span class="badge bg-primary text-uppercase small fw-semibold position-absolute top-0 start-0 m-3"> @statusName </span>
                         }
-                        <a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id }))">
-                            @if (project.DefaultPicture?.Name is null)
-                            {
-                                imageUrl = "~/img/no_image.jpg";
-                            }
-                            else
-                            {
-                                imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
-                            }
-                            <img src="@Url.Content(imageUrl)" class="card-img-top" alt="@project.Name" />
+                        <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })">
+                            <img src="@Url.Content(imageUrl)"
+                                 class="card-img-top"
+                                 alt="@project.Name" />
                         </a>
                     </div>
+
                     <div class="card-body bg-light">
-                        <h4 class="text-4 line-height-2 mt-0 mb-1">
-                            <a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id }))" class="ecommerce-sidebar-link text-color-dark text-color-hover-primary text-decoration-none">
-                                @project.Name
-                            </a>
-                        </h4>
-                        @if (!string.IsNullOrWhiteSpace(project.CommercialTitleNL))
-                        {
-                            <div class="text-muted mb-1">@project.CommercialTitleNL</div>
-                        }
-                        <div class="d-flex align-items-center text-muted mb-1">
-                            <i class="fas fa-map-marker-alt me-2"></i>
-                            <span>@project.Postalcode?.Gemeente</span>
-                        </div>
-                        @if (!string.IsNullOrEmpty(startDateText) || !string.IsNullOrEmpty(deliveryDateText))
-                        {
-                            <div class="text-muted mb-1 d-flex align-items-center">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                <div>
-                                    <span>Start: @startDateDisplay</span>
-                                    @if (!string.IsNullOrEmpty(deliveryDateText))
-                                    {
-                                        <span class="ms-1">tot @deliveryDateText</span>
-                                    }
+                        <div class="project-details">
+                            <h4 class="fw-bold mb-1">@project.Name</h4>
+
+                            @if (!string.IsNullOrWhiteSpace(project.CommercialTitleNL))
+                            {
+                                <div class="text-muted mb-4">@project.CommercialTitleNL</div>
+                                ;
+                            }
+
+                            <div class="project-detail-row text-muted mb-1">
+                                <span class="detail-icon"><i class="fas fa-map-marker-alt"></i></span>
+                                <div>@project.Postalcode?.Gemeente</div>
+                            </div>
+
+                            @if (project.StartDateConstruction != null)
+                            {
+                                <div class="project-detail-row text-muted mb-1">
+                                    <span class="detail-icon"><i class="fas fa-calendar-alt"></i></span>
+                                    <div>
+                                        Start: @project.StartDateConstruction.Value.ToString("dd/MM/yyyy")
+                                    </div>
                                 </div>
+                            }
+
+                            <div class="project-detail-row text-muted">
+                                <span class="detail-icon"><i class="fas fa-users"></i></span>
+                                <div>Aantal klanten: @project.ClientCount</div>
                             </div>
-                        }
-                        <div class="text-muted mb-2 d-flex align-items-center">
-                            <i class="fas fa-users me-2"></i>
-                            <span>Aantal klanten: @clientCount</span>
+                            @if (User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("Sales") || User.IsInRole("Verkoop"))
+                            {
+                                <div class="project-progress-container mt-3"> 
+                                    <div class="project-split-row small text-muted mb-1"> 
+                                        <div>Percentage verkocht</div> 
+                                        <div class="fw-bold text-end">@soldPercentageDisplay%</div> 
+                                    </div> 
+                                    <div class="progress light"> 
+                                        <div class="progress-bar progress-bar-primary" role="progressbar" style="width: @soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"> </div> 
+                                        </div> 
+                                 </div>
+                            }
                         </div>
-                        <div class="mb-2 d-none">
-                            <div class="d-flex justify-content-between small text-muted mb-1">
-                                <span>Voortgang</span>
-                                <span class="fw-bold">0%</span>
-                            </div>
-                            <div class="progress">
-                                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                        </div>
-                        @if (User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("Sales") || User.IsInRole("Verkoop"))
-                        {
-                            <div>
-                                <div class="d-flex justify-content-between small text-muted mb-1">
-                                    <span>Percentage verkocht</span>
-                                    <span class="fw-bold">@soldPercentageRounded.ToString("0.##")%</span>
-                                </div>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: @soldPercentageText%;" aria-valuenow="@soldPercentageText" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
-                            </div>
-                        }
                     </div>
+
                 </div>
             </div>
         }
@@ -135,32 +175,93 @@
     else
     {
         <div class="col-12">
-            <div class="alert alert-default" role="alert">
-                Er zijn momenteel geen projecten beschikbaar.
-            </div>
+            <div class="alert alert-info">Er zijn momenteel geen projecten beschikbaar.</div>
         </div>
     }
 </div>
-
-
-@section PageScripts
-{
+@section PageScripts {
     <script src="https://unpkg.com/isotope-layout@3/dist/isotope.pkgd.min.js"></script>
+    <script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
+
     <script>
-        $(document).ready(function () {
-            var $grid = $('#project-grid').isotope({
-                itemSelector: '.filteritem',
-                layoutMode: 'fitRows'
+        $(function () {
+
+            var $grid = $('#project-grid');
+
+            // ⭐ Init Isotope
+            $grid.isotope({
+                itemSelector: '.isotope-item',
+                layoutMode: 'fitRows',
+                filter: function () {
+                    var searchText = qsRegex ? $(this).text().toLowerCase().match(qsRegex) : true;
+                    var statusMatch = filterStatus ? $(this).is(filterStatus) : true;
+                    return searchText && statusMatch;
+                }
             });
 
-            $('.filter-link').on('click', function (e) {
-                e.preventDefault();
-                var filterValue = $(this).data('filter');
-                $grid.isotope({ filter: filterValue });
-
-                $('.filter-link').removeClass('active');
-                $(this).addClass('active');
+            $grid.imagesLoaded(function () {
+                $grid.isotope('layout');
+                equalizeCardBodies();
             });
+
+            // ------------------------------
+            // ⭐ FILTERS: STATUS + SEARCH
+            // ------------------------------
+
+            var filterStatus = "*";   // huidige selectbox filter
+            var qsRegex = null;       // zoek regex
+
+            // ⭐ SELECTBOX → FILTER
+            $('#status-filter-select').on('change', function () {
+                filterStatus = $(this).val() || "*";
+                $grid.isotope();
+                relayout();
+            });
+
+            // ⭐ LIVE SEARCH (met debounce)
+            var debounce = function (fn, delay) {
+                var timer = null;
+                return function () {
+                    var context = this, args = arguments;
+                    clearTimeout(timer);
+                    timer = setTimeout(function () {
+                        fn.apply(context, args);
+                    }, delay);
+                };
+            };
+
+            $('#search-term').on('keyup', debounce(function () {
+                var query = $(this).val().toLowerCase();
+                qsRegex = query.length ? new RegExp(query, 'gi') : null;
+                $grid.isotope();
+                relayout();
+            }, 150));
+
+            // ------------------------------
+            // ⭐ HELPER: opnieuw layout + cards gelijk maken
+            // ------------------------------
+
+            function relayout() {
+                setTimeout(function () {
+                    $grid.isotope('layout');
+                    equalizeCardBodies();
+                }, 150);
+            }
+
+            function equalizeCardBodies() {
+                var maxH = 0;
+                $('.project-card .card-body').css('min-height', '0');
+
+                $('.project-card .card-body').each(function () {
+                    var h = $(this).outerHeight();
+                    if (h > maxH) maxH = h;
+                });
+
+                $('.project-card .card-body').css('min-height', maxH + 'px');
+            }
+
+            $(window).on('resize', equalizeCardBodies);
         });
     </script>
 }
+
