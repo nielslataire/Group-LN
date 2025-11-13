@@ -1,0 +1,482 @@
+﻿@using CPMCore.Helpers
+@model CPMCore.Models.Projecten.EditProjectDetail
+
+@{
+    ViewData["Title"] = $"Project - {Model.Project.Name}";
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
+    <link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
+    <link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <div class="row align-items-center">
+                <div class="col-sm-auto d-flex align-items-center">
+                    <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.Project.Id })" class="text-decoration-none text-reset d-flex align-items-center">
+                        <i class="bx bx-chevron-left fs-1"></i>
+                    </a>
+                </div>
+                <div class="col-sm-auto">
+                    <h1 class="fw-bold mb-0">@Model.Project.Name bewerken</h1>
+                    <h5 class="mb-4 mt-0">Werk de gegevens van dit project bij</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@using (Html.BeginForm("Edit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.Project.Id)
+    @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
+    @Html.HiddenFor(m => m.Project.WheaterStation.Id, new { id = "Project_WheaterStation_Id" })
+    @Html.HiddenFor(m => m.Project.WheaterStation.Name, new { id = "Project_WheaterStation_Name" })
+    @Html.HiddenFor(m => m.Project.Developer.ID, new { id = "Project_Developer_ID" })
+    @Html.HiddenFor(m => m.Project.Developer.Display, new { id = "Project_Developer_Display" })
+    @Html.HiddenFor(m => m.Project.Builder.ID, new { id = "Project_Builder_ID" })
+    @Html.HiddenFor(m => m.Project.Builder.Display, new { id = "Project_Builder_Display" })
+    @Html.HiddenFor(m => m.Project.Architect.ID, new { id = "Project_Architect_ID" })
+    @Html.HiddenFor(m => m.Project.Architect.Display, new { id = "Project_Architect_Display" })
+    @Html.HiddenFor(m => m.Project.Engineer.ID, new { id = "Project_Engineer_ID" })
+    @Html.HiddenFor(m => m.Project.Engineer.Display, new { id = "Project_Engineer_Display" })
+    @Html.HiddenFor(m => m.Project.SecurityCoordinator.ID, new { id = "Project_SecurityCoordinator_ID" })
+    @Html.HiddenFor(m => m.Project.SecurityCoordinator.Display, new { id = "Project_SecurityCoordinator_Display" })
+    @Html.HiddenFor(m => m.Project.EpbReporter.ID, new { id = "Project_EpbReporter_ID" })
+    @Html.HiddenFor(m => m.Project.EpbReporter.Display, new { id = "Project_EpbReporter_Display" })
+
+    <div class="row mt-2">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-info-circle"></i>
+                            <h2 class="card-big-info-title">Algemene info</h2>
+                            <p class="card-big-info-desc">Basisgegevens van het project.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Name">
+                                    @Html.LabelFor(m => m.Project.Name)
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Street">
+                                    @Html.LabelFor(m => m.Project.Street)
+                                </label>
+                                <div class="col-lg-5 col-xl-4">
+                                    @Html.TextBoxFor(m => m.Project.Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
+                                </div>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.TextBoxFor(m => m.Project.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr." })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="lstProjectCountries">Land</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="PostalSelect">
+                                    @Html.LabelFor(m => m.Project.Postalcode.Gemeente)
+                                </label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="PostalSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.SelectedPostalcode > 0)
+                                        {
+                                            <option value="@Model.SelectedPostalcode" selected>
+                                                @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTitleNL">
+                                    @Html.LabelFor(m => m.Project.CommercialTitleNL)
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.TextBoxFor(m => m.Project.CommercialTitleNL, new { @class = "form-control form-control-modern", placeholder = "Commerciële titel" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-start pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTextNL">
+                                    @Html.LabelFor(m => m.Project.CommercialTextNL)
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", placeholder = "Beschrijving van het project" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-calendar"></i>
+                            <h2 class="card-big-info-title">Planning & status</h2>
+                            <p class="card-big-info-desc">Plan de uitvoering en wijs verantwoordelijken toe.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_StartDateConstruction">@Html.LabelFor(m => m.Project.StartDateConstruction)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    <input type="date" class="form-control form-control-modern" id="Project_StartDateConstruction" name="Project.StartDateConstruction" value="@(Model.Project.StartDateConstruction.HasValue? Model.Project.StartDateConstruction.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_ExecutionDays">@Html.LabelFor(m => m.Project.ExecutionDays)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "form-control form-control-modern", type = "number", min = "0" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_DeliveryDate">@Html.LabelFor(m => m.Project.DeliveryDate)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    <input type="date" class="form-control form-control-modern" id="Project_DeliveryDate" name="Project.DeliveryDate" value="@(Model.Project.DeliveryDate.HasValue? Model.Project.DeliveryDate.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_DeliveryDateDef">@Html.LabelFor(m => m.Project.DeliveryDateDef)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    <input type="date" class="form-control form-control-modern" id="Project_DeliveryDateDef" name="Project.DeliveryDateDef" value="@(Model.Project.DeliveryDateDef.HasValue? Model.Project.DeliveryDateDef.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="WheaterSelect">@Html.LabelFor(m => m.Project.WheaterStation)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="WheaterSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.WheaterStation.Id > 0)
+                                        {
+                                            <option value="@Model.Project.WheaterStation.Id" selected>@Model.Project.WheaterStation.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="lstProjectStatuses">@Html.LabelFor(m => m.Project.Status)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.DropDownListFor(m => m.SelectedStatus, new SelectList(Model.Statuses, "ID", "Display", Model.SelectedStatus), new { @class = "form-control form-control-modern", id = "lstProjectStatuses" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_ProjectType">@Html.LabelFor(m => m.Project.ProjectType)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.EnumDropDownListFor(m => m.Project.ProjectType, new { @class = "form-control form-control-modern" })
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_AspNetUserID">@Html.LabelFor(m => m.Project.AspNetUserID)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "Displayname", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_TotalLandShare">@Html.LabelFor(m => m.Project.TotalLandShare)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.TextBoxFor(m => m.Project.TotalLandShare, new { @class = "form-control form-control-modern", type = "number", step = "0.01", min = "0" })
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_ProjectFolder">@Html.LabelFor(m => m.Project.ProjectFolder)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.TextBoxFor(m => m.Project.ProjectFolder, new { @class = "form-control form-control-modern", placeholder = "Projectmap" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_FacebookPlaceId">Facebook plaats</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.TextBoxFor(m => m.Project.FacebookPlaceId, new { @class = "form-control form-control-modern", placeholder = "Facebook plaats ID" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-user"></i>
+                            <h2 class="card-big-info-title">Partners & documenten</h2>
+                            <p class="card-big-info-desc">Koppel de betrokken partijen en beheer de documentatie.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="DeveloperSelect">@Html.LabelFor(m => m.Project.Developer)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="DeveloperSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.Developer.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Developer.ID" selected>@Model.Project.Developer.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="BuilderSelect">@Html.LabelFor(m => m.Project.Builder)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="BuilderSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.Builder.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Builder.ID" selected>@Model.Project.Builder.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="ArchitectSelect">@Html.LabelFor(m => m.Project.Architect)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="ArchitectSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.Architect.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Architect.ID" selected>@Model.Project.Architect.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="EngineerSelect">@Html.LabelFor(m => m.Project.Engineer)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="EngineerSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.Engineer.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Engineer.ID" selected>@Model.Project.Engineer.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="SecuritySelect">@Html.LabelFor(m => m.Project.SecurityCoordinator)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="SecuritySelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.SecurityCoordinator.ID > 0)
+                                        {
+                                            <option value="@Model.Project.SecurityCoordinator.ID" selected>@Model.Project.SecurityCoordinator.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="EpbSelect">@Html.LabelFor(m => m.Project.EpbReporter)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="EpbSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.EpbReporter.ID > 0)
+                                        {
+                                            <option value="@Model.Project.EpbReporter.ID" selected>@Model.Project.EpbReporter.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <hr />
+                                <h4 class="fw-bold mb-3">Verplichte documenten</h4>
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocDelivery">@Html.LabelFor(m => m.Project.DocDelivery)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocDelivery, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocDefDelivery">@Html.LabelFor(m => m.Project.DocDefDelivery)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocDefDelivery, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocPID">@Html.LabelFor(m => m.Project.DocPID)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocPID, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocElectricalInspection">@Html.LabelFor(m => m.Project.DocElectricalInspection)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocElectricalInspection, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocWaterInspection">@Html.LabelFor(m => m.Project.DocWaterInspection)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocWaterInspection, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocFireInspection">@Html.LabelFor(m => m.Project.DocFireInspection)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocFireInspection, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DocSewerInspection">@Html.LabelFor(m => m.Project.DocSewerInspection)</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        <div class="form-check">
+                                            @Html.CheckBoxFor(m => m.Project.DocSewerInspection, new { @class = "form-check-input" })
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row action-buttons">
+        <div class="col-12 col-md-auto">
+            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                <i class="bx bx-save text-4 me-2"></i> Wijzigingen opslaan
+            </button>
+        </div>
+        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+            <a href="@((TempData.Peek("Referrer") as string) ?? Url.Action("Detail", "Projecten", new { projectid = Model.Project.Id }))" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/select2/js/i18n/nl.js"></script>
+    <script src="~/js/theme.admin.extension.js"></script>
+    <script>
+        function configureSelect(selector, options, onSelect) {
+                const $el = $(selector).select2(options);
+                if (onSelect) {
+                        $el.on('select2:select', onSelect);
+                        $el.on('select2:clear', function () {
+                                onSelect({ params: { data: { id: 0, text: '' } } });
+                        });
+                }
+                return $el;
+        }
+
+        $(function () {
+                const companyOptions = {
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer...',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        minimumInputLength: 3,
+                        ajax: {
+                                url: '@Url.Action("GetCompanys", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return { term: params.term };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                };
+
+                configureSelect('#PostalSelect', {
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer de gemeente',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        ajax: {
+                                url: '@Url.Action("GetPostcodesByCountry", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return {
+                                                term: params.term,
+                                                countryId: $('#lstProjectCountries').val()
+                                        };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }, function (e) {
+                        $('#SelectedPostalcode').val(e.params.data.id);
+                });
+
+                configureSelect('#WheaterSelect', {
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer het KMI weerstation',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        minimumInputLength: 1,
+                        ajax: {
+                                url: '@Url.Action("GetWheaterstations", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return { term: params.term };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }, function (e) {
+                        $('#Project_WheaterStation_Id').val(e.params.data.id);
+                        $('#Project_WheaterStation_Name').val(e.params.data.text);
+                });
+
+                configureSelect('#DeveloperSelect', companyOptions, function (e) {
+                        $('#Project_Developer_ID').val(e.params.data.id);
+                        $('#Project_Developer_Display').val(e.params.data.text);
+                });
+                configureSelect('#BuilderSelect', companyOptions, function (e) {
+                        $('#Project_Builder_ID').val(e.params.data.id);
+                        $('#Project_Builder_Display').val(e.params.data.text);
+                });
+                configureSelect('#ArchitectSelect', companyOptions, function (e) {
+                        $('#Project_Architect_ID').val(e.params.data.id);
+                        $('#Project_Architect_Display').val(e.params.data.text);
+                });
+                configureSelect('#EngineerSelect', companyOptions, function (e) {
+                        $('#Project_Engineer_ID').val(e.params.data.id);
+                        $('#Project_Engineer_Display').val(e.params.data.text);
+                });
+                configureSelect('#SecuritySelect', companyOptions, function (e) {
+                        $('#Project_SecurityCoordinator_ID').val(e.params.data.id);
+                        $('#Project_SecurityCoordinator_Display').val(e.params.data.text);
+                });
+                configureSelect('#EpbSelect', companyOptions, function (e) {
+                        $('#Project_EpbReporter_ID').val(e.params.data.id);
+                        $('#Project_EpbReporter_Display').val(e.params.data.text);
+                });
+
+                if ($('#PostalSelect').val()) {
+                        $('#SelectedPostalcode').val($('#PostalSelect').val());
+                }
+        });
+    </script>
+}

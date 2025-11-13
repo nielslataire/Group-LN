@@ -13,25 +13,13 @@
 
 @section PageStyle
 {
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-multiselect/css/bootstrap-multiselect.css" />
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <style>
-        div.dt-buttons .btn.buttons-colvis::after {
-            font-family: "Font Awesome 6 Free";
-            content: "\f078";
-            font-weight: 900;
-            font-size: 0.85rem;
-            vertical-align: middle;
-            border: none;
-            margin-left: 0.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
-            transform: rotate(180deg);
-        }
-
         #datatable-suppliers.dataTable > thead > tr > th,
         #datatable-suppliers.dataTable > tbody > tr > td {
             padding-top: 1rem !important;
@@ -39,19 +27,10 @@
             line-height: 1.2 !important;
             vertical-align: middle !important;
         }
-
         #datatable-suppliers td.actions i {
             line-height: 1 !important;
         }
 
-        .select2-container--bootstrap .select2-selection--single,
-        .select2-container--bootstrap .select2-selection--multiple {
-            min-height: 38px;
-        }
-
-            .select2-container--bootstrap .select2-selection--multiple .select2-selection__rendered {
-                padding: 0.3rem;
-            }
     </style>
 }
 
@@ -68,33 +47,27 @@
             <div class="col-lg-6">
                 <label class="form-label mb-1" for="supplier-search">Zoek leverancier</label>
                 <div class="input-group">
-                    <span class="input-group-text">
-                        <i class="bx bx-search"></i>
-                    </span>
-                    <select id="supplier-search" class="form-control select2" data-placeholder="Zoek op naam..." style="width: 100%;">
-                        <option></option>
-                    </select>
+                    <span class="input-group-text"><i class="bx bx-search"></i></span>
+                    <input id="search-term"
+                           type="text"
+                           class="form-control form-control-modern me-2"
+                           placeholder="Zoek je leverancier ...">
                 </div>
             </div>
             <div class="col-lg-6">
                 <label class="form-label mb-1" for="activity-filter">Filter op activiteit</label>
-                <div class="input-group">
-                    <span class="input-group-text">
-                        <i class="bx bx-filter-alt"></i>
-                    </span>
-                    <select id="activity-filter" class="form-control select2" multiple data-placeholder="Alle activiteiten" style="width: 100%;">
-                        <option></option>
-                        @foreach (var group in groupedActivities)
-                        {
-                            <optgroup label="@group.Key">
-                                @foreach (var activity in group.OrderBy(a => a.Name))
-                                {
-                                    <option value="@activity.Id">@activity.Name</option>
-                                }
-                            </optgroup>
-                        }
-                    </select>
-                </div>
+
+                <select multiple data-plugin-selectTwo class="form-control form-control-modern populate">
+                            @foreach (var group in groupedActivities)
+                            {
+                                <optgroup label="@group.Key">
+                                    @foreach (var activity in group.OrderBy(a => a.Name))
+                                    {
+                                        <option value="@activity.Id">@activity.Name</option>
+                                    }
+                                </optgroup>
+                            }
+                        </select>
             </div>
         </div>
     </div>
@@ -148,6 +121,8 @@
 
 @section PageScripts
 {
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
     <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>

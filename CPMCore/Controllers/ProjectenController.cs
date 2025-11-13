@@ -27,12 +27,14 @@ using SixLabors.ImageSharp.Processing;
 using SmartBreadcrumbs.Attributes;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using System.Web;
 
 
@@ -143,6 +145,59 @@ namespace CPMCore.Controllers
             return View("Index", model);
         }
 
+        [HttpGet]
+        [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
+        public IActionResult Toevoegen()
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var referrer = Request.Headers["Referer"].ToString();
+            TempData["Referrer"] = string.IsNullOrEmpty(referrer)
+                ? Url.Action("Index", "Projecten")
+                : referrer;
+
+            var model = new ProjectModel();
+            model.Project.Postalcode.Country.CountryId = 19;
+            model.Project.Postalcode.Country.ISOCode = "BE";
+
+            FillInAddSelectLists(model);
+
+            ViewData["Title"] = "Project toevoegen";
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
+        public IActionResult Toevoegen(ProjectModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                FillInAddSelectLists(model);
+                return View(model);
+            }
+
+            model.Project.Postalcode.Country.CountryId = model.SelectedCountry;
+            model.Project.Postalcode.PostcodeId = model.SelectedPostalcode;
+            model.Project.Status.Id = model.Project.Status.Id == 0 ? 1 : model.Project.Status.Id;
+            model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdate(model.Project);
+
+            if (response.Success)
+            {
+                AddMessage("success", $"Het project {model.Project.Name} is toegevoegd", "Geslaagd!");
+                return RedirectToAction("Index", "Home");
+            }
+
+            AddMessage("error", $"Het project {model.Project.Name} is NIET toegevoegd", "Fout!");
+
+            FillInAddSelectLists(model);
+            return View(model);
+        }
+
 
         [HttpGet]
         //[Breadcrumb("Info")]
@@ -217,6 +272,76 @@ namespace CPMCore.Controllers
 
             ViewData["BreadcrumbNode"] = projectDetail;
 
+            return View(model);
+        }
+
+        [HttpGet]
+        [Breadcrumb("Project bewerken", FromAction = nameof(Index))]
+        public IActionResult Edit(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var referrer = Request.Headers["Referer"].ToString();
+            TempData["Referrer"] = string.IsNullOrEmpty(referrer)
+                ? Url.Action("Detail", "Projecten", new { projectid })
+                : referrer;
+
+            var model = new EditProjectDetail();
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetProjectByID(projectid);
+
+            if (!response.Success || response.Value == null)
+            {
+                AddMessage("error", "Project niet gevonden", "Fout!");
+                return RedirectToAction("Index");
+            }
+
+            model.Project = response.Value;
+            model.Project.Postalcode.Country.CountryId = model.Project.Postalcode.Country.CountryId == 0 ? 19 : model.Project.Postalcode.Country.CountryId;
+            model.Project.Postalcode.Country.ISOCode = string.IsNullOrWhiteSpace(model.Project.Postalcode.Country.ISOCode) ? "BE" : model.Project.Postalcode.Country.ISOCode;
+            model.SelectedCountry = model.Project.Postalcode.Country.CountryId;
+            model.SelectedPostalcode = model.Project.Postalcode.PostcodeId.HasValue ? (int)model.Project.Postalcode.PostcodeId.Value : 0;
+            model.SelectedStatus = model.Project.Status.Id;
+
+            FillInAddSelectListsDetailEdit(model);
+
+            model.Users = _userManager.Users?.OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
+
+            ViewData["Title"] = $"Project - {model.Project.Name}";
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Breadcrumb("Project bewerken", FromAction = nameof(Index))]
+        public IActionResult Edit(EditProjectDetail model)
+        {
+            if (!ModelState.IsValid)
+            {
+                FillInAddSelectListsDetailEdit(model);
+                model.Users = _userManager.Users?.OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
+                return View(model);
+            }
+
+            model.Project.Postalcode.Country.CountryId = model.SelectedCountry;
+            model.Project.Postalcode.PostcodeId = model.SelectedPostalcode;
+            model.Project.Status.Id = model.SelectedStatus;
+            model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertUpdate(model.Project);
+
+            if (response.Success)
+            {
+                AddMessage("success", $"{model.Project.Name} is bijgewerkt", "Geslaagd!");
+                return RedirectToAction("Detail", new { projectid = model.Project.Id });
+            }
+
+            AddMessage("error", $"{model.Project.Name} is NIET bijgewerkt", "Fout!");
+
+            FillInAddSelectListsDetailEdit(model);
+            model.Users = _userManager.Users?.OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
             return View(model);
         }
 
@@ -3914,6 +4039,47 @@ namespace CPMCore.Controllers
             var aresponse = projectService.GetProjectContractActivitiesForSelect(model.ProjectId);
             model.ProjectContractActivities = aresponse.Success ? aresponse.Values : model.ProjectContractActivities;
         }
+        private void FillInAddSelectLists(ProjectModel model)
+        {
+            if (model == null) throw new ArgumentNullException(nameof(model));
+
+            var cservice = ServiceFactory.GetCountryService();
+            var cresponse = cservice.GetVisibleCountriesForSelect();
+            if (cresponse.Success && cresponse.Values is not null)
+            {
+                model.Countries = cresponse.Values;
+                var defCountry = model.Countries.FirstOrDefault(m => m.Group == "19");
+                if (defCountry != null)
+                {
+                    model.SelectedCountry = defCountry.ID;
+                }
+            }
+        }
+
+        private void FillInAddSelectListsDetailEdit(EditProjectDetail model)
+        {
+            if (model == null) throw new ArgumentNullException(nameof(model));
+
+            var cservice = ServiceFactory.GetCountryService();
+            var cresponse = cservice.GetVisibleCountriesForSelect();
+            if (cresponse.Success && cresponse.Values is not null)
+            {
+                model.Countries = cresponse.Values;
+                var defCountry = model.Countries.FirstOrDefault(m => m.Group == "19");
+                if (defCountry != null && model.SelectedCountry == 0)
+                {
+                    model.SelectedCountry = defCountry.ID;
+                }
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetStatusesForSelect();
+            if (response.Success && response.Values is not null)
+            {
+                model.Statuses = response.Values;
+            }
+
+        }
 
         private void FillInAddSelectListsDetail(ref ShowProjectDetail model)
         {
@@ -3954,6 +4120,35 @@ namespace CPMCore.Controllers
             return presponse;
         }
         [HttpPost]
+        public JsonResult GetCountryIsoCode(int countryid)
+        {
+            var pservice = ServiceFactory.GetCountryService();
+            var presponse = pservice.GetCountryById(countryid);
+            var country = presponse.Success ? presponse.Values.FirstOrDefault() : null;
+            return Json(country?.ISOCode ?? string.Empty);
+        }
+        [HttpPost]
+        public async Task<JsonResult> GetPostcodesByCountry(string term, int countryId)
+        {
+            var pservice = ServiceFactory.GetPostalcodeService();
+            var presponse = await pservice.GetPostalcodeByCountryAndSearchstring(countryId, term ?? string.Empty);
+
+            var list = new List<SelectBO>();
+            if (presponse.Success && presponse.Values is not null)
+            {
+                foreach (var selectedPostalcode in presponse.Values)
+                {
+                    list.Add(new SelectBO
+                    {
+                        id = selectedPostalcode.PostcodeId ?? 0,
+                        text = $"{selectedPostalcode.Postcode} - {selectedPostalcode.Gemeente}"
+                    });
+                }
+            }
+
+            return Json(list);
+        }
+        [HttpPost]
         public JsonResult GetCompanys(string term)
         {
             var pservice = ServiceFactory.GetCompanyService();
@@ -3966,6 +4161,44 @@ namespace CPMCore.Controllers
             }
 
             return Json(iList);
+        }
+        [HttpPost]
+        public JsonResult GetWheaterstations(string term)
+        {
+            var pservice = ServiceFactory.GetProjectService();
+            var presponse = pservice.GetWheaterstations(term ?? string.Empty);
+            var list = new List<SelectBO>();
+
+            if (presponse.Success && presponse.Values is not null)
+            {
+                foreach (var station in presponse.Values)
+                {
+                    list.Add(new SelectBO
+                    {
+                        id = station.Id,
+                        text = station.Name,
+                        extra = station.Visible?.ToString()
+                    });
+                }
+            }
+
+            return Json(list);
+        }
+        public string GetSlugForPostcodeId(int id, string name)
+        {
+            var city = string.Empty;
+            if (id != 0)
+            {
+                var cityService = ServiceFactory.GetPostalcodeService();
+                var postalcode = cityService.GetPostalcodeById(id);
+                if (postalcode.Success && postalcode.Value is not null)
+                {
+                    city = postalcode.Value.Gemeente;
+                }
+            }
+
+            var projectService = ServiceFactory.GetProjectService();
+            return projectService.GenerateSlug($"{name} {city}".Trim());
         }
         public class Select2DTO
         {

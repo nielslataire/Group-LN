@@ -1,0 +1,327 @@
+﻿@using CPMCore.Helpers
+@model CPMCore.Models.Projecten.ProjectModel
+
+@{
+    ViewData["Title"] = "Project toevoegen";
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
+    <link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
+    <link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <div class="row align-items-center">
+                <div class="col-sm-auto d-flex align-items-center">
+                    <a href="@Url.Action("Index", "Projecten")" class="text-decoration-none text-reset d-flex align-items-center">
+                        <i class="bx bx-chevron-left fs-1"></i>
+                    </a>
+                </div>
+                <div class="col-sm-auto">
+                    <h1 class="fw-bold mb-0">Project toevoegen</h1>
+                    <h5 class="mb-4 mt-0">Maak een nieuw project aan en vul de algemene gegevens in</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
+    @Html.HiddenFor(m => m.Project.Developer.ID, new { id = "Project_Developer_ID" })
+    @Html.HiddenFor(m => m.Project.Developer.Display, new { id = "Project_Developer_Display" })
+    @Html.HiddenFor(m => m.Project.Builder.ID, new { id = "Project_Builder_ID" })
+    @Html.HiddenFor(m => m.Project.Builder.Display, new { id = "Project_Builder_Display" })
+    @Html.HiddenFor(m => m.Project.WheaterStation.Id, new { id = "Project_WheaterStation_Id" })
+    @Html.HiddenFor(m => m.Project.WheaterStation.Name, new { id = "Project_WheaterStation_Name" })
+
+    <div class="row mt-2">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-buildings"></i>
+                            <h2 class="card-big-info-title">Projectgegevens</h2>
+                            <p class="card-big-info-desc">Vul hier de algemene informatie van het project in.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Name">
+                                    @Html.LabelFor(m => m.Project.Name)
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Street">
+                                    @Html.LabelFor(m => m.Project.Street)
+                                </label>
+                                <div class="col-lg-5 col-xl-4">
+                                    @Html.TextBoxFor(m => m.Project.Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
+                                </div>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.TextBoxFor(m => m.Project.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr." })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="lstProjectCountries">Land</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="PostalSelect">
+                                    @Html.LabelFor(m => m.Project.Postalcode.Gemeente)
+                                </label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="PostalSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.SelectedPostalcode > 0)
+                                        {
+                                            <option value="@Model.SelectedPostalcode" selected>
+                                                @($"{Model.Project.Postalcode.Postcode} - {Model.Project.Postalcode.Gemeente}")
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTitleNL">
+                                    @Html.LabelFor(m => m.Project.CommercialTitleNL)
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.TextBoxFor(m => m.Project.CommercialTitleNL, new { @class = "form-control form-control-modern", placeholder = "Commerciële titel" })
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-start pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTextNL">
+                                    @Html.LabelFor(m => m.Project.CommercialTextNL)
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", placeholder = "Beschrijving van het project" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-calendar"></i>
+                            <h2 class="card-big-info-title">Planning & partners</h2>
+                            <p class="card-big-info-desc">Bepaal de start- en opleverdata en koppel de betrokken partijen.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_StartDateConstruction">@Html.LabelFor(m => m.Project.StartDateConstruction)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    <input type="date" class="form-control form-control-modern" id="Project_StartDateConstruction" name="Project.StartDateConstruction" value="@(Model.Project.StartDateConstruction.HasValue? Model.Project.StartDateConstruction.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_ExecutionDays">@Html.LabelFor(m => m.Project.ExecutionDays)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "form-control form-control-modern", type = "number", min = "0" })
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DeliveryDate">@Html.LabelFor(m => m.Project.DeliveryDate)</label>
+                                <div class="col-lg-3 col-xl-2">
+                                    <input type="date" class="form-control form-control-modern" id="Project_DeliveryDate" name="Project.DeliveryDate" value="@(Model.Project.DeliveryDate.HasValue? Model.Project.DeliveryDate.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="WheaterSelect">@Html.LabelFor(m => m.Project.WheaterStation)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="WheaterSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.WheaterStation.Id > 0)
+                                        {
+                                            <option value="@Model.Project.WheaterStation.Id" selected>@Model.Project.WheaterStation.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="DeveloperSelect">@Html.LabelFor(m => m.Project.Developer)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="DeveloperSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.Developer.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Developer.ID" selected>@Model.Project.Developer.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="BuilderSelect">@Html.LabelFor(m => m.Project.Builder)</label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select id="BuilderSelect" class="form-control" style="width: 100%;">
+                                        @if (Model.Project.Builder.ID > 0)
+                                        {
+                                            <option value="@Model.Project.Builder.ID" selected>@Model.Project.Builder.Display</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row action-buttons">
+        <div class="col-12 col-md-auto">
+            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
+                <i class="bx bx-save text-4 me-2"></i> Project opslaan
+            </button>
+        </div>
+        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+            <a href="@((TempData.Peek("Referrer") as string) ?? Url.Action("Index", "Projecten"))" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+        </div>
+    </div>
+}
+
+@section PageScripts
+{
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/select2/js/i18n/nl.js"></script>
+    <script src="~/js/theme.admin.extension.js"></script>
+    <script>
+        function bindSelect(selectId, options) {
+                const $select = $(selectId);
+                $select.select2(options);
+                return $select;
+        }
+
+        $(function () {
+                const countrySelector = '#lstProjectCountries';
+
+                bindSelect('#PostalSelect', {
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer de gemeente',
+                        width: '100%',
+                        allowClear: true,
+                        language: 'nl',
+                        ajax: {
+                                url: '@Url.Action("GetPostcodesByCountry", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return {
+                                                term: params.term,
+                                                countryId: $(countrySelector).val()
+                                        };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }).on('select2:select', function (e) {
+                        $('#SelectedPostalcode').val(e.params.data.id);
+                }).on('select2:clear', function () {
+                        $('#SelectedPostalcode').val(0);
+                });
+
+                $('#DeveloperSelect').select2({
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer de projectontwikkelaar',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        minimumInputLength: 3,
+                        ajax: {
+                                url: '@Url.Action("GetCompanys", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return { term: params.term };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }).on('select2:select', function (e) {
+                        $('#Project_Developer_ID').val(e.params.data.id);
+                        $('#Project_Developer_Display').val(e.params.data.text);
+                }).on('select2:clear', function () {
+                        $('#Project_Developer_ID').val(0);
+                        $('#Project_Developer_Display').val('');
+                });
+
+                $('#BuilderSelect').select2({
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer de bouwheer',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        minimumInputLength: 3,
+                        ajax: {
+                                url: '@Url.Action("GetCompanys", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return { term: params.term };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }).on('select2:select', function (e) {
+                        $('#Project_Builder_ID').val(e.params.data.id);
+                        $('#Project_Builder_Display').val(e.params.data.text);
+                }).on('select2:clear', function () {
+                        $('#Project_Builder_ID').val(0);
+                        $('#Project_Builder_Display').val('');
+                });
+
+                $('#WheaterSelect').select2({
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer het KMI weerstation',
+                        width: '100%',
+                        language: 'nl',
+                        allowClear: true,
+                        minimumInputLength: 1,
+                        ajax: {
+                                url: '@Url.Action("GetWheaterstations", "Projecten")',
+                                type: 'POST',
+                                dataType: 'json',
+                                delay: 250,
+                                data: function (params) {
+                                        return { term: params.term };
+                                },
+                                processResults: function (data) {
+                                        return { results: data };
+                                }
+                        }
+                }).on('select2:select', function (e) {
+                        $('#Project_WheaterStation_Id').val(e.params.data.id);
+                        $('#Project_WheaterStation_Name').val(e.params.data.text);
+                }).on('select2:clear', function () {
+                        $('#Project_WheaterStation_Id').val(0);
+                        $('#Project_WheaterStation_Name').val('');
+                });
+
+                // Update selected postal code on initial value
+                if ($('#PostalSelect').val()) {
+                        $('#SelectedPostalcode').val($('#PostalSelect').val());
+                }
+        });
+    </script>
+}
