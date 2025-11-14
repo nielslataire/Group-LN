@@ -1,0 +1,104 @@
+﻿@model CPMCore.Models.Projecten.ProjectGridRenderModel
+@using System.Linq
+@using System
+@using BOCore
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
+@{
+    string imageUrl = string.Empty;
+}
+
+@if (Model?.Projects != null)
+{
+    foreach (var project in Model.Projects)
+    {
+        ProjectSalesDataBO projectSalesData = null;
+        var hasSalesData = Model.SalesData != null && Model.SalesData.TryGetValue(project.Id, out projectSalesData);
+
+        var statusName = !string.IsNullOrWhiteSpace(project.Status?.Name)
+            ? project.Status.Name
+            : Model.Statuses?.FirstOrDefault(s => s.Id == project.Status?.Id)?.Name;
+
+        var clientCount = project.ClientCount > 0
+            ? project.ClientCount
+            : (hasSalesData ? projectSalesData.LivingUnitsSold : 0);
+
+        var soldPercentageValue = hasSalesData ? projectSalesData.PercentageSold : 0m;
+        var soldPercentageRounded = Math.Round(soldPercentageValue, 1);
+        var soldPercentageDisplay = soldPercentageRounded.ToString("0.##");
+        var soldPercentageClamped = Math.Min(100m, Math.Max(0m, soldPercentageValue));
+        var soldPercentageStyleText = soldPercentageClamped.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+        var statusId = project.Status?.Id ?? 0;
+
+        if (project.DefaultPicture?.Name is null)
+        {
+            imageUrl = "~/img/no_image.jpg";
+        }
+        else
+        {
+            imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
+        }
+
+        <div class="isotope-item status-@statusId col-sm-12 col-md-4 col-lg-2 mb-4">
+            <div class="card card-modern h-100 project-card">
+                <div class="image-frame-wrapper position-relative">
+                    @if (!string.IsNullOrWhiteSpace(statusName))
+                    {
+                        <span class="badge bg-primary text-uppercase small fw-semibold position-absolute top-0 start-0 m-3">@statusName</span>
+                    }
+                    <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })">
+                        <img src="@Url.Content(imageUrl)"
+                             class="card-img-top"
+                             alt="@project.Name" />
+                    </a>
+                </div>
+
+                <div class="card-body bg-light">
+                    <div class="project-details">
+                        <h4 class="fw-bold mb-1">@project.Name</h4>
+
+                        @if (!string.IsNullOrWhiteSpace(project.CommercialTitleNL))
+                        {
+                            <div class="text-muted mb-4">@project.CommercialTitleNL</div>
+                            ;
+                        }
+
+                        <div class="project-detail-row text-muted mb-1">
+                            <span class="detail-icon"><i class="fas fa-map-marker-alt"></i></span>
+                            <div>@project.Postalcode?.Gemeente</div>
+                        </div>
+
+                        @if (project.StartDateConstruction != null)
+                        {
+                            <div class="project-detail-row text-muted mb-1">
+                                <span class="detail-icon"><i class="fas fa-calendar-alt"></i></span>
+                                <div>
+                                    Start: @project.StartDateConstruction.Value.ToString("dd/MM/yyyy")
+                                </div>
+                            </div>
+                        }
+
+                        <div class="project-detail-row text-muted">
+                            <span class="detail-icon"><i class="fas fa-users"></i></span>
+                            <div>Aantal klanten: @clientCount</div>
+                        </div>
+
+                        @if (User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("Sales") || User.IsInRole("Verkoop"))
+                        {
+                            <div class="project-progress-container mt-3">
+                                <div class="project-split-row small text-muted mb-1">
+                                    <div>Percentage verkocht</div>
+                                    <div class="fw-bold text-end">@soldPercentageDisplay%</div>
+                                </div>
+                                <div class="progress light">
+                                    <div class="progress-bar progress-bar-primary" role="progressbar" style="width: @soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    }
+}

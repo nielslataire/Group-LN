@@ -30,8 +30,14 @@
                     <h5 class="mb-4 mt-0">Bekijk alle onderdelen van het project</h5>
                 </div>
                 <div class="col-sm-auto px-0">
-@*                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
-                    <button type="button" class="btn btn-primary btn-md px-3" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button> *@
+                    <div class="btn-group" role="group" aria-label="Project acties">
+                        <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })" class="btn btn-primary btn-md px-3 me-1">
+                            <i class="fas fa-edit me-1"></i>Bewerken
+                        </a>
+                        <a href="#modaldeleteproject" class="btn btn-danger btn-md px-3" id="delete-project-button" data-project-id="@Model.Project.Id">
+                            <i class="fas fa-trash-alt me-1"></i>Verwijderen
+                        </a>
+                    </div>
                 </div>
             </div>
             </div>
@@ -368,6 +374,32 @@
 
                 
             </div>
-			</div>
 		</div>
-	</section>
+		
+</section>
+<div id="modaldeleteproject" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-project-container"></div>
+</div>
+
+@section PageScripts {
+    <script>
+        $(document).on('click', '#delete-project-button', function (e) {
+            e.preventDefault();
+            const projectId = $(this).data('project-id');
+
+            $('#delete-project-container').empty();
+
+            $.get('@Url.Action("ModalDeleteProject", "Projecten")', { id: projectId })
+                .done(function (html) {
+                    $('#delete-project-container').html(html);
+                    $.magnificPopup.open({
+                        items: { src: '#modaldeleteproject' },
+                        type: 'inline'
+                    });
+                })
+                .fail(function () {
+                    alert('Kon de verwijderbevestiging niet laden.');
+                });
+        });
+    </script>
+}

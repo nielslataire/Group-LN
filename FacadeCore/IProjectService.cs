@@ -29,6 +29,7 @@ namespace FacadeCore
         Response InsertUpdate(ProjectBO project);
         Response Delete(List<int> ids);
         Response Delete(List<ProjectBO> bos);
+        string GenerateSlug(string phrase);
 
         // Wheaterstations
         //GetResponse<WheaterStationBO> GetWheaterstations();

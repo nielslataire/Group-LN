@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
 using System.IO;
+using System;
 
 namespace CPMCore.Models.Projecten
 {
@@ -88,6 +89,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private ImageBO _image;
+        [ValidateNever]
         public ImageBO Image
         {
             get
@@ -101,6 +103,7 @@ namespace CPMCore.Models.Projecten
         }
         private IFormFile _imageupload;
         [DataType(DataType.Upload)]
+        [ValidateNever]
         public IFormFile ImageUpload
         {
             get
@@ -113,6 +116,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<IdNameBO> _countries;
+        [ValidateNever]
         public List<IdNameBO> Countries
         {
             get
@@ -125,6 +129,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private IEnumerable<ApplicationUser> _users;
+        [ValidateNever]
         public IEnumerable<ApplicationUser> Users
         {
             get
@@ -185,6 +190,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<IdNameBO> _statuses;
+        [ValidateNever]
         public List<IdNameBO> Statuses
         {
             get
@@ -197,6 +203,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<FacebookPlaceBO> _facebookplaces;
+        [ValidateNever]
         public List<FacebookPlaceBO> FacebookPlaces
         {
             get
@@ -209,6 +216,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private FacebookPlaceBO _selectedfacebookplace;
+        [ValidateNever]
         public FacebookPlaceBO SelectedFacebookPlace
         {
             get
@@ -221,6 +229,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private List<ProjectDocBO> _docs;
+        [ValidateNever]
         public List<ProjectDocBO> Docs
         {
             get
@@ -277,6 +286,26 @@ namespace CPMCore.Models.Projecten
                 _salesData = value;
             }
         }
+        public int TotalProjectCount { get; set; }
+
+        public int VisibleProjectCount { get; set; }
+
+        public int InitialLimit { get; set; }
+
+        public int BatchSize { get; set; }
+
+        public bool HasMoreProjects => TotalProjectCount > VisibleProjectCount;
+
+        public int RemainingProjectCount => Math.Max(0, TotalProjectCount - VisibleProjectCount);
+    }
+
+    public class ProjectGridRenderModel
+    {
+        public IEnumerable<ProjectBO> Projects { get; set; } = new List<ProjectBO>();
+
+        public List<ProjectStatusBO> Statuses { get; set; } = new List<ProjectStatusBO>();
+
+        public Dictionary<int, ProjectSalesDataBO> SalesData { get; set; } = new Dictionary<int, ProjectSalesDataBO>();
     }
 
     // Detail

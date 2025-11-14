@@ -53,13 +53,20 @@
                             <p class="card-big-info-desc">Vul hier de algemene informatie van het project in.</p>
                         </div>
                         <div class="col-lg-3-5 col-xl-4-5">
-                            @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
+                            @if (!ViewData.ModelState.IsValid)
+                            {
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+                                </label>
+                                <div class="col-lg-8 col-xl-6">
+                                    @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
+                                </div> 
+                            }
 
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Name">
                                     @Html.LabelFor(m => m.Project.Name)
                                 </label>
-                                <div class="col-lg-8 col-xl-6">
+                                <div class="col-lg-8 col-xl-8">
                                     @Html.TextBoxFor(m => m.Project.Name, new { @class = "form-control form-control-modern", placeholder = "Naam van het project", autocomplete = "off" })
                                 </div>
                             </div>
@@ -68,7 +75,7 @@
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Street">
                                     @Html.LabelFor(m => m.Project.Street)
                                 </label>
-                                <div class="col-lg-5 col-xl-4">
+                                <div class="col-lg-5 col-xl-6">
                                     @Html.TextBoxFor(m => m.Project.Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
                                 </div>
                                 <div class="col-lg-3 col-xl-2">
@@ -78,7 +85,7 @@
 
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="lstProjectCountries">Land</label>
-                                <div class="col-lg-3 col-xl-2">
+                                <div class="col-lg-3 col-xl-3">
                                     @Html.DropDownListFor(m => m.SelectedCountry, new SelectList(Model.Countries, "ID", "Display", Model.SelectedCountry), new { @class = "form-control form-control-modern", id = "lstProjectCountries" })
                                 </div>
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="PostalSelect">
@@ -100,7 +107,7 @@
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTitleNL">
                                     @Html.LabelFor(m => m.Project.CommercialTitleNL)
                                 </label>
-                                <div class="col-lg-8 col-xl-6">
+                                <div class="col-lg-8 col-xl-8">
                                     @Html.TextBoxFor(m => m.Project.CommercialTitleNL, new { @class = "form-control form-control-modern", placeholder = "Commerciële titel" })
                                 </div>
                             </div>
@@ -109,7 +116,7 @@
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_CommercialTextNL">
                                     @Html.LabelFor(m => m.Project.CommercialTextNL)
                                 </label>
-                                <div class="col-lg-8 col-xl-6">
+                                <div class="col-lg-8 col-xl-8">
                                     @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", placeholder = "Beschrijving van het project" })
                                 </div>
                             </div>
@@ -133,18 +140,33 @@
                         <div class="col-lg-3-5 col-xl-4-5">
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_StartDateConstruction">@Html.LabelFor(m => m.Project.StartDateConstruction)</label>
-                                <div class="col-lg-3 col-xl-2">
-                                    <input type="date" class="form-control form-control-modern" id="Project_StartDateConstruction" name="Project.StartDateConstruction" value="@(Model.Project.StartDateConstruction.HasValue? Model.Project.StartDateConstruction.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                <div class="col-lg-3 col-xl-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </span>
+                                        @Html.TextBoxFor(m => m.Project.StartDateConstruction, "{0:dd/MM/yyyy}", new { @class = "form-control form-control-modern", data_plugin_datepicker = string.Empty, autocomplete = "off" })
+                                    </div>
                                 </div>
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_ExecutionDays">@Html.LabelFor(m => m.Project.ExecutionDays)</label>
-                                <div class="col-lg-3 col-xl-2">
-                                    @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "form-control form-control-modern", type = "number", min = "0" })
+                                <div class="col-lg-3 col-xl-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-hourglass-half"></i>
+                                        </span>
+                                        @Html.TextBoxFor(m => m.Project.ExecutionDays, new { @class = "form-control form-control-modern", type = "number", min = "0" })
+                                    </div>
                                 </div>
                             </div>
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_DeliveryDate">@Html.LabelFor(m => m.Project.DeliveryDate)</label>
-                                <div class="col-lg-3 col-xl-2">
-                                    <input type="date" class="form-control form-control-modern" id="Project_DeliveryDate" name="Project.DeliveryDate" value="@(Model.Project.DeliveryDate.HasValue? Model.Project.DeliveryDate.Value.ToString("yyyy-MM-dd") : string.Empty)" />
+                                <div class="col-lg-3 col-xl-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-calendar-alt"></i>
+                                        </span>
+                                        @Html.TextBoxFor(m => m.Project.DeliveryDate, "{0:dd/MM/yyyy}", new { @class = "form-control form-control-modern", data_plugin_datepicker = string.Empty, autocomplete = "off" })
+                                    </div>
                                 </div>
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="WheaterSelect">@Html.LabelFor(m => m.Project.WheaterStation)</label>
                                 <div class="col-lg-3 col-xl-3">

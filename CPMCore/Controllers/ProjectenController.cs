@@ -65,7 +65,7 @@ namespace CPMCore.Controllers
 
         // ========== PROJECT DETAIL ==========
         [Breadcrumb("Projecten", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
-        public IActionResult Index()
+        public IActionResult Index(bool showAll = false)
         {
             var model = new ShowProjectsModel();
             var service = ServiceFactory.GetProjectService();
@@ -73,10 +73,20 @@ namespace CPMCore.Controllers
             var response = service.GetProjectsForList();
             if (response.Success && response.Values is not null)
             {
-                model.Projects = response.Values
+                const int initialLimit = 30;
+                const int batchSize = 12;
+
+                var orderedProjects = response.Values
                     .OrderByDescending(m => m.DeliveryDate == null)
                     .ThenByDescending(m => m.DeliveryDate)
                     .ToList();
+
+                model.InitialLimit = initialLimit;
+                model.BatchSize = batchSize;
+                model.TotalProjectCount = orderedProjects.Count;
+                model.Projects = orderedProjects.Take(initialLimit).ToList();
+                model.VisibleProjectCount = model.Projects.Count;
+
 
                 var ids = model.Projects.Select(p => p.Id).ToList();
                 if (ids.Count > 0)
@@ -114,10 +124,17 @@ namespace CPMCore.Controllers
             var response = service.GetProjectsForList(0, 0, userId);
             if (response.Success && response.Values is not null)
             {
-                model.Projects = response.Values
+                var orderedProjects = response.Values
                     .OrderByDescending(m => m.DeliveryDate == null)
                     .ThenByDescending(m => m.DeliveryDate)
                     .ToList();
+
+                model.Projects = orderedProjects;
+
+                model.TotalProjectCount = model.Projects.Count;
+                model.VisibleProjectCount = model.Projects.Count;
+                model.InitialLimit = model.Projects.Count;
+                model.BatchSize = 0;
 
                 var ids = model.Projects.Select(p => p.Id).ToList();
                 if (ids.Count > 0)
@@ -146,11 +163,69 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        public IActionResult LoadMoreProjects(int skip, int take = 3)
+        {
+            if (skip < 0)
+            {
+                skip = 0;
+            }
+
+            if (take <= 0)
+            {
+                take = 3;
+            }
+
+            var service = ServiceFactory.GetProjectService();
+
+            var response = service.GetProjectsForList();
+            if (!response.Success || response.Values is null)
+            {
+                return Content(string.Empty);
+            }
+
+            var orderedProjects = response.Values
+                .OrderByDescending(m => m.DeliveryDate == null)
+                .ThenByDescending(m => m.DeliveryDate)
+                .ToList();
+
+            var projects = orderedProjects.Skip(skip).Take(take).ToList();
+            if (projects.Count == 0)
+            {
+                return Content(string.Empty);
+            }
+
+            var statusResponse = service.GetStatuses();
+            var statuses = statusResponse.Success && statusResponse.Values is not null
+                ? statusResponse.Values
+                : new List<ProjectStatusBO>();
+
+            Dictionary<int, ProjectSalesDataBO> salesData = new();
+            var ids = projects.Select(p => p.Id).ToList();
+            if (ids.Count > 0)
+            {
+                var salesResponse = service.GetProjectSalesData(ids);
+                if (salesResponse.Success && salesResponse.Values is not null)
+                {
+                    salesData = salesResponse.Values
+                        .GroupBy(v => v.ProjectId)
+                        .ToDictionary(g => g.Key, g => g.First());
+                }
+            }
+
+            var model = new ProjectGridRenderModel
+            {
+                Projects = projects,
+                Statuses = statuses,
+                SalesData = salesData
+            };
+
+            return PartialView("_ProjectGridItems", model);
+        }
+
+        [HttpGet]
         [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
         public IActionResult Toevoegen()
         {
-            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-
             var referrer = Request.Headers["Referer"].ToString();
             TempData["Referrer"] = string.IsNullOrEmpty(referrer)
                 ? Url.Action("Index", "Projecten")
@@ -222,12 +297,11 @@ namespace CPMCore.Controllers
             model.GeneralDataEditMode = EditGeneralData;
             model.SelectedPostalcode = (int)model.Project.Postalcode.PostcodeId;
             model.Docs = Service.GetProjectDocs(projectid).Values;
-            model.Users = _userManager.Users.ToList();
-            model.Users = model.Users.OrderBy(m => m.Displayname).ToList();
-            if (model.Project.ExecutionDays == 0)
+            model.Users = GetOrderedUsers();
+            if (!model.Project.ExecutionDays.HasValue || model.Project.ExecutionDays.Value == 0)
                 model.ExecutionDays = Service.GetProjectExecutionDays(model.Project.Id);
             else
-                model.ExecutionDays = (int)model.Project.ExecutionDays;
+                model.ExecutionDays = model.Project.ExecutionDays.Value;
             if (model.Project.StartDateConstruction is not null)
                 model.StartDate = (DateOnly)model.Project.StartDateConstruction;
             else
@@ -274,12 +348,54 @@ namespace CPMCore.Controllers
 
             return View(model);
         }
+        [HttpGet]
+        public IActionResult ModalDeleteProject(int id)
+        {
+            var model = new ProjectBO();
+
+            if (id != 0)
+            {
+                var service = ServiceFactory.GetProjectService();
+                var response = service.GetProjectByID(id);
+
+                if (response.Success && response.Value is not null)
+                {
+                    model = response.Value;
+                }
+                else
+                {
+                    model.Id = id;
+                }
+            }
+
+            return PartialView("Modals/_ModalDeleteProject", model);
+        }
+
+        public IActionResult DeleteProject(int id)
+        {
+            if (id == 0)
+            {
+                AddMessage("error", "Het project kon niet verwijderd worden.", "Fout!");
+                return RedirectToAction("Index");
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.Delete(new List<int> { id });
+
+            if (response.Success)
+            {
+                AddMessage("success", "Het project is verwijderd", "Geslaagd!");
+                return RedirectToAction("Index");
+            }
+
+            AddMessage("error", "Het project kon niet verwijderd worden.", "Fout!");
+            return RedirectToAction("Detail", new { projectid = id });
+        }
 
         [HttpGet]
         [Breadcrumb("Project bewerken", FromAction = nameof(Index))]
         public IActionResult Edit(int projectid)
         {
-            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var referrer = Request.Headers["Referer"].ToString();
             TempData["Referrer"] = string.IsNullOrEmpty(referrer)
@@ -305,7 +421,7 @@ namespace CPMCore.Controllers
 
             FillInAddSelectListsDetailEdit(model);
 
-            model.Users = _userManager.Users?.OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
+            model.Users = GetOrderedUsers();
 
             ViewData["Title"] = $"Project - {model.Project.Name}";
 
@@ -320,7 +436,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 FillInAddSelectListsDetailEdit(model);
-                model.Users = _userManager.Users?.OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
+                model.Users = _userManager.Users?.AsEnumerable().OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
                 return View(model);
             }
 
@@ -341,9 +457,24 @@ namespace CPMCore.Controllers
             AddMessage("error", $"{model.Project.Name} is NIET bijgewerkt", "Fout!");
 
             FillInAddSelectListsDetailEdit(model);
-            model.Users = _userManager.Users?.OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
+            model.Users = GetOrderedUsers();
             return View(model);
         }
+        private IEnumerable<ApplicationUser> GetOrderedUsers()
+        {
+            if (_userManager.Users is null)
+            {
+                return Enumerable.Empty<ApplicationUser>();
+            }
+
+            var users = _userManager.Users.ToList();
+
+            return users
+                .OrderBy(user => user.Name)
+                .ThenBy(user => user.Forename)
+                .ToList();
+        }
+
 
         // ========== PROJECT DETAIL KLANTEN ==========
 
