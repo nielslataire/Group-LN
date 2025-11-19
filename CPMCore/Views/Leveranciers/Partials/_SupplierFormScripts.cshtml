@@ -21,6 +21,7 @@
         const vatLookupCountry = $('#vatLookupCountry');
         const vatApplyButton = $('#btn-apply-vat-data');
         const belgianIso = 'BE';
+    const emailPattern = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
 
         function getBootstrapModal() {
             if (!vatModalElement || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
@@ -143,37 +144,37 @@
             select.append(option).trigger('change');
         }
     function parseVatAddressLine(strAddress) {
-                if (!strAddress) {
-                    return { street: '', number: '' };
-                }
+               if (!strAddress) {
+                   return { street: '', number: '' };
+               }
 
-                const firstLine = strAddress.split('\n')[0].trim();
-                const match = firstLine.match(/^(.+?)\s+(\d+.*)$/);
-                if (match) {
-                    return {
-                        street: (match[1] || '').trim(),
-                        number: (match[2] || '').trim()
-                    };
-                }
+               const firstLine = strAddress.split('\n')[0].trim();
+               const match = firstLine.match(/^(.+?)\s+(\d+.*)$/);
+               if (match) {
+                   return {
+                       street: (match[1] || '').trim(),
+                       number: (match[2] || '').trim()
+                   };
+               }
 
-                return { street: firstLine, number: '' };
-            }
+               return { street: firstLine, number: '' };
+           }
 
-            function selectCountryByIso(isoCode) {
-                if (!isoCode || !countrySelect.length) {
-                    return;
-                }
+           function selectCountryByIso(isoCode) {
+               if (!isoCode || !countrySelect.length) {
+                   return;
+               }
 
-                const target = isoCode.toString().toUpperCase();
-                const match = countrySelect.find('option').filter(function () {
-                    const optionIso = ($(this).data('isocode') || '').toString().toUpperCase();
-                    return optionIso === target;
-                }).first();
+               const target = isoCode.toString().toUpperCase();
+               const match = countrySelect.find('option').filter(function () {
+                   const optionIso = ($(this).data('isocode') || '').toString().toUpperCase();
+                   return optionIso === target;
+               }).first();
 
-                if (match.length) {
-                    countrySelect.val(match.val()).trigger('change');
-                }
-            }
+               if (match.length) {
+                   countrySelect.val(match.val()).trigger('change');
+               }
+           }
 
      function refreshContactDepartmentOptions() {
                 const departments = [];
@@ -214,25 +215,30 @@
                 });
             }
 
-            function appendDepartmentRow(html) {
-                if (!departmentRows.length) {
-                    return;
-                }
-
-                const fragment = $(html);
-                departmentRows.append(fragment);
-                hydrateExistingPostalSelects();
-                refreshContactDepartmentOptions();
+        function appendDepartmentRow(html) {
+            if (!departmentRows.length) {
+                return;
             }
 
-            function appendContactRow(html) {
-                if (!contactRows.length) {
-                    return;
-                }
+            const fragment = $(html);
+            departmentRows.append(fragment);
+            hydrateExistingPostalSelects();
+            refreshContactDepartmentOptions();
+            initInputMasks(fragment);
+            initEmailValidation(fragment);
+        }
 
-                contactRows.append($(html));
-                refreshContactDepartmentOptions();
+        function appendContactRow(html) {
+            if (!contactRows.length) {
+                return;
             }
+
+            const fragment = $(html);
+            contactRows.append(fragment);
+            refreshContactDepartmentOptions();
+            initInputMasks(fragment);
+            initEmailValidation(fragment);
+        }
 
         function hydrateExistingPostalSelects() {
             $('.postal-select').each(function () {
@@ -250,7 +256,7 @@
             });
         }
 
-    function fillVatModal(data) {
+           function fillVatModal(data) {
             if (!vatModalElement || !data) {
                 return;
             }
@@ -394,61 +400,133 @@
                 });
             });
         }
+         function applyPhoneMask(element) {
+            if (typeof Inputmask === 'undefined' || !element) {
+                return;
+            }
 
-      initActivitySelect();
-        initSelect2(postalSelect);
-    setPostalListeners(postalSelect, postalCodeInput, cityInput);
-        hydrateExistingPostalSelects();
-        refreshContactDepartmentOptions();
-        bindVatLookup();
-        bindVatModalApply();
-        togglePostalMode();
+            const input = $(element);
+            if (input.data('maskApplied')) {
+                return;
+            }
 
-        countrySelect.on('change', function () {
-            togglePostalMode();
-        });
+            Inputmask({
+                mask: ['+99 999 99 99 99', '0 999 99 99 99', '999 99 99 99'],
+                greedy: false,
+                showMaskOnHover: false,
+                clearIncomplete: false,
+                placeholder: '_',
+                keepStatic: true
+            }).mask(element);
+
+            input.data('maskApplied', true);
+        }
+
+        function initInputMasks(scope) {
+            if (typeof Inputmask === 'undefined') {
+                return;
+            }
+
+            const target = scope && scope.length ? scope : $(document);
+            target.find('.phone-mask, .mobile-mask').each(function () {
+                applyPhoneMask(this);
+            });
+        }
+
+        function bindEmailValidation(input) {
+            const field = $(input);
+            if (field.data('emailValidationBound')) {
+                return;
+            }
+
+            field.data('emailValidationBound', true);
+            const feedbackSelector = field.data('feedback');
+            const feedback = feedbackSelector ? $(feedbackSelector) : field.siblings('.invalid-feedback').first();
+
+            function validateEmail() {
+                const value = (field.val() || '').toString().trim();
+                if (!value) {
+                    field.removeClass('is-invalid');
+                    if (feedback.length) {
+                        feedback.addClass('d-none');
+                    }
+                    return;
+                }
+
+                const isValid = emailPattern.test(value);
+                field.toggleClass('is-invalid', !isValid);
+                if (feedback.length) {
+                    feedback.toggleClass('d-none', isValid);
+                }
+            }
+
+            field.on('input blur', validateEmail);
+            validateEmail();
+        }
+
+        function initEmailValidation(scope) {
+            const target = scope && scope.length ? scope : $(document);
+            target.find('.email-validate').each(function () {
+                bindEmailValidation(this);
+            });
+        }
+
+    initActivitySelect();
+         initSelect2(postalSelect);
+         setPostalListeners(postalSelect, postalCodeInput, cityInput);
+         hydrateExistingPostalSelects();
+         refreshContactDepartmentOptions();
+         bindVatLookup();
+         bindVatModalApply();
+         togglePostalMode();
+         initInputMasks();
+         initEmailValidation();
+
+         countrySelect.on('change', function () {
+             togglePostalMode();
+         });
 
          $('#add-department').on('click', function (e) {
-                e.preventDefault();
-                const url = $(this).attr('href');
-                if (!url) {
-                    return;
-                }
+             e.preventDefault();
+             const url = $(this).attr('href');
+             if (!url) {
+                 return;
+             }
 
-                $.get(url).done(function (html) {
-                    appendDepartmentRow(html);
-                }).fail(function () {
-                    showNotification('Fout', 'Kon geen nieuwe afdeling toevoegen.', 'error');
-                });
-            });
+             $.get(url).done(function (html) {
+                 appendDepartmentRow(html);
+             }).fail(function () {
+                 showNotification('Fout', 'Kon geen nieuwe afdeling toevoegen.', 'error');
+             });
+         });
 
-            departmentRows.on('click', '.deleteDepartmentRow', function (e) {
-                e.preventDefault();
-                $(this).closest('.supplier-department-row').remove();
-                refreshContactDepartmentOptions();
-            });
+         departmentRows.on('click', '.deleteDepartmentRow', function (e) {
+             e.preventDefault();
+             $(this).closest('.supplier-department-row').remove();
+             refreshContactDepartmentOptions();
+         });
 
-            departmentRows.on('input', '.department-name-input', function () {
-                refreshContactDepartmentOptions();
-            });
+         departmentRows.on('input', '.department-name-input', function () {
+             refreshContactDepartmentOptions();
+         });
 
-            $('#add-contact').on('click', function (e) {
-                e.preventDefault();
-                const url = $(this).attr('href');
-                if (!url) {
-                    return;
-                }
+         $('#add-contact').on('click', function (e) {
+             e.preventDefault();
+             const url = $(this).attr('href');
+             if (!url) {
+                 return;
+             }
 
-                $.get(url).done(function (html) {
-                    appendContactRow(html);
-                }).fail(function () {
-                    showNotification('Fout', 'Kon geen nieuw contact toevoegen.', 'error');
-                });
-            });
+             $.get(url).done(function (html) {
+                 appendContactRow(html);
+             }).fail(function () {
+                 showNotification('Fout', 'Kon geen nieuw contact toevoegen.', 'error');
+             });
+         });
 
-            contactRows.on('click', '.deleteContactRow', function (e) {
-                e.preventDefault();
-                $(this).closest('.supplier-contact-row').remove();
-            });
-    })();
+         contactRows.on('click', '.deleteContactRow', function (e) {
+             e.preventDefault();
+             $(this).closest('.supplier-contact-row').remove();
+         });
+     })();
 </script>

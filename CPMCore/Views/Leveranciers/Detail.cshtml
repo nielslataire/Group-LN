@@ -1,0 +1,285 @@
+﻿@model CPMCore.Models.Leveranciers.SupplierDetailViewModel
+@using System.Globalization
+
+@{
+    ViewData["Title"] = Model.Name;
+    var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
+    var canDelete = User.IsInRole("Admin") || User.IsInRole("Administrator");
+}
+
+<div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
+    <div class="col-sm-auto mb-3 mb-sm-0">
+        <div class="d-flex align-items-center">
+            <a href="@Url.Action("Index", "Leveranciers")" class="text-decoration-none text-reset d-flex align-items-center me-3">
+                <i class="bx bx-chevron-left fs-1"></i>
+            </a>
+            <div>
+                <h1 class="fw-bold mb-0">@Model.Name</h1>
+                <h5 class="mb-0 text-muted">Leverancier detail</h5>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-auto text-sm-end">
+        <a href="@Url.Action("Edit", "Leveranciers", new { id = Model.Id })" class="btn btn-primary btn-md me-2">
+            <i class="bx bx-pencil me-1"></i> Bewerken
+        </a>
+        @if (canDelete)
+        {
+            using (Html.BeginForm("Delete", "Leveranciers", new { id = Model.Id }, FormMethod.Post, new { id = "delete-supplier-form", onsubmit = "return confirm('Ben je zeker dat je deze leverancier wil verwijderen?');" }))
+            {
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-danger btn-md">
+                    <i class="bx bx-trash me-1"></i> Verwijderen
+                </button>
+            }
+        }
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-7">
+        <section class="card card-modern mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bx bx-buildings fs-3 me-2 text-primary"></i>
+                    <h4 class="mb-0">Algemene info</h4>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Ondernemingsnummer</span>
+                        <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.EnterpriseNumber) ? "-" : Model.EnterpriseNumber)</div>
+                    </div>
+                    <div class="col-md-6">
+                        <span class="text-muted small d-block">Bedrijfsvorm</span>
+                        <div class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.LegalForm) ? "-" : Model.LegalForm)</div>
+                    </div>
+                    <div class="col-md-12">
+                        <span class="text-muted small d-block">Adres</span>
+                        <div class="fw-semibold">
+                            @if (!string.IsNullOrWhiteSpace(Model.Street))
+                            {
+                                <text>@Model.Street @Model.HouseNumber @(string.IsNullOrWhiteSpace(Model.BusNumber) ? string.Empty : $" bus {Model.BusNumber}")</text>
+                                <br />
+                                <text>@Model.PostalCode @Model.City</text>
+                                if (!string.IsNullOrWhiteSpace(Model.CountryName))
+                                {
+                                    <text><br />@Model.CountryName</text>
+                                }
+                            }
+                            else
+                            {
+                                <text>-</text>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <span class="text-muted small d-block">Activiteiten</span>
+                        @if (Model.Activities.Any())
+                        {
+                            <div class="mt-2">
+                                @foreach (var activity in Model.Activities)
+                                {
+                                    <span class="badge bg-secondary me-1 mb-1">@activity</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="fw-semibold">-</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-5">
+        <section class="card card-modern mb-4">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bx bxs-contact fs-3 me-2 text-primary"></i>
+                    <h4 class="mb-0">Contact & facturatie</h4>
+                </div>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3">
+                        <span class="text-muted small d-block">Telefoon</span>
+                        <div class="fw-semibold"><i class="fas fa-phone me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(Model.Phone) ? "-" : Model.Phone)</div>
+                    </li>
+                    <li class="mb-3">
+                        <span class="text-muted small d-block">GSM</span>
+                        <div class="fw-semibold"><i class="fas fa-mobile-alt me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(Model.Mobile) ? "-" : Model.Mobile)</div>
+                    </li>
+                    <li class="mb-3">
+                        <span class="text-muted small d-block">Email</span>
+                        <div class="fw-semibold">
+                            <i class="fas fa-envelope me-2 text-primary"></i>
+                            @if (!string.IsNullOrWhiteSpace(Model.Email))
+                            {
+                                <a href="mailto:@Model.Email">@Model.Email</a>
+                            }
+                            else
+                            {
+                                <text>-</text>
+                            }
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <span class="text-muted small d-block">Facturatie email</span>
+                        <div class="fw-semibold">
+                            <i class="fas fa-file-invoice me-2 text-primary"></i>
+                            @if (!string.IsNullOrWhiteSpace(Model.InvoiceEmail))
+                            {
+                                <a href="mailto:@Model.InvoiceEmail">@Model.InvoiceEmail</a>
+                            }
+                            else
+                            {
+                                <text>-</text>
+                            }
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <span class="text-muted small d-block">Website</span>
+                        <div class="fw-semibold">
+                            <i class="fas fa-globe me-2 text-primary"></i>
+                            @if (!string.IsNullOrWhiteSpace(Model.WebUrl))
+                            {
+                                <a href="@Model.WebUrl" target="_blank" rel="noopener">@Model.WebUrl</a>
+                            }
+                            else
+                            {
+                                <text>-</text>
+                            }
+                        </div>
+                    </li>
+                    <li>
+                        <span class="text-muted small d-block">Facturatie instellingen</span>
+                        <div class="mt-2">
+                            <span class="badge @(Model.RequiresDigitalInvoice ? "bg-success" : "bg-secondary") me-1">Digitale factuur @(Model.RequiresDigitalInvoice ? "vereist" : "niet vereist")</span>
+                            <span class="badge @(Model.AttachUblByDefault ? "bg-success" : "bg-secondary")">UBL standaard @(Model.AttachUblByDefault ? "aan" : "uit")</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="card card-modern mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bx bx-git-branch fs-3 me-2 text-primary"></i>
+            <h4 class="mb-0">Afdelingen</h4>
+        </div>
+        @if (Model.Departments.Any())
+        {
+            <div class="row row-cols-1 row-cols-md-2 g-3">
+                @foreach (var department in Model.Departments)
+                {
+                    <div class="col">
+                        <div class="border rounded p-3 h-100">
+                            <div class="fw-bold mb-2">@(!string.IsNullOrWhiteSpace(department.Name) ? department.Name : "Onbenoemde afdeling")</div>
+                            <div class="small text-muted">Adres</div>
+                            <div class="mb-2">
+                                @(string.IsNullOrWhiteSpace(department.Street) ? "-" : $"{department.Street} {department.HouseNumber} {(string.IsNullOrWhiteSpace(department.Bus) ? string.Empty : "bus " + department.Bus)}")
+                                <br />
+                                @(string.IsNullOrWhiteSpace(department.PostalCode) ? string.Empty : $"{department.PostalCode} ")@department.City
+                                @if (!string.IsNullOrWhiteSpace(department.CountryName))
+                                {
+                                    <text><br />@department.CountryName</text>
+                                }
+                            </div>
+                            <div class="mb-1"><i class="fas fa-phone me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(department.Phone) ? "-" : department.Phone)</div>
+                            <div class="mb-1"><i class="fas fa-mobile-alt me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(department.Mobile) ? "-" : department.Mobile)</div>
+                            <div><i class="fas fa-envelope me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(department.Email) ? "-" : department.Email)</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="mb-0 text-muted">Er zijn nog geen afdelingen toegevoegd.</p>
+        }
+    </div>
+</section>
+
+<section class="card card-modern mb-4">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bx bx-user fs-3 me-2 text-primary"></i>
+            <h4 class="mb-0">Contacten</h4>
+        </div>
+        @if (Model.Contacts.Any())
+        {
+            <div class="row row-cols-1 row-cols-md-2 g-3">
+                @foreach (var contact in Model.Contacts)
+                {
+                    <div class="col">
+                        <div class="border rounded p-3 h-100">
+                            <div class="fw-bold">@(!string.IsNullOrWhiteSpace(contact.LastName) || !string.IsNullOrWhiteSpace(contact.FirstName) ? $"{contact.FirstName} {contact.LastName}".Trim() : "Onbekende contactpersoon")</div>
+                            @if (!string.IsNullOrWhiteSpace(contact.Function))
+                            {
+                                <div class="text-muted small mb-2">@contact.Function</div>
+                            }
+                            <div class="mb-1"><i class="fas fa-phone me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(contact.Phone) ? "-" : contact.Phone)</div>
+                            <div class="mb-1"><i class="fas fa-mobile-alt me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(contact.Mobile) ? "-" : contact.Mobile)</div>
+                            <div class="mb-1"><i class="fas fa-envelope me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(contact.Email) ? "-" : contact.Email)</div>
+                            @if (!string.IsNullOrWhiteSpace(contact.DepartmentName))
+                            {
+                                <div class="text-muted small">Afdeling: @contact.DepartmentName</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="mb-0 text-muted">Er zijn nog geen contacten toegevoegd.</p>
+        }
+    </div>
+</section>
+
+<section class="card card-modern">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bx bx-file fs-3 me-2 text-primary"></i>
+            <h4 class="mb-0">Contracten</h4>
+        </div>
+        @if (Model.Contracts.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Project</th>
+                            <th>Contract #</th>
+                            <th>Aantal activiteiten</th>
+                            <th class="text-end">Totale waarde</th>
+                            <th class="text-end">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var contract in Model.Contracts)
+                        {
+                            <tr>
+                                <td>@(string.IsNullOrWhiteSpace(contract.ProjectName) ? "-" : contract.ProjectName)</td>
+                                <td>@contract.Id</td>
+                                <td>@contract.ActivityCount</td>
+                                <td class="text-end">@contract.TotalAmount.ToString("C", currencyCulture)</td>
+                                <td class="text-end">
+                                    <a href="@Url.Action("EditContract", "Projecten", new { projectid = contract.ProjectId, contractid = contract.Id })" class="btn btn-sm btn-outline-primary">
+                                        Bekijken
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="mb-0 text-muted">Er zijn geen contracten gekoppeld.</p>
+        }
+    </div>
+</section>

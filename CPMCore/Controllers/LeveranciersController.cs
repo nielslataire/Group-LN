@@ -224,7 +224,6 @@ public class LeveranciersController : BaseController
     }
 
 
-
     private async Task<string?> ResolveLegalFormAbbreviation(int? legalFormId, CancellationToken ct)
     {
         if (!legalFormId.HasValue)
@@ -441,6 +440,122 @@ public class LeveranciersController : BaseController
         };
 
         return View(vm);
+    }
+
+    [HttpGet]
+    [Breadcrumb("Detail", FromAction = nameof(Index))]
+    public async Task<IActionResult> Details(int id, CancellationToken ct)
+    {
+        var supplier = await _db.CompanyInfo
+            .Include(c => c.PostCode)
+                .ThenInclude(p => p.Country)
+            .Include(c => c.CompanyDepartments)
+                .ThenInclude(d => d.Postcode)
+                    .ThenInclude(p => p.Country)
+            .Include(c => c.CompanyContacts)
+                .ThenInclude(contact => contact.Department)
+            .Include(c => c.Activity)
+            .Include(c => c.Contract)
+                .ThenInclude(contract => contract.Project)
+            .Include(c => c.Contract)
+                .ThenInclude(contract => contract.ContractActivity)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.CompanyId == id, ct);
+
+        if (supplier == null)
+        {
+            return NotFound();
+        }
+
+        string? legalFormName = null;
+
+        if (!string.IsNullOrWhiteSpace(supplier.Type))
+        {
+            legalFormName = await _db.CompanyLegalForm
+                .Where(l => l.Abbreviation == supplier.Type || l.Name == supplier.Type)
+                .Select(l => l.Name)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        var countryName = supplier.PostCode?.Country?.LandNaam;
+
+        if (string.IsNullOrWhiteSpace(countryName) && !string.IsNullOrWhiteSpace(supplier.LandCode))
+        {
+            countryName = await _db.Country
+                .Where(c => c.LandIsocode == supplier.LandCode)
+                .Select(c => c.LandNaam)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        var detailModel = new SupplierDetailViewModel
+        {
+            Id = supplier.CompanyId,
+            Name = supplier.BedrijfsNaam,
+            EnterpriseNumber = supplier.Ondernemingsnummer,
+            LegalForm = legalFormName ?? supplier.Type,
+            Street = supplier.Straat,
+            HouseNumber = supplier.Huisnummer,
+            BusNumber = supplier.Busnummer,
+            PostalCode = supplier.Postcode,
+            City = supplier.Gemeente,
+            CountryName = countryName,
+            CountryCode = supplier.LandCode,
+            Phone = supplier.Telefoon1,
+            Mobile = supplier.Gsm,
+            Email = supplier.Email,
+            InvoiceEmail = supplier.InvoiceEmail,
+            WebUrl = supplier.Weburl,
+            RequiresDigitalInvoice = supplier.RequiresDigitalInvoice,
+            AttachUblByDefault = supplier.AttachUblByDefault,
+            Activities = supplier.Activity
+                .OrderBy(a => a.Omschrijving)
+                .Select(a => a.Omschrijving)
+                .ToList(),
+            Departments = supplier.CompanyDepartments
+                .OrderBy(d => d.Naam)
+                .Select(d => new SupplierDepartmentDetailViewModel
+                {
+                    Name = d.Naam,
+                    Street = d.Straat,
+                    HouseNumber = d.Huisnummer,
+                    Bus = d.Bus,
+                    PostalCode = d.Postcode?.Postcode,
+                    City = d.Postcode?.Gemeente,
+                    CountryName = d.Postcode?.Country?.LandNaam,
+                    Phone = d.Telefoon,
+                    Mobile = d.Gsm,
+                    Email = d.Email
+                })
+                .ToList(),
+            Contacts = supplier.CompanyContacts
+                .OrderBy(c => c.ContactNaam)
+                .ThenBy(c => c.ContactVoornaam)
+                .Select(c => new SupplierContactDetailViewModel
+                {
+                    FirstName = c.ContactVoornaam,
+                    LastName = c.ContactNaam,
+                    Function = c.Functie,
+                    Phone = c.Telefoon,
+                    Mobile = c.Gsm,
+                    Email = c.Email,
+                    DepartmentName = c.Department?.Naam
+                })
+                .ToList(),
+            Contracts = supplier.Contract
+                .OrderBy(c => c.Id)
+                .Select(c => new SupplierContractDetailViewModel
+                {
+                    Id = c.Id,
+                    ProjectId = c.ProjectId,
+                    ProjectName = c.Project?.ProjectName ?? string.Empty,
+                    TotalAmount = c.ContractActivity.Sum(a => (decimal?)a.Price) ?? 0m,
+                    ActivityCount = c.ContractActivity.Count
+                })
+                .ToList()
+        };
+
+        ViewData["Title"] = detailModel.Name;
+        return View(detailModel);
     }
 
     [HttpGet]

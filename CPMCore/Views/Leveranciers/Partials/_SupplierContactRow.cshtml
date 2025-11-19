@@ -42,13 +42,13 @@
                     </div>
                     <div class="row align-items-center pb-3">
                         <div class="col-lg-6 col-xl-6">
-                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "Email", type = "email" })
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern email-validate", placeholder = "Email", type = "email" })
                         </div>
                         <div class="col-lg-3 col-xl-3">
-                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern", placeholder = "Telefoon" })
+                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern phone-mask", placeholder = "Telefoon" })
                         </div>
                         <div class="col-lg-3 col-xl-3">
-                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern mobile-mask", placeholder = "GSM" })
                         </div>
                     </div>
                 </div>

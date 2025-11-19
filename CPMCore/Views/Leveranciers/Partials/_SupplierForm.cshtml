@@ -169,33 +169,70 @@
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Phone)</label>
                                     <div class="col-lg-7 col-xl-8">
-                                        @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern", placeholder = "Telefoon" })
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-phone"></i>
+                                            </span>
+                                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern phone-mask", placeholder = "Telefoon", autocomplete = "tel" })
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Mobile)</label>
                                     <div class="col-lg-7 col-xl-8">
-                                        @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-mobile-alt"></i>
+                                            </span>
+                                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern mobile-mask", placeholder = "GSM", autocomplete = "tel-national" })
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Email)</label>
                                     <div class="col-lg-7 col-xl-8">
-                                        @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "Email" })
+                                        @{
+                                            var emailFeedbackId = $"{Html.IdFor(m => m.Email)}-feedback";
+                                        }
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-envelope"></i>
+                                            </span>
+                                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern email-validate", placeholder = "Email", type = "email", data_feedback = "#" + emailFeedbackId })
+                                        </div>
+                                        <div id="@emailFeedbackId" class="invalid-feedback d-none">
+                                            Gelieve een geldig e-mailadres in te geven.
+                                        </div>
                                         @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
                                     </div>
                                 </div>
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.InvoiceEmail)</label>
                                     <div class="col-lg-7 col-xl-8">
-                                        @Html.TextBoxFor(m => m.InvoiceEmail, new { @class = "form-control form-control-modern", placeholder = "Facturatie email" })
+                                        @{
+                                            var invoiceEmailFeedbackId = $"{Html.IdFor(m => m.InvoiceEmail)}-feedback";
+                                        }
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-file-invoice"></i>
+                                            </span>
+                                            @Html.TextBoxFor(m => m.InvoiceEmail, new { @class = "form-control form-control-modern email-validate", placeholder = "Facturatie email", type = "email", data_feedback = "#" + invoiceEmailFeedbackId })
+                                        </div>
+                                        <div id="@invoiceEmailFeedbackId" class="invalid-feedback d-none">
+                                            Gelieve een geldig e-mailadres in te geven.
+                                        </div>
                                         @Html.ValidationMessageFor(m => m.InvoiceEmail, "", new { @class = "text-danger" })
                                     </div>
                                 </div>
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.WebUrl)</label>
                                     <div class="col-lg-7 col-xl-8">
-                                        @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern", placeholder = "Website" })
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="fas fa-globe"></i>
+                                            </span>
+                                            @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern", placeholder = "Website", type = "url" })
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="row align-items-center pb-3">

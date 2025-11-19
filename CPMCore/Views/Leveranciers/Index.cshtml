@@ -115,7 +115,11 @@
                         var phone = supplier.PrimaryPhone;
                         var activityData = string.Join(",", supplier.ActivityIds);
                         <tr data-activities="@activityData">
-                            <td>@supplier.Name</td>
+                            <td>
+                                <a href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })" class="text-decoration-none text-reset fw-semibold">
+                                    @supplier.Name
+                                </a>
+                            </td>
                             <td>@(string.IsNullOrWhiteSpace(supplier.EnterpriseNumber) ? "-" : supplier.EnterpriseNumber)</td>
                             <td>@(string.IsNullOrWhiteSpace(phone) ? "-" : phone)</td>
                             <td>

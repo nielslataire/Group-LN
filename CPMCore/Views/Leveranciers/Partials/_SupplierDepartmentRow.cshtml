@@ -20,20 +20,20 @@
                             @Html.TextBoxFor(m => m.Name, new { @class = "form-control form-control-modern department-name-input", placeholder = "Naam" })
                         </div>
                         <div class="col-lg-6 col-xl-6">
-                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "Email" })
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern email-validate", placeholder = "Email", type = "email" })
                         </div>
                     </div>
                     <div class="row align-items-center pb-3">
                         <div class="col-lg-5 col-xl-5">
                             @Html.TextBoxFor(m => m.Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
                         </div>
-                        <div class="col-lg-1 col-xl-1">
+                        <div class="col-lg-2 col-xl-2">
                             @Html.TextBoxFor(m => m.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr" })
                         </div>
-                        <div class="col-lg-1 col-xl-1">
+                        <div class="col-lg-2 col-xl-2">
                             @Html.TextBoxFor(m => m.Bus, new { @class = "form-control form-control-modern", placeholder = "Bus" })
                         </div>
-                        <div class="col-lg-5 col-xl-5">
+                        <div class="col-lg-3 col-xl-3">
                             @{
                                 var postalName = Html.NameFor(m => m.PostalCodeId).ToString();
                                 var postalId = Html.IdFor(m => m.PostalCodeId).ToString();
@@ -53,11 +53,11 @@
                         </div>
                     </div>
                     <div class="row align-items-center">
-                        <div class="col-lg-6 col-xl-6">
-                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern", placeholder = "Telefoon" })
+                        <div class="col-lg-4 col-xl-4">
+                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern phone-mask", placeholder = "Telefoon" })
                         </div>
-                        <div class="col-lg-6 col-xl-6">
-                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                        <div class="col-lg-4 col-xl-4">
+                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern mobile-mask", placeholder = "GSM" })
                         </div>
                     </div>
                 </div>
