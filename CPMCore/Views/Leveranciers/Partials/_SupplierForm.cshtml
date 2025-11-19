@@ -1,0 +1,465 @@
+﻿@model CPMCore.Models.Leveranciers.SupplierFormViewModel
+@using System.Linq
+
+@{
+    var groupedActivities = Model.Activities
+        .GroupBy(a => string.IsNullOrWhiteSpace(a.GroupName) ? "Overige" : a.GroupName!)
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    var formRouteValues = Model.Id.HasValue ? new { id = Model.Id } : null;
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <div class="row align-items-center">
+                <div class="col-sm-auto d-flex align-items-center">
+                    <a href="@Url.Action("Index", "Leveranciers")" class="text-decoration-none text-reset d-flex align-items-center">
+                        <i class="bx bx-chevron-left fs-1"></i>
+                    </a>
+                </div>
+                <div class="col-sm-auto">
+                    <h1 class="fw-bold mb-0">@Model.Title</h1>
+                    <h5 class="mb-4 mt-0">@Model.Subtitle</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@using (Html.BeginForm(Model.Id.HasValue ? "Edit" : "Create", "Leveranciers", formRouteValues, FormMethod.Post, antiforgery: null, htmlAttributes: new { @class = "ecommerce-form action-buttons-fixed", id = "supplier-form" }))
+{
+    @Html.AntiForgeryToken()
+    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+    @Html.HiddenFor(m => m.Id)
+
+    <div class="row mt-2">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-buildings"></i>
+                            <h2 class="card-big-info-title">Algemene info</h2>
+                            <p class="card-big-info-desc">Vul de basisgegevens van de leverancier in.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group">
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Name)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="row g-2">
+                                            <div class="col-lg-4 col-xl-4">
+                                                <select id="SelectedLegalFormId" name="SelectedLegalFormId" class="form-control form-control-modern populate">
+                                                    <option value="">Bedrijfsvorm</option>
+                                                    @foreach (var legal in Model.LegalForms)
+                                                    {
+                                                        <option value="@legal.Id" selected="@(Model.SelectedLegalFormId == legal.Id ? "selected" : null)">@legal.Name (@legal.Abbreviation)</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="col-lg-8 col-xl-8">
+                                                @Html.TextBoxFor(m => m.Name, new { @class = "form-control form-control-modern", placeholder = "Bedrijfsnaam" })
+                                            </div>
+                                        </div>
+                                        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.EnterpriseNumber)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="input-group">
+                                            @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "Ondernemingsnummer", id = "enterprise-number" })
+                                            <button type="button" class="btn btn-default" id="btn-validate-vat"><i class="bx bx-check"></i><span class="d-none d-sm-inline ms-1">Controleren</span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Adres</label>
+                                    <div class="col-lg-5 col-xl-5 mb-2 mb-lg-0">
+                                        @Html.TextBoxFor(m => m.Street, new { @class = "form-control form-control-modern", placeholder = "Straat", id = "Street" })
+                                    </div>
+                                    <div class="col-lg-1 col-xl-1 mb-2 mb-lg-0">
+                                        @Html.TextBoxFor(m => m.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr", id = "HouseNumber" })
+                                    </div>
+                                    <div class="col-lg-1 col-xl-1">
+                                        @Html.TextBoxFor(m => m.BusNumber, new { @class = "form-control form-control-modern", placeholder = "Bus", id = "BusNumber" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Plaats</label>
+                                    <div class="col-lg-3 col-xl-3 mb-2 mb-lg-0">
+                                        <select id="SelectedCountryId" name="SelectedCountryId" class="form-control form-control-modern populate">
+                                            @foreach (var country in Model.Countries)
+                                            {
+                                                <option value="@country.Id" data-isocode="@country.IsoCode" selected="@(Model.SelectedCountryId == country.Id ? "selected" : null)">@country.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-lg-3 col-xl-3 mb-2 mb-lg-0">
+                                        @Html.TextBoxFor(m => m.PostalCode, new { @class = "form-control form-control-modern", placeholder = "Postcode", @readonly = "readonly", id = "PostalCode" })
+                                    </div>
+                                    <div class="col-lg-3 col-xl-4 mb-2 mb-lg-0">
+                                        <select id="SelectedPostalCodeId" name="SelectedPostalCodeId" class="form-control form-control-modern populate postal-select" data-selected-text="@((Model.SelectedPostalCodeId.HasValue && !string.IsNullOrWhiteSpace(Model.PostalCode) && !string.IsNullOrWhiteSpace(Model.City)) ? ($"{Model.PostalCode} - {Model.City}") : string.Empty)">
+                                            @if (Model.SelectedPostalCodeId.HasValue && !string.IsNullOrWhiteSpace(Model.PostalCode) && !string.IsNullOrWhiteSpace(Model.City))
+                                            {
+                                                <option value="@Model.SelectedPostalCodeId" selected="selected">@Model.PostalCode - @Model.City</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.City, new { @class = "form-control form-control-modern", placeholder = "Gemeente", @readonly = "readonly", id = "City" })
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bxs-contact"></i>
+                            <h2 class="card-big-info-title">Contact & Facturatie</h2>
+                            <p class="card-big-info-desc">Contactgegevens, facturatie en activiteiten.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group">
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Phone)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern", placeholder = "Telefoon" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Mobile)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Email)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "Email" })
+                                        @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.InvoiceEmail)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        @Html.TextBoxFor(m => m.InvoiceEmail, new { @class = "form-control form-control-modern", placeholder = "Facturatie email" })
+                                        @Html.ValidationMessageFor(m => m.InvoiceEmail, "", new { @class = "text-danger" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.WebUrl)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern", placeholder = "Website" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <div class="col-lg-5 col-xl-3"></div>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="checkbox-custom checkbox-default">
+                                            @Html.CheckBoxFor(m => m.RequiresDigitalInvoice, new { id = "checkboxDigitalInvoice" })
+                                            <label for="checkboxDigitalInvoice">Digitale facturatie vereist</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <div class="col-lg-5 col-xl-3"></div>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="checkbox-custom checkbox-default">
+                                            @Html.CheckBoxFor(m => m.AttachUblByDefault, new { id = "checkboxAttachUbl" })
+                                            <label for="checkboxAttachUbl">UBL standaard meesturen</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.SelectedActivityIds)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <select id="SelectedActivityIds" name="SelectedActivityIds" class="form-control form-control-modern populate" multiple data-plugin-selectTwo>
+                                            @foreach (var group in groupedActivities)
+                                            {
+                                                <optgroup label="@group.Key">
+                                                    @foreach (var activity in group.OrderBy(a => a.Name))
+                                                    {
+                                                        var selected = Model.SelectedActivityIds != null && Model.SelectedActivityIds.Contains(activity.Id);
+                                                        <option value="@activity.Id" selected="@(selected ? "selected" : null)">@activity.Name</option>
+                                                    }
+                                                </optgroup>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bxs-building-house"></i>
+                            <h2 class="card-big-info-title">Afdelingen</h2>
+                            <p class="card-big-info-desc">Voeg verschillende afdelingen toe met hun adresgegevens.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="table-responsive">
+                                <table class="table table-ecommerce-simple mb-0" id="departments-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Naam</th>
+                                            <th>Adres</th>
+                                            <th>Postcode</th>
+                                            <th>Contact</th>
+                                            <th class="text-center">Acties</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="department-rows">
+                                        @for (var i = 0; i < Model.Departments.Count; i++)
+                                        {
+                                            var department = Model.Departments[i];
+                                            <tr data-key="@department.Key">
+                                                @Html.HiddenFor(m => m.Departments[i].Key)
+                                                @Html.HiddenFor(m => m.Departments[i].Id)
+                                                <td>
+                                                    @Html.TextBoxFor(m => m.Departments[i].Name, new { @class = "form-control form-control-modern", placeholder = "Naam" })
+                                                </td>
+                                                <td>
+                                                    <div class="row gx-2">
+                                                        <div class="col-6 mb-2 mb-md-0">
+                                                            @Html.TextBoxFor(m => m.Departments[i].Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
+                                                        </div>
+                                                        <div class="col-3 mb-2 mb-md-0">
+                                                            @Html.TextBoxFor(m => m.Departments[i].HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr" })
+                                                        </div>
+                                                        <div class="col-3">
+                                                            @Html.TextBoxFor(m => m.Departments[i].Bus, new { @class = "form-control form-control-modern", placeholder = "Bus" })
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <select name="Departments[@i].PostalCodeId" class="form-control form-control-modern populate postal-select" data-selected-text="@department.PostalDisplay">
+                                                        @if (department.PostalCodeId.HasValue && !string.IsNullOrWhiteSpace(department.PostalDisplay))
+                                                        {
+                                                            <option value="@department.PostalCodeId" selected="selected">@department.PostalDisplay</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <div class="row gx-2">
+                                                        <div class="col-6 mb-2 mb-md-0">
+                                                            @Html.TextBoxFor(m => m.Departments[i].Phone, new { @class = "form-control form-control-modern", placeholder = "Tel" })
+                                                        </div>
+                                                        <div class="col-6">
+                                                            @Html.TextBoxFor(m => m.Departments[i].Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                                                        </div>
+                                                        <div class="col-12 mt-2">
+                                                            @Html.TextBoxFor(m => m.Departments[i].Email, new { @class = "form-control form-control-modern", placeholder = "Email" })
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center align-middle">
+                                                    <button type="button" class="btn btn-link text-danger remove-department" aria-label="Verwijder afdeling"><i class="bx bx-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-default btn-md" id="add-department"><i class="bx bx-plus me-2"></i>Afdeling toevoegen</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bxs-user-detail"></i>
+                            <h2 class="card-big-info-title">Contacten</h2>
+                            <p class="card-big-info-desc">Koppel meerdere contactpersonen aan de leverancier.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="table-responsive">
+                                <table class="table table-ecommerce-simple mb-0" id="contacts-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Naam</th>
+                                            <th>Functie</th>
+                                            <th>Contact</th>
+                                            <th>Afdeling</th>
+                                            <th class="text-center">Acties</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="contact-rows">
+                                        @for (var i = 0; i < Model.Contacts.Count; i++)
+                                        {
+                                            var contact = Model.Contacts[i];
+                                            <tr data-key="@contact.Key">
+                                                @Html.HiddenFor(m => m.Contacts[i].Key)
+                                                @Html.HiddenFor(m => m.Contacts[i].Id)
+                                                <td>
+                                                    <div class="row gx-2">
+                                                        <div class="col-6 mb-2 mb-md-0">
+                                                            @Html.TextBoxFor(m => m.Contacts[i].LastName, new { @class = "form-control form-control-modern", placeholder = "Naam" })
+                                                        </div>
+                                                        <div class="col-6">
+                                                            @Html.TextBoxFor(m => m.Contacts[i].FirstName, new { @class = "form-control form-control-modern", placeholder = "Voornaam" })
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(m => m.Contacts[i].Function, new { @class = "form-control form-control-modern", placeholder = "Functie" })
+                                                </td>
+                                                <td>
+                                                    <div class="row gx-2">
+                                                        <div class="col-6 mb-2 mb-md-0">
+                                                            @Html.TextBoxFor(m => m.Contacts[i].Phone, new { @class = "form-control form-control-modern", placeholder = "Tel" })
+                                                        </div>
+                                                        <div class="col-6 mb-2 mb-md-0">
+                                                            @Html.TextBoxFor(m => m.Contacts[i].Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                                                        </div>
+                                                        <div class="col-12">
+                                                            @Html.TextBoxFor(m => m.Contacts[i].Email, new { @class = "form-control form-control-modern", placeholder = "Email" })
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <select name="Contacts[@i].DepartmentKey" class="form-control form-control-modern contact-department">
+                                                        <option value="">Geen</option>
+                                                        @foreach (var department in Model.Departments)
+                                                        {
+                                                            <option value="@department.Key" selected="@(contact.DepartmentKey == department.Key ? "selected" : null)">@department.Name</option>
+                                                        }
+                                                    </select>
+                                                </td>
+                                                <td class="text-center align-middle">
+                                                    <button type="button" class="btn btn-link text-danger remove-contact" aria-label="Verwijder contact"><i class="bx bx-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-default btn-md" id="add-contact"><i class="bx bx-plus me-2"></i>Contact toevoegen</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <template id="department-row-template">
+        <tr data-key="__key__">
+            <td>
+                <input type="hidden" name="Departments[__index__].Key" value="__key__" />
+                <input type="hidden" name="Departments[__index__].Id" />
+                <input type="text" name="Departments[__index__].Name" class="form-control form-control-modern" placeholder="Naam" />
+            </td>
+            <td>
+                <div class="row gx-2">
+                    <div class="col-6 mb-2 mb-md-0">
+                        <input type="text" name="Departments[__index__].Street" class="form-control form-control-modern" placeholder="Straat" />
+                    </div>
+                    <div class="col-3 mb-2 mb-md-0">
+                        <input type="text" name="Departments[__index__].HouseNumber" class="form-control form-control-modern" placeholder="Nr" />
+                    </div>
+                    <div class="col-3">
+                        <input type="text" name="Departments[__index__].Bus" class="form-control form-control-modern" placeholder="Bus" />
+                    </div>
+                </div>
+            </td>
+            <td>
+                <select name="Departments[__index__].PostalCodeId" class="form-control form-control-modern populate postal-select"></select>
+            </td>
+            <td>
+                <div class="row gx-2">
+                    <div class="col-6 mb-2 mb-md-0">
+                        <input type="text" name="Departments[__index__].Phone" class="form-control form-control-modern" placeholder="Tel" />
+                    </div>
+                    <div class="col-6 mb-2 mb-md-0">
+                        <input type="text" name="Departments[__index__].Mobile" class="form-control form-control-modern" placeholder="GSM" />
+                    </div>
+                    <div class="col-12 mt-2">
+                        <input type="text" name="Departments[__index__].Email" class="form-control form-control-modern" placeholder="Email" />
+                    </div>
+                </div>
+            </td>
+            <td class="text-center align-middle">
+                <button type="button" class="btn btn-link text-danger remove-department" aria-label="Verwijder afdeling"><i class="bx bx-trash"></i></button>
+            </td>
+        </tr>
+    </template>
+
+    <template id="contact-row-template">
+        <tr data-key="__key__">
+            <td>
+                <input type="hidden" name="Contacts[__index__].Key" value="__key__" />
+                <input type="hidden" name="Contacts[__index__].Id" />
+                <div class="row gx-2">
+                    <div class="col-6 mb-2 mb-md-0">
+                        <input type="text" name="Contacts[__index__].LastName" class="form-control form-control-modern" placeholder="Naam" />
+                    </div>
+                    <div class="col-6">
+                        <input type="text" name="Contacts[__index__].FirstName" class="form-control form-control-modern" placeholder="Voornaam" />
+                    </div>
+                </div>
+            </td>
+            <td>
+                <input type="text" name="Contacts[__index__].Function" class="form-control form-control-modern" placeholder="Functie" />
+            </td>
+            <td>
+                <div class="row gx-2">
+                    <div class="col-6 mb-2 mb-md-0">
+                        <input type="text" name="Contacts[__index__].Phone" class="form-control form-control-modern" placeholder="Tel" />
+                    </div>
+                    <div class="col-6 mb-2 mb-md-0">
+                        <input type="text" name="Contacts[__index__].Mobile" class="form-control form-control-modern" placeholder="GSM" />
+                    </div>
+                    <div class="col-12">
+                        <input type="text" name="Contacts[__index__].Email" class="form-control form-control-modern" placeholder="Email" />
+                    </div>
+                </div>
+            </td>
+            <td>
+                <select name="Contacts[__index__].DepartmentKey" class="form-control form-control-modern contact-department">
+                    <option value="">Geen</option>
+                </select>
+            </td>
+            <td class="text-center align-middle">
+                <button type="button" class="btn btn-link text-danger remove-contact" aria-label="Verwijder contact"><i class="bx bx-trash"></i></button>
+            </td>
+        </tr>
+    </template>
+
+    <div class="row mt-4">
+        <div class="col d-flex justify-content-end gap-2">
+            <a class="btn btn-default btn-md" href="@Url.Action("Index", "Leveranciers")">Annuleren</a>
+            <button type="submit" class="btn btn-primary btn-md">Opslaan</button>
+        </div>
+    </div>
+}

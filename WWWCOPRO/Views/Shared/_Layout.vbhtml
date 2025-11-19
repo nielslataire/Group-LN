@@ -2,16 +2,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-169438032-1"></script>
+    <!-- Google Tag Manager -->
     <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'UA-169438032-1');
-    </script>
-
+    (function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-KG5HPVWR');</script>
+    <!-- End Google Tag Manager -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>@ViewData("Title")</title>
@@ -19,7 +20,7 @@
     <meta name="description" content="Projectontwikkeling en Bouwcoördinatie van alle residentiële bouwprojecten.">
     <meta name="author" content="Group LN">
     <link rel="icon" href="@Url.Content("~/content/img/favicon.ico")" type="image/x-icon" />
-    <meta property="og:title" content="@ViewData("ogtitle")"/>
+    <meta property="og:title" content="@ViewData("ogtitle")" />
     <meta property="og:type" content="@ViewData("ogtype")" />
     <meta property="og:description" content="@ViewData("ogdescription")" />
     <meta property="og:image" content="@ViewData("ogimage")" />
@@ -36,28 +37,15 @@
     @Styles.Render("~/Content/theme")
     @Styles.Render("~/Content/skin")
     @RenderSection("PageStyle", required:=False)
-    @*@Scripts.Render("~/Vendor/js")
-    @Scripts.Render("~/Scripts/js")*@
-        <!-- Facebook Pixel Code -->
-        <script>
-    !function(f,b,e,v,n,t,s)
-    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-    n.queue=[];t=b.createElement(e);t.async=!0;
-    t.src=v;s=b.getElementsByTagName(e)[0];
-    s.parentNode.insertBefore(t,s)}(window, document,'script',
-    'https://connect.facebook.net/en_US/fbevents.js');
-    fbq('init', '486865188966568');
-    fbq('track', 'PageView');
-        </script>
-        <noscript>
-            <img height="1" width="1" style="display:none"
-                 src="https://www.facebook.com/tr?id=486865188966568&ev=PageView&noscript=1" />
-        </noscript>
-        <!-- End Facebook Pixel Code -->
+
 </head>
 <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript>
+        <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KG5HPVWR"
+                height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div class="body">
         <header id="header" class="header-no-border-bottom" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": 148, "stickySetTop": "-148px", "stickyChangeLogo": false}'>
             <div class="header-body">
@@ -111,54 +99,54 @@
                         </div>
                     </div>
                 </div>
-                <div class="header-container header-nav header-nav-bar header-nav-bar-primary" >
-                    <div class=" container" >
-                    <button class="btn header-btn-collapse-nav" data-toggle="collapse" data-target=".header-nav-main">
-                        <i class="fa fa-bars"></i>
-                    </button>
-                    <div class="header-nav-main header-nav-main-light  header-nav-main-effect-1 header-nav-main-sub-effect-1 collapse">
-                        <nav>
-                            <ul class="nav nav-pills" id="mainNav">
-                                <li>
-                                    <a href="@Url.Action("Index", "Home")">
-                                        Home
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="@Url.Action("Index", "AboutUs")">
-                                        Over ons
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">
-                                        Woonprojecten
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">
-                                        Commercieel
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">
-                                        Realisaties
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="@Url.Action("Index", "Team")">
-                                        Team
-                                    </a>
-                                </li>
-                                <li>
-                                    <a href="@Url.Action("Index", "Contact")">
-                                        Contact
-                                    </a>
-                                </li>
+                <div class="header-container header-nav header-nav-bar header-nav-bar-primary">
+                    <div class=" container">
+                        <button class="btn header-btn-collapse-nav" data-toggle="collapse" data-target=".header-nav-main">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <div class="header-nav-main header-nav-main-light  header-nav-main-effect-1 header-nav-main-sub-effect-1 collapse">
+                            <nav>
+                                <ul class="nav nav-pills" id="mainNav">
+                                    <li>
+                                        <a href="@Url.Action("Index", "Home")">
+                                            Home
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="@Url.Action("Index", "AboutUs")">
+                                            Over ons
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Woonproject})">
+                                            Woonprojecten
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="@Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional, .Type = ProjectType.Commerciëel})">
+                                            Commercieel
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="@Url.Action("Index", "References", New With {.id = UrlParameter.Optional})">
+                                            Realisaties
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="@Url.Action("Index", "Team")">
+                                            Team
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="@Url.Action("Index", "Contact")">
+                                            Contact
+                                        </a>
+                                    </li>
 
-                            </ul>
-                        </nav>
+                                </ul>
+                            </nav>
+                        </div>
                     </div>
-                </div>
                 </div>
             </div>
         </header>
@@ -172,19 +160,19 @@
                         <span>Volg ons</span>
                     </div>
                     @*<div class="col-md-3">
-                        <div class="newsletter">
-                            @Html.Partial("Newsletter")
-                           
-                        </div>
-                        @RenderSection("LatestPictures", False)
-                        
-                    </div>*@
+                            <div class="newsletter">
+                                @Html.Partial("Newsletter")
+
+                            </div>
+                            @RenderSection("LatestPictures", False)
+
+                        </div>*@
                     <div class="col-md-4">
                         @RenderSection("LatestNews", False)
                         @*<h4>Laaste Facebook Posts</h4>
-                        <div id="tweet" class="twitter" data-plugin-tweets data-plugin-options='{"username": "", "count": 2}'>
-                            <p>Please wait...</p>
-                        </div>*@
+                            <div id="tweet" class="twitter" data-plugin-tweets data-plugin-options='{"username": "", "count": 2}'>
+                                <p>Please wait...</p>
+                            </div>*@
                     </div>
                     <div class="col-md-4">
                         <div class="contact-details">
@@ -215,55 +203,55 @@
                             <p>© Copyright 2015. All Rights Reserved.</p>
                         </div>
                         @*<div class="col-md-4">
-                            <nav id="sub-menu">
-                                <ul style="color:#FFF">
-                                    <li><a href="page-faq.html">FAQ's</a></li>
-                                    <li><a href="sitemap.html">Sitemap</a></li>
-                                    <li><a href="contact-us.html">Contact</a></li>
-                                </ul>
-                            </nav>
-                        </div>*@
+                                <nav id="sub-menu">
+                                    <ul style="color:#FFF">
+                                        <li><a href="page-faq.html">FAQ's</a></li>
+                                        <li><a href="sitemap.html">Sitemap</a></li>
+                                        <li><a href="contact-us.html">Contact</a></li>
+                                    </ul>
+                                </nav>
+                            </div>*@
                     </div>
                 </div>
             </div>
         </footer>
- </div>
+    </div>
     @Scripts.Render("~/Vendor/jquerybundle")
     @Scripts.Render("~/Vendor/headlibs")
-        @Scripts.Render("~/Vendor/jsbundle")
-        @Scripts.Render("~/Scripts/jsbundle")
-        @RenderSection("scripts", required:=False)
-   @*@section scripts
-       <script>
-           $(function () {
-               $('#FormNewsletter').submit(function () {
-                   if ($(this).valid()) {
-                       $.ajax({
-                           url: this.action,
-                           type: this.method,
-                           data: $(this).serialize(),
-                           success: function (result) {
-                       
-                               if(result.success === true){
-                                   //$.post(result.url,function(partial){
-                                   //    $('#DepartmentRows').html(partial);
-                                   //});
-                          
-                               }
-                               else{
-                                   //$.post(result.url,function(partial){
-                                   $('#ValSummary').html(partial);
-                                   //});
-                               }
+    @Scripts.Render("~/Vendor/jsbundle")
+    @Scripts.Render("~/Scripts/jsbundle")
+    @RenderSection("scripts", required:=False)
+    @*@section scripts
+            <script>
+                $(function () {
+                    $('#FormNewsletter').submit(function () {
+                        if ($(this).valid()) {
+                            $.ajax({
+                                url: this.action,
+                                type: this.method,
+                                data: $(this).serialize(),
+                                success: function (result) {
 
-                           }
+                                    if(result.success === true){
+                                        //$.post(result.url,function(partial){
+                                        //    $('#DepartmentRows').html(partial);
+                                        //});
 
-                       });
-                   }
-                   return false;
-               });
-           });
-       </script>
-   End Section*@
+                                    }
+                                    else{
+                                        //$.post(result.url,function(partial){
+                                        $('#ValSummary').html(partial);
+                                        //});
+                                    }
+
+                                }
+
+                            });
+                        }
+                        return false;
+                    });
+                });
+            </script>
+        End Section*@
 </body>
 </html>

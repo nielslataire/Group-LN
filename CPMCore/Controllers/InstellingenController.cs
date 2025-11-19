@@ -60,6 +60,20 @@ public class InstellingenController : BaseController
         _series = series;
     }
 
+    [HttpGet]
+    [Breadcrumb("Instellingen")]
+    public IActionResult Index()
+    {
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = dashboard
+        };
+
+        ViewData["BreadcrumbNode"] = instellingenIndex;
+        return View();
+    }
+
 
     //VAKANTIEDAGEN
     [HttpGet]

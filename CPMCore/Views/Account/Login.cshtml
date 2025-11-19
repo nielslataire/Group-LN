@@ -14,11 +14,12 @@
 						<h2 class="title text-uppercase font-weight-bold m-0"><i class="bx bx-user-circle me-1 text-6 position-relative top-5"></i> Inloggen</h2>
 					</div>
 					<div class="card-body">
-						   @using (Html.BeginForm("Login" , "Account", new { returnUrl = ViewBag.returnUrl }, FormMethod.Post , null,  new {@role = "form"}))
-							{
-							   @Html.AntiForgeryToken()
-							   @Html.ValidationSummary(true, "", new { @class = "text-danger"})
-							<div class="form-group mb-3">
+				@using (Html.BeginForm("Login", "Account", new { returnUrl = Model.ReturnUrl }, FormMethod.Post, null, new { @role = "form" }))
+				{
+					@Html.AntiForgeryToken()
+					@Html.HiddenFor(m => m.ReturnUrl)
+					@Html.ValidationSummary(true, "", new { @class = "text-danger" })
+					<div class="form-group mb-3">
 								<label>@Html.LabelFor(m => m.Input.Username)</label>
 								<div class="input-group">
 									 @Html.TextBoxFor(m => m.Input.Username, new { @class = "form-control", tabindex="1"})

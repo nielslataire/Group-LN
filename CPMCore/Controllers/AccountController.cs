@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Encodings.Web;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 
 namespace CPMCore.Controllers
@@ -30,6 +32,7 @@ namespace CPMCore.Controllers
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
+            _emailSender = emailSender;
         }
         public IActionResult Index()
         {
@@ -39,7 +42,15 @@ namespace CPMCore.Controllers
         [AllowAnonymous]
         public async Task<ActionResult> Login(string returnUrl = null)
         {
-            LoginViewModel model = new LoginViewModel();
+            var model = new LoginViewModel
+            {
+                Input = new LoginViewModel.InputModel
+                {
+                    Username = string.Empty,
+                    Password = string.Empty
+                },
+                ReturnUrl = returnUrl ?? Url.Content("~/")
+            };
 
 
             if (!string.IsNullOrEmpty(model.ErrorMessage))
@@ -62,6 +73,7 @@ namespace CPMCore.Controllers
         public async Task<ActionResult> Login(LoginViewModel model, string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/");
+            model.ReturnUrl = returnUrl;
 
             if (ModelState.IsValid)
             {
@@ -185,12 +197,14 @@ namespace CPMCore.Controllers
         }
         // GET: /Account/ForgotPassword
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult ForgotPassword()
         {
             return View();
         }
 
         // POST: /Account/ForgotPassword
+        [AllowAnonymous]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
@@ -198,15 +212,24 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var user = await FindFirstUserByEmailAsync(model.Email);
             if (user != null)
             {
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackUrl = Url.Action("ResetPassword", "Account", new { email = model.Email, code = token }, Request.Scheme);
 
                 // Hier moet je je eigen emailservice toevoegen of een SMTP mail sturen via bijv. SmtpClient
-                await _emailSender.SendEmailAsync(model.Email, "Reset je wachtwoord",
-                    $"Klik <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>hier</a> om je wachtwoord opnieuw in te stellen.");
+                try
+                {
+                    await _emailSender.SendEmailAsync(model.Email, "Reset je wachtwoord",
+                        $"Klik <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>hier</a> om je wachtwoord opnieuw in te stellen.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Fout bij verzenden van resetmail voor gebruiker {Email}", model.Email);
+                    ModelState.AddModelError(string.Empty, "Er liep iets mis bij het verzenden van de resetmail. Probeer het opnieuw of contacteer de administrator.");
+                    return View(model);
+                }
             }
 
             return RedirectToAction(nameof(ForgotPasswordConfirmation));
@@ -220,31 +243,46 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult ForgotPasswordConfirmation()
         {
             return View();
         }
 
-        // GET: /Account/ResetPassword
         [HttpGet]
-        public IActionResult ResetPassword(string? email, string? code)
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword(string? email, string? code)
         {
             if (email == null || code == null)
                 return BadRequest("Ongeldige resetlink.");
 
-            var model = new ResetPasswordViewModel { Email = email, Code = code, Password="", ConfirmPassword=""};
+            var user = await FindFirstUserByEmailAsync(email);
+            var validToken = user != null && await _userManager.VerifyUserTokenAsync(
+                user,
+                _userManager.Options.Tokens.PasswordResetTokenProvider,
+                "ResetPassword",
+                code);
+
+            if (user == null || !validToken)
+            {
+                TempData["ResetError"] = "De resetlink is ongeldig of verlopen. Vraag een nieuwe link aan.";
+                return RedirectToAction(nameof(ForgotPassword));
+            }
+
+            var model = new ResetPasswordViewModel { Email = email, Code = code, Password = "", ConfirmPassword = "" };
             return View(model);
         }
 
         // POST: /Account/ResetPassword
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AllowAnonymous]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var user = await FindFirstUserByEmailAsync(model.Email);
             if (user == null)
                 return RedirectToAction(nameof(ResetPasswordConfirmation));
 
@@ -262,6 +300,20 @@ namespace CPMCore.Controllers
         public IActionResult ResetPasswordConfirmation()
         {
             return View();
+        }
+        private async Task<ApplicationUser?> FindFirstUserByEmailAsync(string email)
+        {
+            var normalizedEmail = _userManager.NormalizeEmail(email);
+            var matches = await _userManager.Users
+                .Where(u => u.NormalizedEmail == normalizedEmail)
+                .ToListAsync();
+
+            if (matches.Count > 1)
+            {
+                _logger.LogWarning("Multiple users share the email address {Email}. Using the first match for password reset.", email);
+            }
+
+            return matches.FirstOrDefault();
         }
     }
 }

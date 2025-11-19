@@ -235,8 +235,8 @@ body .btn-danger[disabled] {
 body .btn-info {
 	color: #fff;
 	text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
-	background-color: #5bc0de;
-	border-color: #5bc0de;
+	background-color: #338B72;
+	border-color: #338B72;
 }
 
 body .btn-info:hover {
@@ -572,7 +572,7 @@ html .panel-primary .panel-heading {
 }
 
 .widget-profile-info .profile-info .profile-footer {
-	border-top-color: rgba(0, 198, 73, 0.7);
+	border-top-color: rgba(51, 139, 114, 0);
 }
 /* Thumb Info */
 .thumb-info .thumb-info-type {

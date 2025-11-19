@@ -1,0 +1,57 @@
+﻿@{
+    ViewData["Title"] = "Instellingen";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="card">
+    <header class="card-header">
+        <div class="card-actions">
+            <a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+        </div>
+        <h2 class="card-title">Beheer &amp; instellingen</h2>
+        <p class="card-subtitle">Kies een onderdeel om je administratie bij te werken.</p>
+    </header>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 col-xl-4 mb-3">
+                <section class="card card-modern card-modern-overlay">
+                    <div class="card-body bg-primary text-white">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="h4 mb-0">Mijn bedrijven</span>
+                            <i class="bx bx-building-house text-5"></i>
+                        </div>
+                        <p class="mb-3">Beheer uitgevende bedrijven, lay-out instellingen en verzendgegevens.</p>
+                        <a class="btn btn-light" href="@Url.Action("IssuerCompanies", "Instellingen")">Open beheer</a>
+                    </div>
+                </section>
+            </div>
+            <div class="col-md-6 col-xl-4 mb-3">
+                <section class="card card-modern card-modern-overlay">
+                    <div class="card-body bg-secondary text-white">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="h4 mb-0">Verlofdagen</span>
+                            <i class="bx bx-calendar text-5"></i>
+                        </div>
+                        <p class="mb-3">Plan collectief verlof en weerverlet zodat projecten juist rekenen.</p>
+                        <a class="btn btn-light" href="@Url.Action("VacationDays", "Instellingen")">Plan dagen</a>
+                    </div>
+                </section>
+            </div>
+            <div class="col-md-6 col-xl-4 mb-3">
+                <section class="card card-modern card-modern-overlay">
+                    <div class="card-body bg-dark text-white">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="h4 mb-0">Gebruikers &amp; rollen</span>
+                            <i class="bx bx-user-check text-5"></i>
+                        </div>
+                        <p class="mb-3">Beheer toegang van collega’s en hou rollen up-to-date.</p>
+                        <div class="d-flex gap-2">
+                            <a class="btn btn-light" href="@Url.Action("Index", "UserAdmin")">Gebruikers</a>
+                            <a class="btn btn-outline-light" href="@Url.Action("Index", "AppRoles")">Rollen</a>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</section>

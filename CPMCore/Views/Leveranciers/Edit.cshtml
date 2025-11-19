@@ -1,0 +1,30 @@
+﻿@model CPMCore.Models.Leveranciers.SupplierFormViewModel
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+}
+
+@await Html.PartialAsync("_SupplierForm", Model)
+
+@section PageScripts
+{
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script>
+        (function () {
+            $('#SelectedActivityIds').select2({
+                theme: 'bootstrap',
+                placeholder: 'Selecteer activiteiten',
+                allowClear: true,
+                closeOnSelect: false,
+                width: '100%',
+                language: 'nl'
+            });
+        })();
+    </script>
+}

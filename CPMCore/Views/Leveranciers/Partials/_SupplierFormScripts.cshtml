@@ -1,0 +1,215 @@
+﻿@model CPMCore.Models.Leveranciers.SupplierFormViewModel
+<script>
+    (function () {
+        const countrySelect = $('#SelectedCountryId');
+        const postalSelect = $('#SelectedPostalCodeId');
+        const departmentRows = $('#department-rows');
+        const contactRows = $('#contact-rows');
+        let departmentIndex = departmentRows.find('tr').length;
+        let contactIndex = contactRows.find('tr').length;
+
+        function nextKey(prefix) {
+            return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        }
+
+        function initActivitySelect() {
+            $('#SelectedActivityIds').select2({
+                theme: 'bootstrap',
+                placeholder: 'Selecteer activiteiten',
+                allowClear: true,
+                closeOnSelect: false,
+                width: '100%',
+                language: 'nl'
+            });
+        }
+
+        function initSelect2(element) {
+            element.select2({
+                minimumInputLength: 3,
+                theme: 'bootstrap',
+                dropdownAutoWidth: true,
+                placeholder: 'Selecteer uw gemeente',
+                ajax: {
+                    url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+                    cache: false,
+                    traditional: true,
+                    type: 'POST',
+                    data: function (params) {
+                        return {
+                            term: params.term,
+                            CountryId: countrySelect.val()
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: $.map(data, function (item) {
+                                return { id: item.id, text: item.text };
+                            })
+                        };
+                    }
+                }
+            });
+        }
+
+        function setPostalListeners(select, postalCodeInput, cityInput) {
+            select.on('select2:select', function (e) {
+                const text = e.params && e.params.data ? e.params.data.text : '';
+                const parts = text.split(' - ');
+                if (postalCodeInput.length) {
+                    postalCodeInput.val(parts[0] || '');
+                }
+                if (cityInput.length) {
+                    cityInput.val(parts.slice(1).join(' - ').trim());
+                }
+            });
+        }
+
+        function setSelect2Selection(select, id, text) {
+            if (!select || !select.length || !id) {
+                return;
+            }
+
+            const option = new Option(text, id, true, true);
+            select.append(option).trigger('change');
+        }
+
+        function refreshContactDepartmentOptions() {
+            const departments = [];
+            departmentRows.find('tr').each(function () {
+                const key = $(this).data('key');
+                const name = $(this).find('input[name$=".Name"]').val() || 'Afdeling';
+                if (key) {
+                    departments.push({ key, name });
+                }
+            });
+
+            $('.contact-department').each(function () {
+                const current = $(this).val();
+                $(this).empty().append($('<option>').val('').text('Geen'));
+                departments.forEach(function (dept) {
+                    const option = $('<option>').val(dept.key).text(dept.name);
+                    if (dept.key === current) {
+                        option.attr('selected', 'selected');
+                    }
+                    $(this).append(option);
+                }, this);
+            });
+        }
+
+        function addDepartmentRow() {
+            const template = $('#department-row-template').html();
+            const key = nextKey('dep');
+            const rowHtml = template.replace(/__index__/g, departmentIndex).replace(/__key__/g, key);
+            const row = $(rowHtml);
+            departmentRows.append(row);
+            initSelect2(row.find('.postal-select'));
+            departmentIndex += 1;
+            refreshContactDepartmentOptions();
+        }
+
+        function addContactRow() {
+            const template = $('#contact-row-template').html();
+            const key = nextKey('ct');
+            const rowHtml = template.replace(/__index__/g, contactIndex).replace(/__key__/g, key);
+            const row = $(rowHtml);
+            contactRows.append(row);
+            refreshContactDepartmentOptions();
+            contactIndex += 1;
+        }
+
+        function hydrateExistingPostalSelects() {
+            $('.postal-select').each(function () {
+                const select = $(this);
+                if (select.data('select2')) {
+                    return;
+                }
+                initSelect2(select);
+                const selectedText = select.data('selected-text');
+                const value = select.find('option:selected').val();
+                if (!value && selectedText) {
+                    // ensure placeholder text is visible for preloaded select2
+                    select.append($('<option>').val('').text(selectedText));
+                }
+            });
+        }
+
+        function bindVatLookup() {
+            $('#btn-validate-vat').on('click', function () {
+                const vatNumber = $('#enterprise-number').val();
+                if (!vatNumber) {
+                    return;
+                }
+
+                $.getJSON('@Url.Action("ValidateVat", "Leveranciers")', { vatNumber: vatNumber })
+                    .done(function (data) {
+                        if (!data) {
+                            return;
+                        }
+
+                        if (data.name) {
+                            $('#Name').val(data.name);
+                        }
+                        if (data.address) {
+                            $('#Street').val(data.address.street);
+                            $('#PostalCode').val(data.address.zip);
+                            $('#City').val(data.address.city);
+                        }
+
+                        if (data.countryCode) {
+                            const match = $('#SelectedCountryId option').filter(function () {
+                                return $(this).data('isocode') === data.countryCode;
+                            }).first();
+                            if (match.length) {
+                                $('#SelectedCountryId').val(match.val()).trigger('change');
+                            }
+                        }
+
+                        if (data.address && data.address.zip && data.address.city) {
+                            $.get('@Url.Action("FindPostalMatch", "Leveranciers")', {
+                                postalCode: data.address.zip,
+                                city: data.address.city,
+                                countryIso: data.countryCode
+                            }).done(function (match) {
+                                if (match && match.id && match.text) {
+                                    setSelect2Selection(postalSelect, match.id, match.text);
+                                    $('#PostalCode').val(data.address.zip);
+                                    $('#City').val(data.address.city);
+                                    if (match.countryId) {
+                                        $('#SelectedCountryId').val(match.countryId).trigger('change');
+                                    }
+                                }
+                            });
+                        }
+                    });
+            });
+        }
+
+        initActivitySelect();
+        initSelect2(postalSelect);
+        setPostalListeners(postalSelect, $('#PostalCode'), $('#City'));
+        hydrateExistingPostalSelects();
+        refreshContactDepartmentOptions();
+        bindVatLookup();
+
+        $('#add-department').on('click', function () {
+            addDepartmentRow();
+        });
+
+        departmentRows.on('click', '.remove-department', function () {
+            $(this).closest('tr').remove();
+            refreshContactDepartmentOptions();
+        });
+
+        departmentRows.on('input', 'input[name$=".Name"]', function () {
+            refreshContactDepartmentOptions();
+        });
+
+        $('#add-contact').on('click', function () {
+            addContactRow();
+        });
+
+        contactRows.on('click', '.remove-contact', function () {
+            $(this).closest('tr').remove();
+        });
+    })();
+</script>

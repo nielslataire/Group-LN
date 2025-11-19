@@ -113,21 +113,22 @@
 							<span>Instellingen</span>
 						</a>
 						<ul class="nav nav-children">
-							@if (User.IsInRole("Admin"))
-							{
-								<li>
-									@Html.ActionLink("Mijn bedrijven", "IssuerCompanies", "Instellingen")
-								</li>
-								<li>
-									@Html.ActionLink("Instellingen", "Settings", "Admin")
-								</li>
-								<li>
-									@Html.ActionLink("Gebruikers beheren", "Index", "Useradmin")
-								</li>
-								<li>
-									@Html.ActionLink("Rollen beheren", "Index", "AppRoles")
-								</li>
-								 <li>
+
+						@if (User.IsInRole("Admin") || User.IsInRole("Administrator"))
+						{
+									<li>
+										@Html.ActionLink("Mijn bedrijven", "IssuerCompanies", "Instellingen")
+									</li>
+									<li>
+										@Html.ActionLink("Instellingen", "Index", "Instellingen")
+									</li>
+									<li>
+										@Html.ActionLink("Gebruikers beheren", "Index", "UserAdmin")
+									</li>
+									<li>
+										@Html.ActionLink("Rollen beheren", "Index", "AppRoles")
+									</li>
+									<li>
                                     @Html.ActionLink("Verlofdagen - weerverlet", "VacationDays", "Instellingen")
 								</li>
 							}
