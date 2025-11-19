@@ -15,16 +15,5 @@
 @section PageScripts
 {
     <script src="~/lib/select2/js/select2.js"></script>
-    <script>
-        (function () {
-            $('#SelectedActivityIds').select2({
-                theme: 'bootstrap',
-                placeholder: 'Selecteer activiteiten',
-                allowClear: true,
-                closeOnSelect: false,
-                width: '100%',
-                language: 'nl'
-            });
-        })();
-    </script>
+    @await Html.PartialAsync("Partials/_SupplierFormScripts", Model)
 }

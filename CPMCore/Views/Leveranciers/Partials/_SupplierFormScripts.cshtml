@@ -3,13 +3,83 @@
     (function () {
         const countrySelect = $('#SelectedCountryId');
         const postalSelect = $('#SelectedPostalCodeId');
-        const departmentRows = $('#department-rows');
-        const contactRows = $('#contact-rows');
-        let departmentIndex = departmentRows.find('tr').length;
-        let contactIndex = contactRows.find('tr').length;
+        const postalSelectWrapper = $('#postal-select-wrapper');
+        const manualPostalWrapper = $('#postal-manual-wrapper');
+        const manualCityWrapper = $('#city-manual-wrapper');
+        const postalCodeInput = $('#PostalCode');
+        const cityInput = $('#City');
+        const departmentRows = $('#departmentRows');
+        const contactRows = $('#contactRows');
+        const vatNumberInput = $('#enterprise-number');
+        const vatCountrySelect = $('#EnterpriseNumberCountryCode');
+        const vatModalElement = document.getElementById('vat-lookup-modal');
+        const vatLookupName = $('#vatLookupName');
+        const vatLookupStreet = $('#vatLookupStreet');
+        const vatLookupHouseNumber = $('#vatLookupHouseNumber');
+        const vatLookupPostal = $('#vatLookupPostal');
+        const vatLookupCity = $('#vatLookupCity');
+        const vatLookupCountry = $('#vatLookupCountry');
+        const vatApplyButton = $('#btn-apply-vat-data');
+        const belgianIso = 'BE';
+
+        function getBootstrapModal() {
+            if (!vatModalElement || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+                return null;
+            }
+
+            return bootstrap.Modal.getOrCreateInstance(vatModalElement);
+        }
+
+            function showNotification(title, text, type) {
+                if (typeof PNotify !== 'undefined') {
+                    new PNotify({
+                        title: title || '',
+                        text: text || '',
+                        type: type || 'info',
+                        addclass: 'stack-bar-top',
+                        stack: { dir1: 'down', dir2: 'right', push: 'top', spacing1: 5 }
+                    });
+                } else {
+                    const message = (title ? `${title}\n` : '') + (text || '');
+                    window.alert(message);
+                }
+         }
 
         function nextKey(prefix) {
             return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        }
+         function getSelectedCountryIso() {
+            if (!countrySelect.length) {
+                return '';
+            }
+
+            const selected = countrySelect.find('option:selected');
+            return (selected.data('isocode') || '').toString().toUpperCase();
+        }
+
+        function togglePostalMode() {
+            if (!postalSelectWrapper.length || !manualPostalWrapper.length || !manualCityWrapper.length) {
+                return;
+            }
+
+            const iso = getSelectedCountryIso();
+            const isBelgium = iso === belgianIso;
+
+            postalSelectWrapper.toggleClass('d-none', !isBelgium);
+            manualPostalWrapper.toggleClass('d-none', isBelgium);
+            manualCityWrapper.toggleClass('d-none', isBelgium);
+
+            postalCodeInput.prop('readonly', isBelgium);
+            cityInput.prop('readonly', isBelgium);
+
+            if (isBelgium) {
+                if (!postalSelect.val()) {
+                    postalCodeInput.val('');
+                    cityInput.val('');
+                }
+            } else {
+                postalSelect.val(null).trigger('change');
+            }
         }
 
         function initActivitySelect() {
@@ -72,50 +142,97 @@
             const option = new Option(text, id, true, true);
             select.append(option).trigger('change');
         }
-
-        function refreshContactDepartmentOptions() {
-            const departments = [];
-            departmentRows.find('tr').each(function () {
-                const key = $(this).data('key');
-                const name = $(this).find('input[name$=".Name"]').val() || 'Afdeling';
-                if (key) {
-                    departments.push({ key, name });
+    function parseVatAddressLine(strAddress) {
+                if (!strAddress) {
+                    return { street: '', number: '' };
                 }
-            });
 
-            $('.contact-department').each(function () {
-                const current = $(this).val();
-                $(this).empty().append($('<option>').val('').text('Geen'));
-                departments.forEach(function (dept) {
-                    const option = $('<option>').val(dept.key).text(dept.name);
-                    if (dept.key === current) {
-                        option.attr('selected', 'selected');
+                const firstLine = strAddress.split('\n')[0].trim();
+                const match = firstLine.match(/^(.+?)\s+(\d+.*)$/);
+                if (match) {
+                    return {
+                        street: (match[1] || '').trim(),
+                        number: (match[2] || '').trim()
+                    };
+                }
+
+                return { street: firstLine, number: '' };
+            }
+
+            function selectCountryByIso(isoCode) {
+                if (!isoCode || !countrySelect.length) {
+                    return;
+                }
+
+                const target = isoCode.toString().toUpperCase();
+                const match = countrySelect.find('option').filter(function () {
+                    const optionIso = ($(this).data('isocode') || '').toString().toUpperCase();
+                    return optionIso === target;
+                }).first();
+
+                if (match.length) {
+                    countrySelect.val(match.val()).trigger('change');
+                }
+            }
+
+     function refreshContactDepartmentOptions() {
+                const departments = [];
+                if (departmentRows.length) {
+                    departmentRows.find('.supplier-department-row').each(function () {
+                        const row = $(this);
+                        const keyInput = row.find('input[name$=".Key"]');
+                        const key = keyInput.length ? keyInput.val() : row.data('key');
+                        const nameInput = row.find('.department-name-input');
+                        const name = nameInput.length ? nameInput.val() : 'Afdeling';
+                        if (key) {
+                            departments.push({ key: key.toString(), name: name || 'Afdeling' });
+                        }
+                    });
+                }
+
+                $('.contact-department').each(function () {
+                    const select = $(this);
+                    const stored = select.data('selectedKey') || '';
+                    const current = select.val() || stored || '';
+                    let hasMatch = false;
+                    select.empty().append($('<option>').val('').text('Geen'));
+                    departments.forEach(function (dept) {
+                        const option = $('<option>').val(dept.key).text(dept.name);
+                        if (dept.key === current) {
+                            option.attr('selected', 'selected');
+                            hasMatch = true;
+                        }
+                        select.append(option);
+                    });
+                    if (hasMatch) {
+                        select.val(current);
+                        select.data('selectedKey', current);
+                    } else {
+                        select.val('');
+                        select.data('selectedKey', '');
                     }
-                    $(this).append(option);
-                }, this);
-            });
-        }
+                });
+            }
 
-        function addDepartmentRow() {
-            const template = $('#department-row-template').html();
-            const key = nextKey('dep');
-            const rowHtml = template.replace(/__index__/g, departmentIndex).replace(/__key__/g, key);
-            const row = $(rowHtml);
-            departmentRows.append(row);
-            initSelect2(row.find('.postal-select'));
-            departmentIndex += 1;
-            refreshContactDepartmentOptions();
-        }
+            function appendDepartmentRow(html) {
+                if (!departmentRows.length) {
+                    return;
+                }
 
-        function addContactRow() {
-            const template = $('#contact-row-template').html();
-            const key = nextKey('ct');
-            const rowHtml = template.replace(/__index__/g, contactIndex).replace(/__key__/g, key);
-            const row = $(rowHtml);
-            contactRows.append(row);
-            refreshContactDepartmentOptions();
-            contactIndex += 1;
-        }
+                const fragment = $(html);
+                departmentRows.append(fragment);
+                hydrateExistingPostalSelects();
+                refreshContactDepartmentOptions();
+            }
+
+            function appendContactRow(html) {
+                if (!contactRows.length) {
+                    return;
+                }
+
+                contactRows.append($(html));
+                refreshContactDepartmentOptions();
+            }
 
         function hydrateExistingPostalSelects() {
             $('.postal-select').each(function () {
@@ -133,83 +250,205 @@
             });
         }
 
-        function bindVatLookup() {
-            $('#btn-validate-vat').on('click', function () {
-                const vatNumber = $('#enterprise-number').val();
-                if (!vatNumber) {
-                    return;
+    function fillVatModal(data) {
+            if (!vatModalElement || !data) {
+                return;
+            }
+
+            const address = data.address || {};
+            const parsedAddress = (!address.street || !address.number) && data.strAddress
+                ? parseVatAddressLine(data.strAddress)
+                : { street: '', number: '' };
+
+            if (vatLookupName.length) {
+                vatLookupName.val(data.name || $('#Name').val() || '');
+            }
+            if (vatLookupStreet.length) {
+                vatLookupStreet.val(address.street || parsedAddress.street || $('#Street').val() || '');
+            }
+            if (vatLookupHouseNumber.length) {
+                vatLookupHouseNumber.val(address.number || parsedAddress.number || $('#HouseNumber').val() || '');
+            }
+            if (vatLookupPostal.length) {
+                const postal = address.zip || address.zip_code || address.postcode || postalCodeInput.val() || '';
+                vatLookupPostal.val(postal);
+            }
+            if (vatLookupCity.length) {
+                vatLookupCity.val(address.city || cityInput.val() || '');
+            }
+
+            if (vatLookupCountry.length) {
+                const iso = (address.countryCode || data.countryCode || vatCountrySelect.val() || '').toString().toUpperCase();
+                if (iso && vatLookupCountry.find('option[value="' + iso + '"]').length) {
+                    vatLookupCountry.val(iso);
+                } else if (vatLookupCountry.find('option[value="' + (vatCountrySelect.val() || '').toString().toUpperCase() + '"]').length) {
+                    vatLookupCountry.val((vatCountrySelect.val() || '').toString().toUpperCase());
+                } else {
+                    vatLookupCountry.prop('selectedIndex', 0);
+                }
+            }
+        }
+
+        function bindVatModalApply() {
+            if (!vatApplyButton.length) {
+                return;
+            }
+
+            vatApplyButton.on('click', function () {
+                const selectedIso = vatLookupCountry.length ? vatLookupCountry.val() : null;
+                const postalValue = vatLookupPostal.length ? vatLookupPostal.val() : null;
+                const cityValue = vatLookupCity.length ? vatLookupCity.val() : null;
+
+                if (vatLookupName.length && vatLookupName.val()) {
+                    $('#Name').val(vatLookupName.val());
                 }
 
-                $.getJSON('@Url.Action("ValidateVat", "Leveranciers")', { vatNumber: vatNumber })
-                    .done(function (data) {
-                        if (!data) {
-                            return;
-                        }
+                if (vatLookupStreet.length && vatLookupStreet.val()) {
+                    $('#Street').val(vatLookupStreet.val());
+                }
 
-                        if (data.name) {
-                            $('#Name').val(data.name);
-                        }
-                        if (data.address) {
-                            $('#Street').val(data.address.street);
-                            $('#PostalCode').val(data.address.zip);
-                            $('#City').val(data.address.city);
-                        }
+                if (vatLookupHouseNumber.length && vatLookupHouseNumber.val()) {
+                    $('#HouseNumber').val(vatLookupHouseNumber.val());
+                }
 
-                        if (data.countryCode) {
-                            const match = $('#SelectedCountryId option').filter(function () {
-                                return $(this).data('isocode') === data.countryCode;
-                            }).first();
-                            if (match.length) {
-                                $('#SelectedCountryId').val(match.val()).trigger('change');
+                if (postalValue) {
+                    postalCodeInput.val(postalValue);
+                }
+
+                if (cityValue) {
+                    cityInput.val(cityValue);
+                }
+
+                if (selectedIso) {
+                    selectCountryByIso(selectedIso);
+                }
+
+                if (postalValue) {
+                    $.get('@Url.Action("FindPostalMatch", "Leveranciers")', {
+                        postalCode: postalValue,
+                        city: cityValue,
+                        countryIso: selectedIso
+                    }).done(function (match) {
+                        if (match && match.id && match.text) {
+                            setSelect2Selection(postalSelect, match.id, match.text);
+                            if (match.countryId) {
+                                countrySelect.val(match.countryId).trigger('change');
                             }
                         }
-
-                        if (data.address && data.address.zip && data.address.city) {
-                            $.get('@Url.Action("FindPostalMatch", "Leveranciers")', {
-                                postalCode: data.address.zip,
-                                city: data.address.city,
-                                countryIso: data.countryCode
-                            }).done(function (match) {
-                                if (match && match.id && match.text) {
-                                    setSelect2Selection(postalSelect, match.id, match.text);
-                                    $('#PostalCode').val(data.address.zip);
-                                    $('#City').val(data.address.city);
-                                    if (match.countryId) {
-                                        $('#SelectedCountryId').val(match.countryId).trigger('change');
-                                    }
-                                }
-                            });
-                        }
+                    }).fail(function () {
+                        showNotification('Postcode niet gevonden', 'De opgegeven postcode bestaat nog niet in de lijst.', 'warning');
                     });
+                }
+
+                const modal = getBootstrapModal();
+                if (modal) {
+                    modal.hide();
+                }
             });
         }
 
-        initActivitySelect();
+        function bindVatLookup() {
+            const trigger = $('#btn-validate-vat');
+            if (!trigger.length) {
+                return;
+            }
+
+            trigger.on('click', function () {
+                const vatNumber = (vatNumberInput.val() || '').toString().trim();
+                const vatCountry = (vatCountrySelect.val() || '').toString().trim();
+
+                if (!vatCountry || vatCountry.length !== 2) {
+                    showNotification('Ongeldig btw-nummer', 'Selecteer eerst een geldige landcode.', 'warning');
+                    return;
+                }
+
+                if (!vatNumber) {
+                    showNotification('Ongeldig btw-nummer', 'Vul eerst een btw nummer in.', 'warning');
+                    return;
+                }
+
+                const button = $(this);
+                button.prop('disabled', true);
+
+                $.getJSON('@Url.Action("ValidateVat", "Leveranciers")', {
+                    vatCountryCode: vatCountry,
+                    vatNumber: vatNumber
+                }).done(function (data) {
+                    if (!data || data.valid === false) {
+                        showNotification('Ongeldig btw-nummer', 'Dit btw-nummer werd niet gevonden.', 'error');
+                        return;
+                    }
+
+                    fillVatModal(data);
+                    const modal = getBootstrapModal();
+                    if (modal) {
+                        modal.show();
+                    }
+                }).fail(function (xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.error
+                        ? xhr.responseJSON.error
+                        : 'De validatie van het btw-nummer is mislukt.';
+                    showNotification('Fout bij controle', message, 'error');
+                }).always(function () {
+                    button.prop('disabled', false);
+                });
+            });
+        }
+
+      initActivitySelect();
         initSelect2(postalSelect);
-        setPostalListeners(postalSelect, $('#PostalCode'), $('#City'));
+    setPostalListeners(postalSelect, postalCodeInput, cityInput);
         hydrateExistingPostalSelects();
         refreshContactDepartmentOptions();
         bindVatLookup();
+        bindVatModalApply();
+        togglePostalMode();
 
-        $('#add-department').on('click', function () {
-            addDepartmentRow();
+        countrySelect.on('change', function () {
+            togglePostalMode();
         });
 
-        departmentRows.on('click', '.remove-department', function () {
-            $(this).closest('tr').remove();
-            refreshContactDepartmentOptions();
-        });
+         $('#add-department').on('click', function (e) {
+                e.preventDefault();
+                const url = $(this).attr('href');
+                if (!url) {
+                    return;
+                }
 
-        departmentRows.on('input', 'input[name$=".Name"]', function () {
-            refreshContactDepartmentOptions();
-        });
+                $.get(url).done(function (html) {
+                    appendDepartmentRow(html);
+                }).fail(function () {
+                    showNotification('Fout', 'Kon geen nieuwe afdeling toevoegen.', 'error');
+                });
+            });
 
-        $('#add-contact').on('click', function () {
-            addContactRow();
-        });
+            departmentRows.on('click', '.deleteDepartmentRow', function (e) {
+                e.preventDefault();
+                $(this).closest('.supplier-department-row').remove();
+                refreshContactDepartmentOptions();
+            });
 
-        contactRows.on('click', '.remove-contact', function () {
-            $(this).closest('tr').remove();
-        });
+            departmentRows.on('input', '.department-name-input', function () {
+                refreshContactDepartmentOptions();
+            });
+
+            $('#add-contact').on('click', function (e) {
+                e.preventDefault();
+                const url = $(this).attr('href');
+                if (!url) {
+                    return;
+                }
+
+                $.get(url).done(function (html) {
+                    appendContactRow(html);
+                }).fail(function () {
+                    showNotification('Fout', 'Kon geen nieuw contact toevoegen.', 'error');
+                });
+            });
+
+            contactRows.on('click', '.deleteContactRow', function (e) {
+                e.preventDefault();
+                $(this).closest('.supplier-contact-row').remove();
+            });
     })();
 </script>

@@ -4,19 +4,28 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartBreadcrumbs.Attributes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace CPMCore.Controllers;
 
 [Authorize]
 public class LeveranciersController : BaseController
 {
+    private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true
+    };
     private readonly cpmRunningContext _db;
     public LeveranciersController(cpmRunningContext db)
     {
@@ -52,6 +61,18 @@ public class LeveranciersController : BaseController
             .ToListAsync(ct);
         model.Countries = countries;
 
+        if (string.IsNullOrWhiteSpace(model.EnterpriseNumberCountryCode))
+        {
+            model.EnterpriseNumberCountryCode = countries
+                .FirstOrDefault(c => string.Equals(c.IsoCode, "BE", StringComparison.OrdinalIgnoreCase))?.IsoCode
+                ?? countries.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.IsoCode))?.IsoCode
+                ?? "BE";
+        }
+        else
+        {
+            model.EnterpriseNumberCountryCode = SanitizeVatCountry(model.EnterpriseNumberCountryCode) ?? model.EnterpriseNumberCountryCode;
+        }
+
         var legalForms = await _db.CompanyLegalForm
             .AsNoTracking()
             .Where(l => l.IsActive)
@@ -67,7 +88,10 @@ public class LeveranciersController : BaseController
 
         if (!model.SelectedCountryId.HasValue && countries.Any())
         {
-            var defaultCountry = countries.First();
+            var defaultCountry = countries
+                .FirstOrDefault(c => string.Equals(c.IsoCode, "BE", StringComparison.OrdinalIgnoreCase))
+                ?? countries.First();
+
             model.SelectedCountryId = defaultCountry.Id;
             model.CountryCode ??= defaultCountry.IsoCode;
         }
@@ -104,7 +128,7 @@ public class LeveranciersController : BaseController
     private static void MapToEntity(SupplierFormViewModel model, CompanyInfo entity)
     {
         entity.BedrijfsNaam = model.Name;
-        entity.Ondernemingsnummer = model.EnterpriseNumber;
+        entity.Ondernemingsnummer = CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber);
         entity.Straat = model.Street;
         entity.Huisnummer = model.HouseNumber;
         entity.Busnummer = model.BusNumber;
@@ -147,6 +171,59 @@ public class LeveranciersController : BaseController
                 .FirstOrDefaultAsync(ct);
         }
     }
+    private async Task EnsurePostalSelectionAsync(SupplierFormViewModel model, CancellationToken ct)
+    {
+        if (model.SelectedPostalCodeId.HasValue)
+        {
+            return;
+        }
+
+        if (!model.SelectedCountryId.HasValue && !string.IsNullOrWhiteSpace(model.CountryCode))
+        {
+            var iso = model.CountryCode.Trim().ToUpperInvariant();
+            model.SelectedCountryId = await _db.Country
+                .AsNoTracking()
+                .Where(c => c.LandIsocode == iso)
+                .Select(c => (int?)c.Id)
+                .FirstOrDefaultAsync(ct);
+        }
+
+        if (!model.SelectedCountryId.HasValue || string.IsNullOrWhiteSpace(model.PostalCode) || string.IsNullOrWhiteSpace(model.City))
+        {
+            return;
+        }
+
+        var trimmedPostal = model.PostalCode.Trim();
+        var trimmedCity = model.City.Trim();
+
+        var existing = await _db.PostalCode
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                p => p.Postcode == trimmedPostal &&
+                     p.Gemeente == trimmedCity &&
+                     p.CountryId == model.SelectedCountryId.Value,
+                ct);
+
+        if (existing != null)
+        {
+            model.SelectedPostalCodeId = existing.PostcodeId;
+            return;
+        }
+
+        var newPostal = new PostalCode
+        {
+            Postcode = trimmedPostal,
+            Gemeente = trimmedCity,
+            CountryId = model.SelectedCountryId.Value
+        };
+
+        _db.PostalCode.Add(newPostal);
+        await _db.SaveChangesAsync(ct);
+
+        model.SelectedPostalCodeId = newPostal.PostcodeId;
+    }
+
+
 
     private async Task<string?> ResolveLegalFormAbbreviation(int? legalFormId, CancellationToken ct)
     {
@@ -242,6 +319,81 @@ public class LeveranciersController : BaseController
         await _db.SaveChangesAsync(ct);
     }
 
+    private static string? CombineEnterpriseNumber(string? countryCode, string? number)
+    {
+        var sanitizedNumber = SanitizeVatPart(number);
+        if (string.IsNullOrWhiteSpace(sanitizedNumber))
+        {
+            return null;
+        }
+
+        var sanitizedCountry = SanitizeVatCountry(countryCode);
+        return string.IsNullOrEmpty(sanitizedCountry) ? sanitizedNumber : sanitizedCountry + sanitizedNumber;
+    }
+
+    private static (string? CountryCode, string? NumberPart) SplitEnterpriseNumber(string? value)
+    {
+        var sanitized = SanitizeVatPart(value);
+
+        if (string.IsNullOrWhiteSpace(sanitized))
+        {
+            return (null, null);
+        }
+
+        if (sanitized.Length >= 2 && char.IsLetter(sanitized[0]) && char.IsLetter(sanitized[1]))
+        {
+            var prefix = sanitized.Substring(0, 2);
+            var remainder = sanitized.Substring(2);
+            return (prefix, string.IsNullOrWhiteSpace(remainder) ? null : remainder);
+        }
+
+        return (null, sanitized);
+    }
+
+    private static string? SanitizeVatPart(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var builder = new StringBuilder(value.Length);
+        foreach (var ch in value)
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                builder.Append(char.ToUpperInvariant(ch));
+            }
+        }
+
+        return builder.Length == 0 ? null : builder.ToString();
+    }
+
+    private static string? SanitizeVatCountry(string? countryCode)
+    {
+        if (string.IsNullOrWhiteSpace(countryCode))
+        {
+            return null;
+        }
+
+        var builder = new StringBuilder(2);
+        foreach (var ch in countryCode.Trim())
+        {
+            if (char.IsLetter(ch))
+            {
+                builder.Append(char.ToUpperInvariant(ch));
+            }
+
+            if (builder.Length == 2)
+            {
+                break;
+            }
+        }
+
+        return builder.Length == 0 ? null : builder.ToString();
+    }
+
+
 
     [HttpGet]
     [Breadcrumb("Leveranciers")]
@@ -316,25 +468,62 @@ public class LeveranciersController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> ValidateVat(string vatNumber, CancellationToken ct)
+    public async Task<IActionResult> ValidateVat(string vatNumber, string vatCountryCode, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(vatNumber))
+        var normalized = CombineEnterpriseNumber(vatCountryCode, vatNumber);
+
+        if (string.IsNullOrWhiteSpace(normalized))
         {
             return BadRequest(new { error = "Ongeldig ondernemingsnummer" });
         }
 
         try
         {
-            using var httpClient = new HttpClient();
-            var response = await httpClient.GetAsync($"https://controleerbtwnummer.eu/api/validate/{Uri.EscapeDataString(vatNumber.Trim())}", ct);
+            using var httpClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromSeconds(15)
+            };
+
+            using var response = await httpClient.GetAsync($"https://controleerbtwnummer.eu/api/validate/{Uri.EscapeDataString(normalized)}.json", ct);
+            var rawContent = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)
             {
-                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync(ct));
+                var errorMessage = string.IsNullOrWhiteSpace(rawContent)
+                    ? "De controle van het btw-nummer is mislukt."
+                    : rawContent;
+
+                return StatusCode((int)response.StatusCode, new { error = errorMessage });
             }
 
-            var payload = await response.Content.ReadFromJsonAsync<VatLookupResponse>(cancellationToken: ct);
+            VatLookupResponse? payload;
+
+            try
+            {
+                payload = JsonSerializer.Deserialize<VatLookupResponse>(rawContent, VatLookupSerializerOptions);
+            }
+            catch (JsonException jsonEx)
+            {
+                return BadRequest(new { error = $"Het antwoord van de btw-service kon niet worden gelezen: {jsonEx.Message}" });
+            }
+
+            if (payload == null)
+            {
+                return BadRequest(new { error = "Ontving een leeg antwoord van de btw-service." });
+            }
+
+            payload.address ??= new VatLookupAddress();
+
+            if (string.IsNullOrWhiteSpace(payload.countryCode))
+            {
+                payload.countryCode = payload.address.countryCode;
+            }
+
             return Json(payload);
+        }
+        catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+        {
+            return StatusCode(504, new { error = "De btw-service heeft niet tijdig geantwoord. Probeer het later opnieuw." });
         }
         catch (Exception ex)
         {
@@ -345,27 +534,42 @@ public class LeveranciersController : BaseController
     [HttpGet]
     public async Task<IActionResult> FindPostalMatch(string postalCode, string city, string? countryIso, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(postalCode) || string.IsNullOrWhiteSpace(city))
+        if (string.IsNullOrWhiteSpace(postalCode))
         {
             return BadRequest();
         }
 
-        var query = _db.PostalCode
+        var trimmedPostal = postalCode.Trim();
+        var trimmedCity = city?.Trim();
+        var normalizedIso = countryIso?.Trim().ToUpperInvariant();
+
+        var baseQuery = _db.PostalCode
             .Include(p => p.Country)
             .AsNoTracking()
-            .Where(p => p.Postcode == postalCode.Trim() && p.Gemeente == city.Trim());
+            .Where(p => p.Postcode == trimmedPostal);
 
-        if (!string.IsNullOrWhiteSpace(countryIso))
+        if (!string.IsNullOrWhiteSpace(normalizedIso))
         {
-            query = query.Where(p => p.Country != null && p.Country.LandIsocode == countryIso);
+            baseQuery = baseQuery.Where(p => p.Country != null && p.Country.LandIsocode != null && p.Country.LandIsocode.ToUpper() == normalizedIso);
         }
 
-        var match = await query.FirstOrDefaultAsync(ct);
+        var candidates = await baseQuery
+            .OrderBy(p => p.Gemeente)
+            .ToListAsync(ct);
 
-        if (match == null)
+        if (candidates.Count == 0)
         {
             return NotFound();
         }
+
+        PostalCode? match = null;
+
+        if (!string.IsNullOrWhiteSpace(trimmedCity))
+        {
+            match = candidates.FirstOrDefault(p => string.Equals(p.Gemeente?.Trim(), trimmedCity, StringComparison.OrdinalIgnoreCase));
+        }
+
+        match ??= candidates.First();
 
         return Json(new { id = match.PostcodeId, text = $"{match.Postcode} - {match.Gemeente}", countryId = match.CountryId });
     }
@@ -388,6 +592,7 @@ public class LeveranciersController : BaseController
         }
 
         await PopulateSelectionsAsync(model, ct);
+        await EnsurePostalSelectionAsync(model, ct);
 
         var entity = new CompanyInfo();
         MapToEntity(model, entity);
@@ -431,12 +636,15 @@ public class LeveranciersController : BaseController
             .Select(l => (int?)l.Id)
             .FirstOrDefaultAsync(ct);
 
+        var (enterpriseVatCountryCode, enterpriseVatNumber) = SplitEnterpriseNumber(entity.Ondernemingsnummer);
+
         var vm = new SupplierFormViewModel
         {
             Id = entity.CompanyId,
             Name = entity.BedrijfsNaam,
             SelectedLegalFormId = legalFormId,
-            EnterpriseNumber = entity.Ondernemingsnummer,
+            EnterpriseNumber = enterpriseVatNumber,
+            EnterpriseNumberCountryCode = enterpriseVatCountryCode ?? "BE",
             Street = entity.Straat,
             HouseNumber = entity.Huisnummer,
             BusNumber = entity.Busnummer,
@@ -524,6 +732,7 @@ public class LeveranciersController : BaseController
         }
 
         await PopulateSelectionsAsync(model, ct);
+        await EnsurePostalSelectionAsync(model, ct);
 
         MapToEntity(model, entity);
 
@@ -602,7 +811,19 @@ public class LeveranciersController : BaseController
         return RedirectToAction(nameof(Index));
     }
 
-    private class VatLookupResponse
+    [HttpGet]
+    public PartialViewResult BlankDepartmentRow()
+    {
+        return PartialView("Partials/_SupplierDepartmentRow", new DepartmentInputViewModel());
+    }
+
+    [HttpGet]
+    public PartialViewResult BlankContactRow()
+    {
+        return PartialView("Partials/_SupplierContactRow", new ContactInputViewModel());
+    }
+
+    private sealed class VatLookupResponse
     {
         public bool valid { get; set; }
 
@@ -612,15 +833,25 @@ public class LeveranciersController : BaseController
 
         public string countryCode { get; set; } = string.Empty;
 
-        public VatLookupAddress address { get; set; } = new();
+        public VatLookupAddress? address { get; set; }
+
+        [JsonPropertyName("strAddress")]
+        public string? strAddress { get; set; }
     }
 
-    private class VatLookupAddress
+    private sealed class VatLookupAddress
     {
         public string street { get; set; } = string.Empty;
 
+        public string number { get; set; } = string.Empty;
+
+        [JsonPropertyName("zip_code")]
         public string zip { get; set; } = string.Empty;
 
         public string city { get; set; } = string.Empty;
+
+        public string country { get; set; } = string.Empty;
+
+        public string countryCode { get; set; } = string.Empty;
     }
 }

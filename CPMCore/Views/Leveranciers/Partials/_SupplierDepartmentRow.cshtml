@@ -1,0 +1,67 @@
+﻿@model CPMCore.Models.Leveranciers.DepartmentInputViewModel
+@using HtmlHelpers.BeginCollectionItemCore
+
+<div class="supplier-department-row" data-key="@Model.Key">
+    @using (Html.BeginCollectionItem("Departments"))
+    {
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.Key)
+        <section class="card mb-4">
+            <div class="card-body border p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="fs-6 fw-bold">Afdeling</div>
+                    <a href="#" class="deleteDepartmentRow text-decoration-none text-reset" title="Verwijder afdeling">
+                        <i class="bx bx-trash fs-4"></i>
+                    </a>
+                </div>
+                <div class="form-group">
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.Name, new { @class = "form-control form-control-modern department-name-input", placeholder = "Naam" })
+                        </div>
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "Email" })
+                        </div>
+                    </div>
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-5 col-xl-5">
+                            @Html.TextBoxFor(m => m.Street, new { @class = "form-control form-control-modern", placeholder = "Straat" })
+                        </div>
+                        <div class="col-lg-1 col-xl-1">
+                            @Html.TextBoxFor(m => m.HouseNumber, new { @class = "form-control form-control-modern", placeholder = "Nr" })
+                        </div>
+                        <div class="col-lg-1 col-xl-1">
+                            @Html.TextBoxFor(m => m.Bus, new { @class = "form-control form-control-modern", placeholder = "Bus" })
+                        </div>
+                        <div class="col-lg-5 col-xl-5">
+                            @{
+                                var postalName = Html.NameFor(m => m.PostalCodeId).ToString();
+                                var postalId = Html.IdFor(m => m.PostalCodeId).ToString();
+                                var selectedText = Model.PostalCodeId.HasValue && !string.IsNullOrWhiteSpace(Model.PostalDisplay)
+                                ? Model.PostalDisplay
+                                : string.Empty;
+                            }
+                            <select name="@postalName"
+                                    id="@postalId"
+                                    class="form-control form-control-modern populate postal-select"
+                                    data-selected-text="@selectedText">
+                                @if (Model.PostalCodeId.HasValue && !string.IsNullOrWhiteSpace(Model.PostalDisplay))
+                                {
+                                    <option value="@Model.PostalCodeId" selected="selected">@Model.PostalDisplay</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row align-items-center">
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern", placeholder = "Telefoon" })
+                        </div>
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+</div>

@@ -1,0 +1,58 @@
+﻿@model CPMCore.Models.Leveranciers.ContactInputViewModel
+@using HtmlHelpers.BeginCollectionItemCore
+
+<div class="supplier-contact-row">
+    @using (Html.BeginCollectionItem("Contacts"))
+    {
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.Key)
+        <section class="card mb-4">
+            <div class="card-body border p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="fs-6 fw-bold">Contact</div>
+                    <a href="#" class="deleteContactRow text-decoration-none text-reset" title="Verwijder contact">
+                        <i class="bx bx-trash fs-4"></i>
+                    </a>
+                </div>
+                <div class="form-group">
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.LastName, new { @class = "form-control form-control-modern", placeholder = "Naam" })
+                        </div>
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.FirstName, new { @class = "form-control form-control-modern", placeholder = "Voornaam" })
+                        </div>
+                    </div>
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.Function, new { @class = "form-control form-control-modern", placeholder = "Functie" })
+                        </div>
+                        <div class="col-lg-6 col-xl-6">
+                            @{
+                                var departmentName = Html.NameFor(m => m.DepartmentKey).ToString();
+                                var departmentId = Html.IdFor(m => m.DepartmentKey).ToString();
+                            }
+                            <select name="@departmentName"
+                                    id="@departmentId"
+                                    class="form-control form-control-modern contact-department"
+                                    data-selected-key="@Model.DepartmentKey">
+                                <option value="">Geen</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-6 col-xl-6">
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "Email", type = "email" })
+                        </div>
+                        <div class="col-lg-3 col-xl-3">
+                            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control form-control-modern", placeholder = "Telefoon" })
+                        </div>
+                        <div class="col-lg-3 col-xl-3">
+                            @Html.TextBoxFor(m => m.Mobile, new { @class = "form-control form-control-modern", placeholder = "GSM" })
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+</div>

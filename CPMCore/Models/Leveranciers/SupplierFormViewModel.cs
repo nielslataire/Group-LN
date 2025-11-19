@@ -18,6 +18,9 @@ public class SupplierFormViewModel
     [Display(Name = "Ondernemingsnummer")]
     public string? EnterpriseNumber { get; set; }
 
+    [Display(Name = "BTW landcode")]
+    public string EnterpriseNumberCountryCode { get; set; } = "BE";
+
     [Display(Name = "Straat")]
     public string? Street { get; set; }
 
