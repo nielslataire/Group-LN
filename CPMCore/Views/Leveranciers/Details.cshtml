@@ -25,7 +25,7 @@
         </a>
         @if (canDelete)
         {
-            using (Html.BeginForm("Delete", "Leveranciers", new { id = Model.Id }, FormMethod.Post, new { id = "delete-supplier-form", onsubmit = "return confirm('Ben je zeker dat je deze leverancier wil verwijderen?');" }))
+            using (Html.BeginForm("Delete", "Leveranciers", new { id = Model.Id }, FormMethod.Post, false, new { id = "delete-supplier-form", onsubmit = "return confirm('Ben je zeker dat je deze leverancier wil verwijderen?');" }))
             {
                 @Html.AntiForgeryToken()
                 <button type="submit" class="btn btn-outline-danger btn-md">
