@@ -105,142 +105,158 @@ end section
                
                 </div>
                 <div class="col-md-5">
-                    
-                        <table class="table table-striped">
-                            <colgroup>
-                                <col width="35%">
-                                <col width="65%">
-                            </colgroup>
-                            <tbody>
-                                <tr>
-                                    @If Model.SalesData.StartingPrice > 0 Then
-                                        @<text>
-                                            <td Class="background-color-primary text-light pt-md">
-                                                Prijzen vanaf
-                                            </td>
-                                            <td Class="font-size-xl font-weight-bold pt-sm pb-sm background-color-primary text-light">
 
-                                                @Html.DisplayFor(Function(m) m.SalesData.StartingPrice)
-                                            </td>
-                                        </text>
-                                    ElseIf Model.SalesData.PercentageLivingUnitsSold < 15 Then
-                                        @<text>
-                                            <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
-                                                Lancering
-                                            </td>
+                    <table class="table table-striped">
+                        <colgroup>
+                            <col width="35%">
+                            <col width="65%">
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                @If Model.SalesData.StartingPrice > 0 Then
+                                    @<text>
+                                        <td Class="background-color-primary text-light pt-md">
+                                            Prijzen vanaf
+                                        </td>
+                                        <td Class="font-size-xl font-weight-bold pt-sm pb-sm background-color-primary text-light">
 
-                                        </text>
-                                    ElseIf Model.SalesData.PercentageLivingUnitsSold = 100 AndAlso Model.SalesData.LivingUnits > 0 Then
-                                        @<text>
-                                            <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
-                                                Uitverkocht
-                                            </td>
-                                        </text>
-                                    ElseIf Model.SalesData.LivingUnits = 0 Then
-                                        @<text>
-                                            <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
-                                                Binnenkort
-                                            </td>
-                                        </text>
-                                    End If
-                                </tr>
-                                <tr>
-                                    <td>
-                                        Adres
-                                    </td>
-                                    <td>
-                                        @Model.Data.Street @Model.Data.HouseNumber - @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente<br /><a href="#map" Class="font-size-sm" data-hash data-hash-offset="100">(Locatie op kaart)</a>
-                                    </td>
-                                </tr>
+                                            @Html.DisplayFor(Function(m) m.SalesData.StartingPrice)
+                                        </td>
+                                    </text>
+                                ElseIf Model.SalesData.PercentageLivingUnitsSold < 15 Then
+                                    @<text>
+                                        <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
+                                            Lancering
+                                        </td>
 
-                                @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 0 Then
-                                    @<text>
-                                        <tr>
-                                            <td>
-                                                <i Class="fa fa-building"></i>
-                                            </td>
-                                            <td>@Model.Units.Where(Function(m) m.Type.Id = 1).Count() @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 1 Then@<text> <span style="position:relative;left:15px;">appartementen</span></text>Else @<text> <span style="position:relative;left:15px;">appartement</span></text> End if </td>
-                                        </tr>
                                     </text>
-                            End If
-                                @If Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 0 Then
+                                ElseIf Model.SalesData.PercentageLivingUnitsSold = 100 AndAlso Model.SalesData.LivingUnits > 0 Then
                                     @<text>
-                                        <tr>
-                                            <td>
-                                                <i Class="fa fa-home"></i>
-                                            </td>
-                                            <td>@Model.Units.Where(Function(m) m.Type.Id = 2).Count() @If Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 1 Then@<text> <span style="position:relative;left:15px;">woningen</span></text>Else @<text> <span style="position:relative;left:15px;">woning</span></text> End if </td>
-                                        </tr>
+                                        <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
+                                            Uitverkocht
+                                        </td>
                                     </text>
-                            End If
-                                @If Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 0 Then
+                                ElseIf Model.SalesData.LivingUnits = 0 Then
                                     @<text>
-                                        <tr>
-                                            <td>
-                                                <i Class="fa fa-shopping-cart"></i>
-                                            </td>
-                                            <td>@Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() @If Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 1 Then@<text> <span style="position:relative;left:15px;">handelspanden</span></text>Else @<text> <span style="position:relative;left:15px;">handelspand</span></text> End if </td>
-                                        </tr>
-                                    </text>
-                            End If
-                                @If Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 0 Then
-                                    @<text>
-                                        <tr>
-                                            <td>
-                                                <i Class="fa fa-archive"></i>
-                                            </td>
-                                            <td>@Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() @If Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 1 Then@<text> <span style="position:relative;left:15px;">bergingen</span></text>Else @<text> <span style="position:relative;left:15px;">berging</span></text> End if </td>
-                                        </tr>
-                                    </text>
-                            End If
-
-                                @If Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 0 Then
-                                    @<text>
-                                        <tr>
-                                            <td>
-                                                <i Class="fa fa-road"></i>
-                                            </td>
-                                            <td>@Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() @If Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 1 Then@<text> <span style="position:relative;left:15px;">parkeerplaatsen</span></text>Else @<text> <span style="position:relative;left:15px;">parkeerplaats</span></text> End if </td>
-                                        </tr>
-                                    </text>
-                            End If
-                                @If Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 0 Then
-                                    @<text>
-                                        <tr>
-                                            <td>
-                                                <i Class="fa fa-car"></i>
-                                            </td>
-                                            <td>@Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() @If Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 1 Then@<text> <span style="position:relative;left:15px;">garages</span></text>Else @<text> <span style="position:relative;left:15px;">garage</span></text> End if </td>
-                                        </tr>
-                                    </text>
-                            End If
-
-
-                                <tr>
-                                    <td class="font-weight-bold text-color-primary">
-                                        Beschikbaar
-                                    </td>
-                                    <td class="font-weight-bold text-color-primary">
-                                        @(Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold) <span style="position:relative;left:15px;">wooneenheden</span>
-                                    </td>
-                                </tr>
-                                @If Model.Data.Architect.ID > 0 Then
-                                    @<text>
-                                        <tr>
-                                            <td>
-                                                Architect
-                                            </td>
-                                            <td>
-                                                @Model.Data.Architect.Display
-                                            </td>
-                                        </tr>
+                                        <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
+                                            Binnenkort
+                                        </td>
                                     </text>
                                 End If
+                            </tr>
+                            <tr>
+                                <td>
+                                    Adres
+                                </td>
+                                <td>
+                                    @Model.Data.Street @Model.Data.HouseNumber - @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente<br /><a href="#map" Class="font-size-sm" data-hash data-hash-offset="100">(Locatie op kaart)</a>
+                                </td>
+                            </tr>
 
-                            </tbody>
-                        </table>
-                    
-                    
+                            @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            <i Class="fa fa-building"></i>
+                                        </td>
+                                        <td>@Model.Units.Where(Function(m) m.Type.Id = 1).Count() @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 1 Then@<text> <span style="position:relative;left:15px;">appartementen</span></text>Else @<text> <span style="position:relative;left:15px;">appartement</span></text>End if </td>
+                                    </tr>
+                                </text>
+                            End If
+                            @If Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            <i Class="fa fa-home"></i>
+                                        </td>
+                                        <td>@Model.Units.Where(Function(m) m.Type.Id = 2).Count() @If Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 1 Then@<text> <span style="position:relative;left:15px;">woningen</span></text>Else @<text> <span style="position:relative;left:15px;">woning</span></text>End if </td>
+                                    </tr>
+                                </text>
+                            End If
+                            @If Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            <i Class="fa fa-shopping-cart"></i>
+                                        </td>
+                                        <td>@Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() @If Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 1 Then@<text> <span style="position:relative;left:15px;">handelspanden</span></text>Else @<text> <span style="position:relative;left:15px;">handelspand</span></text>End if </td>
+                                    </tr>
+                                </text>
+                            End If
+                            @If Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            <i Class="fa fa-archive"></i>
+                                        </td>
+                                        <td>@Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() @If Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 1 Then@<text> <span style="position:relative;left:15px;">bergingen</span></text>Else @<text> <span style="position:relative;left:15px;">berging</span></text>End if </td>
+                                    </tr>
+                                </text>
+                            End If
+
+                            @If Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            <i Class="fa fa-road"></i>
+                                        </td>
+                                        <td>@Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() @If Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 1 Then@<text> <span style="position:relative;left:15px;">parkeerplaatsen</span></text>Else @<text> <span style="position:relative;left:15px;">parkeerplaats</span></text>End if </td>
+                                    </tr>
+                                </text>
+                            End If
+                            @If Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            <i Class="fa fa-car"></i>
+                                        </td>
+                                        <td>@Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() @If Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 1 Then@<text> <span style="position:relative;left:15px;">garages</span></text>Else @<text> <span style="position:relative;left:15px;">garage</span></text>End if </td>
+                                    </tr>
+                                </text>
+                            End If
+
+
+                            <tr>
+                                <td class="font-weight-bold text-color-primary">
+                                    Beschikbaar
+                                </td>
+                                <td class="font-weight-bold text-color-primary">
+                                    @(Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold) <span style="position:relative;left:15px;">wooneenheden</span>
+                                </td>
+                            </tr>
+                            @If Model.Data.Architect.ID > 0 Then
+                                @<text>
+                                    <tr>
+                                        <td>
+                                            Architect
+                                        </td>
+                                        <td>
+                                            @Model.Data.Architect.Display
+                                        </td>
+                                    </tr>
+                                </text>
+                            End If
+
+                        </tbody>
+                    </table>
+                    @If Not Model.BrochureDoc Is Nothing AndAlso Model.BrochureDoc.IsBrochure Then
+                        @<text>
+                            <div class="feature-box feature-box-light feature-box-style-5 background-color-primary p-sm m-none mb-sm" style="height:70px;border-radius:8px;">
+                                <a href="#modalsendbrochure" data-id="@Model.BrochureDoc.Docid" class="modal-with-form btnsendbrochure" style="border-radius:8px;">
+                                    <div class="feature-box-icon" style="height:50px;">
+                                        <i class="fa fa-file-pdf-o"></i>
+                                    </div>
+                                    <div class="feature-box-info text-light">
+                                        <h4 class="mb-none text-light">Download brochure</h4>
+                                        <p class="text-light"><small>Ontvang meteen de brochure</small></p>
+
+                                    </div>
+                                </a>
+
+                            </div>
+                        </text>
+                    End If
+
                     <div class="feature-box feature-box-light feature-box-style-5 background-color-primary p-sm m-none" style="height:70px;">
                         <div class="feature-box-icon" style="height:50px;">
                             <i class="fa fa-phone"></i>
@@ -266,7 +282,7 @@ end section
                             </div>
                         </a>
                     </div>
-                        </div>
+                </div>
             </div>
             <h4 Class="mt-md mb-md">@Model.Data.CommercialTitleNL</h4>
             @Model.Data.CommercialTextNL
@@ -571,6 +587,9 @@ end section
 <div id="modalsenddoc" class="modal-block modal-block-primary mfp-hide">
     <div id="send-doc-container"></div>
 </div>
+<div id="modalsendbrochure" class="modal-block modal-block-primary mfp-hide">
+    <div id="send-brochure-container"></div>
+</div>
 <div id="modalsendmail" class="modal-block modal-block-lg modal-block-primary mfp-hide">
     <div id="send-mail-container"></div>
 </div>
@@ -598,6 +617,13 @@ end section
             $('#send-doc-container').html(data);
         });
     });
+    $('.btnsendbrochure').click(function () {
+        var url = "/Projects/SendBrochure";
+        var id = $(this).attr('data-id');
+        $.get(url + '/' + id, function (data) {
+            $('#send-brochure-container').html(data);
+        });
+    });
     $('.btnsendmail').click(function () {
         var url = "/Projects/SendMail"; // the url to the controller
         var id = $(this).attr('data-id'); // the id that's given to each button in the list
@@ -605,9 +631,21 @@ end section
             $('#send-mail-container').html(data);
         });
     });
-        $(document).ready(function () {
-            $('a[href="' + this.location.pathname + '"]').parent().addClass('active');
-        });
+    $(document).ready(function () {
+        $('a[href="' + this.location.pathname + '"]').parent().addClass('active');
+        if (window.location.hash === "#brochure" && $('.btnsendbrochure').length) {
+            var id = $('.btnsendbrochure').attr('data-id');
+            $.get('/Projects/SendBrochure/' + id, function (data) {
+                $('#send-brochure-container').html(data);
+                $.magnificPopup.open({
+                    items: {
+                        src: '#modalsendbrochure'
+                    },
+                    type: 'inline'
+                });
+            });
+        }
+    });
 
     </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>

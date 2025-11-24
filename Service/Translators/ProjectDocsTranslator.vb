@@ -12,6 +12,7 @@ Public Class ProjectDocsTranslator
         bo.Filename = _entity.Filename
         bo.SortOrder = _entity.SortOrder
         bo.Type = _entity.Type
+        bo.IsBrochure = _entity.IsBrochure
         bo.DocDate = _entity.Date
 
         Return ErrorCode.Success
@@ -26,6 +27,7 @@ Public Class ProjectDocsTranslator
         _entity.SortOrder = bo.SortOrder
         _entity.Type = bo.Type
         _entity.Date = bo.DocDate
+        _entity.IsBrochure = bo.IsBrochure
         Return ErrorCode.Success
     End Function
 

@@ -500,6 +500,7 @@
           <Property Name="SortOrder" Type="int" Nullable="false" />
           <Property Name="Type" Type="int" />
           <Property Name="Date" Type="date" />
+          <Property Name="IsBrochure" Type="bit" Nullable="false" />
         </EntityType>
         <EntityType Name="ProjectLevels">
           <Key>
@@ -3701,6 +3702,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="ClientAccountId" Type="Int32" />
           <NavigationProperty Name="ClientAccount" Relationship="copropmModel.FK_ProjectDocs_ClientAccount" FromRole="ProjectDocs" ToRole="ClientAccount" />
           <NavigationProperty Name="InvoicingPaymentStages" Relationship="copropmModel.FK_InvoicingPaymentStages_ProjectDocs" FromRole="ProjectDocs" ToRole="InvoicingPaymentStages" />
+          <Property Name="IsBrochure" Type="Boolean" Nullable="false" />
         </EntityType>
         <Association Name="FK_ProjectDocs_Project">
           <End Type="copropmModel.Project" Role="Project" Multiplicity="1" />
@@ -4929,6 +4931,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <EntitySetMapping Name="ProjectDocs">
             <EntityTypeMapping TypeName="copropmModel.ProjectDocs">
               <MappingFragment StoreEntitySet="ProjectDocs">
+                <ScalarProperty Name="IsBrochure" ColumnName="IsBrochure" />
                 <ScalarProperty Name="ClientAccountId" ColumnName="ClientAccountId" />
                 <ScalarProperty Name="Date" ColumnName="Date" />
                 <ScalarProperty Name="Type" ColumnName="Type" />

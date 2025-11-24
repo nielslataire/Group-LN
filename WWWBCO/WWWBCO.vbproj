@@ -519,6 +519,7 @@
     <Content Include="Views\Contact\Succes.vbhtml" />
     <Content Include="Scripts\jquery-3.7.1.slim.min.map" />
     <Content Include="Scripts\jquery-3.7.1.min.map" />
+    <Content Include="Views\Projects\ModalSendBrochure.vbhtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\custom.css" />

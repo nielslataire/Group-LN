@@ -41,7 +41,7 @@
             Dim model As New ReferencesModel
             Dim service = ServiceFactory.GetProjectService
 
-            Dim response = service.GetProjectsForList(1, Nothing, 1039)
+            Dim response = service.GetProjectsForList(Type:=1, StatusId:=1, UserId:=Nothing, BuilderId:=1039, TrimCommercialText:=True)
             If (response.Success) Then model.Projects = response.Values
             model.Projects = model.Projects.OrderByDescending(Function(m) m.DeliveryDate).ToList
             'Metatags

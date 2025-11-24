@@ -30,6 +30,8 @@ Public Class ProjectsController
             If (response3.Success) Then model.Units = response3.Values
             'Docs
             model.Docs = service.GetProjectDocs(id, ProjectDocType.Sales).Values
+            If model.Docs Is Nothing Then model.Docs = New List(Of ProjectDocBO)
+            model.BrochureDoc = model.Docs.FirstOrDefault(Function(d) d.IsBrochure)
             'Salessettings
             model.SalesSetttings = service.GetSalesSettings(model.Data.Id).Value
             If model.SalesSetttings Is Nothing Then
@@ -49,7 +51,7 @@ Public Class ProjectsController
             ViewData("LatestNews") = GetLatestNews(4)
             Dim model As New ProjectModel
             Dim service = ServiceFactory.GetProjectService
-            Dim response = service.GetProjectsForList(2, Nothing, 1039, True)
+            Dim response = service.GetProjectsForList(Type:=1, StatusId:=2, UserId:=Nothing, BuilderId:=1039, TrimCommercialText:=True)
             If (response.Success) Then model.Projects = response.Values
             model.Projects = model.Projects.OrderByDescending(Function(m) m.Id).ToList
             Dim response2 = service.GetProjectSalesData(model.Projects.Select(Function(m) m.Id).ToList())
@@ -80,6 +82,8 @@ Public Class ProjectsController
         model.News = service.GetNewsByProjectId(model.Data.Id).Values.OrderByDescending(Function(m) m.NewsDate).ToList
         'Docs
         model.Docs = service.GetProjectDocs(model.Data.Id, ProjectDocType.Sales).Values
+        If model.Docs Is Nothing Then model.Docs = New List(Of ProjectDocBO)
+        model.BrochureDoc = model.Docs.FirstOrDefault(Function(d) d.IsBrochure)
         'sort news
         'ViewData("title") = "BCO - " & model.Data.Name
         'Units
@@ -165,6 +169,12 @@ Public Class ProjectsController
         viewModel.DocId = id
         Return PartialView("ModalSendDoc", viewModel)
     End Function
+    <HttpGet>
+    Function SendBrochure(id As Integer) As ActionResult
+        Dim viewModel = New ProjectSendBrochureModel
+        viewModel.DocId = id
+        Return PartialView("ModalSendBrochure", viewModel)
+    End Function
     <HttpPost>
     Function SendDoc(model As ProjectSendDocModel) As PartialViewResult
         If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
@@ -174,6 +184,7 @@ Public Class ProjectsController
 
             Dim service2 = ServiceFactory.GetProjectService
             Doc = service2.GetProjectDoc(model.DocId).Value
+            If Doc Is Nothing Then Return PartialView("ModalFailDoc")
             Dim response2 = service2.GetProjectByID(Doc.ProjectId)
             If response2.Success Then project = response2.Value
 
@@ -201,6 +212,58 @@ Public Class ProjectsController
             internalemail.[To] = model.Email
             internalemail.Project = project.Name
             internalemail.Phone = model.Phone
+            internalemail.Send()
+            Return PartialView("ModalSuccesDoc")
+        Else
+            Return PartialView("ModalFailDoc")
+        End If
+    End Function
+    <HttpPost>
+    Function SendBrochure(model As ProjectSendBrochureModel) As PartialViewResult
+        If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
+        If (ModelState.IsValid) Then
+            Dim Doc As New ProjectDocBO
+            Dim project As New ProjectBO
+
+            Dim service2 = ServiceFactory.GetProjectService
+            Doc = service2.GetProjectDoc(model.DocId).Value
+            If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+            Dim response2 = service2.GetProjectByID(Doc.ProjectId)
+            If response2.Success Then project = response2.Value
+
+            Dim email As Object = New Email("PlanMail")
+            email.[To] = model.Email
+            email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+            email.Title = project.CommercialTitleNL
+            email.Text = project.CommercialTextNL
+            email.Image = project.DefaultPicture.Name
+            email.Imagecaption = project.DefaultPicture.Caption
+            email.Slug = project.Slug
+            email.EmailTitle = "BCO - Uw brochureaanvraag"
+            email.Firstname = model.Firstname
+            email.Name = model.Name
+            email.Phone = model.Phone
+            Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "docs/"
+            Dim brochureUrl = dir & Doc.Filename
+            Dim cd As System.Net.Mime.ContentDisposition
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
+            Using webClient As New System.Net.WebClient
+                Dim brochureBytes = webClient.DownloadData(brochureUrl)
+                Using brochureStream As New MemoryStream(brochureBytes)
+                    Dim att As New System.Net.Mail.Attachment(brochureStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+                    cd = att.ContentDisposition
+                    cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+                    email.Attach(att)
+                    email.Send()
+                End Using
+            End Using
+
+            Dim internalemail As Object = New Email("PlanInternalMail")
+            internalemail.[To] = model.Email
+            internalemail.Project = project.Name
+            internalemail.Phone = model.Phone
+            internalemail.Name = model.Name
+            internalemail.Firstname = model.Firstname
             internalemail.Send()
             Return PartialView("ModalSuccesDoc")
         Else

@@ -19,6 +19,7 @@ Partial Public Class ProjectDocs
     Public Property Type As Nullable(Of Integer)
     Public Property [Date] As Nullable(Of Date)
     Public Property ClientAccountId As Nullable(Of Integer)
+    Public Property IsBrochure As Boolean
 
     Public Overridable Property Project As Project
     Public Overridable Property ClientAccount As ClientAccount

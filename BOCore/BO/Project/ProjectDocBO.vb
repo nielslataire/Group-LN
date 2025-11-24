@@ -63,6 +63,15 @@ Public Class ProjectDocBO
             _type = value
         End Set
     End Property
+    Private _isBrochure As Boolean
+    Public Property IsBrochure() As Boolean
+        Get
+            Return _isBrochure
+        End Get
+        Set(ByVal value As Boolean)
+            _isBrochure = value
+        End Set
+    End Property
     Private _docdate As DateOnly?
     <UIHint("Date")>
     <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:dd/MM/yyyy}")>
