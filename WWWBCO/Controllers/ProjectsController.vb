@@ -142,21 +142,32 @@ Public Class ProjectsController
             email.Imagecaption = project.DefaultPicture.Caption
             email.Slug = project.Slug
             email.EmailTitle = "BCO - Uw planaanvraag"
-            'Local Upload directory
-            Dim dir = My.Settings.PlanLocalUrl
-            'Uploadname per directory
-            Dim planpath = Path.Combine(dir, unit.Plan)
+            email.Firstname = model.Firstname
+            email.Name = model.Name
+            Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "Plans/"
+            Dim planUrl = dir & unit.Plan
             Dim cd As System.Net.Mime.ContentDisposition
-            Dim att As New System.Net.Mail.Attachment(planpath)
-            cd = att.ContentDisposition
-            cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
-            email.Attach(att)
-            email.Send()
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
+            Using webClient As New System.Net.WebClient
+                Dim planBytes = webClient.DownloadData(planUrl)
+                Using planStream As New MemoryStream(planBytes)
+                    Dim att As New System.Net.Mail.Attachment(planStream, "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString)
+                    cd = att.ContentDisposition
+                    cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
+                    email.Attach(att)
+                    email.Send()
+                End Using
+            End Using
             Dim internalemail As Object = New Email("PlanInternalMail")
             internalemail.[To] = model.Email
+            internalemail.[From] = "niels.lataire@groupln.be"
             internalemail.Unit = unit.Type.Name & " " & unit.Name
             internalemail.Project = project.Name
             internalemail.Phone = model.Phone
+            internalemail.Name = model.Name
+            internalemail.Firstname = model.Firstname
+            internalemail.RequestType = "planaanvraag"
+            internalemail.RequestTitle = "Nieuwe planaanvraag"
             internalemail.Send()
             Return PartialView("ModalSuccesPlan")
         Else
@@ -198,20 +209,31 @@ Public Class ProjectsController
             email.Imagecaption = project.DefaultPicture.Caption
             email.Slug = project.Slug
             email.EmailTitle = "BCO - Uw documentaanvraag"
-            'Local Upload directory
-            Dim dir = My.Settings.DocLocalUrl
-            'Uploadname per directory
-            Dim planpath = Path.Combine(dir, Doc.Filename)
+            email.Firstname = model.Firstname
+            email.Name = model.Name
+            Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "docs/"
+            Dim docUrl = dir & Doc.Filename
             Dim cd As System.Net.Mime.ContentDisposition
-            Dim att As New System.Net.Mail.Attachment(planpath)
-            cd = att.ContentDisposition
-            cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
-            email.Attach(att)
-            email.Send()
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
+            Using webClient As New System.Net.WebClient
+                Dim docBytes = webClient.DownloadData(docUrl)
+                Using docStream As New MemoryStream(docBytes)
+                    Dim att As New System.Net.Mail.Attachment(docStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+                    cd = att.ContentDisposition
+                    cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+                    email.Attach(att)
+                    email.Send()
+                End Using
+            End Using
             Dim internalemail As Object = New Email("PlanInternalMail")
             internalemail.[To] = model.Email
+            internalemail.[From] = "niels.lataire@groupln.be"
             internalemail.Project = project.Name
             internalemail.Phone = model.Phone
+            internalemail.Name = model.Name
+            internalemail.Firstname = model.Firstname
+            internalemail.RequestType = "documentaanvraag"
+            internalemail.RequestTitle = "Nieuwe documentaanvraag"
             internalemail.Send()
             Return PartialView("ModalSuccesDoc")
         Else
@@ -260,10 +282,13 @@ Public Class ProjectsController
 
             Dim internalemail As Object = New Email("PlanInternalMail")
             internalemail.[To] = model.Email
+            internalemail.[From] = "niels.lataire@groupln.be"
             internalemail.Project = project.Name
             internalemail.Phone = model.Phone
             internalemail.Name = model.Name
             internalemail.Firstname = model.Firstname
+            internalemail.RequestType = "brochureaanvraag"
+            internalemail.RequestTitle = "Nieuwe brochureaanvraag"
             internalemail.Send()
             Return PartialView("ModalSuccesDoc")
         Else
@@ -304,6 +329,7 @@ Public Class ProjectsController
             'Internalmail
             Dim internalemail As Object = New Email("ProjectInternalMail")
             internalemail.[To] = model.Email
+            internalemail.[From] = "niels.lataire@groupln.be"
             internalemail.Project = project.Name
             internalemail.Phone = model.Phone
             internalemail.Name = model.Name

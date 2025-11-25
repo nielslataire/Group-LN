@@ -32,8 +32,8 @@ end section
 
 <div class="container">
 
-    <div class="row pb-xl pt-md">
-        <div class="col-md-9">
+   
+       
 
             <div class="row">
                 <div class="col-md-7">
@@ -241,19 +241,24 @@ end section
                     </table>
                     @If Not Model.BrochureDoc Is Nothing AndAlso Model.BrochureDoc.IsBrochure Then
                         @<text>
-                            <div class="feature-box feature-box-light feature-box-style-5 background-color-primary p-sm m-none mb-sm" style="height:70px;border-radius:8px;">
-                                <a href="#modalsendbrochure" data-id="@Model.BrochureDoc.Docid" class="modal-with-form btnsendbrochure" style="border-radius:8px;">
-                                    <div class="feature-box-icon" style="height:50px;">
-                                        <i class="fa fa-file-pdf-o"></i>
-                                    </div>
-                                    <div class="feature-box-info text-light">
-                                        <h4 class="mb-none text-light">Download brochure</h4>
-                                        <p class="text-light"><small>Ontvang meteen de brochure</small></p>
-
-                                    </div>
+                            <div class="text-center mb-md" style="margin-left: 40px; margin-right: 40px; margin-top: 20px; margin-bottom: 20px;">
+                                <a href="#modalsendbrochure" data-id="@Model.BrochureDoc.Docid" class="modal-with-form btnsendbrochure btn btn-primary btn-lg btn-block" style="border-radius:6px;">
+                                    <i class="fa fa-download mr-sm"></i> DOWNLOAD BROCHURE
                                 </a>
-
                             </div>
+                        </text>
+                    End If
+                    @if Model.Docs.Count > 0 AndAlso Model.SalesSetttings.SaleVisible = True Then
+                        @<text>
+                            <hr />
+                            <h4 Class="pt-none mb-md text-color-dark">Documenten</h4>
+                            <ul Class="list list-icons list-borders list-primary mb-lg ">
+                                @for each doc In Model.Docs
+                                    @<text>
+                                        <li>  <a href="#modalsenddoc" class="modal-with-form btnsenddoc" data-toggle="tooltip" data-placement="top" title="Document opvragen" data-original-title="Document opvragen" type="button" data-id="@doc.Docid"><i Class="fa fa-download"></i> @doc.Name</a></li>
+                                    </text>
+                                Next
+                            </ul>
                         </text>
                     End If
 
@@ -286,68 +291,9 @@ end section
             </div>
             <h4 Class="mt-md mb-md">@Model.Data.CommercialTitleNL</h4>
             @Model.Data.CommercialTextNL
-        </div>
-        <div Class="col-md-3">
-            <aside Class="sidebar">
-                @if Model.Docs.Count > 0 AndAlso Model.SalesSetttings.SaleVisible = True Then
-                @<text>
-                    <h4 Class="pt-none mb-md text-color-dark">Documenten</h4>
-                    <ul Class="list list-icons list-borders list-primary mb-lg ">
-                        @for each doc In Model.Docs
-                    @<text>
-                        <li>  <a href="#modalsenddoc" class="modal-with-form btnsenddoc" data-toggle="tooltip" data-placement="top" title="Document opvragen" data-original-title="Document opvragen" type="button" data-id="@doc.Docid"><i Class="fa fa-download"></i> @doc.Name</a></li>
-                    </text>
-                        Next
-                    </ul>
-                </text>
-                End If
-                <div class="recent-posts">
-                    @If Not Model.News.Count = 0 AndAlso Model.SalesSetttings.SaleVisible = True Then
-                            @<text>
-                    <h4 Class="pt-none mb-md text-color-dark">Laatste nieuws</h4>
-                    </text>
-                    End if
-                    @If Model.News.Count > 1 AndAlso Model.SalesSetttings.SaleVisible = True Then
-                    @For Each newsitem In Model.News.GetRange(0, 1)
-                    @<text>
-
-                        <article>
-                            <div class="date">
-                                <span class="day">@newsitem.NewsDate.Day </span>
-                                <span class="month">@newsitem.NewsDate.ToString("MMM")</span>
-                            </div>
-                            <h5 class="heading-primary"><a href="@(Url.Action("News", "Projects", New With {.id = Model.Data.Id}))">@newsitem.TitleNL </a></h5>
-                            <p>@TrimTo(newsitem.TextNL, 200) <a href="@(Url.Action("News", "Projects", New With {.id = Model.Data.Id}))" class="read-more">lees meer <i class="fa fa-angle-right"></i></a></p>
-                            <img class="img-responsive" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/news/800/" & newsitem.Picture.Name)" />
-                        </article>
-
-                    </Text>
-                    Next
-                    ElseIf Model.News.Count = 1 AndAlso Model.SalesSetttings.SaleVisible = True Then
-                    @For Each newsitem In Model.News.GetRange(0, Model.News.Count)
-                    @<text>
-
-                        <article>
-                            <div class="date">
-                                <span class="day">@newsitem.NewsDate.Day </span>
-                                <span class="month">@newsitem.NewsDate.ToString("MMM")</span>
-                            </div>
-                            <h5 class="heading-primary"><a href="@(Url.Action("News", "Projects", New With {.id = Model.Data.Id}))">@newsitem.TitleNL </a></h5>
-                            <p>@TrimTo(newsitem.TextNL, 200)  <a href="@(Url.Action("News", "Projects", New With {.id = Model.Data.Id}))" class="read-more">lees meer <i class="fa fa-angle-right"></i></a></p>
-                            <img class="img-responsive" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/news/" & newsitem.Picture.Name)" />
-
-                        </article>
-
-                    </Text>
-                    Next
-                                    End If
-
-
-</div>
-</aside>
-        </div>
         
-  </div>
+        
+ 
     @If Model.SalesSetttings.SaleVisible = True Then
             @<text>
 
@@ -389,8 +335,7 @@ end section
                                 @If unit.ClientAccountId = 0 Then @<text>
                                                             <td Class="text-center"> @Html.DisplayFor(Function(m) unit.TotalValue)</td></text> Else @<text>
                                                             <td Class="text-center"> Verkocht</td></text>end if
-                                <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then @<text><a href="http://www.groupln.be/uploads/plans/@unit.Plan" target="_blank" class="fa fa-download" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
-
+                                <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then @<text><a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
                             </tr>
                         </text>
                                                                         Else
@@ -441,7 +386,7 @@ end section
                                     @If unit.ClientAccountId = 0 Then @<text>
                                         <td Class="text-center"> @Html.DisplayFor(Function(m) unit.TotalValue)</td></text> Else @<text>
                                         <td Class="text-center"> Verkocht</td></text>end if
-                                    <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then @<text><a href="http://www.groupln.be/uploads/plans/@unit.Plan" target="_blank" class="fa fa-download" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
+                                <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then@<text><a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
 
                                 </tr>
                             </text>
@@ -489,7 +434,7 @@ end section
                                             @If unit.ClientAccountId = 0 Then @<text>
                                         <td Class="text-center"> @Html.DisplayFor(Function(m) unit.TotalValue)</td></text> Else @<text>
                                         <td Class="text-center"> Verkocht</td></text>end if
-                                            <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then @<text><a href="http://www.groupln.be/uploads/plans/@unit.Plan" target="_blank" class="fa fa-download" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
+                                        <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then@<text><a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
 
                                         </tr>
                                     </text>
@@ -603,18 +548,75 @@ end section
 <script src="~/vendor/rs-plugin/js/jquery.themepunch.revolution.min.js"></script>
 <script src="~/Scripts/examples.mediagallery.js"></script>
 <script>
+    var bcoContactCookieName = 'bco_contact_info';
+
+    function getSavedContactInfo() {
+        var match = document.cookie.match(new RegExp('(?:^|; )' + bcoContactCookieName + '=([^;]*)'));
+        if (!match) {
+            return null;
+        }
+        try {
+            return JSON.parse(decodeURIComponent(match[1]));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveContactInfoToCookie(contact) {
+        try {
+            var serialized = encodeURIComponent(JSON.stringify(contact));
+            document.cookie = bcoContactCookieName + '=' + serialized + ';path=/;max-age=' + (60 * 60 * 24 * 365);
+        } catch (e) {
+            // ignore cookie persistence errors
+        }
+    }
+
+    function applySavedContact($container) {
+        var saved = getSavedContactInfo();
+        if (!saved) {
+            return null;
+        }
+        if (saved.firstname) {
+            $container.find('#txtFirstname').val(saved.firstname);
+        }
+        if (saved.name) {
+            $container.find('#txtName').val(saved.name);
+        }
+        if (saved.email) {
+            $container.find('#txtEmail').val(saved.email);
+        }
+        if (saved.phone) {
+            $container.find('#txtPhone').val(saved.phone);
+        }
+        return saved;
+    }
+
+    function autoSubmitIfComplete($container, saved) {
+        if (!saved || !saved.firstname || !saved.name || !saved.email || !saved.phone) {
+            return;
+        }
+        var $form = $container.find('form');
+        if ($form.length) {
+            $form.trigger('submit');
+        }
+    }
+
     $('.btnsendplan').click(function () {
-            var url = "/Projects/SendPlan"; // the url to the controller
-            var id = $(this).attr('data-id'); // the id that's given to each button in the list
-            $.get(url + '/' + id, function (data) {
-                $('#send-plan-container').html(data);
-            });
+        var url = "/Projects/SendPlan"; // the url to the controller
+        var id = $(this).attr('data-id'); // the id that's given to each button in the list
+        $.get(url + '/' + id, function (data) {
+            $('#send-plan-container').html(data);
+            var saved = applySavedContact($('#send-plan-container'));
+            autoSubmitIfComplete($('#send-plan-container'), saved);
+        });
     });
     $('.btnsenddoc').click(function () {
         var url = "/Projects/SendDoc"; // the url to the controller
         var id = $(this).attr('data-id'); // the id that's given to each button in the list
         $.get(url + '/' + id, function (data) {
             $('#send-doc-container').html(data);
+            var saved = applySavedContact($('#send-doc-container'));
+            autoSubmitIfComplete($('#send-doc-container'), saved);
         });
     });
     $('.btnsendbrochure').click(function () {
@@ -622,6 +624,8 @@ end section
         var id = $(this).attr('data-id');
         $.get(url + '/' + id, function (data) {
             $('#send-brochure-container').html(data);
+            var saved = applySavedContact($('#send-brochure-container'));
+            autoSubmitIfComplete($('#send-brochure-container'), saved);
         });
     });
     $('.btnsendmail').click(function () {
@@ -647,7 +651,7 @@ end section
         }
     });
 
-    </script>
+</script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>
 <script>
 

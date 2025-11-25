@@ -28,25 +28,25 @@
                     <div class="form-group">
                         <label class="col-md-4 control-label">@Html.LabelFor(Function(m) m.Firstname)</label>
                         <div class="col-md-8">
-                            @Html.TextBoxFor(Function(m) m.Firstname, New With {.class = "form-control", .id = "txtFirstname", .autocomplete = "given-name"})
+                            @Html.TextBoxFor(Function(m) m.Firstname, New With {.class = "form-control", .id = "txtFirstname", .autocomplete = "given-name", .required = "required"})
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-md-4 control-label">@Html.LabelFor(Function(m) m.Name)</label>
                         <div class="col-md-8">
-                            @Html.TextBoxFor(Function(m) m.Name, New With {.class = "form-control", .id = "txtName", .autocomplete = "family-name"})
+                            @Html.TextBoxFor(Function(m) m.Name, New With {.class = "form-control", .id = "txtName", .autocomplete = "family-name", .required = "required"})
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-md-4 control-label">@Html.LabelFor(Function(m) m.Email)</label>
                         <div class="col-md-8">
-                            @Html.TextBoxFor(Function(m) m.Email, New With {.class = "form-control", .id = "txtEmail", .autocomplete = "email"})
+                            @Html.TextBoxFor(Function(m) m.Email, New With {.class = "form-control", .id = "txtEmail", .autocomplete = "email", .type = "email", .required = "required"})
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-md-4 control-label">@Html.LabelFor(Function(m) m.Phone)</label>
                         <div class="col-md-8">
-                            @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "form-control", .id = "txtPhone", .autocomplete = "tel"})
+                            @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "form-control", .id = "txtPhone", .autocomplete = "tel", .type = "tel", .required = "required", .inputmode = "tel"})
                         </div>
                     </div>
                 </div>
@@ -55,7 +55,7 @@
             <footer class="panel-footer">
                 <div class="row">
                     <div class="col-md-12 text-right">
-                        <button class="btn btn-primary btn-block " id="btnBrochureSend"><i class="fa fa-envelope"></i>&nbsp;&nbsp;&nbsp;Verzenden</button>
+                        <button class="btn btn-primary btn-block " id="btnBrochureSend"><i class="fa fa-spinner fa-spin" id="btnBrochureSpinner" style="display:none"></i><i class="fa fa-envelope" id="btnBrochureIcon"></i>&nbsp;&nbsp;&nbsp;Verzenden</button>
 
                     </div>
                 </div>
@@ -68,6 +68,20 @@ End Using
         $("#FormSendBrochure").submit(function (event) {
 
             event.preventDefault();
+            var $button = $("#btnBrochureSend");
+            var $spinner = $("#btnBrochureSpinner");
+            var $icon = $("#btnBrochureIcon");
+            if (typeof saveContactInfoToCookie === 'function') {
+                saveContactInfoToCookie({
+                    firstname: $("#txtFirstname").val(),
+                    name: $("#txtName").val(),
+                    email: $("#txtEmail").val(),
+                    phone: $("#txtPhone").val()
+                });
+            }
+            $button.prop("disabled", true);
+            $spinner.show();
+            $icon.hide();
             $.ajax({
                 url: '@Url.Action("SendBrochure", "Projects")',
                 data:  $('#FormSendBrochure').serialize(),
@@ -75,6 +89,11 @@ End Using
                 success: function (result) {
                     $("#modalsendbrochurepanel").html(result);
                 },
+                complete: function () {
+                    $button.prop("disabled", false);
+                    $spinner.hide();
+                    $icon.show();
+                }
             });
         });
 </script>

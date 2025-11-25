@@ -251,12 +251,33 @@ Public Class ProjectSendPlanModel
     End Property
     Private _phone As String
     <Display(Name:="Telefoonnummer")>
+    <Required(ErrorMessage:="Uw telefoonnummer is verplicht")>
     Public Property Phone() As String
         Get
             Return _phone
         End Get
         Set(ByVal value As String)
             _phone = value
+        End Set
+    End Property
+    Private _firstname As String
+    <Display(Name:="Voornaam")>
+    Public Property Firstname() As String
+        Get
+            Return _firstname
+        End Get
+        Set(ByVal value As String)
+            _firstname = value
+        End Set
+    End Property
+    Private _name As String
+    <Display(Name:="Familienaam")>
+    Public Property Name() As String
+        Get
+            Return _name
+        End Get
+        Set(ByVal value As String)
+            _name = value
         End Set
     End Property
 End Class
@@ -288,12 +309,33 @@ Public Class ProjectSendDocModel
     End Property
     Private _phone As String
     <Display(Name:="Telefoonnummer")>
+    <Required(ErrorMessage:="Uw telefoonnummer is verplicht")>
     Public Property Phone() As String
         Get
             Return _phone
         End Get
         Set(ByVal value As String)
             _phone = value
+        End Set
+    End Property
+    Private _firstname As String
+    <Display(Name:="Voornaam")>
+    Public Property Firstname() As String
+        Get
+            Return _firstname
+        End Get
+        Set(ByVal value As String)
+            _firstname = value
+        End Set
+    End Property
+    Private _name As String
+    <Display(Name:="Familienaam")>
+    Public Property Name() As String
+        Get
+            Return _name
+        End Get
+        Set(ByVal value As String)
+            _name = value
         End Set
     End Property
 End Class
@@ -385,6 +427,7 @@ Public Class ProjectSendMailModel
     End Property
     Private _phone As String
     <Display(Name:="Telefoonnummer")>
+    <Required(ErrorMessage:="Uw telefoonnummer is verplicht")>
     Public Property Phone() As String
         Get
             Return _phone
