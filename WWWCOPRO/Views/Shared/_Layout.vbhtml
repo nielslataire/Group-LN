@@ -78,7 +78,7 @@
                                             <i class="fa fa-phone"></i>
                                         </div>
                                         <div class="feature-box-info">
-                                            <h4 class="mb-none">+32 (0)9 223 03 27</h4>
+                                            <h4 class="mb-none">+32 (0)9 216 49 50</h4>
                                             <p><small>Neem telefonisch contact op</small></p>
                                         </div>
                                     </div>
@@ -179,7 +179,6 @@
                             <h4><strong>Contacteer</strong> Ons</h4>
                             <ul class="contact">
                                 <li><p><i class="fa fa-map-marker"></i> <strong>Adres:</strong> Klaverdries 53, 9031 Drongen, België</p></li>
-                                <li><p><i class="fa fa-phone"></i> <strong>Telefoon:</strong> +32 (0)9 223 03 27</p></li>
                                 <li><p><i class="fa fa-phone"></i> <strong>Telefoon:</strong> +32 (0)9 216 49 50</p></li>
                                 <li><p><i class="fa fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@groupln.be">info@groupln.be</a></p></li>
                             </ul>
@@ -200,7 +199,7 @@
                     <div class="row">
 
                         <div class="col-md-8">
-                            <p>© Copyright 2015. All Rights Reserved.</p>
+                            <p>© Copyright 2025. All Rights Reserved.</p>
                         </div>
                         @*<div class="col-md-4">
                                 <nav id="sub-menu">

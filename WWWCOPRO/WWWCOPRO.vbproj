@@ -365,6 +365,8 @@
     <Content Include="Fonts\glyphicons-halflings-regular.svg" />
     <Content Include="Fonts\revicons\revicons.svg" />
     <Content Include="Fonts\Simple-Line-Icons.svg" />
+    <Content Include="Scripts\admin\theme.admin.extension.js" />
+    <Content Include="Scripts\admin\theme.js" />
     <Content Include="Scripts\bootstrap.bundle.js" />
     <Content Include="Scripts\bootstrap.bundle.min.js" />
     <Content Include="Scripts\bootstrap.esm.js" />
@@ -372,6 +374,7 @@
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
     <Content Include="Scripts\examples.mediagallery.js" />
+    <Content Include="Scripts\examples.modals.js" />
     <Content Include="Scripts\examples.notifications.js" />
     <Content Include="Scripts\bootstrap.min.js.map" />
     <Content Include="Scripts\bootstrap.js.map" />
@@ -493,6 +496,20 @@
     <Content Include="Views\Shared\Newsletter.vbhtml" />
     <Content Include="Scripts\jquery-3.7.1.slim.min.map" />
     <Content Include="Scripts\jquery-3.7.1.min.map" />
+    <Content Include="Views\Emails\PlanInternalMail.vbhtml" />
+    <Content Include="Views\Projects\ModalFailDoc.vbhtml" />
+    <Content Include="Views\Projects\ModalFailMail.vbhtml" />
+    <Content Include="Views\Projects\ModalFailPlan.vbhtml" />
+    <Content Include="Views\Projects\ModalSendBrochure.vbhtml" />
+    <Content Include="Views\Projects\ModalSendDoc.vbhtml" />
+    <Content Include="Views\Projects\ModalSendMail.vbhtml" />
+    <Content Include="Views\Projects\ModalSendPlan.vbhtml" />
+    <Content Include="Views\Projects\ModalSuccesDoc.vbhtml" />
+    <Content Include="Views\Projects\ModalSuccesMail.vbhtml" />
+    <Content Include="Views\Projects\ModalSuccesPlan.vbhtml" />
+    <Content Include="Views\Emails\PlanMail.vbhtml" />
+    <Content Include="Views\Emails\ProjectMail.vbhtml" />
+    <Content Include="Views\Emails\ProjectInternalMail.vbhtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\custom.css" />

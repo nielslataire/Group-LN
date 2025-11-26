@@ -1,7 +1,7 @@
 /*
 Name: 			theme-blog.css
 Written by: 	Okler Themes - (http://www.okler.net)
-Version: 		4.4.0
+Theme Version:	5.4.0
 */
 /* Posts */
 .blog-posts article {
@@ -125,9 +125,7 @@ article .post-audio iframe {
 article.post-medium .post-image .owl-carousel {
 	width: 100.2%;
 }
-article.post-medium {
-	margin-left: 60px;
-}
+
 article.post-large {
 	margin-left: 60px;
 }
@@ -135,9 +133,7 @@ article.post-large {
 article.post-large h2 {
 	margin-bottom: 5px;
 }
-article.post-medium .post-date {
-	margin-left: -60px;
-}
+
 article.post-large .post-image, article.post-large .post-date {
 	margin-left: -60px;
 }
@@ -378,6 +374,10 @@ ul.simple-post-list .post-image {
 ul.simple-post-list .post-meta {
 	color: #888;
 	font-size: 0.8em;
+}
+
+ul.simple-post-list .post-info {
+	line-height: 20px;
 }
 
 /* Responsive */

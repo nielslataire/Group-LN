@@ -1,7 +1,11 @@
 ﻿@ModelType WWWCOPRO.ProjectModel
 @Imports wwwcopro.extensions
+@Imports System.Globalization
 @Code
+    Dim isWoonproject As Boolean = Model.Projects.FirstOrDefault.ProjectType = BO.ProjectType.Woonproject
+    ViewData("Title") = If(isWoonproject, "Group LN - Woonprojecten", "Group LN - Commerciële projecten")
     Layout = "~/Views/Shared/_Layout.vbhtml"
+    Dim belgianCulture = New CultureInfo("nl-BE")
 End Code
 @section PageStyle
     <link rel="stylesheet" href="~/Content/real-estate.css" />
@@ -10,67 +14,253 @@ end section
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <ul class="breadcrumb"> 
+                <ul class="breadcrumb">
                     <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
                     <li class="active">
-                        @If Model.Projects.FirstOrDefault.ProjectType = BO.ProjectType.Woonproject Then @<text>Woonproject</text> else @<text>Commercieel</text> End if </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                                <div Class="row">
-                                    <div Class="col-md-12">
-                                        <h1> @If Model.Projects.FirstOrDefault.ProjectType = BO.ProjectType.Woonproject Then@<text>Woonprojecten</text> else @<text>Commerciële projecten</text>End if </h1>
-                                    </div>
-                                </div>
-                            </div>
+                        @If Model.Projects.FirstOrDefault.ProjectType = BO.ProjectType.Woonproject Then@<text>Woonproject</text> else @<text>Commercieel</text>End if
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div Class="row">
+            <div Class="col-md-12">
+                <h1> @If Model.Projects.FirstOrDefault.ProjectType = BO.ProjectType.Woonproject Then@<text>Woonprojecten</text> else @<text>Commerciële projecten</text>End if </h1>
+            </div>
+        </div>
+    </div>
 </section>
 
-<div Class="container">
-                            <div Class="row">
+<div class="container ">
+    <div class="row">
 
-                                <ul Class="properties-listing sort-destination p-none" data-sort-id="portfolio">
-                        @For Each project In Model.Projects
-                        @<text>
-<li class="col-md-4 col-sm-6 col-xs-12 p-md isotope-item">
-                
-                    <div class="listing-item">
-                        <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = project.Slug}))">
-                            @If project.DefaultPicture.Name IsNot Nothing Then
-                                @<text>
-                                    <span class="thumb-info thumb-info-lighten">
-                                        <span class="thumb-info-wrapper m-none">
-                                            <img src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & project.DefaultPicture.Name)" class="img-responsive" alt="@project.DefaultPicture.Caption ">
-                                            <span class="thumb-info-listing-type background-color-primary text-uppercase text-color-light font-weight-semibold p-xs pl-md pr-md">
-                                                @project.Postalcode.Gemeente
-                                            </span>
-                                            <span Class="custom-thumb-info-title b-normal p-md">
-                                                <span Class="thumb-info-inner text-weight-bold text-uppercase" >@project.Name</span>
-                                            </span>
-                                        </span>              
-                                    </span>
-                                    
-                                </text>
-                            Else
-                                @<text>
-                                    <span class="thumb-info thumb-info-lighten">
-                                        <span class="thumb-info-wrapper m-none">
-                                            <img src="@Url.Content("~/content/img/no_image.jpg")" class="img-responsive" alt="@project.DefaultPicture.Caption ">
-                                            <span class="thumb-info-listing-type background-color-primary text-uppercase text-color-light font-weight-semibold p-xs pl-md pr-md">
-                                                @project.Postalcode.Gemeente
-                                            </span>
-                                            <span Class="custom-thumb-info-title b-normal p-md">
-                                                <span Class="thumb-info-inner text-md">@project.Name</span>
+        <ul class="properties-listing sort-destination p-none">
+            @For Each project In Model.Projects
+                Dim sales = Model.SalesData.FirstOrDefault(Function(m) m.ProjectId = project.Id)
+                Dim settings = Model.SalesSettings.FirstOrDefault(Function(m) m.ProjectId = project.Id)
+                Dim livingUnits = If(sales IsNot Nothing, sales.LivingUnits, 0)
+                Dim percentageSold = If(sales IsNot Nothing, sales.PercentageLivingUnitsSold, 0D)
+                Dim startingPrice = If(sales IsNot Nothing, sales.StartingPrice, 0D)
+                Dim numberAppartments = If(sales IsNot Nothing, sales.NumberAppartments, 0)
+                Dim numberCommercial = If(sales IsNot Nothing, sales.NumberCommercial, 0)
+                Dim numberHouses = If(sales IsNot Nothing, sales.NumberHouses, 0)
+                Dim saleVisible = If(settings IsNot Nothing, settings.SaleVisible, True)
+                Dim formattedStartingPrice = If(startingPrice > 0, String.Format(belgianCulture, "{0:C0}", startingPrice), String.Empty)
+                @<text>
+                    <li class="col-md-4 col-sm-6 col-xs-12 p-md isotope-item">
+
+                        <div class="listing-item">
+                            <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = project.Slug}))" class="text-decoration-none">
+                                @If project.DefaultPicture.Name IsNot Nothing Then
+                                    @<text>
+                                        <span class="thumb-info thumb-info-lighten">
+                                            <span class="thumb-info-wrapper m-none">
+                                                @If livingUnits = 0 Or saleVisible = False Then
+                                                    @<text>
+                                                        <span class="feature-tag background-color-primary" data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 10px 90px; position: absolute; right: -24%; top: 6%; transform: rotate(45deg); transition: none; text-align: inherit; line-height: 21px; border-width: 0px; margin: 0px; letter-spacing: 0px; font-weight: 400; font-size: 12px;">
+                                                            BINNENKORT
+                                                        </span>
+                                                    </text>
+                                                ElseIf percentageSold < 15 Then
+
+                                                    @<text>
+                                                        <span class="feature-tag background-color-primary" data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 10px 95px; position: absolute; right: -24%; top: 6%; transform: rotate(45deg); transition: none; text-align: inherit; line-height: 21px; border-width: 0px; margin: 0px; letter-spacing: 0px; font-weight: 400; font-size: 12px;">
+                                                            LANCERING
+                                                        </span>
+                                                    </text>
+
+                                                ElseIf percentageSold = 100 Then
+
+                                                    @<text>
+                                                        <span class="feature-tag background-color-primary font-weight-bold " data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 10px 90px; position: absolute; right: -24%; top: 6%; transform: rotate(45deg); transition: none; text-align: inherit; line-height: 21px; border-width: 0px; margin: 0px; letter-spacing: 0px; font-weight: 400; font-size: 12px;">
+                                                            UITVERKOCHT
+                                                        </span>
+                                                    </text>
+
+                                                Else
+                                                    @<text>
+                                                        <span class="feature-tag background-color-secondary text-md" data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 20px 87px;padding-bottom:10px; position: absolute; right: -25%; top: -1%; transform: rotate(45deg); transition: none; text-align: center; line-height: 15px; border-width: 0px; margin: 0px; letter-spacing: 0px;">
+                                                            <span class="font-weight-bold">@String.Format("{0:n0}", Math.Ceiling(percentageSold / 5) * 5) %</span><br /><span class="text-xs">verkocht</span>
+                                                        </span>
+                                                    </text>
+                                                End If
+                                                <img src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & project.DefaultPicture.Name)" class="img-responsive" alt="@project.DefaultPicture.Caption ">
+                                                <span class="thumb-info-listing-type background-color-primary text-uppercase text-color-light font-weight-semibold p-xs pl-md pr-md">
+                                                    @project.Name
+                                                </span>
+                                                <span class="thumb-info-price background-color-secondary text-color-light text-mg p-sm pl-md pr-md">
+                                                    @If startingPrice > 0 Then
+                                                        @<text>
+                                                            Vanaf @formattedStartingPrice
+                                                        </text>
+                                                    Else
+                                                        @<text>
+                                                            &nbsp;
+                                                        </text>
+                                                    End If
+                                                    <i Class="fa fa-caret-right text-color-light pull-right"></i>
+                                                </span>
+
+                                                <span Class="custom-thumb-info-title b-normal p-md">
+                                                    <span Class="thumb-info-inner text-md text-uppercase">@project.CommercialTitleNL</span>
+                                                    <span Class="thumb-info-inner text-md text-uppercase font-weight-bold">@project.Postalcode.Gemeente </span><br />
+                                                    <span class="text-color-dark"><p>@project.CommercialTextNL</p></span>
+                                                    <ul Class="accommodations text-uppercase p-none font-weight-bold text-sm">
+                                                        @If numberAppartments > 0 Then
+                                                            @<text>
+                                                                <li>
+                                                                    <span Class="accomodation-title">
+                                                                        Appartementen:
+                                                                    </span>
+                                                                    <span Class="accomodation-value text-color-secondary ">
+                                                                        @numberAppartments
+                                                                    </span>
+                                                                </li>
+                                                            </text>
+
+                                                        End If
+                                                        @If numberCommercial > 0 Then
+                                                            @<text>
+                                                                <li>
+                                                                    <span Class="accomodation-title">
+                                                                        Handelspanden:
+                                                                    </span>
+                                                                    <span Class="accomodation-value text-color-secondary">
+                                                                        @numberCommercial
+                                                                    </span>
+                                                                </li>
+                                                            </text>
+
+                                                        End If
+                                                        @If numberHouses > 0 Then
+                                                            @<text>
+                                                                <li>
+                                                                    <span Class="accomodation-title">
+                                                                        Woningen:
+                                                                    </span>
+                                                                    <span Class="accomodation-value text-color-secondary">
+                                                                        @numberHouses
+                                                                    </span>
+                                                                </li>
+                                                            </text>
+
+                                                        End If
+                                                        @If livingUnits = 0 Then
+                                                            @<text>
+                                                                &nbsp;
+                                                            </text>
+
+                                                        End If
+                                                    </ul>
+                                                </span>
+
                                             </span>
                                         </span>
-                                    </span>
-                                </text>
-                            End If
-                        </a>
-                    </div>
-</li>
-</text>
-        Next
-          
+                                    </text>
+                                Else
+                                    @<text>
+
+                                        <span class="thumb-info thumb-info-lighten">
+                                            <span class="thumb-info-wrapper m-none">
+                                                @If percentageSold < 15 Then
+
+                                                    @<text>
+                                                        <span class="feature-tag background-color-primary" data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 10px 95px; position: absolute; right: -24%; top: 6%; transform: rotate(45deg); transition: none; text-align: inherit; line-height: 21px; border-width: 0px; margin: 0px; letter-spacing: 0px; font-weight: 400; font-size: 12px;">
+                                                            LANCERING
+                                                        </span>
+                                                    </text>
+                                                ElseIf percentageSold = 100 Then
+
+                                                    @<text>
+                                                        <span class="feature-tag background-color-primary" data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 10px 90px; position: absolute; right: -24%; top: 6%; transform: rotate(45deg); transition: none; text-align: inherit; line-height: 21px; border-width: 0px; margin: 0px; letter-spacing: 0px; font-weight: 400; font-size: 12px;">
+                                                            UITVERKOCHT
+                                                        </span>
+                                                    </text>
+                                                Else
+                                                    @<text>
+                                                        <span class="feature-tag background-color-secondary text-md" data-width="40" data-height="50" style="color: rgb(255, 255, 255); text-transform: uppercase; padding: 20px 87px;padding-bottom:10px; position: absolute; right: -25%; top: -1%; transform: rotate(45deg); transition: none; text-align: center; line-height: 15px; border-width: 0px; margin: 0px; letter-spacing: 0px;">
+                                                            <span class="font-weight-bold">@String.Format("{0:n0}", Math.Ceiling(percentageSold / 5) * 5) %</span><br /><span class="text-xs">verkocht</span>
+                                                        </span>
+                                                    </text>
+                                                End If
+                                                <img src="@Url.Content("~/content/img/no_image.jpg")" class="img-responsive" alt="@project.DefaultPicture.Caption ">
+                                                <span class="thumb-info-listing-type background-color-primary text-uppercase text-color-light font-weight-semibold p-xs pl-md pr-md">
+                                                    @project.Postalcode.Gemeente
+                                                </span>
+                                                <span class="thumb-info-price background-color-secondary text-color-light text-md p-sm pl-md pr-md">
+                                                    @If startingPrice > 0 Then
+                                                        @<text>
+                                                            Vanaf @formattedStartingPrice
+                                                        </text>
+                                                    Else
+                                                        @<text>
+                                                            &nbsp;
+                                                        </text>
+                                                    End If
+                                                    <i Class="fa fa-caret-right text-color-light pull-right"></i>
+                                                </span>
+                                                <span Class="custom-thumb-info-title b-normal p-md">
+                                                    <span Class="thumb-info-inner text-md">@project.Name</span>
+                                                    <ul Class="accommodations text-uppercase p-none font-weight-bold text-xs">
+                                                        @If numberAppartments > 0 Then
+                                                            @<text>
+                                                                <li>
+                                                                    <span Class="accomodation-title">
+                                                                        Appartementen:
+                                                                    </span>
+                                                                    <span Class="accomodation-value text-color-secondary ">
+                                                                        @numberAppartments
+                                                                    </span>
+                                                                </li>
+                                                            </text>
+
+                                                        End If
+                                                        @If numberCommercial > 0 Then
+                                                            @<text>
+                                                                <li>
+                                                                    <span Class="accomodation-title">
+                                                                        Handelspanden:
+                                                                    </span>
+                                                                    <span Class="accomodation-value text-color-secondary">
+                                                                        @numberCommercial
+                                                                    </span>
+                                                                </li>
+                                                            </text>
+
+                                                        End If
+                                                        @If numberHouses > 0 Then
+                                                            @<text>
+                                                                <li>
+                                                                    <span Class="accomodation-title">
+                                                                        Woningen:
+                                                                    </span>
+                                                                    <span Class="accomodation-value text-color-secondary">
+                                                                        @numberHouses
+                                                                    </span>
+                                                                </li>
+                                                            </text>
+
+                                                        End If
+                                                        @If livingUnits = 0 Then
+                                                            @<text>
+                                                                &nbsp;
+                                                            </text>
+
+                                                        End If
+                                                    </ul>
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </text>
+
+                                End If
+
+                            </a>
+                        </div>
+
+                    </li>
+                </text>
+            Next
+
         </ul>
     </div>
 

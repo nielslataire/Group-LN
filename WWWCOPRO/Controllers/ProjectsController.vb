@@ -25,7 +25,20 @@ Namespace Controllers
 
                 model.News = service.GetNewsByProjectId(id).Values.OrderByDescending(Function(m) m.NewsDate).ToList
                 'sort news
-
+                'Units
+                Dim unitservice = ServiceFactory.GetUnitService
+                Dim response3 = unitservice.GetUnitsWithDetailsByProjectId(model.Data.Id)
+                If (response3.Success) Then model.Units = response3.Values
+                'Docs
+                model.Docs = service.GetProjectDocs(id, ProjectDocType.Sales).Values
+                If model.Docs Is Nothing Then model.Docs = New List(Of ProjectDocBO)
+                model.BrochureDoc = model.Docs.FirstOrDefault(Function(d) d.IsBrochure)
+                'Salessettings
+                model.SalesSetttings = service.GetSalesSettings(model.Data.Id).Value
+                If model.SalesSetttings Is Nothing Then
+                    model.SalesSetttings = New ProjectSalesSettingsBO
+                    model.SalesSetttings.SaleVisible = False
+                End If
                 'Developer
                 Dim companyservice = ServiceFactory.GetCompanyService
                 Dim response2 = companyservice.GetCompanyByID(model.Data.Developer.ID)
@@ -46,19 +59,37 @@ Namespace Controllers
                 response2 = companyservice.GetCompanyByID(model.Data.EpbReporter.ID)
                 If (response.Success) Then model.EpbReporter = response2.Values.FirstOrDefault
                 ViewData("title") = "Group LN - " & model.Data.Name
+                ViewBag.Metatitle = "Group LN - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
+                ViewBag.MetaSubtitle = "Vanaf " & FormatCurrency(model.SalesData.StartingPrice, 0,,, TriState.True)
+                ViewBag.MetaDescription = model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
+                ViewBag.MetaURL = "http://www.groupln.be/woonprojecten/" & model.Data.Slug
+                ViewBag.MetaImageUrl = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & model.Data.DefaultPicture.Name
                 Return View("Detail", model)
             Else
                 ViewData("LatestNews") = GetLatestNews(4)
                 If Type = ProjectType.Woonproject Then
                     ViewData("Title") = "Group LN - Woonprojecten"
+                    ViewBag.Metatitle = "Group LN - Woonprojecten"
+                    ViewBag.MetaDescription = "Woonprojecten"
+                    ViewBag.MetaURL = "http://www.groupln.be/woonprojecten"
+                    ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
                 Else
                     ViewData("Title") = "Group LN - Commercieel"
+                    ViewBag.Metatitle = "Group LN - Commercieel"
+                    ViewBag.MetaDescription = "Commercieel"
+                    ViewBag.MetaURL = "http://www.groupln.be/Commercieel"
+                    ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
                 End If
 
                 Dim model As New ProjectModel
                 Dim service = ServiceFactory.GetProjectService
-                Dim response = service.GetProjectsForList(Type, 2)
+                Dim response = service.GetProjectsForList(Type, 2,, TrimCommercialText:=True)
                 If (response.Success) Then model.Projects = response.Values
+                model.Projects = model.Projects.OrderByDescending(Function(m) m.Id).ToList
+                Dim response2 = service.GetProjectSalesData(model.Projects.Select(Function(m) m.Id).ToList())
+                If (response2.Success) Then model.SalesData = response2.Values
+                Dim response3 = service.GetSalesSettings(model.Projects.Select(Function(m) m.Id).ToList())
+                If (response3.Success) Then model.SalesSettings = response3.Values
                 Return View(model)
             End If
 
@@ -76,8 +107,23 @@ Namespace Controllers
             model.Data.Pictures = model.Data.Pictures.OrderByDescending(Function(m) m.DateTimeUploaded).ToList
 
             model.News = service.GetNewsByProjectId(model.Data.Id).Values.OrderByDescending(Function(m) m.NewsDate).ToList
-            'sort news
-
+            'Docs
+            model.Docs = service.GetProjectDocs(model.Data.Id, ProjectDocType.Sales).Values
+            If model.Docs Is Nothing Then model.Docs = New List(Of ProjectDocBO)
+            model.BrochureDoc = model.Docs.FirstOrDefault(Function(d) d.IsBrochure)
+            Dim unitservice = ServiceFactory.GetUnitService
+            Dim response3 = unitservice.GetUnitsWithDetailsByProjectId(model.Data.Id)
+            If (response3.Success) Then model.Units = response3.Values
+            Dim ids As New List(Of Integer)
+            ids.Add(model.Data.Id)
+            'Salesdata
+            model.SalesData = service.GetProjectSalesData(ids).Values.FirstOrDefault
+            'Salessettings
+            model.SalesSetttings = service.GetSalesSettings(model.Data.Id).Value
+            If model.SalesSetttings Is Nothing Then
+                model.SalesSetttings = New ProjectSalesSettingsBO
+                model.SalesSetttings.SaleVisible = False
+            End If
             'Developer
             Dim companyservice = ServiceFactory.GetCompanyService
             Dim response2 = companyservice.GetCompanyByID(model.Data.Developer.ID)
@@ -98,16 +144,252 @@ Namespace Controllers
             response2 = companyservice.GetCompanyByID(model.Data.EpbReporter.ID)
             If (response.Success) Then model.EpbReporter = response2.Values.FirstOrDefault
             ViewData("title") = "Group LN - " & model.Data.Name
+            'Metatags
+            ViewBag.Metatitle = "Group LN - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
+            ViewBag.MetaSubtitle = "Vanaf " & FormatCurrency(model.SalesData.StartingPrice, 0,,, TriState.True)
+            ViewBag.MetaDescription = model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
+            ViewBag.MetaURL = "http://www.groupln.be/woonprojecten/" & model.Data.Slug
+            ViewBag.MetaImageUrl = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & model.Data.DefaultPicture.Name
             Return View("Detail", model)
 
 
         End Function
         Function Detail(model As ProjectDetailModel) As ActionResult
-          
+
 
             Return View(model)
 
         End Function
+
+        <HttpGet>
+        Function SendPlan(id As Integer) As ActionResult
+            Dim viewModel = New ProjectSendPlanModel
+            viewModel.UnitId = id
+            Return PartialView("ModalSendPlan", viewModel)
+        End Function
+        <HttpPost>
+        Function SendPlan(model As ProjectSendPlanModel) As PartialViewResult
+            If (Not ModelState.IsValid) Then Return PartialView("ModalFailPlan")
+            If (ModelState.IsValid) Then
+                Dim unit As New UnitBO
+                Dim project As New ProjectBO
+                Dim service = ServiceFactory.GetUnitService
+                Dim response = service.GetUnitById(model.UnitId)
+                If response.Success Then unit = response.Value
+                Dim service2 = ServiceFactory.GetProjectService
+                Dim response2 = service2.GetProjectByID(unit.ProjectId)
+                If response2.Success Then project = response2.Value
+
+                'Mail
+                Dim email As Object = New Email("PlanMail")
+                email.[To] = model.Email
+                email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+                email.Title = project.CommercialTitleNL
+                email.Text = project.CommercialTextNL
+                email.Image = project.DefaultPicture.Name
+                email.Imagecaption = project.DefaultPicture.Caption
+                email.Slug = project.Slug
+                email.EmailTitle = "Group LN - Uw planaanvraag"
+                email.Firstname = model.Firstname
+                email.Name = model.Name
+                Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "Plans/"
+                Dim planUrl = dir & unit.Plan
+                Dim cd As System.Net.Mime.ContentDisposition
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
+                Using webClient As New System.Net.WebClient
+                    Dim planBytes = webClient.DownloadData(planUrl)
+                    Using planStream As New MemoryStream(planBytes)
+                        Dim att As New System.Net.Mail.Attachment(planStream, "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString)
+                        cd = att.ContentDisposition
+                        cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
+                        email.Attach(att)
+                        email.Send()
+                    End Using
+                End Using
+                Dim internalemail As Object = New Email("PlanInternalMail")
+                internalemail.[To] = model.Email
+                internalemail.[From] = "niels.lataire@groupln.be"
+                internalemail.Unit = unit.Type.Name & " " & unit.Name
+                internalemail.Project = project.Name
+                internalemail.Phone = model.Phone
+                internalemail.Name = model.Name
+                internalemail.Firstname = model.Firstname
+                internalemail.RequestType = "planaanvraag"
+                internalemail.RequestTitle = "Nieuwe planaanvraag"
+                internalemail.Send()
+                Return PartialView("ModalSuccesPlan")
+            Else
+                Return PartialView("ModalFailPlan")
+            End If
+        End Function
+        <HttpGet>
+        Function SendDoc(id As Integer) As ActionResult
+            Dim viewModel = New ProjectSendDocModel
+            viewModel.DocId = id
+            Return PartialView("ModalSendDoc", viewModel)
+        End Function
+        <HttpGet>
+        Function SendBrochure(id As Integer) As ActionResult
+            Dim viewModel = New ProjectSendBrochureModel
+            viewModel.DocId = id
+            Return PartialView("ModalSendBrochure", viewModel)
+        End Function
+        <HttpPost>
+        Function SendDoc(model As ProjectSendDocModel) As PartialViewResult
+            If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
+            If (ModelState.IsValid) Then
+                Dim Doc As New ProjectDocBO
+                Dim project As New ProjectBO
+
+                Dim service2 = ServiceFactory.GetProjectService
+                Doc = service2.GetProjectDoc(model.DocId).Value
+                If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+                Dim response2 = service2.GetProjectByID(Doc.ProjectId)
+                If response2.Success Then project = response2.Value
+
+                'Mail
+                Dim email As Object = New Email("PlanMail")
+                email.[To] = model.Email
+                email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+                email.Title = project.CommercialTitleNL
+                email.Text = project.CommercialTextNL
+                email.Image = project.DefaultPicture.Name
+                email.Imagecaption = project.DefaultPicture.Caption
+                email.Slug = project.Slug
+                email.EmailTitle = "Group LN - Uw documentaanvraag"
+                email.Firstname = model.Firstname
+                email.Name = model.Name
+                Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "docs/"
+                Dim docUrl = dir & Doc.Filename
+                Dim cd As System.Net.Mime.ContentDisposition
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
+                Using webClient As New System.Net.WebClient
+                    Dim docBytes = webClient.DownloadData(docUrl)
+                    Using docStream As New MemoryStream(docBytes)
+                        Dim att As New System.Net.Mail.Attachment(docStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+                        cd = att.ContentDisposition
+                        cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+                        email.Attach(att)
+                        email.Send()
+                    End Using
+                End Using
+                Dim internalemail As Object = New Email("PlanInternalMail")
+                internalemail.[To] = model.Email
+                internalemail.[From] = "niels.lataire@groupln.be"
+                internalemail.Project = project.Name
+                internalemail.Phone = model.Phone
+                internalemail.Name = model.Name
+                internalemail.Firstname = model.Firstname
+                internalemail.RequestType = "documentaanvraag"
+                internalemail.RequestTitle = "Nieuwe documentaanvraag"
+                internalemail.Send()
+                Return PartialView("ModalSuccesDoc")
+            Else
+                Return PartialView("ModalFailDoc")
+            End If
+        End Function
+        <HttpPost>
+        Function SendBrochure(model As ProjectSendBrochureModel) As PartialViewResult
+            If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
+            If (ModelState.IsValid) Then
+                Dim Doc As New ProjectDocBO
+                Dim project As New ProjectBO
+
+                Dim service2 = ServiceFactory.GetProjectService
+                Doc = service2.GetProjectDoc(model.DocId).Value
+                If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+                Dim response2 = service2.GetProjectByID(Doc.ProjectId)
+                If response2.Success Then project = response2.Value
+
+                Dim email As Object = New Email("PlanMail")
+                email.[To] = model.Email
+                email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+                email.Title = project.CommercialTitleNL
+                email.Text = project.CommercialTextNL
+                email.Image = project.DefaultPicture.Name
+                email.Imagecaption = project.DefaultPicture.Caption
+                email.Slug = project.Slug
+                email.EmailTitle = "Group LN - Uw brochureaanvraag"
+                email.Firstname = model.Firstname
+                email.Name = model.Name
+                email.Phone = model.Phone
+                Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "docs/"
+                Dim brochureUrl = dir & Doc.Filename
+                Dim cd As System.Net.Mime.ContentDisposition
+                System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
+                Using webClient As New System.Net.WebClient
+                    Dim brochureBytes = webClient.DownloadData(brochureUrl)
+                    Using brochureStream As New MemoryStream(brochureBytes)
+                        Dim att As New System.Net.Mail.Attachment(brochureStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+                        cd = att.ContentDisposition
+                        cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+                        email.Attach(att)
+                        email.Send()
+                    End Using
+                End Using
+
+                Dim internalemail As Object = New Email("PlanInternalMail")
+                internalemail.[To] = model.Email
+                internalemail.[From] = "niels.lataire@groupln.be"
+                internalemail.Project = project.Name
+                internalemail.Phone = model.Phone
+                internalemail.Name = model.Name
+                internalemail.Firstname = model.Firstname
+                internalemail.RequestType = "brochureaanvraag"
+                internalemail.RequestTitle = "Nieuwe brochureaanvraag"
+                internalemail.Send()
+                Return PartialView("ModalSuccesDoc")
+            Else
+                Return PartialView("ModalFailDoc")
+            End If
+        End Function
+        <HttpGet>
+        Function SendMail(id As Integer) As ActionResult
+            Dim viewModel = New ProjectSendMailModel
+            viewModel.ProjectId = id
+            Return PartialView("ModalSendMail", viewModel)
+        End Function
+        <HttpPost>
+        Function SendMail(model As ProjectSendMailModel) As PartialViewResult
+            If (Not ModelState.IsValid) Then Return PartialView("ModalFailMail")
+            If (ModelState.IsValid) Then
+                Dim project As New ProjectBO
+                Dim service2 = ServiceFactory.GetProjectService
+                Dim response2 = service2.GetProjectByID(model.ProjectId)
+                If response2.Success Then project = response2.Value
+
+                'Mail
+                Dim email As Object = New Email("ProjectMail")
+                email.[To] = model.Email
+                email.[From] = "niels.lataire@groupln.be"
+                email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+                email.Title = project.CommercialTitleNL
+                email.Text = project.CommercialTextNL
+                email.Image = project.DefaultPicture.Name
+                email.Imagecaption = project.DefaultPicture.Caption
+                email.Slug = project.Slug
+                email.EmailTitle = "Group LN - Uw informatieaanvraag"
+                email.Phone = model.Phone
+                email.Firstname = model.Firstname
+                email.Name = model.Name
+                email.Question = model.Question
+                email.Send()
+                'Internalmail
+                Dim internalemail As Object = New Email("ProjectInternalMail")
+                internalemail.[To] = model.Email
+                internalemail.[From] = "niels.lataire@groupln.be"
+                internalemail.Project = project.Name
+                internalemail.Phone = model.Phone
+                internalemail.Name = model.Name
+                internalemail.Firstname = model.Firstname
+                internalemail.Question = model.Question
+                internalemail.Send()
+                Return PartialView("ModalSuccesMail")
+            Else
+                Return PartialView("ModalFailMail")
+            End If
+        End Function
+
         <Route("Projects/Photos/{slug}", name:="ProjectPhotosBySlug")>
         Function Photos(slug As String) As ActionResult
 
