@@ -79,6 +79,10 @@ End Using
                     phone: $("#txtPhone").val()
                 });
             }
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                event: 'download_form_submit'
+            });
             $button.prop("disabled", true);
             $spinner.show();
             $icon.hide();

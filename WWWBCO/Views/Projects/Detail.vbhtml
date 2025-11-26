@@ -239,6 +239,7 @@ end section
 
                         </tbody>
                     </table>
+
                     @If Not Model.BrochureDoc Is Nothing AndAlso Model.BrochureDoc.IsBrochure Then
                         @<text>
                             <div class="text-center mb-md" style="margin-left: 40px; margin-right: 40px; margin-top: 20px; margin-bottom: 20px;">
@@ -591,23 +592,14 @@ end section
         return saved;
     }
 
-    function autoSubmitIfComplete($container, saved) {
-        if (!saved || !saved.firstname || !saved.name || !saved.email || !saved.phone) {
-            return;
-        }
-        var $form = $container.find('form');
-        if ($form.length) {
-            $form.trigger('submit');
-        }
-    }
+
 
     $('.btnsendplan').click(function () {
         var url = "/Projects/SendPlan"; // the url to the controller
         var id = $(this).attr('data-id'); // the id that's given to each button in the list
         $.get(url + '/' + id, function (data) {
             $('#send-plan-container').html(data);
-            var saved = applySavedContact($('#send-plan-container'));
-            autoSubmitIfComplete($('#send-plan-container'), saved);
+            applySavedContact($('#send-plan-container'));
         });
     });
     $('.btnsenddoc').click(function () {
@@ -615,8 +607,7 @@ end section
         var id = $(this).attr('data-id'); // the id that's given to each button in the list
         $.get(url + '/' + id, function (data) {
             $('#send-doc-container').html(data);
-            var saved = applySavedContact($('#send-doc-container'));
-            autoSubmitIfComplete($('#send-doc-container'), saved);
+            applySavedContact($('#send-doc-container'));
         });
     });
     $('.btnsendbrochure').click(function () {
@@ -624,8 +615,8 @@ end section
         var id = $(this).attr('data-id');
         $.get(url + '/' + id, function (data) {
             $('#send-brochure-container').html(data);
-            var saved = applySavedContact($('#send-brochure-container'));
-            autoSubmitIfComplete($('#send-brochure-container'), saved);
+            applySavedContact($('#send-brochure-container'));
+
         });
     });
     $('.btnsendmail').click(function () {
@@ -635,21 +626,29 @@ end section
             $('#send-mail-container').html(data);
         });
     });
+    function openBrochureFromHash() {
+        if (window.location.hash !== "#brochure" || !$('.btnsendbrochure').length) {
+            return;
+        }
+
+        var id = $('.btnsendbrochure').attr('data-id');
+        $.get('/Projects/SendBrochure/' + id, function (data) {
+            $('#send-brochure-container').html(data);
+            applySavedContact($('#send-brochure-container'));
+            $.magnificPopup.open({
+                items: {
+                    src: '#modalsendbrochure'
+                },
+                type: 'inline'
+            });
+        });
+    }
     $(document).ready(function () {
         $('a[href="' + this.location.pathname + '"]').parent().addClass('active');
-        if (window.location.hash === "#brochure" && $('.btnsendbrochure').length) {
-            var id = $('.btnsendbrochure').attr('data-id');
-            $.get('/Projects/SendBrochure/' + id, function (data) {
-                $('#send-brochure-container').html(data);
-                $.magnificPopup.open({
-                    items: {
-                        src: '#modalsendbrochure'
-                    },
-                    type: 'inline'
-                });
-            });
-        }
+        openBrochureFromHash();
     });
+
+    $(window).on('hashchange', openBrochureFromHash);
 
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>
