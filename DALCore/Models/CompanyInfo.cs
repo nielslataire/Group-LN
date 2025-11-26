@@ -83,5 +83,7 @@ public partial class CompanyInfo
 
     public virtual ICollection<Activity> Activity { get; set; } = new List<Activity>();
 
+    public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
+
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
 }

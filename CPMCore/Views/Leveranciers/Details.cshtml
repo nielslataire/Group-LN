@@ -47,19 +47,17 @@
         </div>
     </div>
     <div class="col-sm-auto text-sm-end">
-        <a href="@Url.Action("Edit", "Leveranciers", new { id = Model.Id })" class="btn btn-primary btn-md me-2">
-            <i class="bx bx-pencil me-1"></i> Bewerken
-        </a>
-        @if (canDelete)
-        {
-            using (Html.BeginForm("Delete", "Leveranciers", new { id = Model.Id }, FormMethod.Post, false, new { id = "delete-supplier-form", onsubmit = "return confirm('Ben je zeker dat je deze leverancier wil verwijderen?');" }))
+        <div class="btn-group" role="group" aria-label="Leverancier acties">
+            <a href="@Url.Action("Edit", "Leveranciers", new { id = Model.Id })" class="btn btn-primary btn-md px-3 me-1">
+                <i class="bx bx-pencil me-1"></i>Bewerken
+            </a>
+            @if (canDelete)
             {
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger btn-md">
-                    <i class="bx bx-trash me-1"></i> Verwijderen
-                </button>
+                <a href="#modaldeletesupplier" id="delete-supplier-button" data-id="@Model.Id" class="btn btn-danger btn-md px-3">
+                    <i class="bx bx-trash me-1"></i>Verwijderen
+                </a>
             }
-        }
+        </div>
     </div>
 </div>
 
@@ -336,33 +334,64 @@
         }
         else
         {
-            <p class="mb-0 text-muted">Er zijn geen contracten gekoppeld.</p>
+            <p class="mb-0 text-muted">Er zijn geen contracten gekoppeld. </p>
         }
     </div>
 </section>
 
-<script>
-    (function () {
-        const sectionButtons = document.querySelectorAll('[data-section-toggle]');
-        const sections = {
-            algemeen: document.getElementById('supplier-general-section'),
-            afdelingen: document.getElementById('supplier-departments-section'),
-            contacten: document.getElementById('supplier-contacts-section'),
-            contracten: document.getElementById('supplier-contracts-section')
-        };
+<div id="modaldeletesupplier" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-supplier-container"></div>
+</div>
+@section PageScripts {
+    <script>
+        (function () {
+            const sectionButtons = document.querySelectorAll('[data-section-toggle]');
+            const sections = {
+                algemeen: document.getElementById('supplier-general-section'),
+                afdelingen: document.getElementById('supplier-departments-section'),
+                contacten: document.getElementById('supplier-contacts-section'),
+                contracten: document.getElementById('supplier-contracts-section')
+            };
 
-        sectionButtons.forEach((button) => {
-            button.addEventListener('click', (event) => {
-                event.preventDefault();
+            sectionButtons.forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
 
-                const target = button.getAttribute('data-section-toggle');
+                    const target = button.getAttribute('data-section-toggle');
 
-                sectionButtons.forEach((btn) => btn.classList.remove('active'));
-                button.classList.add('active');
+                    sectionButtons.forEach((btn) => btn.classList.remove('active'));
+                    button.classList.add('active');
 
-                Object.values(sections).forEach((section) => section?.classList.add('d-none'));
-                sections[target]?.classList.remove('d-none');
+                    Object.values(sections).forEach((section) => section?.classList.add('d-none'));
+                    sections[target]?.classList.remove('d-none');
+                });
+            });
+        })();
+
+        $(function () {
+            const deleteModalSelector = '#modaldeletesupplier';
+            const deleteContainerSelector = '#delete-supplier-container';
+            const deleteUrl = '@Url.Action("ModalDelete", "Leveranciers")';
+
+            $(document).on('click', '#delete-supplier-button', function (e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+
+                $(deleteContainerSelector).empty();
+
+                $.get(`${deleteUrl}/${id}`, function (data) {
+                    $(deleteContainerSelector).html(data);
+
+                    $.magnificPopup.open({
+                        items: {
+                            src: deleteModalSelector
+                        },
+                        type: 'inline',
+                        preloader: false,
+                        focus: '#delete-supplier-container'
+                    });
+                });
             });
         });
-    })();
-</script>
+    </script>
+}

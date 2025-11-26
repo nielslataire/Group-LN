@@ -147,6 +147,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[CompanyIssuerCompany]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[CompanyLegalForm]",
          "ObjectType": 0
       },

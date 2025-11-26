@@ -852,6 +852,22 @@ public partial class cpmRunningContext : DbContext
                         j.IndexerProperty<int>("ActivityId").HasColumnName("ActivityID");
                     });
 
+            entity.HasMany(d => d.IssuerCompany).WithMany(p => p.Company)
+                .UsingEntity<Dictionary<string, object>>(
+                    "CompanyIssuerCompany",
+                    r => r.HasOne<IssuerCompany>().WithMany()
+                        .HasForeignKey("IssuerCompanyId")
+                        .HasConstraintName("FK_CompanyIssuerCompany_IssuerCompany"),
+                    l => l.HasOne<CompanyInfo>().WithMany()
+                        .HasForeignKey("CompanyId")
+                        .HasConstraintName("FK_CompanyIssuerCompany_CompanyInfo"),
+                    j =>
+                    {
+                        j.HasKey("CompanyId", "IssuerCompanyId");
+                        j.HasIndex(new[] { "IssuerCompanyId" }, "IX_CompanyIssuerCompany_IssuerCompanyId");
+                        j.IndexerProperty<int>("CompanyId").HasColumnName("CompanyID");
+                    });
+
             entity.HasMany(d => d.Project).WithMany(p => p.Company)
                 .UsingEntity<Dictionary<string, object>>(
                     "CustomerProject",

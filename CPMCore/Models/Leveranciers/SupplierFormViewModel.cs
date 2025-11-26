@@ -7,6 +7,8 @@ namespace CPMCore.Models.Leveranciers;
 public class SupplierFormViewModel
 {
     public int? Id { get; set; }
+    [Display(Name = "Facturatiebedrijven")]
+    public List<int> SelectedIssuerCompanyIds { get; set; } = new();
 
     [Required(ErrorMessage = "Bedrijfsnaam is verplicht")]
     [Display(Name = "Bedrijfsnaam")]
@@ -74,6 +76,7 @@ public class SupplierFormViewModel
     public IReadOnlyList<ActivityFilterItemViewModel> Activities { get; set; } = new List<ActivityFilterItemViewModel>();
 
     public IReadOnlyList<CountryOptionViewModel> Countries { get; set; } = new List<CountryOptionViewModel>();
+    public IReadOnlyList<IssuerCompanyOptionViewModel> IssuerCompanies { get; set; } = new List<IssuerCompanyOptionViewModel>();
 
     public IReadOnlyList<LegalFormOptionViewModel> LegalForms { get; set; } = new List<LegalFormOptionViewModel>();
 
@@ -85,7 +88,11 @@ public class SupplierFormViewModel
 
     public string Subtitle => Id.HasValue ? "Pas de leverancier aan" : "Voeg een nieuwe leverancier toe";
 }
-
+public class IssuerCompanyOptionViewModel
+{
+    public int Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+}
 public class CountryOptionViewModel
 {
     public int Id { get; init; }

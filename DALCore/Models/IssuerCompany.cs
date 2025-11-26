@@ -104,4 +104,6 @@ public partial class IssuerCompany
     public virtual ICollection<Invoices> Invoices { get; set; } = new List<Invoices>();
 
     public virtual IssuerBankAccount IssuerBankAccount { get; set; }
+
+    public virtual ICollection<CompanyInfo> Company { get; set; } = new List<CompanyInfo>();
 }

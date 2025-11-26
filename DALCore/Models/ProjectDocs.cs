@@ -23,6 +23,8 @@ public partial class ProjectDocs
 
     public DateOnly? Date { get; set; }
 
+    public bool IsBrochure { get; set; }
+
     public virtual ClientAccount ClientAccount { get; set; }
 
     public virtual ICollection<InvoicingPaymentStages> InvoicingPaymentStages { get; set; } = new List<InvoicingPaymentStages>();

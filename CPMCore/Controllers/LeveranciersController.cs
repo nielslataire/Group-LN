@@ -86,6 +86,29 @@ public class LeveranciersController : BaseController
             .ToListAsync(ct);
         model.LegalForms = legalForms;
 
+        var issuerCompanies = await _db.IssuerCompany
+            .AsNoTracking()
+            .Where(i => i.IsActive)
+            .OrderBy(i => i.Name)
+            .Select(i => new IssuerCompanyOptionViewModel
+            {
+                Id = i.Id,
+                Name = i.Name
+            })
+            .ToListAsync(ct);
+
+        model.IssuerCompanies = issuerCompanies;
+
+        model.SelectedIssuerCompanyIds ??= new List<int>();
+
+        if (!model.SelectedIssuerCompanyIds.Any() && issuerCompanies.Any())
+        {
+            model.SelectedIssuerCompanyIds = issuerCompanies
+                .Take(1)
+                .Select(i => i.Id)
+                .ToList();
+        }
+
         if (!model.SelectedCountryId.HasValue && countries.Any())
         {
             var defaultCountry = countries
@@ -143,6 +166,29 @@ public class LeveranciersController : BaseController
         entity.AttachUblByDefault = model.AttachUblByDefault;
         entity.PostCodeId = model.SelectedPostalCodeId;
         entity.Weburl = model.WebUrl;
+    }
+    private async Task AssignIssuerCompaniesAsync(CompanyInfo entity, IEnumerable<int> selectedIssuerCompanyIds, CancellationToken ct)
+    {
+        entity.IssuerCompanies.Clear();
+
+        var issuerIds = selectedIssuerCompanyIds
+            ?.Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        if (issuerIds == null || issuerIds.Count == 0)
+        {
+            return;
+        }
+
+        var issuers = await _db.IssuerCompany
+            .Where(i => issuerIds.Contains(i.Id))
+            .ToListAsync(ct);
+
+        foreach (var issuer in issuers)
+        {
+            entity.IssuerCompanies.Add(issuer);
+        }
     }
 
     private async Task PopulateSelectionsAsync(SupplierFormViewModel model, CancellationToken ct)
@@ -723,6 +769,8 @@ public class LeveranciersController : BaseController
 
         entity.Type = await ResolveLegalFormAbbreviation(model.SelectedLegalFormId, ct);
 
+        _db.CompanyInfo.Add(entity);
+
         if (model.SelectedActivityIds != null && model.SelectedActivityIds.Any())
         {
             entity.Activity = await _db.Activity
@@ -730,7 +778,8 @@ public class LeveranciersController : BaseController
                 .ToListAsync(ct);
         }
 
-        _db.CompanyInfo.Add(entity);
+        await AssignIssuerCompaniesAsync(entity, model.SelectedIssuerCompanyIds, ct);
+
         await _db.SaveChangesAsync(ct);
 
         var departments = await PersistDepartmentsAsync(entity.CompanyId, model.Departments ?? Enumerable.Empty<DepartmentInputViewModel>(), ct);
@@ -744,6 +793,7 @@ public class LeveranciersController : BaseController
     {
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
+            .Include(c => c.IssuerCompanies)
             .Include(c => c.CompanyDepartments)
             .ThenInclude(d => d.Postcode)
             .Include(c => c.CompanyContacts)
@@ -783,6 +833,7 @@ public class LeveranciersController : BaseController
             RequiresDigitalInvoice = entity.RequiresDigitalInvoice,
             AttachUblByDefault = entity.AttachUblByDefault,
             SelectedActivityIds = entity.Activity.Select(a => a.ActivityId).ToList(),
+            SelectedIssuerCompanyIds = entity.IssuerCompanies.Select(i => i.Id).ToList(),
             WebUrl = entity.Weburl,
             Departments = entity.CompanyDepartments
                 .Select(d => new DepartmentInputViewModel
@@ -846,6 +897,7 @@ public class LeveranciersController : BaseController
 
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
+            .Include(c => c.IssuerCompanies)
             .Include(c => c.CompanyDepartments)
             .Include(c => c.CompanyContacts)
             .FirstOrDefaultAsync(c => c.CompanyId == id, ct);
@@ -875,6 +927,8 @@ public class LeveranciersController : BaseController
                 entity.Activity.Add(activity);
             }
         }
+        
+        await AssignIssuerCompaniesAsync(entity, model.SelectedIssuerCompanyIds, ct);
 
         if (entity.CompanyContacts.Any())
         {
