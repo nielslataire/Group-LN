@@ -169,7 +169,7 @@ public class LeveranciersController : BaseController
     }
     private async Task AssignIssuerCompaniesAsync(CompanyInfo entity, IEnumerable<int> selectedIssuerCompanyIds, CancellationToken ct)
     {
-        entity.IssuerCompanies.Clear();
+        entity.IssuerCompany.Clear();
 
         var issuerIds = selectedIssuerCompanyIds
             ?.Where(id => id > 0)
@@ -187,7 +187,7 @@ public class LeveranciersController : BaseController
 
         foreach (var issuer in issuers)
         {
-            entity.IssuerCompanies.Add(issuer);
+            entity.IssuerCompany.Add(issuer);
         }
     }
 
@@ -793,7 +793,7 @@ public class LeveranciersController : BaseController
     {
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
-            .Include(c => c.IssuerCompanies)
+            .Include(c => c.IssuerCompany)
             .Include(c => c.CompanyDepartments)
             .ThenInclude(d => d.Postcode)
             .Include(c => c.CompanyContacts)
@@ -833,7 +833,7 @@ public class LeveranciersController : BaseController
             RequiresDigitalInvoice = entity.RequiresDigitalInvoice,
             AttachUblByDefault = entity.AttachUblByDefault,
             SelectedActivityIds = entity.Activity.Select(a => a.ActivityId).ToList(),
-            SelectedIssuerCompanyIds = entity.IssuerCompanies.Select(i => i.Id).ToList(),
+            SelectedIssuerCompanyIds = entity.IssuerCompany.Select(i => i.Id).ToList(),
             WebUrl = entity.Weburl,
             Departments = entity.CompanyDepartments
                 .Select(d => new DepartmentInputViewModel
@@ -897,7 +897,7 @@ public class LeveranciersController : BaseController
 
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
-            .Include(c => c.IssuerCompanies)
+            .Include(c => c.IssuerCompany)
             .Include(c => c.CompanyDepartments)
             .Include(c => c.CompanyContacts)
             .FirstOrDefaultAsync(c => c.CompanyId == id, ct);

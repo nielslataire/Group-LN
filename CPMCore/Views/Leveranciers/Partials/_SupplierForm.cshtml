@@ -68,14 +68,13 @@
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end">@Html.LabelFor(m => m.SelectedIssuerCompanyIds)</label>
                                     <div class="col-lg-7 col-xl-8">
-                                        <select id="SelectedIssuerCompanyIds" name="SelectedIssuerCompanyIds" class="form-control form-control-modern" multiple="multiple" size="@(Model.IssuerCompanies.Count == 0 ? 3 : Math.Min(Model.IssuerCompanies.Count, 6))">
+                                        <select id="SelectedIssuerCompanyIds" name="SelectedIssuerCompanyIds" class="form-control form-control-modern" multiple="multiple" data-plugin-multiselect data-plugin-options='{"maxHeight": 200, "includeSelectAllOption": true, "buttonWidth": "100%"}'>
                                             @foreach (var issuer in Model.IssuerCompanies)
                                             {
                                                 var selected = Model.SelectedIssuerCompanyIds != null && Model.SelectedIssuerCompanyIds.Contains(issuer.Id);
                                                 <option value="@issuer.Id" selected="@(selected ? "selected" : null)">@issuer.Name</option>
                                             }
                                         </select>
-                                        <small class="text-muted d-block mt-1">Selecteer één of meerdere facturatiebedrijven.</small>
                                         @Html.ValidationMessageFor(m => m.SelectedIssuerCompanyIds, "", new { @class = "text-danger" })
                                     </div>
                                 </div>
