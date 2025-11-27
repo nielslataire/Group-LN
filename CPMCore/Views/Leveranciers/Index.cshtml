@@ -54,14 +54,14 @@
         <h5 class="mb-4 mt-0">Beheer en doorzoek alle leveranciers</h5>
     </div>
     <div class="col-sm-auto px-0">
-        <a href="@Url.Action("Create", "Leveranciers")" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
+        <a href="@Url.Action("Create", "Leveranciers", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
     </div>
 </div>
 
 <div class="card card-modern mb-4">
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-lg-4">
                 <label class="form-label mb-1" for="search-term">Zoek leverancier</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bx bx-search"></i></span>
@@ -71,7 +71,22 @@
                            placeholder="Zoek je leverancier ...">
                 </div>
             </div>
-            <div class="col-lg-6">
+             <div class="col-lg-4">
+                <label class="form-label mb-1" for="issuer-filter">Filter op facturatiebedrijf</label>
+                <select id="issuer-filter" class="form-select form-select-modern">
+                    <option value="">Alle bedrijven</option>
+
+                    @foreach (var issuer in Model.IssuerCompanies)
+                    {
+                        var selected = issuer.Id == Model.SelectedIssuerCompanyId ? "selected" : null;
+
+                        <option value="@issuer.Id" selected="@selected">
+                            @issuer.Name
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-lg-4">
                 <label class="form-label mb-1" for="activity-filter">Filter op activiteit</label>
 
                 <select id="activity-filter" multiple data-plugin-selectTwo class="form-control form-control-modern populate">
@@ -114,7 +129,8 @@
                     {
                         var phone = supplier.PrimaryPhone;
                         var activityData = string.Join(",", supplier.ActivityIds);
-                        <tr data-activities="@activityData">
+                        var issuerData = string.Join(",", supplier.IssuerCompanyIds);
+                        <tr data-activities="@activityData" data-issuers="@issuerData">
                             <td>
                                 <a href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })" class="text-decoration-none text-reset fw-semibold">
                                     @supplier.Name
@@ -195,6 +211,7 @@
             }
 
             let selectedActivityIds = [];
+            let selectedIssuerId = document.getElementById('issuer-filter')?.value || '';
 
             const suppliersTableElement = document.getElementById('datatable-suppliers');
 
@@ -212,6 +229,21 @@
                     .toString()
                     .split(',')
                     .filter(Boolean);
+
+                    if (selectedIssuerId) {
+                    const rowIssuers = (rowElement?.dataset.issuers || '')
+                        .toString()
+                        .split(',')
+                        .filter(Boolean);
+
+                    if (!rowIssuers.includes(selectedIssuerId)) {
+                        return false;
+                    }
+                }
+
+                if (!selectedActivityIds.length) {
+                    return true;
+                }
 
                 if (!rowActivities.length) {
                     return false;
@@ -264,6 +296,12 @@
                 selectedActivityIds = $(this).val() || [];
                 table.draw();
             });
+
+            $('#issuer-filter').on('change', function () {
+                selectedIssuerId = $(this).val() || '';
+                table.draw();
+            });
+
 
             const deleteModalSelector = '#modaldeletesupplier';
             const deleteContainerSelector = '#delete-supplier-container';

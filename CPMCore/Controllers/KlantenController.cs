@@ -52,14 +52,34 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(CancellationToken ct)
+        public async Task<IActionResult> Index(int? issuerCompanyId, CancellationToken ct)
         {
-            var clients = await _db.ClientAccount
+            var issuerCompanies = await _db.IssuerCompany
+                .AsNoTracking()
+                .Where(i => i.IsActive)
+                .OrderBy(i => i.Name)
+                .Select(i => new IssuerCompanyOptionViewModel
+                {
+                    Id = i.Id,
+                    Name = i.Name
+                })
+                .ToListAsync(ct);
+
+            var clientsQuery = _db.ClientAccount
                 .Include(c => c.PostalCode)
                 .Include(c => c.ClientContacts)
                 .Include(c => c.IssuerCompany)
                 .AsNoTracking()
-                .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName)
+                .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
+
+            if (issuerCompanyId.HasValue)
+            {
+                clientsQuery = clientsQuery
+                    .Where(c => c.IssuerCompany.Any(i => i.Id == issuerCompanyId))
+                    .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
+            }
+
+            var clients = await clientsQuery
                 .Select(c => new ClientListItemViewModel
                 {
                     Id = c.Id,
@@ -84,6 +104,9 @@ namespace CPMCore.Controllers
                     IssuerCompanies = c.IssuerCompany
                         .Select(i => i.Name)
                         .ToList(),
+                    IssuerCompanyIds = c.IssuerCompany
+                        .Select(i => i.Id)
+                        .ToList(),
 
                     ContactCount = c.ClientContacts.Count
                 })
@@ -92,7 +115,9 @@ namespace CPMCore.Controllers
 
             var model = new ClientIndexViewModel
             {
-                Clients = clients
+                Clients = clients,
+                IssuerCompanies = issuerCompanies,
+                SelectedIssuerCompanyId = issuerCompanyId
             };
 
             return View(model);
@@ -170,9 +195,14 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Create(CancellationToken ct)
+        public async Task<IActionResult> Create(int? issuerCompanyId, CancellationToken ct)
         {
-            var model = new ClientFormViewModel();
+            var model = new ClientFormViewModel
+            {
+                SelectedIssuerCompanyIds = issuerCompanyId.HasValue
+                    ? new List<int> { issuerCompanyId.Value }
+                    : new List<int>()
+            };
             await BuildFormAsync(model, ct);
             return View("Create", model);
         }

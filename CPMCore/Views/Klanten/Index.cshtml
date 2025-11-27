@@ -15,15 +15,37 @@
         <h5 class="mb-4 mt-0">Beheer en doorzoek alle klanten</h5>
     </div>
     <div class="col-sm-auto px-0">
-        <a href="@Url.Action("Create", "Klanten")" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+        <a href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
     </div>
 </div>
 
 <div class="card card-modern mb-4">
     <div class="card-body">
-        <div class="input-group">
-            <span class="input-group-text"><i class="bx bx-search"></i></span>
-            <input id="search-term" type="text" class="form-control form-control-modern me-2" placeholder="Zoek klant..." />
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <label class="form-label mb-1" for="search-term">Zoek klant</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bx bx-search"></i></span>
+                    <input id="search-term" type="text" class="form-control form-control-modern me-2" placeholder="Zoek klant..." />
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <label class="form-label mb-1" for="issuer-filter">Filter op facturatiebedrijf</label>
+                <select id="issuer-filter" class="form-select form-select-modern">
+                    <option value="">Alle bedrijven</option>
+
+                    @foreach (var issuer in Model.IssuerCompanies)
+                    {
+                        var selected = issuer.Id == Model.SelectedIssuerCompanyId ? "selected" : null;
+
+                        <option value="@issuer.Id" selected="@selected">
+                            @issuer.Name
+                        </option>
+                    }
+                </select>
+
+
+            </div>
         </div>
     </div>
 </div>
@@ -45,7 +67,8 @@
                 <tbody>
                     @foreach (var client in Model.Clients)
                     {
-                        <tr>
+                        var issuerIds = string.Join(",", client.IssuerCompanyIds);
+                        <tr data-issuer-ids="@issuerIds">
                             <td>
                                 <a href="@Url.Action("Details", "Klanten", new { id = client.Id })" class="text-decoration-none text-reset fw-semibold">
                                     @client.DisplayName
@@ -111,6 +134,24 @@
             const searchTerm = document.getElementById('search-term');
             searchTerm?.addEventListener('input', function () {
                 table.search(this.value).draw();
+            });
+            const issuerFilter = document.getElementById('issuer-filter');
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                if (settings.nTable.id !== 'datatable-clients') {
+                    return true;
+                }
+
+                const selectedIssuer = issuerFilter?.value;
+                if (!selectedIssuer) {
+                    return true;
+                }
+
+                const rowIssuers = table.row(dataIndex).node().getAttribute('data-issuer-ids') || '';
+                return rowIssuers.split(',').filter(Boolean).includes(selectedIssuer);
+            });
+
+            issuerFilter?.addEventListener('change', function () {
+                table.draw();
             });
         })();
     </script>

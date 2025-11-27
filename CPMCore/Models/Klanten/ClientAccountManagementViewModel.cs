@@ -8,6 +8,8 @@ namespace CPMCore.Models.Klanten;
 public class ClientIndexViewModel
 {
     public IReadOnlyList<ClientListItemViewModel> Clients { get; init; } = new List<ClientListItemViewModel>();
+    public IReadOnlyList<IssuerCompanyOptionViewModel> IssuerCompanies { get; init; } = new List<IssuerCompanyOptionViewModel>();
+    public int? SelectedIssuerCompanyId { get; init; }
 }
 
 public class ClientListItemViewModel
@@ -19,6 +21,7 @@ public class ClientListItemViewModel
     public string? Email { get; init; }
     public string? Phone { get; init; }
     public IReadOnlyList<string> IssuerCompanies { get; init; } = new List<string>();
+    public IReadOnlyList<int> IssuerCompanyIds { get; init; } = new List<int>();
     public int ContactCount { get; init; }
 }
 

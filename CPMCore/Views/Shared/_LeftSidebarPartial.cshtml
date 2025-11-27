@@ -1,9 +1,14 @@
 ﻿@using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Authorization	
+@using Microsoft.AspNetCore.Authorization
 
+@using FacadeCore
 @inject UserManager<ApplicationUser> UserManager
+@inject IIssuerCompanyService IssuerCompanyService
 @{
 	var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+	var issuerCompanies = (await IssuerCompanyService.GetAllAsync())
+		.OrderBy(i => i.Name)
+		.ToList();
 }
 
 
@@ -31,17 +36,31 @@
 						</a>
 					</li>
 
-					<li class="@(currentController == "Leveranciers" ? "nav-active" : string.Empty)">
-						<a href="@Url.Action("Index", "Leveranciers")">
+					<li class="nav-parent @(currentController == "Leveranciers" ? "nav-active nav-expanded" : string.Empty)">
+						<a>
 							<i class="fa fa-truck" aria-hidden="true"></i>
 							<span>Leveranciers</span>
 						</a>
+						<ul class="nav nav-children">
+							<li>@Html.ActionLink("Alle leveranciers", "Index", "Leveranciers")</li>
+							@foreach (var issuer in issuerCompanies)
+							{
+								<li>@Html.ActionLink(issuer.Name, "Index", "Leveranciers", new { issuerCompanyId = issuer.Id }, null)</li>
+							}
+						</ul>
 					</li>
-					<li class="@(currentController == "Klanten" ? "nav-active" : string.Empty)">
-						<a href="@Url.Action("Index", "Klanten")">
+					<li class="nav-parent @(currentController == "Klanten" ? "nav-active nav-expanded" : string.Empty)">
+						<a>
 							<i class="fa fa-users" aria-hidden="true"></i>
 							<span>Klanten</span>
 						</a>
+						<ul class="nav nav-children">
+							<li>@Html.ActionLink("Alle klanten", "Index", "Klanten")</li>
+							@foreach (var issuer in issuerCompanies)
+							{
+								<li>@Html.ActionLink(issuer.Name, "Index", "Klanten", new { issuerCompanyId = issuer.Id }, null)</li>
+							}
+						</ul>
 					</li>
 					<li class="nav-parent" style="display:none">
 						<a>

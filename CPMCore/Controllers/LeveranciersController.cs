@@ -442,12 +442,20 @@ public class LeveranciersController : BaseController
 
     [HttpGet]
     [Breadcrumb("Leveranciers")]
-    public async Task<IActionResult> Index(CancellationToken ct)
+    public async Task<IActionResult> Index(int? issuerCompanyId, CancellationToken ct)
     {
         ViewData["Title"] = "Leveranciers";
 
-        var suppliers = await _db.CompanyInfo
-            .AsNoTracking()
+        var suppliersQuery = _db.CompanyInfo
+            .Include(c => c.IssuerCompany)
+            .AsNoTracking();
+
+        if (issuerCompanyId.HasValue)
+        {
+            suppliersQuery = suppliersQuery.Where(c => c.IssuerCompany.Any(i => i.Id == issuerCompanyId));
+        }
+
+        var suppliers = await suppliersQuery
             .Select(c => new SupplierListItemViewModel
             {
                 Id = c.CompanyId,
@@ -462,6 +470,9 @@ public class LeveranciersController : BaseController
                     .Sum(activity => (decimal?)activity.Price) ?? 0m,
                 ActivityIds = c.Activity
                     .Select(a => a.ActivityId)
+                    .ToList(),
+                IssuerCompanyIds = c.IssuerCompany
+                    .Select(i => i.Id)
                     .ToList()
             })
             .OrderBy(c => c.Name)
@@ -479,14 +490,28 @@ public class LeveranciersController : BaseController
             .ThenBy(a => a.Name)
             .ToListAsync(ct);
 
+        var issuers = await _db.IssuerCompany
+            .AsNoTracking()
+            .Where(i => i.IsActive)
+            .OrderBy(i => i.Name)
+            .Select(i => new IssuerCompanyOptionViewModel
+            {
+                Id = i.Id,
+                Name = i.Name
+            })
+            .ToListAsync(ct);
+
         var vm = new SupplierIndexViewModel
         {
             Suppliers = suppliers,
-            Activities = activities
+            Activities = activities,
+            IssuerCompanies = issuers,
+            SelectedIssuerCompanyId = issuerCompanyId
         };
 
         return View(vm);
     }
+
 
     [HttpGet]
     [Breadcrumb("Detail", FromAction = nameof(Index))]
@@ -745,9 +770,14 @@ public class LeveranciersController : BaseController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Create(CancellationToken ct)
+    public async Task<IActionResult> Create(int? issuerCompanyId, CancellationToken ct)
     {
-        var vm = await BuildFormAsync(new SupplierFormViewModel(), ct);
+        var vm = await BuildFormAsync(new SupplierFormViewModel
+        {
+            SelectedIssuerCompanyIds = issuerCompanyId.HasValue
+                ? new List<int> { issuerCompanyId.Value }
+                : new List<int>()
+        }, ct);
         return View(vm);
     }
 
