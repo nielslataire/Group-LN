@@ -73,18 +73,24 @@
             </div>
              <div class="col-lg-4">
                 <label class="form-label mb-1" for="issuer-filter">Filter op facturatiebedrijf</label>
-                <select id="issuer-filter" class="form-select form-select-modern">
-                    <option value="">Alle bedrijven</option>
+                <div class="input-group input-group-select-append">
+                    <span class="input-group-text">
+                        <i class="fas fa-filter"></i>
+                    </span>
+                    <select id="issuer-filter" class="form-control form-control-modern">
+                        <option value="">Alle bedrijven</option>
 
-                    @foreach (var issuer in Model.IssuerCompanies)
-                    {
-                        var selected = issuer.Id == Model.SelectedIssuerCompanyId ? "selected" : null;
+                        @foreach (var issuer in Model.IssuerCompanies)
+                        {
+                            var selected = issuer.Id == Model.SelectedIssuerCompanyId ? "selected" : null;
 
-                        <option value="@issuer.Id" selected="@selected">
-                            @issuer.Name
-                        </option>
-                    }
-                </select>
+                            <option value="@issuer.Id" selected="@selected">
+                                @issuer.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+               
             </div>
             <div class="col-lg-4">
                 <label class="form-label mb-1" for="activity-filter">Filter op activiteit</label>
@@ -279,7 +285,6 @@
                 }
             });
 
-            table.buttons(0, null).containers().appendTo('#colvis-container');
 
             $('#search-term').on('input', function () {
                 table.search($(this).val()).draw();
