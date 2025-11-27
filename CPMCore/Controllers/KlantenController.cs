@@ -1,25 +1,26 @@
 ﻿using BOCore;
 using CPMCore.Models;
 using CPMCore.Models.Klanten;
+using CPMCore.Models.Leveranciers;
+using CPMCore.Models.Projecten;
 using CPMCore.Service;
+using DALCore.Models;
+using DinkToPdf;
+using Humanizer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using NuGet.Configuration;
+using ServiceCore;
+using SmartBreadcrumbs.Attributes;
 using System;
 using System.Drawing;
 using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using static System.Net.Mime.MediaTypeNames;
-using NuGet.Configuration;
-using ServiceCore;
-using DinkToPdf;
-using Humanizer;
-using DALCore.Models;
-using Microsoft.EntityFrameworkCore;
-using CPMCore.Models.Projecten;
-using SmartBreadcrumbs.Attributes;
 
 namespace CPMCore.Controllers
 {
@@ -28,18 +29,240 @@ namespace CPMCore.Controllers
         private readonly ILogger<HomeController> _logger;
         private UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration Configuration;
+        private readonly cpmRunningContext _db;
 
-        public KlantenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration)
+        public KlantenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db)
         {
             _userManager = userManager;
             _logger = logger;
             Configuration = configuration;
+            _db = db;
         }
-        public IActionResult Index()
+        [HttpGet]
+        public async Task<IActionResult> Index(CancellationToken ct)
         {
-            return View();
+            var clients = await _db.ClientAccount
+                .Include(c => c.PostalCode)
+                .Include(c => c.ClientContacts)
+                .Include(c => c.IssuerCompany)
+                .AsNoTracking()
+                .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName)
+                .Select(c => new ClientListItemViewModel
+                {
+                    Id = c.Id,
+                    DisplayName = string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName,
+                    EnterpriseNumber = c.Vatnumber,
+                    City = c.PostalCode != null
+                        ? c.PostalCode.Postcode + " " + c.PostalCode.Gemeente
+                        : null,
+
+                    Email = c.ClientContacts
+                        .Select(x => x.Email)
+                        .FirstOrDefault(),
+
+                    Phone = c.ClientContacts
+                        .Select(x => x.Phone ?? x.Cellphone)
+                        .FirstOrDefault(),
+
+                    IssuerCompanies = c.IssuerCompany
+                        .Select(i => i.Name)
+                        .ToList(),
+
+                    ContactCount = c.ClientContacts.Count
+                })
+                .ToListAsync(ct);
+
+
+            var model = new ClientIndexViewModel
+            {
+                Clients = clients
+            };
+
+            return View(model);
         }
-        // KLANTEN
+        [HttpGet]
+        public async Task<IActionResult> Details(int id, CancellationToken ct)
+        {
+            var client = await _db.ClientAccount
+                .Include(c => c.PostalCode)
+                .Include(c => c.InvoicePostalCode)
+                .Include(c => c.ClientContacts)
+                .Include(c => c.IssuerCompany)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == id, ct);
+
+            if (client == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ClientFormViewModel
+            {
+                Id = client.Id,
+                DisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName ?? string.Empty,
+                EnterpriseNumber = client.Vatnumber,
+                Street = client.Street,
+                HouseNumber = client.Housenumber,
+                BusNumber = client.Busnumber,
+                SelectedPostalCodeId = client.PostalCodeId,
+                PostalCode = client.PostalCode?.Postcode,
+                City = client.PostalCode?.Gemeente,
+                SelectedCountryId = client.PostalCode?.CountryId,
+                UseInvoiceAddress = client.InvoiceAddress ?? false,
+                InvoiceStreet = client.InvoiceStreet,
+                InvoiceHouseNumber = client.InvoiceHousenumber,
+                InvoiceBusNumber = client.InvoiceBusnumber,
+                SelectedInvoicePostalCodeId = client.InvoicePostalCodeId,
+                InvoicePostalCode = client.InvoicePostalCode?.Postcode,
+                InvoiceCity = client.InvoicePostalCode?.Gemeente,
+                SelectedInvoiceCountryId = client.InvoicePostalCode?.CountryId,
+                SelectedIssuerCompanyId = client.IssuerCompany.FirstOrDefault()?.Id,
+                Contacts = client.ClientContacts
+                    .OrderBy(c => c.Id)
+                    .Select(c => new CPMCore.Models.Klanten.ContactInputViewModel
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Forename = c.Forename,
+                        Email = c.Email,
+                        Phone = c.Phone,
+                        Mobile = c.Cellphone,
+                        InvoiceEmail = c.InvoiceEmail,
+                        RequiresDigitalInvoice = c.RequiresDigitalInvoice,
+                        AttachUblByDefault = c.AttachUblByDefault
+                    }).ToList()
+            };
+
+            await BuildFormAsync(model, ct);
+            ViewBag.ReadOnly = true;
+            return View("Form", model);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Create(CancellationToken ct)
+        {
+            var model = new ClientFormViewModel();
+            await BuildFormAsync(model, ct);
+            return View("Form", model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(ClientFormViewModel model, CancellationToken ct)
+        {
+            await BuildFormAsync(model, ct);
+
+            if (!ModelState.IsValid)
+            {
+                return View("Form", model);
+            }
+
+            var entity = new ClientAccount();
+            MapToEntity(model, entity);
+            AttachIssuerCompany(model, entity);
+            AttachContacts(model, entity);
+
+            _db.ClientAccount.Add(entity);
+            await _db.SaveChangesAsync(ct);
+
+            AddMessage("success", $"Klant {model.DisplayName} is toegevoegd", "Geslaagd!");
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id, CancellationToken ct)
+        {
+            var client = await _db.ClientAccount
+                .Include(c => c.ClientContacts)
+                .Include(c => c.IssuerCompany)
+                .Include(c => c.PostalCode)
+                .Include(c => c.InvoicePostalCode)
+                .FirstOrDefaultAsync(c => c.Id == id, ct);
+
+            if (client == null)
+            {
+                return NotFound();
+            }
+
+            var model = new ClientFormViewModel
+            {
+                Id = client.Id,
+                DisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName ?? string.Empty,
+                EnterpriseNumber = client.Vatnumber,
+                Street = client.Street,
+                HouseNumber = client.Housenumber,
+                BusNumber = client.Busnumber,
+                SelectedPostalCodeId = client.PostalCodeId,
+                PostalCode = client.PostalCode?.Postcode,
+                City = client.PostalCode?.Gemeente,
+                SelectedCountryId = client.PostalCode?.CountryId,
+                UseInvoiceAddress = client.InvoiceAddress ?? false,
+                InvoiceStreet = client.InvoiceStreet,
+                InvoiceHouseNumber = client.InvoiceHousenumber,
+                InvoiceBusNumber = client.InvoiceBusnumber,
+                SelectedInvoicePostalCodeId = client.InvoicePostalCodeId,
+                InvoicePostalCode = client.InvoicePostalCode?.Postcode,
+                InvoiceCity = client.InvoicePostalCode?.Gemeente,
+                SelectedInvoiceCountryId = client.InvoicePostalCode?.CountryId,
+                SelectedIssuerCompanyId = client.IssuerCompany.FirstOrDefault()?.Id,
+                Contacts = client.ClientContacts
+                    .OrderBy(c => c.Id)
+                    .Select(c => new CPMCore.Models.Klanten.ContactInputViewModel
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                        Forename = c.Forename,
+                        Email = c.Email,
+                        Phone = c.Phone,
+                        Mobile = c.Cellphone,
+                        InvoiceEmail = c.InvoiceEmail,
+                        RequiresDigitalInvoice = c.RequiresDigitalInvoice,
+                        AttachUblByDefault = c.AttachUblByDefault
+                    }).ToList()
+            };
+
+            await BuildFormAsync(model, ct);
+            return View("Form", model);
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, ClientFormViewModel model, CancellationToken ct)
+        {
+            if (id != model.Id)
+            {
+                return BadRequest();
+            }
+
+            var client = await _db.ClientAccount
+                .Include(c => c.ClientContacts)
+                .Include(c => c.IssuerCompany)
+                .FirstOrDefaultAsync(c => c.Id == id, ct);
+
+            if (client == null)
+            {
+                return NotFound();
+            }
+
+            await BuildFormAsync(model, ct);
+
+            if (!ModelState.IsValid)
+            {
+                return View("Form", model);
+            }
+
+            MapToEntity(model, client);
+            UpdateIssuerCompany(model, client);
+            UpdateContacts(model, client);
+
+            await _db.SaveChangesAsync(ct);
+
+            AddMessage("success", $"Klant {model.DisplayName} is bijgewerkt", "Geslaagd!");
+            return RedirectToAction(nameof(Index));
+        }
+
+
+
+        // KLANTEN - PROJECT
         [Breadcrumb("Klanten", FromController = typeof(ProjectenController), FromAction = nameof(ProjectenController.Detail))]
         public ActionResult Detail(int clientId, int projectId = 0)
         {
@@ -398,6 +621,158 @@ namespace CPMCore.Controllers
                 ViewName = "_GiftRow",
                 ViewData = viewData
             };
+        }
+        private async Task<ClientFormViewModel> BuildFormAsync(ClientFormViewModel model, CancellationToken ct)
+        {
+            var countries = await _db.Country
+                .AsNoTracking()
+                .Where(c => c.Selectable)
+                .OrderBy(c => c.LandNaam)
+                .Select(c => new CPMCore.Models.Klanten.CountryOptionViewModel
+                {
+                    Id = c.Id,
+                    Name = c.LandNaam,
+                    IsoCode = c.LandIsocode ?? string.Empty
+                })
+                .ToListAsync(ct);
+
+            model.Countries = countries;
+
+            if (!model.SelectedCountryId.HasValue && countries.Any())
+            {
+                var defaultCountry = countries.FirstOrDefault(c => c.IsoCode.Equals("BE", StringComparison.OrdinalIgnoreCase)) ?? countries.First();
+                model.SelectedCountryId = defaultCountry.Id;
+                model.CountryIsoCode = defaultCountry.IsoCode;
+            }
+
+            if (!model.SelectedInvoiceCountryId.HasValue && countries.Any())
+            {
+                model.SelectedInvoiceCountryId = model.SelectedCountryId;
+            }
+
+            var issuers = await _db.IssuerCompany
+                .AsNoTracking()
+                .Where(i => i.IsActive)
+                .OrderBy(i => i.Name)
+                .Select(i => new CPMCore.Models.Klanten.IssuerCompanyOptionViewModel
+                {
+                    Id = i.Id,
+                    Name = i.Name
+                })
+                .ToListAsync(ct);
+
+            model.IssuerCompanies = issuers;
+
+            if (!model.SelectedIssuerCompanyId.HasValue && issuers.Any())
+            {
+                model.SelectedIssuerCompanyId = issuers.First().Id;
+            }
+
+            if (model.Contacts == null || model.Contacts.Count == 0)
+            {
+                model.Contacts = new List<CPMCore.Models.Klanten.ContactInputViewModel> { new CPMCore.Models.Klanten.ContactInputViewModel() };
+            }
+
+            return model;
+        }
+
+        private static void MapToEntity(ClientFormViewModel model, ClientAccount entity)
+        {
+            entity.Name = model.DisplayName;
+            entity.CompanyName = model.DisplayName;
+            entity.Vatnumber = model.EnterpriseNumber;
+            entity.Street = model.Street;
+            entity.Housenumber = model.HouseNumber;
+            entity.Busnumber = model.BusNumber;
+            entity.PostalCodeId = model.SelectedPostalCodeId;
+            entity.InvoiceAddress = model.UseInvoiceAddress;
+            entity.InvoiceStreet = model.UseInvoiceAddress ? model.InvoiceStreet : null;
+            entity.InvoiceHousenumber = model.UseInvoiceAddress ? model.InvoiceHouseNumber : null;
+            entity.InvoiceBusnumber = model.UseInvoiceAddress ? model.InvoiceBusNumber : null;
+            entity.InvoicePostalCodeId = model.UseInvoiceAddress ? model.SelectedInvoicePostalCodeId : null;
+            entity.OwnerPercentage ??= 100;
+            entity.OwnerTypeId ??= 1;
+        }
+
+        private void AttachIssuerCompany(ClientFormViewModel model, ClientAccount entity)
+        {
+            if (model.SelectedIssuerCompanyId is null)
+            {
+                return;
+            }
+
+            var issuer = _db.IssuerCompany.Find(model.SelectedIssuerCompanyId.Value);
+            if (issuer != null)
+            {
+                entity.IssuerCompany.Add(issuer);
+            }
+        }
+
+        private void UpdateIssuerCompany(ClientFormViewModel model, ClientAccount entity)
+        {
+            entity.IssuerCompany.Clear();
+            AttachIssuerCompany(model, entity);
+        }
+
+        private static void AttachContacts(ClientFormViewModel model, ClientAccount entity)
+        {
+            foreach (var contact in model.Contacts.Where(c => !string.IsNullOrWhiteSpace(c.Name)))
+            {
+                entity.ClientContacts.Add(new ClientContacts
+                {
+                    Name = contact.Name,
+                    Forename = contact.Forename,
+                    Email = contact.Email,
+                    Phone = contact.Phone,
+                    Cellphone = contact.Mobile,
+                    InvoiceEmail = contact.InvoiceEmail,
+                    RequiresDigitalInvoice = contact.RequiresDigitalInvoice,
+                    AttachUblByDefault = contact.AttachUblByDefault
+                });
+            }
+        }
+
+        private static void UpdateContacts(ClientFormViewModel model, ClientAccount entity)
+        {
+            var incomingIds = model.Contacts.Where(c => c.Id.HasValue).Select(c => c.Id!.Value).ToList();
+            var toRemove = entity.ClientContacts.Where(c => !incomingIds.Contains(c.Id)).ToList();
+
+            foreach (var removal in toRemove)
+            {
+                entity.ClientContacts.Remove(removal);
+            }
+
+            foreach (var contactModel in model.Contacts)
+            {
+                if (contactModel.Id is int contactId)
+                {
+                    var existing = entity.ClientContacts.FirstOrDefault(c => c.Id == contactId);
+                    if (existing != null)
+                    {
+                        existing.Name = contactModel.Name;
+                        existing.Forename = contactModel.Forename;
+                        existing.Email = contactModel.Email;
+                        existing.Phone = contactModel.Phone;
+                        existing.Cellphone = contactModel.Mobile;
+                        existing.InvoiceEmail = contactModel.InvoiceEmail;
+                        existing.RequiresDigitalInvoice = contactModel.RequiresDigitalInvoice;
+                        existing.AttachUblByDefault = contactModel.AttachUblByDefault;
+                        continue;
+                    }
+                }
+
+                entity.ClientContacts.Add(new ClientContacts
+                {
+                    Name = contactModel.Name,
+                    Forename = contactModel.Forename,
+                    Email = contactModel.Email,
+                    Phone = contactModel.Phone,
+                    Cellphone = contactModel.Mobile,
+                    InvoiceEmail = contactModel.InvoiceEmail,
+                    RequiresDigitalInvoice = contactModel.RequiresDigitalInvoice,
+                    AttachUblByDefault = contactModel.AttachUblByDefault
+                });
+            }
         }
         public PartialViewResult BlankPoaRow()
         {

@@ -107,6 +107,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ClientAccountIssuerCompany]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ClientContacts]",
          "ObjectType": 0
       },

@@ -1,0 +1,117 @@
+﻿@model CPMCore.Models.Klanten.ClientIndexViewModel
+
+@{
+    ViewData["Title"] = "Klanten";
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+}
+
+<div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
+    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+        <h1 class="font-weight-bold mb-0 mt-0">Klanten</h1>
+        <h5 class="mb-4 mt-0">Beheer en doorzoek alle klanten</h5>
+    </div>
+    <div class="col-sm-auto px-0">
+        <a href="@Url.Action("Create", "Klanten")" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+    </div>
+</div>
+
+<div class="card card-modern mb-4">
+    <div class="card-body">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bx bx-search"></i></span>
+            <input id="search-term" type="text" class="form-control form-control-modern me-2" placeholder="Zoek klant..." />
+        </div>
+    </div>
+</div>
+
+<div class="card card-modern">
+    <div class="card-body">
+        <div class="datatables-header-footer-wrapper mt-2">
+            <table class="table table-responsive-md table-hover mb-3" id="datatable-clients" style="min-width: 720px;">
+                <thead>
+                    <tr>
+                        <th>Naam</th>
+                        <th>Ondernemingsnummer</th>
+                        <th>Locatie</th>
+                        <th>Contact</th>
+                        <th>Facturatiebedrijf</th>
+                        <th class="text-end noVis">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var client in Model.Clients)
+                    {
+                        <tr>
+                            <td>
+                                <a href="@Url.Action("Details", "Klanten", new { id = client.Id })" class="text-decoration-none text-reset fw-semibold">
+                                    @client.DisplayName
+                                </a>
+                            </td>
+                            <td>@(string.IsNullOrWhiteSpace(client.EnterpriseNumber) ? "-" : client.EnterpriseNumber)</td>
+                            <td>@(string.IsNullOrWhiteSpace(client.City) ? "-" : client.City)</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(client.Email))
+                                {
+                                    <a href="mailto:@client.Email">@client.Email</a>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(client.Phone))
+                                {
+                                    @client.Phone
+                                }
+                                else
+                                {
+                                    @:-
+                                }
+                            </td>
+                            <td>
+                                @(client.IssuerCompanies.Any() ? string.Join(", ", client.IssuerCompanies) : "-")
+                            </td>
+                            <td class="actions text-end">
+                                <a class="ms-1 me-1" data-placement="top" title="Bewerken" href="@Url.Action("Edit", "Klanten", new { id = client.Id })">
+                                    <i class="bx bx-pencil fs-5"></i>
+                                    <span class="visually-hidden">Bewerken</span>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section PageScripts
+{
+    <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        (function () {
+            const table = $('#datatable-clients').DataTable({
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                lengthChange: false,
+                pageLength: 25,
+                language: {
+                    zeroRecords: 'Geen klanten om weer te geven',
+                    emptyTable: 'Er zijn geen klanten om weer te geven',
+                    search: 'Zoek:',
+                    paginate: {
+                        previous: 'Vorige',
+                        next: 'Volgende'
+                    }
+                }
+            });
+
+            const searchTerm = document.getElementById('search-term');
+            searchTerm?.addEventListener('input', function () {
+                table.search(this.value).draw();
+            });
+        })();
+    </script>
+}

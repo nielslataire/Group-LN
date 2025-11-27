@@ -2,17 +2,21 @@
 Public Class ContactController
     Inherits System.Web.Mvc.Controller
 
-    '
+    Private Const ReCaptchaActionName As String = "contact"
+    Private Const ReCaptchaMinimumScore As Double = 0.5
+
     ' GET: /Contact
     <Route("Contact")>
     Function Index() As ActionResult
         Dim model As New MailModel
+        ApplyRecaptchaSettings()
         ViewData("LatestNews") = GetLatestNews(4)
         Return View(model)
     End Function
     <HttpPost>
     <Route("Contact")>
     Function Index(model As MailModel) As ActionResult
+        ApplyRecaptchaSettings()
         ViewData("LatestNews") = GetLatestNews(4)
         Return View(model)
     End Function
@@ -21,21 +25,28 @@ Public Class ContactController
     <ValidateInput(False)>
     Function Send(model As MailModel) As ActionResult
         Dim errors As New ArrayList
+        ApplyRecaptchaSettings()
+        ViewData("LatestNews") = GetLatestNews(4)
         'if not valid then there where errors (required property not filled in or such) so return to show them
         'For Each key In ModelState.Keys
         '    If ModelState(key).Errors.Count > 0 Then
         '        errors(key) = ModelState(key).Errors()
         '    End If
         'Next
-        Dim captchaResponse As String = Request.Form("g-Recaptcha-Response")
-        Dim result As ReCaptchaValidationResult = ReCaptchaValidator.IsValid(captchaResponse)
+
+        Dim captchaResponse As String = Request.Form("g-recaptcha-response")
+        Dim actionFromForm As String = Request.Form("recaptcha-action")
+        Dim result As ReCaptchaValidationResult = ReCaptchaValidator.ValidateV3(captchaResponse, actionFromForm, ReCaptchaMinimumScore)
         If Not result.Success Then
-            For Each err As String In result.ErrorCodes
-                ModelState.AddModelError("", err)
-            Next
+            If result.ErrorCodes IsNot Nothing AndAlso result.ErrorCodes.Count > 0 Then
+                For Each err As String In result.ErrorCodes
+                    ModelState.AddModelError("", err)
+                Next
+            Else
+                ModelState.AddModelError("", "Invalid reCAPTCHA response")
+            End If
             Return View("index", model)
         End If
-        ViewData("LatestNews") = GetLatestNews(4)
         If (Not ModelState.IsValid) Then Return View("index", model)
         If (ModelState.IsValid) Then
             Dim email As Object = New Email("ContactMail")
@@ -81,5 +92,10 @@ Public Class ContactController
         TempData("MessageType") = messagetype
         TempData("MessageTitle") = messagetitle
     End Sub
-  
+
+    Private Sub ApplyRecaptchaSettings()
+        ViewBag.ReCaptchaSiteKey = ConfigurationManager.AppSettings("ReCaptchaV3SiteKey")
+        ViewBag.ReCaptchaAction = ReCaptchaActionName
+    End Sub
+
 End Class

@@ -1,0 +1,231 @@
+﻿@model CPMCore.Models.Klanten.ClientFormViewModel
+@{
+    var isReadOnly = ViewBag.ReadOnly as bool? ?? false;
+}
+
+<div class="row mt-2">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-user"></i>
+                        <h2 class="card-big-info-title">Algemene info</h2>
+                        <p class="card-big-info-desc">Vul de basisgegevens van de klant in.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Html.LabelFor(m => m.DisplayName)</label>
+                            @Html.TextBoxFor(m => m.DisplayName, new { @class = "form-control form-control-modern", placeholder = "Naam of bedrijfsnaam" })
+                            @Html.ValidationMessageFor(m => m.DisplayName, "", new { @class = "text-danger" })
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="control-label">@Html.LabelFor(m => m.EnterpriseNumber)</label>
+                            @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "BE0123.456.789" })
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="control-label">@Html.LabelFor(m => m.SelectedIssuerCompanyId)</label>
+                                <select asp-for="SelectedIssuerCompanyId" class="form-control form-control-modern">
+                                    @foreach (var issuer in Model.IssuerCompanies)
+                                    {
+                                        <option value="@issuer.Id" selected="@(Model.SelectedIssuerCompanyId == issuer.Id ? "selected" : null)">@issuer.Name</option>
+                                    }
+                                </select>
+                                @Html.ValidationMessageFor(m => m.SelectedIssuerCompanyId, "", new { @class = "text-danger" })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card card-modern card-big-info mt-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-home"></i>
+                        <h2 class="card-big-info-title">Adres</h2>
+                        <p class="card-big-info-desc">Contact- en facturatieadres.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="control-label">@Html.LabelFor(m => m.Street)</label>
+                                @Html.TextBoxFor(m => m.Street, new { @class = "form-control form-control-modern" })
+                            </div>
+                            <div class="col-md-3">
+                                <label class="control-label">@Html.LabelFor(m => m.HouseNumber)</label>
+                                @Html.TextBoxFor(m => m.HouseNumber, new { @class = "form-control form-control-modern" })
+                            </div>
+                            <div class="col-md-3">
+                                <label class="control-label">@Html.LabelFor(m => m.BusNumber)</label>
+                                @Html.TextBoxFor(m => m.BusNumber, new { @class = "form-control form-control-modern" })
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-md-6">
+                                <label class="control-label">@Html.LabelFor(m => m.SelectedPostalCodeId)</label>
+                                <select asp-for="SelectedPostalCodeId" class="form-control form-control-modern postal-select">
+                                    <option value="">Selecteer</option>
+                                    @if (Model.SelectedPostalCodeId.HasValue && Model.SelectedCountryId.HasValue)
+                                    {
+                                        <option selected value="@Model.SelectedPostalCodeId">@Model.PostalCode - @Model.City</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="control-label">@Html.LabelFor(m => m.SelectedCountryId)</label>
+                                <select asp-for="SelectedCountryId" class="form-control form-control-modern">
+                                    @foreach (var country in Model.Countries)
+                                    {
+                                        <option value="@country.Id" selected="@(Model.SelectedCountryId == country.Id ? "selected" : null)">@country.Name</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            @Html.CheckBoxFor(m => m.UseInvoiceAddress, new { @class = "form-check-input", role = "switch", id = "UseInvoiceAddress" })
+                            <label class="form-check-label" for="UseInvoiceAddress">Ander facturatieadres</label>
+                        </div>
+
+                        <div id="invoice-address" class="@(Model.UseInvoiceAddress ? string.Empty : "d-none")">
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceStreet)</label>
+                                    @Html.TextBoxFor(m => m.InvoiceStreet, new { @class = "form-control form-control-modern" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceHouseNumber)</label>
+                                    @Html.TextBoxFor(m => m.InvoiceHouseNumber, new { @class = "form-control form-control-modern" })
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceBusNumber)</label>
+                                    @Html.TextBoxFor(m => m.InvoiceBusNumber, new { @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+                            <div class="row g-3 mb-2">
+                                <div class="col-md-6">
+                                    <label class="control-label">@Html.LabelFor(m => m.SelectedInvoicePostalCodeId)</label>
+                                    <select asp-for="SelectedInvoicePostalCodeId" class="form-control form-control-modern postal-select">
+                                        <option value="">Selecteer</option>
+                                        @if (Model.SelectedInvoicePostalCodeId.HasValue && Model.SelectedInvoiceCountryId.HasValue)
+                                        {
+                                            <option selected value="@Model.SelectedInvoicePostalCodeId">@Model.InvoicePostalCode - @Model.InvoiceCity</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="control-label">@Html.LabelFor(m => m.SelectedInvoiceCountryId)</label>
+                                    <select asp-for="SelectedInvoiceCountryId" class="form-control form-control-modern">
+                                        @foreach (var country in Model.Countries)
+                                        {
+                                            <option value="@country.Id" selected="@(Model.SelectedInvoiceCountryId == country.Id ? "selected" : null)">@country.Name</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card card-modern card-big-info mt-3">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-group"></i>
+                        <h2 class="card-big-info-title">Contacten</h2>
+                        <p class="card-big-info-desc">Voeg meerdere contactpersonen toe bij deze klant.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        <div id="contacts-container" class="row g-3"></div>
+                        @if (!isReadOnly)
+                        {
+                            <div class="mt-3">
+                                <button type="button" id="add-contact" class="btn btn-sm btn-primary"><i class="bx bx-plus"></i> Contact toevoegen</button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        @if (!isReadOnly)
+        {
+            <div class="row mt-4">
+                <div class="col text-end">
+                    <a href="@Url.Action("Index", "Klanten")" class="btn btn-default">Annuleren</a>
+                    <button type="submit" class="btn btn-primary">Opslaan</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<template id="contact-template">
+    <div class="col-12 contact-row">
+        <div class="card border">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <label class="control-label">Naam</label>
+                        <input type="text" data-name-template="Contacts[__index__].Name" class="form-control form-control-modern" />
+                        <input type="hidden" data-name-template="Contacts[__index__].Id" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="control-label">Voornaam</label>
+                        <input type="text" data-name-template="Contacts[__index__].Forename" class="form-control form-control-modern" />
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button type="button" class="btn btn-link text-danger remove-contact"><i class="bx bx-trash"></i></button>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-4">
+                        <label class="control-label">E-mail</label>
+                        <input type="email" data-name-template="Contacts[__index__].Email" class="form-control form-control-modern" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="control-label">Telefoon</label>
+                        <input type="text" data-name-template="Contacts[__index__].Phone" class="form-control form-control-modern" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="control-label">GSM</label>
+                        <input type="text" data-name-template="Contacts[__index__].Mobile" class="form-control form-control-modern" />
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label class="control-label">Facturatie e-mail</label>
+                        <input type="email" data-name-template="Contacts[__index__].InvoiceEmail" class="form-control form-control-modern" />
+                    </div>
+                    <div class="col-md-3 form-check mt-4">
+                        <input type="checkbox" class="form-check-input" data-name-template="Contacts[__index__].RequiresDigitalInvoice" data-id-template="contact-__index__-digital" />
+                        <label class="form-check-label" data-for-template="contact-__index__-digital">Digitale factuur</label>
+                    </div>
+                    <div class="col-md-3 form-check mt-4">
+                        <input type="checkbox" class="form-check-input" data-name-template="Contacts[__index__].AttachUblByDefault" data-id-template="contact-__index__-ubl" />
+                        <label class="form-check-label" data-for-template="contact-__index__-ubl">UBL meesturen</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+    (function () {
+        const checkbox = document.getElementById('UseInvoiceAddress');
+        const invoiceWrapper = document.getElementById('invoice-address');
+
+        function toggleInvoice() {
+            invoiceWrapper.classList.toggle('d-none', !checkbox.checked);
+        }
+
+        checkbox?.addEventListener('change', toggleInvoice);
+        toggleInvoice();
+    })();
+</script>

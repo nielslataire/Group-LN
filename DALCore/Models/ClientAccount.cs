@@ -78,4 +78,6 @@ public partial class ClientAccount
     public virtual ICollection<ProjectDocs> ProjectDocs { get; set; } = new List<ProjectDocs>();
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
+
+    public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
 }

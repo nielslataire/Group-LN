@@ -105,5 +105,7 @@ public partial class IssuerCompany
 
     public virtual IssuerBankAccount IssuerBankAccount { get; set; }
 
+    public virtual ICollection<ClientAccount> ClientAccount { get; set; } = new List<ClientAccount>();
+
     public virtual ICollection<CompanyInfo> Company { get; set; } = new List<CompanyInfo>();
 }

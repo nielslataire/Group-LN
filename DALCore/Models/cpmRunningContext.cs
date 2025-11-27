@@ -642,6 +642,23 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.PostalCode).WithMany(p => p.ClientAccountPostalCode)
                 .HasForeignKey(d => d.PostalCodeId)
                 .HasConstraintName("FK_ClientAccount_PostalCode");
+
+            entity.HasMany(d => d.IssuerCompany).WithMany(p => p.ClientAccount)
+                .UsingEntity<Dictionary<string, object>>(
+                    "ClientAccountIssuerCompany",
+                    r => r.HasOne<IssuerCompany>().WithMany()
+                        .HasForeignKey("IssuerCompanyId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_ClientAccountIssuerCompany_IssuerCompany"),
+                    l => l.HasOne<ClientAccount>().WithMany()
+                        .HasForeignKey("ClientAccountId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_ClientAccountIssuerCompany_ClientAccount"),
+                    j =>
+                    {
+                        j.HasKey("ClientAccountId", "IssuerCompanyId");
+                        j.HasIndex(new[] { "IssuerCompanyId" }, "IX_ClientAccountIssuerCompany_IssuerCompanyId");
+                    });
         });
 
         modelBuilder.Entity<ClientContacts>(entity =>

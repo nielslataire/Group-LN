@@ -30,66 +30,70 @@ End Code
         <div class="col-md-6">
 
             @*<div class="alert alert-success hidden" id="contactSuccess">
-                <strong>Success!</strong> Your message has been sent to us.
-            </div>
+            <strong>Success!</strong> Your message has been sent to us.
+        </div>
 
-            <div class="alert alert-danger hidden" id="contactError">
-                <strong>Error!</strong> There was an error sending your message.
-            </div>*@
+        <div class="alert alert-danger hidden" id="contactError">
+            <strong>Error!</strong> There was an error sending your message.
+        </div>*@
 
             <h2 class="mb-sm mt-sm"><strong>Contacteer</strong> Ons</h2>
-            @Using Html.BeginForm("Send", "Contact", FormMethod.Post, New With {.id = "FormMail", .class = "form-horizontal"})
+            @Using Html.BeginForm("Send", "Contact", FormMethod.Post, New With {.id = "FormMail", .class = "form-horizontal", .autocomplete = "on"})
                 @<text>
                     <div class="row">
                         <div class="form-group">
-                            <div class="col-md-6">
-                                <label>Uw naam *</label>
-                                @Html.TextBoxFor(Function(m) m.ContactName, New With {.class = "form-control"})
-                            </div>
-                            <div class="col-md-6">
-                                <label>Uw email adres *</label>
-                                @Html.TextBoxFor(Function(m) m.EmailTo, New With {.class = "form-control"})
-                            </div>
-                           </div>
+                                            <div class="col-md-6">
+                                                <label>Uw naam *</label>
+                                                @Html.TextBoxFor(Function(m) m.ContactName, New With {.class = "form-control", .autocomplete = "name"})
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>Uw email adres *</label>
+                                                @Html.TextBoxFor(Function(m) m.EmailTo, New With {.class = "form-control", .autocomplete = "email"})
+                                            </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="form-group">
                             <div class="col-md-12">
                                 <label>Uw telefoonnummer/GSM</label>
-                                @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "form-control"})
-                                </div>
+                                @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "form-control", .autocomplete = "tel"})
                             </div>
+                        </div>
                     </div>
-                            <div class="row">
-                                <div class="form-group">
-                                    <div class="col-md-12">
-                                        <label>Onderwerp</label>
-                                        @Html.TextBoxFor(Function(m) m.Title, New With {.class = "form-control"})
-                                        @*<input type="text" value="" data-msg-required="Please enter the subject." maxlength="100" class="form-control" name="subject" id="subject" required>*@
-                                    </div>
-                                </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <label>Onderwerp</label>
+                                @Html.TextBoxFor(Function(m) m.Title, New With {.class = "form-control", .autocomplete = "subject"})
+                                @*<input type="text" value="" data-msg-required="Please enter the subject." maxlength="100" class="form-control" name="subject" id="subject" required>*@
                             </div>
-                            <div class="row">
-                                <div class="form-group">
-                                    <div class="col-md-12">
-                                        <label>Bericht *</label>
-                                        @Html.TextAreaFor(Function(m) m.Message, New With {.rows = "10", .id = "message", .class = "form-control"})
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <label>Bericht *</label>
+                                @Html.TextAreaFor(Function(m) m.Message, New With {.rows = "10", .id = "message", .class = "form-control", .autocomplete = "message"})
 
 
-                                        @*<textarea maxlength="5000" data-msg-required="Please enter your message." rows="10" class="form-control" name="message" id="message" required></textarea>*@
-                                    </div>
-                                </div>
+
+                                @*<textarea maxlength="5000" data-msg-required="Please enter your message." rows="10" class="form-control" name="message" id="message" required></textarea>*@
                             </div>
-                            <div class="form-row">
-                                <div class="form-group col">
-                                    <div class="g-recaptcha" data-sitekey="6LfcFIoUAAAAANVEZIKVDzRsrGbRflktDHkaBPrW"></div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <button class="btn btn-primary btn-lg mb-xlg g-recaptch" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx" data-callback='onSubmit'>Verstuur bericht</button>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+                    @*<div class="form-row">
+                    <div class="form-group col">
+                        <div class="g-recaptcha" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx"></div>
+                    </div>
+                </div>*@
+                    <div class="row">
+                        <div class="col-md-12">
+                            @Html.Hidden("recaptcha-action", "", New With {.id = "recaptcha-action"})
+                            @Html.Hidden("g-recaptcha-response", "", New With {.id = "g-recaptcha-response"})
+                            <button type="submit" class="btn btn-primary btn-lg mb-xlg" id="contact-submit">Verstuur bericht</button>
+                            @*<button type="submit" class="g-recaptcha btn btn-primary btn-lg mb-xlg" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx" data-callback="onSubmit">Verstuur bericht</button>*@
+                        </div>
+                    </div>
                 </text>
             End Using
 
@@ -125,12 +129,29 @@ End Code
     </div>
 
 @section scripts
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+<script src="https://www.google.com/recaptcha/api.js?render=@ViewBag.ReCaptchaSiteKey"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>
 <script>
-    function onSubmit(token) {
-        document.getElementById("FormMail").submit();
-    }
+var recaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
+var recaptchaAction = '@ViewBag.ReCaptchaAction';
+var contactForm = document.getElementById('FormMail');
+var recaptchaInput = document.getElementById('g-recaptcha-response');
+var recaptchaActionInput = document.getElementById('recaptcha-action');
+
+if (typeof grecaptcha !== 'undefined' && recaptchaSiteKey && contactForm && recaptchaInput) {
+    grecaptcha.ready(function () {
+        contactForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            grecaptcha.execute(recaptchaSiteKey, { action: recaptchaAction || 'contact' }).then(function (token) {
+                recaptchaInput.value = token;
+                recaptchaActionInput.value = recaptchaAction || 'contact'; // <-- BELANGRIJK
+                contactForm.submit();
+            }, function () {
+                contactForm.submit();
+            });
+        });
+    });
+}
 			/*
 			Map Settings
 
@@ -172,7 +193,7 @@ End Code
 			    latitude: initLatitude,
 			    longitude: initLongitude,
 			    zoom: 15
-              
+
 			};
 
 			var map = $("#googlemaps").gMap(mapSettings);
@@ -202,12 +223,16 @@ End Section
     <h4>Recente <strong>berichten</strong></h4>
 
     <ul class="nav nav-list mb-xl">
-        @For Each news In ViewData("LatestNews")
-            @<text>
-                <li><a title="@news.news.TitleNL" href="@Url.Action("News", "Projects", New With {.slug = news.projectslug})">@news.news.TitleNL</a></li>
-            </text>
+        @Code                Dim latestNews = TryCast(ViewData("LatestNews"), IEnumerable(Of WWWCOPRO.LatestNews))
+        End Code
+        @If latestNews IsNot Nothing Then
+            @For Each news In latestNews
+                @<text>
+                    <li><a title="@news.news.TitleNL" href="@Url.Action("News", "Projects", New With {.slug = news.projectslug})">@news.news.TitleNL</a></li>
+                </text>
 
-        Next
+            Next
+        End If
 
     </ul>
 End Section
