@@ -23,11 +23,21 @@ using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
 using CPMCore.Models.Projecten;
 using SmartBreadcrumbs.Attributes;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace CPMCore.Controllers
 {
     public class KlantenController : BaseController
     {
+        private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        };
         private readonly ILogger<HomeController> _logger;
         private UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration Configuration;
@@ -59,10 +69,12 @@ namespace CPMCore.Controllers
                         ? c.PostalCode.Postcode + " " + c.PostalCode.Gemeente
                         : null,
 
-                    Email = c.ClientContacts
-                        .OrderBy(cc => cc.Id)
-                        .Select(cc => cc.Email)
-                        .FirstOrDefault(),
+                    Email = !string.IsNullOrWhiteSpace(c.Email)
+                        ? c.Email
+                        : c.ClientContacts
+                            .OrderBy(cc => cc.Id)
+                            .Select(cc => cc.Email)
+                            .FirstOrDefault(),
 
                     Phone = c.ClientContacts
                         .OrderBy(cc => cc.Id)
@@ -102,11 +114,21 @@ namespace CPMCore.Controllers
                 return NotFound();
             }
 
+            var isCompany = !string.IsNullOrWhiteSpace(client.CompanyName) || !string.IsNullOrWhiteSpace(client.Vatnumber);
+            Salutation? salutation = Enum.TryParse(client.Salutation, out Salutation parsed)
+                    ? parsed
+                    : null;
+            var (vatCountryCode, vatNumber) = SplitEnterpriseNumber(client.Vatnumber);
+
             var model = new ClientFormViewModel
             {
                 Id = client.Id,
-                DisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName ?? string.Empty,
-                EnterpriseNumber = client.Vatnumber,
+                IsCompany = isCompany,
+                CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
+                Name = client.Name,
+                Salutation = isCompany ? null : salutation,
+                EnterpriseNumber = isCompany ? client.Vatnumber : null,
+                EnterpriseNumberCountryCode = isCompany ? vatCountryCode ?? "BE" : "BE",
                 Street = client.Street,
                 HouseNumber = client.Housenumber,
                 BusNumber = client.Busnumber,
@@ -122,7 +144,11 @@ namespace CPMCore.Controllers
                 InvoicePostalCode = client.InvoicePostalCode?.Postcode,
                 InvoiceCity = client.InvoicePostalCode?.Gemeente,
                 SelectedInvoiceCountryId = client.InvoicePostalCode?.CountryId,
-                SelectedIssuerCompanyId = client.IssuerCompany.FirstOrDefault()?.Id,
+                Email = client.Email,
+                InvoiceEmail = client.InvoiceEmail,
+                RequiresDigitalInvoice = client.RequiresDigitalInvoice,
+                AttachUblByDefault = client.AttachUblByDefault,
+                SelectedIssuerCompanyIds = client.IssuerCompany.Select(i => i.Id).ToList(),
                 Contacts = client.ClientContacts
                     .OrderBy(c => c.Id)
                     .Select(c => new ContactInputViewModel
@@ -133,7 +159,6 @@ namespace CPMCore.Controllers
                         Email = c.Email,
                         Phone = c.Phone,
                         Mobile = c.Cellphone,
-                        InvoiceEmail = c.InvoiceEmail,
                         RequiresDigitalInvoice = c.RequiresDigitalInvoice,
                         AttachUblByDefault = c.AttachUblByDefault
                     }).ToList()
@@ -157,6 +182,8 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> Create(ClientFormViewModel model, CancellationToken ct)
         {
             await BuildFormAsync(model, ct);
+            ValidateClientType(model);
+            ValidateIssuerCompanies(model);
 
             if (!ModelState.IsValid)
             {
@@ -171,7 +198,7 @@ namespace CPMCore.Controllers
             _db.ClientAccount.Add(entity);
             await _db.SaveChangesAsync(ct);
 
-            AddMessage("success", $"Klant {model.DisplayName} is toegevoegd", "Geslaagd!");
+            AddMessage("success", $"Klant {model.DisplayLabel} is toegevoegd", "Geslaagd!");
             return RedirectToAction(nameof(Index));
         }
 
@@ -189,12 +216,21 @@ namespace CPMCore.Controllers
             {
                 return NotFound();
             }
+            var isCompany = !string.IsNullOrWhiteSpace(client.CompanyName) || !string.IsNullOrWhiteSpace(client.Vatnumber);
+            Salutation? salutation = Enum.TryParse(client.Salutation, out Salutation parsed)
+                ? parsed
+                : null;
+            var (vatCountryCode, vatNumber) = SplitEnterpriseNumber(client.Vatnumber);
 
             var model = new ClientFormViewModel
             {
                 Id = client.Id,
-                DisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName ?? string.Empty,
-                EnterpriseNumber = client.Vatnumber,
+                IsCompany = isCompany,
+                CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
+                Name = client.Name,
+                Salutation = isCompany ? null : salutation,
+                EnterpriseNumber = isCompany ? client.Vatnumber : null,
+                EnterpriseNumberCountryCode = isCompany ? vatCountryCode ?? "BE" : "BE",
                 Street = client.Street,
                 HouseNumber = client.Housenumber,
                 BusNumber = client.Busnumber,
@@ -210,7 +246,11 @@ namespace CPMCore.Controllers
                 InvoicePostalCode = client.InvoicePostalCode?.Postcode,
                 InvoiceCity = client.InvoicePostalCode?.Gemeente,
                 SelectedInvoiceCountryId = client.InvoicePostalCode?.CountryId,
-                SelectedIssuerCompanyId = client.IssuerCompany.FirstOrDefault()?.Id,
+                Email = client.Email,
+                InvoiceEmail = client.InvoiceEmail,
+                RequiresDigitalInvoice = client.RequiresDigitalInvoice,
+                AttachUblByDefault = client.AttachUblByDefault,
+                SelectedIssuerCompanyIds = client.IssuerCompany.Select(i => i.Id).ToList(),
                 Contacts = client.ClientContacts
                     .OrderBy(c => c.Id)
                     .Select(c => new ContactInputViewModel
@@ -221,7 +261,6 @@ namespace CPMCore.Controllers
                         Email = c.Email,
                         Phone = c.Phone,
                         Mobile = c.Cellphone,
-                        InvoiceEmail = c.InvoiceEmail,
                         RequiresDigitalInvoice = c.RequiresDigitalInvoice,
                         AttachUblByDefault = c.AttachUblByDefault
                     }).ToList()
@@ -251,6 +290,8 @@ namespace CPMCore.Controllers
             }
 
             await BuildFormAsync(model, ct);
+            ValidateClientType(model);
+            ValidateIssuerCompanies(model);
 
             if (!ModelState.IsValid)
             {
@@ -263,7 +304,7 @@ namespace CPMCore.Controllers
 
             await _db.SaveChangesAsync(ct);
 
-            AddMessage("success", $"Klant {model.DisplayName} is bijgewerkt", "Geslaagd!");
+            AddMessage("success", $"Klant {model.DisplayLabel} is bijgewerkt", "Geslaagd!");
             return RedirectToAction(nameof(Index));
         }
 
@@ -645,6 +686,18 @@ namespace CPMCore.Controllers
 
             model.Countries = countries;
 
+            if (string.IsNullOrWhiteSpace(model.EnterpriseNumberCountryCode))
+            {
+                model.EnterpriseNumberCountryCode = countries
+                    .FirstOrDefault(c => string.Equals(c.IsoCode, "BE", StringComparison.OrdinalIgnoreCase))?.IsoCode
+                    ?? countries.FirstOrDefault(c => !string.IsNullOrWhiteSpace(c.IsoCode))?.IsoCode
+                    ?? "BE";
+            }
+            else
+            {
+                model.EnterpriseNumberCountryCode = SanitizeVatCountry(model.EnterpriseNumberCountryCode) ?? model.EnterpriseNumberCountryCode;
+            }
+
             if (!model.SelectedCountryId.HasValue && countries.Any())
             {
                 var defaultCountry = countries.FirstOrDefault(c => c.IsoCode.Equals("BE", StringComparison.OrdinalIgnoreCase)) ?? countries.First();
@@ -668,12 +721,17 @@ namespace CPMCore.Controllers
                 })
                 .ToListAsync(ct);
 
+            model.SelectedIssuerCompanyIds ??= new List<int>();
             model.IssuerCompanies = issuers;
 
-            if (!model.SelectedIssuerCompanyId.HasValue && issuers.Any())
+            if (!model.SelectedIssuerCompanyIds.Any() && issuers.Any())
             {
-                model.SelectedIssuerCompanyId = issuers.First().Id;
+                model.SelectedIssuerCompanyIds = issuers
+                    .Take(1)
+                    .Select(i => i.Id)
+                    .ToList();
             }
+
 
             if (model.Contacts == null || model.Contacts.Count == 0)
             {
@@ -682,12 +740,45 @@ namespace CPMCore.Controllers
 
             return model;
         }
+        private void ValidateClientType(ClientFormViewModel model)
+        {
+            if (model.IsCompany)
+            {
+                if (string.IsNullOrWhiteSpace(model.CompanyName))
+                {
+                    ModelState.AddModelError(nameof(model.CompanyName), "Bedrijfsnaam is verplicht voor een onderneming.");
+                }
+
+                return;
+            }
+
+            if (!model.Salutation.HasValue)
+            {
+                ModelState.AddModelError(nameof(model.Salutation), "Kies een aanspreking.");
+            }
+
+            if (string.IsNullOrWhiteSpace(model.Name))
+            {
+                ModelState.AddModelError(nameof(model.Name), "Naam is verplicht voor een particulier.");
+            }
+        }
+
+        private void ValidateIssuerCompanies(ClientFormViewModel model)
+        {
+            if (model.SelectedIssuerCompanyIds == null || !model.SelectedIssuerCompanyIds.Any())
+            {
+                ModelState.AddModelError(nameof(model.SelectedIssuerCompanyIds), "Kies minstens één facturatiebedrijf.");
+            }
+        }
 
         private static void MapToEntity(ClientFormViewModel model, ClientAccount entity)
         {
-            entity.Name = model.DisplayName;
-            entity.CompanyName = model.DisplayName;
-            entity.Vatnumber = model.EnterpriseNumber;
+            entity.Name = model.IsCompany ? model.CompanyName : model.Name;
+            entity.CompanyName = model.IsCompany ? model.CompanyName : null;
+            entity.Salutation = model.IsCompany ? null : model.Salutation?.ToString();
+            entity.Vatnumber = model.IsCompany
+               ? CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber)
+               : null;
             entity.Street = model.Street;
             entity.Housenumber = model.HouseNumber;
             entity.Busnumber = model.BusNumber;
@@ -697,19 +788,27 @@ namespace CPMCore.Controllers
             entity.InvoiceHousenumber = model.UseInvoiceAddress ? model.InvoiceHouseNumber : null;
             entity.InvoiceBusnumber = model.UseInvoiceAddress ? model.InvoiceBusNumber : null;
             entity.InvoicePostalCodeId = model.UseInvoiceAddress ? model.SelectedInvoicePostalCodeId : null;
+            entity.Email = model.Email;
+            entity.InvoiceEmail = model.InvoiceEmail;
+            entity.RequiresDigitalInvoice = model.RequiresDigitalInvoice;
+            entity.AttachUblByDefault = model.AttachUblByDefault;
             entity.OwnerPercentage ??= 100;
             entity.OwnerTypeId ??= 1;
         }
 
         private void AttachIssuerCompany(ClientFormViewModel model, ClientAccount entity)
         {
-            if (model.SelectedIssuerCompanyId is null)
+            if (model.SelectedIssuerCompanyIds == null || model.SelectedIssuerCompanyIds.Count == 0)
             {
                 return;
             }
 
-            var issuer = _db.IssuerCompany.Find(model.SelectedIssuerCompanyId.Value);
-            if (issuer != null)
+            var issuerIds = model.SelectedIssuerCompanyIds.Distinct().ToList();
+            var issuers = _db.IssuerCompany
+                .Where(i => issuerIds.Contains(i.Id))
+                .ToList();
+
+            foreach (var issuer in issuers)
             {
                 entity.IssuerCompany.Add(issuer);
             }
@@ -732,7 +831,6 @@ namespace CPMCore.Controllers
                     Email = contact.Email,
                     Phone = contact.Phone,
                     Cellphone = contact.Mobile,
-                    InvoiceEmail = contact.InvoiceEmail,
                     RequiresDigitalInvoice = contact.RequiresDigitalInvoice,
                     AttachUblByDefault = contact.AttachUblByDefault
                 });
@@ -761,7 +859,6 @@ namespace CPMCore.Controllers
                         existing.Email = contactModel.Email;
                         existing.Phone = contactModel.Phone;
                         existing.Cellphone = contactModel.Mobile;
-                        existing.InvoiceEmail = contactModel.InvoiceEmail;
                         existing.RequiresDigitalInvoice = contactModel.RequiresDigitalInvoice;
                         existing.AttachUblByDefault = contactModel.AttachUblByDefault;
                         continue;
@@ -775,7 +872,6 @@ namespace CPMCore.Controllers
                     Email = contactModel.Email,
                     Phone = contactModel.Phone,
                     Cellphone = contactModel.Mobile,
-                    InvoiceEmail = contactModel.InvoiceEmail,
                     RequiresDigitalInvoice = contactModel.RequiresDigitalInvoice,
                     AttachUblByDefault = contactModel.AttachUblByDefault
                 });
@@ -1163,6 +1259,220 @@ namespace CPMCore.Controllers
             else
                 return Redirect(stri);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ValidateVat(string vatNumber, string vatCountryCode, CancellationToken ct)
+        {
+            var normalized = CombineEnterpriseNumber(vatCountryCode, vatNumber);
+
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return BadRequest(new { error = "Ongeldig ondernemingsnummer" });
+            }
+
+            try
+            {
+                using var httpClient = new HttpClient
+                {
+                    Timeout = TimeSpan.FromSeconds(15)
+                };
+
+                using var response = await httpClient.GetAsync($"https://controleerbtwnummer.eu/api/validate/{Uri.EscapeDataString(normalized)}.json", ct);
+                var rawContent = await response.Content.ReadAsStringAsync(ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorMessage = string.IsNullOrWhiteSpace(rawContent)
+                        ? "De controle van het btw-nummer is mislukt."
+                        : rawContent;
+
+                    return StatusCode((int)response.StatusCode, new { error = errorMessage });
+                }
+
+                VatLookupResponse? payload;
+
+                try
+                {
+                    payload = JsonSerializer.Deserialize<VatLookupResponse>(rawContent, VatLookupSerializerOptions);
+                }
+                catch (JsonException jsonEx)
+                {
+                    return BadRequest(new { error = $"Het antwoord van de btw-service kon niet worden gelezen: {jsonEx.Message}" });
+                }
+
+                if (payload == null)
+                {
+                    return BadRequest(new { error = "Ontving een leeg antwoord van de btw-service." });
+                }
+
+                payload.address ??= new VatLookupAddress();
+
+                if (string.IsNullOrWhiteSpace(payload.countryCode))
+                {
+                    payload.countryCode = payload.address.countryCode;
+                }
+
+                return Json(payload);
+            }
+            catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+            {
+                return StatusCode(504, new { error = "De btw-service heeft niet tijdig geantwoord. Probeer het later opnieuw." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> FindPostalMatch(string postalCode, string city, string? countryIso, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(postalCode))
+            {
+                return BadRequest();
+            }
+
+            var trimmedPostal = postalCode.Trim();
+            var trimmedCity = city?.Trim();
+            var normalizedIso = countryIso?.Trim().ToUpperInvariant();
+
+            var baseQuery = _db.PostalCode
+                .Include(p => p.Country)
+                .AsNoTracking()
+                .Where(p => p.Postcode == trimmedPostal);
+
+            if (!string.IsNullOrWhiteSpace(normalizedIso))
+            {
+                baseQuery = baseQuery.Where(p => p.Country != null && p.Country.LandIsocode != null && p.Country.LandIsocode.ToUpper() == normalizedIso);
+            }
+
+            var candidates = await baseQuery
+                .OrderBy(p => p.Gemeente)
+                .ToListAsync(ct);
+
+            if (candidates.Count == 0)
+            {
+                return NotFound();
+            }
+
+            PostalCode? match = null;
+
+            if (!string.IsNullOrWhiteSpace(trimmedCity))
+            {
+                match = candidates.FirstOrDefault(p => string.Equals(p.Gemeente?.Trim(), trimmedCity, StringComparison.OrdinalIgnoreCase));
+            }
+
+            match ??= candidates.First();
+
+            return Json(new { id = match.PostcodeId, text = $"{match.Postcode} - {match.Gemeente}", countryId = match.CountryId });
+        }
+
+        private static string? CombineEnterpriseNumber(string? countryCode, string? number)
+        {
+            var sanitizedNumber = SanitizeVatPart(number);
+            if (string.IsNullOrWhiteSpace(sanitizedNumber))
+            {
+                return null;
+            }
+
+            var sanitizedCountry = SanitizeVatCountry(countryCode);
+            return string.IsNullOrEmpty(sanitizedCountry) ? sanitizedNumber : sanitizedCountry + sanitizedNumber;
+        }
+
+        private static (string? CountryCode, string? NumberPart) SplitEnterpriseNumber(string? value)
+        {
+            var sanitized = SanitizeVatPart(value);
+
+            if (string.IsNullOrWhiteSpace(sanitized))
+            {
+                return (null, null);
+            }
+
+            if (sanitized.Length >= 2 && char.IsLetter(sanitized[0]) && char.IsLetter(sanitized[1]))
+            {
+                var prefix = sanitized.Substring(0, 2);
+                var remainder = sanitized.Substring(2);
+                return (prefix, string.IsNullOrWhiteSpace(remainder) ? null : remainder);
+            }
+
+            return (null, sanitized);
+        }
+
+        private static string? SanitizeVatPart(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder(value.Length);
+            foreach (var ch in value)
+            {
+                if (char.IsLetterOrDigit(ch))
+                {
+                    builder.Append(char.ToUpperInvariant(ch));
+                }
+            }
+
+            return builder.Length == 0 ? null : builder.ToString();
+        }
+
+        private static string? SanitizeVatCountry(string? countryCode)
+        {
+            if (string.IsNullOrWhiteSpace(countryCode))
+            {
+                return null;
+            }
+
+            var builder = new StringBuilder(2);
+            foreach (var ch in countryCode.Trim())
+            {
+                if (char.IsLetter(ch))
+                {
+                    builder.Append(char.ToUpperInvariant(ch));
+                }
+
+                if (builder.Length == 2)
+                {
+                    break;
+                }
+            }
+
+            return builder.Length == 0 ? null : builder.ToString();
+        }
+
+        private sealed class VatLookupResponse
+        {
+            public bool valid { get; set; }
+
+            public string vatNumber { get; set; } = string.Empty;
+
+            public string name { get; set; } = string.Empty;
+
+            public string countryCode { get; set; } = string.Empty;
+
+            public VatLookupAddress? address { get; set; }
+
+            [JsonPropertyName("strAddress")]
+            public string? strAddress { get; set; }
+        }
+
+        private sealed class VatLookupAddress
+        {
+            public string street { get; set; } = string.Empty;
+
+            public string number { get; set; } = string.Empty;
+
+            [JsonPropertyName("zip_code")]
+            public string zip { get; set; } = string.Empty;
+
+            public string city { get; set; } = string.Empty;
+
+            public string country { get; set; } = string.Empty;
+
+            public string countryCode { get; set; } = string.Empty;
+        }
+
         public void AddMessage(string messagetype, string message, string messagetitle)
         {
             TempData["Message"] = message;

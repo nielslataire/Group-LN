@@ -619,8 +619,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.CompanyName).HasMaxLength(100);
             entity.Property(e => e.DeliveryDoc).HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(300);
             entity.Property(e => e.Housenumber).HasMaxLength(10);
             entity.Property(e => e.InvoiceBusnumber).HasMaxLength(10);
+            entity.Property(e => e.InvoiceEmail).HasMaxLength(300);
             entity.Property(e => e.InvoiceHousenumber).HasMaxLength(10);
             entity.Property(e => e.InvoiceStreet).HasMaxLength(250);
             entity.Property(e => e.Name).HasMaxLength(200);

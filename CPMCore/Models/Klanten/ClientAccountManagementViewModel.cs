@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using BOCore;
 
 namespace CPMCore.Models.Klanten;
 
@@ -25,12 +26,24 @@ public class ClientFormViewModel
 {
     public int? Id { get; set; }
 
-    [Required(ErrorMessage = "Naam is verplicht")]
-    [Display(Name = "Naam/bedrijfsnaam")]
+    [Display(Name = "Bedrijf of particulier")]
+    public bool IsCompany { get; set; } = true;
+
+    [Display(Name = "Bedrijfsnaam")]
+    public string? CompanyName { get; set; }
+
+    [Display(Name = "Naam")]
+    public string? Name { get; set; }
+
+    [Display(Name = "Aanspreking")]
+    public Salutation? Salutation { get; set; }
     public string DisplayName { get; set; } = string.Empty;
 
     [Display(Name = "Ondernemingsnummer")]
     public string? EnterpriseNumber { get; set; }
+
+    [Display(Name = "BTW landcode")]
+    public string EnterpriseNumberCountryCode { get; set; } = "BE";
 
     [Display(Name = "Straat")]
     public string? Street { get; set; }
@@ -79,9 +92,23 @@ public class ClientFormViewModel
     [Display(Name = "Land facturatie")]
     public int? SelectedInvoiceCountryId { get; set; }
 
-    [Display(Name = "Facturatiebedrijf")]
-    [Required(ErrorMessage = "Kies een facturatiebedrijf")]
-    public int? SelectedIssuerCompanyId { get; set; }
+    [Display(Name = "Facturatiebedrijven")]
+    [Required(ErrorMessage = "Kies minstens één facturatiebedrijf")]
+    public List<int> SelectedIssuerCompanyIds { get; set; } = new();
+
+    [Display(Name = "E-mail")]
+    [EmailAddress(ErrorMessage = "Ongeldige e-mail")]
+    public string? Email { get; set; }
+
+    [Display(Name = "Facturatie e-mail")]
+    [EmailAddress(ErrorMessage = "Ongeldige e-mail")]
+    public string? InvoiceEmail { get; set; }
+
+    [Display(Name = "Digitale factuur vereist")]
+    public bool RequiresDigitalInvoice { get; set; }
+
+    [Display(Name = "UBL standaard meesturen")]
+    public bool AttachUblByDefault { get; set; }
 
     public List<CountryOptionViewModel> Countries { get; set; } = new();
     public List<IssuerCompanyOptionViewModel> IssuerCompanies { get; set; } = new();
@@ -89,6 +116,10 @@ public class ClientFormViewModel
 
     public string Title => Id.HasValue ? "Klant bewerken" : "Klant toevoegen";
     public string Subtitle => Id.HasValue ? "Werk de klantgegevens bij" : "Maak een nieuwe klant aan";
+
+    public string DisplayLabel => IsCompany
+        ? CompanyName ?? string.Empty
+        : string.Join(" ", new[] { Salutation?.GetDisplayName(), Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
 }
 
 public class ContactInputViewModel
@@ -111,10 +142,6 @@ public class ContactInputViewModel
 
     [Display(Name = "GSM")]
     public string? Mobile { get; set; }
-
-    [Display(Name = "Facturatie e-mail")]
-    [EmailAddress(ErrorMessage = "Ongeldige e-mail")]
-    public string? InvoiceEmail { get; set; }
 
     [Display(Name = "Digitale factuur vereist")]
     public bool RequiresDigitalInvoice { get; set; }

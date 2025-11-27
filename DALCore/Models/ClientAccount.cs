@@ -59,6 +59,14 @@ public partial class ClientAccount
 
     public DateOnly? DeedOfSaleExpDate { get; set; }
 
+    public string Email { get; set; }
+
+    public string InvoiceEmail { get; set; }
+
+    public bool RequiresDigitalInvoice { get; set; }
+
+    public bool AttachUblByDefault { get; set; }
+
     public virtual ICollection<ChangeOrder> ChangeOrder { get; set; } = new List<ChangeOrder>();
 
     public virtual ICollection<ClientContacts> ClientContacts { get; set; } = new List<ClientContacts>();

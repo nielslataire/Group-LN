@@ -1,6 +1,9 @@
 ﻿@model CPMCore.Models.Klanten.ClientFormViewModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using BOCore
 @{
     var isReadOnly = ViewBag.ReadOnly as bool? ?? false;
+    var vatCountryOptions = Model.Countries.Where(c => !string.IsNullOrWhiteSpace(c.IsoCode)).ToList();
 }
 
 <div class="row mt-2">
@@ -14,25 +17,105 @@
                         <p class="card-big-info-desc">Vul de basisgegevens van de klant in.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="form-group mb-3">
-                            <label class="control-label">@Html.LabelFor(m => m.DisplayName)</label>
-                            @Html.TextBoxFor(m => m.DisplayName, new { @class = "form-control form-control-modern", placeholder = "Naam of bedrijfsnaam" })
-                            @Html.ValidationMessageFor(m => m.DisplayName, "", new { @class = "text-danger" })
-                        </div>
-                        <div class="form-group mb-3">
-                            <label class="control-label">@Html.LabelFor(m => m.EnterpriseNumber)</label>
-                            @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "BE0123.456.789" })
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="control-label">@Html.LabelFor(m => m.SelectedIssuerCompanyId)</label>
-                                <select asp-for="SelectedIssuerCompanyId" class="form-control form-control-modern">
+                        <div class="row align-items-center pb-3">
+                           <div class="form-group">
+                                <div class="col-md-12">
+                                <label class="control-label">@Html.LabelFor(m => m.SelectedIssuerCompanyIds)</label>
+                                <select id="SelectedIssuerCompanyIds" name="SelectedIssuerCompanyIds" class="form-control form-control-modern" multiple="multiple" data-plugin-multiselect data-plugin-options='{"maxHeight": 200, "includeSelectAllOption": true, "buttonWidth": "100%"}'>
                                     @foreach (var issuer in Model.IssuerCompanies)
                                     {
-                                        <option value="@issuer.Id" selected="@(Model.SelectedIssuerCompanyId == issuer.Id ? "selected" : null)">@issuer.Name</option>
+                                        var selected = Model.SelectedIssuerCompanyIds != null && Model.SelectedIssuerCompanyIds.Contains(issuer.Id);
+                                        <option value="@issuer.Id" selected="@(selected ? "selected" : null)">@issuer.Name</option>
                                     }
                                 </select>
-                                @Html.ValidationMessageFor(m => m.SelectedIssuerCompanyId, "", new { @class = "text-danger" })
+                                @Html.ValidationMessageFor(m => m.SelectedIssuerCompanyIds, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                 <div class="col-md-12">
+                                <label class="control-label">@Html.LabelFor(m => m.IsCompany)</label>
+                                @Html.DropDownListFor(
+                                    m => m.IsCompany,
+                                    new List<SelectListItem>
+                                    {
+                                        new SelectListItem("Onderneming", bool.TrueString, Model.IsCompany),
+                                        new SelectListItem("Particulier", bool.FalseString, !Model.IsCompany)
+                                    },
+                                    new { @class = "form-control form-control-modern", id = "IsCompany" })
+                                    </div>
+                            </div>
+
+                            <div id="company-fields" class="row align-items-center pb-3 @(Model.IsCompany ? string.Empty : "d-none")">
+                                <div class="form-group mb-3">
+                                    <label class="control-label">@Html.LabelFor(m => m.CompanyName)</label>
+                                    @Html.TextBoxFor(m => m.CompanyName, new { @class = "form-control form-control-modern", placeholder = "Bedrijfsnaam" })
+                                    @Html.ValidationMessageFor(m => m.CompanyName, "", new { @class = "text-danger" })
+                                </div>
+                                <div class="form-group mb-3">
+                                    <label class="control-label">@Html.LabelFor(m => m.EnterpriseNumber)</label>
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <select id="EnterpriseNumberCountryCode" name="EnterpriseNumberCountryCode" class="form-control form-control-modern">
+                                                @foreach (var option in vatCountryOptions)
+                                                {
+                                                    <option value="@option.IsoCode" selected="@(Model.EnterpriseNumberCountryCode == option.IsoCode ? "selected" : null)">@option.Name (@option.IsoCode)</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <div class="input-group">
+                                                @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "Ondernemingsnummer", id = "enterprise-number", autocomplete = "off" })
+                                                <button type="button" class="btn btn-primary" id="btn-validate-vat"><i class="bx bx-check"></i><span class="d-none d-sm-inline ms-1">Controleren</span></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @Html.ValidationMessageFor(m => m.EnterpriseNumber, "", new { @class = "text-danger" })
+                                    <small class="text-muted d-block mt-1">Voer de landcode en het btw-nummer in (bv. BE 0123456789).</small>
+                                </div>
+                            </div>
+
+                            <div id="person-fields" class="row align-items-center pb-3 @(Model.IsCompany ? "d-none" : string.Empty)">
+
+                                    <div class="col-md-6">
+                                        <label class="control-label">@Html.LabelFor(m => m.Salutation)</label>
+                                        @Html.DropDownListFor(m => m.Salutation, Html.GetEnumSelectList<Salutation>(), new { @class = "form-control form-control-modern" })
+                                        @Html.ValidationMessageFor(m => m.Salutation, "", new { @class = "text-danger" })
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">@Html.LabelFor(m => m.Name)</label>
+                                        @Html.TextBoxFor(m => m.Name, new { @class = "form-control form-control-modern", placeholder = "Naam" })
+                                        @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger" })
+                                    </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3 ">
+                                <div class="col-md-6">
+                                    <label class="control-label">@Html.LabelFor(m => m.Email)</label>
+                                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control form-control-modern", placeholder = "klant@bedrijf.be", type = "email" })
+                                    @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceEmail)</label>
+                                    @Html.TextBoxFor(m => m.InvoiceEmail, new { @class = "form-control form-control-modern", placeholder = "facturatie@bedrijf.be", type = "email" })
+                                    @Html.ValidationMessageFor(m => m.InvoiceEmail, "", new { @class = "text-danger" })
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3 ">
+                                <div class="col-md-6">
+                                <div class="form-check">
+                                    @Html.CheckBoxFor(m => m.RequiresDigitalInvoice, new { @class = "form-check-input" })
+                                    <label class="form-check-label" for="@Html.IdFor(m => m.RequiresDigitalInvoice)">Digitale factuur vereist</label>
+                                </div>
+                                </div>
+                                    <div class="col-md-6">
+                                <div class="form-check">
+                                    @Html.CheckBoxFor(m => m.AttachUblByDefault, new { @class = "form-check-input" })
+                                    <label class="form-check-label" for="@Html.IdFor(m => m.AttachUblByDefault)">UBL standaard meesturen</label>
+                                </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -132,10 +215,10 @@
                                     <div class="col-md-6">
                                         <label class="control-label">@Html.LabelFor(m => m.SelectedInvoiceCountryId)</label>
                                         <select asp-for="SelectedInvoiceCountryId" class="form-control form-control-modern">
-                                            @foreach (var country in Model.Countries)
-                                            {
-                                                <option value="@country.Id" selected="@(Model.SelectedInvoiceCountryId == country.Id ? "selected" : null)">@country.Name</option>
-                                            }
+ @foreach (var country in Model.Countries)
+                                        {
+                                            <option value="@country.Id" data-isocode="@country.IsoCode" selected="@(Model.SelectedInvoiceCountryId == country.Id ? "selected" : null)">@country.Name</option>
+                                        }
                                         </select>
                                     </div>
                                 </div>
@@ -159,13 +242,13 @@
                         <p class="card-big-info-desc">Voeg meerdere contactpersonen toe bij deze klant.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div id="contacts-container" class="row g-3"></div>
-                        @if (!isReadOnly)
-                        {
-                            <div class="mt-3">
-                                <button type="button" id="add-contact" class="btn btn-sm btn-primary"><i class="bx bx-plus"></i> Contact toevoegen</button>
-                            </div>
-                        }
+                        <div class="d-flex justify-content-end mb-3">
+                            @if (!isReadOnly)
+                            {
+                                <a href="#" id="add-contact" class="btn btn-default btn-md"><i class="bx bx-plus me-2"></i>Contact toevoegen</a>
+                            }
+                        </div>
+                        <div id="contacts-container"></div>
                     </div>
                 </div>
             </div>
@@ -183,55 +266,89 @@
     </div>
 }
 
-
-<template id="contact-template">
-    <div class="col-12 contact-row">
-        <div class="card border">
-            <div class="card-body">
-                <div class="row g-3 align-items-center">
-                    <div class="col-md-4">
-                        <label class="control-label">Naam</label>
-                        <input type="text" data-name-template="Contacts[__index__].Name" class="form-control form-control-modern" />
-                        <input type="hidden" data-name-template="Contacts[__index__].Id" />
+<div class="modal fade" id="vat-lookup-modal" tabindex="-1" aria-labelledby="vatLookupModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vatLookupModalLabel">Gegevens van het btw-nummer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Controleer de gevonden gegevens, pas ze indien nodig aan en kies dan voor "Gegevens overnemen".</p>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label mb-1" for="vatLookupName">Naam</label>
+                        <input type="text" class="form-control form-control-modern" id="vatLookupName" />
                     </div>
-                    <div class="col-md-4">
-                        <label class="control-label">Voornaam</label>
-                        <input type="text" data-name-template="Contacts[__index__].Forename" class="form-control form-control-modern" />
-                    </div>
-                    <div class="col-md-4 text-end">
-                        <button type="button" class="btn btn-link text-danger remove-contact"><i class="bx bx-trash"></i></button>
-                    </div>
-                </div>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-4">
-                        <label class="control-label">E-mail</label>
-                        <input type="email" data-name-template="Contacts[__index__].Email" class="form-control form-control-modern" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="control-label">Telefoon</label>
-                        <input type="text" data-name-template="Contacts[__index__].Phone" class="form-control form-control-modern" />
-                    </div>
-                    <div class="col-md-4">
-                        <label class="control-label">GSM</label>
-                        <input type="text" data-name-template="Contacts[__index__].Mobile" class="form-control form-control-modern" />
-                    </div>
-                </div>
-                <div class="row g-3 mt-2">
                     <div class="col-md-6">
-                        <label class="control-label">Facturatie e-mail</label>
-                        <input type="email" data-name-template="Contacts[__index__].InvoiceEmail" class="form-control form-control-modern" />
+                        <label class="form-label mb-1" for="vatLookupStreet">Straat</label>
+                        <input type="text" class="form-control form-control-modern" id="vatLookupStreet" />
                     </div>
-                    <div class="col-md-3 form-check mt-4">
-                        <input type="checkbox" class="form-check-input" data-name-template="Contacts[__index__].RequiresDigitalInvoice" data-id-template="contact-__index__-digital" />
-                        <label class="form-check-label" data-for-template="contact-__index__-digital">Digitale factuur</label>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1" for="vatLookupHouseNumber">Nr</label>
+                        <input type="text" class="form-control form-control-modern" id="vatLookupHouseNumber" />
                     </div>
-                    <div class="col-md-3 form-check mt-4">
-                        <input type="checkbox" class="form-check-input" data-name-template="Contacts[__index__].AttachUblByDefault" data-id-template="contact-__index__-ubl" />
-                        <label class="form-check-label" data-for-template="contact-__index__-ubl">UBL meesturen</label>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1" for="vatLookupPostal">Postcode</label>
+                        <input type="text" class="form-control form-control-modern" id="vatLookupPostal" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1" for="vatLookupCity">Gemeente</label>
+                        <input type="text" class="form-control form-control-modern" id="vatLookupCity" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1" for="vatLookupCountry">Land</label>
+                        <select id="vatLookupCountry" class="form-control form-control-modern">
+                            @foreach (var option in vatCountryOptions)
+                            {
+                                <option value="@option.IsoCode">@option.Name (@option.IsoCode)</option>
+                            }
+                        </select>
                     </div>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="btn-apply-vat-data">Gegevens overnemen</button>
+            </div>
         </div>
+    </div>
+</div>
+
+<template id="contact-template">
+    <div class="contact-row supplier-contact-row">
+        <section class="card mb-4">
+            <div class="card-body border p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="fs-6 fw-bold">Contact</div>
+                    <a href="#" class="remove-contact text-decoration-none text-reset" title="Contact verwijderen">
+                        <i class="bx bx-trash fs-4"></i>
+                    </a>
+                </div>
+                <div class="form-group">
+                    <input type="hidden" data-name-template="Contacts[__index__].Id" />
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-6 col-xl-6">
+                            <input type="text" data-name-template="Contacts[__index__].Name" class="form-control form-control-modern" placeholder="Naam" />
+                        </div>
+                        <div class="col-lg-6 col-xl-6">
+                            <input type="text" data-name-template="Contacts[__index__].Forename" class="form-control form-control-modern" placeholder="Voornaam" />
+                        </div>
+                    </div>
+                    <div class="row align-items-center pb-3">
+                        <div class="col-lg-6 col-xl-6">
+                            <input type="email" data-name-template="Contacts[__index__].Email" class="form-control form-control-modern" placeholder="Email" />
+                        </div>
+                        <div class="col-lg-3 col-xl-3">
+                            <input type="text" data-name-template="Contacts[__index__].Phone" class="form-control form-control-modern phone-input" placeholder="Telefoon" />
+                        </div>
+                        <div class="col-lg-3 col-xl-3">
+                            <input type="text" data-name-template="Contacts[__index__].Mobile" class="form-control form-control-modern cellphone-input" placeholder="GSM" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </div>
 </template>
 
