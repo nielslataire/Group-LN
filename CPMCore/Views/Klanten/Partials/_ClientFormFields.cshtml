@@ -39,8 +39,11 @@
                 </div>
             </div>
         </section>
-
-        <section class="card card-modern card-big-info mt-3">
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
             <div class="card-body">
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
@@ -49,90 +52,105 @@
                         <p class="card-big-info-desc">Contact- en facturatieadres.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="row g-3 mb-2">
-                            <div class="col-md-6">
-                                <label class="control-label">@Html.LabelFor(m => m.Street)</label>
-                                @Html.TextBoxFor(m => m.Street, new { @class = "form-control form-control-modern" })
-                            </div>
-                            <div class="col-md-3">
-                                <label class="control-label">@Html.LabelFor(m => m.HouseNumber)</label>
-                                @Html.TextBoxFor(m => m.HouseNumber, new { @class = "form-control form-control-modern" })
-                            </div>
-                            <div class="col-md-3">
-                                <label class="control-label">@Html.LabelFor(m => m.BusNumber)</label>
-                                @Html.TextBoxFor(m => m.BusNumber, new { @class = "form-control form-control-modern" })
-                            </div>
-                        </div>
-                        <div class="row g-3 mb-2">
-                            <div class="col-md-6">
-                                <label class="control-label">@Html.LabelFor(m => m.SelectedPostalCodeId)</label>
-                                <select asp-for="SelectedPostalCodeId" class="form-control form-control-modern postal-select">
-                                    <option value="">Selecteer</option>
-                                    @if (Model.SelectedPostalCodeId.HasValue && Model.SelectedCountryId.HasValue)
-                                    {
-                                        <option selected value="@Model.SelectedPostalCodeId">@Model.PostalCode - @Model.City</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="control-label">@Html.LabelFor(m => m.SelectedCountryId)</label>
-                                <select asp-for="SelectedCountryId" class="form-control form-control-modern">
-                                    @foreach (var country in Model.Countries)
-                                    {
-                                        <option value="@country.Id" selected="@(Model.SelectedCountryId == country.Id ? "selected" : null)">@country.Name</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-check form-switch mb-3">
-                            @Html.CheckBoxFor(m => m.UseInvoiceAddress, new { @class = "form-check-input", role = "switch", id = "UseInvoiceAddress" })
-                            <label class="form-check-label" for="UseInvoiceAddress">Ander facturatieadres</label>
-                        </div>
-
-                        <div id="invoice-address" class="@(Model.UseInvoiceAddress ? string.Empty : "d-none")">
-                            <div class="row g-3 mb-2">
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
                                 <div class="col-md-6">
-                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceStreet)</label>
-                                    @Html.TextBoxFor(m => m.InvoiceStreet, new { @class = "form-control form-control-modern" })
+                                    <label class="control-label">@Html.LabelFor(m => m.Street)</label>
+                                    @Html.TextBoxFor(m => m.Street, new { @class = "form-control form-control-modern" })
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceHouseNumber)</label>
-                                    @Html.TextBoxFor(m => m.InvoiceHouseNumber, new { @class = "form-control form-control-modern" })
+                                    <label class="control-label">@Html.LabelFor(m => m.HouseNumber)</label>
+                                    @Html.TextBoxFor(m => m.HouseNumber, new { @class = "form-control form-control-modern" })
                                 </div>
                                 <div class="col-md-3">
-                                    <label class="control-label">@Html.LabelFor(m => m.InvoiceBusNumber)</label>
-                                    @Html.TextBoxFor(m => m.InvoiceBusNumber, new { @class = "form-control form-control-modern" })
+                                    <label class="control-label">@Html.LabelFor(m => m.BusNumber)</label>
+                                    @Html.TextBoxFor(m => m.BusNumber, new { @class = "form-control form-control-modern" })
                                 </div>
-                            </div>
-                            <div class="row g-3 mb-2">
+                            </div> 
+                            <div class="row align-items-center pb-3">
                                 <div class="col-md-6">
-                                    <label class="control-label">@Html.LabelFor(m => m.SelectedInvoicePostalCodeId)</label>
-                                    <select asp-for="SelectedInvoicePostalCodeId" class="form-control form-control-modern postal-select">
+                                    <label class="control-label">@Html.LabelFor(m => m.SelectedPostalCodeId)</label>
+                                    <select asp-for="SelectedPostalCodeId" class="form-control form-control-modern postal-select">
                                         <option value="">Selecteer</option>
-                                        @if (Model.SelectedInvoicePostalCodeId.HasValue && Model.SelectedInvoiceCountryId.HasValue)
+                                        @if (Model.SelectedPostalCodeId.HasValue && Model.SelectedCountryId.HasValue)
                                         {
-                                            <option selected value="@Model.SelectedInvoicePostalCodeId">@Model.InvoicePostalCode - @Model.InvoiceCity</option>
+                                            <option selected value="@Model.SelectedPostalCodeId">@Model.PostalCode - @Model.City</option>
                                         }
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="control-label">@Html.LabelFor(m => m.SelectedInvoiceCountryId)</label>
-                                    <select asp-for="SelectedInvoiceCountryId" class="form-control form-control-modern">
+                                    <label class="control-label">@Html.LabelFor(m => m.SelectedCountryId)</label>
+                                    <select asp-for="SelectedCountryId" class="form-control form-control-modern">
                                         @foreach (var country in Model.Countries)
                                         {
-                                            <option value="@country.Id" selected="@(Model.SelectedInvoiceCountryId == country.Id ? "selected" : null)">@country.Name</option>
+                                            <option value="@country.Id" selected="@(Model.SelectedCountryId == country.Id ? "selected" : null)">@country.Name</option>
                                         }
                                     </select>
                                 </div>
                             </div>
+                            <div class="row align-items-center pb-3">
+                                <div class="mb-3">
+                                    <div class="switch switch-sm switch-primary">
+                                        @Html.CheckBoxFor(
+                                            m => m.UseInvoiceAddress,
+                                            new {
+                                                @class = "",
+                                                data_plugin_ios_switch = "true",
+                                                id = "UseInvoiceAddress"
+                                            }
+                                        )
+                                    </div>
+                                    <label class="form-check-label ms-2" for="UseInvoiceAddress">Ander facturatieadres</label>
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3" id="invoice-address" class="@(Model.UseInvoiceAddress ? string.Empty : "d-none")">
+                                <div class="row align-items-center pb-3">
+                                    <div class="col-md-6">
+                                        <label class="control-label">@Html.LabelFor(m => m.InvoiceStreet)</label>
+                                        @Html.TextBoxFor(m => m.InvoiceStreet, new { @class = "form-control form-control-modern" })
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="control-label">@Html.LabelFor(m => m.InvoiceHouseNumber)</label>
+                                        @Html.TextBoxFor(m => m.InvoiceHouseNumber, new { @class = "form-control form-control-modern" })
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="control-label">@Html.LabelFor(m => m.InvoiceBusNumber)</label>
+                                        @Html.TextBoxFor(m => m.InvoiceBusNumber, new { @class = "form-control form-control-modern" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <div class="col-md-6">
+                                        <label class="control-label">@Html.LabelFor(m => m.SelectedInvoicePostalCodeId)</label>
+                                        <select asp-for="SelectedInvoicePostalCodeId" class="form-control form-control-modern postal-select">
+                                            <option value="">Selecteer</option>
+                                            @if (Model.SelectedInvoicePostalCodeId.HasValue && Model.SelectedInvoiceCountryId.HasValue)
+                                            {
+                                                <option selected value="@Model.SelectedInvoicePostalCodeId">@Model.InvoicePostalCode - @Model.InvoiceCity</option>
+                                            }
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">@Html.LabelFor(m => m.SelectedInvoiceCountryId)</label>
+                                        <select asp-for="SelectedInvoiceCountryId" class="form-control form-control-modern">
+                                            @foreach (var country in Model.Countries)
+                                            {
+                                                <option value="@country.Id" selected="@(Model.SelectedInvoiceCountryId == country.Id ? "selected" : null)">@country.Name</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                     </div>
                 </div>
             </div>
         </section>
-
-        <section class="card card-modern card-big-info mt-3">
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
             <div class="card-body">
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
@@ -152,18 +170,19 @@
                 </div>
             </div>
         </section>
-
-        @if (!isReadOnly)
-        {
-            <div class="row mt-4">
-                <div class="col text-end">
-                    <a href="@Url.Action("Index", "Klanten")" class="btn btn-default">Annuleren</a>
-                    <button type="submit" class="btn btn-primary">Opslaan</button>
-                </div>
-            </div>
-        }
     </div>
 </div>
+
+@if (!isReadOnly)
+{
+    <div class="row mt-4">
+        <div class="col text-end">
+            <a href="@Url.Action("Index", "Klanten")" class="btn btn-default">Annuleren</a>
+            <button type="submit" class="btn btn-primary">Opslaan</button>
+        </div>
+    </div>
+}
+
 
 <template id="contact-template">
     <div class="col-12 contact-row">

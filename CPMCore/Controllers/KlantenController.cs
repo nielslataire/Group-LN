@@ -1,26 +1,28 @@
 ﻿using BOCore;
 using CPMCore.Models;
 using CPMCore.Models.Klanten;
-using CPMCore.Models.Leveranciers;
-using CPMCore.Models.Projecten;
 using CPMCore.Service;
-using DALCore.Models;
-using DinkToPdf;
-using Humanizer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using static System.Net.Mime.MediaTypeNames;
 using NuGet.Configuration;
 using ServiceCore;
+using DinkToPdf;
+using Humanizer;
+using DALCore.Models;
+using Microsoft.EntityFrameworkCore;
+using CPMCore.Models.Projecten;
 using SmartBreadcrumbs.Attributes;
-using System;
-using System.Drawing;
-using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace CPMCore.Controllers
 {
@@ -38,6 +40,7 @@ namespace CPMCore.Controllers
             Configuration = configuration;
             _db = db;
         }
+
         [HttpGet]
         public async Task<IActionResult> Index(CancellationToken ct)
         {
@@ -57,11 +60,13 @@ namespace CPMCore.Controllers
                         : null,
 
                     Email = c.ClientContacts
-                        .Select(x => x.Email)
+                        .OrderBy(cc => cc.Id)
+                        .Select(cc => cc.Email)
                         .FirstOrDefault(),
 
                     Phone = c.ClientContacts
-                        .Select(x => x.Phone ?? x.Cellphone)
+                        .OrderBy(cc => cc.Id)
+                        .Select(cc => cc.Phone != null ? cc.Phone : cc.Cellphone)
                         .FirstOrDefault(),
 
                     IssuerCompanies = c.IssuerCompany
@@ -80,6 +85,7 @@ namespace CPMCore.Controllers
 
             return View(model);
         }
+
         [HttpGet]
         public async Task<IActionResult> Details(int id, CancellationToken ct)
         {
@@ -119,7 +125,7 @@ namespace CPMCore.Controllers
                 SelectedIssuerCompanyId = client.IssuerCompany.FirstOrDefault()?.Id,
                 Contacts = client.ClientContacts
                     .OrderBy(c => c.Id)
-                    .Select(c => new CPMCore.Models.Klanten.ContactInputViewModel
+                    .Select(c => new ContactInputViewModel
                     {
                         Id = c.Id,
                         Name = c.Name,
@@ -143,7 +149,7 @@ namespace CPMCore.Controllers
         {
             var model = new ClientFormViewModel();
             await BuildFormAsync(model, ct);
-            return View("Form", model);
+            return View("Create", model);
         }
 
         [HttpPost]
@@ -154,7 +160,7 @@ namespace CPMCore.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("Form", model);
+                return View("Create", model);
             }
 
             var entity = new ClientAccount();
@@ -207,7 +213,7 @@ namespace CPMCore.Controllers
                 SelectedIssuerCompanyId = client.IssuerCompany.FirstOrDefault()?.Id,
                 Contacts = client.ClientContacts
                     .OrderBy(c => c.Id)
-                    .Select(c => new CPMCore.Models.Klanten.ContactInputViewModel
+                    .Select(c => new ContactInputViewModel
                     {
                         Id = c.Id,
                         Name = c.Name,
@@ -222,8 +228,9 @@ namespace CPMCore.Controllers
             };
 
             await BuildFormAsync(model, ct);
-            return View("Form", model);
+            return View("Edit", model);
         }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, ClientFormViewModel model, CancellationToken ct)
@@ -247,7 +254,7 @@ namespace CPMCore.Controllers
 
             if (!ModelState.IsValid)
             {
-                return View("Form", model);
+                return View("Edit", model);
             }
 
             MapToEntity(model, client);
@@ -628,7 +635,7 @@ namespace CPMCore.Controllers
                 .AsNoTracking()
                 .Where(c => c.Selectable)
                 .OrderBy(c => c.LandNaam)
-                .Select(c => new CPMCore.Models.Klanten.CountryOptionViewModel
+                .Select(c => new CountryOptionViewModel
                 {
                     Id = c.Id,
                     Name = c.LandNaam,
@@ -654,7 +661,7 @@ namespace CPMCore.Controllers
                 .AsNoTracking()
                 .Where(i => i.IsActive)
                 .OrderBy(i => i.Name)
-                .Select(i => new CPMCore.Models.Klanten.IssuerCompanyOptionViewModel
+                .Select(i => new IssuerCompanyOptionViewModel
                 {
                     Id = i.Id,
                     Name = i.Name
@@ -670,7 +677,7 @@ namespace CPMCore.Controllers
 
             if (model.Contacts == null || model.Contacts.Count == 0)
             {
-                model.Contacts = new List<CPMCore.Models.Klanten.ContactInputViewModel> { new CPMCore.Models.Klanten.ContactInputViewModel() };
+                model.Contacts = new List<ContactInputViewModel> { new ContactInputViewModel() };
             }
 
             return model;
@@ -817,9 +824,9 @@ namespace CPMCore.Controllers
             return PartialView("_UnitRow", unit);
         }
 
-        //KLANT BEWERKEN
+        //KLANT BEWERKEN BIJ PROJECT
         [HttpGet]
-        public ActionResult Edit(int projectid, int clientid, int activetab)
+        public ActionResult EditProject(int projectid, int clientid, int activetab)
         {
             var referrer = Request.Headers["Referer"].ToString();
 
@@ -898,17 +905,17 @@ namespace CPMCore.Controllers
 
             model.ProjectId = projectid;
             FillInAddSelectListsEdit(ref model);
-            return View(model);
+            return View("EditProject", model);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Edit(EditClientModel viewmodel)
+        public async Task<IActionResult> EditProject(EditClientModel viewmodel)
         {
             var Referrer = TempData["Referrer"];
             if (!ModelState.IsValid || viewmodel.Client.Id == 0)
             {
                 FillInAddSelectListsEdit(ref viewmodel);
-                return View(viewmodel);
+                return View("EditProject", viewmodel);
             }
 
             // 1) Één UoW voor alles in deze actie

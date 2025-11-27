@@ -1,0 +1,138 @@
+﻿@model CPMCore.Models.Klanten.ClientFormViewModel
+@{
+    var isReadOnly = ViewBag.ReadOnly as bool? ?? false;
+}
+
+<script src="~/lib/select2/js/select2.js"></script>
+<script src="~/lib/ios7-switch/ios7-switch.js"></script>
+<script>
+    (function () {
+        const isReadOnly = @isReadOnly.ToString().ToLower();
+
+        if (isReadOnly) {
+            document.querySelectorAll('input, select, textarea, button[type=submit]').forEach(el => {
+                el.setAttribute('disabled', 'disabled');
+            });
+        }
+
+        $('.postal-select').select2({
+            theme: 'bootstrap',
+            ajax: {
+                url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+                dataType: 'json',
+                type: 'POST',
+                delay: 250,
+                data: function (params) {
+                    const countryId = document.getElementById(this[0].id === 'SelectedInvoicePostalCodeId' ? 'SelectedInvoiceCountryId' : 'SelectedCountryId')?.value;
+                    return {
+                        term: params.term,
+                        CountryId: countryId || 0
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data
+                    };
+                }
+            },
+            placeholder: 'Zoek postcode',
+            minimumInputLength: 2
+        });
+
+        $('#SelectedCountryId').on('change', function () {
+            $('#SelectedPostalCodeId').val(null).trigger('change');
+        });
+
+        $('#SelectedInvoiceCountryId').on('change', function () {
+            $('#SelectedInvoicePostalCodeId').val(null).trigger('change');
+        });
+
+        const contactContainer = document.getElementById('contacts-container');
+        const addContactButton = document.getElementById('add-contact');
+
+        function getNextContactIndex() {
+            let maxIndex = -1;
+            contactContainer?.querySelectorAll('.contact-row').forEach(row => {
+                const idx = parseInt(row.getAttribute('data-contact-index'));
+                if (!isNaN(idx) && idx > maxIndex) {
+                    maxIndex = idx;
+                }
+            });
+            return maxIndex + 1;
+        }
+
+        function buildContactRow(index, data) {
+            const template = document.getElementById('contact-template');
+            const clone = template.content.cloneNode(true);
+
+            const row = clone.querySelector('.contact-row');
+            if (row) {
+                row.setAttribute('data-contact-index', index);
+            }
+
+            clone.querySelectorAll('[data-name-template]').forEach(input => {
+                input.name = input.getAttribute('data-name-template').replace('__index__', index);
+
+                if (data) {
+                    const field = input.name.substring(input.name.lastIndexOf('.') + 1);
+                    if (field && data[field] !== undefined && data[field] !== null) {
+                        if (input.type === 'checkbox') {
+                            input.checked = data[field] === true;
+                        } else {
+                            input.value = data[field];
+                        }
+                    }
+                }
+
+                if (isReadOnly) {
+                    input.setAttribute('readonly', 'readonly');
+                    input.setAttribute('disabled', 'disabled');
+                }
+            });
+
+            clone.querySelectorAll('[data-id-template]').forEach(el => {
+                const newId = el.getAttribute('data-id-template').replace('__index__', index);
+                el.id = newId;
+            });
+
+            clone.querySelectorAll('[data-for-template]').forEach(label => {
+                label.setAttribute('for', label.getAttribute('data-for-template').replace('__index__', index));
+            });
+
+            if (!isReadOnly) {
+                clone.querySelector('.remove-contact')?.addEventListener('click', function () {
+                    this.closest('.contact-row').remove();
+                });
+            } else {
+                const removeBtn = clone.querySelector('.remove-contact');
+                if (removeBtn) {
+                    removeBtn.remove();
+                }
+            }
+
+            return clone;
+        }
+
+        if (contactContainer && !isReadOnly) {
+            addContactButton?.addEventListener('click', function () {
+                const index = getNextContactIndex();
+                contactContainer.appendChild(buildContactRow(index));
+            });
+        }
+
+        const presetContacts = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Contacts));
+        if (contactContainer) {
+            contactContainer.innerHTML = '';
+            presetContacts.forEach((c, idx) => contactContainer.appendChild(buildContactRow(idx, c)));
+        }
+
+        const invoiceToggle = document.getElementById('UseInvoiceAddress');
+        const invoiceSection = document.getElementById('invoice-address');
+
+        if (invoiceToggle && invoiceSection) {
+            invoiceToggle.addEventListener('change', function () {
+                invoiceSection.classList.toggle('d-none', !this.checked);
+            });
+        }
+    })();
+</script>

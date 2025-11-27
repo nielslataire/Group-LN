@@ -1,4 +1,5 @@
 ﻿Imports System.Globalization
+Imports System.Net
 Imports System.Net.Http
 Imports Newtonsoft.Json
 
@@ -20,43 +21,51 @@ Public Class ReCaptchaValidator
             Return validationResult
         End If
 
-        Using client As HttpClient = New HttpClient()
-            client.BaseAddress = New Uri("https://www.google.com")
-            Dim values = New List(Of KeyValuePair(Of String, String))() From {
-                New KeyValuePair(Of String, String)("secret", secretKey),
-                New KeyValuePair(Of String, String)("response", captchaResponse)
-            }
-            Dim content As FormUrlEncodedContent = New FormUrlEncodedContent(values)
-            Dim response As HttpResponseMessage = client.PostAsync("/recaptcha/api/siteverify", content).Result
-            Dim verificationResponse As String = response.Content.ReadAsStringAsync().Result
-            Dim verificationResult = JsonConvert.DeserializeObject(Of ReCaptchaValidationResult)(verificationResponse)
+        Try
+            ' Ensure modern TLS protocols are enabled so the Google verification call succeeds
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 Or SecurityProtocolType.Tls11 Or SecurityProtocolType.Tls
 
-            If verificationResult Is Nothing Then
-                validationResult.ErrorCodes.Add("invalid-response")
-                Return validationResult
-            End If
+            Using client As HttpClient = New HttpClient()
+                client.BaseAddress = New Uri("https://www.google.com")
+                Dim values = New List(Of KeyValuePair(Of String, String))() From {
+                    New KeyValuePair(Of String, String)("secret", secretKey),
+                    New KeyValuePair(Of String, String)("response", captchaResponse)
+                }
+                Dim content As FormUrlEncodedContent = New FormUrlEncodedContent(values)
+                Dim response As HttpResponseMessage = client.PostAsync("/recaptcha/api/siteverify", content).Result
+                Dim verificationResponse As String = response.Content.ReadAsStringAsync().Result
+                Dim verificationResult = JsonConvert.DeserializeObject(Of ReCaptchaValidationResult)(verificationResponse)
 
-            If verificationResult.ErrorCodes Is Nothing Then
-                verificationResult.ErrorCodes = New List(Of String)()
-            End If
+                If verificationResult Is Nothing Then
+                    validationResult.ErrorCodes.Add("invalid-response")
+                    Return validationResult
+                End If
 
-            If Not verificationResult.Success Then
+                If verificationResult.ErrorCodes Is Nothing Then
+                    verificationResult.ErrorCodes = New List(Of String)()
+                End If
+
+                If Not verificationResult.Success Then
+                    Return verificationResult
+                End If
+
+                If Not String.IsNullOrWhiteSpace(expectedAction) AndAlso Not String.Equals(verificationResult.Action, expectedAction, StringComparison.OrdinalIgnoreCase) Then
+                    verificationResult.Success = False
+                    verificationResult.ErrorCodes.Add("invalid-action")
+                    Return verificationResult
+                End If
+
+                If verificationResult.Score < minimumScore Then
+                    verificationResult.Success = False
+                    verificationResult.ErrorCodes.Add(String.Format(CultureInfo.InvariantCulture, "score-below-threshold ({0:0.00})", verificationResult.Score))
+                    Return verificationResult
+                End If
+
                 Return verificationResult
-            End If
-
-            If Not String.IsNullOrWhiteSpace(expectedAction) AndAlso Not String.Equals(verificationResult.Action, expectedAction, StringComparison.OrdinalIgnoreCase) Then
-                verificationResult.Success = False
-                verificationResult.ErrorCodes.Add("invalid-action")
-                Return verificationResult
-            End If
-
-            If verificationResult.Score < minimumScore Then
-                verificationResult.Success = False
-                verificationResult.ErrorCodes.Add(String.Format(CultureInfo.InvariantCulture, "score-below-threshold ({0:0.00})", verificationResult.Score))
-                Return verificationResult
-            End If
-
-            Return verificationResult
-        End Using
+            End Using
+        Catch ex As Exception
+            validationResult.ErrorCodes.Add(String.Format(CultureInfo.InvariantCulture, "recaptcha-request-failed ({0})", ex.Message))
+            Return validationResult
+        End Try
     End Function
 End Class

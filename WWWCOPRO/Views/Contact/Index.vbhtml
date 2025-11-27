@@ -88,8 +88,8 @@ End Code
                 </div>*@
                     <div class="row">
                         <div class="col-md-12">
-                            @Html.Hidden("recaptcha-action", "", New With {.id = "recaptcha-action"})
-                            @Html.Hidden("g-recaptcha-response", "", New With {.id = "g-recaptcha-response"})
+                            @*@Html.Hidden("recaptcha-action", "", New With {.id = "recaptcha-action"})
+                            @Html.Hidden("g-recaptcha-response", "", New With {.id = "g-recaptcha-response"})*@
                             <button type="submit" class="btn btn-primary btn-lg mb-xlg" id="contact-submit">Verstuur bericht</button>
                             @*<button type="submit" class="g-recaptcha btn btn-primary btn-lg mb-xlg" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx" data-callback="onSubmit">Verstuur bericht</button>*@
                         </div>
@@ -132,7 +132,7 @@ End Code
 <script src="https://www.google.com/recaptcha/api.js?render=@ViewBag.ReCaptchaSiteKey"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>
 <script>
-var recaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
+@*var recaptchaSiteKey = '@ViewBag.ReCaptchaSiteKey';
 var recaptchaAction = '@ViewBag.ReCaptchaAction';
 var contactForm = document.getElementById('FormMail');
 var recaptchaInput = document.getElementById('g-recaptcha-response');
@@ -151,7 +151,7 @@ if (typeof grecaptcha !== 'undefined' && recaptchaSiteKey && contactForm && reca
             });
         });
     });
-}
+}*@
 			/*
 			Map Settings
 
