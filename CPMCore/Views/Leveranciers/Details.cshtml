@@ -77,69 +77,72 @@
 </ul>
 
 <div id="supplier-general-section" class="supplier-section">
-    <div class="row">
-        <div class="col-lg-7">
-            <section class="card card-modern mb-4">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="bx bx-buildings fs-1 me-2 text-primary"></i>
-                        <h2>Algemene info</h2>
+    <section class="card card-modern card-big-info">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-2-5 col-xl-2-5">
+                    <i class="card-big-info-icon bx bx-box"></i>
+                    <h2 class="card-big-info-title">Algemene info</h2>
+                    <p class="card-big-info-desc">Hier vindt u de basisgegevens van de leverancier.</p>
+                </div>
+                <div class="col-lg-3-5 col-xl-3-5">
+                    <div class="col-md-12">
+                        <span class="fw-semibold fs-6">Ondernemingsnummer</span>
+                        <div class="text-muted">@(string.IsNullOrWhiteSpace(Model.EnterpriseNumber) ? "-" : Model.EnterpriseNumber)</div>
                     </div>
-                    <div class="row g-4">
-                        <div class="col-md-6">
-                            <span class="fw-semibold fs-6">Ondernemingsnummer</span>
-                            <div class="text-muted">@(string.IsNullOrWhiteSpace(Model.EnterpriseNumber) ? "-" : Model.EnterpriseNumber)</div>
-                        </div>
-                        <div class="col-md-6">
-                            <span class="fw-semibold fs-6">Bedrijfsvorm</span>
-                            <div class="text-muted">@(string.IsNullOrWhiteSpace(Model.LegalForm) ? "-" : Model.LegalForm)</div>
-                        </div>
-                        <div class="col-md-12">
-                            <span class="fw-semibold fs-6">Adres</span>
-                            <div class="text-muted">
-                                @if (!string.IsNullOrWhiteSpace(Model.Street))
-                                {
-                                    <text>@Model.Street @Model.HouseNumber @(string.IsNullOrWhiteSpace(Model.BusNumber) ? string.Empty : $" bus {Model.BusNumber}")</text>
-                                    <br />
-                                    <text>@Model.PostalCode @Model.City</text>
-                                    if (!string.IsNullOrWhiteSpace(Model.CountryName))
-                                    {
-                                        <text><br />@Model.CountryName</text>
-                                    }
-                                }
-                                else
-                                {
-                                    <text>-</text>
-                                }
-                            </div>
-                        </div>
-                        <div class="col-md-12">
-                            <span class="fw-semibold fs-6">Activiteiten</span>
-                            @if (Model.Activities.Any())
+                    <div class="col-md-12">
+                        <span class="fw-semibold fs-6">Bedrijfsvorm</span>
+                        <div class="text-muted">@(string.IsNullOrWhiteSpace(Model.LegalForm) ? "-" : Model.LegalForm)</div>
+                    </div>
+                    <div class="col-md-12">
+                        <span class="fw-semibold fs-6">Adres</span>
+                        <div class="text-muted">
+                            @if (!string.IsNullOrWhiteSpace(Model.Street))
                             {
-                                <div class="mt-2">
-                                    @foreach (var activity in Model.Activities)
-                                    {
-                                        <span class="badge badge-default me-1 mb-1 fs-6">@activity</span>
-                                    }
-                                </div>
+                                <text>@Model.Street @Model.HouseNumber @(string.IsNullOrWhiteSpace(Model.BusNumber) ? string.Empty : $" bus {Model.BusNumber}")</text>
+                                <br />
+                                <text>@Model.PostalCode @Model.City</text>
+                                if (!string.IsNullOrWhiteSpace(Model.CountryName))
+                                {
+                                    <text><br />@Model.CountryName</text>
+                                }
                             }
                             else
                             {
-                                <div class="fw-semibold">-</div>
+                                <text>-</text>
                             }
                         </div>
                     </div>
-                </div>
-            </section>
-        </div>
-        <div class="col-lg-5">
-            <section class="card card-modern mb-4">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <i class="bx bxs-contact fs-1 me-2 text-primary"></i>
-                        <h2>Contact & facturatie</h2>
+                    <div class="col-md-12">
+                        <span class="fw-semibold fs-6">Activiteiten</span>
+                        @if (Model.Activities.Any())
+                        {
+                            <div class="mt-2">
+                                @foreach (var activity in Model.Activities)
+                                {
+                                    <span class="badge badge-default me-1 mb-1 fs-6">@activity</span>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="fw-semibold">-</div>
+                        }
                     </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="card card-modern card-big-info">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-lg-2-5 col-xl-2-5">
+                    <i class="card-big-info-icon bx bxs-contact"></i>
+                    <h2 class="card-big-info-title">Contact & facturatie</h2>
+                    <p class="card-big-info-desc">Hier vindt u de contact en facturatiegegevens van de leverancier.</p>
+                </div>
+                <div class="col-lg-3-5 col-xl-3-5">
                     <ul class="list-unstyled mb-0">
                         <li class="mb-3">
                             <span class="fw-semibold fs-6">Telefoon</span>
@@ -199,10 +202,11 @@
                             </div>
                         </li>
                     </ul>
+
                 </div>
-            </section>
+            </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <section class="card card-modern supplier-section d-none" id="supplier-departments-section">

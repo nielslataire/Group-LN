@@ -7,6 +7,7 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
 }
 
 <div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
@@ -71,6 +72,9 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @{
+                        var canDelete = User.IsInRole("Admin") || User.IsInRole("Administrator");
+                    }
                     @foreach (var client in Model.Clients)
                     {
                         var issuerIds = string.Join(",", client.IssuerCompanyIds);
@@ -104,6 +108,13 @@
                                     <i class="bx bx-pencil fs-5"></i>
                                     <span class="visually-hidden">Bewerken</span>
                                 </a>
+                                @if (canDelete)
+                                {
+                                    <a href="#modaldeleteclient" data-toggle="tooltip" data-placement="top" title="Verwijderen" class="deleteClient ms-1 me-1" data-id="@client.Id">
+                                        <i class="bx bx-trash fs-5 text-danger"></i>
+                                        <span class="visually-hidden">Verwijderen</span>
+                                    </a>
+                                }
                             </td>
                         </tr>
                     }
@@ -112,11 +123,14 @@
         </div>
     </div>
 </div>
-
+<div id="modaldeleteclient" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-client-container"></div>
+</div>
 @section PageScripts
 {
     <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
     <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function () {
             const table = $('#datatable-clients').DataTable({
@@ -136,7 +150,8 @@
                     }
                 }
             });
-            table.buttons(0, null).containers().appendTo('#colvis-container');
+             $('.dataTables_filter, .dt-search').hide();
+
             const searchTerm = document.getElementById('search-term');
             searchTerm?.addEventListener('input', function () {
                 table.search(this.value).draw();
@@ -158,6 +173,27 @@
 
             issuerFilter?.addEventListener('change', function () {
                 table.draw();
+            });
+             const deleteModalSelector = '#modaldeleteclient';
+            const deleteContainerSelector = '#delete-client-container';
+            const deleteUrl = '@Url.Action("PartialDeleteClientModal", "Klanten")';
+
+            $(document).on('click', '.deleteClient', function (e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+
+                $.get(`${deleteUrl}/${id}`, function (data) {
+                    $(deleteContainerSelector).html(data);
+
+                    $.magnificPopup.open({
+                        items: {
+                            src: deleteModalSelector
+                        },
+                        type: 'inline',
+                        preloader: false,
+                        focus: deleteContainerSelector
+                    });
+                });
             });
         })();
     </script>

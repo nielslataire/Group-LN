@@ -2,18 +2,307 @@
 
 @{
     var isReadOnly = ViewBag.ReadOnly as bool? ?? false;
-    ViewData["Title"] = Model.Title;
+    var displayName = string.IsNullOrWhiteSpace(Model.DisplayLabel) ? Model.Title : Model.DisplayLabel;
+    ViewData["Title"] = isReadOnly ? displayName : Model.Title;
+
+    var issuerNames = Model.IssuerCompanies
+        .Where(ic => Model.SelectedIssuerCompanyIds.Contains(ic.Id))
+        .Select(ic => ic.Name)
+        .ToList();
+
+    string? GetCountryName(int? id) => Model.Countries.FirstOrDefault(c => c.Id == id)?.Name;
+    var backUrl = TempData.Peek("Referrer") ?? Url.Action("Index", "Klanten");
 }
 
 @section PageStyle
 {
-    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
-    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    @if (!isReadOnly)
+    {
+        <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+        <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    }
+    else
+    {
+        <style>
+            .client-tab-nav {
+                background-color: #f3f5f7;
+                border-radius: 6px;
+                padding: 6px;
+                gap: 4px;
+            }
+
+                .client-tab-nav .nav-link {
+                    color: #6c757d;
+                    font-weight: 600;
+                    border-radius: 6px;
+                    border: 1px solid transparent;
+                    padding: 10px 16px;
+                }
+
+                    .client-tab-nav .nav-link.active {
+                        background-color: #ffffff;
+                        color: #1f2d3d;
+                        border-color: #e3e6ea;
+                        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+                    }
+        </style>
+    }
 }
 
-@await Html.PartialAsync("_ClientForm", Model)
+@if (isReadOnly)
+{
+    <div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
+        <div class="col-sm-auto mb-3 mb-sm-0">
+            <div class="d-flex align-items-center">
+                <a href="@backUrl" class="text-decoration-none text-reset d-flex align-items-center me-3">
+                    <i class="bx bx-chevron-left fs-1"></i>
+                </a>
+                <div>
+                    <h1 class="fw-bold mb-0">@displayName</h1>
+                    <h5 class="mb-0 text-muted">Klant detail</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-auto text-sm-end">
+            @if (Model.Id.HasValue)
+            {
+                <a href="@Url.Action("Edit", "Klanten", new { id = Model.Id })" class="btn btn-primary btn-md px-3">
+                    <i class="bx bx-pencil me-1"></i>Bewerken
+                </a>
+            }
+        </div>
+    </div>
+
+    <ul class="nav nav-pills client-tab-nav mb-4" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" href="#" data-section-toggle="algemeen">Algemeen</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#" data-section-toggle="facturen">Facturen</a>
+        </li>
+    </ul>
+
+    <div id="client-general-section" class="client-section">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="row">
+                    <div class="col-md-12">
+                        <section class="card card-modern card-big-info">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-2-5">
+                                <i class="card-big-info-icon bx bx-box"></i>
+                                <h2 class="card-big-info-title">Algemene info</h2>
+                                <p class="card-big-info-desc">Hier vindt u de basisgegevens van de klant.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-3-5">
+                                <div class="col-md-12">
+                                    <span class="fw-semibold fs-6">Type</span>
+                                    <div class="text-muted">@(Model.IsCompany ? "Bedrijf" : "Particulier")</div>
+                                </div>
+                                <div class="col-md-12">
+                                    <span class="fw-semibold fs-6">Ondernemingsnummer</span>
+                                    <div class="text-muted">@(string.IsNullOrWhiteSpace(Model.EnterpriseNumber) ? "-" : Model.EnterpriseNumber)</div>
+                                </div>
+                                <div class="col-md-12">
+                                    <span class="fw-semibold fs-6">Facturatiebedrijf</span>
+                                    @if (issuerNames.Any())
+                                    {
+                                        <div class="mt-2">
+                                            @foreach (var issuer in issuerNames)
+                                            {
+                                                <span class="badge badge-default me-1 mb-1 fs-6">@issuer</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted">-</div>
+                                    }
+                                </div>
+                                <div class="col-md-12">
+                                    <span class="fw-semibold fs-6">Adres</span>
+                                    <div class="text-muted">
+                                        @if (!string.IsNullOrWhiteSpace(Model.Street))
+                                        {
+                                            <div>@Model.Street @Model.HouseNumber @(!string.IsNullOrWhiteSpace(Model.BusNumber) ? $" bus {Model.BusNumber}" : string.Empty)</div>
+                                            <div>@Model.PostalCode @Model.City</div>
+                                            <div>@GetCountryName(Model.SelectedCountryId)</div>
+                                        }
+                                        else
+                                        {
+                                            <div>-</div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <section class="card card-modern card-big-info">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-2-5">
+                                <i class="card-big-info-icon bx bxs-contact"></i>
+                                <h2 class="card-big-info-title">Contact & facturatie</h2>
+                                <p class="card-big-info-desc">Hier vindt u de contact en facturatiegegevens van de klant.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-3-5">
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-3">
+                                        <span class="fw-semibold fs-6">E-mail</span>
+                                        <div>
+                                            @if (!string.IsNullOrWhiteSpace(Model.Email))
+                                            {
+                                                <a href="mailto:@Model.Email">@Model.Email</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </div>
+                                    </li>
+                                    <li class="mb-3">
+                                        <span class="fw-semibold fs-6">Facturatie e-mail</span>
+                                        <div>
+                                            @if (!string.IsNullOrWhiteSpace(Model.InvoiceEmail))
+                                            {
+                                                <a href="mailto:@Model.InvoiceEmail">@Model.InvoiceEmail</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </div>
+                                    </li>
+                                    <li class="mb-3">
+                                        <span class="fw-semibold fs-6">Facturatie adres</span>
+                                        <div class="text-muted">
+                                            @if (Model.UseInvoiceAddress && !string.IsNullOrWhiteSpace(Model.InvoiceStreet))
+                                            {
+                                                <div>@Model.InvoiceStreet @Model.InvoiceHouseNumber @(!string.IsNullOrWhiteSpace(Model.InvoiceBusNumber) ? $" bus {Model.InvoiceBusNumber}" : string.Empty)</div>
+                                                <div>@Model.InvoicePostalCode @Model.InvoiceCity</div>
+                                                <div>@GetCountryName(Model.SelectedInvoiceCountryId)</div>
+                                            }
+                                            else if (!string.IsNullOrWhiteSpace(Model.Street))
+                                            {
+                                                <div>@Model.Street @Model.HouseNumber @(!string.IsNullOrWhiteSpace(Model.BusNumber) ? $" bus {Model.BusNumber}" : string.Empty)</div>
+                                                <div>@Model.PostalCode @Model.City</div>
+                                                <div>@GetCountryName(Model.SelectedCountryId)</div>
+                                            }
+                                            else
+                                            {
+                                                <div>-</div>
+                                            }
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <span class="fw-semibold fs-6">Facturatie instellingen</span>
+                                        <div class="mt-2">
+                                            <span class="badge @(Model.RequiresDigitalInvoice ? "bg-success" : "bg-secondary") me-1">Digitale factuur @(Model.RequiresDigitalInvoice ? "vereist" : "niet vereist")</span>
+                                            <span class="badge @(Model.AttachUblByDefault ? "bg-success" : "bg-secondary")">UBL standaard @(Model.AttachUblByDefault ? "aan" : "uit")</span>
+                                        </div>
+                                    </li>
+                                </ul>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="row">
+                    <div class="col-md-12">
+                        <section class="card card-modern mb-4">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="bx bx-group fs-1 me-2 text-primary"></i>
+                            <h2>Contactpersonen</h2>
+                        </div>
+                        @if (Model.Contacts.Any(c => !string.IsNullOrWhiteSpace(c.Name) || !string.IsNullOrWhiteSpace(c.Email) || !string.IsNullOrWhiteSpace(c.Phone) || !string.IsNullOrWhiteSpace(c.Mobile)))
+                        {
+                            <div class="row g-3">
+                                @foreach (var contact in Model.Contacts)
+                                {
+                                    if (string.IsNullOrWhiteSpace(contact.Name) && string.IsNullOrWhiteSpace(contact.Email) && string.IsNullOrWhiteSpace(contact.Phone) && string.IsNullOrWhiteSpace(contact.Mobile))
+                                    {
+                                        continue;
+                                    }
+
+                                    <div class="col"> 
+                                        <div class="border rounded p-3 h-100">
+                                            <div class="fw-semibold fs-5 mb-2">@contact.Name @contact.Forename</div>
+                                            <div class="mb-1 text-muted"><i class="fas fa-envelope me-2"></i>@(string.IsNullOrWhiteSpace(contact.Email) ? "-" : contact.Email)</div>
+                                            <div class="mb-1 text-muted"><i class="fas fa-phone me-2"></i>@(string.IsNullOrWhiteSpace(contact.Phone) ? "-" : contact.Phone)</div>
+                                            <div class="text-muted"><i class="fas fa-mobile-alt me-2"></i>@(string.IsNullOrWhiteSpace(contact.Mobile) ? "-" : contact.Mobile)</div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info mb-0">Er zijn nog geen contactpersonen toegevoegd.</div>
+                        }
+                    </div>
+                </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <section class="card card-modern client-section d-none" id="client-invoices-section">
+        <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+                <i class="bx bx-receipt fs-1 me-2 text-primary"></i>
+                <h2>Facturen</h2>
+            </div>
+            <div class="alert alert-secondary mb-0">Facturen worden hier binnenkort beschikbaar.</div>
+        </div>
+    </section>
+}
+else
+{
+    @await Html.PartialAsync("_ClientForm", Model)
+}
 
 @section PageScripts
 {
-    @await Html.PartialAsync("_ClientFormScripts", Model)
+    @if (isReadOnly)
+    {
+        <script>
+            (function () {
+                const sections = {
+                    algemeen: document.getElementById('client-general-section'),
+                    facturen: document.getElementById('client-invoices-section')
+                };
+
+                document.querySelectorAll('[data-section-toggle]').forEach((button) => {
+                    button.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        const target = this.getAttribute('data-section-toggle');
+
+                        document.querySelectorAll('.client-tab-nav .nav-link').forEach((link) => link.classList.remove('active'));
+                        this.classList.add('active');
+
+                        Object.values(sections).forEach((section) => section?.classList.add('d-none'));
+                        sections[target]?.classList.remove('d-none');
+                    });
+                });
+            })();
+        </script>
+    }
+    else
+    {
+        @await Html.PartialAsync("_ClientFormScripts", Model)
+    }
 }

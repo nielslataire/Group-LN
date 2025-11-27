@@ -126,4 +126,5 @@ html:not(.sidebar-light) .datepicker.datepicker-dark {
 .multiselect-container > .active > a:hover,
 .multiselect-container > .active > a:focus {
 	background-color: #00532C;
+	border-radius:0;
 }

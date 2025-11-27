@@ -87,7 +87,7 @@
                         <div class="col-md-6">
                             <label class="form-label">Facturatiebedrijf</label>
                             @* Facturatiebedrijf *@
-                            <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control">
+                            <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control form-control-modern">
                                 @foreach (var i in Model.Issuers)
                                 {
                                     if (i.Id == Model.IssuerCompanyId)
