@@ -1,10 +1,14 @@
 ﻿@model CPMCore.Models.Instellingen.IssuerCompanyVM
+@using CPMCore.Services.Octopus
 @{
     var terms = (System.Collections.Generic.IReadOnlyList<BOCore.PaymentTermOptionBO>)
                 ViewBag.PaymentTerms ?? new List<BOCore.PaymentTermOptionBO>();
     var bank = (IReadOnlyList<BOCore.IssuerBankAccountBO>)ViewBag.BankAccounts ?? new List<BOCore.IssuerBankAccountBO>();
     var series = (IReadOnlyList<BOCore.InvoiceSeriesBO>)ViewBag.InvoiceSeries ?? new List<BOCore.InvoiceSeriesBO>();
     var legalForms = (IReadOnlyList<BOCore.CompanyLegalFormBO>)ViewBag.CompanyLegalForms ?? new List<BOCore.CompanyLegalFormBO>();
+    var octopusDossiers = ViewBag.OctopusDossiers as IReadOnlyList<OctopusDossierItem> ?? new List<OctopusDossierItem>();
+    var octopusMessage = ViewBag.OctopusMessage as string;
+    var octopusMessageType = ViewBag.OctopusMessageType as string;
 }
 <div class="row mt-2">
 	<div class="col">
@@ -263,6 +267,122 @@
                             </tbody>
                         </table>
 
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-link"></i>
+                        <h2 class="card-big-info-title">Octopus koppeling</h2>
+                        <p class="card-big-info-desc">Verbind het bedrijf met een Octopus-dossier. Bewaar eerst het bedrijf om tokens op te halen.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                        @if (!string.IsNullOrWhiteSpace(octopusMessage))
+                        {
+                            var alertType = string.IsNullOrWhiteSpace(octopusMessageType) ? "info" : octopusMessageType;
+                            <div class="alert alert-@alertType" role="alert">@octopusMessage</div>
+                        }
+
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="OctopusUsername" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="OctopusUsername" class="form-control form-control-modern" placeholder="Gebruikersnaam" autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="OctopusPassword" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="OctopusPassword" value="@Model.OctopusPassword" type="password" class="form-control form-control-modern" placeholder="Wachtwoord" autocomplete="current-password" />
+                            </div>
+                        </div>
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0">Authenticatietoken</label>
+                            <div class="col-md-9">
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="submit"
+                                            class="btn btn-primary"
+                                            formaction='@Url.Action("IssuerCompanyOctopusAuthenticate", "Instellingen", new { issuerId = Model.Id })'
+                                            formmethod="post"
+                                            formnovalidate
+                                            @(Model.Id <= 0 ? "disabled" : null)>
+                                        <i class="bx bx-key"></i>
+                                    </button>
+                                    <small class="text-muted">
+                                        @if (!string.IsNullOrWhiteSpace(Model.OctopusAuthenticateToken))
+                                        {
+                                            <text>Huidig tot @(Model.OctopusAuthenticateTokenValidUntil?.ToString("g") ?? "onbekend")</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Nog geen token</text>
+                                        }
+                                    </small>
+                                </div>
+                                <input type="hidden" asp-for="OctopusAuthenticateToken" />
+                                <input type="hidden" asp-for="OctopusAuthenticateTokenValidUntil" />
+                            </div>
+                        </div>
+
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0">Dossier kiezen</label>
+                            <div class="col-md-9">
+                                <div class="d-flex flex-column gap-2">
+                                    <div class="d-flex gap-2">
+                                        <select class="form-control form-control-modern" name="DossierNumber" @(Model.Id <= 0 ? "disabled" : null)>
+                                            <option value="">— kies dossier —</option>
+                                            @if (!string.IsNullOrWhiteSpace(Model.OctopusDossierNumber) && !(octopusDossiers?.Any(d => d.Number == Model.OctopusDossierNumber) ?? false))
+                                            {
+                                                <option value="@Model.OctopusDossierNumber" selected>Huidig: @Model.OctopusDossierNumber</option>
+                                            }
+                                            @if (octopusDossiers != null)
+                                            {
+                                                foreach (var dossier in octopusDossiers)
+                                                {
+                                                    var selected = string.Equals(Model.OctopusDossierNumber, dossier.Number, StringComparison.OrdinalIgnoreCase);
+                                                    <option value="@dossier.Number" selected="@(selected ? "selected" : null)">@dossier.Number - @dossier.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                        <button type="submit"
+                                                class="btn btn-secondary"
+                                                formaction='@Url.Action("IssuerCompanyOctopusDossiers", "Instellingen", new { issuerId = Model.Id })'
+                                                formmethod="post"
+                                                formnovalidate
+                                                @(Model.Id <= 0 ? "disabled" : null)>
+                                            <i class="bx bx-refresh"></i>
+                                        </button>
+                                        <button type="submit"
+                                                class="btn btn-success"
+                                                formaction='@Url.Action("IssuerCompanyOctopusConnect", "Instellingen", new { issuerId = Model.Id })'
+                                                formmethod="post"
+                                                formnovalidate
+                                                @(Model.Id <= 0 ? "disabled" : null)>
+                                            <i class="bx bx-link-alt"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">
+                                        @if (!string.IsNullOrWhiteSpace(Model.OctopusDossierNumber))
+                                        {
+                                            <text>Dossier gekoppeld: @Model.OctopusDossierNumber (token geldig tot @(Model.OctopusDossierTokenValidUntil?.ToString("g") ?? "onbekend"))</text>
+                                        }
+                                        else
+                                        {
+                                            <text>Geen dossier gekoppeld</text>
+                                        }
+                                    </small>
+                                </div>
+                                <input type="hidden" asp-for="OctopusDossierToken" />
+                                <input type="hidden" asp-for="OctopusDossierTokenValidUntil" />
+                                <input type="hidden" asp-for="OctopusDossierNumber" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

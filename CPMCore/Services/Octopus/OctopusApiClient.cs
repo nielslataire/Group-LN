@@ -1,0 +1,162 @@
+﻿using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CPMCore.Services.Octopus
+{
+    public interface IOctopusApiClient
+    {
+        Task<string> AuthenticateAsync(string username, string password, CancellationToken ct = default);
+
+        Task<IReadOnlyList<OctopusDossierItem>> GetDossiersAsync(string authenticateToken, CancellationToken ct = default);
+
+        Task<OctopusDossierTokenResult> GetDossierTokenAsync(string authenticateToken, string dossierNumber, CancellationToken ct = default);
+    }
+
+    public class OctopusApiClient : IOctopusApiClient
+    {
+        private readonly HttpClient _httpClient;
+        private readonly OctopusOptions _options;
+        private readonly ILogger<OctopusApiClient> _logger;
+
+        public OctopusApiClient(HttpClient httpClient, IOptions<OctopusOptions> options, ILogger<OctopusApiClient> logger)
+        {
+            _httpClient = httpClient;
+            _options = options?.Value ?? new OctopusOptions();
+            _logger = logger;
+        }
+
+        public async Task<string> AuthenticateAsync(
+        string username,
+        string password,
+        CancellationToken ct = default)
+        {
+            var url = $"{_options.ApiBaseUrl}/authentication?softwareHouseUuid={_options.softwareHouseUuid}";
+
+            var payload = new OctopusAuthenticationRequest
+            {
+                User = username,
+                Password = password
+            };
+
+            using var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync(ct);
+                throw new InvalidOperationException(
+                    $"Octopus authentication failed: {response.StatusCode} - {error}");
+            }
+
+            var body = await response.Content.ReadFromJsonAsync<OctopusAuthenticationResponse>(cancellationToken: ct);
+
+            if (body == null || string.IsNullOrWhiteSpace(body.Token))
+                throw new InvalidOperationException("Octopus authentication response contains no token.");
+
+ 
+            return body.Token; // ← dit is je Authentication Token
+        }
+        public async Task<IReadOnlyList<OctopusDossierItem>> GetDossiersAsync(string authenticateToken, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, "dossier");
+            EnsureUrl(url, "Dossier lijst");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var dossiers = await response.Content.ReadFromJsonAsync<List<OctopusDossierItem>>(cancellationToken: ct)
+                ?? new List<OctopusDossierItem>();
+            return dossiers;
+        }
+
+        public async Task<OctopusDossierTokenResult> GetDossierTokenAsync(string authenticateToken, string dossierNumber, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossier/{dossierNumber}/token");
+            EnsureUrl(url, "Dossier token");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var body = await response.Content.ReadFromJsonAsync<OctopusTokenResponse>(cancellationToken: ct);
+            if (body == null || string.IsNullOrWhiteSpace(body.Token))
+            {
+                throw new InvalidOperationException("Octopus dossier token ontbreekt in het antwoord.");
+            }
+
+            return new OctopusDossierTokenResult(body.Token!, body.ValidUntil ?? DateTime.UtcNow.AddHours(1));
+        }
+
+        private static string BuildUrl(string baseUrl, string path)
+        {
+            baseUrl ??= string.Empty;
+            return $"{baseUrl.TrimEnd('/')}/{path}";
+        }
+
+        private void EnsureUrl(string url, string context)
+        {
+            if (string.IsNullOrWhiteSpace(url) || url.EndsWith("/", StringComparison.Ordinal))
+            {
+                _logger.LogWarning("Octopus {Context} URL ontbreekt of is ongeldig.", context);
+                throw new InvalidOperationException($"Octopus {context} URL is niet geconfigureerd.");
+            }
+        }
+
+        private static async Task EnsureSuccessAsync(HttpResponseMessage response, string url)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var body = await response.Content.ReadAsStringAsync();
+            var message = string.IsNullOrWhiteSpace(body)
+                ? $"Octopus request naar {url} mislukt met status {response.StatusCode}."
+                : body;
+            throw new HttpRequestException(message, null, response.StatusCode);
+        }
+    }
+
+    public record OctopusAuthenticateResult(string Token, DateTime? ValidUntil);
+
+    public record OctopusDossierTokenResult(string Token, DateTime? ValidUntil);
+
+    public class OctopusDossierItem
+    {
+        [JsonPropertyName("number")]
+        public string? Number { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+    }
+
+    public class OctopusAuthenticationRequest
+    {
+        [JsonPropertyName("user")]
+        public string User { get; set; } = default!;
+        [JsonPropertyName("password")]
+        public string Password { get; set; } = default!;
+    }
+
+    public class OctopusAuthenticationResponse
+    {
+        [JsonPropertyName("token")]
+        public string Token { get; set; } = default!;
+    }
+
+    internal class OctopusTokenResponse
+    {
+        [JsonPropertyName("token")]
+        public string? Token { get; set; }
+
+        [JsonPropertyName("validUntil")]
+        public DateTime? ValidUntil { get; set; }
+    }
+}

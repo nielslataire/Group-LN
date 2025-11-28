@@ -5,6 +5,7 @@ using CPMCore.Models.Home;
 using CPMCore.Models.Instellingen;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
+using CPMCore.Services.Octopus;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
@@ -36,6 +37,7 @@ public class InstellingenController : BaseController
     private readonly IIssuerCompanyService _issuers;
     private readonly IIssuerBankAccountService _bank;
     private readonly IIssuerSeriesService _series;
+    private readonly IOctopusApiClient _octopusClient;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -51,13 +53,14 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series)
+    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient)
     {
         _userManager = userManager;
         _logger = logger;
         _issuers = issuers;
         _bank = bank;
         _series = series;
+        _octopusClient = octopusClient;
     }
 
     [HttpGet]
@@ -292,6 +295,13 @@ public class InstellingenController : BaseController
             EpcRemittanceType = vm.EpcRemittanceType,
             EpcRemittanceTemplate = vm.EpcRemittanceTemplate,
             CompanyLegalFormId = vm.CompanyLegalFormId,
+            OctopusUsername = vm.OctopusUsername,
+            OctopusPassword = vm.OctopusPassword,
+            OctopusAuthenticateToken = vm.OctopusAuthenticateToken,
+            OctopusAuthenticateTokenValidUntil = vm.OctopusAuthenticateTokenValidUntil,
+            OctopusDossierToken = vm.OctopusDossierToken,
+            OctopusDossierTokenValidUntil = vm.OctopusDossierTokenValidUntil,
+            OctopusDossierNumber = vm.OctopusDossierNumber,
         };
         await _issuers.CreateAsync(bo);
         AddMessage("success", "Mijn bedrijf " + vm.Name + " toegevoegd.", "Geslaagd!");
@@ -357,7 +367,21 @@ public class InstellingenController : BaseController
             EpcRemittanceTemplate = bo.EpcRemittanceTemplate,
             CompanyLegalFormId = bo.CompanyLegalFormId,
             CompanyLegalFormAbbreviation = bo.CompanyLegalFormAbbreviation,
+            OctopusUsername = bo.OctopusUsername,
+            OctopusPassword = bo.OctopusPassword,
+            OctopusAuthenticateToken = bo.OctopusAuthenticateToken,
+            OctopusAuthenticateTokenValidUntil = bo.OctopusAuthenticateTokenValidUntil,
+            OctopusDossierToken = bo.OctopusDossierToken,
+            OctopusDossierTokenValidUntil = bo.OctopusDossierTokenValidUntil,
+            OctopusDossierNumber = bo.OctopusDossierNumber,
         };
+
+        if (TempData["OctopusDossiers"] is string dossiersJson && !string.IsNullOrWhiteSpace(dossiersJson))
+        {
+            ViewBag.OctopusDossiers = JsonConvert.DeserializeObject<List<OctopusDossierItem>>(dossiersJson) ?? new List<OctopusDossierItem>();
+        }
+        ViewBag.OctopusMessage = TempData["OctopusMessage"] as string;
+        ViewBag.OctopusMessageType = TempData["OctopusMessageType"] as string;
 
         //BREADCRUMBS
         var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -462,6 +486,13 @@ public class InstellingenController : BaseController
             EpcRemittanceType = vm.EpcRemittanceType,
             EpcRemittanceTemplate = vm.EpcRemittanceTemplate,
             CompanyLegalFormId = vm.CompanyLegalFormId,
+            OctopusUsername = vm.OctopusUsername,
+            OctopusPassword = vm.OctopusPassword,
+            OctopusAuthenticateToken = vm.OctopusAuthenticateToken,
+            OctopusAuthenticateTokenValidUntil = vm.OctopusAuthenticateTokenValidUntil,
+            OctopusDossierToken = vm.OctopusDossierToken,
+            OctopusDossierTokenValidUntil = vm.OctopusDossierTokenValidUntil,
+            OctopusDossierNumber = vm.OctopusDossierNumber,
         };
         await _issuers.UpdateAsync(bo);
 
@@ -469,6 +500,133 @@ public class InstellingenController : BaseController
         return RedirectToAction(nameof(IssuerCompanies));
     }
 
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/authenticate")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyOctopusAuthenticate(int issuerId, OctopusAuthRequest request, CancellationToken ct)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        {
+            TempData["OctopusMessage"] = "Gebruikersnaam en wachtwoord zijn verplicht.";
+            TempData["OctopusMessageType"] = "danger";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        var bo = await _issuers.GetAsync(issuerId, ct);
+        if (bo == null)
+            return NotFound();
+
+        try
+        {
+            var authResult = await _octopusClient.AuthenticateAsync(request.Username!, request.Password!, ct);
+
+            bo.OctopusUsername = request.Username;
+            bo.OctopusPassword = request.Password;
+            bo.OctopusAuthenticateToken = authResult;
+            bo.OctopusAuthenticateTokenValidUntil = DateTime.UtcNow.AddMinutes(9);
+            await _issuers.UpdateAsync(bo, ct);
+
+            TempData["OctopusMessage"] = "Authenticatietoken opgehaald en opgeslagen.";
+            TempData["OctopusMessageType"] = "success";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Octopus authenticatie mislukt voor issuer {IssuerId}", issuerId);
+            TempData["OctopusMessage"] = $"Token aanvragen mislukt: {ex.Message}";
+            TempData["OctopusMessageType"] = "danger";
+        }
+
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+    }
+
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/dossiers")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyOctopusDossiers(int issuerId, CancellationToken ct)
+    {
+        var bo = await _issuers.GetAsync(issuerId, ct);
+        if (bo == null)
+            return NotFound();
+
+        if (string.IsNullOrWhiteSpace(bo.OctopusAuthenticateToken))
+        {
+            TempData["OctopusMessage"] = "Vraag eerst een authenticatietoken aan.";
+            TempData["OctopusMessageType"] = "warning";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        if (bo.OctopusAuthenticateTokenValidUntil.HasValue && bo.OctopusAuthenticateTokenValidUntil.Value <= DateTime.UtcNow)
+        {
+            TempData["OctopusMessage"] = "Authenticatietoken is verlopen. Vraag een nieuwe aan.";
+            TempData["OctopusMessageType"] = "warning";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        try
+        {
+            var dossiers = await _octopusClient.GetDossiersAsync(bo.OctopusAuthenticateToken, ct);
+            TempData["OctopusDossiers"] = JsonConvert.SerializeObject(dossiers);
+            TempData["OctopusMessage"] = $"Dossierlijst geladen ({dossiers.Count}).";
+            TempData["OctopusMessageType"] = "success";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Octopus dossiers laden mislukt voor issuer {IssuerId}", issuerId);
+            TempData["OctopusMessage"] = $"Dossiers laden mislukt: {ex.Message}";
+            TempData["OctopusMessageType"] = "danger";
+        }
+
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+    }
+
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/dossier")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyOctopusConnect(int issuerId, OctopusDossierRequest request, CancellationToken ct)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.DossierNumber))
+        {
+            TempData["OctopusMessage"] = "Kies een dossier.";
+            TempData["OctopusMessageType"] = "warning";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        var bo = await _issuers.GetAsync(issuerId, ct);
+        if (bo == null)
+            return NotFound();
+
+        if (string.IsNullOrWhiteSpace(bo.OctopusAuthenticateToken))
+        {
+            TempData["OctopusMessage"] = "Vraag eerst een authenticatietoken aan.";
+            TempData["OctopusMessageType"] = "warning";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        if (bo.OctopusAuthenticateTokenValidUntil.HasValue && bo.OctopusAuthenticateTokenValidUntil.Value <= DateTime.UtcNow)
+        {
+            TempData["OctopusMessage"] = "Authenticatietoken is verlopen. Vraag een nieuwe aan.";
+            TempData["OctopusMessageType"] = "warning";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        try
+        {
+            var dossierToken = await _octopusClient.GetDossierTokenAsync(bo.OctopusAuthenticateToken, request.DossierNumber, ct);
+
+            bo.OctopusDossierNumber = request.DossierNumber;
+            bo.OctopusDossierToken = dossierToken.Token;
+            bo.OctopusDossierTokenValidUntil = dossierToken.ValidUntil;
+            await _issuers.UpdateAsync(bo, ct);
+
+            TempData["OctopusMessage"] = "Dossier gekoppeld en token opgeslagen.";
+            TempData["OctopusMessageType"] = "success";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Octopus dossier koppelen mislukt voor issuer {IssuerId}", issuerId);
+            TempData["OctopusMessage"] = $"Dossier koppelen mislukt: {ex.Message}";
+            TempData["OctopusMessageType"] = "danger";
+        }
+
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+    }
     // POST /Admin/IssuerCompanies/Disable/5
     [HttpPost("IssuerCompanies/Disable/{id:int}")]
     [ValidateAntiForgeryToken]

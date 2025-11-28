@@ -28,6 +28,7 @@ using QuestPDF.Infrastructure;
 using QuestPDF.Drawing;
 using CPMCore.Services.Peppol;
 using System.Net.Http.Headers;
+using CPMCore.Services.Octopus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,6 +83,8 @@ builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(cl
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 builder.Services.AddHttpClient<IPeppolSender, PeppolSender>();
+builder.Services.Configure<OctopusOptions>(builder.Configuration.GetSection("Octopus"));
+builder.Services.AddHttpClient<IOctopusApiClient, OctopusApiClient>();
 
 
 builder.Services.AddSingleton<TemplateInterpolator>();

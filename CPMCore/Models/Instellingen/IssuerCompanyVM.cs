@@ -110,5 +110,23 @@ namespace CPMCore.Models.Instellingen
         public string? EpcRemittanceType { get; set; }       // 'CHAR'|'SCOR'
         [Display(Name = "Overschrijving Template")]
         public string? EpcRemittanceTemplate { get; set; }   // "Factuur {PublicId}"
+
+        [Display(Name = "Octopus gebruikersnaam")]
+        public string? OctopusUsername { get; set; }
+
+        [Display(Name = "Octopus wachtwoord")]
+        [DataType(DataType.Password)]
+        public string? OctopusPassword { get; set; }
+
+        public string? OctopusAuthenticateToken { get; set; }
+
+        public DateTime? OctopusAuthenticateTokenValidUntil { get; set; }
+
+        public string? OctopusDossierToken { get; set; }
+
+        public DateTime? OctopusDossierTokenValidUntil { get; set; }
+
+        [Display(Name = "Octopus dossiernummer")]
+        public string? OctopusDossierNumber { get; set; }
     }
 }

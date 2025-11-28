@@ -1472,6 +1472,11 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(200);
+            entity.Property(e => e.OctopusAuthenticateToken).HasMaxLength(512);
+            entity.Property(e => e.OctopusDossierNumber).HasMaxLength(100);
+            entity.Property(e => e.OctopusDossierToken).HasMaxLength(512);
+            entity.Property(e => e.OctopusPassword).HasMaxLength(200);
+            entity.Property(e => e.OctopusUsername).HasMaxLength(200);
             entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.Phone2).HasMaxLength(50);

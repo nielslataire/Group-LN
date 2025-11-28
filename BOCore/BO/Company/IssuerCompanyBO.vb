@@ -51,4 +51,12 @@
     Public Property DefaultBankAccountIban As String
     Public Property DefaultBankAccountBic As String
 
+    Public Property OctopusUsername As String
+    Public Property OctopusPassword As String
+    Public Property OctopusAuthenticateToken As String
+    Public Property OctopusAuthenticateTokenValidUntil As Date?
+    Public Property OctopusDossierToken As String
+    Public Property OctopusDossierTokenValidUntil As Date?
+    Public Property OctopusDossierNumber As String
+
 End Class

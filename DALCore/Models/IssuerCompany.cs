@@ -93,6 +93,20 @@ public partial class IssuerCompany
 
     public int? CompanyLegalFormId { get; set; }
 
+    public string OctopusUsername { get; set; }
+
+    public string OctopusPassword { get; set; }
+
+    public string OctopusAuthenticateToken { get; set; }
+
+    public DateTime? OctopusAuthenticateTokenValidUntil { get; set; }
+
+    public string OctopusDossierToken { get; set; }
+
+    public DateTime? OctopusDossierTokenValidUntil { get; set; }
+
+    public string OctopusDossierNumber { get; set; }
+
     public virtual CompanyLegalForm CompanyLegalForm { get; set; }
 
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }

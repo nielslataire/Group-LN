@@ -62,7 +62,14 @@ namespace ServiceCore
                     CompanyLegalFormName = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Name : null,
                     CompanyLegalFormAbbreviation = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Abbreviation : null,
                     DefaultBankAccountIban = x.account != null ? x.account.Iban : null,
-                    DefaultBankAccountBic = x.account != null ? x.account.Bic : null
+                    DefaultBankAccountBic = x.account != null ? x.account.Bic : null,
+                    OctopusUsername = x.company.OctopusUsername,
+                    OctopusPassword = x.company.OctopusPassword,
+                    OctopusAuthenticateToken = x.company.OctopusAuthenticateToken,
+                    OctopusAuthenticateTokenValidUntil = x.company.OctopusAuthenticateTokenValidUntil,
+                    OctopusDossierToken = x.company.OctopusDossierToken,
+                    OctopusDossierTokenValidUntil = x.company.OctopusDossierTokenValidUntil,
+                    OctopusDossierNumber = x.company.OctopusDossierNumber
                 })
                 .ToListAsync(ct);
         }
@@ -233,7 +240,14 @@ namespace ServiceCore
                 CompanyLegalFormName = x.CompanyLegalForm?.Name,
                 CompanyLegalFormAbbreviation = x.CompanyLegalForm?.Abbreviation,
                 DefaultBankAccountIban = account?.Iban,
-                DefaultBankAccountBic = account?.Bic
+                DefaultBankAccountBic = account?.Bic,
+                OctopusUsername = x.OctopusUsername,
+                OctopusPassword = x.OctopusPassword,
+                OctopusAuthenticateToken = x.OctopusAuthenticateToken,
+                OctopusAuthenticateTokenValidUntil = x.OctopusAuthenticateTokenValidUntil,
+                OctopusDossierToken = x.OctopusDossierToken,
+                OctopusDossierTokenValidUntil = x.OctopusDossierTokenValidUntil,
+                OctopusDossierNumber = x.OctopusDossierNumber
             };
         }
 
@@ -279,6 +293,13 @@ namespace ServiceCore
             e.FooterLegalText = bo.FooterLegalText;
             e.PeppolEnabled = bo.PeppolEnabled;
             e.CompanyLegalFormId = bo.CompanyLegalFormId;
+            e.OctopusUsername = bo.OctopusUsername;
+            e.OctopusPassword = bo.OctopusPassword;
+            e.OctopusAuthenticateToken = bo.OctopusAuthenticateToken;
+            e.OctopusAuthenticateTokenValidUntil = bo.OctopusAuthenticateTokenValidUntil;
+            e.OctopusDossierToken = bo.OctopusDossierToken;
+            e.OctopusDossierTokenValidUntil = bo.OctopusDossierTokenValidUntil;
+            e.OctopusDossierNumber = bo.OctopusDossierNumber;
             return e;
         }
     }
