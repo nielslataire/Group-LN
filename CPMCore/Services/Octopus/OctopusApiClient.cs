@@ -33,30 +33,34 @@ namespace CPMCore.Services.Octopus
         string password,
         CancellationToken ct = default)
         {
-            var url = $"{_options.ApiBaseUrl}/authentication?softwareHouseUuid={_options.softwareHouseUuid}";
+            var url = $"{_options.ApiBaseUrl}/authentication";
 
-            var payload = new OctopusAuthenticationRequest
+            var payload = new
             {
-                User = username,
-                Password = password
+                user = username,
+                password = password
             };
 
-            using var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
+            var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(payload)
+            };
+
+            // ⚠️ SUPER BELANGRIJK: softwareHouseUuid moet in de HEADER
+            request.Headers.Add("softwareHouseUuid", _options.softwareHouseUuid);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            using var response = await _httpClient.SendAsync(request, ct);
 
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync(ct);
-                throw new InvalidOperationException(
-                    $"Octopus authentication failed: {response.StatusCode} - {error}");
+                throw new Exception($"Authentication failed: {response.StatusCode} - {error}");
             }
 
-            var body = await response.Content.ReadFromJsonAsync<OctopusAuthenticationResponse>(cancellationToken: ct);
+            var result = await response.Content.ReadFromJsonAsync<OctopusAuthenticationResponse>(cancellationToken: ct);
 
-            if (body == null || string.IsNullOrWhiteSpace(body.Token))
-                throw new InvalidOperationException("Octopus authentication response contains no token.");
-
- 
-            return body.Token; // ← dit is je Authentication Token
+            return result!.Token;
         }
         public async Task<IReadOnlyList<OctopusDossierItem>> GetDossiersAsync(string authenticateToken, CancellationToken ct = default)
         {
