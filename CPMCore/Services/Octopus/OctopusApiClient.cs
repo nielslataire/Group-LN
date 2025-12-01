@@ -64,11 +64,11 @@ namespace CPMCore.Services.Octopus
         }
         public async Task<IReadOnlyList<OctopusDossierItem>> GetDossiersAsync(string authenticateToken, CancellationToken ct = default)
         {
-            var url = BuildUrl(_options.ApiBaseUrl, "dossier");
+            var url = $"{_options.ApiBaseUrl}/dossiers";
             EnsureUrl(url, "Dossier lijst");
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
+            request.Headers.Add("Token", authenticateToken);
 
             using var response = await _httpClient.SendAsync(request, ct);
             await EnsureSuccessAsync(response, url);
@@ -134,12 +134,58 @@ namespace CPMCore.Services.Octopus
 
     public class OctopusDossierItem
     {
-        [JsonPropertyName("number")]
-        public string? Number { get; set; }
+        [JsonPropertyName("dossierKey")]
+        public OctopusDossierKey? DossierKey { get; set; }
 
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        [JsonPropertyName("dossierDescription")]
+        public string? DossierDescription { get; set; }
+
+        [JsonPropertyName("vatNr")]
+        public string? VatNumber { get; set; }
+
+        [JsonPropertyName("streetAndNr")]
+        public string? StreetAndNumber { get; set; }
+
+        [JsonPropertyName("country")]
+        public string? Country { get; set; }
+
+        [JsonPropertyName("postalCode")]
+        public string? PostalCode { get; set; }
+
+        [JsonPropertyName("city")]
+        public string? City { get; set; }
+
+        [JsonPropertyName("url")]
+        public string? Url { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("corporationTypeKey")]
+        public OctopusCorporationTypeKey? CorporationTypeKey { get; set; }
+
+        [JsonPropertyName("languageCode")]
+        public string? LanguageCode { get; set; }
+
+        [JsonIgnore]
+        public string? Number => DossierKey?.Id?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        [JsonIgnore]
+        public string? Name => DossierDescription;
     }
+
+    public class OctopusDossierKey
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+    }
+
+    public class OctopusCorporationTypeKey
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+    }
+
 
     public class OctopusAuthenticationRequest
     {

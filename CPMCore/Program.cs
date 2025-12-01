@@ -85,7 +85,7 @@ builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(cl
 builder.Services.AddHttpClient<IPeppolSender, PeppolSender>();
 builder.Services.Configure<OctopusOptions>(builder.Configuration.GetSection("Octopus"));
 builder.Services.AddHttpClient<IOctopusApiClient, OctopusApiClient>();
-
+builder.Services.AddScoped<IOctopusTokenManager, OctopusTokenManager>();
 
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();

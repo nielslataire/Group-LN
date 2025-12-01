@@ -13,6 +13,7 @@ namespace CPMCore.Models.Instellingen
 
     public class OctopusDossierRequest
     {
+        [FromForm(Name = "DossierNumber")]
         public string? DossierNumber { get; set; }
     }
 }

@@ -38,6 +38,7 @@ public class InstellingenController : BaseController
     private readonly IIssuerBankAccountService _bank;
     private readonly IIssuerSeriesService _series;
     private readonly IOctopusApiClient _octopusClient;
+    private readonly IOctopusTokenManager _octopusTokens;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -53,7 +54,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient)
+    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
     {
         _userManager = userManager;
         _logger = logger;
@@ -61,6 +62,7 @@ public class InstellingenController : BaseController
         _bank = bank;
         _series = series;
         _octopusClient = octopusClient;
+        _octopusTokens = octopusTokens;
     }
 
     [HttpGet]
@@ -546,23 +548,16 @@ public class InstellingenController : BaseController
         if (bo == null)
             return NotFound();
 
-        if (string.IsNullOrWhiteSpace(bo.OctopusAuthenticateToken))
+        if (string.IsNullOrWhiteSpace(bo.OctopusUsername) || string.IsNullOrWhiteSpace(bo.OctopusPassword))
         {
-            TempData["OctopusMessage"] = "Vraag eerst een authenticatietoken aan.";
-            TempData["OctopusMessageType"] = "warning";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
-        }
-
-        if (bo.OctopusAuthenticateTokenValidUntil.HasValue && bo.OctopusAuthenticateTokenValidUntil.Value <= DateTime.UtcNow)
-        {
-            TempData["OctopusMessage"] = "Authenticatietoken is verlopen. Vraag een nieuwe aan.";
+            TempData["OctopusMessage"] = "Octopus login ontbreekt. Vul gebruikersnaam en wachtwoord in en authenticatie opnieuw.";
             TempData["OctopusMessageType"] = "warning";
             return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
         }
 
         try
         {
-            var dossiers = await _octopusClient.GetDossiersAsync(bo.OctopusAuthenticateToken, ct);
+            var dossiers = await _octopusTokens.GetDossiersWithRetryAsync(issuerId, ct);
             TempData["OctopusDossiers"] = JsonConvert.SerializeObject(dossiers);
             TempData["OctopusMessage"] = $"Dossierlijst geladen ({dossiers.Count}).";
             TempData["OctopusMessageType"] = "success";
@@ -581,42 +576,24 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> IssuerCompanyOctopusConnect(int issuerId, OctopusDossierRequest request, CancellationToken ct)
     {
-        if (request == null || string.IsNullOrWhiteSpace(request.DossierNumber))
-        {
-            TempData["OctopusMessage"] = "Kies een dossier.";
-            TempData["OctopusMessageType"] = "warning";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
-        }
-
         var bo = await _issuers.GetAsync(issuerId, ct);
         if (bo == null)
             return NotFound();
-
-        if (string.IsNullOrWhiteSpace(bo.OctopusAuthenticateToken))
-        {
-            TempData["OctopusMessage"] = "Vraag eerst een authenticatietoken aan.";
-            TempData["OctopusMessageType"] = "warning";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
-        }
-
-        if (bo.OctopusAuthenticateTokenValidUntil.HasValue && bo.OctopusAuthenticateTokenValidUntil.Value <= DateTime.UtcNow)
-        {
-            TempData["OctopusMessage"] = "Authenticatietoken is verlopen. Vraag een nieuwe aan.";
-            TempData["OctopusMessageType"] = "warning";
-            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
-        }
-
         try
         {
-            var dossierToken = await _octopusClient.GetDossierTokenAsync(bo.OctopusAuthenticateToken, request.DossierNumber, ct);
+            if (request == null || string.IsNullOrWhiteSpace(request.DossierNumber))
+            {
+                TempData["OctopusMessage"] = "Kies een dossier.";
+                TempData["OctopusMessageType"] = "warning";
+            }
+            else
+            {
+                bo.OctopusDossierNumber = request.DossierNumber;
+                await _issuers.UpdateAsync(bo, ct);
 
-            bo.OctopusDossierNumber = request.DossierNumber;
-            bo.OctopusDossierToken = dossierToken.Token;
-            bo.OctopusDossierTokenValidUntil = dossierToken.ValidUntil;
-            await _issuers.UpdateAsync(bo, ct);
-
-            TempData["OctopusMessage"] = "Dossier gekoppeld en token opgeslagen.";
-            TempData["OctopusMessageType"] = "success";
+                TempData["OctopusMessage"] = "Dossiernummer opgeslagen.";
+                TempData["OctopusMessageType"] = "success";
+            }
         }
         catch (Exception ex)
         {
