@@ -1,4 +1,7 @@
 ﻿using System.Net;
+using System.Text.Json;
+using System.Linq;
+using System.Collections.Generic;
 using BOCore;
 using FacadeCore;
 using Microsoft.Extensions.Logging;
@@ -10,19 +13,22 @@ namespace CPMCore.Services.Octopus
         Task<IReadOnlyList<OctopusDossierItem>> GetDossiersWithRetryAsync(int issuerId, CancellationToken ct = default);
         Task<OctopusDossierTokenResult> RefreshDossierTokenAsync(int issuerId, string dossierNumber, CancellationToken ct = default);
         Task<T> ExecuteWithDossierTokensAsync<T>(int issuerId, string dossierNumber, Func<string, string, Task<T>> action, CancellationToken ct = default);
+        Task<IReadOnlyList<OctopusBookyearBO>> SyncBookyearsAsync(int issuerId, string dossierNumber, CancellationToken ct = default);
     }
 
     public class OctopusTokenManager : IOctopusTokenManager
     {
         private readonly IIssuerCompanyService _issuers;
         private readonly IOctopusApiClient _client;
+        private readonly IOctopusBookyearService _bookyears;
         private readonly ILogger<OctopusTokenManager> _logger;
         private static readonly TimeSpan AuthenticateTokenLifetime = TimeSpan.FromMinutes(9);
 
-        public OctopusTokenManager(IIssuerCompanyService issuers, IOctopusApiClient client, ILogger<OctopusTokenManager> logger)
+        public OctopusTokenManager(IIssuerCompanyService issuers, IOctopusApiClient client, IOctopusBookyearService bookyears, ILogger<OctopusTokenManager> logger)
         {
             _issuers = issuers;
             _client = client;
+            _bookyears = bookyears;
             _logger = logger;
         }
 
@@ -76,6 +82,28 @@ namespace CPMCore.Services.Octopus
                 authenticateToken = await RefreshAuthenticateTokenAsync(issuer, ct);
                 dossierToken = (await RequestAndStoreDossierTokenAsync(issuer, authenticateToken, dossierNumber, ct)).Token;
                 return await action(authenticateToken, dossierToken);
+            }
+        }
+
+        public async Task<IReadOnlyList<OctopusBookyearBO>> SyncBookyearsAsync(int issuerId, string dossierNumber, CancellationToken ct = default)
+        {
+            var issuer = await EnsureIssuerAsync(issuerId, ct);
+            var authenticateToken = await RefreshAuthenticateTokenIfNeededAsync(issuer, ct);
+            var dossierToken = await EnsureDossierTokenAsync(issuer, authenticateToken, dossierNumber, ct);
+
+            try
+            {
+                var bookyears = await LoadBookyearsAsync(authenticateToken, dossierToken,dossierNumber, ct);
+                await _bookyears.SyncAsync(issuerId, bookyears, ct);
+                return bookyears;
+            }
+            catch (HttpRequestException ex) when (IsUnauthorized(ex))
+            {
+                authenticateToken = await RefreshAuthenticateTokenAsync(issuer, ct);
+                dossierToken = (await RequestAndStoreDossierTokenAsync(issuer, authenticateToken, dossierNumber, ct)).Token;
+                var bookyears = await LoadBookyearsAsync(authenticateToken, dossierToken,dossierNumber, ct);
+                await _bookyears.SyncAsync(issuerId, bookyears, ct);
+                return bookyears;
             }
         }
 
@@ -144,6 +172,51 @@ namespace CPMCore.Services.Octopus
             issuer.OctopusDossierTokenValidUntil = tokenResult.ValidUntil;
             await _issuers.UpdateAsync(issuer, ct);
             return tokenResult;
+        }
+
+        private async Task<IReadOnlyList<OctopusBookyearBO>> LoadBookyearsAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct)
+        {
+            var bookyears = await _client.GetBookyearsAsync(authenticateToken, dossierToken,dossierNumber, ct);
+            var results = new List<OctopusBookyearBO>();
+
+            foreach (var bookyear in bookyears)
+            {
+                if (bookyear.BookyearKey?.Id == null) continue;
+                var journalItems = await _client.GetJournalsAsync(authenticateToken, dossierToken, bookyear.BookyearKey.Id, ct);
+                results.Add(new OctopusBookyearBO
+                {
+                    BookyearKeyId = bookyear.BookyearKey.Id,
+                    BookyearDescription = bookyear.BookyearDescription ?? string.Empty,
+                    StartDate = bookyear.StartDate,
+                    EndDate = bookyear.EndDate,
+                    Closed = bookyear.Closed,
+                    Periods = bookyear.Periods.Select(p => new OctopusBookyearPeriodBO
+                    {
+                        BookyearPeriod = p.BookyearPeriod,
+                        StartDate = p.StartDate,
+                        EndDate = p.EndDate
+                    }).ToList(),
+                    Journals = journalItems
+                        .Where(j => !string.IsNullOrWhiteSpace(j.JournalKey))
+                        .Select(j => new OctopusJournalBO
+                        {
+                            BookyearKeyId = j.BookyearKey?.Id ?? bookyear.BookyearKey.Id,
+                            JournalKey = j.JournalKey ?? string.Empty,
+                            Name = j.Name ?? string.Empty,
+                            Closed = j.Closed,
+                            CurrencyCode = j.CurrencyCode ?? string.Empty,
+                            LastBookedDocumentNr = j.LastBookedDocumentNr,
+                            ProtectedPeriod = j.ProtectedPeriod,
+                            ClosedPeriod = j.ClosedPeriod,
+                            InsertionType = j.InsertionType,
+                            CustomFieldListJson = JsonSerializer.Serialize(j.CustomFieldList ?? new List<OctopusCustomFieldItem>()),
+                            CustomFieldLineListJson = JsonSerializer.Serialize(j.CustomFieldLineList ?? new List<OctopusCustomFieldItem>())
+                        })
+                        .ToList()
+                });
+            }
+
+            return results;
         }
 
         private static bool IsUnauthorized(HttpRequestException ex)

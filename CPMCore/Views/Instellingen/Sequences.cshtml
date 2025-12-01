@@ -1,6 +1,9 @@
-﻿@model CPMCore.Models.Instellingen.InvoiceSequencesPageVM
+﻿@using System.Linq
+@model CPMCore.Models.Instellingen.InvoiceSequencesPageVM
 @{
     ViewData["Title"] = "Sequenties";
+    var octopusBookyears = ViewBag.OctopusBookyears as IEnumerable<BOCore.OctopusBookyearBO> ?? Enumerable.Empty<BOCore.OctopusBookyearBO>();
+    var octopusJournals = octopusBookyears.SelectMany(by => by.Journals.Select(j => new { Journal = j, Bookyear = by })).ToList();
 
 }
 @section PageStyle
@@ -43,12 +46,32 @@
                 <div class="card-body">
                     <div class="row">
                             <div class="row align-items-center">
+                                <label class="col-md-2 control-label text-lg-end mb-0">Boekjaar</label>
+                                <div class="col-md-3">
+                                    <select name="bookyearId" class="form-control form-control-modern">
+                                        <option value="">— kies boekjaar —</option>
+                                        @foreach (var bookyear in octopusBookyears)
+                                        {
+                                            <option value="@bookyear.Id">@bookyear.BookyearDescription (@bookyear.StartDate.ToString("yyyy-MM-dd") - @bookyear.EndDate.ToString("yyyy-MM-dd"))</option>
+                                        }
+                                    </select>
+                                </div>
+                                <label class="col-md-2 control-label text-lg-end mb-0">Dagboek</label>
+                                <div class="col-md-3">
+                                    <select name="journalId" class="form-control form-control-modern">
+                                        <option value="">— kies dagboek —</option>
+                                        @foreach (var journal in octopusJournals)
+                                        {
+                                            <option value="@journal.Journal.Id">@journal.Journal.Name (@journal.Bookyear.BookyearDescription)</option>
+                                        }
+                                    </select>
+                                </div>
                                 <label class="col-md-2 control-label text-lg-end mb-0">Jaar</label>
                                 <div class="col-md-3">
                                     <input type="number" name="fiscalYear" value="@DateTime.Now.Year" class="form-control form-control-modern" />
                                 </div>
                                 <label class="col-md-2 control-label text-lg-end mb-0">Start nummering</label>
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                         <input type="number" name="startAt" value="1" class="form-control form-control-modern" />
                                 </div>
                                 <button class="btn btn-primary col-md-2">Toevoegen</button>
@@ -75,7 +98,7 @@
                         </div>
                         <div class="col-lg-3-5 col-xl-4-5">
                             <table class="table mt-3">
-                                <thead><tr><th>Jaar</th><th>Huidig nummer</th><th class="text-end">Acties </th></tr></thead>
+                                <thead><tr><th>Boekjaar</th><th>Dagboek</th><th>Jaar</th><th>Huidig nummer</th><th class="text-end">Acties </th></tr></thead>
                                 <tbody>
                                     @foreach (var s in Model.Items)
                                     {
@@ -86,6 +109,25 @@
                                                   asp-route-seriesId="@Model.SeriesId"
                                                   asp-route-issuerId="@Model.IssuerId"
                                                   class="d-inline">
+                                            <td>
+                                                <select name="bookyearId" class="form-control form-control-sm">
+                                                    <option value="">—</option>
+                                                    @foreach (var bookyear in octopusBookyears)
+                                                    {
+                                                        <option value="@bookyear.Id" selected="@(bookyear.Id == s.BookyearId ? "selected" : null)">@bookyear.BookyearDescription</option>
+                                                    }
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select name="journalId" class="form-control form-control-sm">
+                                                    <option value="">—</option>
+                                                    @foreach (var journal in octopusJournals)
+                                                    {
+                                                        var selected = journal.Journal.Id == s.JournalId;
+                                                        <option value="@journal.Journal.Id" selected="@(selected ? "selected" : null)">@journal.Journal.Name (@journal.Bookyear.BookyearDescription)</option>
+                                                    }
+                                                </select>
+                                            </td>
                                             <td>@s.FiscalYear</td>
                                             <td>
      

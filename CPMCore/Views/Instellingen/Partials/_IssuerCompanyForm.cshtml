@@ -9,6 +9,7 @@
     var octopusDossiers = ViewBag.OctopusDossiers as IReadOnlyList<OctopusDossierItem> ?? new List<OctopusDossierItem>();
     var octopusMessage = ViewBag.OctopusMessage as string;
     var octopusMessageType = ViewBag.OctopusMessageType as string;
+    var octopusBookyears = ViewBag.OctopusBookyears as IReadOnlyList<BOCore.OctopusBookyearBO> ?? new List<BOCore.OctopusBookyearBO>();
 }
 <div class="row mt-2">
 	<div class="col">
@@ -381,6 +382,58 @@
                                 <input type="hidden" asp-for="OctopusDossierToken" />
                                 <input type="hidden" asp-for="OctopusDossierTokenValidUntil" />
                                 <input type="hidden" asp-for="OctopusDossierNumber" />
+                            </div>
+                        </div>
+                        <div class="row align-items-start pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0">Boekjaren &amp; dagboeken</label>
+                            <div class="col-md-9">
+                                <div class="d-flex gap-2 mb-2">
+                                    <button type="submit"
+                                            class="btn btn-secondary"
+                                            formaction='@Url.Action("IssuerCompanyOctopusBookyears", "Instellingen", new { issuerId = Model.Id })'
+                                            formmethod="post"
+                                            formnovalidate
+                                            @(Model.Id <= 0 ? "disabled" : null)>
+                                        <i class="bx bx-refresh"></i> Boekjaren ophalen
+                                    </button>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr><th>Boekjaar</th><th>Periodes</th><th>Dagboeken</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var bookyear in octopusBookyears)
+                                            {
+                                                <tr>
+                                                    <td>@bookyear.BookyearDescription<br /><small class="text-muted">@bookyear.StartDate:yyyy-MM-dd - @bookyear.EndDate:yyyy-MM-dd</small></td>
+                                                    <td>
+                                                        @if (bookyear.Periods?.Any() ?? false)
+                                                        {
+                                                            <ul class="mb-0 ps-3">
+                                                                @foreach (var p in bookyear.Periods)
+                                                                {
+                                                                    <li>Periode @p.BookyearPeriod: @p.StartDate:yyyy-MM-dd - @p.EndDate:yyyy-MM-dd</li>
+                                                                }
+                                                            </ul>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @if (bookyear.Journals?.Any() ?? false)
+                                                        {
+                                                            <ul class="mb-0 ps-3">
+                                                                @foreach (var j in bookyear.Journals)
+                                                                {
+                                                                    <li>@j.Name (@j.JournalKey)</li>
+                                                                }
+                                                            </ul>
+                                                        }
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

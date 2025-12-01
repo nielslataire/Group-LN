@@ -125,6 +125,12 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<MigrationHistory> MigrationHistory { get; set; }
 
+    public virtual DbSet<OctopusBookyearPeriods> OctopusBookyearPeriods { get; set; }
+
+    public virtual DbSet<OctopusBookyears> OctopusBookyears { get; set; }
+
+    public virtual DbSet<OctopusJournals> OctopusJournals { get; set; }
+
     public virtual DbSet<PaymentAllocations> PaymentAllocations { get; set; }
 
     public virtual DbSet<PaymentTerms> PaymentTerms { get; set; }
@@ -187,7 +193,7 @@ public partial class cpmRunningContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
+        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;User ID=db_ab5fbb_testdb_admin;Password=840683P@s");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -615,6 +621,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientAccount>(entity =>
         {
+            entity.Property(e => e.AttachUblByDefault).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientAccount_AttachUblByDefault");
             entity.Property(e => e.BankAccountNumber).HasMaxLength(50);
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.CompanyName).HasMaxLength(100);
@@ -627,6 +634,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.InvoiceStreet).HasMaxLength(250);
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
+            entity.Property(e => e.RequiresDigitalInvoice).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientAccount_RequiresDigitalInvoice");
             entity.Property(e => e.Salutation).HasMaxLength(50);
             entity.Property(e => e.Street).HasMaxLength(250);
             entity.Property(e => e.Vatnumber)
@@ -665,6 +673,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientContacts>(entity =>
         {
+            entity.Property(e => e.AttachUblByDefault).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientContacts_AttachUblByDefault");
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.Cellphone).HasMaxLength(50);
             entity.Property(e => e.ClientAccountId).HasColumnName("ClientAccountID");
@@ -682,6 +691,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
+            entity.Property(e => e.RequiresDigitalInvoice).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientContacts_RequiresDigitalInvoice");
             entity.Property(e => e.Salutation).HasMaxLength(50);
             entity.Property(e => e.Street).HasMaxLength(250);
             entity.Property(e => e.Vatnumber)
@@ -822,7 +832,9 @@ public partial class cpmRunningContext : DbContext
             entity.HasKey(e => e.CompanyId);
 
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
-            entity.Property(e => e.AttachUblByDefault).HasDefaultValue(true);
+            entity.Property(e => e.AttachUblByDefault)
+                .HasDefaultValue(true)
+                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyInfo_AttachUblByDefault");
             entity.Property(e => e.Bank).HasMaxLength(50);
             entity.Property(e => e.BedrijfsNaam).HasMaxLength(250);
             entity.Property(e => e.Busnummer).HasMaxLength(50);
@@ -840,7 +852,9 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.PostCodeId).HasColumnName("PostCodeID");
             entity.Property(e => e.Postcode).HasMaxLength(50);
             entity.Property(e => e.RegistratieNr).HasMaxLength(50);
-            entity.Property(e => e.RequiresDigitalInvoice).HasDefaultValue(true);
+            entity.Property(e => e.RequiresDigitalInvoice)
+                .HasDefaultValue(true)
+                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyInfo_RequiresDigitalInvoice");
             entity.Property(e => e.Straat).HasMaxLength(250);
             entity.Property(e => e.Telefoon1).HasMaxLength(50);
             entity.Property(e => e.Telefoon2).HasMaxLength(50);
@@ -913,7 +927,9 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Abbreviation)
                 .IsRequired()
                 .HasMaxLength(16);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyLegalForm_IsActive");
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(100);
@@ -1205,9 +1221,22 @@ public partial class cpmRunningContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC0753928DA7");
 
+            entity.HasIndex(e => e.BookyearId, "IX_InvoiceSequence_BookyearId");
+
+            entity.HasIndex(e => e.JournalId, "IX_InvoiceSequence_JournalId");
+
             entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UQ__InvoiceS__F0F80679723D5DB7").IsUnique();
 
             entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UX_InvoiceSequence_Series_Year").IsUnique();
+
+            entity.HasOne(d => d.Bookyear).WithMany(p => p.InvoiceSequence)
+                .HasForeignKey(d => d.BookyearId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_InvoiceSequence_OctopusBookyear");
+
+            entity.HasOne(d => d.Journal).WithMany(p => p.InvoiceSequence)
+                .HasForeignKey(d => d.JournalId)
+                .HasConstraintName("FK_InvoiceSequence_OctopusJournal");
 
             entity.HasOne(d => d.Series).WithMany(p => p.InvoiceSequence)
                 .HasForeignKey(d => d.SeriesId)
@@ -1368,6 +1397,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LineType).HasMaxLength(20);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.Text).HasMaxLength(200);
+            entity.Property(e => e.UtilityIsAdvance).HasAnnotation("Relational:DefaultConstraintName", "DF_InvoicesDetails_UtilityIsAdvance");
             entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.Invoice).WithMany(p => p.InvoicesDetails)
@@ -1455,18 +1485,23 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(3)
                 .IsFixedLength();
             entity.Property(e => e.DefaultLanguage).HasMaxLength(5);
-            entity.Property(e => e.EinvoiceEnabled).HasColumnName("EInvoiceEnabled");
+            entity.Property(e => e.EinvoiceEnabled)
+                .HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_EInvEnabled")
+                .HasColumnName("EInvoiceEnabled");
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.EmailSubjectTemplate).HasMaxLength(200);
             entity.Property(e => e.EnterpriseNumber).HasMaxLength(32);
             entity.Property(e => e.EpcBeneficiaryName).HasMaxLength(70);
             entity.Property(e => e.EpcBic).HasMaxLength(11);
             entity.Property(e => e.EpcIban).HasMaxLength(34);
+            entity.Property(e => e.EpcQrEnabled).HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_EpcEnabled");
             entity.Property(e => e.EpcRemittanceTemplate).HasMaxLength(140);
             entity.Property(e => e.EpcRemittanceType).HasMaxLength(10);
             entity.Property(e => e.FontFamily).HasMaxLength(100);
             entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsActive)
+                .HasDefaultValue(true)
+                .HasAnnotation("Relational:DefaultConstraintName", "DF__IssuerCom__IsAct__1960B67E");
             entity.Property(e => e.LegalName).HasMaxLength(200);
             entity.Property(e => e.LogoPath).HasMaxLength(400);
             entity.Property(e => e.Name)
@@ -1477,12 +1512,15 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.OctopusDossierToken).HasMaxLength(512);
             entity.Property(e => e.OctopusPassword).HasMaxLength(200);
             entity.Property(e => e.OctopusUsername).HasMaxLength(200);
+            entity.Property(e => e.PeppolEnabled).HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_PeppolEnabled");
             entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.Phone2).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(16);
             entity.Property(e => e.TemplateKey).HasMaxLength(64);
-            entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
+            entity.Property(e => e.UblAttachPdf)
+                .HasDefaultValue(true)
+                .HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_UblAttachPdf");
             entity.Property(e => e.VatNumber).HasMaxLength(32);
             entity.Property(e => e.Website).HasMaxLength(200);
 
@@ -1511,6 +1549,53 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ProductVersion)
                 .IsRequired()
                 .HasMaxLength(32);
+        });
+
+        modelBuilder.Entity<OctopusBookyearPeriods>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__OctopusB__3214EC070A6FFD27");
+
+            entity.HasIndex(e => e.BookyearId, "IX_OctopusBookyearPeriods_BookyearId");
+
+            entity.HasOne(d => d.Bookyear).WithMany(p => p.OctopusBookyearPeriods)
+                .HasForeignKey(d => d.BookyearId)
+                .HasConstraintName("FK_OctopusBookyearPeriods_Bookyear");
+        });
+
+        modelBuilder.Entity<OctopusBookyears>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__OctopusB__3214EC072E362E4F");
+
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.BookyearKeyId }, "UX_OctopusBookyears_Issuer_BookyearKey").IsUnique();
+
+            entity.Property(e => e.BookyearDescription)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasOne(d => d.IssuerCompany).WithMany(p => p.OctopusBookyears)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .HasConstraintName("FK_OctopusBookyears_IssuerCompany");
+        });
+
+        modelBuilder.Entity<OctopusJournals>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__OctopusJ__3214EC0775C819F4");
+
+            entity.HasIndex(e => e.BookyearId, "IX_OctopusJournals_BookyearId");
+
+            entity.HasIndex(e => new { e.BookyearId, e.JournalKey }, "UX_OctopusJournals_Bookyear_Journal").IsUnique();
+
+            entity.Property(e => e.CurrencyCode).HasMaxLength(3);
+            entity.Property(e => e.JournalKey)
+                .IsRequired()
+                .HasMaxLength(50);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasOne(d => d.Bookyear).WithMany(p => p.OctopusJournals)
+                .HasForeignKey(d => d.BookyearId)
+                .HasConstraintName("FK_OctopusJournals_Bookyear");
         });
 
         modelBuilder.Entity<PaymentAllocations>(entity =>
@@ -1737,6 +1822,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Filename)
                 .IsRequired()
                 .HasMaxLength(200);
+            entity.Property(e => e.IsBrochure).HasAnnotation("Relational:DefaultConstraintName", "DF_ProjectDocs_IsBrochure");
             entity.Property(e => e.Name).HasMaxLength(200);
 
             entity.HasOne(d => d.ClientAccount).WithMany(p => p.ProjectDocs)

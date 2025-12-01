@@ -64,26 +64,41 @@ namespace ServiceCore
         }
 
         public async Task<IReadOnlyList<InvoiceSequenceBO>> ListSequencesAsync(int seriesId, CancellationToken ct = default)
-            => await _db.InvoiceSequence.AsNoTracking()
-                .Where(x => x.SeriesId == seriesId)
-                .OrderByDescending(x => x.FiscalYear)
-                .Select(x => new InvoiceSequenceBO { Id = x.Id, SeriesId = x.SeriesId, FiscalYear = x.FiscalYear, CurrentNumber = x.CurrentNumber })
-                .ToListAsync(ct);
+           => await _db.InvoiceSequence.AsNoTracking()
+               .Include(x => x.Bookyear)
+               .Include(x => x.Journal)
+               .Where(x => x.SeriesId == seriesId)
+               .OrderByDescending(x => x.FiscalYear)
+               .Select(x => new InvoiceSequenceBO
+               {
+                   Id = x.Id,
+                   SeriesId = x.SeriesId,
+                   BookyearId = x.BookyearId,
+                   JournalId = x.JournalId,
+                   FiscalYear = x.FiscalYear,
+                   CurrentNumber = x.CurrentNumber,
+                   BookyearDescription = x.Bookyear != null ? x.Bookyear.BookyearDescription : string.Empty,
+                   JournalName = x.Journal != null ? x.Journal.Name : string.Empty
+               })
+               .ToListAsync(ct);
 
-        public async Task<int> CreateSequenceAsync(int seriesId, int fiscalYear, int startAt, CancellationToken ct = default)
+        public async Task<int> CreateSequenceAsync(int seriesId, int fiscalYear, int startAt, int? bookyearId = null, int? journalId = null, CancellationToken ct = default)
         {
-            var e = new InvoiceSequence { SeriesId = seriesId, FiscalYear = fiscalYear, CurrentNumber = startAt };
+            var e = new InvoiceSequence { SeriesId = seriesId, FiscalYear = fiscalYear, CurrentNumber = startAt, BookyearId = bookyearId, JournalId = journalId };
             _uow.InvoiceSequences.Add(e);
             await _uow.SaveChangesAsync(ct);
             return e.Id;
         }
 
-        public async Task UpdateSequenceAsync(int id, int currentNumber, CancellationToken ct = default)
+        public async Task UpdateSequenceAsync(int id, int currentNumber, int? bookyearId = null, int? journalId = null, CancellationToken ct = default)
         {
             var e = await _db.InvoiceSequence.FirstAsync(x => x.Id == id, ct);
             e.CurrentNumber = currentNumber;
+            e.BookyearId = bookyearId;
+            e.JournalId = journalId;
             await _uow.SaveChangesAsync(ct);
         }
+
         public async Task DeleteSequenceAsync(int id, CancellationToken ct = default)
         {
             var seq = await _db.InvoiceSequence.FirstOrDefaultAsync(x => x.Id == id, ct);

@@ -39,6 +39,7 @@ public class InstellingenController : BaseController
     private readonly IIssuerSeriesService _series;
     private readonly IOctopusApiClient _octopusClient;
     private readonly IOctopusTokenManager _octopusTokens;
+    private readonly IOctopusBookyearService _octopusBookyears;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -54,7 +55,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
+    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears)
     {
         _userManager = userManager;
         _logger = logger;
@@ -63,6 +64,7 @@ public class InstellingenController : BaseController
         _series = series;
         _octopusClient = octopusClient;
         _octopusTokens = octopusTokens;
+        _octopusBookyears = octopusBookyears;
     }
 
     [HttpGet]
@@ -324,6 +326,7 @@ public class InstellingenController : BaseController
         ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
         ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
         ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
+        ViewBag.OctopusBookyears = await _octopusBookyears.ListByIssuerAsync(id);
 
         var vm = new IssuerCompanyVM
         {
@@ -604,6 +607,39 @@ public class InstellingenController : BaseController
 
         return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
     }
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/bookyears")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyOctopusBookyears(int issuerId, CancellationToken ct)
+    {
+        try
+        {
+            var issuer = await _issuers.GetAsync(issuerId, ct);
+            if (issuer == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
+            {
+                TempData["OctopusMessage"] = "Koppel eerst een dossier.";
+                TempData["OctopusMessageType"] = "warning";
+                return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+            }
+
+            var bookyears = await _octopusTokens.SyncBookyearsAsync(issuerId, issuer.OctopusDossierNumber, ct);
+            TempData["OctopusMessage"] = $"{bookyears.Count} boekjaren geladen en opgeslagen.";
+            TempData["OctopusMessageType"] = "success";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Octopus boekjaren laden mislukt voor issuer {IssuerId}", issuerId);
+            TempData["OctopusMessage"] = $"Boekjaren laden mislukt: {ex.Message}";
+            TempData["OctopusMessageType"] = "danger";
+        }
+
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+    }
+
     // POST /Admin/IssuerCompanies/Disable/5
     [HttpPost("IssuerCompanies/Disable/{id:int}")]
     [ValidateAntiForgeryToken]
@@ -787,11 +823,13 @@ public class InstellingenController : BaseController
         return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
     }
 
+
     [HttpGet("IssuerCompanies/{issuerId:int}/Series/{seriesId:int}/Sequences")]
     //[HttpGet("Series/{seriesId:int}/Sequences")]
     public async Task<IActionResult> Sequences(int seriesId, int issuerId)
     {
         var items = await _series.ListSequencesAsync(seriesId);
+        var bookyears = await _octopusBookyears.ListByIssuerAsync(issuerId);
         var vm = new InvoiceSequencesPageVM
         {
             IssuerId = issuerId,
@@ -800,25 +838,39 @@ public class InstellingenController : BaseController
             {
                 Id = x.Id,
                 SeriesId = x.SeriesId,
+                BookyearId = x.BookyearId,
+                JournalId = x.JournalId,
                 FiscalYear = x.FiscalYear,
-                CurrentNumber = x.CurrentNumber
+                CurrentNumber = x.CurrentNumber,
+                BookyearDescription = x.BookyearDescription,
+                JournalName = x.JournalName
             }).ToList()
         };
+        ViewBag.OctopusBookyears = bookyears;
         return View(vm);
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Series/{seriesId:int}/Sequences/Create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SequenceCreate(int seriesId,int issuerId, int fiscalYear, int startAt = 0)
+    public async Task<IActionResult> SequenceCreate(int seriesId, int issuerId, int fiscalYear, int startAt = 0, int? bookyearId = null, int? journalId = null)
     {
-        await _series.CreateSequenceAsync(seriesId, fiscalYear, startAt);
+        if (bookyearId.HasValue)
+        {
+            var bookyear = await _octopusBookyears.GetAsync(bookyearId.Value, CancellationToken.None);
+            if (bookyear != null)
+            {
+                fiscalYear = bookyear.StartDate.Year;
+            }
+        }
+
+        await _series.CreateSequenceAsync(seriesId, fiscalYear, startAt, bookyearId, journalId);
         return RedirectToAction("Sequences", new { seriesId, issuerId });
     }
     [HttpPost("IssuerCompanies/{issuerId:int}/Series/{seriesId:int}/Sequences/Update/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SequenceUpdate(int id, int currentNumber, int seriesId, int issuerId)
+    public async Task<IActionResult> SequenceUpdate(int id, int currentNumber, int seriesId, int issuerId, int? bookyearId = null, int? journalId = null)
     {
-        await _series.UpdateSequenceAsync(id, currentNumber);
+        await _series.UpdateSequenceAsync(id, currentNumber, bookyearId, journalId);
         return RedirectToAction("Sequences", new { seriesId, issuerId });
     }
 

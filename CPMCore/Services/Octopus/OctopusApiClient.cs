@@ -1,8 +1,10 @@
-﻿using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json.Serialization;
+﻿using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace CPMCore.Services.Octopus
 {
@@ -13,6 +15,9 @@ namespace CPMCore.Services.Octopus
         Task<IReadOnlyList<OctopusDossierItem>> GetDossiersAsync(string authenticateToken, CancellationToken ct = default);
 
         Task<OctopusDossierTokenResult> GetDossierTokenAsync(string authenticateToken, string dossierNumber, CancellationToken ct = default);
+        Task<IReadOnlyList<OctopusBookyearItem>> GetBookyearsAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
+
+        Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, CancellationToken ct = default);
     }
 
     public class OctopusApiClient : IOctopusApiClient
@@ -80,11 +85,11 @@ namespace CPMCore.Services.Octopus
 
         public async Task<OctopusDossierTokenResult> GetDossierTokenAsync(string authenticateToken, string dossierNumber, CancellationToken ct = default)
         {
-            var url = BuildUrl(_options.ApiBaseUrl, $"dossier/{dossierNumber}/token");
+            var url = $"{_options.ApiBaseUrl}/dossiers?dossierId={Uri.EscapeDataString(dossierNumber)}";
             EnsureUrl(url, "Dossier token");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
+            request.Headers.Add("Token", authenticateToken);
 
             using var response = await _httpClient.SendAsync(request, ct);
             await EnsureSuccessAsync(response, url);
@@ -98,6 +103,39 @@ namespace CPMCore.Services.Octopus
             return new OctopusDossierTokenResult(body.Token!, body.ValidUntil ?? DateTime.UtcNow.AddHours(1));
         }
 
+        public async Task<IReadOnlyList<OctopusBookyearItem>> GetBookyearsAsync(string authenticateToken, string dossierToken,string dossierNumber, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossier/{dossierNumber}/bookyears");
+            EnsureUrl(url, "Boekjaren");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusBookyearItem>>(cancellationToken: ct)
+                         ?? new List<OctopusBookyearItem>();
+            return result;
+        }
+
+        public async Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"bookyears/{bookyearKey}/journals");
+            EnsureUrl(url, "Journaals");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusJournalItem>>(cancellationToken: ct)
+                         ?? new List<OctopusJournalItem>();
+            return result;
+        }
         private static string BuildUrl(string baseUrl, string path)
         {
             baseUrl ??= string.Empty;
@@ -186,6 +224,86 @@ namespace CPMCore.Services.Octopus
         public int? Id { get; set; }
     }
 
+    public class OctopusBookyearItem
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKey? BookyearKey { get; set; }
+
+        [JsonPropertyName("bookyearDescription")]
+        public string? BookyearDescription { get; set; }
+
+        [JsonPropertyName("startDate")]
+        public DateTime StartDate { get; set; }
+
+        [JsonPropertyName("endDate")]
+        public DateTime EndDate { get; set; }
+
+        [JsonPropertyName("closed")]
+        public bool Closed { get; set; }
+
+        [JsonPropertyName("periods")]
+        public List<OctopusBookyearPeriodItem> Periods { get; set; } = new();
+    }
+
+    public class OctopusBookyearKey
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
+
+    public class OctopusBookyearPeriodItem
+    {
+        [JsonPropertyName("bookyearPeriod")]
+        public int BookyearPeriod { get; set; }
+
+        [JsonPropertyName("startDate")]
+        public DateTime StartDate { get; set; }
+
+        [JsonPropertyName("endDate")]
+        public DateTime EndDate { get; set; }
+    }
+
+    public class OctopusJournalItem
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKey? BookyearKey { get; set; }
+
+        [JsonPropertyName("journalKey")]
+        public string? JournalKey { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("closed")]
+        public bool Closed { get; set; }
+
+        [JsonPropertyName("currencyCode")]
+        public string? CurrencyCode { get; set; }
+
+        [JsonPropertyName("lastBookedDocumentNr")]
+        public int? LastBookedDocumentNr { get; set; }
+
+        [JsonPropertyName("protectedPeriod")]
+        public int? ProtectedPeriod { get; set; }
+
+        [JsonPropertyName("closedPeriod")]
+        public int? ClosedPeriod { get; set; }
+
+        [JsonPropertyName("insertionType")]
+        public int? InsertionType { get; set; }
+
+        [JsonPropertyName("customFieldList")]
+        public List<OctopusCustomFieldItem> CustomFieldList { get; set; } = new();
+
+        [JsonPropertyName("customFieldLineList")]
+        public List<OctopusCustomFieldItem> CustomFieldLineList { get; set; } = new();
+    }
+
+    public class OctopusCustomFieldItem
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
 
     public class OctopusAuthenticationRequest
     {

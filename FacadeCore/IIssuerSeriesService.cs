@@ -17,8 +17,8 @@ namespace FacadeCore
         Task DisableAsync(int id, CancellationToken ct = default);  // soft delete (IsActive = false)
 
         Task<IReadOnlyList<InvoiceSequenceBO>> ListSequencesAsync(int seriesId, CancellationToken ct = default);
-        Task<int> CreateSequenceAsync(int seriesId, int fiscalYear, int startAt, CancellationToken ct = default);
-        Task UpdateSequenceAsync(int id, int currentNumber, CancellationToken ct = default);
+        Task<int> CreateSequenceAsync(int seriesId, int fiscalYear, int startAt, int? bookyearId = null, int? journalId = null, CancellationToken ct = default);
+        Task UpdateSequenceAsync(int id, int currentNumber, int? bookyearId = null, int? journalId = null, CancellationToken ct = default);
         Task DeleteSequenceAsync(int id, CancellationToken ct = default);
     }
 }

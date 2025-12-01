@@ -15,5 +15,13 @@ public partial class InvoiceSequence
 
     public int CurrentNumber { get; set; }
 
+    public int? BookyearId { get; set; }
+
+    public int? JournalId { get; set; }
+
+    public virtual OctopusBookyears Bookyear { get; set; }
+
+    public virtual OctopusJournals Journal { get; set; }
+
     public virtual InvoiceSeries Series { get; set; }
 }

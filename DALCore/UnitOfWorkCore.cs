@@ -1,4 +1,5 @@
-﻿using DALCore.Models;
+﻿using BOCore;
+using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -70,6 +71,9 @@ namespace DALCore
         public GenericRepository<PaymentTerms> PaymentTerms { get; }
         public GenericRepository<IssuerCompany> IssuerCompanies { get; }
         public GenericRepository<IssuerBankAccount> IssuerBankAccount { get; }
+        public GenericRepository<OctopusBookyears> OctopusBookyears { get; }
+        public GenericRepository<OctopusBookyearPeriods> OctopusBookyearPeriods { get; }
+        public GenericRepository<OctopusJournals> OctopusJournals { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -140,6 +144,9 @@ namespace DALCore
             PaymentTerms = new GenericRepository<PaymentTerms>(_context);
             IssuerCompanies = new GenericRepository<IssuerCompany>(_context);
             IssuerBankAccount = new GenericRepository<IssuerBankAccount>(_context);
+            OctopusBookyears = new GenericRepository<OctopusBookyears>(_context);
+            OctopusBookyearPeriods = new GenericRepository<OctopusBookyearPeriods>(_context);
+            OctopusJournals = new GenericRepository<OctopusJournals>(_context);
         }
 
         // Eenduidige save-methodes

@@ -77,6 +77,7 @@ builder.Services.AddScoped<IInvoiceNumberingService, InvoiceNumberingService>();
 builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupService>();
 builder.Services.AddScoped<IInvoiceCommunicationService, InvoiceCommunicationService>();
 builder.Services.AddScoped<IInvoiceUblBuilder, InvoiceUblBuilder>();
+builder.Services.AddScoped<IOctopusBookyearService, OctopusBookyearService>();
 builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(client =>
 {
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
