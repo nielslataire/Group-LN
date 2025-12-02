@@ -45,7 +45,8 @@
             <section class="card card-modern mt-4">
                 <div class="card-body">
                     <div class="row">
-                            <div class="row align-items-center">
+                    <div class="form-group">
+                            <div class="row align-items-center pb-3">
                                 <label class="col-md-2 control-label text-lg-end mb-0">Boekjaar</label>
                                 <div class="col-md-3">
                                     <select name="bookyearId" class="form-control form-control-modern">
@@ -66,15 +67,22 @@
                                         }
                                     </select>
                                 </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
                                 <label class="col-md-2 control-label text-lg-end mb-0">Jaar</label>
                                 <div class="col-md-3">
                                     <input type="number" name="fiscalYear" value="@DateTime.Now.Year" class="form-control form-control-modern" />
                                 </div>
                                 <label class="col-md-2 control-label text-lg-end mb-0">Start nummering</label>
-                                <div class="col-md-2">
+                                <div class="col-md-3">
                                         <input type="number" name="startAt" value="1" class="form-control form-control-modern" />
                                 </div>
-                                <button class="btn btn-primary col-md-2">Toevoegen</button>
+                            </div>
+                                <div class="row align-items-center">
+                                    <div class="col-md-7">
+                                    </div>
+                                    <button class="btn btn-primary col-md-3">Toevoegen</button>
+                                </div>
                             </div>
                     </div>
                 </div>

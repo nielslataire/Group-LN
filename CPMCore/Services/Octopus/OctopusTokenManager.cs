@@ -182,7 +182,7 @@ namespace CPMCore.Services.Octopus
             foreach (var bookyear in bookyears)
             {
                 if (bookyear.BookyearKey?.Id == null) continue;
-                var journalItems = await _client.GetJournalsAsync(authenticateToken, dossierToken, bookyear.BookyearKey.Id, ct);
+                var journalItems = await _client.GetJournalsAsync(authenticateToken, dossierToken, bookyear.BookyearKey.Id,dossierNumber, ct);
                 results.Add(new OctopusBookyearBO
                 {
                     BookyearKeyId = bookyear.BookyearKey.Id,

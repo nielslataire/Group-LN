@@ -17,7 +17,7 @@ namespace CPMCore.Services.Octopus
         Task<OctopusDossierTokenResult> GetDossierTokenAsync(string authenticateToken, string dossierNumber, CancellationToken ct = default);
         Task<IReadOnlyList<OctopusBookyearItem>> GetBookyearsAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
 
-        Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, CancellationToken ct = default);
+        Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, string dossierNumber, CancellationToken ct = default);
     }
 
     public class OctopusApiClient : IOctopusApiClient
@@ -94,22 +94,22 @@ namespace CPMCore.Services.Octopus
             using var response = await _httpClient.SendAsync(request, ct);
             await EnsureSuccessAsync(response, url);
 
-            var body = await response.Content.ReadFromJsonAsync<OctopusTokenResponse>(cancellationToken: ct);
-            if (body == null || string.IsNullOrWhiteSpace(body.Token))
+            var currenttime = DateTime.UtcNow;
+            var body = await response.Content.ReadFromJsonAsync<OctopusDossierTokenResponse>(cancellationToken: ct);
+            if (body == null || string.IsNullOrWhiteSpace(body.Dossiertoken))
             {
                 throw new InvalidOperationException("Octopus dossier token ontbreekt in het antwoord.");
             }
 
-            return new OctopusDossierTokenResult(body.Token!, body.ValidUntil ?? DateTime.UtcNow.AddHours(1));
+            return new OctopusDossierTokenResult(body.Dossiertoken!, body.ValidUntil ?? currenttime.AddSeconds(590));
         }
 
         public async Task<IReadOnlyList<OctopusBookyearItem>> GetBookyearsAsync(string authenticateToken, string dossierToken,string dossierNumber, CancellationToken ct = default)
         {
-            var url = BuildUrl(_options.ApiBaseUrl, $"dossier/{dossierNumber}/bookyears");
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/bookyears");
             EnsureUrl(url, "Boekjaren");
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
             request.Headers.Add("dossierToken", dossierToken);
 
             using var response = await _httpClient.SendAsync(request, ct);
@@ -120,13 +120,12 @@ namespace CPMCore.Services.Octopus
             return result;
         }
 
-        public async Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, CancellationToken ct = default)
+        public async Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, string dossierNumber, CancellationToken ct = default)
         {
-            var url = BuildUrl(_options.ApiBaseUrl, $"bookyears/{bookyearKey}/journals");
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/bookyears/{bookyearKey}/journals");
             EnsureUrl(url, "Journaals");
 
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authenticateToken);
             request.Headers.Add("dossierToken", dossierToken);
 
             using var response = await _httpClient.SendAsync(request, ct);
@@ -319,10 +318,10 @@ namespace CPMCore.Services.Octopus
         public string Token { get; set; } = default!;
     }
 
-    internal class OctopusTokenResponse
+    internal class OctopusDossierTokenResponse
     {
-        [JsonPropertyName("token")]
-        public string? Token { get; set; }
+        [JsonPropertyName("Dossiertoken")]
+        public string? Dossiertoken { get; set; }
 
         [JsonPropertyName("validUntil")]
         public DateTime? ValidUntil { get; set; }
