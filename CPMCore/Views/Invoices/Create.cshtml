@@ -168,14 +168,14 @@
                                 {
                                     if (Model.VatTypeId == v.Id)
                                     {
-                                        <option value="@v.Id" data-pct="@v.VATpercentage" selected="selected">
-                                            @v.VATtext
+                                        <option value="@v.Id" data-pct="@v.BasePercentage" selected="selected">
+                                            @v.Code - @v.Description (@v.BasePercentage%)
                                         </option>
                                     }
                                     else
                                     {
-                                        <option value="@v.Id" data-pct="@v.VATpercentage">
-                                            @v.VATtext
+                                        <option value="@v.Id" data-pct="@v.BasePercentage">
+                                            @v.Code - @v.Description (@v.BasePercentage%)
                                         </option>
                                     }
                             

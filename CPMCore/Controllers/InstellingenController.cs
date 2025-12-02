@@ -166,6 +166,7 @@ public class InstellingenController : BaseController
             FontFamily = x.FontFamily,
             LogoBytes = x.LogoBytes,
             DefaultPaymentTermId = x.DefaultPaymentTermId,
+            DefaultVatTypeId = x.DefaultVatTypeId,
             IsActive = x.IsActive,
             EInvoiceEnabled = x.EInvoiceEnabled,
             PeppolParticipantId = x.PeppolParticipantId,
@@ -280,6 +281,7 @@ public class InstellingenController : BaseController
             FontFamily = vm.FontFamily,
             LogoBytes = vm.LogoBytes,
             DefaultPaymentTermId = vm.DefaultPaymentTermId,
+            DefaultVatTypeId = vm.DefaultVatTypeId,
             IsActive = vm.IsActive,
             EInvoiceEnabled = vm.EInvoiceEnabled,
             PeppolParticipantId = vm.PeppolParticipantId,
@@ -314,19 +316,20 @@ public class InstellingenController : BaseController
 
     // GET /Admin/IssuerCompanies/Edit/5
     [HttpGet("IssuerCompanies/Edit/{id:int}")]
-    public async Task<IActionResult> IssuerCompaniesEdit(int id)
+    public async Task<IActionResult> IssuerCompaniesEdit(int id, CancellationToken ct)
     {
         var referrer = Request.Headers["Referer"].ToString();
         // Use the referrer URL as needed
         TempData["Referrer"] = referrer;
-        var bo = await _issuers.GetAsync(id);
+        var bo = await _issuers.GetAsync(id, ct);
         if (bo == null) return NotFound();
 
-        ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
-        ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
-        ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
-        ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
-        ViewBag.OctopusBookyears = await _octopusBookyears.ListByIssuerAsync(id);
+        ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync(ct);
+        ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id, ct);
+        ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id, ct);
+        ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync(ct);
+        ViewBag.OctopusBookyears = await _octopusBookyears.ListByIssuerAsync(id, ct);
+        ViewBag.OctopusVatCodes = await _issuers.ListVatTypeAsync(id, ct);
 
         var vm = new IssuerCompanyVM
         {
@@ -352,6 +355,7 @@ public class InstellingenController : BaseController
             FontFamily = bo.FontFamily,
             LogoBytes = bo.LogoBytes,
             DefaultPaymentTermId = bo.DefaultPaymentTermId,
+            DefaultVatTypeId = bo.DefaultVatTypeId,
             IsActive = bo.IsActive,
             EInvoiceEnabled = bo.EInvoiceEnabled,
             PeppolParticipantId = bo.PeppolParticipantId,
@@ -472,6 +476,7 @@ public class InstellingenController : BaseController
             FontFamily = vm.FontFamily,
             LogoBytes = vm.LogoBytes,
             DefaultPaymentTermId = vm.DefaultPaymentTermId,
+            DefaultVatTypeId = vm.DefaultVatTypeId,
             IsActive = vm.IsActive,
             EInvoiceEnabled = vm.EInvoiceEnabled,
             PeppolParticipantId = vm.PeppolParticipantId,
@@ -607,9 +612,18 @@ public class InstellingenController : BaseController
 
         return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
     }
+
     [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/bookyears")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> IssuerCompanyOctopusBookyears(int issuerId, CancellationToken ct)
+        => await SyncOctopusDossierAsync(issuerId, ct);
+
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/sync")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyOctopusSync(int issuerId, CancellationToken ct)
+        => await SyncOctopusDossierAsync(issuerId, ct);
+
+    private async Task<IActionResult> SyncOctopusDossierAsync(int issuerId, CancellationToken ct)
     {
         try
         {
@@ -626,14 +640,14 @@ public class InstellingenController : BaseController
                 return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
             }
 
-            var bookyears = await _octopusTokens.SyncBookyearsAsync(issuerId, issuer.OctopusDossierNumber, ct);
-            TempData["OctopusMessage"] = $"{bookyears.Count} boekjaren geladen en opgeslagen.";
+            var syncResult = await _octopusTokens.SyncDossierAsync(issuerId, issuer.OctopusDossierNumber, ct);
+            TempData["OctopusMessage"] = $"Dossier gesynchroniseerd: {syncResult.BookyearCount} boekjaren en {syncResult.VatCodeCount} verkoop-btw-codes.";
             TempData["OctopusMessageType"] = "success";
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Octopus boekjaren laden mislukt voor issuer {IssuerId}", issuerId);
-            TempData["OctopusMessage"] = $"Boekjaren laden mislukt: {ex.Message}";
+            _logger.LogError(ex, "Octopus dossier synchronisatie mislukt voor issuer {IssuerId}", issuerId);
+            TempData["OctopusMessage"] = $"Dossier synchroniseren mislukt: {ex.Message}";
             TempData["OctopusMessageType"] = "danger";
         }
 

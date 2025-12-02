@@ -21,6 +21,7 @@
     Public Property FontFamily As String
     Public Property LogoBytes As Byte()
     Public Property DefaultPaymentTermId As Integer?
+    Public Property DefaultVatTypeId As Integer?
     Public Property IsActive As Boolean
 
     Public Property EInvoiceEnabled As Boolean

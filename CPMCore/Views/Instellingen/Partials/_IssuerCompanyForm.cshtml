@@ -1,5 +1,6 @@
 ﻿@model CPMCore.Models.Instellingen.IssuerCompanyVM
 @using CPMCore.Services.Octopus
+@using FacadeCore
 @{
     var terms = (System.Collections.Generic.IReadOnlyList<BOCore.PaymentTermOptionBO>)
                 ViewBag.PaymentTerms ?? new List<BOCore.PaymentTermOptionBO>();
@@ -10,6 +11,7 @@
     var octopusMessage = ViewBag.OctopusMessage as string;
     var octopusMessageType = ViewBag.OctopusMessageType as string;
     var octopusBookyears = ViewBag.OctopusBookyears as IReadOnlyList<BOCore.OctopusBookyearBO> ?? new List<BOCore.OctopusBookyearBO>();
+    var octopusVatCodes = ViewBag.OctopusVatCodes as IReadOnlyList<VatTypeBO> ?? new List<VatTypeBO>();
 }
 <div class="row mt-2">
 	<div class="col">
@@ -71,6 +73,28 @@
                                         <option value="@t.Id">@t.Label</option>
                                     }
                                 </select>
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
+                            <label asp-for="DefaultVatTypeId" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                @if (octopusVatCodes.Any())
+                                {
+                                    <select asp-for="DefaultVatTypeId" class="form-control form-control-modern">
+                                        <option value="">— kies —</option>
+                                        @foreach (var vat in octopusVatCodes)
+                                        {
+                                            <option value="@vat.Id">@vat.Code - @vat.Description (@vat.BasePercentage.ToString("0.##")%)</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <select asp-for="DefaultVatTypeId" class="form-control form-control-modern" disabled="disabled">
+                                        <option value="">— kies —</option>
+                                    </select>
+                                    <small class="text-muted">Synchroniseer het dossier om btw-codes op te halen.</small>
+                                }
                             </div>
                         </div>
                         <div class="form-group row align-items-center pb-3">
@@ -390,15 +414,15 @@
                                 <div class="d-flex gap-2 mb-2">
                                     <button type="submit"
                                             class="btn btn-secondary"
-                                            formaction='@Url.Action("IssuerCompanyOctopusBookyears", "Instellingen", new { issuerId = Model.Id })'
+                                            formaction='@Url.Action("IssuerCompanyOctopusSync", "Instellingen", new { issuerId = Model.Id })'
                                             formmethod="post"
                                             formnovalidate
                                             @(Model.Id <= 0 ? "disabled" : null)>
-                                        <i class="bx bx-refresh"></i> Boekjaren ophalen
+                                        <i class="bx bx-refresh"></i> Dossier synchroniseren
                                     </button>
                                 </div>
                                 <div class="table-responsive">
-                                    <table class="table table-sm mb-0">
+                                    <table class="table table-sm mb-3">
                                         <thead>
                                             <tr><th>Boekjaar</th><th>Periodes</th><th>Dagboeken</th></tr>
                                         </thead>
@@ -406,30 +430,52 @@
                                             @foreach (var bookyear in octopusBookyears)
                                             {
                                                 <tr>
-                                                    <td>@bookyear.BookyearDescription<br /><small class="text-muted">@bookyear.StartDate:yyyy-MM-dd - @bookyear.EndDate:yyyy-MM-dd</small></td>
                                                     <td>
-                                                        @if (bookyear.Periods?.Any() ?? false)
-                                                        {
-                                                            <ul class="mb-0 ps-3">
-                                                                @foreach (var p in bookyear.Periods)
-                                                                {
-                                                                    <li>Periode @p.BookyearPeriod: @p.StartDate:yyyy-MM-dd - @p.EndDate:yyyy-MM-dd</li>
-                                                                }
-                                                            </ul>
-                                                        }
+                                                        <div>@bookyear.BookyearDescription</div>
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            <small class="text-muted">@bookyear.StartDate:dd/MM/yyyy - @bookyear.EndDate:dd/MM/yyyy</small>
+                                                            <span class="badge @(bookyear.Closed ? "bg-danger" : "bg-success")">@(bookyear.Closed ? "Afgesloten" : "Open")</span>
+                                                        </div>
                                                     </td>
-                                                    <td>
-                                                        @if (bookyear.Journals?.Any() ?? false)
-                                                        {
-                                                            <ul class="mb-0 ps-3">
-                                                                @foreach (var j in bookyear.Journals)
-                                                                {
-                                                                    <li>@j.Name (@j.JournalKey)</li>
-                                                                }
-                                                            </ul>
-                                                        }
-                                                    </td>
-                                                </tr>
+                                                    <td class="align-middle">@(bookyear.Periods?.Count ?? 0)</td>
+                                                    <td class="align-middle">
+                                                        @(bookyear.Journals?.Any() ?? false
+                                                                                                            ? string.Join(", ", bookyear.Journals.Select(j => j.JournalKey))
+                                                                                                            : "—")
+                                                </td>
+                                            </tr>
+                                                                                        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr><th>BTW-code</th><th>Omschrijving</th><th>Type</th><th>Basis %</th><th>Standaard rekening</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (octopusVatCodes.Any())
+                                            {
+                                                @foreach (var code in octopusVatCodes)
+                                                {
+                                                    <tr>
+                                                        <td class="align-middle">@code.Code</td>
+                                                        <td class="align-middle">@code.Description</td>
+                                                        <td class="align-middle">
+                                                            @(code.Type == 2
+                                                                                                                ? "Verkoop"
+                                                                                                                : code.Type == 4
+                                                                                                                ? "Verkoop credit"
+                                                                                                                : $"Type {code.Type}")
+                                                </td>
+                                                <td class="align-middle">@code.BasePercentage%</td>
+                                                <td class="align-middle">@(code.DefaultSellBookingAccountNr?.ToString() ?? "—")</td>
+                                            </tr>
+                                                                                        }
+                                            }
+                                            else
+                                            {
+                                                <tr><td colspan="5" class="text-muted">Geen verkoop-btw-codes gesynchroniseerd.</td></tr>
                                             }
                                         </tbody>
                                     </table>

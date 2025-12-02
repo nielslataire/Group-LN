@@ -8,7 +8,7 @@ namespace CPMCore.Models.Invoicing
     // VM-items voor dropdown rendering
     public record IssuerItemVM(int Id, string Name, int? DefaultPaymentTermId, int? DefaultVatTypeId);
     public record PaymentTermItemVM(int Id, string Name, int Days);
-    public record VatTypeVM (int Id, int VATpercentage, string VATtext);
+    public record VatTypeVM(int Id, decimal BasePercentage, string Code, string Description, int Type, int? DefaultSellBookingAccountNr);
 
     public enum StartStatus { Draft = 0, Invoice = 1 } // Invoice = meteen uitgeven
     public class InvoiceComposeVM

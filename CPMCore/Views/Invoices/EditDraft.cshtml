@@ -178,14 +178,14 @@
                                 {
                                     if (Model.VatTypeId == v.Id)
                                     {
-                                        <option value="@v.Id" data-pct="@v.VATpercentage" selected="selected">
-                                            @v.VATtext
+                                        <option value="@v.Id" data-pct="@v.BasePercentage" selected="selected">
+                                            @v.Code - @v.Description (@v.BasePercentage%)
                                         </option>
                                     }
                                     else
                                     {
-                                        <option value="@v.Id" data-pct="@v.VATpercentage">
-                                            @v.VATtext
+                                        <option value="@v.Id" data-pct="@v.BasePercentage">
+                                            @v.Code - @v.Description (@v.BasePercentage%)
                                         </option>
                                     }
 
@@ -413,7 +413,7 @@
         text = line.Text,
         price = line.Price,
         vatPercentage = line.VatPercentage,
-        vatTypeId = Model.VatTypes?.FirstOrDefault(v => System.Math.Abs(v.VATpercentage - line.VatPercentage) < 0.001m)?.Id,
+        vatTypeId = Model.VatTypes?.FirstOrDefault(v => System.Math.Abs(v.BasePercentage - line.VatPercentage) < 0.001m)?.Id,
         discountPercent = line.DiscountPercent,
         discountAmount = line.DiscountAmount,
         paymentStageId = line.PaymentStageId,

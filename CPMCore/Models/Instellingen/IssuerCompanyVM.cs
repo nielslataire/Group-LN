@@ -70,6 +70,9 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Standaard betaaltermijn")]
         public int? DefaultPaymentTermId { get; set; }
 
+        [Display(Name = "Standaard btw-code")]
+        public int? DefaultVatTypeId { get; set; }
+
         [Display(Name = "Actief")]
         public bool IsActive { get; set; } = true;
         [Display(Name = "E-invoicing")]

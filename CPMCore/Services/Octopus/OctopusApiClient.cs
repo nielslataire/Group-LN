@@ -18,6 +18,9 @@ namespace CPMCore.Services.Octopus
         Task<IReadOnlyList<OctopusBookyearItem>> GetBookyearsAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
 
         Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, string dossierNumber, CancellationToken ct = default);
+        Task<IReadOnlyList<OctopusVatCodeItem>> GetVatCodesAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
+
+        Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
     }
 
     public class OctopusApiClient : IOctopusApiClient
@@ -109,6 +112,8 @@ namespace CPMCore.Services.Octopus
             var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/bookyears");
             EnsureUrl(url, "Boekjaren");
 
+            _ = authenticateToken;
+
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("dossierToken", dossierToken);
 
@@ -125,6 +130,8 @@ namespace CPMCore.Services.Octopus
             var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/bookyears/{bookyearKey}/journals");
             EnsureUrl(url, "Journaals");
 
+            _ = authenticateToken;
+
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
             request.Headers.Add("dossierToken", dossierToken);
 
@@ -135,6 +142,41 @@ namespace CPMCore.Services.Octopus
                          ?? new List<OctopusJournalItem>();
             return result;
         }
+
+        public async Task<IReadOnlyList<OctopusVatCodeItem>> GetVatCodesAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/vatcodes");
+            EnsureUrl(url, "Vatcodes");
+
+            _ = authenticateToken;
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusVatCodeItem>>(cancellationToken: ct)
+                         ?? new List<OctopusVatCodeItem>();
+            return result;
+        }
+
+        public async Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices");
+            EnsureUrl(url, "Factuur aanmaken");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+        }
+
+
         private static string BuildUrl(string baseUrl, string path)
         {
             baseUrl ??= string.Empty;
@@ -296,6 +338,24 @@ namespace CPMCore.Services.Octopus
 
         [JsonPropertyName("customFieldLineList")]
         public List<OctopusCustomFieldItem> CustomFieldLineList { get; set; } = new();
+    }
+
+    public class OctopusVatCodeItem
+    {
+        [JsonPropertyName("code")]
+        public string? Code { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("type")]
+        public int Type { get; set; }
+
+        [JsonPropertyName("basePercentage")]
+        public decimal BasePercentage { get; set; }
+
+        [JsonPropertyName("defaultSellBookingAccountNr")]
+        public int? DefaultSellBookingAccountNr { get; set; }
     }
 
     public class OctopusCustomFieldItem

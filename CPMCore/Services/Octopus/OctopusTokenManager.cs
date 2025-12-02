@@ -14,6 +14,8 @@ namespace CPMCore.Services.Octopus
         Task<OctopusDossierTokenResult> RefreshDossierTokenAsync(int issuerId, string dossierNumber, CancellationToken ct = default);
         Task<T> ExecuteWithDossierTokensAsync<T>(int issuerId, string dossierNumber, Func<string, string, Task<T>> action, CancellationToken ct = default);
         Task<IReadOnlyList<OctopusBookyearBO>> SyncBookyearsAsync(int issuerId, string dossierNumber, CancellationToken ct = default);
+        Task<IReadOnlyList<VatTypeBO>> SyncVatCodesAsync(int issuerId, string dossierNumber, CancellationToken ct = default);
+        Task<OctopusSyncResult> SyncDossierAsync(int issuerId, string dossierNumber, CancellationToken ct = default);
     }
 
     public class OctopusTokenManager : IOctopusTokenManager
@@ -87,24 +89,39 @@ namespace CPMCore.Services.Octopus
 
         public async Task<IReadOnlyList<OctopusBookyearBO>> SyncBookyearsAsync(int issuerId, string dossierNumber, CancellationToken ct = default)
         {
-            var issuer = await EnsureIssuerAsync(issuerId, ct);
-            var authenticateToken = await RefreshAuthenticateTokenIfNeededAsync(issuer, ct);
-            var dossierToken = await EnsureDossierTokenAsync(issuer, authenticateToken, dossierNumber, ct);
+            return await ExecuteWithDossierTokensAsync(issuerId, dossierNumber,
+                async (authenticateToken, dossierToken) =>
+                {
+                    var bookyears = await LoadBookyearsAsync(authenticateToken, dossierToken, dossierNumber, ct);
+                    await _bookyears.SyncAsync(issuerId, bookyears, ct);
+                    return bookyears;
+                }, ct);
+        }
 
-            try
-            {
-                var bookyears = await LoadBookyearsAsync(authenticateToken, dossierToken,dossierNumber, ct);
-                await _bookyears.SyncAsync(issuerId, bookyears, ct);
-                return bookyears;
-            }
-            catch (HttpRequestException ex) when (IsUnauthorized(ex))
-            {
-                authenticateToken = await RefreshAuthenticateTokenAsync(issuer, ct);
-                dossierToken = (await RequestAndStoreDossierTokenAsync(issuer, authenticateToken, dossierNumber, ct)).Token;
-                var bookyears = await LoadBookyearsAsync(authenticateToken, dossierToken,dossierNumber, ct);
-                await _bookyears.SyncAsync(issuerId, bookyears, ct);
-                return bookyears;
-            }
+        public async Task<IReadOnlyList<VatTypeBO>> SyncVatCodesAsync(int issuerId, string dossierNumber, CancellationToken ct = default)
+        {
+            return await ExecuteWithDossierTokensAsync(issuerId, dossierNumber,
+                async (authenticateToken, dossierToken) =>
+                {
+                    var vatCodes = await LoadVatCodesAsync(issuerId, authenticateToken, dossierToken, dossierNumber, ct);
+                    await _issuers.SyncVatTypesAsync(issuerId, vatCodes, ct);
+                    return vatCodes;
+                }, ct);
+        }
+
+        public async Task<OctopusSyncResult> SyncDossierAsync(int issuerId, string dossierNumber, CancellationToken ct = default)
+        {
+            return await ExecuteWithDossierTokensAsync(issuerId, dossierNumber,
+                async (authenticateToken, dossierToken) =>
+                {
+                    var bookyears = await LoadBookyearsAsync(authenticateToken, dossierToken, dossierNumber, ct);
+                    await _bookyears.SyncAsync(issuerId, bookyears, ct);
+
+                    var vatCodes = await LoadVatCodesAsync(issuerId, authenticateToken, dossierToken, dossierNumber, ct);
+                    await _issuers.SyncVatTypesAsync(issuerId, vatCodes, ct);
+
+                    return new OctopusSyncResult(bookyears.Count, vatCodes.Count);
+                }, ct);
         }
 
         private async Task<IssuerCompanyBO> EnsureIssuerAsync(int issuerId, CancellationToken ct)
@@ -219,6 +236,25 @@ namespace CPMCore.Services.Octopus
             return results;
         }
 
+        private async Task<IReadOnlyList<VatTypeBO>> LoadVatCodesAsync(int issuerId, string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct)
+        {
+            var vatCodes = await _client.GetVatCodesAsync(authenticateToken, dossierToken, dossierNumber, ct);
+
+            return vatCodes
+                .Where(v => v != null && (v.Type == 2 || v.Type == 4))
+                .Select(v => new VatTypeBO
+                {
+                    IssuerCompanyId = issuerId,
+                    Code = v.Code ?? string.Empty,
+                    Description = string.IsNullOrWhiteSpace(v.Description) ? v.Code ?? string.Empty : v.Description!,
+                    Type = v.Type,
+                    BasePercentage = v.BasePercentage,
+                    DefaultSellBookingAccountNr = v.DefaultSellBookingAccountNr
+                })
+                .ToList();
+        }
+
+
         private static bool IsUnauthorized(HttpRequestException ex)
         {
             return ex.StatusCode == HttpStatusCode.Unauthorized
@@ -226,4 +262,5 @@ namespace CPMCore.Services.Octopus
                    || (ex.Message?.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ?? false);
         }
     }
+    public record OctopusSyncResult(int BookyearCount, int VatCodeCount);
 }

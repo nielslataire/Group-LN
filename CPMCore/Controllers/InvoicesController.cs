@@ -4,10 +4,13 @@ using CPMCore.Extensions;
 using CPMCore.Models.Invoicing;
 using CPMCore.Service;
 using CPMCore.Services.Peppol;
+using CPMCore.Services.Octopus;
+using DALCore;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using ServiceCore;
 using ServiceCore.Invoicing;
@@ -42,6 +45,10 @@ namespace CPMCore.Controllers
         private readonly TemplateInterpolator _templateInterpolator;
         private readonly IPeppolDirectoryClient _peppolDirectory;
         private readonly IPeppolSender _peppolSender;
+        private readonly IOctopusApiClient _octopusClient;
+        private readonly IOctopusTokenManager _octopusTokens;
+        private readonly UnitOfWorkCore _uow;
+        private readonly cpmRunningContext _db;
 
         public InvoicesController(
             IInvoiceQueryService invoices,
@@ -58,7 +65,10 @@ namespace CPMCore.Controllers
             IEmailSender emailSender,
             TemplateInterpolator templateInterpolator,
             IPeppolDirectoryClient peppolDirectory,
-            IPeppolSender peppolSender)
+            IPeppolSender peppolSender,
+            IOctopusApiClient octopusClient,
+            IOctopusTokenManager octopusTokens,
+            UnitOfWorkCore uow)
         {
             _invoices = invoices;
             _companies = companies;
@@ -75,6 +85,10 @@ namespace CPMCore.Controllers
             _templateInterpolator = templateInterpolator;
             _peppolDirectory = peppolDirectory;
             _peppolSender = peppolSender;
+            _octopusClient = octopusClient;
+            _octopusTokens = octopusTokens;
+            _uow = uow;
+            _db = (cpmRunningContext)uow.Context;
         }
 
         // LIST
@@ -442,6 +456,7 @@ namespace CPMCore.Controllers
         {
             try
             {
+                await SendInvoiceToOctopusAsync(id, ct);
                 var publicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
                 if (!string.IsNullOrWhiteSpace(publicId))
                     AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
@@ -469,12 +484,16 @@ namespace CPMCore.Controllers
             // haal alles via service
             var issuersBo = await _ics.ListActiveIssuersAsync(ct);
             var termsBo = await _ics.ListPaymentTermsAsync(ct);
-            var VatsBo = await _ics.ListVatTypeAsync(ct);
+
 
             // gekozen issuer (param of eerste actieve)
             var selectedIssuerId = issuerId
                 ?? (await _ics.GetFirstActiveIssuerIdAsync(ct))
                 ?? 0;
+
+            var VatsBo = selectedIssuerId > 0
+               ? await _ics.ListVatTypeAsync(selectedIssuerId, ct)
+               : Array.Empty<VatTypeBO>();
 
             var accountsBo = selectedIssuerId > 0
                 ? await _bank.ListByIssuerAsync(selectedIssuerId, ct)
@@ -510,7 +529,7 @@ namespace CPMCore.Controllers
                     .ToList(),
 
                 VatTypes = VatsBo
-                    .Select(t => new VatTypeVM(t.Id, t.VATPercentage, t.VATText))
+                     .Select(t => new VatTypeVM(t.Id, t.BasePercentage, t.Code, t.Description, t.Type, t.DefaultSellBookingAccountNr))
                     .ToList(),
 
                 IssuerBankAccountId = defaultAccountId,
@@ -1251,12 +1270,16 @@ namespace CPMCore.Controllers
 
             var issuersBo = await _ics.ListActiveIssuersAsync(ct);
             var termsBo = await _ics.ListPaymentTermsAsync(ct);
-            var vatBo = await _ics.ListVatTypeAsync(ct);
+
 
             var selectedIssuerId = posted?.IssuerCompanyId > 0 ? posted!.IssuerCompanyId : detail.IssuerCompanyId;
             var accountsBo = selectedIssuerId > 0
                 ? await _bank.ListByIssuerAsync(selectedIssuerId, ct)
                 : Array.Empty<IssuerBankAccountBO>();
+
+            var vatBo = selectedIssuerId > 0
+                ? await _ics.ListVatTypeAsync(selectedIssuerId, ct)
+                : Array.Empty<VatTypeBO>();
 
             var vm = new InvoiceDraftEditVM
             {
@@ -1288,7 +1311,7 @@ namespace CPMCore.Controllers
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),
                 BankAccountIban = detail.BankAccount,
-                VatTypes = vatBo.Select(t => new VatTypeVM(t.Id, t.VATPercentage, t.VATText)).ToList(),
+                VatTypes = vatBo.Select(t => new VatTypeVM(t.Id, t.BasePercentage, t.Code, t.Description, t.Type, t.DefaultSellBookingAccountNr)).ToList(),
                 Issuers = issuersBo.Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId)).ToList(),
                 PaymentTerms = termsBo.Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days)).ToList()
             };
@@ -1321,7 +1344,7 @@ namespace CPMCore.Controllers
                 var firstLine = vm.Lines?.FirstOrDefault();
                 if (firstLine != null)
                 {
-                    var match = vm.VatTypes.FirstOrDefault(v => Math.Abs(v.VATpercentage - firstLine.VatPercentage) < 0.001m);
+                    var match = vm.VatTypes.FirstOrDefault(v => Math.Abs(v.BasePercentage - firstLine.VatPercentage) < 0.001m);
                     if (match != null)
                         vm.VatTypeId = match.Id;
                 }
@@ -1733,6 +1756,95 @@ namespace CPMCore.Controllers
             return string.Equals(mode, "copy", StringComparison.OrdinalIgnoreCase)
                 ? InvoiceSendFormMode.Copy
                 : InvoiceSendFormMode.Standard;
+        }
+
+        private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct)
+        {
+            var invoice = await _db.Invoices
+                .AsNoTracking()
+                .Include(i => i.InvoicesDetails)
+                .Include(i => i.IssuerCompany)
+                .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+            var issuer = invoice.IssuerCompany
+                ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
+
+            if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
+                throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
+
+            var finalDate = invoice.Date == default
+                ? DateOnly.FromDateTime(DateTime.Today)
+                : invoice.Date;
+
+            var seriesId = await _db.InvoiceSeries
+                .Where(s => s.IssuerCompanyId == issuer.Id && s.IsActive)
+                .OrderBy(s => s.Id)
+                .Select(s => (int?)s.Id)
+                .FirstOrDefaultAsync(ct)
+                ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit facturatiebedrijf.");
+
+            var fiscalYear = finalDate.Year;
+            var sequence = await _db.InvoiceSequence
+                .Include(s => s.Bookyear)!
+                .ThenInclude(b => b.OctopusBookyearPeriods)
+                .Include(s => s.Journal)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
+
+            if (sequence?.Bookyear == null || sequence.Journal == null)
+                throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit jaar.");
+
+            var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
+
+            var periodNumber = sequence.Bookyear.OctopusBookyearPeriods
+                .FirstOrDefault(p =>
+                {
+                    var start = DateOnly.FromDateTime(p.StartDate);
+                    var end = DateOnly.FromDateTime(p.EndDate);
+                    return finalDate >= start && finalDate <= end;
+                })?.BookyearPeriodNr
+                ?? 0;
+
+            var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
+
+            var payload = new OctopusInvoiceCreateRequest
+            {
+                BookyearKey = new OctopusBookyearKeyRef { Id = sequence.Bookyear.BookyearKeyId },
+                JournalKey = sequence.Journal.JournalKey,
+                DocumentSequenceNr = nextNumber,
+                BookyearPeriodeNr = periodNumber,
+                DocumentDate = finalDate,
+                ExpiryDate = invoice.ExpirationDate ?? finalDate,
+                CurrencyCode = string.IsNullOrWhiteSpace(invoice.CurrencyCode) ? "EUR" : invoice.CurrencyCode!,
+                ExchangeRate = invoice.FxRateToCompany ?? 0m,
+                RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
+                {
+                    RelationKey = new OctopusRelationKeyRef { Id = invoice.ClientId ?? 0 },
+                    ExternalRelationId = invoice.ClientId ?? invoice.CompanyId ?? 0
+                },
+                Comment = invoice.DetailText,
+                OrderReference = invoice.ProjectId?.ToString(CultureInfo.InvariantCulture),
+                Reference = invoice.PublicId,
+                FinancialDiscount = 0m,
+                CustomFieldValueList = new List<OctopusCustomFieldValue>(),
+                InvoiceLines = invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
+                {
+                    ExternProductNr = line.Id.ToString(CultureInfo.InvariantCulture),
+                    Description = line.Text,
+                    Count = 1,
+                    Unit = string.Empty,
+                    UnitPrice = line.Price ?? 0m,
+                    DiscountPercentage = line.DiscountPercent ?? 0m,
+                    VatCodeKey = (line.VatPercentage ?? 0m).ToString(CultureInfo.InvariantCulture),
+                    BookingAccountNr = 0,
+                    CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
+                    CustomFieldValueList = new List<OctopusCustomFieldValue>(),
+                    IntrastatServiceData = null
+                }).ToList()
+            };
+
+            await _octopusClient.CreateInvoiceAsync(dossierToken.Token, issuer.OctopusDossierNumber, payload, ct);
         }
 
 

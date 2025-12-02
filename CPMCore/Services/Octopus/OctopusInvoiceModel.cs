@@ -1,0 +1,162 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+namespace CPMCore.Services.Octopus
+{
+    public class OctopusInvoiceCreateRequest
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKeyRef? BookyearKey { get; set; }
+
+        [JsonPropertyName("journalKey")]
+        public string? JournalKey { get; set; }
+
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
+
+        [JsonPropertyName("bookyearPeriodeNr")]
+        public int BookyearPeriodeNr { get; set; }
+
+        [JsonPropertyName("documentDate")]
+        public DateOnly DocumentDate { get; set; }
+
+        [JsonPropertyName("expiryDate")]
+        public DateOnly ExpiryDate { get; set; }
+
+        [JsonPropertyName("currencyCode")]
+        public string CurrencyCode { get; set; } = "EUR";
+
+        [JsonPropertyName("exchangeRate")]
+        public decimal ExchangeRate { get; set; }
+
+        [JsonPropertyName("relationIdentificationServiceData")]
+        public OctopusRelationIdentificationServiceData? RelationIdentificationServiceData { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("orderReference")]
+        public string? OrderReference { get; set; }
+
+        [JsonPropertyName("reference")]
+        public string? Reference { get; set; }
+
+        [JsonPropertyName("financialDiscount")]
+        public decimal FinancialDiscount { get; set; }
+
+        [JsonPropertyName("customFieldValueList")]
+        public List<OctopusCustomFieldValue> CustomFieldValueList { get; set; } = new();
+
+        [JsonPropertyName("invoiceLines")]
+        public List<OctopusInvoiceLineRequest> InvoiceLines { get; set; } = new();
+    }
+
+    public class OctopusBookyearKeyRef
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
+
+    public class OctopusRelationIdentificationServiceData
+    {
+        [JsonPropertyName("relationKey")]
+        public OctopusRelationKeyRef? RelationKey { get; set; }
+
+        [JsonPropertyName("externalRelationId")]
+        public int ExternalRelationId { get; set; }
+    }
+
+    public class OctopusRelationKeyRef
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
+
+    public class OctopusCustomFieldValue
+    {
+        [JsonPropertyName("customFieldKey")]
+        public OctopusCustomFieldKeyRef? CustomFieldKey { get; set; }
+
+        [JsonPropertyName("value")]
+        public string? Value { get; set; }
+    }
+
+    public class OctopusCustomFieldKeyRef
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
+
+    public class OctopusInvoiceLineRequest
+    {
+        [JsonPropertyName("externProductNr")]
+        public string? ExternProductNr { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("count")]
+        public decimal Count { get; set; }
+
+        [JsonPropertyName("unit")]
+        public string? Unit { get; set; }
+
+        [JsonPropertyName("unitPrice")]
+        public decimal UnitPrice { get; set; }
+
+        [JsonPropertyName("discountPercentage")]
+        public decimal DiscountPercentage { get; set; }
+
+        [JsonPropertyName("vatCodeKey")]
+        public string? VatCodeKey { get; set; }
+
+        [JsonPropertyName("bookingAccountNr")]
+        public int BookingAccountNr { get; set; }
+
+        [JsonPropertyName("costCentreKey")]
+        public OctopusCostCentreKeyRef? CostCentreKey { get; set; }
+
+        [JsonPropertyName("customFieldValueList")]
+        public List<OctopusCustomFieldValue> CustomFieldValueList { get; set; } = new();
+
+        [JsonPropertyName("intrastatServiceData")]
+        public OctopusIntrastatServiceData? IntrastatServiceData { get; set; }
+    }
+
+    public class OctopusCostCentreKeyRef
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
+
+    public class OctopusIntrastatServiceData
+    {
+        [JsonPropertyName("isoCountrycode")]
+        public string? IsoCountrycode { get; set; }
+
+        [JsonPropertyName("transactionCode")]
+        public int TransactionCode { get; set; }
+
+        [JsonPropertyName("productCode")]
+        public string? ProductCode { get; set; }
+
+        [JsonPropertyName("region")]
+        public int Region { get; set; }
+
+        [JsonPropertyName("weight")]
+        public decimal Weight { get; set; }
+
+        [JsonPropertyName("unitCount")]
+        public decimal UnitCount { get; set; }
+
+        [JsonPropertyName("transportCode")]
+        public int TransportCode { get; set; }
+
+        [JsonPropertyName("incoTerms")]
+        public string? IncoTerms { get; set; }
+
+        [JsonPropertyName("originCountry")]
+        public string? OriginCountry { get; set; }
+    }
+}

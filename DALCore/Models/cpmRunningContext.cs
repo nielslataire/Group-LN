@@ -193,7 +193,7 @@ public partial class cpmRunningContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;User ID=db_ab5fbb_testdb_admin;Password=840683P@s");
+        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -621,7 +621,6 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientAccount>(entity =>
         {
-            entity.Property(e => e.AttachUblByDefault).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientAccount_AttachUblByDefault");
             entity.Property(e => e.BankAccountNumber).HasMaxLength(50);
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.CompanyName).HasMaxLength(100);
@@ -634,7 +633,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.InvoiceStreet).HasMaxLength(250);
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
-            entity.Property(e => e.RequiresDigitalInvoice).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientAccount_RequiresDigitalInvoice");
             entity.Property(e => e.Salutation).HasMaxLength(50);
             entity.Property(e => e.Street).HasMaxLength(250);
             entity.Property(e => e.Vatnumber)
@@ -673,7 +671,6 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientContacts>(entity =>
         {
-            entity.Property(e => e.AttachUblByDefault).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientContacts_AttachUblByDefault");
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.Cellphone).HasMaxLength(50);
             entity.Property(e => e.ClientAccountId).HasColumnName("ClientAccountID");
@@ -691,7 +688,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
-            entity.Property(e => e.RequiresDigitalInvoice).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientContacts_RequiresDigitalInvoice");
             entity.Property(e => e.Salutation).HasMaxLength(50);
             entity.Property(e => e.Street).HasMaxLength(250);
             entity.Property(e => e.Vatnumber)
@@ -832,9 +828,7 @@ public partial class cpmRunningContext : DbContext
             entity.HasKey(e => e.CompanyId);
 
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
-            entity.Property(e => e.AttachUblByDefault)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyInfo_AttachUblByDefault");
+            entity.Property(e => e.AttachUblByDefault).HasDefaultValue(true);
             entity.Property(e => e.Bank).HasMaxLength(50);
             entity.Property(e => e.BedrijfsNaam).HasMaxLength(250);
             entity.Property(e => e.Busnummer).HasMaxLength(50);
@@ -852,9 +846,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.PostCodeId).HasColumnName("PostCodeID");
             entity.Property(e => e.Postcode).HasMaxLength(50);
             entity.Property(e => e.RegistratieNr).HasMaxLength(50);
-            entity.Property(e => e.RequiresDigitalInvoice)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyInfo_RequiresDigitalInvoice");
+            entity.Property(e => e.RequiresDigitalInvoice).HasDefaultValue(true);
             entity.Property(e => e.Straat).HasMaxLength(250);
             entity.Property(e => e.Telefoon1).HasMaxLength(50);
             entity.Property(e => e.Telefoon2).HasMaxLength(50);
@@ -927,9 +919,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Abbreviation)
                 .IsRequired()
                 .HasMaxLength(16);
-            entity.Property(e => e.IsActive)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyLegalForm_IsActive");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(100);
@@ -1397,7 +1387,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LineType).HasMaxLength(20);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.Text).HasMaxLength(200);
-            entity.Property(e => e.UtilityIsAdvance).HasAnnotation("Relational:DefaultConstraintName", "DF_InvoicesDetails_UtilityIsAdvance");
             entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.Invoice).WithMany(p => p.InvoicesDetails)
@@ -1485,23 +1474,18 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(3)
                 .IsFixedLength();
             entity.Property(e => e.DefaultLanguage).HasMaxLength(5);
-            entity.Property(e => e.EinvoiceEnabled)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_EInvEnabled")
-                .HasColumnName("EInvoiceEnabled");
+            entity.Property(e => e.EinvoiceEnabled).HasColumnName("EInvoiceEnabled");
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.EmailSubjectTemplate).HasMaxLength(200);
             entity.Property(e => e.EnterpriseNumber).HasMaxLength(32);
             entity.Property(e => e.EpcBeneficiaryName).HasMaxLength(70);
             entity.Property(e => e.EpcBic).HasMaxLength(11);
             entity.Property(e => e.EpcIban).HasMaxLength(34);
-            entity.Property(e => e.EpcQrEnabled).HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_EpcEnabled");
             entity.Property(e => e.EpcRemittanceTemplate).HasMaxLength(140);
             entity.Property(e => e.EpcRemittanceType).HasMaxLength(10);
             entity.Property(e => e.FontFamily).HasMaxLength(100);
             entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
-            entity.Property(e => e.IsActive)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF__IssuerCom__IsAct__1960B67E");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LegalName).HasMaxLength(200);
             entity.Property(e => e.LogoPath).HasMaxLength(400);
             entity.Property(e => e.Name)
@@ -1512,15 +1496,12 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.OctopusDossierToken).HasMaxLength(512);
             entity.Property(e => e.OctopusPassword).HasMaxLength(200);
             entity.Property(e => e.OctopusUsername).HasMaxLength(200);
-            entity.Property(e => e.PeppolEnabled).HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_PeppolEnabled");
             entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.Phone2).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(16);
             entity.Property(e => e.TemplateKey).HasMaxLength(64);
-            entity.Property(e => e.UblAttachPdf)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_UblAttachPdf");
+            entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
             entity.Property(e => e.VatNumber).HasMaxLength(32);
             entity.Property(e => e.Website).HasMaxLength(200);
 
@@ -1822,7 +1803,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Filename)
                 .IsRequired()
                 .HasMaxLength(200);
-            entity.Property(e => e.IsBrochure).HasAnnotation("Relational:DefaultConstraintName", "DF_ProjectDocs_IsBrochure");
             entity.Property(e => e.Name).HasMaxLength(200);
 
             entity.HasOne(d => d.ClientAccount).WithMany(p => p.ProjectDocs)
@@ -2096,13 +2076,24 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Vattype>(entity =>
         {
+            entity.HasKey(e => e.Id).HasName("PK__VATtype___3214EC0799E5BC79");
+
             entity.ToTable("VATtype");
 
-            entity.Property(e => e.Vatpercentage).HasColumnName("VATpercentage");
-            entity.Property(e => e.Vattext)
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.Code }, "UX_VATtype_Issuer_Code").IsUnique();
+
+            entity.Property(e => e.BasePercentage).HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.Code)
                 .IsRequired()
-                .HasMaxLength(50)
-                .HasColumnName("VATtext");
+                .HasMaxLength(50);
+            entity.Property(e => e.Description)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasOne(d => d.IssuerCompanyNavigation).WithMany(p => p.Vattype)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_VATtype_IssuerCompany");
         });
 
         modelBuilder.Entity<VwInvoiceBalance>(entity =>

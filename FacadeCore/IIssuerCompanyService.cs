@@ -19,7 +19,8 @@ namespace FacadeCore
         Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default);
         Task<int?> GetFirstActiveIssuerIdAsync(CancellationToken ct = default);
         Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default);
-        Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(int issuerId, CancellationToken ct = default);
+        Task SyncVatTypesAsync(int issuerId, IEnumerable<VatTypeBO> vatTypes, CancellationToken ct = default);
         Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default);
     }
     // Lichte BO’s voor de UI-lijsten
@@ -40,7 +41,11 @@ namespace FacadeCore
     public class VatTypeBO
     {
         public int Id { get; set; }
-        public int VATPercentage { get; set; }
-        public string VATText { get; set; } ="";
+        public int IssuerCompanyId { get; set; }
+        public string Code { get; set; } = "";
+        public string Description { get; set; } = "";
+        public int Type { get; set; }
+        public decimal BasePercentage { get; set; }
+        public int? DefaultSellBookingAccountNr { get; set; }
     }
 }

@@ -38,7 +38,8 @@
     <form method="post"
       asp-action="SequenceCreate"
       asp-route-seriesId="@Model.SeriesId"
-      asp-route-issuerId="@Model.IssuerId">
+          asp-route-issuerId="@Model.IssuerId"
+          id="sequence-create-form">
     @Html.AntiForgeryToken()
     <div class="row mt-4">
         <div class="col">
@@ -49,7 +50,7 @@
                             <div class="row align-items-center pb-3">
                                 <label class="col-md-2 control-label text-lg-end mb-0">Boekjaar</label>
                                 <div class="col-md-3">
-                                    <select name="bookyearId" class="form-control form-control-modern">
+                                        <select name="bookyearId" class="form-control form-control-modern js-bookyear-select">
                                         <option value="">— kies boekjaar —</option>
                                         @foreach (var bookyear in octopusBookyears)
                                         {
@@ -59,11 +60,11 @@
                                 </div>
                                 <label class="col-md-2 control-label text-lg-end mb-0">Dagboek</label>
                                 <div class="col-md-3">
-                                    <select name="journalId" class="form-control form-control-modern">
+                                        <select name="journalId" class="form-control form-control-modern js-journal-select">
                                         <option value="">— kies dagboek —</option>
                                         @foreach (var journal in octopusJournals)
                                         {
-                                            <option value="@journal.Journal.Id">@journal.Journal.Name (@journal.Bookyear.BookyearDescription)</option>
+                                                <option value="@journal.Journal.Id" data-bookyear="@journal.Bookyear.Id" data-lastnumber="@journal.Journal.LastBookedDocumentNr">@journal.Journal.Name (@journal.Bookyear.BookyearDescription)</option>
                                         }
                                     </select>
                                 </div>
@@ -118,7 +119,7 @@
                                                   asp-route-issuerId="@Model.IssuerId"
                                                   class="d-inline">
                                             <td>
-                                                <select name="bookyearId" class="form-control form-control-sm">
+                                                <select name="bookyearId" class="form-control form-control-sm js-bookyear-select">
                                                     <option value="">—</option>
                                                     @foreach (var bookyear in octopusBookyears)
                                                     {
@@ -127,12 +128,12 @@
                                                 </select>
                                             </td>
                                             <td>
-                                                <select name="journalId" class="form-control form-control-sm">
+                                                <select name="journalId" class="form-control form-control-sm js-journal-select">
                                                     <option value="">—</option>
                                                     @foreach (var journal in octopusJournals)
                                                     {
                                                         var selected = journal.Journal.Id == s.JournalId;
-                                                        <option value="@journal.Journal.Id" selected="@(selected ? "selected" : null)">@journal.Journal.Name (@journal.Bookyear.BookyearDescription)</option>
+                                                        <option value="@journal.Journal.Id" data-bookyear="@journal.Bookyear.Id" data-lastnumber="@journal.Journal.LastBookedDocumentNr" selected="@(selected ? "selected" : null)">@journal.Journal.Name (@journal.Bookyear.BookyearDescription)</option>
                                                     }
                                                 </select>
                                             </td>
@@ -169,5 +170,92 @@
 
         </div>
     </div>
+@section PageScripts {
+        <script>
+            (function () {
+                function getNextNumber($select) {
+                    var lastNumber = $select.find('option:selected').data('lastnumber');
+                    var parsed = parseInt(lastNumber);
+                    return isNaN(parsed) ? null : parsed + 1;
+                }
 
+                function applyJournalFilter($bookyearSelect, $journalSelect) {
+                    var selectedBookyear = $bookyearSelect.val();
+
+                    $journalSelect.find('option').each(function () {
+                        var $option = $(this);
+                        var optionBookyear = $option.data('bookyear');
+                        var isPlaceholder = $option.val() === '';
+                        var visible = isPlaceholder || !selectedBookyear || (optionBookyear && optionBookyear.toString() === selectedBookyear.toString());
+
+                        $option.prop('disabled', !visible);
+                        $option.toggle(visible);
+                    });
+
+                    var selectedOption = $journalSelect.find('option:selected');
+                    if (selectedOption.prop('disabled')) {
+                        $journalSelect.val('');
+                    }
+                }
+
+                function wireCreateForm() {
+                    var $form = $('#sequence-create-form');
+                    var $journal = $form.find('select[name="journalId"]');
+                    var $startAt = $form.find('input[name="startAt"]');
+                    var $bookyear = $form.find('select[name="bookyearId"]');
+
+                    $bookyear.on('change', function () {
+                        applyJournalFilter($bookyear, $journal);
+                        $journal.trigger('change');
+                    });
+
+                    applyJournalFilter($bookyear, $journal);
+
+                    $journal.on('change', function () {
+                        var next = getNextNumber($(this));
+                        if (next !== null) {
+                            $startAt.val(next);
+                        }
+                    });
+                }
+
+                function wireExistingRows() {
+                    var $table = $('table');
+
+                    $table.find('tr').each(function () {
+                        var $row = $(this);
+                        var $bookyear = $row.find('select[name="bookyearId"]');
+                        var $journal = $row.find('select[name="journalId"]');
+                        if ($bookyear.length && $journal.length) {
+                            applyJournalFilter($bookyear, $journal);
+                        }
+                    });
+
+                    $table.on('change', 'select[name="bookyearId"]', function () {
+                        var $row = $(this).closest('tr');
+                        var $journal = $row.find('select[name="journalId"]');
+                        applyJournalFilter($(this), $journal);
+                        $journal.trigger('change');
+                    });
+
+                    $table.on('change', 'select[name="journalId"]', function () {
+                        var next = getNextNumber($(this));
+                        if (next === null) {
+                            return;
+                        }
+                        var $row = $(this).closest('tr');
+                        var $currentNumber = $row.find('input[name="currentNumber"]');
+                        if ($currentNumber.length) {
+                            $currentNumber.val(next);
+                        }
+                    });
+                }
+
+                $(function () {
+                    wireCreateForm();
+                    wireExistingRows();
+                });
+            })();
+        </script>
+}
 

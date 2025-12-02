@@ -57,6 +57,7 @@ namespace ServiceCore
                     LogoPath = x.company.LogoPath,
                     Website = x.company.Website,
                     DefaultPaymentTermId = x.company.DefaultPaymentTermId,
+                    DefaultVatTypeId = x.company.DefaultVatTypeId,
                     IsActive = x.company.IsActive,
                     CompanyLegalFormId = x.company.CompanyLegalFormId,
                     CompanyLegalFormName = x.company.CompanyLegalForm != null ? x.company.CompanyLegalForm.Name : null,
@@ -160,18 +161,88 @@ namespace ServiceCore
                 })
                 .ToListAsync(ct);
         }
-        public async Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(CancellationToken ct = default)
+        public async Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(int issuerId, CancellationToken ct = default)
         {
+            if (issuerId <= 0)
+            {
+                return Array.Empty<VatTypeBO>();
+            }
+
             return await _db.Vattype
                 .AsNoTracking()
-                .OrderBy(t => t.Vatpercentage)
+                .Where(t => t.IssuerCompanyId == issuerId)
+                .OrderBy(t => t.BasePercentage)
+                .ThenBy(t => t.Code)
                 .Select(t => new VatTypeBO
                 {
                     Id = t.Id,
-                    VATPercentage = t.Vatpercentage,
-                    VATText = t.Vattext
+                    IssuerCompanyId = t.IssuerCompanyId,
+                    Code = t.Code,
+                    Description = t.Description,
+                    Type = t.Type,
+                    BasePercentage = t.BasePercentage,
+                    DefaultSellBookingAccountNr = t.DefaultSellBookingAccountNr
                 })
                 .ToListAsync(ct);
+        }
+
+        public async Task SyncVatTypesAsync(int issuerId, IEnumerable<VatTypeBO> vatTypes, CancellationToken ct = default)
+        {
+            if (issuerId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(issuerId));
+            }
+
+            var incoming = vatTypes?.Where(v => !string.IsNullOrWhiteSpace(v.Code)).ToList()
+                           ?? new List<VatTypeBO>();
+
+            var existing = await _db.Vattype
+                .Where(v => v.IssuerCompanyId == issuerId)
+                .ToListAsync(ct);
+
+            var issuer = await _db.IssuerCompany.FirstOrDefaultAsync(i => i.Id == issuerId, ct);
+
+            var existingByCode = existing
+                .GroupBy(v => v.Code, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var code in incoming)
+            {
+                if (existingByCode.TryGetValue(code.Code, out var entity))
+                {
+                    entity.Description = code.Description;
+                    entity.Type = code.Type;
+                    entity.BasePercentage = code.BasePercentage;
+                    entity.DefaultSellBookingAccountNr = code.DefaultSellBookingAccountNr;
+                }
+                else
+                {
+                    _uow.VatTypes.Add(new Vattype
+                    {
+                        IssuerCompanyId = issuerId,
+                        Code = code.Code,
+                        Description = code.Description,
+                        Type = code.Type,
+                        BasePercentage = code.BasePercentage,
+                        DefaultSellBookingAccountNr = code.DefaultSellBookingAccountNr
+                    });
+                }
+            }
+
+            var incomingCodes = new HashSet<string>(incoming.Select(v => v.Code), StringComparer.OrdinalIgnoreCase);
+            foreach (var entity in existing)
+            {
+                if (!incomingCodes.Contains(entity.Code))
+                {
+                    if (issuer != null && issuer.DefaultVatTypeId == entity.Id)
+                    {
+                        issuer.DefaultVatTypeId = null;
+                    }
+                    _uow.VatTypes.Remove(entity);
+                }
+            }
+
+            await _uow.SaveChangesAsync(ct);
         }
         public async Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default)
         {
@@ -218,6 +289,7 @@ namespace ServiceCore
                 FontFamily = x.FontFamily,
                 LogoBytes = x.LogoBytes,
                 DefaultPaymentTermId = x.DefaultPaymentTermId,
+                DefaultVatTypeId = x.DefaultVatTypeId,
                 IsActive = x.IsActive,
                 EInvoiceEnabled = x.EinvoiceEnabled,
                 PeppolParticipantId = x.PeppolParticipantId,
@@ -274,6 +346,7 @@ namespace ServiceCore
             e.FontFamily = bo.FontFamily;
             e.LogoBytes = bo.LogoBytes;
             e.DefaultPaymentTermId = bo.DefaultPaymentTermId;
+            e.DefaultVatTypeId = bo.DefaultVatTypeId;
             e.IsActive = bo.IsActive;
             e.EinvoiceEnabled = bo.EInvoiceEnabled;
             e.PeppolParticipantId = bo.PeppolParticipantId?.Trim();
