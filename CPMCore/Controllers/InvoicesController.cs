@@ -1573,6 +1573,14 @@ namespace CPMCore.Controllers
             var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
             SetEditBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
             ViewData["Title"] = detailTitle;
+
+            var vatBo = issuerId > 0
+              ? await _ics.ListVatTypeAsync(issuerId, ct)
+              : Array.Empty<VatTypeBO>();
+
+            ViewBag.VatTypes = vatBo
+                .Select(t => new VatTypeVM(t.Id, t.BasePercentage, t.Code, t.Description, t.Type, t.DefaultSellBookingAccountNr))
+                .ToList();
         }
 
         private static InvoiceLineEditVM MapLineForEdit(InvoiceLineBO line)

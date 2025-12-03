@@ -35,29 +35,53 @@
     function cloneRow(initial = {}) {
         const html = document.getElementById('freeLineRowTpl').innerHTML.trim();
         const $row = $(html);
+        const initialVatTypeId = initial.vatTypeId ?? initial.VatTypeId;
+        const initialVatCode = initial.vatCode ?? initial.VatCode;
+        const initialVatPercentage = initial.vatPercentage ?? initial.VatPercentage;
 
         // BTW-select vullen + default kiezen (globaal), tenzij initial.VatTypeId/Percentage is meegegeven
         const $vatSel = $row.find('.js-fl-vat-select');
         fillVatOptions($vatSel);
-
-        if (initial.VatTypeId != null) {
-            $vatSel.val(String(initial.VatTypeId));
-        } else if (initial.VatPercentage != null) {
+        if (initialVatTypeId != null) {
+            $vatSel.val(String(initialVatTypeId));
+        } else if (initialVatCode) {
+            const codeUpper = String(initialVatCode).toUpperCase();
+            const $matchByCode = $vatSel.children('option').filter(function () {
+                const optCode = ($(this).data('code') || '').toString().toUpperCase();
+                return optCode === codeUpper;
+            }).first();
+            if ($matchByCode.length) {
+                $vatSel.val($matchByCode.val());
+            } else if (initialVatPercentage != null) {
+                // fallback op percentage wanneer code niet gevonden werd
+                let matched = false;
+                $vatSel.children('option').each(function () {
+                    const pct = parseFloat(String($(this).data('pct') || '0').replace(',', '.')) || 0;
+                    if (pct === Number(initialVatPercentage)) { $vatSel.val($(this).val()); matched = true; return false; }
+                });
+                if (!matched) setRowVatToGlobal($row);
+            }
+        } else if (initialVatPercentage != null) {
             // kies de optie met matching percentage
             let matched = false;
             $vatSel.children('option').each(function () {
                 const pct = parseFloat(String($(this).data('pct') || '0').replace(',', '.')) || 0;
-                if (pct === Number(initial.VatPercentage)) { $vatSel.val($(this).val()); matched = true; return false; }
+                if (pct === Number(initialVatPercentage)) { $vatSel.val($(this).val()); matched = true; return false; }
             });
             if (!matched) setRowVatToGlobal($row);
         } else {
             setRowVatToGlobal($row);
         }
 
+         
         // overige initiële velden
         Object.entries(initial).forEach(([k, v]) => {
-            if (k === 'VatTypeId' || k === 'VatPercentage') return;
-            const $el = $row.find('[data-col="' + k + '"]');
+            const keyLower = String(k || '').toLowerCase();
+            if (keyLower === 'vattypeid' || keyLower === 'vatpercentage' || keyLower === 'vatcode') return;
+            const $el = $row.find('[data-col]').filter(function () {
+                const col = ($(this).data('col') || '').toString().toLowerCase();
+                return col === keyLower;
+            });
             if (!$el.length) return;
             if ($el.is(':checkbox')) $el.prop('checked', !!v);
             else $el.val(v);
@@ -72,12 +96,25 @@
 
     function fillVatOptions($sel) {
         $sel.empty();
-        $('#VatTypeId option').each(function () {
-            // we kopiëren value + data-pct + tekst
+
+        const $templateOptions = $('#freeLineVatOptions option');
+        const $source = $templateOptions.length ? $templateOptions : $('#VatTypeId option');
+
+        $source.each(function () {
+            // kopieer value + data-attributen rechtstreeks uit het DOM
+            const pct = $(this).attr('data-pct');
+            let code = $(this).attr('data-code');
+
+            if (!code) {
+                const optText = ($(this).text() || '').trim();
+                const dash = optText.indexOf('-');
+                code = dash >= 0 ? optText.slice(0, dash).trim() : optText;
+            }
+
             const $opt = $('<option>')
                 .val($(this).val())
-                .attr('data-pct', $(this).data('pct'))
-                .attr('data-code', $(this).data('code'))
+                .attr('data-pct', pct)
+                .attr('data-code', code)
                 .text($(this).text());
             $sel.append($opt);
         });
@@ -131,7 +168,8 @@
                 Text: row.text,
                 Price: row.price != null ? nf.format(row.price) : '',
                 VatTypeId: row.vatTypeId,
-                VatPercentage: row.vatPercentage
+                VatPercentage: row.vatPercentage,
+                VatCode: row.vatCode
             });
             node.cells[1].textContent = String(idx + 1);
             dt.row.add(node);

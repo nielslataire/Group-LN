@@ -668,22 +668,42 @@ function prepareFreeLinesForPost($form) {
         const text = ($tr.find('.js-fl-text').val() || '').trim();
         const priceVal = parseLocaleNumber($tr.find('.js-fl-price').val());
 
+        const $globalOpt = $('#VatTypeId option:selected');
+        const globalVatTypeId = $('#VatTypeId').val();
+        const globalVatCode = $globalOpt.attr('data-code') ?? $globalOpt.data('code');
+        const globalPctData = $globalOpt.attr('data-pct') ?? $globalOpt.data('pct');
+
         let vatPct = NaN;
         let vatTypeId = null;
         let vatCode = null;
         const $sel = $tr.find('.js-fl-vat-select');
         if ($sel.length) {
             const $opt = $sel.find('option:selected');
-            const pctData = $opt.data('pct');
-            vatTypeId = $opt.val();
-            vatCode = $opt.data('code');
-            vatPct = parseFloat(String(pctData != null ? pctData : $opt.text()).replace(',', '.'));
+            const pctData = $opt.attr('data-pct') ?? $opt.data('pct');
+            const optText = ($opt.text() || '').trim();
+            const dashIdx = optText.indexOf('-');
+            const textCode = dashIdx >= 0 ? optText.slice(0, dashIdx).trim() : optText || null;
+
+            vatTypeId = ($opt.val() ?? '').toString();
+            if (vatTypeId === '') vatTypeId = null;
+
+            vatCode = ($opt.attr('data-code') ?? $opt.data('code')) || textCode;
+            vatPct = parseFloat(String(pctData != null ? pctData : optText).replace(',', '.'));
         }
+
         if (isNaN(vatPct)) {
-            const fallback = $('#VatTypeId option:selected').data('pct');
-            vatPct = parseFloat(String(fallback != null ? fallback : '0').replace(',', '.')) || 0;
-            vatTypeId = $('#VatTypeId').val();
-            vatCode = $('#VatTypeId option:selected').data('code');
+            vatPct = parseFloat(String(globalPctData != null ? globalPctData : '0').replace(',', '.')) || 0;
+        }
+
+        if (!vatTypeId && globalVatTypeId != null && globalVatTypeId !== '') {
+            vatTypeId = globalVatTypeId;
+        }
+
+        if (!vatCode) {
+            const globalText = ($globalOpt.text() || '').trim();
+            const globalDash = globalText.indexOf('-');
+            const codeFromText = globalDash >= 0 ? globalText.slice(0, globalDash).trim() : globalText || null;
+            vatCode = globalVatCode || codeFromText;
         }
 
         if (!text && priceVal === 0) return;

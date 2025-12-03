@@ -1,10 +1,12 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceEditVM
 @using System.Globalization
+@using CPMCore.Models.Invoicing
 @{
     var culture = CultureInfo.GetCultureInfo("nl-BE");
     var issuerName = (ViewBag.CompanyName as string) ?? Model.IssuerName;
     var isDraft = Model.IsDraft;
     var limitedEdit = Model.IsLimitedEdit;
+    var vatTypes = ViewBag.VatTypes as List<VatTypeVM> ?? new List<VatTypeVM>();
     if (ViewData["Title"] == null)
     {
         ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName)
@@ -203,7 +205,7 @@
             </section>
         </div>
     </div>
-
+    @await Html.PartialAsync("Partials/_FreeLinesTable", new InvoiceComposeVM { VatTypes = vatTypes })
     <div class="row action-buttons mt-4">
         <div class="col-12 col-md-auto">
             <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">

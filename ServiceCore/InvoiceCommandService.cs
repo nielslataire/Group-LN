@@ -601,6 +601,10 @@ namespace ServiceCore
                 }
 
                 var party = await ResolvePartySnapshotAsync(bo, ct);
+                var vatTypes = await _db.Vattype
+                    .AsNoTracking()
+                    .Where(v => v.IssuerCompanyId == bo.IssuerCompanyId)
+                    .ToListAsync(ct);
 
                 var headerText = Clean(bo.HeaderDescription);
                 var detailText = Clean(bo.DetailDescription);
@@ -642,6 +646,19 @@ namespace ServiceCore
 
                 foreach (var l in bo.Lines)
                 {
+                    var resolvedVatTypeId = l.VatTypeId ?? bo.SelectedVatTypeId;
+                    var resolvedVatCode = l.VatCode;
+                    var vatPct = l.VatPercentage;
+
+                    if (resolvedVatTypeId.HasValue)
+                    {
+                        var match = vatTypes.FirstOrDefault(v => v.Id == resolvedVatTypeId.Value);
+                        if (match != null)
+                        {
+                            vatPct = match.BasePercentage;
+                            resolvedVatCode ??= match.Code;
+                        }
+                    }
                     var price = l.Price * sign;
                     decimal? discAmt = l.DiscountAmount;
                     decimal? discPct = l.DiscountPercent;
@@ -658,7 +675,9 @@ namespace ServiceCore
                             ? (l.Text ?? string.Empty).Trim().Substring(0, 200)
                             : (l.Text ?? string.Empty).Trim(),
                         Price = price,
-                        VatPercentage = l.VatPercentage,
+                        VatPercentage = vatPct,
+                        VatTypeId = resolvedVatTypeId,
+                        VatCode = resolvedVatCode,
                         DiscountPercent = discPct,
                         DiscountAmount = discAmt,
                         UnitId = l.UnitId,

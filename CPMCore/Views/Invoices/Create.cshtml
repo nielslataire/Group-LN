@@ -277,50 +277,7 @@
             </section>
 
             <!-- VRIJE LIJNEN BLOCK -->
-            <section class="card card-modern mt-4" id="freeLineBlock" style="display:none">
-                <div class="card-body pb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="fw-bold mb-0">Vrije lijnen</h3>
-                    </div>
-
-                    <div class="table-responsive mt-3 mb-0">
-                        <table id="freeLinesTable" class="table align-middle" style="width:100%">
-                            <thead>
-                                <tr>
-                                    <th style="width:36px;"></th>   <!-- drag handle -->
-                                    <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
-                                    <th>Omschrijving</th>
-                                    <th class="text-end" style="width:140px">Bedrag</th>
-                                    <th class="text-end" style="width:200px">BTW&nbsp;%</th>
-                                    <th class="text-end" style="width:50px">Acties</th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-
-                    <button type="button" class="btn btn-default mt-2 mb-0" id="addFreeLine">
-                        <i class="fas fa-plus me-1"></i> Regel toevoegen
-                    </button>
-                </div>
-            </section>
-
-            <!-- Template + Hidden -->
-            <template id="freeLineRowTpl">
-                <tr class="free-row">
-                    <td class="reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
-                    <td></td>
-                    <td><input class="form-control form-control-sm js-fl-text" data-col="Text" maxlength="200" /></td>
-                    <td class="text-end"><input class="form-control form-control-sm text-end js-fl-price" data-col="Price" type="text" /></td>
-                    <td class="text-end">
-                        <select class="form-select form-select-sm js-fl-vat-select" data-col="VatPercentage"></select>
-                    </td>
-                    <td class="text-end">
-                        <a data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="js-fl-del" id="editAccount"><i class="fas fa-trash"></i></a>
-                    </td>
-                </tr>
-            </template>
-            <div id="freeLinesHidden" class="d-none"></div>
+            @await Html.PartialAsync("Partials/_FreeLinesTable", Model)
         </div>
     </div>
 
