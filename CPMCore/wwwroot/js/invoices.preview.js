@@ -7,6 +7,7 @@
     const $sub = $('#pvSub');
     const $vat = $('#pvVat');
     const $total = $('#pvTotal');
+    const getCreditSign = () => ($('#IsCreditNote').is(':checked') ? -1 : 1);
 
     function readDateStr() {
         const v = $('#InvoiceDate').val();
@@ -47,7 +48,8 @@
         const hdr = ($('#HeaderDescription').val() || '').trim();
         $('#pvHeaderText').text(hdr);
 
-        $('#pvStartAs').text(`${readStartAsText()}`);
+        const creditSuffix = getCreditSign() < 0 ? ' – Credit' : '';
+        $('#pvStartAs').text(`${readStartAsText()}${creditSuffix}`);
     }
 
     function sectionTable(title) {
@@ -94,7 +96,7 @@
         };
     }
 
-    function gatherStages(section) {
+    function gatherStages(section, sign) {
         const rows = $('#stagesList input[type="checkbox"][name$=".IsSelected"].js-stage-row:checked');
         if (rows.length === 0) return { sub: 0, vat: 0, tot: 0, hadRows: false };
 
@@ -105,13 +107,14 @@
             const vatP = parseFloat(($tr.find('input[type="hidden"][name$=".VatPercentage"]').val() || '0').replace(',', '.')) || 0;
             const price = parseFloat(($tr.find('input[type="hidden"][name$=".Price"]').val() || '0').replace(',', '.')) || 0;
 
-            const r = section.pushRow(text, null, null, price, vatP);
+            const signedPrice = price * sign;
+            const r = section.pushRow(text, null, null, signedPrice, vatP)
             sub += r.excl; vat += r.vatAmt; tot += r.tot;
         });
         return { sub, vat, tot, hadRows: true };
     }
 
-    function gatherChangeOrders() {
+    function gatherChangeOrders(sign) {
         let sub = 0, vat = 0, tot = 0, hadAny = false;
         $('#coList .js-co-master:checked').each(function () {
             const coid = $(this).data('coid');
@@ -135,7 +138,9 @@
                 const qty = parseLocaleNumber($row.find('.js-co-qty').val());
                 const uprice = parseLocaleNumber($row.find('.js-co-unitprice').val());
 
-                const r = sec.pushRow(text, qty, uprice, price, vatP);
+                const signedPrice = price * sign;
+                const signedUnit = uprice != null ? uprice * sign : null;
+                const r = sec.pushRow(text, qty, signedUnit, signedPrice, vatP);
                 sub += r.excl; vat += r.vatAmt; tot += r.tot; hasRows = true;
             });
 
@@ -145,7 +150,7 @@
         return { sub, vat, tot, hadRows: hadAny };
     }
 
-    function gatherFreeLines(section) {
+    function gatherFreeLines(section, sign) {
         if (!$('#freeLineBlock').is(':visible')) return { sub: 0, vat: 0, tot: 0, hadRows: false };
         const dt = $.fn.dataTable.isDataTable('#freeLinesTable') ? $('#freeLinesTable').DataTable() : null;
         if (!dt) return { sub: 0, vat: 0, tot: 0, hadRows: false };
@@ -182,7 +187,8 @@
             }
 
             if (!text && price === 0) return;
-            const r = section.pushRow(text, 1, price, price, vatP);
+            const signedPrice = price * sign;
+            const r = section.pushRow(text, 1, signedPrice, signedPrice, vatP);
             sub += r.excl; vat += r.vatAmt; tot += r.tot; had = true;
         });
 
@@ -194,20 +200,21 @@
         $tables.empty();
 
         let sub = 0, vat = 0, tot = 0, any = false;
+        const sign = getCreditSign();
 
         const secStages = sectionTable('Schijven');
-        const st = gatherStages(secStages);
+        const st = gatherStages(secStages, sign);
         if (!st.hadRows) $tables.children().last().remove();
         sub += st.sub; vat += st.vat; tot += st.tot;
         any = any || st.hadRows;
 
         const secFree = sectionTable('Vrije lijnen');
-        const fr = gatherFreeLines(secFree);
+        const fr = gatherFreeLines(secFree, sign);
         if (!fr.hadRows) $tables.children().last().remove();
         sub += fr.sub; vat += fr.vat; tot += fr.tot;
         any = any || fr.hadRows;
 
-        const co = gatherChangeOrders();
+        const co = gatherChangeOrders(sign);
         sub += co.sub; vat += co.vat; tot += co.tot;
         any = any || co.hadRows;
 
@@ -227,6 +234,7 @@
     $(document).on('change', '#stagesList .js-stage-row, #stagesList .js-co-row, #stagesList .js-utl-row', rebuildPreview);
     $(document).on('change input', '#coList .js-co-master, #coList .js-co-pct, #coList .js-co-group-pct, #coList .js-co-override', rebuildPreview);
     $(document).on('change input', '#freeLineBlock input, #freeLineBlock select', rebuildPreview);
+    $(document).on('change', '#IsCreditNote', rebuildPreview);
 
 
     // Init + export

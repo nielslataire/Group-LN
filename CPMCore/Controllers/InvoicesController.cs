@@ -3,8 +3,8 @@ using CPMCore.Documents;
 using CPMCore.Extensions;
 using CPMCore.Models.Invoicing;
 using CPMCore.Service;
-using CPMCore.Services.Peppol;
 using CPMCore.Services.Octopus;
+using CPMCore.Services.Peppol;
 using DALCore;
 using DALCore.Models;
 using FacadeCore;
@@ -15,15 +15,17 @@ using QuestPDF.Fluent;
 using ServiceCore;
 using ServiceCore.Invoicing;
 using ServiceCore.Invoicing.Pdf;
+using SmartBreadcrumbs.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Text;
 using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using SmartBreadcrumbs.Nodes;
 
 namespace CPMCore.Controllers
 {
@@ -884,7 +886,8 @@ namespace CPMCore.Controllers
             var bo = new InvoiceDraftBO
             {
                 IssuerCompanyId = vm.IssuerCompanyId,
-                InvoiceDate = vm.InvoiceDate
+                InvoiceDate = vm.InvoiceDate,
+                IsCreditNote = vm.IsCreditNote
             };
 
             switch (vm.PartyType.Value)
@@ -942,6 +945,8 @@ namespace CPMCore.Controllers
                 PaymentTermId = vm.PaymentTermId,
                 FooterDescription = vm.FooterDescription
             };
+
+            bo.IsCreditNote = vm.IsCreditNote;
 
             if (vm.PartyType == InvoicePartyType.Supplier)
                 (bo.CompanyId, bo.ClientType, bo.ClientId) = (vm.PartyId, null, null);
@@ -1076,12 +1081,43 @@ namespace CPMCore.Controllers
             try
             {
                 var bo = await BuildInvoiceDraftBoAsync(vm, ct);
-                var (id, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: vm.StartAs == StartStatus.Invoice, ct);
+                var issueNow = vm.StartAs == StartStatus.Invoice;
 
-                if (publicId != null)
-                    AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
+                if (!issueNow)
+                {
+                    var (_, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: false, ct);
+                    if (publicId != null)
+                        AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
+                    else
+                        AddMessage("success", "Conceptfactuur opgeslagen.", "Factuur");
+
+                    return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+                }
+
+                var (id, _) = await _cmd.CreateWithLinesAsync(bo, issueNow: false, ct);
+
+                try
+                {
+                    await SendInvoiceToOctopusAsync(id, ct);
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogWarning(ex, "Octopus sync blocked for invoice {InvoiceId}", id);
+                    AddMessage("error", ex.Message, "Factuur");
+                    return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Octopus sync failed for invoice {InvoiceId}", id);
+                    AddMessage("error", "Factuur kon niet naar Octopus verstuurd worden.", "Factuur");
+                    return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+                }
+
+                var issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
+                if (!string.IsNullOrWhiteSpace(issuedPublicId))
+                    AddMessage("success", $"Factuur uitgegeven: {issuedPublicId}", "Factuur");
                 else
-                    AddMessage("success", "Conceptfactuur opgeslagen.", "Factuur");
+                    AddMessage("success", "Factuur uitgegeven.", "Factuur");
 
                 return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
             }
@@ -1295,6 +1331,7 @@ namespace CPMCore.Controllers
                 HeaderDescription = posted?.HeaderDescription ?? NormalizeMultiline(detail.HeaderText),
                 DetailDescription = posted?.DetailDescription ?? NormalizeMultiline(detail.DetailText),
                 FooterDescription = posted?.FooterDescription ?? NormalizeMultiline(detail.ExtraInfo),
+                IsCreditNote = posted?.IsCreditNote ?? DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat),
                 PaymentTermId = posted?.PaymentTermId ?? detail.PaymentTermId,
                 ProjectId = posted?.ProjectId ?? detail.ProjectId,
                 SupplierContractId = posted?.SupplierContractId ?? detail.SupplierContractId,
@@ -1760,136 +1797,198 @@ namespace CPMCore.Controllers
 
         private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct)
         {
-            var invoice = await _db.Invoices
-                .Include(i => i.InvoicesDetails)
-                .Include(i => i.IssuerCompany)
-                .Include(i => i.PostalCode)!
-                    .ThenInclude(pc => pc.Country)
-                .Include(i => i.ClientIdClientAccountNavigation)!
-                    .ThenInclude(c => c.PostalCode)!
+            try
+            {
+                var invoice = await _db.Invoices
+                    .Include(i => i.InvoicesDetails)
+                    .Include(i => i.IssuerCompany)
+                    .Include(i => i.PostalCode)!
                         .ThenInclude(pc => pc.Country)
-                .Include(i => i.ClientIdClientAccountNavigation)!
-                    .ThenInclude(c => c.InvoicePostalCode)!
-                        .ThenInclude(pc => pc.Country)
-                .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
-                ?? throw new InvalidOperationException("Factuur niet gevonden.");
+                    .Include(i => i.ClientIdClientAccountNavigation)!
+                        .ThenInclude(c => c.PostalCode)!
+                            .ThenInclude(pc => pc.Country)
+                    .Include(i => i.ClientIdClientAccountNavigation)!
+                        .ThenInclude(c => c.InvoicePostalCode)!
+                            .ThenInclude(pc => pc.Country)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
 
-            var issuer = invoice.IssuerCompany
-                ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
+                var issuer = invoice.IssuerCompany
+                    ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
 
-            if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
-                throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
+                if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
+                    throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
 
-            var finalDate = invoice.Date == default
-                ? DateOnly.FromDateTime(DateTime.Today)
-                : invoice.Date;
+                var finalDate = invoice.Date == default
+                    ? DateOnly.FromDateTime(DateTime.Today)
+                    : invoice.Date;
 
-            var seriesId = await _db.InvoiceSeries
-                .Where(s => s.IssuerCompanyId == issuer.Id && s.IsActive)
-                .OrderBy(s => s.Id)
-                .Select(s => (int?)s.Id)
-                .FirstOrDefaultAsync(ct)
-                ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit facturatiebedrijf.");
+                var seriesId = await _db.InvoiceSeries
+                    .Where(s => s.IssuerCompanyId == issuer.Id && s.IsActive)
+                    .OrderBy(s => s.Id)
+                    .Select(s => (int?)s.Id)
+                    .FirstOrDefaultAsync(ct)
+                    ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit facturatiebedrijf.");
 
-            var fiscalYear = finalDate.Year;
-            var sequence = await _db.InvoiceSequence
-                .Include(s => s.Bookyear)!
-                .ThenInclude(b => b.OctopusBookyearPeriods)
-                .Include(s => s.Journal)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
+                var fiscalYear = finalDate.Year;
+                var sequence = await _db.InvoiceSequence
+                    .Include(s => s.Bookyear)!
+                    .ThenInclude(b => b.OctopusBookyearPeriods)
+                    .Include(s => s.Journal)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
 
-            if (sequence?.Bookyear == null || sequence.Journal == null)
-                throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit jaar.");
+                if (sequence?.Bookyear == null || sequence.Journal == null)
+                    throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit jaar.");
 
-            var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
+                var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
 
-            var periodNumber = sequence.Bookyear.OctopusBookyearPeriods
-                .FirstOrDefault(p =>
+                var periodNumber = sequence.Bookyear.OctopusBookyearPeriods
+                    .FirstOrDefault(p =>
+                    {
+                        var start = DateOnly.FromDateTime(p.StartDate);
+                        var end = DateOnly.FromDateTime(p.EndDate);
+                        return finalDate >= start && finalDate <= end;
+                    })?.BookyearPeriodNr
+                    ?? 0;
+
+                var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
+
+                var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation);
+                if (!relationLookups.Any())
                 {
-                    var start = DateOnly.FromDateTime(p.StartDate);
-                    var end = DateOnly.FromDateTime(p.EndDate);
-                    return finalDate >= start && finalDate <= end;
-                })?.BookyearPeriodNr
-                ?? 0;
+                    throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
+                }
 
-            var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
+                var relation = await EnsureOctopusRelationAsync(
+                    dossierToken.Token,
+                    issuer.OctopusDossierNumber,
+                    relationLookups,
+                    BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation),
+                    ct);
 
-            var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation);
-            if (!relationLookups.Any())
-            {
-                throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
-            }
+                var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
+                    ?? invoice.ClientIdClientAccountNavigation?.OctopusRelationId;
 
-            var relation = await EnsureOctopusRelationAsync(
-                dossierToken.Token,
-                issuer.OctopusDossierNumber,
-                relationLookups,
-                BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation),
-                ct);
-
-            var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
-                ?? invoice.ClientIdClientAccountNavigation?.OctopusRelationId;
-
-            if (relationId is null or <= 0)
-            {
-                throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
-            }
-
-            if (invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
-                && clientAccount.OctopusRelationId != relationId)
-            {
-                clientAccount.OctopusRelationId = relationId;
-                await _db.SaveChangesAsync(ct);
-            }
-
-            var vatTypes = await _db.Vattype
-                .Where(v => v.IssuerCompanyId == issuer.Id)
-                .AsNoTracking()
-                .ToListAsync(ct);
-
-
-            var payload = new OctopusInvoiceCreateRequest
-            {
-                BookyearKey = new OctopusBookyearKeyRef { Id = sequence.Bookyear.BookyearKeyId },
-                JournalKey = sequence.Journal.JournalKey,
-                DocumentSequenceNr = nextNumber,
-                BookyearPeriodeNr = periodNumber,
-                DocumentDate = finalDate,
-                ExpiryDate = invoice.ExpirationDate ?? finalDate,
-                CurrencyCode = string.IsNullOrWhiteSpace(invoice.CurrencyCode) ? "EUR" : invoice.CurrencyCode!,
-                ExchangeRate = 1m,
-                RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
+                if (relationId is null or <= 0)
                 {
-                    RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
-                    ExternalRelationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId
-                        ?? invoice.ClientId
-                        ?? invoice.CompanyId
-                        ?? relationId
-                        ?? 0
-                },
-                Comment = invoice.Text,
-                OrderReference = invoice.ProjectId?.ToString(CultureInfo.InvariantCulture),
-                Reference = invoice.StructuredCommOgm,
-                FinancialDiscount = 0m,
-                CustomFieldValueList = new List<OctopusCustomFieldValue>(),
-                InvoiceLines = invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
+                    throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
+                }
+
+                if (invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
+                    && clientAccount.OctopusRelationId != relationId)
                 {
-                    ExternProductNr = null,
-                    Description = line.Text,
-                    Count = 1,
-                    Unit = string.Empty,
-                    UnitPrice = line.Price ?? 0m,
-                    DiscountPercentage = line.DiscountPercent ?? 0m,
-                    VatCodeKey = ResolveVatCodeKey(line.VatPercentage ?? 0m, vatTypes),
-                    BookingAccountNr = 0,
-                    //CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
+                    clientAccount.OctopusRelationId = relationId;
+                    await _db.SaveChangesAsync(ct);
+                }
+
+                var vatTypes = await _db.Vattype
+                    .Where(v => v.IssuerCompanyId == issuer.Id)
+                    .AsNoTracking()
+                    .ToListAsync(ct);
+
+                var structuredOgm = BuildStructuredOgm(invoice, fiscalYear, nextNumber);
+
+                var formattedPublicId = string.IsNullOrWhiteSpace(invoice.PublicId)
+                    ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, nextNumber, finalDate)
+                    : invoice.PublicId;
+
+                var payload = new OctopusInvoiceCreateRequest
+                {
+                    BookyearKey = new OctopusBookyearKeyRef { Id = sequence.Bookyear.BookyearKeyId },
+                    JournalKey = sequence.Journal.JournalKey,
+                    DocumentSequenceNr = nextNumber,
+                    BookyearPeriodeNr = periodNumber,
+                    DocumentDate = finalDate,
+                    ExpiryDate = invoice.ExpirationDate ?? finalDate,
+                    CurrencyCode = string.IsNullOrWhiteSpace(invoice.CurrencyCode) ? "EUR" : invoice.CurrencyCode!,
+                    ExchangeRate = 1m,
+                    RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
+                    {
+                        RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
+                        ExternalRelationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                            ?? invoice.ClientId
+                            ?? invoice.CompanyId
+                            ?? relationId
+                            ?? 0
+                    },
+                    Comment = invoice.Text,
+                    OrderReference = invoice.ProjectId?.ToString(CultureInfo.InvariantCulture),
+                    Reference = structuredOgm,
+                    FinancialDiscount = 0m,
                     CustomFieldValueList = new List<OctopusCustomFieldValue>(),
-                    IntrastatServiceData = null
-                }).ToList()
-            };
+                    InvoiceLines = invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
+                    {
+                        ExternProductNr = null,
+                        Description = line.Text,
+                        Count = 1,
+                        Unit = string.Empty,
+                        UnitPrice = line.Price ?? 0m,
+                        DiscountPercentage = line.DiscountPercent ?? 0m,
+                        VatCodeKey = ResolveVatCodeKey(line.VatPercentage, vatTypes, issuer.DefaultVatTypeId),
+                        BookingAccountNr = 0,
+                        //CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
+                        CustomFieldValueList = new List<OctopusCustomFieldValue>(),
+                        IntrastatServiceData = null
+                    }).ToList()
+                };
 
-            await _octopusClient.CreateInvoiceAsync(dossierToken.Token, issuer.OctopusDossierNumber, payload, ct);
+                await _octopusClient.CreateInvoiceAsync(dossierToken.Token, issuer.OctopusDossierNumber, payload, ct);
+
+                var detail = await _invoices.GetDetailAsync(invoiceId, ct)
+                    ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
+                var issuerCompany = await _ics.GetAsync(issuer.Id, ct)
+                    ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden voor PDF-opmaak.");
+
+                var invoiceDto = detail.ToInvoiceDto();
+                invoiceDto.PublicId ??= formattedPublicId;
+                if (!string.IsNullOrWhiteSpace(structuredOgm))
+                {
+                    invoiceDto.StructuredMessage = structuredOgm;
+                }
+                var pdfBytes = _pdf.Render(invoiceDto, issuerCompany);
+                var invoiceNumber = formattedPublicId;
+                var fileName = $"Factuur {formattedPublicId}.pdf";
+
+                await _octopusClient.UploadInvoiceAttachmentAsync(
+                    dossierToken.Token,
+                    issuer.OctopusDossierNumber,
+                    new OctopusInvoiceAttachmentUploadRequest
+                    {
+                        BookyearId = sequence.Bookyear.BookyearKeyId,
+                        JournalKey = sequence.Journal.JournalKey,
+                        DocumentSequenceNumber = nextNumber,
+                        InvoiceNumber = invoiceNumber,
+                        AttachmentType = "Invoice",
+                        FileName = fileName,
+                        Content = pdfBytes,
+                        ContentType = "application/pdf"
+                    },
+                    ct);
+
+                var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
+                var sentAtUtc = DateTime.UtcNow;
+                await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
+                {
+                    InvoiceId = invoice.Id,
+                    ToAddress = "Octopus",
+                    CcAddress = userName,
+                    Subject = $"Doorgestuurd naar Octopus door {userName}",
+                    ProviderId = issuer.OctopusDossierNumber,
+                    SentAt = sentAtUtc,
+                    Status = "Uploaded"
+                }, ct);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "Octopus request failed for invoice {InvoiceId}", invoiceId);
+                var message = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Octopus gaf een onbekende fout terug."
+                    : ex.Message;
+                throw new InvalidOperationException($"Octopus gaf een fout terug bij het boeken van de factuur: {message}", ex);
+            }
+
+
         }
         private async Task<OctopusRelation?> EnsureOctopusRelationAsync(
                   string dossierToken,
@@ -2004,20 +2103,164 @@ namespace CPMCore.Controllers
             return string.IsNullOrWhiteSpace(cleaned) ? trimmed : cleaned;
         }
 
-        private static string ResolveVatCodeKey(decimal vatPercentage, IReadOnlyCollection<Vattype> vatTypes)
+        private static string ResolveVatCodeKey(decimal? vatPercentage, IReadOnlyCollection<Vattype> vatTypes, int? defaultVatTypeId)
         {
             const decimal tolerance = 0.001m;
 
-            var match = vatTypes.FirstOrDefault(v => Math.Abs(v.BasePercentage - vatPercentage) < tolerance);
-
-            if (match == null || string.IsNullOrWhiteSpace(match.Code))
+            if (vatTypes == null || vatTypes.Count == 0)
             {
-                throw new InvalidOperationException(
-                    $"Geen VAT-code gevonden voor percentage {vatPercentage:0.##} voor dit facturatiebedrijf.");
+                throw new InvalidOperationException("Geen VAT-types geconfigureerd voor dit facturatiebedrijf.");
             }
 
-            return match.Code;
+            if (vatPercentage.HasValue)
+            {
+                var match = vatTypes.FirstOrDefault(v => Math.Abs(v.BasePercentage - vatPercentage.Value) < tolerance);
+
+                if (match != null && !string.IsNullOrWhiteSpace(match.Code))
+                {
+                    return match.Code;
+                }
+            }
+
+            if (defaultVatTypeId.HasValue)
+            {
+                var defaultMatch = vatTypes.FirstOrDefault(v => v.Id == defaultVatTypeId.Value);
+                if (defaultMatch != null && !string.IsNullOrWhiteSpace(defaultMatch.Code))
+                {
+                    return defaultMatch.Code;
+                }
+            }
+
+            var firstWithCode = vatTypes.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v.Code));
+            if (firstWithCode != null)
+            {
+                return firstWithCode.Code;
+            }
+
+            throw new InvalidOperationException(
+                vatPercentage.HasValue
+                    ? $"Geen VAT-code gevonden voor percentage {vatPercentage:0.##} voor dit facturatiebedrijf."
+                    : "Geen VAT-code gevonden voor dit facturatiebedrijf.");
         }
+
+        private static readonly Regex InvoicePatternTokenRegex = new(@"\{(num|date):([^}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        private static readonly IReadOnlyDictionary<string, Func<DateTime, CultureInfo, string>> InvoiceDateTokenResolvers =
+            new Dictionary<string, Func<DateTime, CultureInfo, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["MM"] = static (d, c) => d.ToString("MM", c),
+                ["MMM"] = static (d, c) => d.ToString("MMM", c),
+                ["MMMM"] = static (d, c) => d.ToString("MMMM", c),
+                ["yy"] = static (d, c) => d.ToString("yy", c),
+                ["yyyy"] = static (d, c) => d.ToString("yyyy", c),
+                ["MM-yyyy"] = static (d, c) => d.ToString("MM-yyyy", c),
+            };
+
+        private static string FormatInvoiceNumber(string? pattern, int sequenceNumber, DateOnly invoiceDate)
+        {
+            var resolvedPattern = string.IsNullOrWhiteSpace(pattern) ? "{num:0000}/{date:yyyy}" : pattern;
+            return FormatPattern(resolvedPattern, sequenceNumber, invoiceDate.ToDateTime(TimeOnly.MinValue));
+        }
+
+        private static string FormatPattern(string? pattern, int num, DateTime date)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                pattern = "{num:0000}/{date:yyyy}";
+
+            var builder = new StringBuilder();
+            var cursor = 0;
+            var culture = CultureInfo.CurrentCulture;
+
+            foreach (Match token in InvoicePatternTokenRegex.Matches(pattern))
+            {
+                builder.Append(pattern, cursor, token.Index - cursor);
+
+                var type = token.Groups[1].Value;
+                var format = token.Groups[2].Value?.Trim();
+
+                if (type.Equals("num", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var fmt = string.IsNullOrWhiteSpace(format) ? null : format;
+                        builder.Append(fmt is null
+                            ? num.ToString(culture)
+                            : num.ToString(fmt, culture));
+                    }
+                    catch (FormatException)
+                    {
+                        builder.Append(num.ToString(culture));
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(format) && InvoiceDateTokenResolvers.TryGetValue(format, out var resolver))
+                        {
+                            builder.Append(resolver(date, culture));
+                        }
+                        else if (!string.IsNullOrWhiteSpace(format))
+                        {
+                            builder.Append(date.ToString(format, culture));
+                        }
+                        else
+                        {
+                            builder.Append(date.ToString(culture));
+                        }
+                    }
+                    catch (FormatException)
+                    {
+                        builder.Append(date.ToString("yyyy", culture));
+                    }
+                }
+
+                cursor = token.Index + token.Length;
+            }
+
+            if (cursor < pattern.Length)
+                builder.Append(pattern, cursor, pattern.Length - cursor);
+
+            return builder.ToString();
+        }
+
+        private static string? BuildStructuredOgm(Invoices invoice, int fiscalYear, int sequenceNumber)
+        {
+            if (!string.IsNullOrWhiteSpace(invoice.StructuredCommOgm))
+            {
+                return invoice.StructuredCommOgm.Trim();
+            }
+
+            return GenerateStructuredOgm(fiscalYear, sequenceNumber);
+        }
+
+        private static string? GenerateStructuredOgm(int fiscalYear, int sequenceNumber)
+        {
+            if (sequenceNumber <= 0)
+                return null;
+
+            var yearDigits = Math.Abs(fiscalYear % 10000);
+            var numberDigits = Math.Abs(sequenceNumber % 1_000_000);
+            var baseDigits = $"{yearDigits:0000}{numberDigits:000000}";
+            return FormatBelgianStructuredMessage(baseDigits);
+        }
+
+        private static string? FormatBelgianStructuredMessage(string baseDigits)
+        {
+            if (string.IsNullOrWhiteSpace(baseDigits) || baseDigits.Length != 10)
+                return null;
+            if (!baseDigits.All(char.IsDigit))
+                return null;
+
+            var number = long.Parse(baseDigits, CultureInfo.InvariantCulture);
+            var checksum = 97 - (number % 97);
+            if (checksum == 0)
+                checksum = 97;
+
+            var combined = $"{baseDigits}{checksum:00}";
+            return $"+++{combined[..3]}/{combined.Substring(3, 4)}/{combined[^5..]}+++";
+        }
+
 
         private async Task SetIssuerViewBagsAsync(int issuerId, CancellationToken ct)
         {

@@ -81,6 +81,7 @@ namespace ServiceCore
             await using var tx = await _uow.BeginTransactionAsync(ct);
             try
             {
+                var sign = bo.IsCreditNote ? -1m : 1m;
                 var inv = new Invoices
                 {
                     IssuerCompanyId = bo.IssuerCompanyId,
@@ -116,16 +117,17 @@ namespace ServiceCore
                 decimal totalVat = 0m;
                 foreach (var l in bo.Lines)
                 {
+                    var price = l.Price * sign;
                     // normaliseer korting
                     decimal? discAmt = l.DiscountAmount;
                     decimal? discPct = l.DiscountPercent;
 
                     if (discPct.HasValue && !discAmt.HasValue)
-                        discAmt = Math.Round(l.Price * (discPct.Value / 100m), 4, MidpointRounding.AwayFromZero);
-                    else if (discAmt.HasValue && !discPct.HasValue && l.Price != 0)
-                        discPct = Math.Round((discAmt.Value / l.Price) * 100m, 4, MidpointRounding.AwayFromZero);
+                        discAmt = Math.Round(price * (discPct.Value / 100m), 4, MidpointRounding.AwayFromZero);
+                    else if (discAmt.HasValue && !discPct.HasValue && price != 0)
+                        discPct = Math.Round((discAmt.Value / price) * 100m, 4, MidpointRounding.AwayFromZero);
 
-                    var net = l.Price - (discAmt ?? 0m);
+                    var net = price - (discAmt ?? 0m);
                     var vat = Math.Round(net * (l.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
                     totalExcl += net;
                     totalVat += vat;
@@ -134,7 +136,7 @@ namespace ServiceCore
                     {
                         InvoiceId = inv.Id,
                         Text = (l.Text ?? "").Trim().Length > 200 ? (l.Text ?? "").Trim().Substring(0, 200) : (l.Text ?? "").Trim(),
-                        Price = l.Price,
+                        Price = price,
                         VatPercentage = l.VatPercentage,
                         DiscountPercent = discPct,
                         DiscountAmount = discAmt,
@@ -615,16 +617,18 @@ namespace ServiceCore
                 await _uow.SaveChangesAsync(ct);
 
                 bo.Lines ??= new List<InvoiceLineBO>();
+                var sign = bo.IsCreditNote ? -1m : 1m;
 
                 foreach (var l in bo.Lines)
                 {
+                    var price = l.Price * sign;
                     decimal? discAmt = l.DiscountAmount;
                     decimal? discPct = l.DiscountPercent;
 
                     if (discPct.HasValue && !discAmt.HasValue)
-                        discAmt = Math.Round(l.Price * (discPct.Value / 100m), 4, MidpointRounding.AwayFromZero);
-                    else if (discAmt.HasValue && !discPct.HasValue && l.Price != 0)
-                        discPct = Math.Round((discAmt.Value / l.Price) * 100m, 4, MidpointRounding.AwayFromZero);
+                        discAmt = Math.Round(price * (discPct.Value / 100m), 4, MidpointRounding.AwayFromZero);
+                    else if (discAmt.HasValue && !discPct.HasValue && price != 0)
+                        discPct = Math.Round((discAmt.Value / price) * 100m, 4, MidpointRounding.AwayFromZero);
 
                     _uow.InvoiceDetails.Add(new InvoicesDetails
                     {
@@ -632,7 +636,7 @@ namespace ServiceCore
                         Text = (l.Text ?? string.Empty).Trim().Length > 200
                             ? (l.Text ?? string.Empty).Trim().Substring(0, 200)
                             : (l.Text ?? string.Empty).Trim(),
-                        Price = l.Price,
+                        Price = price,
                         VatPercentage = l.VatPercentage,
                         DiscountPercent = discPct,
                         DiscountAmount = discAmt,

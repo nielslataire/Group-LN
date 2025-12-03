@@ -150,7 +150,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
             {
                 Name = dto.Client.Name,
                 LegalName = dto.Client.LegalName,
-                VAT = dto.Client.VatNumber,
+                VAT = FormatEuropeanVatNumber(dto.Client.VatNumber, dto.Client.Country ?? company.CountryCode),
                 AddressLine = dto.Client.AddressLine1,
                 Postal = dto.Client.PostalCode,
                 City = dto.Client.City,
@@ -197,6 +197,43 @@ public sealed class InvoicePdfService : IInvoicePdfService
     private static byte[]? ResolveLogo(string? logoSource, IssuerCompanyBO company)
     {
         return ResolveImageAsset(logoSource, company) ?? company.LogoBytes;
+    }
+
+    private static string? FormatEuropeanVatNumber(string? vatNumber, string? countryCode)
+    {
+        if (string.IsNullOrWhiteSpace(vatNumber))
+            return vatNumber;
+
+        var cleaned = new string(vatNumber.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(cleaned))
+            return vatNumber;
+
+        var country = (countryCode ?? string.Empty).Trim();
+        if (country.Length > 2)
+            country = country.Substring(0, 2);
+        country = country.ToUpperInvariant();
+
+        if (country.Length == 2 && cleaned.StartsWith(country, StringComparison.OrdinalIgnoreCase))
+        {
+            cleaned = cleaned.Substring(country.Length);
+        }
+
+        var digitsOnly = new string(cleaned.Where(char.IsDigit).ToArray());
+
+        if (country == "BE")
+        {
+            var belgianNumber = digitsOnly;
+            if (belgianNumber.Length == 9)
+                belgianNumber = "0" + belgianNumber;
+
+            if (belgianNumber.Length == 10)
+            {
+                return $"{country} {belgianNumber.Substring(0, 4)}.{belgianNumber.Substring(4, 3)}.{belgianNumber.Substring(7, 3)}";
+            }
+        }
+
+        var numberPart = digitsOnly.Length > 0 ? digitsOnly : cleaned;
+        return country.Length == 2 ? $"{country} {numberPart}" : numberPart;
     }
 
     private static byte[]? ResolveImageAsset(string? source, IssuerCompanyBO company)

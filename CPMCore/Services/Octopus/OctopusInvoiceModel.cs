@@ -123,7 +123,24 @@ namespace CPMCore.Services.Octopus
         [JsonPropertyName("intrastatServiceData")]
         public OctopusIntrastatServiceData? IntrastatServiceData { get; set; }
     }
+    public class OctopusInvoiceAttachmentUploadRequest
+    {
+        public int BookyearId { get; set; }
 
+        public string? JournalKey { get; set; }
+
+        public int DocumentSequenceNumber { get; set; }
+
+        public string InvoiceNumber { get; set; } = string.Empty;
+
+        public string AttachmentType { get; set; } = "Invoice";
+
+        public string FileName { get; set; } = string.Empty;
+
+        public string ContentType { get; set; } = "application/pdf";
+
+        public byte[] Content { get; set; } = Array.Empty<byte>();
+    }
     public class OctopusCostCentreKeyRef
     {
         [JsonPropertyName("id")]

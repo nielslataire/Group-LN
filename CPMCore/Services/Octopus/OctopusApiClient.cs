@@ -1,12 +1,14 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+using System.Globalization;
 
 namespace CPMCore.Services.Octopus
 {
@@ -26,7 +28,9 @@ namespace CPMCore.Services.Octopus
         Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default);
 
         Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
-    }
+        Task UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default);
+    
+}
 
     public class OctopusApiClient : IOctopusApiClient
     {
@@ -247,9 +251,49 @@ namespace CPMCore.Services.Octopus
             using var response = await _httpClient.SendAsync(request, ct);
             await EnsureSuccessAsync(response, url);
         }
+    public async Task UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+
+        if (string.IsNullOrWhiteSpace(payload.JournalKey))
+            throw new ArgumentException("JournalKey is verplicht voor het uploaden van een factuurbijlage.", nameof(payload));
+
+        if (payload.BookyearId <= 0)
+            throw new ArgumentException("BookyearId is verplicht voor het uploaden van een factuurbijlage.", nameof(payload));
+
+        var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/attachments/upload");
+        EnsureUrl(url, "Factuur bijlage uploaden");
+
+        var query = new Dictionary<string, string?>
+        {
+            ["bookyearId"] = payload.BookyearId.ToString(CultureInfo.InvariantCulture),
+            ["journal"] = payload.JournalKey,
+            ["documentSeqNr"] = payload.DocumentSequenceNumber.ToString(CultureInfo.InvariantCulture)
+        };
+
+        url = QueryHelpers.AddQueryString(url, query);
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new StringContent(payload.InvoiceNumber ?? string.Empty), "invoiceNumber");
+        form.Add(new StringContent(string.IsNullOrWhiteSpace(payload.AttachmentType) ? "Invoice" : payload.AttachmentType), "attachmentType");
+
+        var fileContent = new ByteArrayContent(payload.Content ?? Array.Empty<byte>());
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(payload.ContentType) ? "application/pdf" : payload.ContentType);
+        form.Add(fileContent, "file", string.IsNullOrWhiteSpace(payload.FileName) ? "invoice.pdf" : payload.FileName);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = form
+        };
+        request.Headers.Add("dossierToken", dossierToken);
+        request.Headers.Add("fileName", string.IsNullOrWhiteSpace(payload.FileName) ? "invoice.pdf" : payload.FileName);
+
+        using var response = await _httpClient.SendAsync(request, ct);
+        await EnsureSuccessAsync(response, url);
+    }
 
 
-        private static string BuildUrl(string baseUrl, string path)
+    private static string BuildUrl(string baseUrl, string path)
         {
             baseUrl ??= string.Empty;
             return $"{baseUrl.TrimEnd('/')}/{path}";

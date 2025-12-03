@@ -20,6 +20,7 @@ namespace CPMCore.Models.Invoicing
         public InvoicePartyType? PartyType { get; set; }
 
         public StartStatus StartAs { get; set; } = StartStatus.Invoice;
+        public bool IsCreditNote { get; set; }
 
         public InvoiceMode Mode { get; set; } = InvoiceMode.Free;
         public string? HeaderDescription { get; set; }

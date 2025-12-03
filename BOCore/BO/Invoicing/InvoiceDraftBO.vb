@@ -24,6 +24,7 @@
     Public Property PaymentTermId As Integer?
 
     Public Property StageIds As List(Of Integer) = New List(Of Integer)
+    Public Property IsCreditNote As Boolean
 
 End Class
 
