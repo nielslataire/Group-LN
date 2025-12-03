@@ -61,7 +61,7 @@ namespace ServiceCore
                 .ToListAsync(ct);
 
             var suppliersRaw = await _db.CompanyInfo.AsNoTracking()
-                .Where(x => term == "" || EF.Functions.Like(x.BedrijfsNaam, like))
+                .Where(x => x.IsCustomer && (term == "" || EF.Functions.Like(x.BedrijfsNaam, like)))
                 .OrderBy(x => x.BedrijfsNaam)
                 .Select(x => new { Id = x.CompanyId, Display = x.BedrijfsNaam })
                 .Take(take)

@@ -22,6 +22,8 @@ namespace ServiceCore.Translators
 
             bo.Text = entity.Text ?? string.Empty;
             bo.VatPercentage = entity.VatPercentage ?? 21m;
+            bo.VatTypeId = entity.VatTypeId;
+            bo.VatCode = entity.VatCode;
             bo.Price = entity.Price ?? 0m;
             bo.DiscountPercent = entity.DiscountPercent;
             bo.DiscountAmount = entity.DiscountAmount;
@@ -51,6 +53,8 @@ namespace ServiceCore.Translators
 
             entity.Text = bo.Text;
             entity.VatPercentage = bo.VatPercentage;
+            entity.VatTypeId = bo.VatTypeId;
+            entity.VatCode = bo.VatCode;
             entity.Price = bo.Price;
             entity.DiscountPercent = bo.DiscountPercent;
             entity.DiscountAmount = bo.DiscountAmount;

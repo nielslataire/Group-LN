@@ -8,6 +8,8 @@
         public decimal UnitPrice { get; set; }
         public decimal Price { get; set; }
         public decimal VatPercentage { get; set; }
+        public int? VatTypeId { get; set; }
+        public string? VatCode { get; set; }
         public decimal? DiscountPercent { get; set; }
         public decimal? DiscountAmount { get; set; }
         public int? UnitId { get; set; }

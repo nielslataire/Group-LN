@@ -508,6 +508,8 @@ namespace CPMCore.Services.Octopus
 
         [JsonPropertyName("vatNr")]
         public string? VatNr { get; set; }
+        [JsonPropertyName("vatType")]
+        public int? VatType { get; set; }
 
         [JsonPropertyName("client")]
         public bool Client { get; set; }
@@ -523,6 +525,9 @@ namespace CPMCore.Services.Octopus
     {
         [JsonPropertyName("relationIdentificationServiceData")]
         public new OctopusRelationIdentificationData? RelationIdentificationServiceData { get; set; }
+
+        [JsonPropertyName("vatType")]
+        public new int? VatType { get; set; }
 
         [JsonPropertyName("defaultBookingAccountClient")]
         public int DefaultBookingAccountClient { get; set; }
@@ -546,6 +551,7 @@ namespace CPMCore.Services.Octopus
                 Telephone = Telephone,
                 Email = Email,
                 VatNr = VatNr,
+                VatType = VatType,
                 Client = Client,
                 Supplier = Supplier,
                 Active = Active

@@ -17,6 +17,7 @@ using ServiceCore.Invoicing;
 using ServiceCore.Invoicing.Pdf;
 using SmartBreadcrumbs.Nodes;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -943,7 +944,8 @@ namespace CPMCore.Controllers
                 PaymentGroupId = vm.PaymentGroupId,
                 IssuerBankAccountId = vm.IssuerBankAccountId,
                 PaymentTermId = vm.PaymentTermId,
-                FooterDescription = vm.FooterDescription
+                FooterDescription = vm.FooterDescription,
+                SelectedVatTypeId = vm.VatTypeId
             };
 
             bo.IsCreditNote = vm.IsCreditNote;
@@ -960,6 +962,8 @@ namespace CPMCore.Controllers
                     Text = l.Text,
                     Price = l.Price,
                     VatPercentage = l.VatPercentage,
+                    VatTypeId = l.VatTypeId ?? vm.VatTypeId,
+                    VatCode = l.VatCode,
                     DiscountPercent = l.DiscountPercent,
                     DiscountAmount = l.DiscountAmount,
                     UnitId = l.UnitId,
@@ -980,6 +984,8 @@ namespace CPMCore.Controllers
                     Text = l.Text,
                     Price = l.Price,
                     VatPercentage = l.VatPercentage,
+                    VatTypeId = l.VatTypeId ?? vm.VatTypeId,
+                    VatCode = l.VatCode,
                     DiscountPercent = l.DiscountPercent,
                     DiscountAmount = l.DiscountAmount,
                     UnitId = l.UnitId,
@@ -1053,6 +1059,7 @@ namespace CPMCore.Controllers
                         Text = row.Title,
                         Price = calc,
                         VatPercentage = row.VatPercentage,
+                        VatTypeId = vm.VatTypeId,
                         LineType = "ChangeOrders",
                         GroupName = "Wijzigingsopdrachten",
                         ChangeOrderDetailId = detailId,
@@ -1417,6 +1424,8 @@ namespace CPMCore.Controllers
                 Text = l.Text ?? string.Empty,
                 Price = l.Price,
                 VatPercentage = l.VatPercentage,
+                VatTypeId = l.VatTypeId,
+                VatCode = l.VatCode,
                 DiscountPercent = l.DiscountPercent,
                 DiscountAmount = l.DiscountAmount,
                 UnitId = l.UnitId,
@@ -1810,6 +1819,12 @@ namespace CPMCore.Controllers
                     .Include(i => i.ClientIdClientAccountNavigation)!
                         .ThenInclude(c => c.InvoicePostalCode)!
                             .ThenInclude(pc => pc.Country)
+                    .Include(i => i.ClientIdClientContactsNavigation)!
+                        .ThenInclude(c => c.PostalCode)!
+                            .ThenInclude(pc => pc.Country)
+                    .Include(i => i.ClientIdClientContactsNavigation)!
+                        .ThenInclude(c => c.InvoicePostalCode)!
+                            .ThenInclude(pc => pc.Country)
                     .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
 
@@ -1854,7 +1869,7 @@ namespace CPMCore.Controllers
 
                 var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
 
-                var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation);
+                var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation);
                 if (!relationLookups.Any())
                 {
                     throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
@@ -1864,7 +1879,7 @@ namespace CPMCore.Controllers
                     dossierToken.Token,
                     issuer.OctopusDossierNumber,
                     relationLookups,
-                    BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation),
+                    BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation),
                     ct);
 
                 var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
@@ -1913,7 +1928,7 @@ namespace CPMCore.Controllers
                             ?? 0
                     },
                     Comment = invoice.Text,
-                    OrderReference = invoice.ProjectId?.ToString(CultureInfo.InvariantCulture),
+                    OrderReference = null,
                     Reference = structuredOgm,
                     FinancialDiscount = 0m,
                     CustomFieldValueList = new List<OctopusCustomFieldValue>(),
@@ -1925,7 +1940,7 @@ namespace CPMCore.Controllers
                         Unit = string.Empty,
                         UnitPrice = line.Price ?? 0m,
                         DiscountPercentage = line.DiscountPercent ?? 0m,
-                        VatCodeKey = ResolveVatCodeKey(line.VatPercentage, vatTypes, issuer.DefaultVatTypeId),
+                        VatCodeKey = ResolveVatCodeKey(line, vatTypes, issuer.DefaultVatTypeId),
                         BookingAccountNr = 0,
                         //CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
                         CustomFieldValueList = new List<OctopusCustomFieldValue>(),
@@ -1948,7 +1963,10 @@ namespace CPMCore.Controllers
                 }
                 var pdfBytes = _pdf.Render(invoiceDto, issuerCompany);
                 var invoiceNumber = formattedPublicId;
-                var fileName = $"Factuur {formattedPublicId}.pdf";
+                var invalidChars = Path.GetInvalidFileNameChars();
+                var safePublicId = string.IsNullOrWhiteSpace(formattedPublicId) ? invoice.Id.ToString(CultureInfo.InvariantCulture) : formattedPublicId;
+                var sanitizedId = new string((safePublicId ?? string.Empty).Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
+                var fileName = $"factuur {sanitizedId}.pdf";
 
                 await _octopusClient.UploadInvoiceAttachmentAsync(
                     dossierToken.Token,
@@ -1997,18 +2015,35 @@ namespace CPMCore.Controllers
                   OctopusRelationRequest request,
                   CancellationToken ct)
         {
+            OctopusRelation? found = null;
             foreach (var lookup in lookups)
             {
                 var relation = await _octopusClient.FindRelationAsync(dossierToken, dossierNumber, lookup, ct);
 
                 if (relation != null)
-                    return relation;
+                {
+                    found = relation;
+                    break;
+                }
+            }
+
+            if (found != null)
+            {
+                request.RelationIdentificationServiceData ??= new OctopusRelationIdentificationData();
+                request.RelationIdentificationServiceData.RelationKey ??= found.RelationIdentificationServiceData?.RelationKey;
+
+                if (NeedsRelationUpdate(found, request))
+                {
+                    return await _octopusClient.UpsertRelationAsync(dossierToken, dossierNumber, request, ct);
+                }
+
+                return found;
             }
 
             return await _octopusClient.UpsertRelationAsync(dossierToken, dossierNumber, request, ct);
         }
 
-        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(Invoices invoice, ClientAccount? clientAccount)
+        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null)
         {
             var lookups = new List<OctopusRelationLookup>();
 
@@ -2017,13 +2052,19 @@ namespace CPMCore.Controllers
                 lookups.Add(new OctopusRelationLookup { RelationId = relationId });
             }
 
-            var vatNumber = NormalizeVatNumber(invoice.VatNumber ?? clientAccount?.Vatnumber);
+            var vatNumber = FormatVatNumberForOctopus(
+                invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber,
+                clientAccount?.InvoicePostalCode?.Country?.LandIsocode
+                    ?? clientAccount?.PostalCode?.Country?.LandIsocode
+                    ?? clientContact?.InvoicePostalCode?.Country?.LandIsocode
+                    ?? clientContact?.PostalCode?.Country?.LandIsocode
+                    ?? invoice.PostalCode?.Country?.LandIsocode);
             if (!string.IsNullOrWhiteSpace(vatNumber))
             {
                 lookups.Add(new OctopusRelationLookup { VatNumber = vatNumber });
             }
 
-            var clientName = SelectClientName(invoice, clientAccount);
+            var clientName = SelectClientName(invoice, clientAccount, clientContact);
 
             if (!string.IsNullOrWhiteSpace(clientName))
             {
@@ -2033,9 +2074,38 @@ namespace CPMCore.Controllers
             return lookups;
         }
 
-        private static OctopusRelationRequest BuildRelationRequest(Invoices invoice, ClientAccount? clientAccount)
+        private static bool NeedsRelationUpdate(OctopusRelation current, OctopusRelationRequest desired)
         {
-            var clientName = SelectClientName(invoice, clientAccount);
+            static bool Different(string? a, string? b)
+                => !string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+            if (desired == null)
+                return false;
+
+            if (Different(current.Name, desired.Name)) return true;
+            if (Different(current.StreetAndNr, desired.StreetAndNr)) return true;
+            if (Different(current.PostalCode, desired.PostalCode)) return true;
+            if (Different(current.City, desired.City)) return true;
+            if (Different(current.Country, desired.Country)) return true;
+            if (!string.IsNullOrWhiteSpace(desired.Email) && Different(current.Email, desired.Email)) return true;
+            if (!string.IsNullOrWhiteSpace(desired.VatNr) && Different(current.VatNr, desired.VatNr)) return true;
+            if (desired.VatType.HasValue && current.VatType != desired.VatType) return true;
+            if (current.Client != desired.Client || current.Supplier != desired.Supplier || current.Active != desired.Active) return true;
+
+            return false;
+        }
+
+        private static OctopusRelationRequest BuildRelationRequest(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact)
+        {
+            var clientName = SelectClientName(invoice, clientAccount, clientContact);
+            var countryCode = clientAccount?.InvoicePostalCode?.Country?.LandIsocode
+                ?? clientAccount?.PostalCode?.Country?.LandIsocode
+                ?? clientContact?.InvoicePostalCode?.Country?.LandIsocode
+                ?? clientContact?.PostalCode?.Country?.LandIsocode
+                ?? invoice.PostalCode?.Country?.LandIsocode;
+            var isCompany = !string.IsNullOrWhiteSpace(clientAccount?.CompanyName)
+                || (!string.IsNullOrWhiteSpace(clientAccount?.Vatnumber))
+                || (!string.IsNullOrWhiteSpace(invoice.VatNumber) && invoice.ClientType != (int)InvoicePartyType.ClientContact);
 
             var request = new OctopusRelationRequest
             {
@@ -2051,18 +2121,19 @@ namespace CPMCore.Controllers
                 Supplier = false,
                 Active = true,
                 StreetAndNr = BuildStreetAndNumber(
-                    clientAccount?.InvoiceStreet ?? clientAccount?.Street,
-                    clientAccount?.InvoiceHousenumber ?? clientAccount?.Housenumber,
-                    clientAccount?.InvoiceBusnumber ?? clientAccount?.Busnumber,
+                    clientAccount?.InvoiceStreet ?? clientAccount?.Street ?? clientContact?.InvoiceStreet ?? clientContact?.Street,
+                    clientAccount?.InvoiceHousenumber ?? clientAccount?.Housenumber ?? clientContact?.InvoiceHousenumber ?? clientContact?.Housenumber,
+                    clientAccount?.InvoiceBusnumber ?? clientAccount?.Busnumber ?? clientContact?.InvoiceBusnumber ?? clientContact?.Busnumber,
                     invoice.Adress),
-                PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? invoice.PostalCode?.Postcode,
-                City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? invoice.PostalCode?.Gemeente,
-                Country = clientAccount?.InvoicePostalCode?.Country?.LandIsocode ?? clientAccount?.PostalCode?.Country?.LandIsocode ?? invoice.PostalCode?.Country?.LandIsocode,
-                Email = clientAccount?.InvoiceEmail ?? clientAccount?.Email,
-                VatNr = NormalizeVatNumber(invoice.VatNumber ?? clientAccount?.Vatnumber),
+                PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? clientContact?.InvoicePostalCode?.Postcode ?? clientContact?.PostalCode?.Postcode ?? invoice.PostalCode?.Postcode,
+                City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? clientContact?.InvoicePostalCode?.Gemeente ?? clientContact?.PostalCode?.Gemeente ?? invoice.PostalCode?.Gemeente,
+                Country = countryCode,
+                Email = clientAccount?.InvoiceEmail ?? clientContact?.InvoiceEmail ?? clientAccount?.Email ?? clientContact?.Email,
+                VatNr = FormatVatNumberForOctopus(invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber, countryCode),
                 DefaultBookingAccountClient = 0,
                 DefaultBookingAccountSupplier = 0,
-                SupplierPaymentMethod = 0
+                SupplierPaymentMethod = 0,
+                VatType = DetermineVatType(isCompany, countryCode)
             };
 
             request.Country ??= "BE";
@@ -2070,11 +2141,16 @@ namespace CPMCore.Controllers
             return request;
         }
 
-        private static string? SelectClientName(Invoices invoice, ClientAccount? clientAccount)
+        private static string? SelectClientName(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null)
         {
             if (!string.IsNullOrWhiteSpace(clientAccount?.CompanyName))
             {
                 return !string.IsNullOrWhiteSpace(invoice.ClientName) ? invoice.ClientName : clientAccount.CompanyName;
+            }
+
+            if (!string.IsNullOrWhiteSpace(clientContact?.CompanyName))
+            {
+                return !string.IsNullOrWhiteSpace(invoice.ClientName) ? invoice.ClientName : clientContact.CompanyName;
             }
 
             return !string.IsNullOrWhiteSpace(clientAccount?.Name) ? clientAccount.Name : invoice.ClientName;
@@ -2103,7 +2179,33 @@ namespace CPMCore.Controllers
             return string.IsNullOrWhiteSpace(cleaned) ? trimmed : cleaned;
         }
 
-        private static string ResolveVatCodeKey(decimal? vatPercentage, IReadOnlyCollection<Vattype> vatTypes, int? defaultVatTypeId)
+        private static string? FormatVatNumberForOctopus(string? vatNumber, string? countryCode)
+        {
+            if (string.IsNullOrWhiteSpace(vatNumber))
+                return null;
+
+            var cleanedDigits = new string(vatNumber.Where(char.IsDigit).ToArray());
+            if (cleanedDigits.Length >= 10)
+            {
+                var digits = cleanedDigits[^10..];
+                var prefix = string.IsNullOrWhiteSpace(countryCode) ? "BE" : countryCode.Trim().ToUpperInvariant();
+                return $"{prefix}{digits[..4]}.{digits.Substring(4, 3)}.{digits.Substring(7, 3)}";
+            }
+
+            return NormalizeVatNumber(vatNumber);
+        }
+
+        private static int? DetermineVatType(bool isCompany, string? countryCode)
+        {
+            var isBelgian = string.Equals(countryCode, "BE", StringComparison.OrdinalIgnoreCase);
+
+            if (isCompany)
+                return isBelgian ? 1 : 4;
+
+            return isBelgian ? 7 : 8;
+        }
+
+        private static string ResolveVatCodeKey(InvoicesDetails line, IReadOnlyCollection<Vattype> vatTypes, int? defaultVatTypeId)
         {
             const decimal tolerance = 0.001m;
 
@@ -2112,9 +2214,23 @@ namespace CPMCore.Controllers
                 throw new InvalidOperationException("Geen VAT-types geconfigureerd voor dit facturatiebedrijf.");
             }
 
-            if (vatPercentage.HasValue)
+            if (!string.IsNullOrWhiteSpace(line.VatCode))
             {
-                var match = vatTypes.FirstOrDefault(v => Math.Abs(v.BasePercentage - vatPercentage.Value) < tolerance);
+                return line.VatCode.Trim();
+            }
+
+            if (line.VatTypeId.HasValue)
+            {
+                var typeMatch = vatTypes.FirstOrDefault(v => v.Id == line.VatTypeId.Value);
+                if (typeMatch != null && !string.IsNullOrWhiteSpace(typeMatch.Code))
+                {
+                    return typeMatch.Code;
+                }
+            }
+
+            if (line.VatPercentage.HasValue)
+            {
+                var match = vatTypes.FirstOrDefault(v => Math.Abs(v.BasePercentage - line.VatPercentage.Value) < tolerance);
 
                 if (match != null && !string.IsNullOrWhiteSpace(match.Code))
                 {
@@ -2138,8 +2254,8 @@ namespace CPMCore.Controllers
             }
 
             throw new InvalidOperationException(
-                vatPercentage.HasValue
-                    ? $"Geen VAT-code gevonden voor percentage {vatPercentage:0.##} voor dit facturatiebedrijf."
+                line.VatPercentage.HasValue
+                    ? $"Geen VAT-code gevonden voor percentage {line.VatPercentage:0.##} voor dit facturatiebedrijf."
                     : "Geen VAT-code gevonden voor dit facturatiebedrijf.");
         }
 

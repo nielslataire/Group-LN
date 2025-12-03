@@ -37,6 +37,10 @@ public partial class InvoicesDetails
 
     public bool UtilityIsAdvance { get; set; }
 
+    public int? VatTypeId { get; set; }
+
+    public string VatCode { get; set; }
+
     public virtual ICollection<ConnectionAdvanceApplication> ConnectionAdvanceApplication { get; set; } = new List<ConnectionAdvanceApplication>();
 
     public virtual Invoices Invoice { get; set; }

@@ -669,15 +669,21 @@ function prepareFreeLinesForPost($form) {
         const priceVal = parseLocaleNumber($tr.find('.js-fl-price').val());
 
         let vatPct = NaN;
+        let vatTypeId = null;
+        let vatCode = null;
         const $sel = $tr.find('.js-fl-vat-select');
         if ($sel.length) {
             const $opt = $sel.find('option:selected');
             const pctData = $opt.data('pct');
+            vatTypeId = $opt.val();
+            vatCode = $opt.data('code');
             vatPct = parseFloat(String(pctData != null ? pctData : $opt.text()).replace(',', '.'));
         }
         if (isNaN(vatPct)) {
             const fallback = $('#VatTypeId option:selected').data('pct');
             vatPct = parseFloat(String(fallback != null ? fallback : '0').replace(',', '.')) || 0;
+            vatTypeId = $('#VatTypeId').val();
+            vatCode = $('#VatTypeId option:selected').data('code');
         }
 
         if (!text && priceVal === 0) return;
@@ -687,6 +693,8 @@ function prepareFreeLinesForPost($form) {
         addHidden(base, 'Text', text);
         addHidden(base, 'Price', formatDecimal(priceVal));
         addHidden(base, 'VatPercentage', formatDecimal(isNaN(vatPct) ? 0 : vatPct));
+        if (vatTypeId != null && vatTypeId !== '') addHidden(base, 'VatTypeId', vatTypeId);
+        if (vatCode) addHidden(base, 'VatCode', vatCode);
         addHidden(base, 'IsSelected', 'true');
         addHidden(base, 'LineType', 'Free');
         addHidden(base, 'GroupName', 'Vrije lijnen');

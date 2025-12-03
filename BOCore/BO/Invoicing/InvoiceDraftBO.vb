@@ -18,6 +18,7 @@
     Public Property FooterDescription As String
 
     Public Property Lines As List(Of InvoiceLineBO) = New List(Of InvoiceLineBO)()
+    Public Property SelectedVatTypeId As Integer?
 
     Public Property PaymentGroupId As Integer?
     Public Property IssuerBankAccountId As Integer?

@@ -77,6 +77,7 @@
             const $opt = $('<option>')
                 .val($(this).val())
                 .attr('data-pct', $(this).data('pct'))
+                .attr('data-code', $(this).data('code'))
                 .text($(this).text());
             $sel.append($opt);
         });

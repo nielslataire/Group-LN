@@ -68,6 +68,11 @@ namespace ServiceCore
 
             var party = await ResolvePartySnapshotAsync(bo, ct);
 
+            var vatTypes = await _db.Vattype
+               .AsNoTracking()
+               .Where(v => v.IssuerCompanyId == bo.IssuerCompanyId)
+               .ToListAsync(ct);
+
             var headerText = Clean(bo.HeaderDescription);
             var detailText = Clean(bo.DetailDescription);
             var bankAccount = Clean(issuerBankAccountIban);
@@ -117,6 +122,20 @@ namespace ServiceCore
                 decimal totalVat = 0m;
                 foreach (var l in bo.Lines)
                 {
+                    var resolvedVatTypeId = l.VatTypeId ?? bo.SelectedVatTypeId;
+                    string? resolvedVatCode = l.VatCode;
+                    var vatPct = l.VatPercentage;
+
+                    if (resolvedVatTypeId.HasValue)
+                    {
+                        var match = vatTypes.FirstOrDefault(v => v.Id == resolvedVatTypeId.Value);
+                        if (match != null)
+                        {
+                            vatPct = match.BasePercentage;
+                            resolvedVatCode ??= match.Code;
+                        }
+                    }
+
                     var price = l.Price * sign;
                     // normaliseer korting
                     decimal? discAmt = l.DiscountAmount;
@@ -128,7 +147,7 @@ namespace ServiceCore
                         discPct = Math.Round((discAmt.Value / price) * 100m, 4, MidpointRounding.AwayFromZero);
 
                     var net = price - (discAmt ?? 0m);
-                    var vat = Math.Round(net * (l.VatPercentage / 100m), 2, MidpointRounding.AwayFromZero);
+                    var vat = Math.Round(net * (vatPct / 100m), 2, MidpointRounding.AwayFromZero);
                     totalExcl += net;
                     totalVat += vat;
 
@@ -137,7 +156,9 @@ namespace ServiceCore
                         InvoiceId = inv.Id,
                         Text = (l.Text ?? "").Trim().Length > 200 ? (l.Text ?? "").Trim().Substring(0, 200) : (l.Text ?? "").Trim(),
                         Price = price,
-                        VatPercentage = l.VatPercentage,
+                        VatPercentage = vatPct,
+                        VatTypeId = resolvedVatTypeId,
+                        VatCode = resolvedVatCode,
                         DiscountPercent = discPct,
                         DiscountAmount = discAmt,
                         UnitId = l.UnitId,
@@ -685,6 +706,7 @@ namespace ServiceCore
                     Text = s.Name,
                     Price = 0m,
                     VatPercentage = vat,
+                    VatTypeId = bo.SelectedVatTypeId,
                     PaymentStageId = s.Id
                 });
             }

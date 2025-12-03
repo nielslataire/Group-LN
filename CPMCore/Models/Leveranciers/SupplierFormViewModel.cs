@@ -70,6 +70,9 @@ public class SupplierFormViewModel
     [Display(Name = "UBL standaard toevoegen")]
     public bool AttachUblByDefault { get; set; }
 
+    [Display(Name = "Ook klant")]
+    public bool IsCustomer { get; set; }
+
     [Display(Name = "Activiteiten")]
     public List<int> SelectedActivityIds { get; set; } = new();
 

@@ -16,4 +16,7 @@
     Public Property UtilityIsAdvance As Boolean
     Public Property ChangeOrderDetailId As Integer?
 
+    Public Property VatTypeId As Integer?
+    Public Property VatCode As String
+
 End Class

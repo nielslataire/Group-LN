@@ -88,6 +88,8 @@
                                 <input type="hidden" name="Lines[@i].GroupName" value="@m.GroupName" />
                                 <input type="hidden" name="Lines[@i].UtilityCost" value="false" />
                                 <input type="hidden" name="Lines[@i].VatPercentage" value="@m.VatPercentage" />
+                                <input type="hidden" name="Lines[@i].VatTypeId" value="@(m.VatTypeId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)" />
+                                <input type="hidden" name="Lines[@i].VatCode" value="@m.VatCode" />
 
                                 @if (m.PaymentStageId.HasValue)
                                 {

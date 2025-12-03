@@ -1389,6 +1389,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LineType).HasMaxLength(20);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.Text).HasMaxLength(200);
+            entity.Property(e => e.VatCode).HasMaxLength(50);
             entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.Invoice).WithMany(p => p.InvoicesDetails)

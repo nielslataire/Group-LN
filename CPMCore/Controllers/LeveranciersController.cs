@@ -166,6 +166,7 @@ public class LeveranciersController : BaseController
         entity.AttachUblByDefault = model.AttachUblByDefault;
         entity.PostCodeId = model.SelectedPostalCodeId;
         entity.Weburl = model.WebUrl;
+        entity.IsCustomer = model.IsCustomer;
     }
     private async Task AssignIssuerCompaniesAsync(CompanyInfo entity, IEnumerable<int> selectedIssuerCompanyIds, CancellationToken ct)
     {
@@ -860,6 +861,7 @@ public class LeveranciersController : BaseController
             Mobile = entity.Gsm,
             Email = entity.Email,
             InvoiceEmail = entity.InvoiceEmail,
+            IsCustomer = entity.IsCustomer,
             RequiresDigitalInvoice = entity.RequiresDigitalInvoice,
             AttachUblByDefault = entity.AttachUblByDefault,
             SelectedActivityIds = entity.Activity.Select(a => a.ActivityId).ToList(),

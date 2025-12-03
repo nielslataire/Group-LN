@@ -176,6 +176,8 @@
                                        value="@m.VatPercentage.ToString("0.##", CultureInfo.InvariantCulture)" disabled />
                                 <input type="hidden" name="Lines[@i].VatPercentage"
                                        value="@m.VatPercentage.ToString(CultureInfo.InvariantCulture)" />
+                                <input type="hidden" name="Lines[@i].VatTypeId" value="@(m.VatTypeId?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)" />
+                                <input type="hidden" name="Lines[@i].VatCode" value="@m.VatCode" />
                             </td>
                         </tr>
                     }

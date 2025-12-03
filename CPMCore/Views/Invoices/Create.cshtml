@@ -166,19 +166,20 @@
                             <select asp-for="VatTypeId" id="VatTypeId" name="VatTypeId" class="form-control form-control-modern">
                                 @foreach (var v in Model.VatTypes)
                                 {
-                                    if (Model.VatTypeId == v.Id)
+                                    var isSelected = Model.VatTypeId == v.Id;
+                                    if (isSelected)
                                     {
-                                        <option value="@v.Id" data-pct="@v.BasePercentage" selected="selected">
+                                        <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code" selected="selected">
                                             @v.Code - @v.Description (@v.BasePercentage%)
                                         </option>
                                     }
                                     else
                                     {
-                                        <option value="@v.Id" data-pct="@v.BasePercentage">
+                                        <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code">
                                             @v.Code - @v.Description (@v.BasePercentage%)
                                         </option>
                                     }
-                            
+
                                 }
                             </select>
                         </div>
