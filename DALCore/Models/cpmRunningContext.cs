@@ -621,6 +621,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientAccount>(entity =>
         {
+            entity.HasIndex(e => e.OctopusRelationId, "IX_ClientAccount_OctopusRelationId");
+
             entity.Property(e => e.BankAccountNumber).HasMaxLength(50);
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.CompanyName).HasMaxLength(100);

@@ -4,7 +4,9 @@ using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
-using Microsoft.AspNetCore.WebUtilities;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 
 namespace CPMCore.Services.Octopus
 {
@@ -19,6 +21,9 @@ namespace CPMCore.Services.Octopus
 
         Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, string dossierNumber, CancellationToken ct = default);
         Task<IReadOnlyList<OctopusVatCodeItem>> GetVatCodesAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
+        Task<OctopusRelation?> FindRelationAsync(string dossierToken, string dossierNumber, OctopusRelationLookup lookup, CancellationToken ct = default);
+
+        Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default);
 
         Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
     }
@@ -159,6 +164,73 @@ namespace CPMCore.Services.Octopus
             var result = await response.Content.ReadFromJsonAsync<List<OctopusVatCodeItem>>(cancellationToken: ct)
                          ?? new List<OctopusVatCodeItem>();
             return result;
+        }
+
+        public async Task<OctopusRelation?> FindRelationAsync(string dossierToken, string dossierNumber, OctopusRelationLookup lookup, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/relations");
+            EnsureUrl(url, "Relatie zoeken");
+
+            var query = new Dictionary<string, string?>();
+
+            if (lookup.RelationId.HasValue)
+            {
+                query["relationId"] = lookup.RelationId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else if (!string.IsNullOrWhiteSpace(lookup.VatNumber))
+            {
+                query["vatNr"] = lookup.VatNumber;
+            }
+            else if (!string.IsNullOrWhiteSpace(lookup.Name))
+            {
+                query["name"] = lookup.Name;
+            }
+            else
+            {
+                return null;
+            }
+
+            url = QueryHelpers.AddQueryString(url, query);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return null;
+
+            await EnsureSuccessAsync(response, url);
+
+            var relations = await response.Content.ReadFromJsonAsync<List<OctopusRelation>>(cancellationToken: ct)
+                           ?? new List<OctopusRelation>();
+
+            return relations.FirstOrDefault();
+        }
+
+        public async Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/relations");
+            EnsureUrl(url, "Relatie opslaan");
+
+            using var request = new HttpRequestMessage(HttpMethod.Put, url)
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == HttpStatusCode.NoContent)
+            {
+                return payload.ToRelation();
+            }
+
+            await EnsureSuccessAsync(response, url);
+
+            var relation = await response.Content.ReadFromJsonAsync<OctopusRelation>(cancellationToken: ct);
+
+            return relation ?? payload.ToRelation();
         }
 
         public async Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default)
@@ -363,6 +435,102 @@ namespace CPMCore.Services.Octopus
         [JsonPropertyName("id")]
         public int Id { get; set; }
     }
+
+    public class OctopusRelation
+    {
+        [JsonPropertyName("relationIdentificationServiceData")]
+        public OctopusRelationIdentificationData? RelationIdentificationServiceData { get; set; }
+
+        [JsonPropertyName("name")]
+        public string? Name { get; set; }
+
+        [JsonPropertyName("streetAndNr")]
+        public string? StreetAndNr { get; set; }
+
+        [JsonPropertyName("postalCode")]
+        public string? PostalCode { get; set; }
+
+        [JsonPropertyName("city")]
+        public string? City { get; set; }
+
+        [JsonPropertyName("country")]
+        public string? Country { get; set; }
+
+        [JsonPropertyName("telephone")]
+        public string? Telephone { get; set; }
+
+        [JsonPropertyName("email")]
+        public string? Email { get; set; }
+
+        [JsonPropertyName("vatNr")]
+        public string? VatNr { get; set; }
+
+        [JsonPropertyName("client")]
+        public bool Client { get; set; }
+
+        [JsonPropertyName("supplier")]
+        public bool Supplier { get; set; }
+
+        [JsonPropertyName("active")]
+        public bool Active { get; set; }
+    }
+
+    public class OctopusRelationRequest : OctopusRelation
+    {
+        [JsonPropertyName("relationIdentificationServiceData")]
+        public new OctopusRelationIdentificationData? RelationIdentificationServiceData { get; set; }
+
+        [JsonPropertyName("defaultBookingAccountClient")]
+        public int DefaultBookingAccountClient { get; set; }
+
+        [JsonPropertyName("defaultBookingAccountSupplier")]
+        public int DefaultBookingAccountSupplier { get; set; }
+
+        [JsonPropertyName("supplierPaymentMethod")]
+        public int SupplierPaymentMethod { get; set; }
+
+        public OctopusRelation ToRelation()
+        {
+            return new OctopusRelation
+            {
+                RelationIdentificationServiceData = RelationIdentificationServiceData,
+                Name = Name,
+                StreetAndNr = StreetAndNr,
+                PostalCode = PostalCode,
+                City = City,
+                Country = Country,
+                Telephone = Telephone,
+                Email = Email,
+                VatNr = VatNr,
+                Client = Client,
+                Supplier = Supplier,
+                Active = Active
+            };
+        }
+    }
+
+    public class OctopusRelationIdentificationData
+    {
+        [JsonPropertyName("relationKey")]
+        public OctopusRelationKey? RelationKey { get; set; }
+
+        [JsonPropertyName("externalRelationId")]
+        public int? ExternalRelationId { get; set; }
+    }
+
+    public class OctopusRelationKey
+    {
+        [JsonPropertyName("id")]
+        public int? Id { get; set; }
+    }
+
+    public class OctopusRelationLookup
+    {
+        public int? RelationId { get; set; }
+        public string? Name { get; set; }
+        public string? VatNumber { get; set; }
+    }
+
 
     public class OctopusAuthenticationRequest
     {

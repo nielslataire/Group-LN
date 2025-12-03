@@ -18,6 +18,7 @@ namespace ServiceCore.Translators
             if (bo == null)
                 return ErrorCode.BoNull;
             bo.Id = _entity.Id;
+            bo.OctopusRelationId = _entity.OctopusRelationId;
             bo.Name = _entity.Name;
             bo.Salutation = (Salutation)Enum.Parse(typeof(Salutation), _entity.Salutation);
             bo.Street = _entity.Street;
@@ -159,6 +160,7 @@ namespace ServiceCore.Translators
             entity.InvoiceHousenumber = bo.InvoiceHousenumber;
             entity.InvoiceBusnumber = bo.InvoiceBusnumber;
             entity.InvoiceExtra = bo.InvoiceExtra;
+            entity.OctopusRelationId = bo.OctopusRelationId;
 
             // 2) OwnerType
             if (bo.OwnerType != null && bo.OwnerType.Id != 0)

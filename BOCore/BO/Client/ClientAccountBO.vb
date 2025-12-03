@@ -17,6 +17,15 @@ Public Class ClientAccountBO
             m_Id = value
         End Set
     End Property
+    Private m_octopusRelationId As Integer?
+    Public Property OctopusRelationId() As Integer?
+        Get
+            Return m_octopusRelationId
+        End Get
+        Set(ByVal value As Integer?)
+            m_octopusRelationId = value
+        End Set
+    End Property
     Private m_Name As String
     <Display(Name:="Naam")>
     Public Property Name() As String

@@ -1761,9 +1761,16 @@ namespace CPMCore.Controllers
         private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct)
         {
             var invoice = await _db.Invoices
-                .AsNoTracking()
                 .Include(i => i.InvoicesDetails)
                 .Include(i => i.IssuerCompany)
+                .Include(i => i.PostalCode)!
+                    .ThenInclude(pc => pc.Country)
+                .Include(i => i.ClientIdClientAccountNavigation)!
+                    .ThenInclude(c => c.PostalCode)!
+                        .ThenInclude(pc => pc.Country)
+                .Include(i => i.ClientIdClientAccountNavigation)!
+                    .ThenInclude(c => c.InvoicePostalCode)!
+                        .ThenInclude(pc => pc.Country)
                 .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                 ?? throw new InvalidOperationException("Factuur niet gevonden.");
 
@@ -1808,6 +1815,40 @@ namespace CPMCore.Controllers
 
             var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
 
+            var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation);
+            if (!relationLookups.Any())
+            {
+                throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
+            }
+
+            var relation = await EnsureOctopusRelationAsync(
+                dossierToken.Token,
+                issuer.OctopusDossierNumber,
+                relationLookups,
+                BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation),
+                ct);
+
+            var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
+                ?? invoice.ClientIdClientAccountNavigation?.OctopusRelationId;
+
+            if (relationId is null or <= 0)
+            {
+                throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
+            }
+
+            if (invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
+                && clientAccount.OctopusRelationId != relationId)
+            {
+                clientAccount.OctopusRelationId = relationId;
+                await _db.SaveChangesAsync(ct);
+            }
+
+            var vatTypes = await _db.Vattype
+                .Where(v => v.IssuerCompanyId == issuer.Id)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+
             var payload = new OctopusInvoiceCreateRequest
             {
                 BookyearKey = new OctopusBookyearKeyRef { Id = sequence.Bookyear.BookyearKeyId },
@@ -1817,28 +1858,32 @@ namespace CPMCore.Controllers
                 DocumentDate = finalDate,
                 ExpiryDate = invoice.ExpirationDate ?? finalDate,
                 CurrencyCode = string.IsNullOrWhiteSpace(invoice.CurrencyCode) ? "EUR" : invoice.CurrencyCode!,
-                ExchangeRate = invoice.FxRateToCompany ?? 0m,
+                ExchangeRate = 1m,
                 RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
                 {
-                    RelationKey = new OctopusRelationKeyRef { Id = invoice.ClientId ?? 0 },
-                    ExternalRelationId = invoice.ClientId ?? invoice.CompanyId ?? 0
+                    RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
+                    ExternalRelationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                        ?? invoice.ClientId
+                        ?? invoice.CompanyId
+                        ?? relationId
+                        ?? 0
                 },
-                Comment = invoice.DetailText,
+                Comment = invoice.Text,
                 OrderReference = invoice.ProjectId?.ToString(CultureInfo.InvariantCulture),
-                Reference = invoice.PublicId,
+                Reference = invoice.StructuredCommOgm,
                 FinancialDiscount = 0m,
                 CustomFieldValueList = new List<OctopusCustomFieldValue>(),
                 InvoiceLines = invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
                 {
-                    ExternProductNr = line.Id.ToString(CultureInfo.InvariantCulture),
+                    ExternProductNr = null,
                     Description = line.Text,
                     Count = 1,
                     Unit = string.Empty,
                     UnitPrice = line.Price ?? 0m,
                     DiscountPercentage = line.DiscountPercent ?? 0m,
-                    VatCodeKey = (line.VatPercentage ?? 0m).ToString(CultureInfo.InvariantCulture),
+                    VatCodeKey = ResolveVatCodeKey(line.VatPercentage ?? 0m, vatTypes),
                     BookingAccountNr = 0,
-                    CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
+                    //CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
                     CustomFieldValueList = new List<OctopusCustomFieldValue>(),
                     IntrastatServiceData = null
                 }).ToList()
@@ -1846,7 +1891,133 @@ namespace CPMCore.Controllers
 
             await _octopusClient.CreateInvoiceAsync(dossierToken.Token, issuer.OctopusDossierNumber, payload, ct);
         }
+        private async Task<OctopusRelation?> EnsureOctopusRelationAsync(
+                  string dossierToken,
+                  string dossierNumber,
+                  IReadOnlyList<OctopusRelationLookup> lookups,
+                  OctopusRelationRequest request,
+                  CancellationToken ct)
+        {
+            foreach (var lookup in lookups)
+            {
+                var relation = await _octopusClient.FindRelationAsync(dossierToken, dossierNumber, lookup, ct);
 
+                if (relation != null)
+                    return relation;
+            }
+
+            return await _octopusClient.UpsertRelationAsync(dossierToken, dossierNumber, request, ct);
+        }
+
+        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(Invoices invoice, ClientAccount? clientAccount)
+        {
+            var lookups = new List<OctopusRelationLookup>();
+
+            if (clientAccount?.OctopusRelationId is int relationId and > 0)
+            {
+                lookups.Add(new OctopusRelationLookup { RelationId = relationId });
+            }
+
+            var vatNumber = NormalizeVatNumber(invoice.VatNumber ?? clientAccount?.Vatnumber);
+            if (!string.IsNullOrWhiteSpace(vatNumber))
+            {
+                lookups.Add(new OctopusRelationLookup { VatNumber = vatNumber });
+            }
+
+            var clientName = SelectClientName(invoice, clientAccount);
+
+            if (!string.IsNullOrWhiteSpace(clientName))
+            {
+                lookups.Add(new OctopusRelationLookup { Name = clientName });
+            }
+
+            return lookups;
+        }
+
+        private static OctopusRelationRequest BuildRelationRequest(Invoices invoice, ClientAccount? clientAccount)
+        {
+            var clientName = SelectClientName(invoice, clientAccount);
+
+            var request = new OctopusRelationRequest
+            {
+                RelationIdentificationServiceData = new OctopusRelationIdentificationData
+                {
+                    RelationKey = clientAccount?.OctopusRelationId is int relationId and > 0
+                        ? new OctopusRelationKey { Id = relationId }
+                        : null,
+                    ExternalRelationId = invoice.ClientId ?? invoice.CompanyId
+                },
+                Name = clientName,
+                Client = true,
+                Supplier = false,
+                Active = true,
+                StreetAndNr = BuildStreetAndNumber(
+                    clientAccount?.InvoiceStreet ?? clientAccount?.Street,
+                    clientAccount?.InvoiceHousenumber ?? clientAccount?.Housenumber,
+                    clientAccount?.InvoiceBusnumber ?? clientAccount?.Busnumber,
+                    invoice.Adress),
+                PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? invoice.PostalCode?.Postcode,
+                City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? invoice.PostalCode?.Gemeente,
+                Country = clientAccount?.InvoicePostalCode?.Country?.LandIsocode ?? clientAccount?.PostalCode?.Country?.LandIsocode ?? invoice.PostalCode?.Country?.LandIsocode,
+                Email = clientAccount?.InvoiceEmail ?? clientAccount?.Email,
+                VatNr = NormalizeVatNumber(invoice.VatNumber ?? clientAccount?.Vatnumber),
+                DefaultBookingAccountClient = 0,
+                DefaultBookingAccountSupplier = 0,
+                SupplierPaymentMethod = 0
+            };
+
+            request.Country ??= "BE";
+
+            return request;
+        }
+
+        private static string? SelectClientName(Invoices invoice, ClientAccount? clientAccount)
+        {
+            if (!string.IsNullOrWhiteSpace(clientAccount?.CompanyName))
+            {
+                return !string.IsNullOrWhiteSpace(invoice.ClientName) ? invoice.ClientName : clientAccount.CompanyName;
+            }
+
+            return !string.IsNullOrWhiteSpace(clientAccount?.Name) ? clientAccount.Name : invoice.ClientName;
+        }
+
+        private static string? BuildStreetAndNumber(string? street, string? houseNumber, string? busNumber, string? fallback)
+        {
+            var parts = new[] { street, houseNumber, string.IsNullOrWhiteSpace(busNumber) ? null : busNumber }
+                .Where(p => !string.IsNullOrWhiteSpace(p));
+
+            var result = string.Join(" ", parts);
+
+            if (string.IsNullOrWhiteSpace(result))
+                return fallback;
+
+            return result;
+        }
+
+        private static string? NormalizeVatNumber(string? vatNumber)
+        {
+            if (string.IsNullOrWhiteSpace(vatNumber))
+                return vatNumber;
+
+            var trimmed = vatNumber.Trim();
+            var cleaned = new string(trimmed.Where(char.IsLetterOrDigit).ToArray());
+            return string.IsNullOrWhiteSpace(cleaned) ? trimmed : cleaned;
+        }
+
+        private static string ResolveVatCodeKey(decimal vatPercentage, IReadOnlyCollection<Vattype> vatTypes)
+        {
+            const decimal tolerance = 0.001m;
+
+            var match = vatTypes.FirstOrDefault(v => Math.Abs(v.BasePercentage - vatPercentage) < tolerance);
+
+            if (match == null || string.IsNullOrWhiteSpace(match.Code))
+            {
+                throw new InvalidOperationException(
+                    $"Geen VAT-code gevonden voor percentage {vatPercentage:0.##} voor dit facturatiebedrijf.");
+            }
+
+            return match.Code;
+        }
 
         private async Task SetIssuerViewBagsAsync(int issuerId, CancellationToken ct)
         {
