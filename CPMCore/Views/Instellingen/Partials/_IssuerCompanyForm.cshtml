@@ -151,6 +151,13 @@
                             </div>
                         </div>
                         <div class="form-group row align-items-center pb-3">
+                            <label asp-for="InvoiceSendEmail" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <input asp-for="InvoiceSendEmail" class="form-control form-control-modern" placeholder="Verzend e-mail adres" />
+                                <small class="text-muted">Wordt gebruikt als afzender voor Octopus factuurverzending.</small>
+                            </div>
+                        </div>
+                        <div class="form-group row align-items-center pb-3">
                             <label asp-for="Phone" class="col-md-3 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
                                 <input asp-for="Phone" class="form-control form-control-modern" placeholder="Telefoon" />

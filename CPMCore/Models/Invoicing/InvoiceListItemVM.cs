@@ -15,5 +15,14 @@
         public bool IsCreditNote { get; set; }
         public long InvoiceSortValue { get; set; }
         public string StatusLabel => Status.GetDisplayName();
+        public bool RequiresDigitalInvoice { get; set; }
+        public bool HasEmail { get; set; }
+        public int? ClientType { get; set; }
+        public bool IsSupplier { get; set; }
+        public bool HasCompanyName { get; set; }
+        public string OctopusWorkflowState { get; set; }
+        public bool DigitallySent { get; set; }
+        public bool DigitalSendSkipped { get; set; }
+        public bool ShowPrintButton { get; set; }
     }
 }

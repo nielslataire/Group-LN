@@ -160,7 +160,13 @@
                                     <td>@typeLabel</td>
                                     <td>@r.ClientName</td>
                                     <td>@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
-                                    <td><span class="@BadgeClass(r.Status)">@r.StatusLabel</span></td>
+                                    <td>
+                                        <span class="@BadgeClass(r.Status)">@r.StatusLabel</span>
+                                        @if (r.DigitallySent)
+                                        {
+                                            <span class="badge bg-info text-dark ms-1">Digitaal verzonden</span>
+                                        }
+                                    </td>
                                     <td class="text-end">@(r.GrossTotal.HasValue? r.GrossTotal.Value.ToString("C", culture) : "-")</td>
                                     <td class="text-end">@(r.Balance.HasValue? r.Balance.Value.ToString("C", culture) : "-")</td>
                                     <td class="text-end">
@@ -235,6 +241,15 @@
                                                target="_blank" class="ms-1 me-1">
                                                 <i class="fa-regular fa-file-pdf  fs-5"></i>
                                             </a>
+                                            @if (r.ShowPrintButton)
+                                            {
+                                                <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                                   asp-action="Pdf"
+                                                   asp-route-id="@r.Id"
+                                                   target="_blank" class="ms-1 me-1">
+                                                    <i class="bx bx-printer fs-5"></i>
+                                                </a>
+                                            }
                                             @if (canManageInvoices)
                                             {
                                                 <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
@@ -266,6 +281,15 @@
                                                target="_blank" class="ms-1 me-1">
                                                 <i class="fa-regular fa-file-pdf  fs-5"></i>
                                             </a>
+                                            @if (r.ShowPrintButton)
+                                            {
+                                                <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                                   asp-action="Pdf"
+                                                   asp-route-id="@r.Id"
+                                                   target="_blank" class="ms-1 me-1">
+                                                    <i class="bx bx-printer fs-5"></i>
+                                                </a>
+                                            }
                                             @if (isAdminUser)
                                             {
                                                 <a href="#ModalDeleteInvoice"

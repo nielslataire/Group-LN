@@ -86,6 +86,11 @@ namespace CPMCore.Models.Instellingen
         public string? EmailSubjectTemplate { get; set; }
         [Display(Name = "Email body template")]
         public string? EmailBodyTemplate { get; set; }
+
+        [Display(Name = "Afzender e-mailadres facturen")]
+        [EmailAddress]
+        public string? InvoiceSendEmail { get; set; }
+
         [Display(Name = "Factuur voettekst")]
         public string? InvoiceFooterHtml { get; set; }
         [Display(Name = "Standaardtaal")]

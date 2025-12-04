@@ -9,5 +9,11 @@
     Public Property Paid As Decimal
     Public Property Balance As Decimal?
     Public Property IsCreditNote As Boolean
+    Public Property RequiresDigitalInvoice As Boolean
+    Public Property HasEmail As Boolean
+    Public Property ClientType As Integer?
+    Public Property IsSupplier As Boolean
+    Public Property HasCompanyName As Boolean
+    Public Property OctopusWorkflowState As String
 
 End Class

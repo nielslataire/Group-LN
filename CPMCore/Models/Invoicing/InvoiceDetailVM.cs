@@ -22,6 +22,15 @@ namespace CPMCore.Models.Invoicing
         public decimal? PaidAmount { get; set; }
         public bool IsCreditNote { get; set; }
         public decimal? Balance { get; set; }
+        public int? OctopusBookyearId { get; set; }
+        public string? OctopusJournalKey { get; set; }
+        public int? OctopusDocumentSequenceNr { get; set; }
+        public string? OctopusWorkflowState { get; set; }
+        public DateTime? OctopusWorkflowUpdatedAt { get; set; }
+        public string? OctopusDeliveryState { get; set; }
+        public string? OctopusDeliveryComment { get; set; }
+        public DateTime? OctopusDeliveryDateTime { get; set; }
+        public DateTime? OctopusDeliveryUpdatedAt { get; set; }
         public IReadOnlyList<InvoiceDetailLineVM> Lines { get; set; } = Array.Empty<InvoiceDetailLineVM>();
         public IReadOnlyList<InvoiceEmailLogItemVM> EmailLogs { get; set; } = Array.Empty<InvoiceEmailLogItemVM>();
         public DateTime? LastEmailSentAt { get; set; }

@@ -176,4 +176,102 @@ namespace CPMCore.Services.Octopus
         [JsonPropertyName("originCountry")]
         public string? OriginCountry { get; set; }
     }
+    public class OctopusInvoiceSendRequest
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKeyRef? BookyearKey { get; set; }
+
+        [JsonPropertyName("journal")]
+        public string? Journal { get; set; }
+
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
+
+        [JsonPropertyName("toDocumentSequenceNr")]
+        public int ToDocumentSequenceNr { get; set; }
+
+        [JsonPropertyName("fromMailAddress")]
+        public string? FromMailAddress { get; set; }
+
+        [JsonPropertyName("ccMailAddress")]
+        public string? CcMailAddress { get; set; }
+
+        [JsonPropertyName("bccMailAddress")]
+        public string? BccMailAddress { get; set; }
+
+        [JsonPropertyName("excludeOctopusPdf")]
+        public bool ExcludeOctopusPdf { get; set; } = true;
+
+        [JsonPropertyName("forceUseEmail")]
+        public bool ForceUseEmail { get; set; }
+    }
+
+    public class OctopusInvoiceSendResponse
+    {
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("sendInvoiceStatusList")]
+        public List<OctopusSendInvoiceStatusServiceData> SendInvoiceStatusList { get; set; } = new();
+    }
+
+    public class OctopusSendInvoiceStatusServiceData
+    {
+        [JsonPropertyName("statusCode")]
+        public int StatusCode { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("documentKey")]
+        public OctopusDocumentKeyServiceData? DocumentKey { get; set; }
+
+        [JsonPropertyName("sendMethod")]
+        public string? SendMethod { get; set; }
+    }
+
+    public class OctopusDocumentKeyServiceData
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKeyRef? BookyearKey { get; set; }
+
+        [JsonPropertyName("journal")]
+        public string? Journal { get; set; }
+
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
+    }
+
+    public class OctopusDocumentSelectionData
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKeyRef? BookyearKey { get; set; }
+
+        [JsonPropertyName("journal")]
+        public string? Journal { get; set; }
+
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
+
+        [JsonPropertyName("toDocumentSequenceNr")]
+        public int ToDocumentSequenceNr { get; set; }
+    }
+
+    public class OctopusDocumentDeliveryState
+    {
+        [JsonPropertyName("documentKey")]
+        public OctopusDocumentKeyServiceData? DocumentKey { get; set; }
+
+        [JsonPropertyName("deliveryState")]
+        public string? DeliveryState { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("deliveryDateTime")]
+        public DateTime? DeliveryDateTime { get; set; }
+    }
 }

@@ -27,6 +27,26 @@
         InvoiceStatus.Cancelled => "badge bg-dark",
         _ => "badge bg-light text-dark"
     };
+    string OctopusBadgeClass(string? state) => (state ?? string.Empty).ToUpperInvariant() switch
+    {
+        "EMAILED" or "PEPPOL_SEND_OK" => "badge bg-success",
+        "PRINTED" or "PRINTED_AND_EMAILED" or "PUBLISHED" or "EXPORTED" => "badge bg-info text-dark",
+        "ERROR" or "PEPPOL_SEND_FAILED" => "badge bg-danger",
+        "PEPPOL_SENDING_IN_PROGRESS" => "badge bg-warning text-dark",
+        _ => "badge bg-secondary"
+    };
+
+    string FormatOctopusState(string? state)
+    {
+        if (string.IsNullOrWhiteSpace(state))
+        {
+            return "Onbekend";
+        }
+
+        var normalized = state.Replace('_', ' ').ToLowerInvariant();
+        var localCulture = CultureInfo.GetCultureInfo("nl-BE");
+        return localCulture.TextInfo.ToTitleCase(normalized);
+    }
 }
 @section PageStyle
 {
@@ -176,7 +196,29 @@
                 Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy")<br />
                 Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")<br />
                 Status: <span class="@BadgeClass(Model.Status)">@Model.StatusLabel</span>
-
+                @if (Model.OctopusDocumentSequenceNr.HasValue)
+                {
+                    <div class="mt-3">
+                        <div>Octopus doc.nr: <strong>@Model.OctopusDocumentSequenceNr</strong></div>
+                        @if (!string.IsNullOrWhiteSpace(Model.OctopusJournalKey))
+                        {
+                            <div>Octopus dagboek: @Model.OctopusJournalKey</div>
+                        }
+                        <div class="mt-1">Leverstatus: <span class="@OctopusBadgeClass(Model.OctopusDeliveryState)">@FormatOctopusState(Model.OctopusDeliveryState)</span></div>
+                        @if (Model.OctopusDeliveryDateTime.HasValue)
+                        {
+                            <div>Laatst gemeld: @Model.OctopusDeliveryDateTime.Value.ToString("g")</div>
+                        }
+                        else if (Model.OctopusDeliveryUpdatedAt.HasValue)
+                        {
+                            <div>Laatst gecontroleerd: @Model.OctopusDeliveryUpdatedAt.Value.ToString("g")</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.OctopusDeliveryComment))
+                        {
+                            <div class="small text-muted">@Model.OctopusDeliveryComment</div>
+                        }
+                    </div>
+                }
              
             </div>
         </div>

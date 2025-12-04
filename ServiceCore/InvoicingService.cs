@@ -116,6 +116,12 @@ namespace ServiceCore
         {
             var query =
                 from i in _db.Invoices.AsNoTracking()
+                let contactEmail = i.ClientIdClientContactsNavigation != null
+                                  ? (i.ClientIdClientContactsNavigation.InvoiceEmail ?? i.ClientIdClientContactsNavigation.Email)
+                                  : null
+                let accountEmail = i.ClientIdClientAccountNavigation != null
+                    ? (i.ClientIdClientAccountNavigation.InvoiceEmail ?? i.ClientIdClientAccountNavigation.Email)
+                    : null
                 from bal in _db.VwInvoiceBalance
                              .AsNoTracking()
                              .Where(v => v.Id == i.Id)
@@ -138,7 +144,21 @@ namespace ServiceCore
                     StatusName = st != null ? st.Name : null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     Balance = (decimal?)bal.Balance ?? 0m,
-                    IsCreditNote = series != null && series.IsCreditNote
+                    IsCreditNote = series != null && series.IsCreditNote,
+                    RequiresDigitalInvoice = i.CompanyId.HasValue
+                        ? true
+                        : (i.ClientIdClientContactsNavigation != null
+                            ? i.ClientIdClientContactsNavigation.RequiresDigitalInvoice
+                            : i.ClientIdClientAccountNavigation != null && i.ClientIdClientAccountNavigation.RequiresDigitalInvoice),
+                    HasEmail = !string.IsNullOrWhiteSpace(contactEmail ?? accountEmail),
+                    ClientType = i.ClientType,
+                    IsSupplier = i.CompanyId.HasValue,
+                    HasCompanyName = !string.IsNullOrWhiteSpace(i.ClientIdClientAccountNavigation != null
+                        ? i.ClientIdClientAccountNavigation.CompanyName
+                        : i.ClientIdClientContactsNavigation != null
+                            ? i.ClientIdClientContactsNavigation.CompanyName
+                            : null),
+                    OctopusWorkflowState = i.OctopusWorkflowState
                 };
 
             return await query.ToListAsync(ct);
@@ -157,6 +177,12 @@ namespace ServiceCore
 
             var result =
                 from i in q
+                let contactEmail = i.ClientIdClientContactsNavigation != null
+                   ? (i.ClientIdClientContactsNavigation.InvoiceEmail ?? i.ClientIdClientContactsNavigation.Email)
+                   : null
+                let accountEmail = i.ClientIdClientAccountNavigation != null
+                    ? (i.ClientIdClientAccountNavigation.InvoiceEmail ?? i.ClientIdClientAccountNavigation.Email)
+                    : null
                 from bal in _db.VwInvoiceBalance.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
                 join s in _db.Set<InvoiceStatusLookup>().AsNoTracking() on i.StatusId equals s.Id into sj
                 from st in sj.DefaultIfEmpty()
@@ -169,8 +195,21 @@ namespace ServiceCore
                     InvoiceDate = i.Date,
                     StatusId = i.StatusId,
                     StatusName = st != null ? st.Name : null,
-                    GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
-                    Balance = (decimal?)bal.Balance ?? 0m
+                    Balance = (decimal?)bal.Balance ?? 0m,
+                    RequiresDigitalInvoice = i.CompanyId.HasValue
+                        ? true
+                        : (i.ClientIdClientContactsNavigation != null
+                            ? i.ClientIdClientContactsNavigation.RequiresDigitalInvoice
+                            : i.ClientIdClientAccountNavigation != null && i.ClientIdClientAccountNavigation.RequiresDigitalInvoice),
+                    HasEmail = !string.IsNullOrWhiteSpace(contactEmail ?? accountEmail),
+                    ClientType = i.ClientType,
+                    IsSupplier = i.CompanyId.HasValue,
+                    HasCompanyName = !string.IsNullOrWhiteSpace(i.ClientIdClientAccountNavigation != null
+                        ? i.ClientIdClientAccountNavigation.CompanyName
+                        : i.ClientIdClientContactsNavigation != null
+                            ? i.ClientIdClientContactsNavigation.CompanyName
+                            : null),
+                    OctopusWorkflowState = i.OctopusWorkflowState
                 };
 
             return await result.ToListAsync(ct);
@@ -338,6 +377,15 @@ namespace ServiceCore
                 ProjectId = invoice.ProjectId,
                 SupplierContractId = invoice.SupplierContractId,
                 PaymentTermId = invoice.PaymentTermId,
+                OctopusBookyearId = invoice.OctopusBookyearId,
+                OctopusJournalKey = invoice.OctopusJournalKey,
+                OctopusDocumentSequenceNr = invoice.OctopusDocumentSequenceNr,
+                OctopusWorkflowState = invoice.OctopusWorkflowState,
+                OctopusWorkflowUpdatedAt = invoice.OctopusWorkflowUpdatedAt,
+                OctopusDeliveryState = invoice.OctopusDeliveryState,
+                OctopusDeliveryComment = invoice.OctopusDeliveryComment,
+                OctopusDeliveryDateTime = invoice.OctopusDeliveryDateTime,
+                OctopusDeliveryUpdatedAt = invoice.OctopusDeliveryUpdatedAt,
             };
         }
 

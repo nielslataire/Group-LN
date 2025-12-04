@@ -10,6 +10,7 @@
     Public Property City As String
     Public Property CountryCode As String
     Public Property Email As String
+    Public Property InvoiceSendEmail As String
     Public Property Phone As String
     Public Property Phone2 As String
     Public Property LogoPath As String

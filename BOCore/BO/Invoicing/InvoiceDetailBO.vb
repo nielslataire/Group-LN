@@ -60,5 +60,16 @@ Public Class InvoiceDetailBO
     Public Property SupplierContractId As Integer?
     Public Property PaymentTermId As Integer?
 
+    Public Property OctopusBookyearId As Integer?
+    Public Property OctopusJournalKey As String
+    Public Property OctopusDocumentSequenceNr As Integer?
+    Public Property OctopusWorkflowState As String
+    Public Property OctopusWorkflowUpdatedAt As Date?
+    Public Property OctopusDeliveryState As String
+    Public Property OctopusDeliveryComment As String
+    Public Property OctopusDeliveryDateTime As Date?
+    Public Property OctopusDeliveryUpdatedAt As Date?
+
+
     Public Property Lines As List(Of InvoiceLineBO)
 End Class

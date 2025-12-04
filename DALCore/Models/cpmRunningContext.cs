@@ -1336,6 +1336,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ForeignGrossTotal).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.FxRateToCompany).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.HeaderDescription).HasMaxLength(400);
+            entity.Property(e => e.OctopusDeliveryComment).HasMaxLength(400);
+            entity.Property(e => e.OctopusDeliveryState).HasMaxLength(50);
+            entity.Property(e => e.OctopusJournalKey).HasMaxLength(50);
+            entity.Property(e => e.OctopusWorkflowState).HasMaxLength(50);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
             entity.Property(e => e.PublicId).HasMaxLength(50);
             entity.Property(e => e.QrEpcPayload).HasMaxLength(512);
@@ -1488,6 +1492,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.EpcRemittanceType).HasMaxLength(10);
             entity.Property(e => e.FontFamily).HasMaxLength(100);
             entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
+            entity.Property(e => e.InvoiceSendEmail).HasMaxLength(200);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LegalName).HasMaxLength(200);
             entity.Property(e => e.LogoPath).HasMaxLength(400);

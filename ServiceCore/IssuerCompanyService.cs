@@ -52,6 +52,7 @@ namespace ServiceCore
                     City = x.company.City,
                     CountryCode = x.company.CountryCode,
                     Email = x.company.Email,
+                    InvoiceSendEmail = x.company.InvoiceSendEmail,
                     Phone = x.company.Phone,
                     Phone2 = x.company.Phone2,
                     LogoPath = x.company.LogoPath,
@@ -278,6 +279,7 @@ namespace ServiceCore
                 City = x.City,
                 CountryCode = x.CountryCode,
                 Email = x.Email,
+                InvoiceSendEmail = x.InvoiceSendEmail,
                 Phone = x.Phone,
                 Phone2 = x.Phone2,
                 LogoPath = x.LogoPath,
@@ -335,6 +337,7 @@ namespace ServiceCore
             e.City = bo.City?.Trim();
             e.CountryCode = bo.CountryCode?.Trim();
             e.Email = bo.Email?.Trim();
+            e.InvoiceSendEmail = bo.InvoiceSendEmail?.Trim();
             e.Phone = bo.Phone?.Trim();
             e.Phone2 = bo.Phone2?.Trim();
             e.LogoPath = bo.LogoPath?.Trim();

@@ -19,7 +19,7 @@ namespace CPMCore.Models.Invoicing
         public int? PartyId { get; set; }
         public InvoicePartyType? PartyType { get; set; }
 
-        public StartStatus StartAs { get; set; } = StartStatus.Invoice;
+        public StartStatus StartAs { get; set; } = StartStatus.Draft;
         public bool IsCreditNote { get; set; }
 
         public InvoiceMode Mode { get; set; } = InvoiceMode.Free;

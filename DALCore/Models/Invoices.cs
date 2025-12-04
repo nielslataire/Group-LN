@@ -83,6 +83,24 @@ public partial class Invoices
 
     public int? SupplierContractId { get; set; }
 
+    public int? OctopusBookyearId { get; set; }
+
+    public string OctopusJournalKey { get; set; }
+
+    public int? OctopusDocumentSequenceNr { get; set; }
+
+    public string OctopusDeliveryState { get; set; }
+
+    public string OctopusDeliveryComment { get; set; }
+
+    public DateTime? OctopusDeliveryDateTime { get; set; }
+
+    public DateTime? OctopusDeliveryUpdatedAt { get; set; }
+
+    public string OctopusWorkflowState { get; set; }
+
+    public DateTime? OctopusWorkflowUpdatedAt { get; set; }
+
     public virtual ClientAccount ClientIdClientAccountNavigation { get; set; }
 
     public virtual ClientContacts ClientIdClientContactsNavigation { get; set; }

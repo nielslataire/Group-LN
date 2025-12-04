@@ -27,10 +27,14 @@ namespace CPMCore.Services.Octopus
 
         Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default);
 
-        Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
-        Task UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default);
-    
-}
+        Task<bool> CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
+        Task<bool> UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default);
+
+        Task<OctopusInvoiceSendResponse> SendInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceSendRequest payload, CancellationToken ct = default);
+
+        Task<IReadOnlyList<OctopusDocumentDeliveryState>> GetInvoiceDeliveryStatesAsync(string dossierToken, string dossierNumber, OctopusDocumentSelectionData payload, CancellationToken ct = default);
+
+    }
 
     public class OctopusApiClient : IOctopusApiClient
     {
@@ -237,7 +241,7 @@ namespace CPMCore.Services.Octopus
             return relation ?? payload.ToRelation();
         }
 
-        public async Task CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default)
+        public async Task<bool> CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default)
         {
             var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices");
             EnsureUrl(url, "Factuur aanmaken");
@@ -250,9 +254,12 @@ namespace CPMCore.Services.Octopus
 
             using var response = await _httpClient.SendAsync(request, ct);
             await EnsureSuccessAsync(response, url);
+            return response.StatusCode == HttpStatusCode.OK
+                || response.StatusCode == HttpStatusCode.Created
+                || response.StatusCode == HttpStatusCode.NoContent;
         }
-    public async Task UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default)
-    {
+        public async Task<bool> UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default)
+        {
         ArgumentNullException.ThrowIfNull(payload);
 
         if (string.IsNullOrWhiteSpace(payload.JournalKey))
@@ -290,10 +297,51 @@ namespace CPMCore.Services.Octopus
 
         using var response = await _httpClient.SendAsync(request, ct);
         await EnsureSuccessAsync(response, url);
-    }
+            return response.StatusCode == HttpStatusCode.NoContent
+            || response.StatusCode == HttpStatusCode.OK;
+        }
 
+        public async Task<OctopusInvoiceSendResponse> SendInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceSendRequest payload, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/send");
+            EnsureUrl(url, "Factuur verzenden");
 
-    private static string BuildUrl(string baseUrl, string path)
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var sendResponse = await response.Content.ReadFromJsonAsync<OctopusInvoiceSendResponse>(cancellationToken: ct)
+                ?? new OctopusInvoiceSendResponse { Success = true };
+
+            return sendResponse;
+        }
+
+        public async Task<IReadOnlyList<OctopusDocumentDeliveryState>> GetInvoiceDeliveryStatesAsync(string dossierToken, string dossierNumber, OctopusDocumentSelectionData payload, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/send/report/deliverystate");
+            EnsureUrl(url, "Factuur afleverstatus");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(payload)
+            };
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusDocumentDeliveryState>>(cancellationToken: ct)
+                         ?? new List<OctopusDocumentDeliveryState>();
+
+            return result;
+        }
+
+        private static string BuildUrl(string baseUrl, string path)
         {
             baseUrl ??= string.Empty;
             return $"{baseUrl.TrimEnd('/')}/{path}";

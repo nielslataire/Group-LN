@@ -107,6 +107,8 @@ public partial class IssuerCompany
 
     public string OctopusDossierNumber { get; set; }
 
+    public string InvoiceSendEmail { get; set; }
+
     public virtual CompanyLegalForm CompanyLegalForm { get; set; }
 
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
