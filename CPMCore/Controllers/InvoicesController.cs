@@ -267,6 +267,21 @@ namespace CPMCore.Controllers
                     ? RedirectToAction(nameof(Index), new { issuerCompanyId })
                     : RedirectToAction(nameof(Index));
             }
+            try
+            {
+                await SendInvoiceToOctopusAsync(id, ct, sendOnly: true);
+                detail = await _invoices.GetDetailAsync(id, ct) ?? detail;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Octopus send retry blocked for invoice {InvoiceId}", id);
+                AddMessage("error", ex.Message, "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Octopus send retry failed for invoice {InvoiceId}", id);
+                AddMessage("error", "Factuur kon niet naar Octopus verstuurd worden.", "Factuur");
+            }
 
             var formMode = ParseSendMode(mode);
             var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: true, checkPeppol: true, formMode, ct);
@@ -1854,7 +1869,7 @@ namespace CPMCore.Controllers
                 : InvoiceSendFormMode.Standard;
         }
 
-        private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct)
+        private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct, bool sendOnly = false)
         {
             try
             {
@@ -1885,7 +1900,7 @@ namespace CPMCore.Controllers
                     throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
 
                 var detail = await _invoices.GetDetailAsync(invoiceId, ct)
-                    ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
+                       ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
 
                 var clientEmail = detail.ClientEmail?.Trim();
                 var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
@@ -1938,6 +1953,12 @@ namespace CPMCore.Controllers
                 if (progress.SendCompleted)
                     return;
 
+                if (sendOnly && !progress.CreationCompleted)
+                    throw new InvalidOperationException("Factuur moet eerst in Octopus aangemaakt worden.");
+
+                if (sendOnly && !progress.UploadCompleted)
+                    throw new InvalidOperationException("Factuur moet eerst als bijlage naar Octopus geüpload worden.");
+
                 var structuredOgm = BuildStructuredOgm(invoice, fiscalYear, documentSequenceNr);
 
                 var formattedPublicId = string.IsNullOrWhiteSpace(invoice.PublicId)
@@ -1950,6 +1971,9 @@ namespace CPMCore.Controllers
 
                 if (!progress.CreationCompleted)
                 {
+                    if (sendOnly)
+                        throw new InvalidOperationException("Octopus-factuur is nog niet aangemaakt.");
+
                     var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation);
                     if (!relationLookups.Any())
                     {
@@ -2045,6 +2069,9 @@ namespace CPMCore.Controllers
 
                 if (!progress.UploadCompleted)
                 {
+                    if (sendOnly)
+                        throw new InvalidOperationException("Octopus-factuurbijlage is nog niet geüpload.");
+
                     var issuerCompany = await _ics.GetAsync(issuer.Id, ct)
                         ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden voor PDF-opmaak.");
 
