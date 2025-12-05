@@ -267,21 +267,6 @@ namespace CPMCore.Controllers
                     ? RedirectToAction(nameof(Index), new { issuerCompanyId })
                     : RedirectToAction(nameof(Index));
             }
-            try
-            {
-                await SendInvoiceToOctopusAsync(id, ct, sendOnly: true);
-                detail = await _invoices.GetDetailAsync(id, ct) ?? detail;
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Octopus send retry blocked for invoice {InvoiceId}", id);
-                AddMessage("error", ex.Message, "Factuur");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Octopus send retry failed for invoice {InvoiceId}", id);
-                AddMessage("error", "Factuur kon niet naar Octopus verstuurd worden.", "Factuur");
-            }
 
             var formMode = ParseSendMode(mode);
             var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: true, checkPeppol: true, formMode, ct);
@@ -454,6 +439,29 @@ namespace CPMCore.Controllers
             }
 
             return RedirectToAction(nameof(Send), new { id = detail.Id, issuerCompanyId = vm.IssuerCompanyId, mode = isCopyRequest ? "copy" : null });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResendOctopus(int id, int issuerCompanyId, CancellationToken ct = default)
+        {
+            try
+            {
+                await SendInvoiceToOctopusAsync(id, ct, sendOnly: true, forceSendStep: true);
+                AddMessage("success", "Factuur opnieuw via Octopus verstuurd.", "Factuur");
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Octopus resend blocked for invoice {InvoiceId}", id);
+                AddMessage("error", ex.Message, "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Octopus resend failed for invoice {InvoiceId}", id);
+                AddMessage("error", "Factuur kon niet opnieuw via Octopus verzonden worden.", "Factuur");
+            }
+
+            return RedirectToAction(nameof(Send), new { id, issuerCompanyId });
         }
 
         // DELETE (POST)
@@ -1824,6 +1832,13 @@ namespace CPMCore.Controllers
                 vm.ExistingUblVersion = ubl.UblVersion;
             }
 
+            var octopusProgress = GetOctopusWorkflowProgress(detail.OctopusWorkflowState);
+            var hasClientEmail = !string.IsNullOrWhiteSpace(detail.ClientEmail);
+            vm.CanRetryOctopusSend = detail.RequiresDigitalInvoice
+                && hasClientEmail
+                && octopusProgress.CreationCompleted
+                && octopusProgress.UploadCompleted;
+
             if (checkPeppol)
             {
                 if (issuer.PeppolEnabled && !string.IsNullOrWhiteSpace(issuer.PeppolParticipantId))
@@ -1869,7 +1884,7 @@ namespace CPMCore.Controllers
                 : InvoiceSendFormMode.Standard;
         }
 
-        private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct, bool sendOnly = false)
+        private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct, bool sendOnly = false, bool forceSendStep = false)
         {
             try
             {
@@ -1900,7 +1915,7 @@ namespace CPMCore.Controllers
                     throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
 
                 var detail = await _invoices.GetDetailAsync(invoiceId, ct)
-                       ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
+                      ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
 
                 var clientEmail = detail.ClientEmail?.Trim();
                 var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
@@ -1950,7 +1965,7 @@ namespace CPMCore.Controllers
 
                 var progress = GetOctopusWorkflowProgress(invoice.OctopusWorkflowState);
 
-                if (progress.SendCompleted)
+                if (progress.SendCompleted && !forceSendStep)
                     return;
 
                 if (sendOnly && !progress.CreationCompleted)
@@ -2132,7 +2147,7 @@ namespace CPMCore.Controllers
                         : issuer.InvoiceSendEmail,
                     CcMailAddress = null,
                     BccMailAddress = null,
-                    ExcludeOctopusPdf = false,
+                    ExcludeOctopusPdf = true,
                     ForceUseEmail = false
                 };
 
@@ -2206,9 +2221,6 @@ namespace CPMCore.Controllers
                     : ex.Message;
                 throw new InvalidOperationException($"Octopus gaf een fout terug bij het boeken van de factuur: {message}", ex);
             }
-
-
-
 
         }
         private static (bool CreationCompleted, bool UploadCompleted, bool SendCompleted) GetOctopusWorkflowProgress(string? workflowState)

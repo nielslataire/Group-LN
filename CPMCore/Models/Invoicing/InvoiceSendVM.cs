@@ -132,6 +132,9 @@ namespace CPMCore.Models.Invoicing
         [BindNever]
         public bool ForcePdfOnly { get; set; }
 
+        [BindNever]
+        public bool CanRetryOctopusSend { get; set; }
+
         public bool IsCopyRequest { get; set; }
     }
 
