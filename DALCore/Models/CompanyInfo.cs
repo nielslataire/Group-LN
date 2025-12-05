@@ -61,6 +61,8 @@ public partial class CompanyInfo
 
     public bool IsCustomer { get; set; }
 
+    public int? OctopusRelationId { get; set; }
+
     public virtual ICollection<CompanyContacts> CompanyContacts { get; set; } = new List<CompanyContacts>();
 
     public virtual ICollection<CompanyDepartments> CompanyDepartments { get; set; } = new List<CompanyDepartments>();

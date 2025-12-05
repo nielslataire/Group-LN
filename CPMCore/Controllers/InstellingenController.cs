@@ -25,6 +25,7 @@ using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace CPMCore.Controllers;
 
@@ -309,6 +310,9 @@ public class InstellingenController : BaseController
             OctopusDossierToken = vm.OctopusDossierToken,
             OctopusDossierTokenValidUntil = vm.OctopusDossierTokenValidUntil,
             OctopusDossierNumber = vm.OctopusDossierNumber,
+            OctopusCustomFieldsJson = vm.OctopusCustomFieldsJson,
+            OctopusCustomFieldMappingsJson = BuildCustomFieldMappingJson(vm.CustomFieldMappings),
+            OctopusDownloadLinkCustomFieldKeyId = vm.OctopusDownloadLinkCustomFieldKeyId,
         };
         await _issuers.CreateAsync(bo);
         AddMessage("success", "Mijn bedrijf " + vm.Name + " toegevoegd.", "Geslaagd!");
@@ -331,6 +335,10 @@ public class InstellingenController : BaseController
         ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync(ct);
         ViewBag.OctopusBookyears = await _octopusBookyears.ListByIssuerAsync(id, ct);
         ViewBag.OctopusVatCodes = await _issuers.ListVatTypeAsync(id, ct);
+        ViewBag.InvoiceFieldOptions = GetInvoiceFieldOptions();
+
+        var customFields = await _issuers.ListOctopusCustomFieldsAsync(id, ct);
+        var storedMappings = DeserializeCustomFieldMappings(bo?.OctopusCustomFieldMappingsJson);
 
         var vm = new IssuerCompanyVM
         {
@@ -385,6 +393,10 @@ public class InstellingenController : BaseController
             OctopusDossierToken = bo.OctopusDossierToken,
             OctopusDossierTokenValidUntil = bo.OctopusDossierTokenValidUntil,
             OctopusDossierNumber = bo.OctopusDossierNumber,
+            OctopusCustomFieldsJson = bo.OctopusCustomFieldsJson,
+            OctopusCustomFieldMappingsJson = bo.OctopusCustomFieldMappingsJson,
+            OctopusDownloadLinkCustomFieldKeyId = bo.OctopusDownloadLinkCustomFieldKeyId,
+            CustomFieldMappings = BuildCustomFieldMappings(customFields, storedMappings)
         };
 
         if (TempData["OctopusDossiers"] is string dossiersJson && !string.IsNullOrWhiteSpace(dossiersJson))
@@ -428,6 +440,8 @@ public class InstellingenController : BaseController
             ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
             ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
             ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
+            ViewBag.InvoiceFieldOptions = GetInvoiceFieldOptions();
+            vm.CustomFieldMappings ??= new List<OctopusCustomFieldMappingVM>();
             PopulateInvoiceLayoutViewData();
             return View(vm);
         }
@@ -506,6 +520,9 @@ public class InstellingenController : BaseController
             OctopusDossierToken = vm.OctopusDossierToken,
             OctopusDossierTokenValidUntil = vm.OctopusDossierTokenValidUntil,
             OctopusDossierNumber = vm.OctopusDossierNumber,
+            OctopusCustomFieldsJson = vm.OctopusCustomFieldsJson,
+            OctopusCustomFieldMappingsJson = BuildCustomFieldMappingJson(vm.CustomFieldMappings),
+            OctopusDownloadLinkCustomFieldKeyId = vm.OctopusDownloadLinkCustomFieldKeyId,
         };
         await _issuers.UpdateAsync(bo);
 
@@ -644,7 +661,7 @@ public class InstellingenController : BaseController
             }
 
             var syncResult = await _octopusTokens.SyncDossierAsync(issuerId, issuer.OctopusDossierNumber, ct);
-            TempData["OctopusMessage"] = $"Dossier gesynchroniseerd: {syncResult.BookyearCount} boekjaren en {syncResult.VatCodeCount} verkoop-btw-codes.";
+            TempData["OctopusMessage"] = $"Dossier gesynchroniseerd: {syncResult.BookyearCount} boekjaren, {syncResult.VatCodeCount} verkoop-btw-codes en {syncResult.CustomFieldCount} customvelden.";
             TempData["OctopusMessageType"] = "success";
         }
         catch (Exception ex)
@@ -961,6 +978,82 @@ public class InstellingenController : BaseController
         TempData["Message"] = message;
         TempData["MessageType"] = messagetype;
         TempData["MessageTitle"] = messagetitle;
+    }
+
+    private static List<OctopusCustomFieldMappingBO> DeserializeCustomFieldMappings(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<OctopusCustomFieldMappingBO>();
+        }
+
+        return System.Text.Json.JsonSerializer.Deserialize<List<OctopusCustomFieldMappingBO>>(json)
+               ?? new List<OctopusCustomFieldMappingBO>();
+    }
+
+    private static List<OctopusCustomFieldMappingVM> BuildCustomFieldMappings(IEnumerable<OctopusCustomFieldBO> fields, IEnumerable<OctopusCustomFieldMappingBO> mappings)
+    {
+        var mappingByKey = mappings?
+            .GroupBy(m => m.CustomFieldKeyId)
+            .ToDictionary(g => g.Key, g => g.First().InvoiceField) ?? new Dictionary<int, string?>();
+
+        var list = new List<OctopusCustomFieldMappingVM>();
+
+        foreach (var field in fields ?? Array.Empty<OctopusCustomFieldBO>())
+        {
+            list.Add(new OctopusCustomFieldMappingVM
+            {
+                CustomFieldKeyId = field.CustomFieldKeyId,
+                TemplateCode = field.TemplateCode,
+                DescriptionNl = field.DescriptionNl,
+                DescriptionFr = field.DescriptionFr,
+                DescriptionEn = field.DescriptionEn,
+                DescriptionDe = field.DescriptionDe,
+                InvoiceField = mappingByKey.TryGetValue(field.CustomFieldKeyId, out var invoiceField)
+                    ? invoiceField
+                    : null
+            });
+        }
+
+        return list;
+    }
+
+    private static string BuildCustomFieldMappingJson(IEnumerable<OctopusCustomFieldMappingVM>? mappings)
+    {
+        var data = (mappings ?? Array.Empty<OctopusCustomFieldMappingVM>())
+            .Where(m => m != null && m.CustomFieldKeyId > 0 && !string.IsNullOrWhiteSpace(m.InvoiceField))
+            .Select(m => new OctopusCustomFieldMappingBO
+            {
+                CustomFieldKeyId = m.CustomFieldKeyId,
+                InvoiceField = m.InvoiceField!
+            })
+            .ToList();
+
+        return System.Text.Json.JsonSerializer.Serialize(data, new JsonSerializerOptions
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        });
+    }
+
+    private static IReadOnlyList<KeyValuePair<string, string>> GetInvoiceFieldOptions()
+    {
+        return new List<KeyValuePair<string, string>>
+        {
+            new("PublicId", "Factuurnummer"),
+            new("StructuredCommOgm", "Gestructureerde mededeling"),
+            new("ClientName", "Klantnaam"),
+            new("VatNumber", "BTW-nummer"),
+            new("VatRegime", "BTW regime"),
+            new("CurrencyCode", "Valuta"),
+            new("BankAccount", "Bankrekening"),
+            new("HeaderDescription", "Koptekst"),
+            new("Text", "Omschrijving"),
+            new("ExtraInfo", "Extra info"),
+            new("QrEpcPayload", "EPC QR payload"),
+            new("InvoiceMode", "Factuurmodus"),
+            new("Date", "Factuurdatum"),
+            new("ExpirationDate", "Vervaldatum")
+        };
     }
 
 

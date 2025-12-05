@@ -136,5 +136,27 @@ namespace CPMCore.Models.Instellingen
 
         [Display(Name = "Octopus dossiernummer")]
         public string? OctopusDossierNumber { get; set; }
+        public string? OctopusCustomFieldsJson { get; set; }
+
+        public string? OctopusCustomFieldMappingsJson { get; set; }
+
+        public int? OctopusDownloadLinkCustomFieldKeyId { get; set; }
+
+        public List<OctopusCustomFieldMappingVM> CustomFieldMappings { get; set; } = new();
+    }
+
+    public class OctopusCustomFieldMappingVM
+    {
+        public int CustomFieldKeyId { get; set; }
+        public string? TemplateCode { get; set; }
+        public string? DescriptionNl { get; set; }
+        public string? DescriptionFr { get; set; }
+        public string? DescriptionEn { get; set; }
+        public string? DescriptionDe { get; set; }
+        public string? InvoiceField { get; set; }
+
+        public string DisplayName => !string.IsNullOrWhiteSpace(TemplateCode)
+            ? $"{TemplateCode} — {DescriptionNl ?? DescriptionEn ?? DescriptionFr ?? DescriptionDe}"
+            : DescriptionNl ?? DescriptionEn ?? DescriptionFr ?? DescriptionDe ?? $"Field {CustomFieldKeyId}";
     }
 }

@@ -23,6 +23,7 @@ namespace CPMCore.Services.Octopus
 
         Task<IReadOnlyList<OctopusJournalItem>> GetJournalsAsync(string authenticateToken, string dossierToken, int bookyearKey, string dossierNumber, CancellationToken ct = default);
         Task<IReadOnlyList<OctopusVatCodeItem>> GetVatCodesAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
+        Task<IReadOnlyList<OctopusCustomFieldResponse>> GetCustomFieldsAsync(string dossierToken, string dossierNumber, CancellationToken ct = default);
         Task<OctopusRelation?> FindRelationAsync(string dossierToken, string dossierNumber, OctopusRelationLookup lookup, CancellationToken ct = default);
 
         Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default);
@@ -171,6 +172,22 @@ namespace CPMCore.Services.Octopus
 
             var result = await response.Content.ReadFromJsonAsync<List<OctopusVatCodeItem>>(cancellationToken: ct)
                          ?? new List<OctopusVatCodeItem>();
+            return result;
+        }
+        public async Task<IReadOnlyList<OctopusCustomFieldResponse>> GetCustomFieldsAsync(string dossierToken, string dossierNumber, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/customfields");
+            EnsureUrl(url, "Custom fields");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusCustomFieldResponse>>(cancellationToken: ct)
+                ?? new List<OctopusCustomFieldResponse>();
+
             return result;
         }
 
@@ -528,6 +545,42 @@ namespace CPMCore.Services.Octopus
         public int Id { get; set; }
     }
 
+    public class OctopusCustomFieldResponse
+    {
+        [JsonPropertyName("customFieldKey")]
+        public OctopusCustomFieldKey? CustomFieldKey { get; set; }
+
+        [JsonPropertyName("description")]
+        public OctopusCustomFieldDescription? Description { get; set; }
+
+        [JsonPropertyName("customFieldType")]
+        public int CustomFieldType { get; set; }
+
+        [JsonPropertyName("templateCode")]
+        public string? TemplateCode { get; set; }
+    }
+
+    public class OctopusCustomFieldKey
+    {
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+    }
+
+    public class OctopusCustomFieldDescription
+    {
+        [JsonPropertyName("description_NL")]
+        public string? DescriptionNl { get; set; }
+
+        [JsonPropertyName("description_FR")]
+        public string? DescriptionFr { get; set; }
+
+        [JsonPropertyName("description_EN")]
+        public string? DescriptionEn { get; set; }
+
+        [JsonPropertyName("description_DE")]
+        public string? DescriptionDe { get; set; }
+    }
+
     public class OctopusRelation
     {
         [JsonPropertyName("relationIdentificationServiceData")]
@@ -538,6 +591,8 @@ namespace CPMCore.Services.Octopus
 
         [JsonPropertyName("streetAndNr")]
         public string? StreetAndNr { get; set; }
+        [JsonPropertyName("firstname")]
+        public string? Firstname { get; set; }
 
         [JsonPropertyName("postalCode")]
         public string? PostalCode { get; set; }
@@ -558,6 +613,11 @@ namespace CPMCore.Services.Octopus
         public string? VatNr { get; set; }
         [JsonPropertyName("vatType")]
         public int? VatType { get; set; }
+        [JsonPropertyName("currencyCode")]
+        public string? CurrencyCode { get; set; }
+
+        [JsonPropertyName("contactperson")]
+        public string? Contactperson { get; set; }
 
         [JsonPropertyName("client")]
         public bool Client { get; set; }
@@ -593,6 +653,7 @@ namespace CPMCore.Services.Octopus
                 RelationIdentificationServiceData = RelationIdentificationServiceData,
                 Name = Name,
                 StreetAndNr = StreetAndNr,
+                Firstname = Firstname,
                 PostalCode = PostalCode,
                 City = City,
                 Country = Country,
@@ -600,6 +661,8 @@ namespace CPMCore.Services.Octopus
                 Email = Email,
                 VatNr = VatNr,
                 VatType = VatType,
+                CurrencyCode = CurrencyCode,
+                Contactperson = Contactperson,
                 Client = Client,
                 Supplier = Supplier,
                 Active = Active

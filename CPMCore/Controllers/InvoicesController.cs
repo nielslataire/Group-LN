@@ -10,6 +10,8 @@ using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using QuestPDF.Fluent;
 using ServiceCore;
@@ -24,6 +26,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,6 +55,7 @@ namespace CPMCore.Controllers
         private readonly IOctopusTokenManager _octopusTokens;
         private readonly UnitOfWorkCore _uow;
         private readonly cpmRunningContext _db;
+        private readonly IDataProtector _downloadLinkProtector;
         private static readonly HashSet<string> RefreshableOctopusStates = new(StringComparer.OrdinalIgnoreCase)
         {
             string.Empty,
@@ -88,6 +92,7 @@ namespace CPMCore.Controllers
             IPeppolSender peppolSender,
             IOctopusApiClient octopusClient,
             IOctopusTokenManager octopusTokens,
+            IDataProtectionProvider dataProtectionProvider,
             UnitOfWorkCore uow)
         {
             _invoices = invoices;
@@ -109,6 +114,7 @@ namespace CPMCore.Controllers
             _octopusTokens = octopusTokens;
             _uow = uow;
             _db = (cpmRunningContext)uow.Context;
+            _downloadLinkProtector = dataProtectionProvider.CreateProtector("OctopusInvoiceDownload");
         }
 
         // LIST
@@ -217,6 +223,54 @@ namespace CPMCore.Controllers
                 return NotFound();
 
             var dto = detail.ToInvoiceDto();
+            var bytes = _pdf.Render(dto, issuer);
+            var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
+                ? $"Factuur_{dto.Id}.pdf"
+                : $"{dto.PublicId}.pdf";
+
+            return File(bytes, "application/pdf", fileName);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("Invoices/OctopusDownload/{id:int}")]
+        public async Task<IActionResult> OctopusDownload(int id, string token, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return Unauthorized();
+            }
+
+            string payload;
+            try
+            {
+                payload = _downloadLinkProtector.Unprotect(token);
+            }
+            catch
+            {
+                return Unauthorized();
+            }
+
+            var parts = payload.Split('|');
+            if (parts.Length < 3 || !int.TryParse(parts[0], out var tokenId) || tokenId != id)
+            {
+                return Unauthorized();
+            }
+
+            var detail = await _invoices.GetDetailAsync(id, ct);
+            if (detail == null)
+                return NotFound();
+
+            if (!string.IsNullOrWhiteSpace(detail.PublicId) && !string.Equals(parts[1], detail.PublicId, StringComparison.Ordinal))
+            {
+                return Unauthorized();
+            }
+
+            var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
+            if (issuer == null)
+                return NotFound();
+
+            var dto = detail.ToInvoiceDto();
+            dto.PublicId ??= detail.PublicId;
             var bytes = _pdf.Render(dto, issuer);
             var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
                 ? $"Factuur_{dto.Id}.pdf"
@@ -1911,6 +1965,16 @@ namespace CPMCore.Controllers
                 var issuer = invoice.IssuerCompany
                     ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
 
+                CompanyInfo? company = null;
+                if (invoice.CompanyId.HasValue)
+                {
+                    company = await _db.CompanyInfo
+                        .Include(c => c.PostCode)!
+                            .ThenInclude(pc => pc.Country)
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(c => c.CompanyId == invoice.CompanyId.Value, ct);
+                }
+
                 if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
                     throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
 
@@ -1981,7 +2045,9 @@ namespace CPMCore.Controllers
                     : invoice.PublicId;
 
                 OctopusRelation? relation = null;
-                int? relationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId;
+                int? relationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                     ?? invoice.ClientIdClientContactsNavigation?.OctopusRelationId
+                     ?? company?.OctopusRelationId;
                 List<Vattype> vatTypes = new();
 
                 if (!progress.CreationCompleted)
@@ -1989,7 +2055,7 @@ namespace CPMCore.Controllers
                     if (sendOnly)
                         throw new InvalidOperationException("Octopus-factuur is nog niet aangemaakt.");
 
-                    var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation);
+                    var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation, company);
                     if (!relationLookups.Any())
                     {
                         throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
@@ -1999,11 +2065,13 @@ namespace CPMCore.Controllers
                         dossierToken.Token,
                         issuer.OctopusDossierNumber,
                         relationLookups,
-                        BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation),
+                       BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation, company),
                         ct);
 
                     relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
-                        ?? invoice.ClientIdClientAccountNavigation?.OctopusRelationId;
+                       ?? invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                       ?? invoice.ClientIdClientContactsNavigation?.OctopusRelationId
+                       ?? company?.OctopusRelationId;
 
                     if (relationId is null or <= 0)
                     {
@@ -2016,11 +2084,29 @@ namespace CPMCore.Controllers
                         clientAccount.OctopusRelationId = relationId;
                         await _db.SaveChangesAsync(ct);
                     }
+                    else if (invoice.ClientIdClientContactsNavigation is ClientContacts clientContact
+                        && clientContact.OctopusRelationId != relationId)
+                    {
+                        clientContact.OctopusRelationId = relationId;
+                        await _db.SaveChangesAsync(ct);
+                    }
+                    else if (company != null && company.OctopusRelationId != relationId)
+                    {
+                        var trackedCompany = await _db.CompanyInfo.FirstOrDefaultAsync(c => c.CompanyId == company.CompanyId, ct);
+
+                        if (trackedCompany != null)
+                        {
+                            trackedCompany.OctopusRelationId = relationId;
+                            await _db.SaveChangesAsync(ct);
+                        }
+                    }
 
                     vatTypes = await _db.Vattype
                         .Where(v => v.IssuerCompanyId == issuer.Id)
                         .AsNoTracking()
                         .ToListAsync(ct);
+
+                    var customFieldValues = BuildInvoiceCustomFieldValues(invoice, issuer, formattedPublicId);
 
                     var payload = new OctopusInvoiceCreateRequest
                     {
@@ -2045,7 +2131,7 @@ namespace CPMCore.Controllers
                         OrderReference = null,
                         Reference = structuredOgm,
                         FinancialDiscount = 0m,
-                        CustomFieldValueList = new List<OctopusCustomFieldValue>(),
+                        CustomFieldValueList = customFieldValues,
                         InvoiceLines = invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
                         {
                             ExternProductNr = null,
@@ -2357,7 +2443,7 @@ namespace CPMCore.Controllers
             return await _octopusClient.UpsertRelationAsync(dossierToken, dossierNumber, request, ct);
         }
 
-        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null)
+        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null, CompanyInfo? company = null)
         {
             var lookups = new List<OctopusRelationLookup>();
 
@@ -2365,20 +2451,30 @@ namespace CPMCore.Controllers
             {
                 lookups.Add(new OctopusRelationLookup { RelationId = relationId });
             }
+            else if (clientContact?.OctopusRelationId is int contactRelationId and > 0)
+            {
+                lookups.Add(new OctopusRelationLookup { RelationId = contactRelationId });
+            }
+            else if (company?.OctopusRelationId is int companyRelationId and > 0)
+            {
+                lookups.Add(new OctopusRelationLookup { RelationId = companyRelationId });
+            }
 
             var vatNumber = FormatVatNumberForOctopus(
-                invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber,
+               invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.Ondernemingsnummer,
                 clientAccount?.InvoicePostalCode?.Country?.LandIsocode
                     ?? clientAccount?.PostalCode?.Country?.LandIsocode
                     ?? clientContact?.InvoicePostalCode?.Country?.LandIsocode
                     ?? clientContact?.PostalCode?.Country?.LandIsocode
-                    ?? invoice.PostalCode?.Country?.LandIsocode);
+                     ?? company?.PostCode?.Country?.LandIsocode
+                    ?? invoice.PostalCode?.Country?.LandIsocode
+                    ?? company?.LandCode);
             if (!string.IsNullOrWhiteSpace(vatNumber))
             {
                 lookups.Add(new OctopusRelationLookup { VatNumber = vatNumber });
             }
 
-            var clientName = SelectClientName(invoice, clientAccount, clientContact);
+            var clientName = SelectClientName(invoice, clientAccount, clientContact, company);
 
             if (!string.IsNullOrWhiteSpace(clientName))
             {
@@ -2397,6 +2493,7 @@ namespace CPMCore.Controllers
                 return false;
 
             if (Different(current.Name, desired.Name)) return true;
+            if (Different(current.Firstname, desired.Firstname)) return true;
             if (Different(current.StreetAndNr, desired.StreetAndNr)) return true;
             if (Different(current.PostalCode, desired.PostalCode)) return true;
             if (Different(current.City, desired.City)) return true;
@@ -2404,22 +2501,31 @@ namespace CPMCore.Controllers
             if (!string.IsNullOrWhiteSpace(desired.Email) && Different(current.Email, desired.Email)) return true;
             if (!string.IsNullOrWhiteSpace(desired.VatNr) && Different(current.VatNr, desired.VatNr)) return true;
             if (desired.VatType.HasValue && current.VatType != desired.VatType) return true;
+            if (Different(current.CurrencyCode, desired.CurrencyCode)) return true;
+            if (Different(current.Contactperson, desired.Contactperson)) return true;
             if (current.Client != desired.Client || current.Supplier != desired.Supplier || current.Active != desired.Active) return true;
 
             return false;
         }
 
-        private static OctopusRelationRequest BuildRelationRequest(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact)
+        private static OctopusRelationRequest BuildRelationRequest(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact, CompanyInfo? company)
         {
-            var clientName = SelectClientName(invoice, clientAccount, clientContact);
+            var clientName = SelectClientName(invoice, clientAccount, clientContact, company);
             var countryCode = clientAccount?.InvoicePostalCode?.Country?.LandIsocode
                 ?? clientAccount?.PostalCode?.Country?.LandIsocode
                 ?? clientContact?.InvoicePostalCode?.Country?.LandIsocode
                 ?? clientContact?.PostalCode?.Country?.LandIsocode
-                ?? invoice.PostalCode?.Country?.LandIsocode;
+                ?? company?.PostCode?.Country?.LandIsocode
+                ?? invoice.PostalCode?.Country?.LandIsocode
+                ?? company?.LandCode;
             var isCompany = !string.IsNullOrWhiteSpace(clientAccount?.CompanyName)
                 || (!string.IsNullOrWhiteSpace(clientAccount?.Vatnumber))
-                || (!string.IsNullOrWhiteSpace(invoice.VatNumber) && invoice.ClientType != (int)InvoicePartyType.ClientContact);
+                || (!string.IsNullOrWhiteSpace(invoice.VatNumber) && invoice.ClientType != (int)InvoicePartyType.ClientContact)
+                || (!string.IsNullOrWhiteSpace(company?.Ondernemingsnummer));
+
+            var firstName = clientContact?.Forename
+                ?? clientAccount?.Name
+                ?? clientName;
 
             var request = new OctopusRelationRequest
             {
@@ -2427,23 +2533,30 @@ namespace CPMCore.Controllers
                 {
                     RelationKey = clientAccount?.OctopusRelationId is int relationId and > 0
                         ? new OctopusRelationKey { Id = relationId }
-                        : null,
+                        : clientContact?.OctopusRelationId is int contactRelationId and > 0
+                            ? new OctopusRelationKey { Id = contactRelationId }
+                            : company?.OctopusRelationId is int companyRelationId and > 0
+                                ? new OctopusRelationKey { Id = companyRelationId }
+                                : null,
                     ExternalRelationId = invoice.ClientId ?? invoice.CompanyId
                 },
                 Name = clientName,
+                Firstname = firstName,
                 Client = true,
-                Supplier = false,
+                Supplier = company != null,
                 Active = true,
                 StreetAndNr = BuildStreetAndNumber(
                     clientAccount?.InvoiceStreet ?? clientAccount?.Street ?? clientContact?.InvoiceStreet ?? clientContact?.Street,
                     clientAccount?.InvoiceHousenumber ?? clientAccount?.Housenumber ?? clientContact?.InvoiceHousenumber ?? clientContact?.Housenumber,
-                    clientAccount?.InvoiceBusnumber ?? clientAccount?.Busnumber ?? clientContact?.InvoiceBusnumber ?? clientContact?.Busnumber,
-                    invoice.Adress),
-                PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? clientContact?.InvoicePostalCode?.Postcode ?? clientContact?.PostalCode?.Postcode ?? invoice.PostalCode?.Postcode,
-                City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? clientContact?.InvoicePostalCode?.Gemeente ?? clientContact?.PostalCode?.Gemeente ?? invoice.PostalCode?.Gemeente,
+                    clientAccount?.InvoiceBusnumber ?? clientAccount?.Busnumber ?? clientContact?.InvoiceBusnumber ?? clientContact?.Busnumber ?? company?.Busnummer,
+                    invoice.Adress ?? company?.Straat),
+                PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? clientContact?.InvoicePostalCode?.Postcode ?? clientContact?.PostalCode?.Postcode ?? company?.Postcode ?? invoice.PostalCode?.Postcode,
+                City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? clientContact?.InvoicePostalCode?.Gemeente ?? clientContact?.PostalCode?.Gemeente ?? company?.Gemeente ?? invoice.PostalCode?.Gemeente,
                 Country = countryCode,
-                Email = clientAccount?.InvoiceEmail ?? clientContact?.InvoiceEmail ?? clientAccount?.Email ?? clientContact?.Email,
-                VatNr = FormatVatNumberForOctopus(invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber, countryCode),
+                Email = clientAccount?.InvoiceEmail ?? clientContact?.InvoiceEmail ?? company?.InvoiceEmail ?? clientAccount?.Email ?? clientContact?.Email ?? company?.Email,
+                VatNr = FormatVatNumberForOctopus(invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.Ondernemingsnummer, countryCode),
+                CurrencyCode = "EUR",
+                Contactperson = clientName,
                 DefaultBookingAccountClient = 0,
                 DefaultBookingAccountSupplier = 0,
                 SupplierPaymentMethod = 0,
@@ -2455,21 +2568,35 @@ namespace CPMCore.Controllers
             return request;
         }
 
-        private static string? SelectClientName(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null)
+        private static string? SelectClientName(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null, CompanyInfo? company = null)
         {
             if (!string.IsNullOrWhiteSpace(clientAccount?.CompanyName))
             {
-                return !string.IsNullOrWhiteSpace(invoice.ClientName) ? invoice.ClientName : clientAccount.CompanyName;
+                return clientAccount.CompanyName;
             }
 
             if (!string.IsNullOrWhiteSpace(clientContact?.CompanyName))
             {
-                return !string.IsNullOrWhiteSpace(invoice.ClientName) ? invoice.ClientName : clientContact.CompanyName;
+                return clientContact.CompanyName;
             }
 
-            return !string.IsNullOrWhiteSpace(clientAccount?.Name) ? clientAccount.Name : invoice.ClientName;
-        }
+            if (!string.IsNullOrWhiteSpace(company?.BedrijfsNaam))
+            {
+                return company.BedrijfsNaam;
+            }
 
+            if (!string.IsNullOrWhiteSpace(clientAccount?.Name))
+            {
+                return clientAccount.Name;
+            }
+
+            if (!string.IsNullOrWhiteSpace(clientContact?.Name))
+            {
+                return clientContact.Name;
+            }
+
+            return invoice.ClientName;
+        }
         private static string? BuildStreetAndNumber(string? street, string? houseNumber, string? busNumber, string? fallback)
         {
             var parts = new[] { street, houseNumber, string.IsNullOrWhiteSpace(busNumber) ? null : busNumber }
@@ -2932,6 +3059,92 @@ namespace CPMCore.Controllers
 
             var normalized = text.Replace("\r\n", "\n").Replace('\r', '\n');
             return normalized.Replace("\n", Environment.NewLine);
+        }
+
+        private List<OctopusCustomFieldValue> BuildInvoiceCustomFieldValues(Invoices invoice, IssuerCompany issuer, string? formattedPublicId)
+        {
+            var results = new List<OctopusCustomFieldValue>();
+            var mappings = DeserializeInvoiceCustomFieldMappings(issuer.OctopusCustomFieldMappingsJson);
+
+            foreach (var mapping in mappings)
+            {
+                var value = ResolveInvoiceFieldValue(invoice, mapping.InvoiceField, formattedPublicId);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    results.Add(new OctopusCustomFieldValue
+                    {
+                        CustomFieldKey = new OctopusCustomFieldKeyRef { Id = mapping.CustomFieldKeyId },
+                        Value = value
+                    });
+                }
+            }
+
+            if (issuer.OctopusDownloadLinkCustomFieldKeyId.HasValue)
+            {
+                var link = BuildInvoiceDownloadLink(invoice, formattedPublicId);
+                if (!string.IsNullOrWhiteSpace(link))
+                {
+                    var existing = results.FirstOrDefault(r => r.CustomFieldKey?.Id == issuer.OctopusDownloadLinkCustomFieldKeyId.Value);
+                    if (existing != null)
+                    {
+                        existing.Value = link;
+                    }
+                    else
+                    {
+                        results.Add(new OctopusCustomFieldValue
+                        {
+                            CustomFieldKey = new OctopusCustomFieldKeyRef { Id = issuer.OctopusDownloadLinkCustomFieldKeyId.Value },
+                            Value = link
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        private static List<OctopusCustomFieldMappingBO> DeserializeInvoiceCustomFieldMappings(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new List<OctopusCustomFieldMappingBO>();
+            }
+
+            return JsonSerializer.Deserialize<List<OctopusCustomFieldMappingBO>>(json)
+                   ?? new List<OctopusCustomFieldMappingBO>();
+        }
+
+        private static string? ResolveInvoiceFieldValue(Invoices invoice, string? invoiceField, string? formattedPublicId)
+        {
+            return invoiceField?.ToUpperInvariant() switch
+            {
+                "PUBLICID" => string.IsNullOrWhiteSpace(invoice.PublicId) ? formattedPublicId : invoice.PublicId,
+                "STRUCTUREDCOMMOGM" => invoice.StructuredCommOgm,
+                "CLIENTNAME" => invoice.ClientName
+                    ?? invoice.ClientIdClientAccountNavigation?.Name
+                    ?? invoice.ClientIdClientContactsNavigation?.Name,
+                "VATNUMBER" => invoice.VatNumber,
+                "VATREGIME" => invoice.VatRegime,
+                "CURRENCYCODE" => invoice.CurrencyCode,
+                "BANKACCOUNT" => invoice.BankAccount,
+                "HEADERDESCRIPTION" => invoice.HeaderDescription,
+                "TEXT" => invoice.Text,
+                "EXTRAINFO" => invoice.ExtraInfo,
+                "QREPCPAYLOAD" => invoice.QrEpcPayload,
+                "INVOICEMODE" => invoice.InvoiceMode?.ToString(CultureInfo.InvariantCulture),
+                "DATE" => invoice.Date.ToString("yyyy-MM-dd"),
+                "EXPIRATIONDATE" => invoice.ExpirationDate?.ToString("yyyy-MM-dd"),
+                _ => null
+            };
+        }
+
+        private string BuildInvoiceDownloadLink(Invoices invoice, string? formattedPublicId)
+        {
+            var tokenPayload = $"{invoice.Id}|{invoice.PublicId ?? string.Empty}|{formattedPublicId ?? string.Empty}";
+            var token = _downloadLinkProtector.Protect(tokenPayload);
+
+            return Url.Action(nameof(OctopusDownload), ControllerName, new { id = invoice.Id, token }, Request.Scheme)
+                ?? string.Empty;
         }
         public void AddMessage(string messagetype, string message, string messagetitle)
         {

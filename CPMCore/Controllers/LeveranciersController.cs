@@ -14,6 +14,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using CPMCore.Services.Octopus;
 
 namespace CPMCore.Controllers;
 
@@ -27,9 +28,13 @@ public class LeveranciersController : BaseController
         AllowTrailingCommas = true
     };
     private readonly cpmRunningContext _db;
-    public LeveranciersController(cpmRunningContext db)
+    private readonly IOctopusApiClient _octopusClient;
+    private readonly IOctopusTokenManager _octopusTokens;
+    public LeveranciersController(cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
     {
         _db = db;
+        _octopusClient = octopusClient;
+        _octopusTokens = octopusTokens;
     }
 
     private async Task<SupplierFormViewModel> BuildFormAsync(SupplierFormViewModel model, CancellationToken ct)
@@ -942,6 +947,10 @@ public class LeveranciersController : BaseController
         await PopulateSelectionsAsync(model, ct);
         await EnsurePostalSelectionAsync(model, ct);
 
+        var requiresOctopusSync = (entity.OctopusRelationId ?? 0) > 0
+            && model.IsCustomer
+            && HasSupplierDataChanged(entity, model);
+
         MapToEntity(model, entity);
 
         entity.Type = await ResolveLegalFormAbbreviation(model.SelectedLegalFormId, ct);
@@ -978,6 +987,11 @@ public class LeveranciersController : BaseController
         await PersistContactsAsync(entity.CompanyId, model.Contacts ?? Enumerable.Empty<ContactInputViewModel>(), departments, ct);
 
         await _db.SaveChangesAsync(ct);
+
+        if (requiresOctopusSync)
+        {
+            await TrySyncSupplierRelationAsync(entity.CompanyId, ct);
+        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -1033,6 +1047,119 @@ public class LeveranciersController : BaseController
         return PartialView("Partials/_SupplierContactRow", new ContactInputViewModel());
     }
 
+    private static bool HasSupplierDataChanged(CompanyInfo entity, SupplierFormViewModel model)
+    {
+        static bool Different(string? a, string? b)
+            => !string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+        var newVat = CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber);
+
+        return Different(entity.Straat, model.Street)
+            || Different(entity.Huisnummer, model.HouseNumber)
+            || Different(entity.Busnummer, model.BusNumber)
+            || entity.PostCodeId != model.SelectedPostalCodeId
+            || Different(entity.Gemeente, model.City)
+            || Different(entity.Postcode, model.PostalCode)
+            || Different(entity.Ondernemingsnummer, newVat)
+            || Different(entity.Email, model.Email)
+            || Different(entity.InvoiceEmail, model.InvoiceEmail);
+    }
+
+    private async Task TrySyncSupplierRelationAsync(int companyId, CancellationToken ct)
+    {
+        var company = await _db.CompanyInfo
+            .Include(c => c.PostCode)!
+                .ThenInclude(pc => pc.Country)
+            .Include(c => c.IssuerCompany)
+            .FirstOrDefaultAsync(c => c.CompanyId == companyId, ct);
+
+        if (company?.OctopusRelationId is not int relationId || relationId <= 0 || !company.IsCustomer)
+        {
+            return;
+        }
+
+        var request = BuildOctopusRelationRequest(company);
+
+        foreach (var issuer in company.IssuerCompany.Where(i => !string.IsNullOrWhiteSpace(i.OctopusDossierNumber)))
+        {
+            var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
+            await _octopusClient.UpsertRelationAsync(dossierToken.Token, issuer.OctopusDossierNumber, request, ct);
+        }
+    }
+
+    private static OctopusRelationRequest BuildOctopusRelationRequest(CompanyInfo company)
+    {
+        var countryCode = company.PostCode?.Country?.LandIsocode ?? company.LandCode;
+
+        var name = company.BedrijfsNaam;
+
+        var request = new OctopusRelationRequest
+        {
+            RelationIdentificationServiceData = new OctopusRelationIdentificationData
+            {
+                RelationKey = new OctopusRelationKey { Id = company.OctopusRelationId ?? 0 },
+                ExternalRelationId = company.CompanyId
+            },
+            Name = name,
+            Firstname = name,
+            Client = true,
+            Supplier = true,
+            Active = true,
+            StreetAndNr = BuildStreetAndNumber(company.Straat, company.Huisnummer, company.Busnummer, company.Straat),
+            PostalCode = company.Postcode,
+            City = company.Gemeente,
+            Country = countryCode ?? "BE",
+            Email = company.InvoiceEmail ?? company.Email,
+            VatNr = FormatVatNumberForOctopus(company.Ondernemingsnummer, countryCode),
+            CurrencyCode = "EUR",
+            Contactperson = name,
+            DefaultBookingAccountClient = 0,
+            DefaultBookingAccountSupplier = 0,
+            SupplierPaymentMethod = 0,
+            VatType = DetermineVatType(!string.IsNullOrWhiteSpace(company.Ondernemingsnummer), countryCode)
+        };
+
+        return request;
+    }
+
+    private static string? BuildStreetAndNumber(string? street, string? houseNumber, string? busNumber, string? fallback)
+    {
+        var parts = new[] { street, houseNumber, string.IsNullOrWhiteSpace(busNumber) ? null : busNumber }
+            .Where(p => !string.IsNullOrWhiteSpace(p));
+
+        var result = string.Join(" ", parts);
+
+        if (string.IsNullOrWhiteSpace(result))
+            return fallback;
+
+        return result;
+    }
+
+    private static string? FormatVatNumberForOctopus(string? vatNumber, string? countryCode)
+    {
+        if (string.IsNullOrWhiteSpace(vatNumber))
+            return null;
+
+        var cleanedDigits = new string(vatNumber.Where(char.IsDigit).ToArray());
+        if (cleanedDigits.Length >= 10)
+        {
+            var digits = cleanedDigits[^10..];
+            var prefix = string.IsNullOrWhiteSpace(countryCode) ? "BE" : countryCode.Trim().ToUpperInvariant();
+            return $"{prefix}{digits[..4]}.{digits.Substring(4, 3)}.{digits.Substring(7, 3)}";
+        }
+
+        return vatNumber;
+    }
+
+    private static int? DetermineVatType(bool isCompany, string? countryCode)
+    {
+        var isBelgian = string.Equals(countryCode, "BE", StringComparison.OrdinalIgnoreCase);
+
+        if (isCompany)
+            return isBelgian ? 1 : 4;
+
+        return isBelgian ? 7 : 8;
+    }
     private sealed class VatLookupResponse
     {
         public bool valid { get; set; }

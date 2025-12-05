@@ -673,6 +673,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientContacts>(entity =>
         {
+            entity.HasIndex(e => e.OctopusRelationId, "IX_ClientContacts_OctopusRelationId");
+
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.Cellphone).HasMaxLength(50);
             entity.Property(e => e.ClientAccountId).HasColumnName("ClientAccountID");
@@ -828,6 +830,8 @@ public partial class cpmRunningContext : DbContext
         modelBuilder.Entity<CompanyInfo>(entity =>
         {
             entity.HasKey(e => e.CompanyId);
+
+            entity.HasIndex(e => e.OctopusRelationId, "IX_CompanyInfo_OctopusRelationId");
 
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
             entity.Property(e => e.AttachUblByDefault).HasDefaultValue(true);

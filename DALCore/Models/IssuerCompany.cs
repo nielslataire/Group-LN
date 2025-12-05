@@ -109,6 +109,12 @@ public partial class IssuerCompany
 
     public string InvoiceSendEmail { get; set; }
 
+    public string OctopusCustomFieldsJson { get; set; }
+
+    public string OctopusCustomFieldMappingsJson { get; set; }
+
+    public int? OctopusDownloadLinkCustomFieldKeyId { get; set; }
+
     public virtual CompanyLegalForm CompanyLegalForm { get; set; }
 
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }

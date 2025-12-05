@@ -120,7 +120,10 @@ namespace CPMCore.Services.Octopus
                     var vatCodes = await LoadVatCodesAsync(issuerId, authenticateToken, dossierToken, dossierNumber, ct);
                     await _issuers.SyncVatTypesAsync(issuerId, vatCodes, ct);
 
-                    return new OctopusSyncResult(bookyears.Count, vatCodes.Count);
+                    var customFields = await LoadCustomFieldsAsync(authenticateToken, dossierToken, dossierNumber, ct);
+                    await _issuers.SyncOctopusCustomFieldsAsync(issuerId, customFields, ct);
+
+                    return new OctopusSyncResult(bookyears.Count, vatCodes.Count, customFields.Count);
                 }, ct);
         }
 
@@ -254,6 +257,26 @@ namespace CPMCore.Services.Octopus
                 .ToList();
         }
 
+        private async Task<List<OctopusCustomFieldBO>> LoadCustomFieldsAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct)
+        {
+            _ = authenticateToken;
+
+            var fields = await _client.GetCustomFieldsAsync(dossierToken, dossierNumber, ct);
+
+            return fields
+                .Where(f => f?.CustomFieldKey?.Id > 0)
+                .Select(f => new OctopusCustomFieldBO
+                {
+                    CustomFieldKeyId = f.CustomFieldKey!.Id,
+                    TemplateCode = f.TemplateCode ?? string.Empty,
+                    DescriptionNl = f.Description?.DescriptionNl ?? string.Empty,
+                    DescriptionFr = f.Description?.DescriptionFr ?? string.Empty,
+                    DescriptionEn = f.Description?.DescriptionEn ?? string.Empty,
+                    DescriptionDe = f.Description?.DescriptionDe ?? string.Empty,
+                    CustomFieldType = f.CustomFieldType
+                })
+                .ToList();
+        }
 
         private static bool IsUnauthorized(HttpRequestException ex)
         {
@@ -262,5 +285,5 @@ namespace CPMCore.Services.Octopus
                    || (ex.Message?.Contains("unauthorized", StringComparison.OrdinalIgnoreCase) ?? false);
         }
     }
-    public record OctopusSyncResult(int BookyearCount, int VatCodeCount);
+    public record OctopusSyncResult(int BookyearCount, int VatCodeCount, int CustomFieldCount);
 }

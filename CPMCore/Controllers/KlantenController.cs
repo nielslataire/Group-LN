@@ -27,6 +27,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CPMCore.Services.Octopus;
 
 namespace CPMCore.Controllers
 {
@@ -42,13 +43,17 @@ namespace CPMCore.Controllers
         private UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration Configuration;
         private readonly cpmRunningContext _db;
+        private readonly IOctopusApiClient _octopusClient;
+        private readonly IOctopusTokenManager _octopusTokens;
 
-        public KlantenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db)
+        public KlantenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
         {
             _userManager = userManager;
             _logger = logger;
             Configuration = configuration;
             _db = db;
+            _octopusClient = octopusClient;
+            _octopusTokens = octopusTokens;
         }
 
         [HttpGet]
@@ -328,11 +333,19 @@ namespace CPMCore.Controllers
                 return View("Edit", model);
             }
 
+            var requiresOctopusSync = (client.OctopusRelationId ?? 0) > 0
+               && HasClientDataChanged(client, model);
+
             MapToEntity(model, client);
             UpdateIssuerCompany(model, client);
             UpdateContacts(model, client);
 
             await _db.SaveChangesAsync(ct);
+
+            if (requiresOctopusSync)
+            {
+                await TrySyncOctopusRelationAsync(client.Id, ct);
+            }
 
             AddMessage("success", $"Klant {model.DisplayLabel} is bijgewerkt", "Geslaagd!");
             return RedirectToAction(nameof(Index));
@@ -906,6 +919,133 @@ namespace CPMCore.Controllers
                     AttachUblByDefault = contactModel.AttachUblByDefault
                 });
             }
+        }
+
+        private static bool HasClientDataChanged(ClientAccount entity, ClientFormViewModel model)
+        {
+            static bool Different(string? a, string? b)
+                => !string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
+
+            var newVat = model.IsCompany
+                ? CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber)
+                : null;
+
+            return Different(entity.Street, model.Street)
+                || Different(entity.Housenumber, model.HouseNumber)
+                || Different(entity.Busnumber, model.BusNumber)
+                || entity.PostalCodeId != model.SelectedPostalCodeId
+                || Different(entity.InvoiceStreet, model.UseInvoiceAddress ? model.InvoiceStreet : null)
+                || Different(entity.InvoiceHousenumber, model.UseInvoiceAddress ? model.InvoiceHouseNumber : null)
+                || Different(entity.InvoiceBusnumber, model.UseInvoiceAddress ? model.InvoiceBusNumber : null)
+                || entity.InvoicePostalCodeId != (model.UseInvoiceAddress ? model.SelectedInvoicePostalCodeId : null)
+                || Different(entity.Vatnumber, newVat)
+                || Different(entity.Email, model.Email)
+                || Different(entity.InvoiceEmail, model.InvoiceEmail);
+        }
+
+        private async Task TrySyncOctopusRelationAsync(int clientId, CancellationToken ct)
+        {
+            var client = await _db.ClientAccount
+                .Include(c => c.PostalCode)!
+                    .ThenInclude(pc => pc.Country)
+                .Include(c => c.InvoicePostalCode)!
+                    .ThenInclude(pc => pc.Country)
+                .Include(c => c.IssuerCompany)
+                .FirstOrDefaultAsync(c => c.Id == clientId, ct);
+
+            if (client?.OctopusRelationId is not int relationId || relationId <= 0)
+            {
+                return;
+            }
+
+            var request = BuildOctopusRelationRequest(client);
+
+            foreach (var issuer in client.IssuerCompany.Where(i => !string.IsNullOrWhiteSpace(i.OctopusDossierNumber)))
+            {
+                var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
+                await _octopusClient.UpsertRelationAsync(dossierToken.Token, issuer.OctopusDossierNumber, request, ct);
+            }
+        }
+
+        private static OctopusRelationRequest BuildOctopusRelationRequest(ClientAccount client)
+        {
+            var countryCode = client.InvoicePostalCode?.Country?.LandIsocode
+                ?? client.PostalCode?.Country?.LandIsocode;
+
+            var isCompany = !string.IsNullOrWhiteSpace(client.CompanyName) || !string.IsNullOrWhiteSpace(client.Vatnumber);
+
+            var name = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
+
+            var request = new OctopusRelationRequest
+            {
+                RelationIdentificationServiceData = new OctopusRelationIdentificationData
+                {
+                    RelationKey = new OctopusRelationKey { Id = client.OctopusRelationId ?? 0 },
+                    ExternalRelationId = client.Id
+                },
+                Name = name,
+                Firstname = client.Name,
+                Client = true,
+                Supplier = false,
+                Active = true,
+                StreetAndNr = BuildStreetAndNumber(
+                    client.InvoiceStreet ?? client.Street,
+                    client.InvoiceHousenumber ?? client.Housenumber,
+                    client.InvoiceBusnumber ?? client.Busnumber,
+                    client.Street),
+                PostalCode = client.InvoicePostalCode?.Postcode ?? client.PostalCode?.Postcode,
+                City = client.InvoicePostalCode?.Gemeente ?? client.PostalCode?.Gemeente,
+                Country = countryCode ?? "BE",
+                Email = client.InvoiceEmail ?? client.Email,
+                VatNr = FormatVatNumberForOctopus(client.Vatnumber, countryCode),
+                CurrencyCode = "EUR",
+                Contactperson = name,
+                DefaultBookingAccountClient = 0,
+                DefaultBookingAccountSupplier = 0,
+                SupplierPaymentMethod = 0,
+                VatType = DetermineVatType(isCompany, countryCode)
+            };
+
+            return request;
+        }
+
+        private static string? BuildStreetAndNumber(string? street, string? houseNumber, string? busNumber, string? fallback)
+        {
+            var parts = new[] { street, houseNumber, string.IsNullOrWhiteSpace(busNumber) ? null : busNumber }
+                .Where(p => !string.IsNullOrWhiteSpace(p));
+
+            var result = string.Join(" ", parts);
+
+            if (string.IsNullOrWhiteSpace(result))
+                return fallback;
+
+            return result;
+        }
+
+        private static string? FormatVatNumberForOctopus(string? vatNumber, string? countryCode)
+        {
+            if (string.IsNullOrWhiteSpace(vatNumber))
+                return null;
+
+            var cleanedDigits = new string(vatNumber.Where(char.IsDigit).ToArray());
+            if (cleanedDigits.Length >= 10)
+            {
+                var digits = cleanedDigits[^10..];
+                var prefix = string.IsNullOrWhiteSpace(countryCode) ? "BE" : countryCode.Trim().ToUpperInvariant();
+                return $"{prefix}{digits[..4]}.{digits.Substring(4, 3)}.{digits.Substring(7, 3)}";
+            }
+
+            return vatNumber;
+        }
+
+        private static int? DetermineVatType(bool isCompany, string? countryCode)
+        {
+            var isBelgian = string.Equals(countryCode, "BE", StringComparison.OrdinalIgnoreCase);
+
+            if (isCompany)
+                return isBelgian ? 1 : 4;
+
+            return isBelgian ? 7 : 8;
         }
         public PartialViewResult BlankPoaRow()
         {

@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace ServiceCore
 {
@@ -71,7 +72,10 @@ namespace ServiceCore
                     OctopusAuthenticateTokenValidUntil = x.company.OctopusAuthenticateTokenValidUntil,
                     OctopusDossierToken = x.company.OctopusDossierToken,
                     OctopusDossierTokenValidUntil = x.company.OctopusDossierTokenValidUntil,
-                    OctopusDossierNumber = x.company.OctopusDossierNumber
+                    OctopusDossierNumber = x.company.OctopusDossierNumber,
+                    OctopusCustomFieldsJson = x.company.OctopusCustomFieldsJson,
+                    OctopusCustomFieldMappingsJson = x.company.OctopusCustomFieldMappingsJson,
+                    OctopusDownloadLinkCustomFieldKeyId = x.company.OctopusDownloadLinkCustomFieldKeyId
                 })
                 .ToListAsync(ct);
         }
@@ -122,6 +126,65 @@ namespace ServiceCore
                 .OrderBy(x => x.Name)
                 .Select(x => new PaymentTermOptionBO { Id = x.Id, Label = x.Name })
                 .ToListAsync(ct);
+        }
+        public async Task SyncOctopusCustomFieldsAsync(int issuerId, IEnumerable<OctopusCustomFieldBO> customFields, CancellationToken ct = default)
+        {
+            if (issuerId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(issuerId));
+            }
+
+            var issuer = await _db.IssuerCompany.FirstOrDefaultAsync(i => i.Id == issuerId, ct)
+                ?? throw new InvalidOperationException($"Issuer {issuerId} niet gevonden.");
+
+            var list = (customFields ?? Array.Empty<OctopusCustomFieldBO>())
+                .Where(f => f != null)
+                .Select(f => new OctopusCustomFieldBO
+                {
+                    CustomFieldKeyId = f.CustomFieldKeyId,
+                    TemplateCode = f.TemplateCode,
+                    DescriptionNl = f.DescriptionNl,
+                    DescriptionFr = f.DescriptionFr,
+                    DescriptionEn = f.DescriptionEn,
+                    DescriptionDe = f.DescriptionDe,
+                    CustomFieldType = f.CustomFieldType
+                })
+                .ToList();
+
+            issuer.OctopusCustomFieldsJson = JsonSerializer.Serialize(list);
+
+            var validKeys = new HashSet<int>(list.Select(f => f.CustomFieldKeyId));
+            var mappings = DeserializeMappings(issuer.OctopusCustomFieldMappingsJson)
+                .Where(m => validKeys.Contains(m.CustomFieldKeyId))
+                .ToList();
+            issuer.OctopusCustomFieldMappingsJson = JsonSerializer.Serialize(mappings);
+
+            if (!issuer.OctopusDownloadLinkCustomFieldKeyId.HasValue || !validKeys.Contains(issuer.OctopusDownloadLinkCustomFieldKeyId.Value))
+            {
+                issuer.OctopusDownloadLinkCustomFieldKeyId = null;
+            }
+
+            await _uow.SaveChangesAsync(ct);
+        }
+
+        public async Task<IReadOnlyList<OctopusCustomFieldBO>> ListOctopusCustomFieldsAsync(int issuerId, CancellationToken ct = default)
+        {
+            if (issuerId <= 0)
+            {
+                return Array.Empty<OctopusCustomFieldBO>();
+            }
+
+            var issuer = await _db.IssuerCompany
+                .AsNoTracking()
+                .FirstOrDefaultAsync(i => i.Id == issuerId, ct);
+
+            if (issuer == null || string.IsNullOrWhiteSpace(issuer.OctopusCustomFieldsJson))
+            {
+                return Array.Empty<OctopusCustomFieldBO>();
+            }
+
+            return JsonSerializer.Deserialize<List<OctopusCustomFieldBO>>(issuer.OctopusCustomFieldsJson)
+                   ?? new List<OctopusCustomFieldBO>();
         }
         public async Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default)
         {
@@ -321,7 +384,10 @@ namespace ServiceCore
                 OctopusAuthenticateTokenValidUntil = x.OctopusAuthenticateTokenValidUntil,
                 OctopusDossierToken = x.OctopusDossierToken,
                 OctopusDossierTokenValidUntil = x.OctopusDossierTokenValidUntil,
-                OctopusDossierNumber = x.OctopusDossierNumber
+                OctopusDossierNumber = x.OctopusDossierNumber,
+                OctopusCustomFieldsJson = x.OctopusCustomFieldsJson,
+                OctopusCustomFieldMappingsJson = x.OctopusCustomFieldMappingsJson,
+                OctopusDownloadLinkCustomFieldKeyId = x.OctopusDownloadLinkCustomFieldKeyId
             };
         }
 
@@ -376,7 +442,20 @@ namespace ServiceCore
             e.OctopusDossierToken = bo.OctopusDossierToken;
             e.OctopusDossierTokenValidUntil = bo.OctopusDossierTokenValidUntil;
             e.OctopusDossierNumber = bo.OctopusDossierNumber;
+            e.OctopusCustomFieldsJson = bo.OctopusCustomFieldsJson;
+            e.OctopusCustomFieldMappingsJson = bo.OctopusCustomFieldMappingsJson;
+            e.OctopusDownloadLinkCustomFieldKeyId = bo.OctopusDownloadLinkCustomFieldKeyId;
             return e;
+        }
+        private static List<OctopusCustomFieldMappingBO> DeserializeMappings(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new List<OctopusCustomFieldMappingBO>();
+            }
+
+            return JsonSerializer.Deserialize<List<OctopusCustomFieldMappingBO>>(json)
+                   ?? new List<OctopusCustomFieldMappingBO>();
         }
     }
 }

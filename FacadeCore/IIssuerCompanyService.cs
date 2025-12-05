@@ -22,6 +22,8 @@ namespace FacadeCore
         Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(int issuerId, CancellationToken ct = default);
         Task SyncVatTypesAsync(int issuerId, IEnumerable<VatTypeBO> vatTypes, CancellationToken ct = default);
         Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default);
+        Task SyncOctopusCustomFieldsAsync(int issuerId, IEnumerable<OctopusCustomFieldBO> customFields, CancellationToken ct = default);
+        Task<IReadOnlyList<OctopusCustomFieldBO>> ListOctopusCustomFieldsAsync(int issuerId, CancellationToken ct = default);
     }
     // Lichte BO’s voor de UI-lijsten
     public class IssuerListItemBO
