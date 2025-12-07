@@ -24,5 +24,7 @@
         public bool DigitallySent { get; set; }
         public bool DigitalSendSkipped { get; set; }
         public bool ShowPrintButton { get; set; }
+        public string? ProjectName { get; set; }
+        public string SendMethod { get; set; } = "Niet verzonden";
     }
 }

@@ -119,7 +119,29 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
     private static void ComposePaymentSection(IContainer container, InvoiceVm vm, TemplateContext ctx)
     {
-        var dueDateText = FormatDate(vm.Invoice.DueDate);
+
+        
+            if (IsCreditNote(vm))
+            {
+                container.Column(col =>
+                {
+                    if (!string.IsNullOrWhiteSpace(vm.ExtraInfo))
+                    {
+                        col.Item().Text(text =>
+                        {
+                            var span = text.Span(vm.ExtraInfo);
+                            span.FontSize(7);
+                            span.Italic();
+                            ApplyFont(span);
+                        });
+                    }
+
+                    ComposeVatMentions(col, vm);
+                });
+
+                return;
+            }
+            var dueDateText = FormatDate(vm.Invoice.DueDate);
         var paymentDate = string.IsNullOrWhiteSpace(dueDateText) ? "—" : dueDateText;
 
         var account = !string.IsNullOrWhiteSpace(vm.Payment?.Iban)
@@ -175,6 +197,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
                         ApplyFont(span);
                     });
                 }
+                ComposeVatMentions(col, vm);
             });
 
             if (vm.Payment?.QrEnabled == true && ctx.EpcQrPng is { Length: > 0 })
@@ -184,6 +207,30 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
                     .Image(ctx.EpcQrPng);
             }
         });
+    }
+    private static void ComposeVatMentions(ColumnDescriptor col, InvoiceVm vm)
+    {
+        if (vm?.VatMentions == null || vm.VatMentions.Count == 0)
+            return;
+
+        foreach (var mention in vm.VatMentions.Where(m => !string.IsNullOrWhiteSpace(m)))
+        {
+            col.Item().Text(text =>
+            {
+                var span = text.Span(mention);
+                span.FontSize(7);
+                span.Italic();
+                ApplyFont(span);
+            });
+        }
+    }
+    private static bool IsCreditNote(InvoiceVm vm)
+    {
+        if (vm?.Totals?.Incl < 0)
+            return true;
+
+        var status = vm?.Invoice?.Status;
+        return !string.IsNullOrWhiteSpace(status) && status.Contains("credit", StringComparison.OrdinalIgnoreCase);
     }
     private static void ComposeContactSection(IContainer container, InvoiceVm vm)
     {

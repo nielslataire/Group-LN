@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CPMCore.Models.Instellingen
 {
+    using CPMCore.Models.Invoicing;
     public class IssuerCompanyVM
     {
         public int Id { get; set; }
@@ -143,6 +144,8 @@ namespace CPMCore.Models.Instellingen
         public int? OctopusDownloadLinkCustomFieldKeyId { get; set; }
 
         public List<OctopusCustomFieldMappingVM> CustomFieldMappings { get; set; } = new();
+
+        public List<VatTypeVM> VatTypes { get; set; } = new();
     }
 
     public class OctopusCustomFieldMappingVM

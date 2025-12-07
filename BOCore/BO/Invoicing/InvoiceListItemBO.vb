@@ -15,5 +15,8 @@
     Public Property IsSupplier As Boolean
     Public Property HasCompanyName As Boolean
     Public Property OctopusWorkflowState As String
+    Public Property OctopusDeliveryState As String
+    Public Property ProjectName As String
+    Public Property HasEmailLog As Boolean
 
 End Class

@@ -1,15 +1,16 @@
-﻿using System;
+﻿using BOCore;
+using CPMCore.Models.Invoicing;
+using FacadeCore;
+using ServiceCore.Invoicing.Pdf;
+using System;
 using System.Globalization;
 using System.Linq;
-using BOCore;
-using ServiceCore.Invoicing.Pdf;
-using CPMCore.Models.Invoicing;
 
 namespace CPMCore.Extensions;
 
 public static class InvoiceDetailExtensions
 {
-    public static InvoiceDto ToInvoiceDto(this InvoiceDetailBO bo)
+    public static InvoiceDto ToInvoiceDto(this InvoiceDetailBO bo, IEnumerable<VatTypeBO>? vatTypes = null)
     {
         if (bo == null) throw new ArgumentNullException(nameof(bo));
 
@@ -61,7 +62,14 @@ public static class InvoiceDetailExtensions
             },
             Project = new ProjectInfoDto(),
             Unit = new UnitInfoDto(),
-            Lines = bo.Lines.Select(ToInvoiceLineDto).ToList()
+            Lines = bo.Lines.Select(ToInvoiceLineDto).ToList(),
+            VatTypes = vatTypes?.Select(v => new VatTypeDto
+            {
+                Id = v.Id,
+                Code = v.Code,
+                BasePercentage = v.BasePercentage,
+                InvoiceMention = v.InvoiceMention
+            }).ToList() ?? new List<VatTypeDto>()
         };
     }
 
@@ -90,7 +98,8 @@ public static class InvoiceDetailExtensions
             Quantity = 1,
             UnitPrice = RoundCurrency(net),
             Vat = line.VatPercentage,
-            Total = RoundCurrency(total)
+            Total = RoundCurrency(total),
+            VatTypeId = line.VatTypeId
         };
     }
 

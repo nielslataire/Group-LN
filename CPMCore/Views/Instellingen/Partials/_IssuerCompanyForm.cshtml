@@ -14,6 +14,7 @@
     var octopusVatCodes = ViewBag.OctopusVatCodes as IReadOnlyList<VatTypeBO> ?? new List<VatTypeBO>();
     var octopusCustomFields = Model.CustomFieldMappings ?? new List<CPMCore.Models.Instellingen.OctopusCustomFieldMappingVM>();
     var invoiceFieldOptions = ViewBag.InvoiceFieldOptions as IReadOnlyList<KeyValuePair<string, string>> ?? new List<KeyValuePair<string, string>>();
+    var vatTypes = Model.VatTypes ?? new List<CPMCore.Models.Invoicing.VatTypeVM>();
 }
 <div class="row mt-2">
 	<div class="col">
@@ -462,31 +463,49 @@
                                 <div class="table-responsive">
                                     <table class="table table-sm mb-0">
                                         <thead>
-                                            <tr><th>BTW-code</th><th>Omschrijving</th><th>Type</th><th>Basis %</th><th>Standaard rekening</th></tr>
+                                            <tr><th>BTW-code</th><th>Omschrijving</th><th>Type</th><th>Basis %</th><th>Standaard rekening</th><th>Factuurvermelding</th></tr>
                                         </thead>
                                         <tbody>
-                                            @if (octopusVatCodes.Any())
+                                            @if (vatTypes.Any())
                                             {
-                                                @foreach (var code in octopusVatCodes)
+                                                for (var i = 0; i < vatTypes.Count; i++)
                                                 {
+                                                    var code = vatTypes[i];
                                                     <tr>
-                                                        <td class="align-middle">@code.Code</td>
-                                                        <td class="align-middle">@code.Description</td>
+                                                        <td class="align-middle">
+                                                            @code.Code
+                                                            <input type="hidden" name="VatTypes[@i].Id" value="@code.Id" />
+                                                            <input type="hidden" name="VatTypes[@i].Code" value="@code.Code" />
+                                                        </td>
+                                                        <td class="align-middle">
+                                                            @code.Description
+                                                            <input type="hidden" name="VatTypes[@i].Description" value="@code.Description" />
+                                                        </td>
                                                         <td class="align-middle">
                                                             @(code.Type == 2
                                                                                                                 ? "Verkoop"
                                                                                                                 : code.Type == 4
                                                                                                                 ? "Verkoop credit"
                                                                                                                 : $"Type {code.Type}")
+                                                    <input type="hidden" name="VatTypes[@i].Type" value="@code.Type" />
                                                 </td>
-                                                <td class="align-middle">@code.BasePercentage%</td>
-                                                <td class="align-middle">@(code.DefaultSellBookingAccountNr?.ToString() ?? "—")</td>
+                                                <td class="align-middle">
+                                                    @code.BasePercentage%
+                                                    <input type="hidden" name="VatTypes[@i].BasePercentage" value="@code.BasePercentage" />
+                                                </td>
+                                                <td class="align-middle">
+                                                    @(code.DefaultSellBookingAccountNr?.ToString() ?? "—")
+                                                    <input type="hidden" name="VatTypes[@i].DefaultSellBookingAccountNr" value="@code.DefaultSellBookingAccountNr" />
+                                                </td>
+                                                <td class="align-middle">
+                                                    <input class="form-control form-control-modern" name="VatTypes[@i].InvoiceMention" value="@code.InvoiceMention" placeholder="Vermelding op factuur" />
+                                                </td>
                                             </tr>
                                                                                         }
                                             }
                                             else
                                             {
-                                                <tr><td colspan="5" class="text-muted">Geen verkoop-btw-codes gesynchroniseerd.</td></tr>
+                                                <tr><td colspan="6" class="text-muted">Geen verkoop-btw-codes gesynchroniseerd.</td></tr>
                                             }
                                         </tbody>
                                     </table>

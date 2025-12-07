@@ -122,6 +122,8 @@ namespace ServiceCore
                 let accountEmail = i.ClientIdClientAccountNavigation != null
                     ? (i.ClientIdClientAccountNavigation.InvoiceEmail ?? i.ClientIdClientAccountNavigation.Email)
                     : null
+                join p in _db.Project.AsNoTracking() on i.ProjectId equals p.ProjectId into pj
+                from project in pj.DefaultIfEmpty()
                 from bal in _db.VwInvoiceBalance
                              .AsNoTracking()
                              .Where(v => v.Id == i.Id)
@@ -145,6 +147,9 @@ namespace ServiceCore
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     Balance = (decimal?)bal.Balance ?? 0m,
                     IsCreditNote = series != null && series.IsCreditNote,
+                    ProjectName = project != null ? project.ProjectName : null,
+                    OctopusDeliveryState = i.OctopusDeliveryState,
+                    HasEmailLog = _db.InvoiceEmailLog.AsNoTracking().Any(l => l.InvoiceId == i.Id),
                     RequiresDigitalInvoice = i.CompanyId.HasValue
                         ? true
                         : (i.ClientIdClientContactsNavigation != null
@@ -183,9 +188,14 @@ namespace ServiceCore
                 let accountEmail = i.ClientIdClientAccountNavigation != null
                     ? (i.ClientIdClientAccountNavigation.InvoiceEmail ?? i.ClientIdClientAccountNavigation.Email)
                     : null
+                join p in _db.Project.AsNoTracking() on i.ProjectId equals p.ProjectId into pj
+                from project in pj.DefaultIfEmpty()
                 from bal in _db.VwInvoiceBalance.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
                 join s in _db.Set<InvoiceStatusLookup>().AsNoTracking() on i.StatusId equals s.Id into sj
                 from st in sj.DefaultIfEmpty()
+                join seriesLookup in _db.InvoiceSeries.AsNoTracking()
+                    on i.SeriesId equals seriesLookup.Id into seriesJoin
+                from series in seriesJoin.DefaultIfEmpty()
                 orderby i.Date descending
                 select new InvoiceListItemBO
                 {
@@ -195,7 +205,12 @@ namespace ServiceCore
                     InvoiceDate = i.Date,
                     StatusId = i.StatusId,
                     StatusName = st != null ? st.Name : null,
+                    IsCreditNote = series != null && series.IsCreditNote,
+                    ProjectName = project != null ? project.ProjectName : null,
+                    GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     Balance = (decimal?)bal.Balance ?? 0m,
+                    OctopusDeliveryState = i.OctopusDeliveryState,
+                    HasEmailLog = _db.InvoiceEmailLog.AsNoTracking().Any(l => l.InvoiceId == i.Id),
                     RequiresDigitalInvoice = i.CompanyId.HasValue
                         ? true
                         : (i.ClientIdClientContactsNavigation != null
@@ -290,16 +305,19 @@ namespace ServiceCore
             var issuerIban = defaultIban ?? issuer?.IssuerBankAccount?.Iban;
             var issuerBic = defaultBic ?? issuer?.IssuerBankAccount?.Bic;
             var contact = invoice.ClientIdClientContactsNavigation;
+            var account = invoice.ClientIdClientAccountNavigation;
             var isSupplier = invoice.CompanyId.HasValue;
 
             string? invoiceEmail = contact?.InvoiceEmail;
             if (string.IsNullOrWhiteSpace(invoiceEmail))
+                invoiceEmail = account?.InvoiceEmail;
+            if (string.IsNullOrWhiteSpace(invoiceEmail))
                 invoiceEmail = company?.InvoiceEmail;
             if (string.IsNullOrWhiteSpace(invoiceEmail))
-                invoiceEmail = contact?.Email ?? company?.Email;
+                invoiceEmail = contact?.Email ?? account?.Email ?? company?.Email;
             if (string.IsNullOrWhiteSpace(invoiceEmail))
             {
-                var accountContacts = invoice.ClientIdClientAccountNavigation?.ClientContacts;
+                var accountContacts = account?.ClientContacts;
                 if (accountContacts != null && accountContacts.Count > 0)
                 {
                     invoiceEmail = accountContacts
@@ -320,6 +338,7 @@ namespace ServiceCore
                 : invoiceEmail.Trim();
 
             var requiresDigital = contact?.RequiresDigitalInvoice
+                ?? account?.RequiresDigitalInvoice
                 ?? company?.RequiresDigitalInvoice
                 ?? false;
             if (isSupplier)

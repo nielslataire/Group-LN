@@ -124,13 +124,17 @@ namespace CPMCore.Controllers
             var vms = bos
             .Select(x =>
             {
+                var isCreditNote = x.IsCreditNote
+                   || (!string.IsNullOrWhiteSpace(x.StatusName) && x.StatusName.Contains("credit", StringComparison.OrdinalIgnoreCase))
+                   || (x.GrossTotal.HasValue && x.GrossTotal.Value < 0m);
                 var parts = ParseInvoicePublicId(x.PublicId);
                 var sortValue = BuildInvoiceSortValue(x.InvoiceDate, parts.Number, parts.Month, parts.Year, x.Id);
                 var digitallySent = IsOctopusStepCompleted(x.OctopusWorkflowState, OctopusWorkflowStateSent);
                 var isIndividual = !x.IsSupplier && !x.HasCompanyName;
                 var requiresDigital = x.IsSupplier || x.RequiresDigitalInvoice;
                 var skipDigitalSend = isIndividual && (!requiresDigital || !x.HasEmail);
-                var needsPrint = skipDigitalSend || (!digitallySent && !x.HasEmail && !isIndividual);
+                //var needsPrint = skipDigitalSend || (!digitallySent && !x.HasEmail && !isIndividual);
+                var needsPrint = true;
 
                 return new InvoiceListItemVM
                 {
@@ -144,7 +148,7 @@ namespace CPMCore.Controllers
                     InvoiceNumber = parts.Number,
                     InvoiceMonth = parts.Month,
                     InvoiceYear = parts.Year,
-                    IsCreditNote = DetermineCreditNote(x.IsCreditNote, x.StatusName, x.GrossTotal),
+                    IsCreditNote = isCreditNote,
                     InvoiceSortValue = sortValue,
                     RequiresDigitalInvoice = x.RequiresDigitalInvoice,
                     HasEmail = x.HasEmail,
@@ -154,7 +158,9 @@ namespace CPMCore.Controllers
                     OctopusWorkflowState = x.OctopusWorkflowState,
                     DigitallySent = digitallySent,
                     DigitalSendSkipped = skipDigitalSend,
-                    ShowPrintButton = needsPrint
+                    ShowPrintButton = needsPrint,
+                    ProjectName = x.ProjectName,
+                    SendMethod = DetermineSendMethod(x.OctopusDeliveryState, x.HasEmailLog, needsPrint)
                 };
             })
                 .OrderByDescending(x => x.InvoiceSortValue)
@@ -222,7 +228,8 @@ namespace CPMCore.Controllers
             if (issuer == null)
                 return NotFound();
 
-            var dto = detail.ToInvoiceDto();
+            var vatTypes = await _ics.ListVatTypeAsync(detail.IssuerCompanyId, ct);
+            var dto = detail.ToInvoiceDto(vatTypes);
             var bytes = _pdf.Render(dto, issuer);
             var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
                 ? $"Factuur_{dto.Id}.pdf"
@@ -269,7 +276,8 @@ namespace CPMCore.Controllers
             if (issuer == null)
                 return NotFound();
 
-            var dto = detail.ToInvoiceDto();
+            var vatTypes = await _ics.ListVatTypeAsync(detail.IssuerCompanyId, ct);
+            var dto = detail.ToInvoiceDto(vatTypes);
             dto.PublicId ??= detail.PublicId;
             var bytes = _pdf.Render(dto, issuer);
             var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
@@ -403,7 +411,8 @@ namespace CPMCore.Controllers
             }
 
             var attachments = new List<EmailAttachment>();
-            var dto = detail.ToInvoiceDto();
+            var vatTypes = await _ics.ListVatTypeAsync(detail.IssuerCompanyId, ct);
+            var dto = detail.ToInvoiceDto(vatTypes);
             var ublDocument = _ublBuilder.Build(detail, issuer);
 
             if (vm.AttachPdf)
@@ -648,7 +657,16 @@ namespace CPMCore.Controllers
                     .ToList(),
 
                 VatTypes = VatsBo
-                     .Select(t => new VatTypeVM(t.Id, t.BasePercentage, t.Code, t.Description, t.Type, t.DefaultSellBookingAccountNr))
+                     .Select(t => new VatTypeVM
+                     {
+                         Id = t.Id,
+                         BasePercentage = t.BasePercentage,
+                         Code = t.Code,
+                         Description = t.Description,
+                         Type = t.Type,
+                         DefaultSellBookingAccountNr = t.DefaultSellBookingAccountNr,
+                         InvoiceMention = t.InvoiceMention
+                     })
                     .ToList(),
 
                 IssuerBankAccountId = defaultAccountId,
@@ -1020,7 +1038,7 @@ namespace CPMCore.Controllers
             var id = await _cmd.CreateDraftAsync(bo, ct);
             TempData["wantIssueNow"] = (vm.StartAs == StartStatus.Invoice);
             AddMessage("success", "Conceptfactuur aangemaakt.", "Factuur");
-            return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+            return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
         }
 
         private async Task<InvoiceDraftBO> BuildInvoiceDraftBoAsync(InvoiceComposeVM vm, CancellationToken ct)
@@ -1030,9 +1048,6 @@ namespace CPMCore.Controllers
 
             if (vm.IssuerCompanyId <= 0 || vm.PartyId is null || vm.PartyType is null)
                 throw new InvalidOperationException("Vul issuer en afnemer in.");
-
-            if (vm.PartyType == InvoicePartyType.Supplier && vm.ProjectId is null && vm.SupplierContractId is null)
-                throw new InvalidOperationException("Kies een project of een contract voor de leveranciersfactuur.");
 
             var usingStageLines = vm.Mode == InvoiceMode.Stages && vm.Lines != null && vm.Lines.Any();
             if (vm.Mode == InvoiceMode.Stages && !usingStageLines)
@@ -1214,7 +1229,7 @@ namespace CPMCore.Controllers
                     else
                         AddMessage("success", "Conceptfactuur opgeslagen.", "Factuur");
 
-                    return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+                    return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
                 }
 
                 var (id, _) = await _cmd.CreateWithLinesAsync(bo, issueNow: false, ct);
@@ -1242,7 +1257,7 @@ namespace CPMCore.Controllers
                 else
                     AddMessage("success", "Factuur uitgegeven.", "Factuur");
 
-                return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+                return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
             }
             catch (InvalidOperationException ex)
             {
@@ -1471,7 +1486,16 @@ namespace CPMCore.Controllers
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),
                 BankAccountIban = detail.BankAccount,
-                VatTypes = vatBo.Select(t => new VatTypeVM(t.Id, t.BasePercentage, t.Code, t.Description, t.Type, t.DefaultSellBookingAccountNr)).ToList(),
+                VatTypes = vatBo.Select(t => new VatTypeVM
+                {
+                    Id = t.Id,
+                    BasePercentage = t.BasePercentage,
+                    Code = t.Code,
+                    Description = t.Description,
+                    Type = t.Type,
+                    DefaultSellBookingAccountNr = t.DefaultSellBookingAccountNr,
+                    InvoiceMention = t.InvoiceMention
+                }).ToList(),
                 Issuers = issuersBo.Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId)).ToList(),
                 PaymentTerms = termsBo.Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days)).ToList()
             };
@@ -1704,8 +1728,18 @@ namespace CPMCore.Controllers
               : Array.Empty<VatTypeBO>();
 
             ViewBag.VatTypes = vatBo
-                .Select(t => new VatTypeVM(t.Id, t.BasePercentage, t.Code, t.Description, t.Type, t.DefaultSellBookingAccountNr))
+                .Select(t => new VatTypeVM
+                {
+                    Id = t.Id,
+                    BasePercentage = t.BasePercentage,
+                    Code = t.Code,
+                    Description = t.Description,
+                    Type = t.Type,
+                    DefaultSellBookingAccountNr = t.DefaultSellBookingAccountNr,
+                    InvoiceMention = t.InvoiceMention
+                })
                 .ToList();
+                
         }
 
         private static InvoiceLineEditVM MapLineForEdit(InvoiceLineBO line)
@@ -1976,7 +2010,20 @@ namespace CPMCore.Controllers
                     return;
 
                 // 7. Klassieke mailverzending indien geen Peppol (PDF identiek aan upload)
-                await SendClassicInvoiceEmailIfRequiredAsync(context, attachment, ct);
+                var classicSent = await SendClassicInvoiceEmailIfRequiredAsync(context, attachment, ct);
+
+                if (classicSent && !WasSentViaPeppol(sendResponse))
+                {
+                    await PersistOctopusDeliveryStateAsync(
+                        context.Invoice.Id,
+                        new OctopusDocumentDeliveryState
+                        {
+                            DeliveryState = "EMAIL",
+                            Comment = "Verzonden via klassieke e-mail",
+                            DeliveryDateTime = DateTime.UtcNow
+                        },
+                        ct);
+                }
 
                 // 8. Logboeken en verzendgeschiedenis bijwerken
                 await LogOctopusSendAsync(context, sendResponse, ct);
@@ -2007,6 +2054,7 @@ namespace CPMCore.Controllers
                 int periodNumber,
                 string structuredOgm,
                 string formattedPublicId,
+                bool isIndividual,
                 bool skipSendStep,
                 string? clientEmail)
             {
@@ -2022,7 +2070,9 @@ namespace CPMCore.Controllers
                 PeriodNumber = periodNumber;
                 StructuredOgm = structuredOgm;
                 FormattedPublicId = formattedPublicId;
-                SkipSendStep = skipSendStep;
+                IsIndividual = isIndividual;
+
+               SkipSendStep = skipSendStep;
                 ClientEmail = clientEmail;
             }
 
@@ -2038,6 +2088,8 @@ namespace CPMCore.Controllers
             public int PeriodNumber { get; }
             public string StructuredOgm { get; }
             public string FormattedPublicId { get; }
+            public bool IsIndividual { get; }
+
             public bool SkipSendStep { get; }
             public string? ClientEmail { get; }
             public List<Vattype> VatTypes { get; } = new();
@@ -2110,7 +2162,9 @@ namespace CPMCore.Controllers
             var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
                 || !string.IsNullOrWhiteSpace(invoice.ClientIdClientContactsNavigation?.CompanyName);
             var isIndividual = !invoice.CompanyId.HasValue && !hasCompanyName;
-            var skipSendStep = isIndividual && (!detail.RequiresDigitalInvoice || string.IsNullOrWhiteSpace(clientEmail));
+            var requiresDigitalInvoice = detail.RequiresDigitalInvoice;
+            var hasClientEmail = !string.IsNullOrWhiteSpace(clientEmail);
+            var skipSendStep = !requiresDigitalInvoice || !hasClientEmail;
 
             var finalDate = invoice.Date == default
                 ? DateOnly.FromDateTime(DateTime.Today)
@@ -2199,6 +2253,7 @@ namespace CPMCore.Controllers
                 periodNumber,
                 structuredOgm,
                 formattedPublicId,
+                isIndividual,
                 skipSendStep,
                 clientEmail);
         }
@@ -2416,7 +2471,21 @@ namespace CPMCore.Controllers
             var issuerCompany = await _ics.GetAsync(context.Issuer.Id, ct)
                 ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden voor PDF-opmaak.");
 
-            var invoiceDto = context.Detail.ToInvoiceDto();
+            var vatTypes = context.VatTypes
+                .Select(v => new VatTypeBO
+                {
+                    Id = v.Id,
+                    IssuerCompanyId = v.IssuerCompanyId,
+                    Code = v.Code,
+                    Description = v.Description,
+                    Type = v.Type,
+                    BasePercentage = v.BasePercentage,
+                    DefaultSellBookingAccountNr = v.DefaultSellBookingAccountNr,
+                    InvoiceMention = v.InvoiceMention
+                })
+                .ToList();
+
+            var invoiceDto = context.Detail.ToInvoiceDto(vatTypes);
             invoiceDto.PublicId ??= context.FormattedPublicId;
             if (!string.IsNullOrWhiteSpace(context.StructuredOgm))
             {
@@ -2441,7 +2510,7 @@ namespace CPMCore.Controllers
             if (context.SkipSendStep)
             {
                 _logger.LogInformation(
-                    "Skipping Octopus send for invoice {InvoiceId}: individual without digital requirement or email",
+                      "Skipping send for invoice {InvoiceId}: digital delivery not required or no destination email",
                     context.Invoice.Id);
                 return null;
             }
@@ -2493,15 +2562,15 @@ namespace CPMCore.Controllers
             return sendResponse;
         }
 
-        private async Task SendClassicInvoiceEmailIfRequiredAsync(
-            OctopusInvoiceContext context,
-            OctopusInvoiceAttachment attachment,
-            CancellationToken ct)
+        private async Task<bool> SendClassicInvoiceEmailIfRequiredAsync(
+           OctopusInvoiceContext context,
+           OctopusInvoiceAttachment attachment,
+           CancellationToken ct)
         {
             // Wanneer Peppol niet van toepassing is, kan de Octopus-stroom aangevuld worden met een klassieke mail.
             // Het PDF-bestand is identiek aan de upload naar Octopus.
             if (context.SkipSendStep || string.IsNullOrWhiteSpace(context.ClientEmail))
-                return;
+                return false;
 
             try
             {
@@ -2548,10 +2617,13 @@ namespace CPMCore.Controllers
                     SentAt = DateTime.UtcNow,
                     Status = "Sent"
                 }, ct);
+
+                return true;
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Classic invoice email failed for invoice {InvoiceId}", context.Invoice.Id);
+                return false;
             }
         }
 
@@ -3291,7 +3363,9 @@ namespace CPMCore.Controllers
                     DueDate = detail.ExpirationDate,
                     TotalExcl = detail.TotalExclVat,
                     TotalVat = detail.TotalVat,
-                    TotalIncl = detail.TotalInclVat
+                    TotalIncl = detail.TotalInclVat,
+                    Type = detail.IsCreditNote ? "Creditnota" : "Factuur",
+                    IsCreditNote = detail.IsCreditNote
                 },
                 Client = new
                 {
@@ -3527,6 +3601,34 @@ namespace CPMCore.Controllers
             TempData["MessageTitle"] = messagetitle;
         }
         private static InvoiceStatus TranslateStatus(string? status) => InvoiceStatusExtensions.FromCode(status);
+        private static bool WasSentViaPeppol(OctopusInvoiceSendResponse? sendResponse)
+        {
+            return sendResponse?.SendInvoiceStatusList?.Any(status =>
+                !string.IsNullOrWhiteSpace(status.SendMethod)
+                && status.SendMethod.Contains("PEPPOL", StringComparison.OrdinalIgnoreCase))
+                ?? false;
+        }
+
+        private static string DetermineSendMethod(string? deliveryState, bool hasEmailLog, bool needsPrint)
+        {
+            if (!string.IsNullOrWhiteSpace(deliveryState))
+            {
+                var normalized = deliveryState.ToUpperInvariant();
+                if (normalized.Contains("PEPPOL"))
+                    return "Peppol";
+
+                if (normalized.Contains("EMAIL"))
+                    return "E-mail";
+            }
+
+            if (hasEmailLog)
+                return "E-mail";
+
+            if (needsPrint)
+                return "Print";
+
+            return "Niet verzonden";
+        }
         private static bool DetermineCreditNote(bool isCreditSeries, string? status, decimal? totalInclVat)
         {
             if (isCreditSeries)

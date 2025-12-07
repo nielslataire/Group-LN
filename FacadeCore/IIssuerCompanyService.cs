@@ -49,5 +49,6 @@ namespace FacadeCore
         public int Type { get; set; }
         public decimal BasePercentage { get; set; }
         public int? DefaultSellBookingAccountNr { get; set; }
+        public string? InvoiceMention { get; set; }
     }
 }

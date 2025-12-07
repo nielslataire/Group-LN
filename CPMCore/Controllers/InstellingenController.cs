@@ -3,6 +3,7 @@ using CPMCore.Attributes;
 using CPMCore.Models;
 using CPMCore.Models.Home;
 using CPMCore.Models.Instellingen;
+using CPMCore.Models.Invoicing;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
 using CPMCore.Services.Octopus;
@@ -17,15 +18,16 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Schema;
 using ServiceCore.Invoicing.Pdf.Templates;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace CPMCore.Controllers;
 
@@ -339,6 +341,7 @@ public class InstellingenController : BaseController
 
         var customFields = await _issuers.ListOctopusCustomFieldsAsync(id, ct);
         var storedMappings = DeserializeCustomFieldMappings(bo?.OctopusCustomFieldMappingsJson);
+        var vatTypes = (ViewBag.OctopusVatCodes as IReadOnlyList<VatTypeBO> ?? Array.Empty<VatTypeBO>()).ToList();
 
         var vm = new IssuerCompanyVM
         {
@@ -396,7 +399,17 @@ public class InstellingenController : BaseController
             OctopusCustomFieldsJson = bo.OctopusCustomFieldsJson,
             OctopusCustomFieldMappingsJson = bo.OctopusCustomFieldMappingsJson,
             OctopusDownloadLinkCustomFieldKeyId = bo.OctopusDownloadLinkCustomFieldKeyId,
-            CustomFieldMappings = BuildCustomFieldMappings(customFields, storedMappings)
+            CustomFieldMappings = BuildCustomFieldMappings(customFields, storedMappings),
+            VatTypes = vatTypes.Select(v => new VatTypeVM
+            {
+                Id = v.Id,
+                BasePercentage = v.BasePercentage,
+                Code = v.Code,
+                Description = v.Description,
+                Type = v.Type,
+                DefaultSellBookingAccountNr = v.DefaultSellBookingAccountNr,
+                InvoiceMention = v.InvoiceMention
+            }).ToList()
         };
 
         if (TempData["OctopusDossiers"] is string dossiersJson && !string.IsNullOrWhiteSpace(dossiersJson))
@@ -430,7 +443,7 @@ public class InstellingenController : BaseController
     // POST /Instellingen/IssuerCompanies/Edit/5
     [HttpPost("IssuerCompanies/Edit/{id:int}", Name = "Instellingen_IssuerCompanies_Edit")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> IssuerCompaniesEdit(int id, IssuerCompanyVM vm)
+    public async Task<IActionResult> IssuerCompaniesEdit(int id, IssuerCompanyVM vm, CancellationToken ct)
     {
         if (id != vm.Id) return BadRequest();
         ValidateTemplateJson(vm.TemplateJson);
@@ -440,8 +453,23 @@ public class InstellingenController : BaseController
             ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
             ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
             ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
+            ViewBag.OctopusVatCodes = await _issuers.ListVatTypeAsync(id);
             ViewBag.InvoiceFieldOptions = GetInvoiceFieldOptions();
             vm.CustomFieldMappings ??= new List<OctopusCustomFieldMappingVM>();
+            vm.VatTypes = vm.VatTypes?.Any() == true
+                ? vm.VatTypes
+                : (ViewBag.OctopusVatCodes as IReadOnlyList<VatTypeBO> ?? Array.Empty<VatTypeBO>())
+                    .Select(v => new VatTypeVM
+                    {
+                        Id = v.Id,
+                        BasePercentage = v.BasePercentage,
+                        Code = v.Code,
+                        Description = v.Description,
+                        Type = v.Type,
+                        DefaultSellBookingAccountNr = v.DefaultSellBookingAccountNr,
+                        InvoiceMention = v.InvoiceMention
+                    })
+                    .ToList();
             PopulateInvoiceLayoutViewData();
             return View(vm);
         }
@@ -524,7 +552,26 @@ public class InstellingenController : BaseController
             OctopusCustomFieldMappingsJson = BuildCustomFieldMappingJson(vm.CustomFieldMappings),
             OctopusDownloadLinkCustomFieldKeyId = vm.OctopusDownloadLinkCustomFieldKeyId,
         };
-        await _issuers.UpdateAsync(bo);
+        await _issuers.UpdateAsync(bo, ct);
+
+        var vatTypes = vm.VatTypes ?? new List<VatTypeVM>();
+        if (vatTypes.Count > 0)
+        {
+            await _issuers.SyncVatTypesAsync(
+                vm.Id,
+                vatTypes.Select(v => new VatTypeBO
+                {
+                    Id = v.Id,
+                    IssuerCompanyId = vm.Id,
+                    Code = v.Code,
+                    Description = v.Description,
+                    Type = v.Type,
+                    BasePercentage = v.BasePercentage,
+                    DefaultSellBookingAccountNr = v.DefaultSellBookingAccountNr,
+                    InvoiceMention = v.InvoiceMention
+                }),
+                ct);
+        }
 
         AddMessage("success", "Mijn bedrijf " +vm.Name + " opgeslagen.", "Geslaagd!");
         return RedirectToAction(nameof(IssuerCompanies));

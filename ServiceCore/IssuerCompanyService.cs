@@ -245,7 +245,8 @@ namespace ServiceCore
                     Description = t.Description,
                     Type = t.Type,
                     BasePercentage = t.BasePercentage,
-                    DefaultSellBookingAccountNr = t.DefaultSellBookingAccountNr
+                    DefaultSellBookingAccountNr = t.DefaultSellBookingAccountNr,
+                    InvoiceMention = t.InvoiceMention
                 })
                 .ToListAsync(ct);
         }
@@ -278,6 +279,10 @@ namespace ServiceCore
                     entity.Type = code.Type;
                     entity.BasePercentage = code.BasePercentage;
                     entity.DefaultSellBookingAccountNr = code.DefaultSellBookingAccountNr;
+                    if (code.InvoiceMention != null)
+                    {
+                        entity.InvoiceMention = code.InvoiceMention;
+                    }
                 }
                 else
                 {
@@ -288,7 +293,8 @@ namespace ServiceCore
                         Description = code.Description,
                         Type = code.Type,
                         BasePercentage = code.BasePercentage,
-                        DefaultSellBookingAccountNr = code.DefaultSellBookingAccountNr
+                        DefaultSellBookingAccountNr = code.DefaultSellBookingAccountNr,
+                        InvoiceMention = code.InvoiceMention
                     });
                 }
             }

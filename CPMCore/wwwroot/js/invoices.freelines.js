@@ -29,7 +29,8 @@
         const raw = $input.val();
         // Leeg laten als leeg
         if (raw == null || String(raw).trim() === '') { return; }
-        const num = parseLocaleNumber(raw);
+        const normalized = String(raw).replace(/\u2212/g, '-'); // sta ook typografische min-teken toe
+        const num = parseLocaleNumber(normalized);
         $input.val(nf.format(num));
     }
     function cloneRow(initial = {}) {

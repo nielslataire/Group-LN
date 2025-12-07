@@ -173,6 +173,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 Terms = BuildPaymentTerms(dto)
             },
             VatSummary = BuildVatSummary(dto),
+            VatMentions = BuildVatMentions(dto),
             ExtraInfo = dto.ExtraInfo,
             HeaderDescription = dto.HeaderDescription,
             DetailDescription = dto.DetailDescription,
@@ -339,6 +340,46 @@ public sealed class InvoicePdfService : IInvoicePdfService
         return summaries;
     }
 
+    private static IReadOnlyList<string> BuildVatMentions(InvoiceDto dto)
+    {
+        if (dto?.VatTypes == null || dto.VatTypes.Count == 0 || dto.Lines == null || dto.Lines.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var usedTypeIds = dto.Lines
+            .Select(l => l.VatTypeId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToHashSet();
+
+        var usedRates = dto.Lines
+            .Select(l => l.Vat)
+            .ToList();
+
+        var mentions = new List<string>();
+        foreach (var vat in dto.VatTypes)
+        {
+            if (string.IsNullOrWhiteSpace(vat.InvoiceMention))
+                continue;
+
+            var matchesType = usedTypeIds.Contains(vat.Id);
+            var matchesRate = usedRates.Any(rate => Math.Abs(rate - vat.BasePercentage) < 0.0001m);
+            if (!matchesType && !matchesRate)
+                continue;
+
+            var mention = vat.InvoiceMention.Trim();
+            if (string.IsNullOrWhiteSpace(mention))
+                continue;
+
+            if (mentions.Any(m => string.Equals(m, mention, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            mentions.Add(mention);
+        }
+
+        return mentions;
+    }
     private static string? BuildPaymentTerms(InvoiceDto dto)
     {
         if (dto?.DueDate is not { } due)

@@ -21,6 +21,8 @@ public partial class Vattype
 
     public int? DefaultSellBookingAccountNr { get; set; }
 
+    public string InvoiceMention { get; set; }
+
     public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
 
     public virtual IssuerCompany IssuerCompanyNavigation { get; set; }

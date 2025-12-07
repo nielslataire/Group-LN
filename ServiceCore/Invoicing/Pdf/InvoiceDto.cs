@@ -1,10 +1,11 @@
-﻿using System;
+﻿using FacadeCore;
+using System;
+using System;
+using System.Collections.Generic;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
 
 namespace ServiceCore.Invoicing.Pdf;
 
@@ -30,6 +31,8 @@ public class InvoiceDto
 
     public TotalsDto Totals { get; set; } = new();
     public IReadOnlyList<InvoiceLineDto> Lines { get; set; } = Array.Empty<InvoiceLineDto>();
+
+    public IReadOnlyList<VatTypeDto> VatTypes { get; set; } = Array.Empty<VatTypeDto>();
 }
 
 public sealed class PartyDto
@@ -83,4 +86,13 @@ public sealed class InvoiceLineDto
     public decimal Vat { get; set; }
     public decimal Total { get; set; }
     public IDictionary<string, object?> Extras { get; set; } = new Dictionary<string, object?>();
+    public int? VatTypeId { get; set; }
+}
+
+public sealed class VatTypeDto
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public decimal BasePercentage { get; set; }
+    public string? InvoiceMention { get; set; }
 }

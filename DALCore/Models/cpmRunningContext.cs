@@ -2123,6 +2123,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(200);
+            entity.Property(e => e.InvoiceMention).HasMaxLength(200);
             entity.Property(e => e.Type).HasAnnotation("Relational:DefaultConstraintName", "DF_VATtype_Type");
 
             entity.HasOne(d => d.IssuerCompanyNavigation).WithMany(p => p.Vattype)

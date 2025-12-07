@@ -567,9 +567,7 @@ $('#partySelect')
         const contractId = $('input[name="SupplierContractId"]').val();
         const mode = $('#Mode').val();
 
-        if (partyType === '3' && !projectId && !contractId) {
-            e.preventDefault(); alert("Kies minstens een project of een contract voor de leveranciersfactuur."); return false;
-        }
+
         if (isCustomer() && mode === '2') {
             if ($('#stagesList input[type="checkbox"][name$=".IsSelected"]:checked').length === 0) {
                 e.preventDefault(); alert("Kies minstens één schijf-lijn."); return false;

@@ -49,6 +49,8 @@ namespace CPMCore.Controllers
             if (issuer == null)
                 return NotFound(new { message = "Bedrijf niet gevonden." });
 
+            var vatTypes = await _issuers.ListVatTypeAsync(request.IssuerCompanyId, ct);
+
             issuer.TemplateKey = string.IsNullOrWhiteSpace(request.TemplateKey)
                 ? issuer.TemplateKey
                 : request.TemplateKey;
@@ -67,7 +69,7 @@ namespace CPMCore.Controllers
 
             try
             {
-                var dto = detail.ToInvoiceDto();
+                var dto = detail.ToInvoiceDto(vatTypes);
                 var bytes = _pdfService.Render(dto, issuer);
                 return File(bytes, "application/pdf", "factuur-preview.pdf");
             }
