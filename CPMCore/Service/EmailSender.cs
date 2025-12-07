@@ -15,7 +15,8 @@ namespace CPMCore.Service
             string subject,
             string htmlMessage,
             IEnumerable<EmailAttachment>? attachments = null,
-            string? cc = null);
+            string? cc = null,
+            string? fromEmail = null);
     }
 
     public sealed record EmailAttachment(string FileName, byte[] Content, string ContentType);
@@ -40,14 +41,15 @@ namespace CPMCore.Service
             string subject,
             string htmlMessage,
             IEnumerable<EmailAttachment>? attachments = null,
-            string? cc = null)
+            string? cc = null,
+            string? fromEmail = null)
         {
             if (string.IsNullOrWhiteSpace(toEmail))
                 throw new ArgumentException("To e-mail is verplicht.", nameof(toEmail));
 
             var message = new MailMessage
             {
-                From = new MailAddress(_smtpUser),
+                From = new MailAddress(string.IsNullOrWhiteSpace(fromEmail) ? _smtpUser : fromEmail),
                 Subject = subject,
                 Body = htmlMessage,
                 IsBodyHtml = true

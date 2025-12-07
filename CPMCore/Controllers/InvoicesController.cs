@@ -425,7 +425,13 @@ namespace CPMCore.Controllers
             var sentAtUtc = DateTime.UtcNow;
             try
             {
-                await _emailSender.SendEmailAsync(vm.To, vm.Subject, vm.Body, attachments, vm.Cc);
+                await _emailSender.SendEmailAsync(
+                     vm.To,
+                     vm.Subject,
+                     vm.Body,
+                     attachments,
+                     vm.Cc,
+                     issuer.InvoiceSendEmail);
                 await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
                 {
                     InvoiceId = detail.Id,
@@ -1942,362 +1948,38 @@ namespace CPMCore.Controllers
         {
             try
             {
-                var invoice = await _db.Invoices
-                    .Include(i => i.InvoicesDetails)
-                    .Include(i => i.IssuerCompany)
-                    .Include(i => i.PostalCode)!
-                        .ThenInclude(pc => pc.Country)
-                    .Include(i => i.ClientIdClientAccountNavigation)!
-                        .ThenInclude(c => c.PostalCode)!
-                            .ThenInclude(pc => pc.Country)
-                    .Include(i => i.ClientIdClientAccountNavigation)!
-                        .ThenInclude(c => c.InvoicePostalCode)!
-                            .ThenInclude(pc => pc.Country)
-                    .Include(i => i.ClientIdClientContactsNavigation)!
-                        .ThenInclude(c => c.PostalCode)!
-                            .ThenInclude(pc => pc.Country)
-                    .Include(i => i.ClientIdClientContactsNavigation)!
-                        .ThenInclude(c => c.InvoicePostalCode)!
-                            .ThenInclude(pc => pc.Country)
-                    .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
-                    ?? throw new InvalidOperationException("Factuur niet gevonden.");
+                // 1. Algemene gegevens van de factuur voorbereiden (gestructureerde mededeling, QR-code/public id enz.)
+                var context = await BuildOctopusInvoiceContextAsync(invoiceId, ct);
+                var progress = GetOctopusWorkflowProgress(context.Invoice.OctopusWorkflowState);
 
-                var issuer = invoice.IssuerCompany
-                    ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
-
-                CompanyInfo? company = null;
-                if (invoice.CompanyId.HasValue)
-                {
-                    company = await _db.CompanyInfo
-                        .Include(c => c.PostCode)!
-                            .ThenInclude(pc => pc.Country)
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(c => c.CompanyId == invoice.CompanyId.Value, ct);
-                }
-
-                if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
-                    throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
-
-                var detail = await _invoices.GetDetailAsync(invoiceId, ct)
-                      ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
-
-                var clientEmail = detail.ClientEmail?.Trim();
-                var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
-                    || !string.IsNullOrWhiteSpace(invoice.ClientIdClientContactsNavigation?.CompanyName);
-                var isIndividual = !invoice.CompanyId.HasValue && !hasCompanyName;
-                var skipSendStep = isIndividual && (!detail.RequiresDigitalInvoice || string.IsNullOrWhiteSpace(clientEmail));
-
-                var finalDate = invoice.Date == default
-                    ? DateOnly.FromDateTime(DateTime.Today)
-                    : invoice.Date;
-
-                var seriesId = await _db.InvoiceSeries
-                    .Where(s => s.IssuerCompanyId == issuer.Id && s.IsActive)
-                    .OrderBy(s => s.Id)
-                    .Select(s => (int?)s.Id)
-                    .FirstOrDefaultAsync(ct)
-                    ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit facturatiebedrijf.");
-
-                var fiscalYear = finalDate.Year;
-                var sequence = await _db.InvoiceSequence
-                    .Include(s => s.Bookyear)!
-                    .ThenInclude(b => b.OctopusBookyearPeriods)
-                    .Include(s => s.Journal)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
-
-                if (sequence?.Bookyear == null || sequence.Journal == null)
-                    throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit jaar.");
-
-                var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
-                var documentSequenceNr = invoice.OctopusDocumentSequenceNr ?? nextNumber;
-                var bookyearId = invoice.OctopusBookyearId ?? sequence.Bookyear.BookyearKeyId;
-                var journalKey = string.IsNullOrWhiteSpace(invoice.OctopusJournalKey)
-                    ? sequence.Journal.JournalKey
-                    : invoice.OctopusJournalKey;
-
-                var periodNumber = sequence.Bookyear.OctopusBookyearPeriods
-                    .FirstOrDefault(p =>
-                    {
-                        var start = DateOnly.FromDateTime(p.StartDate);
-                        var end = DateOnly.FromDateTime(p.EndDate);
-                        return finalDate >= start && finalDate <= end;
-                    })?.BookyearPeriodNr
-                    ?? 0;
-
-                var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
-
-                var progress = GetOctopusWorkflowProgress(invoice.OctopusWorkflowState);
+                // 2. Dossiertoken ophalen en valideren
+                var dossierToken = await EnsureDossierTokenAsync(context, ct);
 
                 if (progress.SendCompleted && !forceSendStep)
                     return;
 
-                if (sendOnly && !progress.CreationCompleted)
-                    throw new InvalidOperationException("Factuur moet eerst in Octopus aangemaakt worden.");
+                ValidateSendOnlyPreconditions(sendOnly, progress);
 
-                if (sendOnly && !progress.UploadCompleted)
-                    throw new InvalidOperationException("Factuur moet eerst als bijlage naar Octopus geüpload worden.");
+                // 3. Relatie ophalen of aanmaken/updaten
+                await EnsureOctopusRelationAsync(context, dossierToken, sendOnly, ct, progress);
 
-                var structuredOgm = BuildStructuredOgm(invoice, fiscalYear, documentSequenceNr);
+                // 4. Factuur aanmaken in Octopus API (CreateInvoiceAsync)
+                await CreateOctopusInvoiceAsync(context, dossierToken, ct, progress);
 
-                var formattedPublicId = string.IsNullOrWhiteSpace(invoice.PublicId)
-                    ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, documentSequenceNr, finalDate)
-                    : invoice.PublicId;
+                // 5. Document uploaden naar Octopus (UploadInvoiceAttachmentAsync)
+                var attachment = await UploadInvoiceAttachmentAsync(context, dossierToken, sendOnly, ct, progress);
 
-                OctopusRelation? relation = null;
-                int? relationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId
-                     ?? invoice.ClientIdClientContactsNavigation?.OctopusRelationId
-                     ?? company?.OctopusRelationId;
-                List<Vattype> vatTypes = new();
+                // 6. Factuur verzenden via Octopus (SendInvoiceAsync)
+                var sendResponse = await SendInvoiceViaOctopusAsync(context, dossierToken, ct);
 
-                if (!progress.CreationCompleted)
-                {
-                    if (sendOnly)
-                        throw new InvalidOperationException("Octopus-factuur is nog niet aangemaakt.");
-
-                    var relationLookups = BuildRelationLookups(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation, company);
-                    if (!relationLookups.Any())
-                    {
-                        throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
-                    }
-
-                    relation = await EnsureOctopusRelationAsync(
-                        dossierToken.Token,
-                        issuer.OctopusDossierNumber,
-                        relationLookups,
-                       BuildRelationRequest(invoice, invoice.ClientIdClientAccountNavigation, invoice.ClientIdClientContactsNavigation, company),
-                        ct);
-
-                    relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
-                       ?? invoice.ClientIdClientAccountNavigation?.OctopusRelationId
-                       ?? invoice.ClientIdClientContactsNavigation?.OctopusRelationId
-                       ?? company?.OctopusRelationId;
-
-                    if (relationId is null or <= 0)
-                    {
-                        throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
-                    }
-
-                    if (invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
-                        && clientAccount.OctopusRelationId != relationId)
-                    {
-                        clientAccount.OctopusRelationId = relationId;
-                        await _db.SaveChangesAsync(ct);
-                    }
-                    else if (invoice.ClientIdClientContactsNavigation is ClientContacts clientContact
-                        && clientContact.OctopusRelationId != relationId)
-                    {
-                        clientContact.OctopusRelationId = relationId;
-                        await _db.SaveChangesAsync(ct);
-                    }
-                    else if (company != null && company.OctopusRelationId != relationId)
-                    {
-                        var trackedCompany = await _db.CompanyInfo.FirstOrDefaultAsync(c => c.CompanyId == company.CompanyId, ct);
-
-                        if (trackedCompany != null)
-                        {
-                            trackedCompany.OctopusRelationId = relationId;
-                            await _db.SaveChangesAsync(ct);
-                        }
-                    }
-
-                    vatTypes = await _db.Vattype
-                        .Where(v => v.IssuerCompanyId == issuer.Id)
-                        .AsNoTracking()
-                        .ToListAsync(ct);
-
-                    var customFieldValues = BuildInvoiceCustomFieldValues(invoice, issuer, formattedPublicId);
-
-                    var payload = new OctopusInvoiceCreateRequest
-                    {
-                        BookyearKey = new OctopusBookyearKeyRef { Id = bookyearId },
-                        JournalKey = journalKey,
-                        DocumentSequenceNr = documentSequenceNr,
-                        BookyearPeriodeNr = periodNumber,
-                        DocumentDate = finalDate,
-                        ExpiryDate = invoice.ExpirationDate ?? finalDate,
-                        CurrencyCode = string.IsNullOrWhiteSpace(invoice.CurrencyCode) ? "EUR" : invoice.CurrencyCode!,
-                        ExchangeRate = 1m,
-                        RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
-                        {
-                            RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
-                            ExternalRelationId = invoice.ClientIdClientAccountNavigation?.OctopusRelationId
-                                ?? invoice.ClientId
-                                ?? invoice.CompanyId
-                                ?? relationId
-                                ?? 0
-                        },
-                        Comment = invoice.Text,
-                        OrderReference = null,
-                        Reference = structuredOgm,
-                        FinancialDiscount = 0m,
-                        CustomFieldValueList = customFieldValues,
-                        InvoiceLines = invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
-                        {
-                            ExternProductNr = null,
-                            Description = line.Text,
-                            Count = 1,
-                            Unit = string.Empty,
-                            UnitPrice = line.Price ?? 0m,
-                            DiscountPercentage = line.DiscountPercent ?? 0m,
-                            VatCodeKey = ResolveVatCodeKey(line, vatTypes, issuer.DefaultVatTypeId),
-                            BookingAccountNr = 0,
-                            //CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
-                            CustomFieldValueList = new List<OctopusCustomFieldValue>(),
-                            IntrastatServiceData = null
-                        }).ToList()
-                    };
-
-                    var created = await _octopusClient.CreateInvoiceAsync(dossierToken.Token, issuer.OctopusDossierNumber, payload, ct);
-                    if (!created)
-                    {
-                        throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het aanmaken van de factuur.");
-                    }
-
-                    invoice.OctopusBookyearId = bookyearId;
-                    invoice.OctopusJournalKey = journalKey;
-                    invoice.OctopusDocumentSequenceNr = documentSequenceNr;
-                    invoice.OctopusDeliveryState ??= "NONE";
-                    await PersistOctopusWorkflowStateAsync(invoice, OctopusWorkflowStateCreated, ct);
-                    progress = GetOctopusWorkflowProgress(invoice.OctopusWorkflowState);
-                }
-                else
-                {
-                    documentSequenceNr = invoice.OctopusDocumentSequenceNr ?? documentSequenceNr;
-                    bookyearId = invoice.OctopusBookyearId ?? bookyearId;
-                    journalKey = string.IsNullOrWhiteSpace(invoice.OctopusJournalKey) ? journalKey : invoice.OctopusJournalKey;
-                }
-
-                if (!progress.UploadCompleted)
-                {
-                    if (sendOnly)
-                        throw new InvalidOperationException("Octopus-factuurbijlage is nog niet geüpload.");
-
-                    var issuerCompany = await _ics.GetAsync(issuer.Id, ct)
-                        ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden voor PDF-opmaak.");
-
-                    var invoiceDto = detail.ToInvoiceDto();
-                    invoiceDto.PublicId ??= formattedPublicId;
-                    if (!string.IsNullOrWhiteSpace(structuredOgm))
-                    {
-                        invoiceDto.StructuredMessage = structuredOgm;
-                    }
-                    var pdfBytes = _pdf.Render(invoiceDto, issuerCompany);
-                    var invoiceNumber = formattedPublicId;
-                    var invalidChars = Path.GetInvalidFileNameChars();
-                    var safePublicId = string.IsNullOrWhiteSpace(formattedPublicId) ? invoice.Id.ToString(CultureInfo.InvariantCulture) : formattedPublicId;
-                    var sanitizedId = new string((safePublicId ?? string.Empty).Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
-                    var fileName = $"factuur {sanitizedId}.pdf";
-
-                    var uploaded = await _octopusClient.UploadInvoiceAttachmentAsync(
-                        dossierToken.Token,
-                        issuer.OctopusDossierNumber,
-                        new OctopusInvoiceAttachmentUploadRequest
-                        {
-                            BookyearId = bookyearId,
-                            JournalKey = journalKey,
-                            DocumentSequenceNumber = documentSequenceNr,
-                            InvoiceNumber = invoiceNumber,
-                            AttachmentType = "Invoice",
-                            FileName = fileName,
-                            Content = pdfBytes,
-                            ContentType = "application/pdf"
-                        },
-                        ct);
-
-                    if (!uploaded)
-                    {
-                        throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het uploaden van de factuurbijlage.");
-                    }
-
-                    await PersistOctopusWorkflowStateAsync(invoice, OctopusWorkflowStateAttachmentUploaded, ct);
-                    progress = GetOctopusWorkflowProgress(invoice.OctopusWorkflowState);
-                }
-
-                if (skipSendStep)
-                {
-                    _logger.LogInformation(
-                        "Skipping Octopus send for invoice {InvoiceId}: individual without digital requirement or email",
-                        invoiceId);
+                if (context.SkipSendStep)
                     return;
-                }
 
-                var sendRequest = new OctopusInvoiceSendRequest
-                {
-                    BookyearKey = new OctopusBookyearKeyRef { Id = bookyearId },
-                    Journal = journalKey,
-                    DocumentSequenceNr = documentSequenceNr,
-                    ToDocumentSequenceNr = documentSequenceNr,
-                    FromMailAddress = string.IsNullOrWhiteSpace(issuer.InvoiceSendEmail)
-                        ? issuer.Email
-                        : issuer.InvoiceSendEmail,
-                    CcMailAddress = null,
-                    BccMailAddress = null,
-                    ExcludeOctopusPdf = true,
-                    ForceUseEmail = false
-                };
+                // 7. Klassieke mailverzending indien geen Peppol (PDF identiek aan upload)
+                await SendClassicInvoiceEmailIfRequiredAsync(context, attachment, ct);
 
-                var sendResponse = await _octopusClient.SendInvoiceAsync(
-                    dossierToken.Token,
-                    issuer.OctopusDossierNumber,
-                    sendRequest,
-                    ct);
-
-                if (sendResponse is null || !sendResponse.Success)
-                {
-                    throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het versturen van de factuur.");
-                }
-
-                var sendDocumentKey = sendResponse?.SendInvoiceStatusList?.FirstOrDefault()?.DocumentKey;
-                documentSequenceNr = sendDocumentKey?.DocumentSequenceNr > 0
-                    ? sendDocumentKey!.DocumentSequenceNr
-                    : documentSequenceNr;
-
-                invoice.OctopusBookyearId = sendDocumentKey?.BookyearKey?.Id ?? bookyearId;
-                invoice.OctopusJournalKey = string.IsNullOrWhiteSpace(sendDocumentKey?.Journal)
-                    ? journalKey
-                    : sendDocumentKey!.Journal;
-                invoice.OctopusDocumentSequenceNr = documentSequenceNr;
-                invoice.OctopusDeliveryState ??= "NONE";
-                invoice.OctopusDeliveryUpdatedAt = DateTime.UtcNow;
-                await PersistOctopusWorkflowStateAsync(invoice, OctopusWorkflowStateSent, ct);
-
-                var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
-                var sentAtUtc = DateTime.UtcNow;
-                await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
-                {
-                    InvoiceId = invoice.Id,
-                    ToAddress = "Octopus",
-                    CcAddress = userName,
-                    Subject = $"Doorgestuurd naar Octopus door {userName}",
-                    ProviderId = issuer.OctopusDossierNumber,
-                    SentAt = sentAtUtc,
-                    Status = "Uploaded"
-                }, ct);
-
-                if (sendResponse?.SendInvoiceStatusList != null)
-                {
-                    foreach (var status in sendResponse.SendInvoiceStatusList)
-                    {
-                        var method = string.IsNullOrWhiteSpace(status.SendMethod) ? "Octopus" : status.SendMethod!;
-                        var subject = $"Octopus verzendstatus ({method})";
-                        if (!string.IsNullOrWhiteSpace(status.Comment))
-                        {
-                            subject = $"{subject}: {Truncate(status.Comment, 120)}";
-                        }
-
-                        await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
-                        {
-                            InvoiceId = invoice.Id,
-                            ToAddress = method,
-                            CcAddress = userName,
-                            Subject = Truncate(subject, 200),
-                            ProviderId = issuer.OctopusDossierNumber,
-                            SentAt = sentAtUtc,
-                            Status = status.Success ? "Sent" : "Error"
-                        }, ct);
-                    }
-                }
+                // 8. Logboeken en verzendgeschiedenis bijwerken
+                await LogOctopusSendAsync(context, sendResponse, ct);
             }
             catch (HttpRequestException ex)
             {
@@ -2309,13 +1991,633 @@ namespace CPMCore.Controllers
             }
 
         }
-        private static (bool CreationCompleted, bool UploadCompleted, bool SendCompleted) GetOctopusWorkflowProgress(string? workflowState)
+
+        private sealed class OctopusInvoiceContext
+        {
+            public OctopusInvoiceContext(
+                Invoices invoice,
+                IssuerCompany issuer,
+                InvoiceDetailBO detail,
+                CompanyInfo? company,
+                DateOnly finalDate,
+                int fiscalYear,
+                int documentSequenceNr,
+                int bookyearId,
+                string journalKey,
+                int periodNumber,
+                string structuredOgm,
+                string formattedPublicId,
+                bool skipSendStep,
+                string? clientEmail)
+            {
+                Invoice = invoice;
+                Issuer = issuer;
+                Detail = detail;
+                Company = company;
+                FinalDate = finalDate;
+                FiscalYear = fiscalYear;
+                DocumentSequenceNr = documentSequenceNr;
+                BookyearId = bookyearId;
+                JournalKey = journalKey;
+                PeriodNumber = periodNumber;
+                StructuredOgm = structuredOgm;
+                FormattedPublicId = formattedPublicId;
+                SkipSendStep = skipSendStep;
+                ClientEmail = clientEmail;
+            }
+
+            public Invoices Invoice { get; }
+            public IssuerCompany Issuer { get; }
+            public InvoiceDetailBO Detail { get; }
+            public CompanyInfo? Company { get; }
+            public DateOnly FinalDate { get; }
+            public int FiscalYear { get; }
+            public int DocumentSequenceNr { get; set; }
+            public int BookyearId { get; set; }
+            public string JournalKey { get; set; }
+            public int PeriodNumber { get; }
+            public string StructuredOgm { get; }
+            public string FormattedPublicId { get; }
+            public bool SkipSendStep { get; }
+            public string? ClientEmail { get; }
+            public List<Vattype> VatTypes { get; } = new();
+            public string DossierNumber => Issuer.OctopusDossierNumber ?? string.Empty;
+        }
+
+        private sealed class OctopusWorkflowProgress
+        {
+            public bool CreationCompleted { get; set; }
+            public bool UploadCompleted { get; set; }
+            public bool SendCompleted { get; set; }
+        }
+
+        private sealed class OctopusInvoiceAttachment
+        {
+            public OctopusInvoiceAttachment(byte[] pdfBytes, string fileName, string invoiceNumber)
+            {
+                PdfBytes = pdfBytes;
+                FileName = fileName;
+                InvoiceNumber = invoiceNumber;
+            }
+
+            public byte[] PdfBytes { get; }
+            public string FileName { get; }
+            public string InvoiceNumber { get; }
+        }
+
+        private async Task<OctopusInvoiceContext> BuildOctopusInvoiceContextAsync(int invoiceId, CancellationToken ct)
+        {
+            var invoice = await _db.Invoices
+                .Include(i => i.InvoicesDetails)
+                .Include(i => i.IssuerCompany)
+                .Include(i => i.PostalCode)!
+                    .ThenInclude(pc => pc.Country)
+                .Include(i => i.ClientIdClientAccountNavigation)!
+                    .ThenInclude(c => c.PostalCode)!
+                        .ThenInclude(pc => pc.Country)
+                .Include(i => i.ClientIdClientAccountNavigation)!
+                    .ThenInclude(c => c.InvoicePostalCode)!
+                        .ThenInclude(pc => pc.Country)
+                .Include(i => i.ClientIdClientContactsNavigation)!
+                    .ThenInclude(c => c.PostalCode)!
+                        .ThenInclude(pc => pc.Country)
+                .Include(i => i.ClientIdClientContactsNavigation)!
+                    .ThenInclude(c => c.InvoicePostalCode)!
+                        .ThenInclude(pc => pc.Country)
+                .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
+                ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+            var issuer = invoice.IssuerCompany
+                ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");
+
+            CompanyInfo? company = null;
+            if (invoice.CompanyId.HasValue)
+            {
+                company = await _db.CompanyInfo
+                    .Include(c => c.PostCode)!
+                        .ThenInclude(pc => pc.Country)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(c => c.CompanyId == invoice.CompanyId.Value, ct);
+            }
+
+            if (string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
+                throw new InvalidOperationException("Octopus dossiernummer ontbreekt. Vul dit in bij het facturatiebedrijf.");
+
+            var detail = await _invoices.GetDetailAsync(invoiceId, ct)
+                  ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
+
+            var clientEmail = detail.ClientEmail?.Trim();
+            var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
+                || !string.IsNullOrWhiteSpace(invoice.ClientIdClientContactsNavigation?.CompanyName);
+            var isIndividual = !invoice.CompanyId.HasValue && !hasCompanyName;
+            var skipSendStep = isIndividual && (!detail.RequiresDigitalInvoice || string.IsNullOrWhiteSpace(clientEmail));
+
+            var finalDate = invoice.Date == default
+                ? DateOnly.FromDateTime(DateTime.Today)
+                : invoice.Date;
+
+            var seriesId = await _db.InvoiceSeries
+                .Where(s => s.IssuerCompanyId == issuer.Id && s.IsActive)
+                .OrderBy(s => s.Id)
+                .Select(s => (int?)s.Id)
+                .FirstOrDefaultAsync(ct)
+                ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit facturatiebedrijf.");
+
+            var fiscalYear = finalDate.Year;
+            var sequence = await _db.InvoiceSequence
+                .Include(s => s.Bookyear)!
+                .ThenInclude(b => b.OctopusBookyearPeriods)
+                .Include(s => s.Journal)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
+
+            if (sequence?.Bookyear == null || sequence.Journal == null)
+                throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit jaar.");
+
+            var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
+            var documentSequenceNr = invoice.OctopusDocumentSequenceNr ?? nextNumber;
+            var bookyearId = invoice.OctopusBookyearId ?? sequence.Bookyear.BookyearKeyId;
+            var journalKey = string.IsNullOrWhiteSpace(invoice.OctopusJournalKey)
+                ? sequence.Journal.JournalKey
+                : invoice.OctopusJournalKey;
+
+            var periodNumber = sequence.Bookyear.OctopusBookyearPeriods
+                .FirstOrDefault(p =>
+                {
+                    var start = DateOnly.FromDateTime(p.StartDate);
+                    var end = DateOnly.FromDateTime(p.EndDate);
+                    return finalDate >= start && finalDate <= end;
+                })?.BookyearPeriodNr
+                ?? 0;
+
+            var structuredOgm = BuildStructuredOgm(invoice, fiscalYear, documentSequenceNr);
+
+            // Zorg dat gestructureerde mededeling en QR-payload up-to-date zijn voor we Octopus aanspreken
+            var updatedQr = BuildEpcQrPayload(
+                issuer,
+                invoice.BankAccount,
+                structuredOgm,
+                detail.TotalInclVat);
+            var needsSave = false;
+            if (!string.IsNullOrWhiteSpace(structuredOgm) && !string.Equals(invoice.StructuredCommOgm, structuredOgm, StringComparison.Ordinal))
+            {
+                invoice.StructuredCommOgm = structuredOgm;
+                needsSave = true;
+            }
+            if (!string.IsNullOrWhiteSpace(updatedQr) && !string.Equals(invoice.QrEpcPayload, updatedQr, StringComparison.Ordinal))
+            {
+                invoice.QrEpcPayload = updatedQr;
+                detail.QrPayLoad = updatedQr;
+                needsSave = true;
+            }
+            if (needsSave)
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+
+            // Zorg dat de detailweergave dezelfde gegevens heeft als de factuur zelf
+            detail.StructuredMessage = string.IsNullOrWhiteSpace(structuredOgm)
+                ? detail.StructuredMessage
+                : structuredOgm;
+
+            var formattedPublicId = string.IsNullOrWhiteSpace(invoice.PublicId)
+                ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, documentSequenceNr, finalDate)
+                : invoice.PublicId;
+
+            detail.PublicId ??= formattedPublicId;
+
+            return new OctopusInvoiceContext(
+                invoice,
+                issuer,
+                detail,
+                company,
+                finalDate,
+                fiscalYear,
+                documentSequenceNr,
+                bookyearId,
+                journalKey,
+                periodNumber,
+                structuredOgm,
+                formattedPublicId,
+                skipSendStep,
+                clientEmail);
+        }
+
+        private static void ValidateSendOnlyPreconditions(bool sendOnly, OctopusWorkflowProgress progress)
+        {
+            if (!sendOnly)
+                return;
+
+            if (!progress.CreationCompleted)
+                throw new InvalidOperationException("Factuur moet eerst in Octopus aangemaakt worden.");
+
+            if (!progress.UploadCompleted)
+                throw new InvalidOperationException("Factuur moet eerst als bijlage naar Octopus geüpload worden.");
+        }
+
+        private async Task<OctopusDossierTokenResult> EnsureDossierTokenAsync(OctopusInvoiceContext context, CancellationToken ct)
+        {
+            return await _octopusTokens.RefreshDossierTokenAsync(context.Issuer.Id, context.DossierNumber, ct);
+        }
+
+        private async Task EnsureOctopusRelationAsync(
+            OctopusInvoiceContext context,
+            OctopusDossierTokenResult dossierToken,
+            bool sendOnly,
+            CancellationToken ct,
+            OctopusWorkflowProgress progress)
+        {
+            if (progress.CreationCompleted)
+                return;
+
+            if (sendOnly)
+                throw new InvalidOperationException("Octopus-factuur is nog niet aangemaakt.");
+
+            var relationLookups = BuildRelationLookups(context.Invoice, context.Invoice.ClientIdClientAccountNavigation, context.Invoice.ClientIdClientContactsNavigation, context.Company);
+            if (!relationLookups.Any())
+            {
+                throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
+            }
+
+            var relation = await EnsureOctopusRelationAsync(
+                dossierToken.Token,
+                context.DossierNumber,
+                relationLookups,
+                BuildRelationRequest(context.Invoice, context.Invoice.ClientIdClientAccountNavigation, context.Invoice.ClientIdClientContactsNavigation, context.Company),
+                ct);
+
+            var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
+                ?? context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                ?? context.Invoice.ClientIdClientContactsNavigation?.OctopusRelationId
+                ?? context.Company?.OctopusRelationId;
+
+            if (relationId is null or <= 0)
+            {
+                throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
+            }
+
+            await UpdateLocalRelationIdsAsync(context, relationId, ct);
+
+            context.VatTypes.Clear();
+            var vatTypes = await _db.Vattype
+                .Where(v => v.IssuerCompanyId == context.Issuer.Id)
+                .AsNoTracking()
+                .ToListAsync(ct);
+            context.VatTypes.AddRange(vatTypes);
+        }
+
+        private async Task UpdateLocalRelationIdsAsync(OctopusInvoiceContext context, int? relationId, CancellationToken ct)
+        {
+            if (context.Invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
+                && clientAccount.OctopusRelationId != relationId)
+            {
+                clientAccount.OctopusRelationId = relationId;
+                await _db.SaveChangesAsync(ct);
+            }
+            else if (context.Invoice.ClientIdClientContactsNavigation is ClientContacts clientContact
+                && clientContact.OctopusRelationId != relationId)
+            {
+                clientContact.OctopusRelationId = relationId;
+                await _db.SaveChangesAsync(ct);
+            }
+            else if (context.Company != null && context.Company.OctopusRelationId != relationId)
+            {
+                var trackedCompany = await _db.CompanyInfo.FirstOrDefaultAsync(c => c.CompanyId == context.Company.CompanyId, ct);
+
+                if (trackedCompany != null)
+                {
+                    trackedCompany.OctopusRelationId = relationId;
+                    await _db.SaveChangesAsync(ct);
+                }
+            }
+        }
+
+        private async Task CreateOctopusInvoiceAsync(
+            OctopusInvoiceContext context,
+            OctopusDossierTokenResult dossierToken,
+            CancellationToken ct,
+            OctopusWorkflowProgress progress)
+        {
+            if (progress.CreationCompleted)
+                return;
+
+            var relationId = context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                ?? context.Invoice.ClientIdClientContactsNavigation?.OctopusRelationId
+                ?? context.Company?.OctopusRelationId;
+
+            if (relationId is null or <= 0)
+            {
+                throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
+            }
+
+            var customFieldValues = BuildInvoiceCustomFieldValues(context.Invoice, context.Issuer, context.FormattedPublicId);
+
+            var payload = new OctopusInvoiceCreateRequest
+            {
+                BookyearKey = new OctopusBookyearKeyRef { Id = context.BookyearId },
+                JournalKey = context.JournalKey,
+                DocumentSequenceNr = context.DocumentSequenceNr,
+                BookyearPeriodeNr = context.PeriodNumber,
+                DocumentDate = context.FinalDate,
+                ExpiryDate = context.Invoice.ExpirationDate ?? context.FinalDate,
+                CurrencyCode = string.IsNullOrWhiteSpace(context.Invoice.CurrencyCode) ? "EUR" : context.Invoice.CurrencyCode!,
+                ExchangeRate = 1m,
+                RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
+                {
+                    RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
+                    ExternalRelationId = context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                        ?? context.Invoice.ClientId
+                        ?? context.Invoice.CompanyId
+                        ?? relationId
+                        ?? 0
+                },
+                Comment = context.Invoice.Text,
+                OrderReference = null,
+                Reference = context.StructuredOgm,
+                FinancialDiscount = 0m,
+                CustomFieldValueList = customFieldValues,
+                InvoiceLines = context.Invoice.InvoicesDetails.Select(line => new OctopusInvoiceLineRequest
+                {
+                    ExternProductNr = null,
+                    Description = line.Text,
+                    Count = 1,
+                    Unit = string.Empty,
+                    UnitPrice = line.Price ?? 0m,
+                    DiscountPercentage = line.DiscountPercent ?? 0m,
+                    VatCodeKey = ResolveVatCodeKey(line, context.VatTypes, context.Issuer.DefaultVatTypeId),
+                    BookingAccountNr = 0,
+                    //CostCentreKey = new OctopusCostCentreKeyRef { Id = 0 },
+                    CustomFieldValueList = new List<OctopusCustomFieldValue>(),
+                    IntrastatServiceData = null
+                }).ToList()
+            };
+
+            var created = await _octopusClient.CreateInvoiceAsync(dossierToken.Token, context.DossierNumber, payload, ct);
+            if (!created)
+            {
+                throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het aanmaken van de factuur.");
+            }
+
+            context.Invoice.OctopusBookyearId = context.BookyearId;
+            context.Invoice.OctopusJournalKey = context.JournalKey;
+            context.Invoice.OctopusDocumentSequenceNr = context.DocumentSequenceNr;
+            context.Invoice.OctopusDeliveryState ??= "NONE";
+            await PersistOctopusWorkflowStateAsync(context.Invoice, OctopusWorkflowStateCreated, ct);
+            UpdateProgressFromState(progress, context.Invoice.OctopusWorkflowState);
+        }
+
+        private async Task<OctopusInvoiceAttachment> UploadInvoiceAttachmentAsync(
+            OctopusInvoiceContext context,
+            OctopusDossierTokenResult dossierToken,
+            bool sendOnly,
+            CancellationToken ct,
+            OctopusWorkflowProgress progress)
+        {
+            if (progress.UploadCompleted)
+            {
+                // Upload is reeds gebeurd, maar we hebben nog steeds de PDF-inhoud nodig voor eventuele mailverzending.
+                return await BuildAttachmentAsync(context, ct);
+            }
+
+            if (sendOnly)
+                throw new InvalidOperationException("Octopus-factuurbijlage is nog niet geüpload.");
+
+            var attachment = await BuildAttachmentAsync(context, ct);
+
+            var uploaded = await _octopusClient.UploadInvoiceAttachmentAsync(
+                dossierToken.Token,
+                context.DossierNumber,
+                new OctopusInvoiceAttachmentUploadRequest
+                {
+                    BookyearId = context.BookyearId,
+                    JournalKey = context.JournalKey,
+                    DocumentSequenceNumber = context.DocumentSequenceNr,
+                    InvoiceNumber = attachment.InvoiceNumber,
+                    AttachmentType = "Invoice",
+                    FileName = attachment.FileName,
+                    Content = attachment.PdfBytes,
+                    ContentType = "application/pdf"
+                },
+                ct);
+
+            if (!uploaded)
+            {
+                throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het uploaden van de factuurbijlage.");
+            }
+
+            await PersistOctopusWorkflowStateAsync(context.Invoice, OctopusWorkflowStateAttachmentUploaded, ct);
+            UpdateProgressFromState(progress, context.Invoice.OctopusWorkflowState);
+
+            return attachment;
+        }
+
+        private async Task<OctopusInvoiceAttachment> BuildAttachmentAsync(OctopusInvoiceContext context, CancellationToken ct)
+        {
+            var issuerCompany = await _ics.GetAsync(context.Issuer.Id, ct)
+                ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden voor PDF-opmaak.");
+
+            var invoiceDto = context.Detail.ToInvoiceDto();
+            invoiceDto.PublicId ??= context.FormattedPublicId;
+            if (!string.IsNullOrWhiteSpace(context.StructuredOgm))
+            {
+                invoiceDto.StructuredMessage = context.StructuredOgm;
+            }
+
+            var pdfBytes = _pdf.Render(invoiceDto, issuerCompany);
+            var invoiceNumber = context.FormattedPublicId;
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var safePublicId = string.IsNullOrWhiteSpace(context.FormattedPublicId) ? context.Invoice.Id.ToString(CultureInfo.InvariantCulture) : context.FormattedPublicId;
+            var sanitizedId = new string((safePublicId ?? string.Empty).Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
+            var fileName = $"factuur {sanitizedId}.pdf";
+
+            return new OctopusInvoiceAttachment(pdfBytes, fileName, invoiceNumber);
+        }
+
+        private async Task<OctopusInvoiceSendResponse?> SendInvoiceViaOctopusAsync(
+            OctopusInvoiceContext context,
+            OctopusDossierTokenResult dossierToken,
+            CancellationToken ct)
+        {
+            if (context.SkipSendStep)
+            {
+                _logger.LogInformation(
+                    "Skipping Octopus send for invoice {InvoiceId}: individual without digital requirement or email",
+                    context.Invoice.Id);
+                return null;
+            }
+
+            var sendRequest = new OctopusInvoiceSendRequest
+            {
+                BookyearKey = new OctopusBookyearKeyRef { Id = context.BookyearId },
+                Journal = context.JournalKey,
+                DocumentSequenceNr = context.DocumentSequenceNr,
+                ToDocumentSequenceNr = context.DocumentSequenceNr,
+                FromMailAddress = string.IsNullOrWhiteSpace(context.Issuer.InvoiceSendEmail)
+                    ? context.Issuer.Email
+                    : context.Issuer.InvoiceSendEmail,
+                CcMailAddress = null,
+                BccMailAddress = null,
+                ExcludeOctopusPdf = true,
+                ForceUseEmail = false
+            };
+
+            var sendResponse = await _octopusClient.SendInvoiceAsync(
+                dossierToken.Token,
+                context.DossierNumber,
+                sendRequest,
+                ct);
+
+            if (sendResponse is null || !sendResponse.Success)
+            {
+                _logger.LogWarning(
+                    "Octopus send failed for invoice {InvoiceId} in dossier {DossierNumber}. Continuing with classic send.",
+                    context.Invoice.Id,
+                    context.DossierNumber);
+                return sendResponse;
+            }
+
+            var sendDocumentKey = sendResponse?.SendInvoiceStatusList?.FirstOrDefault()?.DocumentKey;
+            context.DocumentSequenceNr = sendDocumentKey?.DocumentSequenceNr > 0
+                ? sendDocumentKey!.DocumentSequenceNr
+                : context.DocumentSequenceNr;
+
+            context.Invoice.OctopusBookyearId = sendDocumentKey?.BookyearKey?.Id ?? context.BookyearId;
+            context.Invoice.OctopusJournalKey = string.IsNullOrWhiteSpace(sendDocumentKey?.Journal)
+                ? context.JournalKey
+                : sendDocumentKey!.Journal;
+            context.Invoice.OctopusDocumentSequenceNr = context.DocumentSequenceNr;
+            context.Invoice.OctopusDeliveryState ??= "NONE";
+            context.Invoice.OctopusDeliveryUpdatedAt = DateTime.UtcNow;
+            await PersistOctopusWorkflowStateAsync(context.Invoice, OctopusWorkflowStateSent, ct);
+
+            return sendResponse;
+        }
+
+        private async Task SendClassicInvoiceEmailIfRequiredAsync(
+            OctopusInvoiceContext context,
+            OctopusInvoiceAttachment attachment,
+            CancellationToken ct)
+        {
+            // Wanneer Peppol niet van toepassing is, kan de Octopus-stroom aangevuld worden met een klassieke mail.
+            // Het PDF-bestand is identiek aan de upload naar Octopus.
+            if (context.SkipSendStep || string.IsNullOrWhiteSpace(context.ClientEmail))
+                return;
+
+            try
+            {
+                var issuerBo = await _ics.GetAsync(context.Issuer.Id, ct)
+                    ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden voor e-mailopmaak.");
+
+                var templateModel = BuildEmailTemplateModel(
+                    context.Detail,
+                    issuerBo,
+                    context.Detail.BankAccount,
+                    context.Detail.Currency ?? "EUR");
+
+                var subjectTemplate = issuerBo.EmailSubjectTemplate;
+                var renderedSubject = !string.IsNullOrWhiteSpace(subjectTemplate)
+                    ? _templateInterpolator.Interpolate(subjectTemplate, templateModel).Trim()
+                    : string.Empty;
+                var mailSubject = !string.IsNullOrWhiteSpace(renderedSubject)
+                    ? renderedSubject
+                    : $"Factuur {context.FormattedPublicId ?? context.Invoice.Id.ToString(CultureInfo.InvariantCulture)}";
+
+                var bodyTemplate = issuerBo.EmailBodyTemplate;
+                var renderedBody = !string.IsNullOrWhiteSpace(bodyTemplate)
+                    ? _templateInterpolator.Interpolate(bodyTemplate, templateModel).Trim()
+                    : string.Empty;
+                var mailBody = !string.IsNullOrWhiteSpace(renderedBody)
+                    ? renderedBody
+                    : BuildDefaultEmailBody(context.Detail, issuerBo, context.Detail.Currency ?? "EUR", context.Detail.BankAccount ?? string.Empty);
+
+                await _emailSender.SendEmailAsync(
+                    context.ClientEmail,
+                    mailSubject,
+                    mailBody,
+                    new List<EmailAttachment> { new(attachment.FileName, attachment.PdfBytes, "application/pdf") },
+                    null,
+                    context.Issuer.InvoiceSendEmail);
+
+                await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
+                {
+                    InvoiceId = context.Invoice.Id,
+                    ToAddress = context.ClientEmail,
+                    CcAddress = null,
+                    Subject = mailSubject,
+                    ProviderId = context.DossierNumber,
+                    SentAt = DateTime.UtcNow,
+                    Status = "Sent"
+                }, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Classic invoice email failed for invoice {InvoiceId}", context.Invoice.Id);
+            }
+        }
+
+        private async Task LogOctopusSendAsync(
+            OctopusInvoiceContext context,
+            OctopusInvoiceSendResponse? sendResponse,
+            CancellationToken ct)
+        {
+            var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
+            var sentAtUtc = DateTime.UtcNow;
+
+            await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
+            {
+                InvoiceId = context.Invoice.Id,
+                ToAddress = "Octopus",
+                CcAddress = userName,
+                Subject = $"Doorgestuurd naar Octopus door {userName}",
+                ProviderId = context.DossierNumber,
+                SentAt = sentAtUtc,
+                Status = "Uploaded"
+            }, ct);
+
+            if (sendResponse?.SendInvoiceStatusList != null)
+            {
+                foreach (var status in sendResponse.SendInvoiceStatusList)
+                {
+                    var method = string.IsNullOrWhiteSpace(status.SendMethod) ? "Octopus" : status.SendMethod!;
+                    var subject = $"Octopus verzendstatus ({method})";
+                    if (!string.IsNullOrWhiteSpace(status.Comment))
+                    {
+                        subject = $"{subject}: {Truncate(status.Comment, 120)}";
+                    }
+
+                    await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
+                    {
+                        InvoiceId = context.Invoice.Id,
+                        ToAddress = method,
+                        CcAddress = userName,
+                        Subject = Truncate(subject, 200),
+                        ProviderId = context.DossierNumber,
+                        SentAt = sentAtUtc,
+                        Status = status.Success ? "Sent" : "Error"
+                    }, ct);
+                }
+            }
+        }
+        private static OctopusWorkflowProgress GetOctopusWorkflowProgress(string? workflowState)
         {
             var creationCompleted = IsOctopusStepCompleted(workflowState, OctopusWorkflowStateCreated);
             var uploadCompleted = IsOctopusStepCompleted(workflowState, OctopusWorkflowStateAttachmentUploaded);
             var sendCompleted = IsOctopusStepCompleted(workflowState, OctopusWorkflowStateSent);
 
-            return (creationCompleted, uploadCompleted, sendCompleted);
+            return new OctopusWorkflowProgress
+            {
+                CreationCompleted = creationCompleted,
+                UploadCompleted = uploadCompleted,
+                SendCompleted = sendCompleted
+            };
+        }
+
+        private static void UpdateProgressFromState(OctopusWorkflowProgress progress, string? workflowState)
+        {
+            var updated = GetOctopusWorkflowProgress(workflowState);
+            progress.CreationCompleted = updated.CreationCompleted;
+            progress.UploadCompleted = updated.UploadCompleted;
+            progress.SendCompleted = updated.SendCompleted;
         }
 
         private static bool IsOctopusStepCompleted(string? currentState, string targetState)
@@ -2498,11 +2800,9 @@ namespace CPMCore.Controllers
             if (Different(current.PostalCode, desired.PostalCode)) return true;
             if (Different(current.City, desired.City)) return true;
             if (Different(current.Country, desired.Country)) return true;
-            if (!string.IsNullOrWhiteSpace(desired.Email) && Different(current.Email, desired.Email)) return true;
             if (!string.IsNullOrWhiteSpace(desired.VatNr) && Different(current.VatNr, desired.VatNr)) return true;
             if (desired.VatType.HasValue && current.VatType != desired.VatType) return true;
             if (Different(current.CurrencyCode, desired.CurrencyCode)) return true;
-            if (Different(current.Contactperson, desired.Contactperson)) return true;
             if (current.Client != desired.Client || current.Supplier != desired.Supplier || current.Active != desired.Active) return true;
 
             return false;
@@ -2553,10 +2853,8 @@ namespace CPMCore.Controllers
                 PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? clientContact?.InvoicePostalCode?.Postcode ?? clientContact?.PostalCode?.Postcode ?? company?.Postcode ?? invoice.PostalCode?.Postcode,
                 City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? clientContact?.InvoicePostalCode?.Gemeente ?? clientContact?.PostalCode?.Gemeente ?? company?.Gemeente ?? invoice.PostalCode?.Gemeente,
                 Country = countryCode,
-                Email = clientAccount?.InvoiceEmail ?? clientContact?.InvoiceEmail ?? company?.InvoiceEmail ?? clientAccount?.Email ?? clientContact?.Email ?? company?.Email,
                 VatNr = FormatVatNumberForOctopus(invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.Ondernemingsnummer, countryCode),
                 CurrencyCode = "EUR",
-                Contactperson = clientName,
                 DefaultBookingAccountClient = 0,
                 DefaultBookingAccountSupplier = 0,
                 SupplierPaymentMethod = 0,
@@ -2791,6 +3089,80 @@ namespace CPMCore.Controllers
             return GenerateStructuredOgm(fiscalYear, sequenceNumber);
         }
 
+        private static string? BuildEpcQrPayload(IssuerCompany issuer, string? bankAccount, string? structuredMessage, decimal amount)
+        {
+            if (issuer == null || !issuer.EpcQrEnabled)
+                return null;
+            if (string.IsNullOrWhiteSpace(issuer.EpcBeneficiaryName))
+                return null;
+
+            var iban = string.IsNullOrWhiteSpace(bankAccount) ? issuer.EpcIban : bankAccount;
+            if (string.IsNullOrWhiteSpace(iban))
+                return null;
+            if (string.IsNullOrWhiteSpace(structuredMessage))
+                return null;
+            if (amount <= 0m)
+                return null;
+
+            var builder = new StringBuilder();
+            builder.AppendLine("BCD");
+            builder.AppendLine("001");
+            builder.AppendLine("1");
+            builder.AppendLine("SCT");
+            builder.AppendLine((issuer.EpcBic ?? string.Empty).Trim().ToUpperInvariant());
+            builder.AppendLine(TrimEpcValue(issuer.EpcBeneficiaryName, 70));
+            builder.AppendLine(NormalizeIban(iban));
+            builder.AppendLine($"EUR{amount.ToString("0.00", CultureInfo.InvariantCulture)}");
+            builder.AppendLine();
+            builder.AppendLine(TrimEpcValue(structuredMessage, 140));
+            return builder.ToString();
+        }
+
+        private static string NormalizeIban(string iban)
+        {
+            var sb = new StringBuilder();
+            foreach (var ch in iban)
+            {
+                if (!char.IsWhiteSpace(ch))
+                    sb.Append(char.ToUpperInvariant(ch));
+            }
+
+            return sb.ToString();
+        }
+
+        private static string? FormatBankAccount(string? account)
+        {
+            if (string.IsNullOrWhiteSpace(account))
+                return null;
+
+            var normalized = new string(account.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+
+            if (normalized.StartsWith("BE", StringComparison.Ordinal) &&
+                normalized.Length == 16 &&
+                normalized.Skip(2).All(char.IsDigit))
+            {
+                var checkDigits = normalized.Substring(2, 2);
+                var remainder = normalized.Substring(4);
+                return $"BE{checkDigits} {remainder.Substring(0, 4)} {remainder.Substring(4, 4)} {remainder.Substring(8, 4)}";
+            }
+
+            return account.Trim();
+        }
+
+        private static string TrimEpcValue(string value, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var cleaned = value
+                .Replace("\r", string.Empty)
+                .Replace("\n", " ")
+                .Replace("\t", " ")
+                .Trim();
+
+            return cleaned.Length <= maxLength ? cleaned : cleaned.Substring(0, maxLength);
+        }
+
         private static string? GenerateStructuredOgm(int fiscalYear, int sequenceNumber)
         {
             if (sequenceNumber <= 0)
@@ -2908,6 +3280,7 @@ namespace CPMCore.Controllers
 
         private object BuildEmailTemplateModel(InvoiceDetailBO detail, IssuerCompanyBO issuer, string? bankAccount, string currency)
         {
+            var formattedBankAccount = FormatBankAccount(bankAccount);
             return new
             {
                 Invoice = new
@@ -2935,7 +3308,7 @@ namespace CPMCore.Controllers
                 },
                 Payment = new
                 {
-                    BankAccount = bankAccount,
+                    BankAccount = formattedBankAccount,
                     Currency = currency,
                     StructuredMessage = detail.StructuredMessage
                 }
@@ -2950,6 +3323,7 @@ namespace CPMCore.Controllers
             var clientName = WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(detail.ClientName) ? "klant" : detail.ClientName);
             var builder = new StringBuilder();
             _ = currency;
+            var formattedBankAccount = FormatBankAccount(bankAccount);
 
             builder.Append("<p>Beste ");
             builder.Append(clientName);
@@ -2971,10 +3345,10 @@ namespace CPMCore.Controllers
 
             builder.Append("</p>");
 
-            if (!string.IsNullOrWhiteSpace(bankAccount))
+            if (!string.IsNullOrWhiteSpace(formattedBankAccount))
             {
                 builder.Append("<p>Betaling kan via <strong>");
-                builder.Append(WebUtility.HtmlEncode(bankAccount));
+                builder.Append(WebUtility.HtmlEncode(formattedBankAccount));
                 builder.Append("</strong>.</p>");
             }
 

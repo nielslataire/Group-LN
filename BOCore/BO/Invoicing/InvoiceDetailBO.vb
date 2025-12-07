@@ -51,6 +51,7 @@ Public Class InvoiceDetailBO
     Public Property PaidAmount As Decimal?
     Public Property Balance As Decimal?
     Public Property IsCreditNote As Boolean
+    Public Property Currency As String
 
     Public Property ClientId As Integer?
     Public Property ClientType As Integer?

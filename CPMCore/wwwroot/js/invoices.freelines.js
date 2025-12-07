@@ -276,14 +276,25 @@
     // optioneel: alleen toegestane tekens tijdens input
     $tbl.on('input', 'tbody .js-fl-price', function () {
         let v = $(this).val();
-        // laat cijfers, punten en komma's toe; verwijder overige
-        v = v.replace(/[^\d.,]/g, '');
-        // niet meerdere komma's
-        const parts = v.split(',');
-        if (parts.length > 2) {
-            v = parts.shift() + ',' + parts.join('');
+        // laat cijfers, minteken, punten en komma's toe; verwijder overige
+        v = v.replace(/[^\d.,-]/g, '');
+
+        // Zorg dat het minteken enkel vooraan voorkomt
+        const hasMinus = v.includes('-');
+        v = v.replace(/-/g, '');
+        if (hasMinus) {
+            v = '-' + v;
         }
-        $(this).val(v);
+
+        // niet meerdere komma's
+        const sign = v.startsWith('-') ? '-' : '';
+        let numeric = sign ? v.slice(1) : v;
+        const parts = numeric.split(',');
+        if (parts.length > 2) {
+            numeric = parts.shift() + ',' + parts.join('');
+        }
+
+        $(this).val(sign + numeric);
         notifyStateChange();
     });
     // wijzig je per-lijn btw → meteen preview heropbouwen
