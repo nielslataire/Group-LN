@@ -74,14 +74,15 @@ namespace CPMCore.Controllers
             var clientsQuery = _db.ClientAccount
                 .Include(c => c.PostalCode)
                 .Include(c => c.ClientContacts)
-                .Include(c => c.IssuerCompany)
+                 .Include(c => c.ClientAccountIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
                 .AsNoTracking()
                 .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
 
             if (issuerCompanyId.HasValue)
             {
                 clientsQuery = clientsQuery
-                    .Where(c => c.IssuerCompany.Any(i => i.Id == issuerCompanyId))
+                    .Where(c => c.ClientAccountIssuerCompany.Any(i => i.IssuerCompanyId == issuerCompanyId))
                     .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
             }
 
@@ -107,11 +108,11 @@ namespace CPMCore.Controllers
                         .Select(cc => cc.Phone != null ? cc.Phone : cc.Cellphone)
                         .FirstOrDefault(),
 
-                    IssuerCompanies = c.IssuerCompany
-                        .Select(i => i.Name)
+                    IssuerCompanies = c.ClientAccountIssuerCompany
+                        .Select(i => i.IssuerCompany.Name)
                         .ToList(),
-                    IssuerCompanyIds = c.IssuerCompany
-                        .Select(i => i.Id)
+                    IssuerCompanyIds = c.ClientAccountIssuerCompany
+                        .Select(i => i.IssuerCompanyId)
                         .ToList(),
 
                     ContactCount = c.ClientContacts.Count
@@ -136,7 +137,8 @@ namespace CPMCore.Controllers
                 .Include(c => c.PostalCode)
                 .Include(c => c.InvoicePostalCode)
                 .Include(c => c.ClientContacts)
-                .Include(c => c.IssuerCompany)
+               .Include(c => c.ClientAccountIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == id, ct);
 
@@ -179,7 +181,9 @@ namespace CPMCore.Controllers
                 InvoiceEmail = client.InvoiceEmail,
                 RequiresDigitalInvoice = client.RequiresDigitalInvoice,
                 AttachUblByDefault = client.AttachUblByDefault,
-                SelectedIssuerCompanyIds = client.IssuerCompany.Select(i => i.Id).ToList(),
+                SelectedIssuerCompanyIds = client.ClientAccountIssuerCompany
+                    .Select(i => i.IssuerCompanyId)
+                    .ToList(),
                 Contacts = client.ClientContacts
                     .OrderBy(c => c.Id)
                     .Select(c => new ContactInputViewModel
@@ -243,7 +247,8 @@ namespace CPMCore.Controllers
         {
             var client = await _db.ClientAccount
                 .Include(c => c.ClientContacts)
-                .Include(c => c.IssuerCompany)
+                 .Include(c => c.ClientAccountIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
                 .Include(c => c.PostalCode)
                 .Include(c => c.InvoicePostalCode)
                 .FirstOrDefaultAsync(c => c.Id == id, ct);
@@ -286,7 +291,9 @@ namespace CPMCore.Controllers
                 InvoiceEmail = client.InvoiceEmail,
                 RequiresDigitalInvoice = client.RequiresDigitalInvoice,
                 AttachUblByDefault = client.AttachUblByDefault,
-                SelectedIssuerCompanyIds = client.IssuerCompany.Select(i => i.Id).ToList(),
+                SelectedIssuerCompanyIds = client.ClientAccountIssuerCompany
+                    .Select(i => i.IssuerCompanyId)
+                    .ToList(),
                 Contacts = client.ClientContacts
                     .OrderBy(c => c.Id)
                     .Select(c => new ContactInputViewModel
@@ -317,7 +324,8 @@ namespace CPMCore.Controllers
 
             var client = await _db.ClientAccount
                 .Include(c => c.ClientContacts)
-                .Include(c => c.IssuerCompany)
+                .Include(c => c.ClientAccountIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
                 .FirstOrDefaultAsync(c => c.Id == id, ct);
 
             if (client == null)
@@ -854,13 +862,24 @@ namespace CPMCore.Controllers
 
             foreach (var issuer in issuers)
             {
-                entity.IssuerCompany.Add(issuer);
+                if (entity.ClientAccountIssuerCompany.Any(link => link.IssuerCompanyId == issuer.Id))
+                {
+                    continue;
+                }
+
+                entity.ClientAccountIssuerCompany.Add(new ClientAccountIssuerCompany
+                {
+                    ClientAccount = entity,
+                    ClientAccountId = entity.Id,
+                    IssuerCompany = issuer,
+                    IssuerCompanyId = issuer.Id
+                });
             }
         }
 
         private void UpdateIssuerCompany(ClientFormViewModel model, ClientAccount entity)
         {
-            entity.IssuerCompany.Clear();
+            entity.ClientAccountIssuerCompany.Clear();
             AttachIssuerCompany(model, entity);
         }
 
@@ -951,7 +970,8 @@ namespace CPMCore.Controllers
                     .ThenInclude(pc => pc.Country)
                 .Include(c => c.InvoicePostalCode)!
                     .ThenInclude(pc => pc.Country)
-                .Include(c => c.IssuerCompany)
+                 .Include(c => c.ClientAccountIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
                 .FirstOrDefaultAsync(c => c.Id == clientId, ct);
 
             if (client?.OctopusRelationId is not int relationId || relationId <= 0)
@@ -961,7 +981,9 @@ namespace CPMCore.Controllers
 
             var request = BuildOctopusRelationRequest(client);
 
-            foreach (var issuer in client.IssuerCompany.Where(i => !string.IsNullOrWhiteSpace(i.OctopusDossierNumber)))
+            foreach (var issuer in client.ClientAccountIssuerCompany
+                           .Select(link => link.IssuerCompany)
+                           .Where(i => i != null && !string.IsNullOrWhiteSpace(i.OctopusDossierNumber))!)
             {
                 var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
                 await _octopusClient.UpsertRelationAsync(dossierToken.Token, issuer.OctopusDossierNumber, request, ct);

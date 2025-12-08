@@ -175,7 +175,7 @@ public class LeveranciersController : BaseController
     }
     private async Task AssignIssuerCompaniesAsync(CompanyInfo entity, IEnumerable<int> selectedIssuerCompanyIds, CancellationToken ct)
     {
-        entity.IssuerCompany.Clear();
+        entity.CompanyIssuerCompany.Clear();
 
         var issuerIds = selectedIssuerCompanyIds
             ?.Where(id => id > 0)
@@ -193,7 +193,13 @@ public class LeveranciersController : BaseController
 
         foreach (var issuer in issuers)
         {
-            entity.IssuerCompany.Add(issuer);
+            entity.CompanyIssuerCompany.Add(new CompanyIssuerCompany
+            {
+                Company = entity,
+                IssuerCompany = issuer,
+                IssuerCompanyId = issuer.Id,
+                CompanyId = entity.CompanyId
+            });
         }
     }
 
@@ -453,12 +459,13 @@ public class LeveranciersController : BaseController
         ViewData["Title"] = "Leveranciers";
 
         var suppliersQuery = _db.CompanyInfo
-            .Include(c => c.IssuerCompany)
+            .Include(c => c.CompanyIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
             .AsNoTracking();
 
         if (issuerCompanyId.HasValue)
         {
-            suppliersQuery = suppliersQuery.Where(c => c.IssuerCompany.Any(i => i.Id == issuerCompanyId));
+            suppliersQuery = suppliersQuery.Where(c => c.CompanyIssuerCompany.Any(ci => ci.IssuerCompanyId == issuerCompanyId));
         }
 
         var suppliers = await suppliersQuery
@@ -477,8 +484,8 @@ public class LeveranciersController : BaseController
                 ActivityIds = c.Activity
                     .Select(a => a.ActivityId)
                     .ToList(),
-                IssuerCompanyIds = c.IssuerCompany
-                    .Select(i => i.Id)
+                IssuerCompanyIds = c.CompanyIssuerCompany
+                    .Select(ci => ci.IssuerCompanyId)
                     .ToList()
             })
             .OrderBy(c => c.Name)
@@ -829,7 +836,8 @@ public class LeveranciersController : BaseController
     {
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
-            .Include(c => c.IssuerCompany)
+            .Include(c => c.CompanyIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
             .Include(c => c.CompanyDepartments)
             .ThenInclude(d => d.Postcode)
             .Include(c => c.CompanyContacts)
@@ -870,7 +878,7 @@ public class LeveranciersController : BaseController
             RequiresDigitalInvoice = entity.RequiresDigitalInvoice,
             AttachUblByDefault = entity.AttachUblByDefault,
             SelectedActivityIds = entity.Activity.Select(a => a.ActivityId).ToList(),
-            SelectedIssuerCompanyIds = entity.IssuerCompany.Select(i => i.Id).ToList(),
+            SelectedIssuerCompanyIds = entity.CompanyIssuerCompany.Select(ci => ci.IssuerCompanyId).ToList(),
             WebUrl = entity.Weburl,
             Departments = entity.CompanyDepartments
                 .Select(d => new DepartmentInputViewModel
@@ -934,7 +942,8 @@ public class LeveranciersController : BaseController
 
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
-            .Include(c => c.IssuerCompany)
+            .Include(c => c.CompanyIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
             .Include(c => c.CompanyDepartments)
             .Include(c => c.CompanyContacts)
             .FirstOrDefaultAsync(c => c.CompanyId == id, ct);
@@ -1070,7 +1079,8 @@ public class LeveranciersController : BaseController
         var company = await _db.CompanyInfo
             .Include(c => c.PostCode)!
                 .ThenInclude(pc => pc.Country)
-            .Include(c => c.IssuerCompany)
+            .Include(c => c.CompanyIssuerCompany)
+                    .ThenInclude(link => link.IssuerCompany)
             .FirstOrDefaultAsync(c => c.CompanyId == companyId, ct);
 
         if (company?.OctopusRelationId is not int relationId || relationId <= 0 || !company.IsCustomer)
@@ -1080,7 +1090,12 @@ public class LeveranciersController : BaseController
 
         var request = BuildOctopusRelationRequest(company);
 
-        foreach (var issuer in company.IssuerCompany.Where(i => !string.IsNullOrWhiteSpace(i.OctopusDossierNumber)))
+        var issuers = company.CompanyIssuerCompany
+            .Select(ci => ci.IssuerCompany)
+            .Where(i => i != null && !string.IsNullOrWhiteSpace(i.OctopusDossierNumber))
+            .Cast<IssuerCompany>();
+
+        foreach (var issuer in issuers)
         {
             var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
             await _octopusClient.UpsertRelationAsync(dossierToken.Token, issuer.OctopusDossierNumber, request, ct);
