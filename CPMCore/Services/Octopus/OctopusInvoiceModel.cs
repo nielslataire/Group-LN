@@ -215,6 +215,42 @@ namespace CPMCore.Services.Octopus
         public List<OctopusSendInvoiceStatusServiceData> SendInvoiceStatusList { get; set; } = new();
     }
 
+    public class OctopusInvoiceBookResponse
+    {
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("bookingStatusList")]
+        public List<OctopusBookingStatusServiceData> BookingStatusList { get; set; } = new();
+    }
+
+    public class OctopusBookingStatusServiceData
+    {
+        [JsonPropertyName("statusCode")]
+        public int StatusCode { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("success")]
+        public bool Success { get; set; }
+
+        [JsonPropertyName("documentKey")]
+        public OctopusDocumentKeyServiceData? DocumentKey { get; set; }
+    }
+
+    //public class OctopusDocumentKeyServiceData
+    //{
+    //    [JsonPropertyName("bookyearKey")]
+    //    public OctopusBookyearKey? BookyearKey { get; set; }
+
+    //    [JsonPropertyName("journal")]
+    //    public string? Journal { get; set; }
+
+    //    [JsonPropertyName("documentSequenceNr")]
+    //    public int DocumentSequenceNr { get; set; }
+    //}
+
     public class OctopusBuySellBookingAndAttachmentRequest
     {
         [JsonPropertyName("buySellBookingServiceData")]

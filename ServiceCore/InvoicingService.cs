@@ -405,6 +405,8 @@ namespace ServiceCore
                 OctopusDeliveryComment = invoice.OctopusDeliveryComment,
                 OctopusDeliveryDateTime = invoice.OctopusDeliveryDateTime,
                 OctopusDeliveryUpdatedAt = invoice.OctopusDeliveryUpdatedAt,
+                OctopusBookedAt = invoice.OctopusBookedAt,
+                OctopusBookedBy = invoice.OctopusBookedBy,
             };
         }
 

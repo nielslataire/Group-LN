@@ -9,16 +9,17 @@
     var returnUrl = string.Concat(currentPath, currentQuery);
 }
 @functions {
-    string BadgeClass(InvoiceStatus status) => status switch
+    (string Icon, string Color) StatusIcon(InvoiceStatus status) => status switch
     {
-        InvoiceStatus.Draft => "badge badge-draft",
-        InvoiceStatus.Issued => "badge badge-issued",
-        InvoiceStatus.Sent => "badge badge-sent",
-        InvoiceStatus.PartiallyPaid => "badge badge-partiallypaid",
-        InvoiceStatus.Paid => "badge bg-primary",
-        InvoiceStatus.Overdue => "badge bg-danger",
-        InvoiceStatus.Cancelled => "badge bg-dark",
-        _ => "badge bg-light text-dark"
+        InvoiceStatus.Draft => ("fa fa-pen", "#6c757d"),
+        InvoiceStatus.Issued => ("bx bx-export", "#0dcaf0"),
+        InvoiceStatus.Sent => ("bx bx-paper-plane", "#ffc107"),
+        InvoiceStatus.PartiallyPaid => ("bx bx-wallet-note", "#fd7e14"),
+        InvoiceStatus.Paid => ("bx bx-check-circle", "#01532d"),
+        InvoiceStatus.Overdue => ("bx bx-alert-circle", "#dc3545"),
+        InvoiceStatus.Cancelled => ("bx bx-block", "#343a40"),
+        InvoiceStatus.Booked => ("bx bx-book", "#6f42c1"),
+        _ => ("bx bx-help-circle", "#6c757d")
     };
     string DocumentType(bool isCreditNote) => isCreditNote ? "Creditnota" : "Factuur";
     bool StatusIn(InvoiceStatus status, params InvoiceStatus[] codes)
@@ -63,27 +64,20 @@
             line-height: 1 !important;
         }
 
-        .badge-draft {
-            background-color: #6c757d;
-            color: #fff;
+        .status-col .status-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.05);
+            font-size: 1.1rem;
         }
 
-        .badge-issued {
-            background-color: #0b7f4f;
-            color: #fff;
+        .status-col .badge {
+            vertical-align: middle;
         }
-
-        .badge-sent {
-            background-color: #1ea36e;
-            color: #fff;
-        }
-
-        .badge-partiallypaid {
-            background-color: #fd7e14;
-            color: #fff;
-        }
-
-
 
         .dropdown-item-form {
             margin: 0;
@@ -106,6 +100,10 @@
         <div class="col-sm-auto px-0">
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+            <form asp-action="BookInvoices" method="post" class="d-inline">
+                <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
+                <button type="submit" class="btn btn-primary btn-md px-3 me-1">Boeken facturen</button>
+            </form>
             <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
         </div>
     </div>
@@ -131,12 +129,14 @@
 
                     <thead>
                         <tr>
+
                             <th>Factuurnr</th>
+                                <th>Status</th>
                              <th>Type</th>
                             <th>Klant</th>
                             <th>Project</th>
                             <th>Datum</th>
-                            <th>Status</th>
+                            
                             <th>Verzendwijze</th>
                             <th class="text-end">Totaal</th>
                             <th class="text-end">Saldo</th>
@@ -156,20 +156,26 @@
                                 var shownId = isDraft ? string.Empty : displayId;
                                 var isIssued = StatusIn(r.Status, InvoiceStatus.Issued);
                                 var typeLabel = DocumentType(r.IsCreditNote);
+                                var statusDisplay = StatusIcon(r.Status);
 
                                 <tr>
                                     <td data-order="@r.InvoiceSortValue">@(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))</td>
+                                    <td data-order="@r.StatusLabel" class="status-col">
+                                        <span class="status-icon" style="color: @statusDisplay.Color;">
+                                            <i class="@statusDisplay.Icon"></i>
+                                        </span>
+                                        @if (r.DigitallySent)
+                                        {
+                                            <span class="status-icon" style="color:saddlebrown" data-toggle="tooltip" data-placement="top" title="Verzonden via peppol">
+                                                <i class="bx bx-planet" ></i>
+                                            </span>
+                                        }
+                                    </td>
+
                                     <td>@typeLabel</td>
                                     <td>@r.ClientName</td>
                                     <td>@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)</td>
                                     <td>@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
-                                    <td>
-                                        <span class="@BadgeClass(r.Status)">@r.StatusLabel</span>
-                                        @if (r.DigitallySent)
-                                        {
-                                            <span class="badge bg-info text-dark ms-1">Digitaal verzonden</span>
-                                        }
-                                    </td>
                                     <td>@r.SendMethod</td>
                                     <td class="text-end">@(r.GrossTotal.HasValue? r.GrossTotal.Value.ToString("C", culture) : "-")</td>
                                     <td class="text-end">@(r.Balance.HasValue? r.Balance.Value.ToString("C", culture) : "-")</td>

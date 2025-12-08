@@ -1346,7 +1346,7 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasIndex(e => e.SupplierContractId, "IX_Invoices_SupplierContractId");
 
-            entity.HasIndex(e => e.PublicId, "UX_Invoices_PublicId")
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.PublicId }, "UX_Invoices_Issuer_PublicId")
                 .IsUnique()
                 .HasFilter("([PublicId] IS NOT NULL)");
 
@@ -1368,6 +1368,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ForeignGrossTotal).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.FxRateToCompany).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.HeaderDescription).HasMaxLength(400);
+            entity.Property(e => e.OctopusBookedAt).HasColumnType("datetime");
+            entity.Property(e => e.OctopusBookedBy).HasMaxLength(256);
             entity.Property(e => e.OctopusDeliveryComment).HasMaxLength(400);
             entity.Property(e => e.OctopusDeliveryState).HasMaxLength(50);
             entity.Property(e => e.OctopusJournalKey).HasMaxLength(50);

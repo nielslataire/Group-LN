@@ -29,7 +29,10 @@ namespace CPMCore.Models.Invoicing
         Overdue,
 
         [Display(Name = "Geannuleerd")]
-        Cancelled
+        Cancelled,
+
+        [Display(Name = "Geboekt")]
+        Booked
     }
 
     public static class InvoiceStatusExtensions
@@ -48,6 +51,7 @@ namespace CPMCore.Models.Invoicing
                 "Paid" => InvoiceStatus.Paid,
                 "Overdue" => InvoiceStatus.Overdue,
                 "Cancelled" => InvoiceStatus.Cancelled,
+                "Booked" => InvoiceStatus.Booked,
                 _ => InvoiceStatus.Unknown
             };
         }

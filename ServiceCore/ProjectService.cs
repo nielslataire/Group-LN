@@ -1520,12 +1520,14 @@ namespace ServiceCore
             var response = new GetResponse<UnitWithStagesBO>();
 
             // 1) Units eerst materialiseren (reader sluiten)
+            var cutoffDate = DateTime.Today.AddDays(1);
             var units = _uow.Units.GetNoTracking()
                 .Where(m =>
                     m.ProjectId == projectid &&
                     m.UnitConstructionValue.Any(l => l.PaymentGroup.InvoicingPaymentStages.Any(i => i.Invoicable == true)) &&
                     m.ClientAccountId > 0 &&
-                    m.ClientAccount.DateDeedOfSale != null)
+                    m.ClientAccount.DateDeedOfSale != null &&
+                    m.ClientAccount.DateDeedOfSale.Value <= cutoffDate)
                 .ToList(); // <-- belangrijk
 
             foreach (var unit in units)
@@ -1536,6 +1538,7 @@ namespace ServiceCore
                         m.Invoicable == true &&
                         !m.InvoicesDetails.Any(i => i.UnitId == unit.Id) &&
                         m.Group.UnitConstructionValue.Any(l => l.UnitId == unit.Id))
+                    .Include(m => m.Group)
                     .ToList(); // <-- belangrijk
 
                 if (stages.Count == 0) continue;
@@ -2575,13 +2578,14 @@ namespace ServiceCore
 
             // Alleen klanten met een akte-datum in het verleden
             var today = DateOnly.FromDateTime(DateTime.Today);
+            var deedCutoff = today.AddDays(1);
 
             var hasDeed = await _db.ClientAccount
                 .AsNoTracking()
                 .AnyAsync(c =>
                     c.Id == clientId &&
                     c.DateDeedOfSale != null &&
-                    c.DateDeedOfSale <= today, ct);
+                   c.DateDeedOfSale <= deedCutoff, ct);
             if (!hasDeed) return Array.Empty<UnitStageRow>();
 
             // 1) Stages ophalen (DIRECT via Unit.PaymentGroupId en INDIRECT via UnitConstructionValue.PaymentGroupId)
@@ -2614,6 +2618,17 @@ namespace ServiceCore
             var unitIds  = stages.Select(s => s.Id).Distinct().ToList();
             var groupIds = stages.Select(s => s.GroupId).Distinct().ToList();
             var stageIds = stages.Select(s => s.StageId).Distinct().ToList();
+
+            // 1b) Uitsluiten van stages die al een factuurlijn hebben (zelfde check als ad-hoc SQL)
+            var invoicedStageUnits = await (
+                from d in _db.InvoicesDetails.AsNoTracking()
+                where d.PaymentStageId != null && stageIds.Contains(d.PaymentStageId.Value)
+                    && d.UnitId != null && unitIds.Contains(d.UnitId.Value)
+                select new { StageId = d.PaymentStageId!.Value, UnitId = d.UnitId!.Value }
+            ).Distinct().ToListAsync(ct);
+            var invoicedStageUnitSet = invoicedStageUnits
+                .Select(x => (x.StageId, x.UnitId))
+                .ToHashSet();
 
             // 2) Basis per (Unit,Group): som ValueSold
             var baseRows = await (
@@ -2684,6 +2699,8 @@ namespace ServiceCore
 
             foreach (var st in stages)
             {
+                if (invoicedStageUnitSet.Contains((st.StageId, st.Id)))
+                    continue;
                 var pct = st.StagePercentage ?? 0m;
                 if (pct == 0m) continue;
 

@@ -101,6 +101,10 @@ public partial class Invoices
 
     public DateTime? OctopusWorkflowUpdatedAt { get; set; }
 
+    public DateTime? OctopusBookedAt { get; set; }
+
+    public string OctopusBookedBy { get; set; }
+
     public virtual ClientAccount ClientIdClientAccountNavigation { get; set; }
 
     public virtual ClientContacts ClientIdClientContactsNavigation { get; set; }

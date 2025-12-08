@@ -31,6 +31,13 @@ namespace CPMCore.Services.Octopus
         Task<bool> CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
         Task<bool> CreateBuySellBookingAsync(string dossierToken, string dossierNumber, OctopusBuySellBookingAndAttachmentRequest payload, CancellationToken ct = default);
         Task<bool> UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default);
+        Task<OctopusInvoiceBookResponse> BookInvoiceAsync(
+          string dossierToken,
+          string dossierNumber,
+          int bookyearId,
+          string journalKey,
+          int toDocumentSequenceNr,
+          CancellationToken ct = default);
 
         Task<OctopusInvoiceSendResponse> SendInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceSendRequest payload, CancellationToken ct = default);
 
@@ -277,6 +284,37 @@ namespace CPMCore.Services.Octopus
                 || response.StatusCode == HttpStatusCode.NoContent;
         }
 
+        public async Task<OctopusInvoiceBookResponse> BookInvoiceAsync(
+                   string dossierToken,
+                   string dossierNumber,
+                   int bookyearId,
+                   string journalKey,
+                   int toDocumentSequenceNr,
+                   CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/book");
+            EnsureUrl(url, "Factuur doorboeken");
+
+            var query = new Dictionary<string, string?>
+            {
+                ["bookyearId"] = bookyearId.ToString(CultureInfo.InvariantCulture),
+                ["journalKey"] = journalKey,
+                ["toDocumentSeqNr"] = toDocumentSequenceNr.ToString(CultureInfo.InvariantCulture)
+            };
+
+            url = QueryHelpers.AddQueryString(url, query);
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureBookingSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<OctopusInvoiceBookResponse>(cancellationToken: ct);
+            return result ?? new OctopusInvoiceBookResponse();
+        }
+
+
         public async Task<bool> CreateBuySellBookingAsync(string dossierToken, string dossierNumber, OctopusBuySellBookingAndAttachmentRequest payload, CancellationToken ct = default)
         {
             var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/buysellbookings");
@@ -391,6 +429,36 @@ namespace CPMCore.Services.Octopus
                 _logger.LogWarning("Octopus {Context} URL ontbreekt of is ongeldig.", context);
                 throw new InvalidOperationException($"Octopus {context} URL is niet geconfigureerd.");
             }
+        }
+
+        private static async Task EnsureBookingSuccessAsync(HttpResponseMessage response, string url)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var message = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest => "Invalid or missing parameters passed",
+                HttpStatusCode.Unauthorized => "Invalid or expired token presented, unauthorized",
+                HttpStatusCode.Forbidden => "System right Book Sell Invoice not granted",
+                _ => null
+            };
+
+            var body = await response.Content.ReadAsStringAsync();
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                message = string.IsNullOrWhiteSpace(message)
+                    ? body
+                    : $"{message}: {body}";
+            }
+            else if (string.IsNullOrWhiteSpace(message))
+            {
+                message = $"Octopus request naar {url} mislukt met status {response.StatusCode}.";
+            }
+
+            throw new HttpRequestException(message, null, response.StatusCode);
         }
 
         private static async Task EnsureSuccessAsync(HttpResponseMessage response, string url)

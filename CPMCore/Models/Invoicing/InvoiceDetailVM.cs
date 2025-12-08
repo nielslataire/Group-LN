@@ -31,6 +31,8 @@ namespace CPMCore.Models.Invoicing
         public string? OctopusDeliveryComment { get; set; }
         public DateTime? OctopusDeliveryDateTime { get; set; }
         public DateTime? OctopusDeliveryUpdatedAt { get; set; }
+        public DateTime? OctopusBookedAt { get; set; }
+        public string? OctopusBookedBy { get; set; }
         public IReadOnlyList<InvoiceDetailLineVM> Lines { get; set; } = Array.Empty<InvoiceDetailLineVM>();
         public IReadOnlyList<InvoiceEmailLogItemVM> EmailLogs { get; set; } = Array.Empty<InvoiceEmailLogItemVM>();
         public DateTime? LastEmailSentAt { get; set; }

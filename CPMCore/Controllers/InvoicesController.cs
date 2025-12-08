@@ -31,6 +31,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Security.Claims;
 
 namespace CPMCore.Controllers
 {
@@ -172,6 +173,113 @@ namespace CPMCore.Controllers
             ViewBag.CompanyId = issuerCompanyId;
             SetIndexBreadcrumb(issuerCompanyId, ViewBag.CompanyName as string);
             return View(vms);
+        }
+
+        // BOEK FACTUREN
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BookInvoices(int issuerCompanyId, CancellationToken ct = default)
+        {
+            var issuer = await _ics.GetAsync(issuerCompanyId, ct);
+            if (issuer == null || string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
+            {
+                AddMessage("error", "Facturen kunnen niet geboekt worden omdat er geen Octopus-dossier is gekoppeld.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            var bookedStatusId = await _db.InvoiceStatusLookup
+                .Where(s => s.Name == "Booked")
+                .Select(s => (byte?)s.Id)
+                .FirstOrDefaultAsync(ct);
+
+            if (bookedStatusId is null)
+            {
+                AddMessage("error", "Boekingsstatus 'Booked' kon niet gevonden worden in de database.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            var latestNumberedInvoice = await _db.Invoices
+                .Where(i => i.IssuerCompanyId == issuerCompanyId
+                    && i.OctopusDocumentSequenceNr != null
+                    && i.OctopusBookyearId != null
+                    && !string.IsNullOrWhiteSpace(i.OctopusJournalKey))
+                .OrderByDescending(i => i.OctopusDocumentSequenceNr)
+                .FirstOrDefaultAsync(ct);
+
+            if (latestNumberedInvoice == null)
+            {
+                AddMessage("error", "Er is geen genummerde factuur gevonden om te boeken.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            if (latestNumberedInvoice.OctopusBookyearId is null
+                || latestNumberedInvoice.OctopusDocumentSequenceNr is null
+                || string.IsNullOrWhiteSpace(latestNumberedInvoice.OctopusJournalKey))
+            {
+                AddMessage("error", "Geen geldig boekjaar of dagboek gevonden bij de laatste genummerde factuur.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            try
+            {
+                var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
+
+                var response = await _octopusClient.BookInvoiceAsync(
+                    dossierToken.Token,
+                    issuer.OctopusDossierNumber,
+                    latestNumberedInvoice.OctopusBookyearId.Value,
+                    latestNumberedInvoice.OctopusJournalKey!,
+                    latestNumberedInvoice.OctopusDocumentSequenceNr.Value,
+                    ct);
+
+                var bookingStatus = response?.BookingStatusList?.FirstOrDefault();
+                if (response is null || !response.Success || bookingStatus is null || !bookingStatus.Success)
+                {
+                    var statusMessage = bookingStatus?.Comment;
+                    throw new InvalidOperationException(string.IsNullOrWhiteSpace(statusMessage)
+                        ? "Octopus gaf geen bevestiging terug bij het doorboeken van de facturen."
+                        : statusMessage);
+                }
+
+                var bookedFrom = bookingStatus.DocumentKey?.DocumentSequenceNr
+                    ?? latestNumberedInvoice.OctopusDocumentSequenceNr
+                    ?? 0;
+                var bookedUntil = latestNumberedInvoice.OctopusDocumentSequenceNr ?? bookedFrom;
+                var bookedAt = DateTime.UtcNow;
+                var bookedBy = ResolveUserName() ?? string.Empty;
+
+                var invoicesToUpdate = await _db.Invoices
+                    .Where(i => i.IssuerCompanyId == issuerCompanyId
+                        && i.OctopusBookyearId == latestNumberedInvoice.OctopusBookyearId
+                        && i.OctopusJournalKey == latestNumberedInvoice.OctopusJournalKey
+                        && i.OctopusDocumentSequenceNr != null
+                        && i.OctopusDocumentSequenceNr >= bookedFrom
+                        && i.OctopusDocumentSequenceNr <= bookedUntil
+                        && i.OctopusBookedAt == null)
+                    .ToListAsync(ct);
+
+                foreach (var invoice in invoicesToUpdate)
+                {
+                    invoice.OctopusBookedAt = bookedAt;
+                    invoice.OctopusBookedBy = bookedBy;
+                    invoice.StatusId = bookedStatusId;
+                }
+
+                await _db.SaveChangesAsync(ct);
+
+                AddMessage("success", $"Facturen van nummer {bookedFrom} tot en met nummer {bookedUntil} geboekt.", "Factuur");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Octopus booking failed for issuer {IssuerCompanyId}", issuerCompanyId);
+                var message = string.IsNullOrWhiteSpace(ex.Message)
+                    ? "Facturen konden niet geboekt worden."
+                    : ex.Message;
+                AddMessage("error", message, "Factuur");
+            }
+
+            return RedirectToAction(nameof(Index), new { issuerCompanyId });
         }
 
         //DETAIL FACTUUR
@@ -1592,6 +1700,23 @@ namespace CPMCore.Controllers
                 _ => null
             };
         }
+
+        private string? ResolveUserName()
+        {
+            var userName = User?.Identity?.Name;
+            if (!string.IsNullOrWhiteSpace(userName))
+                return userName;
+
+            userName = User.FindFirstValue(ClaimTypes.Name);
+            if (!string.IsNullOrWhiteSpace(userName))
+                return userName;
+
+            userName = User.FindFirstValue(ClaimTypes.Email);
+            if (!string.IsNullOrWhiteSpace(userName))
+                return userName;
+
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
         private InvoiceDetailVM MapDetail(InvoiceDetailBO bo)
         {
             if (bo == null) throw new ArgumentNullException(nameof(bo));
@@ -1620,7 +1745,9 @@ namespace CPMCore.Controllers
                 OctopusDeliveryState = bo.OctopusDeliveryState,
                 OctopusDeliveryComment = bo.OctopusDeliveryComment,
                 OctopusDeliveryDateTime = bo.OctopusDeliveryDateTime,
-                OctopusDeliveryUpdatedAt = bo.OctopusDeliveryUpdatedAt
+                OctopusDeliveryUpdatedAt = bo.OctopusDeliveryUpdatedAt,
+                OctopusBookedAt = bo.OctopusBookedAt,
+                OctopusBookedBy = bo.OctopusBookedBy
             };
 
             vm.Issuer = new InvoicePartyVM
@@ -2456,20 +2583,6 @@ namespace CPMCore.Controllers
             {
                 throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het aanmaken van de factuur.");
             }
-
-            //var bookingPayload = BuildBuySellBookingPayload(context, relationId!.Value);
-            //var bookingCreated = await _octopusClient.CreateBuySellBookingAsync(
-            //    dossierToken.Token,
-            //    context.DossierNumber,
-            //    bookingPayload,
-            //    ct);
-
-            //if (!bookingCreated)
-            //{
-            //    throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het aanmaken van de boeking.");
-            //}
-
-            //await LogOctopusBookingAsync(context, ct);
 
             context.Invoice.OctopusBookyearId = context.BookyearId;
             context.Invoice.OctopusJournalKey = context.JournalKey;

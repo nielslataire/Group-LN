@@ -70,7 +70,8 @@ Public Class InvoiceDetailBO
     Public Property OctopusDeliveryComment As String
     Public Property OctopusDeliveryDateTime As Date?
     Public Property OctopusDeliveryUpdatedAt As Date?
-
+    Public Property OctopusBookedAt As Date?
+    Public Property OctopusBookedBy As String
 
     Public Property Lines As List(Of InvoiceLineBO)
 End Class
