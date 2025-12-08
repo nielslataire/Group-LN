@@ -215,6 +215,117 @@ namespace CPMCore.Services.Octopus
         public List<OctopusSendInvoiceStatusServiceData> SendInvoiceStatusList { get; set; } = new();
     }
 
+    public class OctopusBuySellBookingAndAttachmentRequest
+    {
+        [JsonPropertyName("buySellBookingServiceData")]
+        public OctopusBuySellBookingServiceData? BuySellBookingServiceData { get; set; }
+
+        [JsonPropertyName("attachments")]
+        public List<OctopusAttachmentItem> Attachments { get; set; } = new();
+    }
+
+    public class OctopusBuySellBookingServiceData
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKeyRef? BookyearKey { get; set; }
+
+        [JsonPropertyName("journalKey")]
+        public string? JournalKey { get; set; }
+
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
+
+        [JsonPropertyName("relationIdentificationServiceData")]
+        public OctopusRelationIdentificationServiceData? RelationIdentificationServiceData { get; set; }
+
+        [JsonPropertyName("bookyearPeriodeNr")]
+        public int BookyearPeriodeNr { get; set; }
+
+        [JsonPropertyName("documentDate")]
+        public DateOnly DocumentDate { get; set; }
+
+        [JsonPropertyName("expiryDate")]
+        public DateOnly ExpiryDate { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("orderReference")]
+        public string? OrderReference { get; set; }
+
+        [JsonPropertyName("reference")]
+        public string? Reference { get; set; }
+
+        [JsonPropertyName("amount")]
+        public decimal Amount { get; set; }
+
+        [JsonPropertyName("currencyCode")]
+        public string? CurrencyCode { get; set; }
+
+        [JsonPropertyName("exchangeRate")]
+        public decimal ExchangeRate { get; set; }
+
+        [JsonPropertyName("bookingLines")]
+        public List<OctopusBuySellBookingLineServiceData> BookingLines { get; set; } = new();
+
+        [JsonPropertyName("paymentMethod")]
+        public int PaymentMethod { get; set; }
+    }
+
+    public class OctopusBuySellBookingLineServiceData
+    {
+        [JsonPropertyName("accountKey")]
+        public int AccountKey { get; set; }
+
+        [JsonPropertyName("baseAmount")]
+        public decimal BaseAmount { get; set; }
+
+        [JsonPropertyName("vatCodeKey")]
+        public string? VatCodeKey { get; set; }
+
+        [JsonPropertyName("vatAmount")]
+        public decimal VatAmount { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("costCentreKey")]
+        public OctopusCostCentreKeyRef? CostCentreKey { get; set; }
+
+        [JsonPropertyName("vatRecupPercentage")]
+        public decimal VatRecupPercentage { get; set; }
+
+        [JsonPropertyName("intrastatServiceData")]
+        public OctopusIntrastatServiceData? IntrastatServiceData { get; set; }
+
+        [JsonPropertyName("overflowBookingServiceData")]
+        public OctopusOverflowBookingServiceData? OverflowBookingServiceData { get; set; }
+    }
+
+    public class OctopusOverflowBookingServiceData
+    {
+        [JsonPropertyName("beginDate")]
+        public DateOnly BeginDate { get; set; }
+
+        [JsonPropertyName("endDate")]
+        public DateOnly EndDate { get; set; }
+
+        [JsonPropertyName("overflowBookingPeriodType")]
+        public int OverflowBookingPeriodType { get; set; }
+
+        [JsonPropertyName("accountNr")]
+        public int AccountNr { get; set; }
+    }
+
+    public class OctopusAttachmentItem
+    {
+        [JsonPropertyName("fileName")]
+        public string? FileName { get; set; }
+
+        [JsonPropertyName("fileData")]
+        public string? FileData { get; set; }
+    }
+
     public class OctopusSendInvoiceStatusServiceData
     {
         [JsonPropertyName("statusCode")]

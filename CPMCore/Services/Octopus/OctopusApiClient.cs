@@ -29,6 +29,7 @@ namespace CPMCore.Services.Octopus
         Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default);
 
         Task<bool> CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
+        Task<bool> CreateBuySellBookingAsync(string dossierToken, string dossierNumber, OctopusBuySellBookingAndAttachmentRequest payload, CancellationToken ct = default);
         Task<bool> UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default);
 
         Task<OctopusInvoiceSendResponse> SendInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceSendRequest payload, CancellationToken ct = default);
@@ -267,6 +268,25 @@ namespace CPMCore.Services.Octopus
             {
                 Content = JsonContent.Create(payload)
             };
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
+            return response.StatusCode == HttpStatusCode.OK
+                || response.StatusCode == HttpStatusCode.Created
+                || response.StatusCode == HttpStatusCode.NoContent;
+        }
+
+        public async Task<bool> CreateBuySellBookingAsync(string dossierToken, string dossierNumber, OctopusBuySellBookingAndAttachmentRequest payload, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/buysellbookings");
+            EnsureUrl(url, "Boeking aanmaken");
+
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(payload)
+            };
+
             request.Headers.Add("dossierToken", dossierToken);
 
             using var response = await _httpClient.SendAsync(request, ct);

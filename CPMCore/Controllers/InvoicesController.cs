@@ -2457,6 +2457,20 @@ namespace CPMCore.Controllers
                 throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het aanmaken van de factuur.");
             }
 
+            //var bookingPayload = BuildBuySellBookingPayload(context, relationId!.Value);
+            //var bookingCreated = await _octopusClient.CreateBuySellBookingAsync(
+            //    dossierToken.Token,
+            //    context.DossierNumber,
+            //    bookingPayload,
+            //    ct);
+
+            //if (!bookingCreated)
+            //{
+            //    throw new InvalidOperationException("Octopus gaf geen bevestiging terug bij het aanmaken van de boeking.");
+            //}
+
+            //await LogOctopusBookingAsync(context, ct);
+
             context.Invoice.OctopusBookyearId = context.BookyearId;
             context.Invoice.OctopusJournalKey = context.JournalKey;
             context.Invoice.OctopusDocumentSequenceNr = context.DocumentSequenceNr;
@@ -2464,6 +2478,57 @@ namespace CPMCore.Controllers
             await PersistOctopusWorkflowStateAsync(context.Invoice, OctopusWorkflowStateCreated, ct);
             UpdateProgressFromState(progress, context.Invoice.OctopusWorkflowState);
         }
+
+        //private OctopusBuySellBookingAndAttachmentRequest BuildBuySellBookingPayload(OctopusInvoiceContext context, int relationId)
+        //{
+        //    var currency = string.IsNullOrWhiteSpace(context.Invoice.CurrencyCode)
+        //        ? "EUR"
+        //        : context.Invoice.CurrencyCode!;
+
+        //    var bookingLines = context.Invoice.InvoicesDetails.Select(line =>
+        //    {
+        //        var baseAmount = line.Price ?? 0m;
+        //        var vatPercentage = line.VatPercentage ?? 0m;
+
+        //        return new OctopusBuySellBookingLineServiceData
+        //        {
+        //            AccountKey = 0,
+        //            BaseAmount = baseAmount,
+        //            VatCodeKey = ResolveVatCodeKey(line, context.VatTypes, context.Issuer.DefaultVatTypeId),
+        //            VatAmount = Math.Round(baseAmount * vatPercentage / 100m, 2, MidpointRounding.AwayFromZero),
+        //            Comment = line.Text,
+        //            VatRecupPercentage = 0m
+        //        };
+        //    }).ToList();
+
+        //    return new OctopusBuySellBookingAndAttachmentRequest
+        //    {
+        //        BuySellBookingServiceData = new OctopusBuySellBookingServiceData
+        //        {
+        //            BookyearKey = new OctopusBookyearKeyRef { Id = context.BookyearId },
+        //            JournalKey = context.JournalKey,
+        //            DocumentSequenceNr = context.DocumentSequenceNr,
+        //            RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
+        //            {
+        //                RelationKey = new OctopusRelationKeyRef { Id = relationId },
+        //                ExternalRelationId = context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+        //                    ?? context.Invoice.ClientId
+        //                    ?? context.Invoice.CompanyId
+        //                    ?? relationId
+        //            },
+        //            BookyearPeriodeNr = context.PeriodNumber,
+        //            DocumentDate = context.FinalDate,
+        //            ExpiryDate = context.Invoice.ExpirationDate ?? context.FinalDate,
+        //            Comment = context.Invoice.Text,
+        //            Reference = context.StructuredOgm,
+        //            Amount = context.Detail.TotalInclVat,
+        //            CurrencyCode = currency,
+        //            ExchangeRate = 1m,
+        //            BookingLines = bookingLines,
+        //            PaymentMethod = 0
+        //        }
+        //    };
+        //}
 
         private async Task<OctopusInvoiceAttachment> UploadInvoiceAttachmentAsync(
             OctopusInvoiceContext context,
@@ -2669,6 +2734,22 @@ namespace CPMCore.Controllers
                 _logger.LogWarning(ex, "Classic invoice email failed for invoice {InvoiceId}", context.Invoice.Id);
                 return false;
             }
+        }
+
+        private async Task LogOctopusBookingAsync(OctopusInvoiceContext context, CancellationToken ct)
+        {
+            var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
+
+            await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
+            {
+                InvoiceId = context.Invoice.Id,
+                ToAddress = "Octopus",
+                CcAddress = userName,
+                Subject = $"Boeking aangemaakt in Octopus door {userName}",
+                ProviderId = context.DossierNumber,
+                SentAt = DateTime.UtcNow,
+                Status = "Booked"
+            }, ct);
         }
 
         private async Task LogOctopusSendAsync(
