@@ -1520,7 +1520,7 @@ namespace ServiceCore
             var response = new GetResponse<UnitWithStagesBO>();
 
             // 1) Units eerst materialiseren (reader sluiten)
-            var cutoffDate = DateTime.Today.AddDays(1);
+            var cutoffDate = DateOnly.FromDateTime(DateTime.Today).AddDays(1);
             var units = _uow.Units.GetNoTracking()
                 .Where(m =>
                     m.ProjectId == projectid &&
