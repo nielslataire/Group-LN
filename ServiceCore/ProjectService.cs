@@ -1519,34 +1519,80 @@ namespace ServiceCore
         {
             var response = new GetResponse<UnitWithStagesBO>();
 
-            // 1) Units eerst materialiseren (reader sluiten)
+            // 1) Units materialiseren (enkel klanten met akte-datum t.e.m. morgen)
             var cutoffDate = DateOnly.FromDateTime(DateTime.Today).AddDays(1);
             var units = _uow.Units.GetNoTracking()
-                .Where(m =>
-                    m.ProjectId == projectid &&
-                    m.UnitConstructionValue.Any(l => l.PaymentGroup.InvoicingPaymentStages.Any(i => i.Invoicable == true)) &&
-                    m.ClientAccountId > 0 &&
-                    m.ClientAccount.DateDeedOfSale != null &&
-                    m.ClientAccount.DateDeedOfSale.Value <= cutoffDate)
-                .ToList(); // <-- belangrijk
+                .Where(u =>
+                    u.ProjectId == projectid &&
+                    u.ClientAccountId > 0 &&
+                    u.ClientAccount.DateDeedOfSale != null &&
+                    u.ClientAccount.DateDeedOfSale.Value <= cutoffDate)
+                .Include(m => m.PaymentGroup)
+                .Include(m => m.ClientAccount)
+                .ToList();
+
+            if (units.Count == 0) return response;
+
+            var unitIds = units.Select(u => u.Id).ToList();
+
+            // 2) Payment groups per unit (direct en via UnitConstructionValue)
+            var groupMap = units
+                .ToDictionary(u => u.Id, u => new HashSet<int>());
 
             foreach (var unit in units)
             {
-                // 2) Stages materialiseren per unit
-                var stages = _uow.PaymentStages.GetNoTracking()
-                    .Where(m =>
-                        m.Invoicable == true &&
-                        !m.InvoicesDetails.Any(i => i.UnitId == unit.Id) &&
-                        m.Group.UnitConstructionValue.Any(l => l.UnitId == unit.Id))
-                    .Include(m => m.Group)
-                    .ToList(); // <-- belangrijk
+                if (unit.PaymentGroupId.HasValue)
+                    groupMap[unit.Id].Add(unit.PaymentGroupId.Value);
+            }
 
-                if (stages.Count == 0) continue;
+            var cvGroups = _uow.UnitConstructionValues.GetNoTracking()
+                .Where(cv => cv.PaymentGroupId != null && unitIds.Contains(cv.UnitId))
+                .Select(cv => new { cv.UnitId, GroupId = cv.PaymentGroupId!.Value })
+                .ToList();
+
+            foreach (var cv in cvGroups)
+                groupMap[cv.UnitId].Add(cv.GroupId);
+
+            // 3) Stages ophalen voor alle relevante groepen
+            var groupIds = groupMap.Values.SelectMany(g => g).Distinct().ToList();
+            if (groupIds.Count == 0) return response;
+
+            var stages = _uow.PaymentStages.GetNoTracking()
+                .Include(s => s.Group)
+                .Include(s => s.InvoicesDetails)
+                .Where(s => s.Invoicable == true && groupIds.Contains(s.GroupId))
+                .ToList();
+
+            if (stages.Count == 0) return response;
+
+            var stageIds = stages.Select(s => s.Id).Distinct().ToList();
+
+            // 4) Gefactureerde combinaties (StageId × UnitId) uitsluiten
+            var invoicedPairs = _uow.InvoiceDetails.GetNoTracking()
+                .Where(d => d.PaymentStageId != null && stageIds.Contains(d.PaymentStageId.Value)
+                            && d.UnitId != null && unitIds.Contains(d.UnitId.Value))
+                .Select(d => new { d.PaymentStageId, d.UnitId })
+                .ToList() // tuple literals can’t be translated in EF expressions
+                .Select(d => (StageId: d.PaymentStageId!.Value, UnitId: d.UnitId!.Value))
+                .Distinct()
+                .ToHashSet();
+
+            // 5) Units + bijhorende stages materialiseren
+            foreach (var unit in units)
+            {
+                if (!groupMap.TryGetValue(unit.Id, out var unitGroupIds) || unitGroupIds.Count == 0)
+                    continue;
+
+                var unitStages = stages
+                    .Where(s => unitGroupIds.Contains(s.GroupId) && !invoicedPairs.Contains((s.Id, unit.Id)))
+                    .ToList();
+
+                if (unitStages.Count == 0) continue;
 
                 var bo = new UnitWithStagesBO();
                 var unitBo = new UnitBO();
 
-                foreach (var stage in stages)
+                foreach (var stage in unitStages)
                 {
                     var stageBo = new ProjectPaymentStageBO();
                     var err2 = ProjectPaymentStageTranslator.TranslateEntityToBO(stage, stageBo);
