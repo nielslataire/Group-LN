@@ -71,6 +71,8 @@ public partial class ClientAccount
 
     public virtual ICollection<ChangeOrder> ChangeOrder { get; set; } = new List<ChangeOrder>();
 
+    public virtual ICollection<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; } = new List<ClientAccountIssuerCompany>();
+
     public virtual ICollection<ClientContacts> ClientContacts { get; set; } = new List<ClientContacts>();
 
     public virtual ICollection<ClientGift> ClientGift { get; set; } = new List<ClientGift>();
@@ -88,6 +90,4 @@ public partial class ClientAccount
     public virtual ICollection<ProjectDocs> ProjectDocs { get; set; } = new List<ProjectDocs>();
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
-
-    public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
 }

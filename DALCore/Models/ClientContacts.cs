@@ -61,6 +61,8 @@ public partial class ClientContacts
 
     public virtual ClientAccount ClientAccount { get; set; }
 
+    public virtual ICollection<ClientContactIssuerCompany> ClientContactIssuerCompany { get; set; } = new List<ClientContactIssuerCompany>();
+
     public virtual ClientOwnerType CoOwnerType { get; set; }
 
     public virtual PostalCode InvoicePostalCode { get; set; }

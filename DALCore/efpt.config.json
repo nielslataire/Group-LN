@@ -4,18 +4,14 @@
    "ContextNamespace": null,
    "FilterSchemas": false,
    "IncludeConnectionString": true,
-   "IrregularWords": null,
-   "MinimumProductVersion": "2.6.1248",
    "ModelNamespace": null,
    "OutputContextPath": null,
    "OutputPath": "Models",
-   "PluralRules": null,
    "PreserveCasingWithRegex": true,
    "ProjectRootNamespace": "DALCore",
    "Schemas": null,
    "SelectedHandlebarsLanguage": 2,
    "SelectedToBeGenerated": 0,
-   "SingularRules": null,
    "T4TemplatePath": null,
    "Tables": [
       {
@@ -112,6 +108,10 @@
       },
       {
          "Name": "[dbo].[ClientAccountIssuerCompany]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ClientContactIssuerCompany]",
          "ObjectType": 0
       },
       {

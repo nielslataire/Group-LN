@@ -67,6 +67,8 @@ public partial class CompanyInfo
 
     public virtual ICollection<CompanyDepartments> CompanyDepartments { get; set; } = new List<CompanyDepartments>();
 
+    public virtual ICollection<CompanyIssuerCompany> CompanyIssuerCompany { get; set; } = new List<CompanyIssuerCompany>();
+
     public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();
 
     public virtual ICollection<IncommingInvoices> IncommingInvoices { get; set; } = new List<IncommingInvoices>();
@@ -86,8 +88,6 @@ public partial class CompanyInfo
     public virtual ICollection<Project> ProjectSecurityCoordinator { get; set; } = new List<Project>();
 
     public virtual ICollection<Activity> Activity { get; set; } = new List<Activity>();
-
-    public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
 }

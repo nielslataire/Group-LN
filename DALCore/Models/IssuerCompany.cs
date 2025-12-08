@@ -115,6 +115,12 @@ public partial class IssuerCompany
 
     public int? OctopusDownloadLinkCustomFieldKeyId { get; set; }
 
+    public virtual ICollection<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; } = new List<ClientAccountIssuerCompany>();
+
+    public virtual ICollection<ClientContactIssuerCompany> ClientContactIssuerCompany { get; set; } = new List<ClientContactIssuerCompany>();
+
+    public virtual ICollection<CompanyIssuerCompany> CompanyIssuerCompany { get; set; } = new List<CompanyIssuerCompany>();
+
     public virtual CompanyLegalForm CompanyLegalForm { get; set; }
 
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
@@ -130,8 +136,4 @@ public partial class IssuerCompany
     public virtual ICollection<OctopusBookyears> OctopusBookyears { get; set; } = new List<OctopusBookyears>();
 
     public virtual ICollection<Vattype> Vattype { get; set; } = new List<Vattype>();
-
-    public virtual ICollection<ClientAccount> ClientAccount { get; set; } = new List<ClientAccount>();
-
-    public virtual ICollection<CompanyInfo> Company { get; set; } = new List<CompanyInfo>();
 }

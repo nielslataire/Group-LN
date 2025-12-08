@@ -21,6 +21,7 @@ using SmartBreadcrumbs.Nodes;
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -2072,7 +2073,7 @@ namespace CPMCore.Controllers
                 FormattedPublicId = formattedPublicId;
                 IsIndividual = isIndividual;
 
-               SkipSendStep = skipSendStep;
+                SkipSendStep = skipSendStep;
                 ClientEmail = clientEmail;
             }
 
@@ -2092,6 +2093,7 @@ namespace CPMCore.Controllers
 
             public bool SkipSendStep { get; }
             public string? ClientEmail { get; }
+            public int? OctopusRelationId { get; set; }
             public List<Vattype> VatTypes { get; } = new();
             public string DossierNumber => Issuer.OctopusDossierNumber ?? string.Empty;
         }
@@ -2288,7 +2290,19 @@ namespace CPMCore.Controllers
             if (sendOnly)
                 throw new InvalidOperationException("Octopus-factuur is nog niet aangemaakt.");
 
-            var relationLookups = BuildRelationLookups(context.Invoice, context.Invoice.ClientIdClientAccountNavigation, context.Invoice.ClientIdClientContactsNavigation, context.Company);
+            var issuerRelationId = await GetIssuerSpecificOctopusRelationIdAsync(
+                 context.Issuer.Id,
+                 context.Invoice.ClientIdClientAccountNavigation,
+                 context.Invoice.ClientIdClientContactsNavigation,
+                 context.Company,
+                 ct);
+
+            var relationLookups = BuildRelationLookups(
+                context.Invoice,
+                context.Invoice.ClientIdClientAccountNavigation,
+                context.Invoice.ClientIdClientContactsNavigation,
+                context.Company,
+                issuerRelationId);
             if (!relationLookups.Any())
             {
                 throw new InvalidOperationException("Onvoldoende klantgegevens om de Octopus-relatie te bepalen.");
@@ -2298,10 +2312,16 @@ namespace CPMCore.Controllers
                 dossierToken.Token,
                 context.DossierNumber,
                 relationLookups,
-                BuildRelationRequest(context.Invoice, context.Invoice.ClientIdClientAccountNavigation, context.Invoice.ClientIdClientContactsNavigation, context.Company),
+                BuildRelationRequest(
+                    context.Invoice,
+                    context.Invoice.ClientIdClientAccountNavigation,
+                    context.Invoice.ClientIdClientContactsNavigation,
+                    context.Company,
+                    issuerRelationId),
                 ct);
 
             var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
+                ?? issuerRelationId
                 ?? context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
                 ?? context.Invoice.ClientIdClientContactsNavigation?.OctopusRelationId
                 ?? context.Company?.OctopusRelationId;
@@ -2311,6 +2331,7 @@ namespace CPMCore.Controllers
                 throw new InvalidOperationException("Octopus-relatie kon niet bepaald worden.");
             }
 
+            context.OctopusRelationId = relationId;
             await UpdateLocalRelationIdsAsync(context, relationId, ct);
 
             context.VatTypes.Clear();
@@ -2323,27 +2344,49 @@ namespace CPMCore.Controllers
 
         private async Task UpdateLocalRelationIdsAsync(OctopusInvoiceContext context, int? relationId, CancellationToken ct)
         {
-            if (context.Invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
-                && clientAccount.OctopusRelationId != relationId)
+            if (!relationId.HasValue || relationId.Value <= 0)
             {
-                clientAccount.OctopusRelationId = relationId;
-                await _db.SaveChangesAsync(ct);
+                return;
+            }
+
+            var issuerRelationId = relationId.Value;
+
+            await SetIssuerSpecificRelationIdAsync(
+                context.Issuer.Id,
+                context.Invoice.ClientIdClientAccountNavigation,
+                context.Invoice.ClientIdClientContactsNavigation,
+                context.Company,
+                issuerRelationId,
+                ct);
+
+            var saveRequired = false;
+
+            if (context.Invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
+                && (clientAccount.OctopusRelationId is null or <= 0))
+            {
+                clientAccount.OctopusRelationId = issuerRelationId;
+                saveRequired = true;
             }
             else if (context.Invoice.ClientIdClientContactsNavigation is ClientContacts clientContact
-                && clientContact.OctopusRelationId != relationId)
+                && (clientContact.OctopusRelationId is null or <= 0))
             {
-                clientContact.OctopusRelationId = relationId;
-                await _db.SaveChangesAsync(ct);
+                clientContact.OctopusRelationId = issuerRelationId;
+                saveRequired = true;
             }
-            else if (context.Company != null && context.Company.OctopusRelationId != relationId)
+            else if (context.Company != null && (context.Company.OctopusRelationId is null or <= 0))
             {
                 var trackedCompany = await _db.CompanyInfo.FirstOrDefaultAsync(c => c.CompanyId == context.Company.CompanyId, ct);
 
-                if (trackedCompany != null)
+                if (trackedCompany != null && (trackedCompany.OctopusRelationId is null or <= 0))
                 {
-                    trackedCompany.OctopusRelationId = relationId;
-                    await _db.SaveChangesAsync(ct);
+                    trackedCompany.OctopusRelationId = issuerRelationId;
+                    saveRequired = true;
                 }
+            }
+
+            if (saveRequired)
+            {
+                await _db.SaveChangesAsync(ct);
             }
         }
 
@@ -2356,7 +2399,8 @@ namespace CPMCore.Controllers
             if (progress.CreationCompleted)
                 return;
 
-            var relationId = context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+            var relationId = context.OctopusRelationId
+                ?? context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
                 ?? context.Invoice.ClientIdClientContactsNavigation?.OctopusRelationId
                 ?? context.Company?.OctopusRelationId;
 
@@ -2817,21 +2861,196 @@ namespace CPMCore.Controllers
             return await _octopusClient.UpsertRelationAsync(dossierToken, dossierNumber, request, ct);
         }
 
-        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact = null, CompanyInfo? company = null)
+        private async Task<int?> GetIssuerSpecificOctopusRelationIdAsync(
+        int issuerCompanyId,
+        ClientAccount? clientAccount,
+        ClientContacts? clientContact,
+        CompanyInfo? company,
+        CancellationToken ct)
+        {
+            var connection = _db.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+            {
+                await connection.OpenAsync(ct);
+            }
+
+            try
+            {
+                async Task<int?> QueryRelationIdAsync(string table, string entityColumn, int entityId)
+                {
+                    await using var command = connection.CreateCommand();
+                    command.CommandText =
+                        $"SELECT TOP 1 OctopusRelationId FROM {table} WHERE {entityColumn} = @entityId AND IssuerCompanyId = @issuerId";
+
+                    var entityParameter = command.CreateParameter();
+                    entityParameter.ParameterName = "@entityId";
+                    entityParameter.Value = entityId;
+                    entityParameter.DbType = DbType.Int32;
+                    command.Parameters.Add(entityParameter);
+
+                    var issuerParameter = command.CreateParameter();
+                    issuerParameter.ParameterName = "@issuerId";
+                    issuerParameter.Value = issuerCompanyId;
+                    issuerParameter.DbType = DbType.Int32;
+                    command.Parameters.Add(issuerParameter);
+
+                    var result = await command.ExecuteScalarAsync(ct);
+                    if (result != null && result != DBNull.Value)
+                    {
+                        return Convert.ToInt32(result);
+                    }
+
+                    return null;
+                }
+
+                var accountId = clientAccount?.Id ?? clientContact?.ClientAccountId;
+                if (accountId is int clientAccountId)
+                {
+                    var relationId = await QueryRelationIdAsync("ClientAccountIssuerCompany", "ClientAccountId", clientAccountId);
+                    if (relationId.HasValue)
+                    {
+                        return relationId;
+                    }
+                }
+
+                if (clientContact?.Id is int clientContactId)
+                {
+                    var relationId = await QueryRelationIdAsync("ClientContactIssuerCompany", "ClientContactId", clientContactId);
+                    if (relationId.HasValue)
+                    {
+                        return relationId;
+                    }
+                }
+
+                if (company?.CompanyId is int companyId)
+                {
+                    var relationId = await QueryRelationIdAsync("CompanyIssuerCompany", "CompanyId", companyId);
+                    if (relationId.HasValue)
+                    {
+                        return relationId;
+                    }
+                }
+
+                return null;
+            }
+            finally
+            {
+                if (shouldClose)
+                {
+                    await connection.CloseAsync();
+                }
+            }
+        }
+
+        private async Task SetIssuerSpecificRelationIdAsync(
+            int issuerCompanyId,
+            ClientAccount? clientAccount,
+            ClientContacts? clientContact,
+            CompanyInfo? company,
+            int relationId,
+            CancellationToken ct)
+        {
+            var connection = _db.Database.GetDbConnection();
+            var shouldClose = connection.State != ConnectionState.Open;
+
+            if (shouldClose)
+            {
+                await connection.OpenAsync(ct);
+            }
+
+            try
+            {
+                async Task UpsertRelationIdAsync(string table, string entityColumn, int entityId)
+                {
+                    await using var command = connection.CreateCommand();
+                    command.CommandText =
+                        $@"IF EXISTS (SELECT 1 FROM {table} WHERE {entityColumn} = @entityId AND IssuerCompanyId = @issuerId)
+BEGIN
+    UPDATE {table}
+    SET OctopusRelationId = @relationId
+    WHERE {entityColumn} = @entityId AND IssuerCompanyId = @issuerId;
+END
+ELSE
+BEGIN
+    INSERT INTO {table} ({entityColumn}, IssuerCompanyId, OctopusRelationId)
+    VALUES (@entityId, @issuerId, @relationId);
+END";
+
+                    var entityParameter = command.CreateParameter();
+                    entityParameter.ParameterName = "@entityId";
+                    entityParameter.Value = entityId;
+                    entityParameter.DbType = DbType.Int32;
+                    command.Parameters.Add(entityParameter);
+
+                    var issuerParameter = command.CreateParameter();
+                    issuerParameter.ParameterName = "@issuerId";
+                    issuerParameter.Value = issuerCompanyId;
+                    issuerParameter.DbType = DbType.Int32;
+                    command.Parameters.Add(issuerParameter);
+
+                    var relationParameter = command.CreateParameter();
+                    relationParameter.ParameterName = "@relationId";
+                    relationParameter.Value = relationId;
+                    relationParameter.DbType = DbType.Int32;
+                    command.Parameters.Add(relationParameter);
+
+                    await command.ExecuteNonQueryAsync(ct);
+                }
+
+                var accountId = clientAccount?.Id ?? clientContact?.ClientAccountId;
+                if (accountId is int clientAccountId)
+                {
+                    await UpsertRelationIdAsync("ClientAccountIssuerCompany", "ClientAccountId", clientAccountId);
+                }
+
+                if (clientContact?.Id is int clientContactId)
+                {
+                    await UpsertRelationIdAsync("ClientContactIssuerCompany", "ClientContactId", clientContactId);
+                }
+
+                if (company?.CompanyId is int companyId)
+                {
+                    await UpsertRelationIdAsync("CompanyIssuerCompany", "CompanyId", companyId);
+                }
+            }
+            finally
+            {
+                if (shouldClose)
+                {
+                    await connection.CloseAsync();
+                }
+            }
+        }
+
+        private static IReadOnlyList<OctopusRelationLookup> BuildRelationLookups(
+            Invoices invoice,
+            ClientAccount? clientAccount,
+            ClientContacts? clientContact = null,
+            CompanyInfo? company = null,
+            int? issuerRelationId = null)
         {
             var lookups = new List<OctopusRelationLookup>();
 
-            if (clientAccount?.OctopusRelationId is int relationId and > 0)
+            if (issuerRelationId is int issuerSpecificRelationId and > 0)
             {
-                lookups.Add(new OctopusRelationLookup { RelationId = relationId });
+                lookups.Add(new OctopusRelationLookup { RelationId = issuerSpecificRelationId });
             }
-            else if (clientContact?.OctopusRelationId is int contactRelationId and > 0)
+            else
             {
-                lookups.Add(new OctopusRelationLookup { RelationId = contactRelationId });
-            }
-            else if (company?.OctopusRelationId is int companyRelationId and > 0)
-            {
-                lookups.Add(new OctopusRelationLookup { RelationId = companyRelationId });
+                if (clientAccount?.OctopusRelationId is int relationId and > 0)
+                {
+                    lookups.Add(new OctopusRelationLookup { RelationId = relationId });
+                }
+                else if (clientContact?.OctopusRelationId is int contactRelationId and > 0)
+                {
+                    lookups.Add(new OctopusRelationLookup { RelationId = contactRelationId });
+                }
+                else if (company?.OctopusRelationId is int companyRelationId and > 0)
+                {
+                    lookups.Add(new OctopusRelationLookup { RelationId = companyRelationId });
+                }
             }
 
             var vatNumber = FormatVatNumberForOctopus(
@@ -2858,6 +3077,7 @@ namespace CPMCore.Controllers
             return lookups;
         }
 
+
         private static bool NeedsRelationUpdate(OctopusRelation current, OctopusRelationRequest desired)
         {
             static bool Different(string? a, string? b)
@@ -2880,7 +3100,12 @@ namespace CPMCore.Controllers
             return false;
         }
 
-        private static OctopusRelationRequest BuildRelationRequest(Invoices invoice, ClientAccount? clientAccount, ClientContacts? clientContact, CompanyInfo? company)
+        private static OctopusRelationRequest BuildRelationRequest(
+          Invoices invoice,
+          ClientAccount? clientAccount,
+          ClientContacts? clientContact,
+          CompanyInfo? company,
+          int? issuerRelationId)
         {
             var clientName = SelectClientName(invoice, clientAccount, clientContact, company);
             var countryCode = clientAccount?.InvoicePostalCode?.Country?.LandIsocode
@@ -2903,13 +3128,15 @@ namespace CPMCore.Controllers
             {
                 RelationIdentificationServiceData = new OctopusRelationIdentificationData
                 {
-                    RelationKey = clientAccount?.OctopusRelationId is int relationId and > 0
-                        ? new OctopusRelationKey { Id = relationId }
-                        : clientContact?.OctopusRelationId is int contactRelationId and > 0
-                            ? new OctopusRelationKey { Id = contactRelationId }
-                            : company?.OctopusRelationId is int companyRelationId and > 0
-                                ? new OctopusRelationKey { Id = companyRelationId }
-                                : null,
+                    RelationKey = issuerRelationId.HasValue && issuerRelationId.Value > 0
+                        ? new OctopusRelationKey { Id = issuerRelationId.Value }
+                        : clientAccount?.OctopusRelationId is int relationId && relationId > 0
+                            ? new OctopusRelationKey { Id = relationId }
+                            : clientContact?.OctopusRelationId is int contactRelationId && contactRelationId > 0
+                                ? new OctopusRelationKey { Id = contactRelationId }
+                                : company?.OctopusRelationId is int companyRelationId && companyRelationId > 0
+                                    ? new OctopusRelationKey { Id = companyRelationId }
+                                    : null,
                     ExternalRelationId = invoice.ClientId ?? invoice.CompanyId
                 },
                 Name = clientName,
