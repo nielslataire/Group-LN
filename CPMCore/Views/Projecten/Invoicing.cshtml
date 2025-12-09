@@ -1,6 +1,6 @@
 ﻿@model CPMCore.Models.Projecten.ProjectInvoicingModel
 @using BOCore
-
+@using System.Globalization
 
 @{
     ViewData["Title"] = "Project – " + Model.ProjectName;
@@ -29,6 +29,19 @@
                 box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
             }
 </style>
+
+@functions {
+    string FormatStageName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return name;
+        }
+
+        name = name.Trim();
+        return $"{char.ToUpper(name[0], CultureInfo.CurrentCulture)}{(name.Length > 1 ? name.Substring(1).ToLower(CultureInfo.CurrentCulture) : string.Empty)}";
+    }
+}
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -78,10 +91,10 @@
                         <h2 class="card-title mb-0">Schijven vordering der werken</h2>
                     </div>
                     <div class="card-body pt-2">
-                        <div class="table-responsive">
+                        <div class="table-responsive pt-3">
                             <table class="table align-middle">
-                                <thead class="table-light">
-                                    <tr>
+                                <thead>
+                                    <tr class="table-secondary">
                                         <th>Schijf</th>
                                         <th class="text-end" style="white-space:nowrap;">Percentage</th>
                                         <th class="text-end" style="white-space:nowrap;">Selectie</th>
@@ -90,8 +103,8 @@
                                 <tbody>
                                     @foreach (var item in Model.ClientAccounts)
                                     {
-                                        <tr class="table-primary align-middle">
-                                            <td class="fw-bold">
+                                        <tr class="bg-secondary align-middle">
+                                            <td class="fw-bold pt-4">
                                                 @(item.Client.Name != null
                                                                                             ? $"{item.Client.Salutation.GetDisplayName()} {item.Client.DisplayName}"
                                                                                             : item.Client.DisplayName)
@@ -100,53 +113,69 @@
                                         <td class="text-end">
                                             @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
                                                 {
-                                                    <input type="checkbox" class="form-check-input chkClient"
-                                                           data-clientaccountid="@item.Client.Id" />
+                                                    <div class="checkbox-custom checkbox-default d-inline-block">
+                                                        <input type="checkbox" class="chkClient"
+                                                               id="@($"client-{item.Client.Id}")"
+                                                               data-clientaccountid="@item.Client.Id" />
+                                                        <label for="@($"client-{item.Client.Id}")"></label>
+                                                    </div>
                                                 }
                                             </td>
                                         </tr>
 
                                         foreach (var iu in item.Units)
                                         {
-                                            <tr class="table-active">
+                                            var stageGroups = iu.PaymentStages.GroupBy(x => x.GroupId).ToList();
+                                            var isFirstGroupForUnit = true;
+
+                                            foreach (var stageGroup in stageGroups)
+                                            {
+                                            var groupName = stageGroup.First().GroupName;
+
+                                            <tr class="table-light">
                                                 <td>
-                                                    @iu.Unit.Type.Name @(" ") @iu.Unit.Name <br />
+                                                    <div class="d-flex flex-wrap justify-content-between align-items-center">
+                                                            <span>@iu.Unit.Type.Name @(" ") @iu.Unit.Name - @groupName</span>
+                                                    </div>
                                                 </td>
                                                 <td></td>
-                                                <td class="text-end">
-                                                    @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
-                                                    {
-                                                        <input type="checkbox" class="form-check-input chkUnit"
-                                                               data-unitid="@iu.Unit.Id"
-                                                               data-clientaccountid="@item.Client.Id" />
-                                                    }
-                                                </td>
+                                                    <td class="text-end">
+                                                        @if ((User.IsInRole("Boekhouding") || User.IsInRole("Admin")) && isFirstGroupForUnit)
+                                                        {
+                                                            <div class="checkbox-custom checkbox-default d-inline-block">
+                                                                <input type="checkbox" class="chkUnit"
+                                                                       id="@($"client-{item.Client.Id}-unit-{iu.Unit.Id}")"
+                                                                       data-unitid="@iu.Unit.Id"
+                                                                       data-clientaccountid="@item.Client.Id" />
+                                                                <label for="@($"client-{item.Client.Id}-unit-{iu.Unit.Id}")"></label>
+                                                            </div>
+                                                        }
+                                                    </td>
                                             </tr>
 
-                                            foreach (var stagegroup in iu.PaymentStages.Select(x => x.GroupId).Distinct())
-                                            {
-                                                <tr class="table-secondary">
-                                                    <td colspan="3">@iu.PaymentStages.First(x => x.GroupId == stagegroup).GroupName</td>
-                                                </tr>
-
-                                                foreach (var stage in iu.PaymentStages.Where(l => l.GroupId == stagegroup))
+                                                foreach (var stage in stageGroup)
                                                 {
                                                     <tr>
-                                                        <td class="text-capitalize">
-                                                            <i class="fa fa-level-down-alt me-2"></i>@stage.Name
+                                                        <td>
+                                                            <i class="fa fa-level-down-alt me-2"></i>@FormatStageName(stage.Name)
                                                         </td>
                                                         <td class="text-end">@stage.Percentage.ToString("0.00") @Html.Raw("%")</td>
                                                         <td class="text-end">
                                                             @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
                                                             {
-                                                                <input type="checkbox" class="form-check-input chkInvoice"
-                                                                       data-id="@stage.Id"
-                                                                       data-unitid="@iu.Unit.Id"
-                                                                       data-clientaccountid="@item.Client.Id" />
+                                                                <div class="checkbox-custom checkbox-default d-inline-block">
+                                                                    <input type="checkbox" class="chkInvoice"
+                                                                           id="@($"client-{item.Client.Id}-unit-{iu.Unit.Id}-stage-{stage.Id}")"
+                                                                           data-id="@stage.Id"
+                                                                           data-unitid="@iu.Unit.Id"
+                                                                           data-clientaccountid="@item.Client.Id" />
+                                                                    <label for="@($"client-{item.Client.Id}-unit-{iu.Unit.Id}-stage-{stage.Id}")"></label>
+                                                                </div>
                                                             }
                                                         </td>
                                                     </tr>
                                                 }
+                                                isFirstGroupForUnit = false;
                                             }
                                         }
                                     }
