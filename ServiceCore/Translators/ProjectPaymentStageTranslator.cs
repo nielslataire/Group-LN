@@ -22,7 +22,7 @@ namespace ServiceCore.Translators
             bo.GroupId = _entity.GroupId;
             bo.Invoicable = _entity.Invoicable;
             bo.Percentage = _entity.Percentage;
-            bo.VatPercentage = _entity.Group.VatPercentage;
+            bo.VatPercentage = _entity.Group?.VatType?.BasePercentage ?? _entity.Group?.VatPercentage;
             bo.InvoiceCount = _entity.InvoicesDetails.Count;
             bo.GroupName = _entity.Group.Name;
             if (_entity.Doc is not null)

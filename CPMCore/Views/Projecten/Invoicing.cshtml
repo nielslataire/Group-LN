@@ -65,7 +65,7 @@
                         </a>
                         @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
                         {
-                            <button type="button" class="btn btn-primary btn-md px-3" id="btnInvoicing" data-bs-toggle="tooltip" title="Facturen opmaken">
+                            <button type="button" class="btn btn-primary btn-md px-3" id="btnInvoicing" data-bs-toggle="tooltip" title="Facturen opmaken" disabled>
                                 <i class="fa fa-euro-sign me-2"></i>Facturen opmaken
                             </button>
                         }
@@ -410,7 +410,23 @@
             });
         })();
 
-        document.getElementById('btnInvoicing')?.addEventListener('click', function (e) {
+        const issuerCompanyId = @(Model.IssuerCompanyIdBuilder ?? 0);
+
+        const invoiceButton = document.getElementById('btnInvoicing');
+
+             const updateInvoiceButtonState = () => {
+                 if (!invoiceButton) return;
+                 const hasStageSelected = document.querySelector('.chkInvoice:checked') !== null;
+                 invoiceButton.disabled = !hasStageSelected;
+             };
+
+             updateInvoiceButtonState();
+
+             stageCheckboxes.forEach(cb => cb.addEventListener('change', updateInvoiceButtonState));
+
+             document.querySelectorAll('.chkClient, .chkUnit').forEach(cb => cb.addEventListener('change', updateInvoiceButtonState));
+
+             invoiceButton?.addEventListener('click', function (e) {
             e.preventDefault();
 
             const list = [];
@@ -419,7 +435,7 @@
                     clientAccountId: parseInt(chk.getAttribute('data-clientaccountid')),
                     unitId: parseInt(chk.getAttribute('data-unitid')),
                     stageId: parseInt(chk.getAttribute('data-id')),
-                    companyId: 1060 // TODO: haal dit dynamisch
+                    companyId: issuerCompanyId
                 });
             });
 
@@ -428,7 +444,8 @@
                 listCO.push({
                     clientAccountId: parseInt(chk.getAttribute('data-clientaccountid')),
                     changeOrderId: parseInt(chk.getAttribute('data-coid')),
-                    changeOrderDetailId: parseInt(chk.getAttribute('data-id'))
+                   changeOrderDetailId: parseInt(chk.getAttribute('data-id')),
+                   companyId: issuerCompanyId
                 });
             });
 

@@ -1,0 +1,76 @@
+﻿@using CPMCore.Controllers
+@using CPMCore.Models
+@using BOCore
+@model CPMCore.Models.Projecten.ProjectPaymentGroupLinkModel
+
+@{
+    ViewData["Title"] = "Project – " + Model.ProjectName;
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+        {
+            new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+            new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+            new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+            new Breadcrumb("Betalingsschijven", nameof(ProjectenController.PaymentStages) + "?projectid=" + Model.ProjectId, "Projecten", true),
+            new Breadcrumb("Koppelen", nameof(ProjectenController.PaymentGroupLink), "Projecten", false)
+        };
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                    <h1 class="font-weight-bold mb-0 mt-0">Betalingsschijven koppelen</h1>
+                    <h5 class="mb-4 mt-0">Koppel betalingsgroepen aan de eenheden van het project</h5>
+                </div>
+                <div class="col-sm-auto px-0">
+                    <a class="btn btn-default btn-md px-3" href="@Url.Action("PaymentStages", "Projecten", new { projectid = Model.ProjectId })">
+                        <i class="fa fa-arrow-left me-2"></i>Terug naar overzicht
+                    </a>
+                </div>
+            </div>
+
+            <div class="card card-modern">
+                <div class="card-body">
+                    <form asp-action="PaymentGroupLink" method="post" class="form-horizontal">
+                        @Html.AntiForgeryToken()
+                        @Html.HiddenFor(m => m.ProjectId)
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-0">
+                                <thead>
+                                    <tr class="table-secondary">
+                                        <th>Eenheid</th>
+                                        <th class="text-end" style="width: 320px;">Betalingsgroep</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < Model.Units.Count; i++)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @Html.HiddenFor(m => m.Units[i].Id)
+                                                @Html.DisplayFor(m => m.Units[i].Type.Name) @Html.Raw(" ") @Html.DisplayFor(m => m.Units[i].Name)
+                                            </td>
+                                            <td class="text-end">
+                                                @Html.DropDownListFor(m => m.Units[i].PaymentGroupId,
+                                                new SelectList(Model.PaymentGroups ?? new List<IdNameBO>(), "ID", "Display", Model.Units[i].PaymentGroupId),
+                                                                                        "Selecteer ....",
+                                                                                        new { @class = "form-control form-control-modern" })
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12 text-end">
+                                <button class="btn btn-primary btn-md" type="submit">Opslaan</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

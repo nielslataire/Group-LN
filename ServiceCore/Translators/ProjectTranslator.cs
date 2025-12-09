@@ -46,6 +46,8 @@ namespace ServiceCore.Translators
             bo.DocPID = _entity.DocPid;
             bo.DocSewerInspection = _entity.DocSewerInspection;
             bo.DocWaterInspection = _entity.DocWaterInspection;
+            bo.IssuerCompanyIdBuilder = _entity.IssuerCompanyIdBuilder;
+            bo.IssuerCompanyIdLandOwner = _entity.IssuerCompanyIdLandOwner;
             // bo.UploadToFacebook = _entity.UploadToFacebook
 
             // Gemeente en postcode van het project
@@ -146,6 +148,8 @@ namespace ServiceCore.Translators
             _entity.DocPid = bo.DocPID;
             _entity.DocSewerInspection = bo.DocSewerInspection;
             _entity.DocWaterInspection = bo.DocWaterInspection;
+            _entity.IssuerCompanyIdBuilder = bo.IssuerCompanyIdBuilder;
+            _entity.IssuerCompanyIdLandOwner = bo.IssuerCompanyIdLandOwner;
             _entity.ProjectType = (int)bo.ProjectType;
 
 

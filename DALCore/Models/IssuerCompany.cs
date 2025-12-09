@@ -135,5 +135,9 @@ public partial class IssuerCompany
 
     public virtual ICollection<OctopusBookyears> OctopusBookyears { get; set; } = new List<OctopusBookyears>();
 
+    public virtual ICollection<Project> ProjectIssuerCompanyIdBuilderNavigation { get; set; } = new List<Project>();
+
+    public virtual ICollection<Project> ProjectIssuerCompanyIdLandOwnerNavigation { get; set; } = new List<Project>();
+
     public virtual ICollection<Vattype> Vattype { get; set; } = new List<Vattype>();
 }

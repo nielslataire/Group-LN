@@ -1419,7 +1419,12 @@ namespace ServiceCore
         {
             var response = new GetResponse<ProjectPaymentGroupBO>();
             var entities = _uow.PaymentGroups
-                .GetNoTracking()
+                .GetNormal()
+                .Include(m => m.VatType)
+                .Include(m => m.InvoicingPaymentStages)
+                    .ThenInclude(s => s.Doc)
+                .Include(m => m.InvoicingPaymentStages)
+                    .ThenInclude(s => s.InvoicesDetails)
                 .Where(m => m.ProjectId == projectid)
                 .OrderByDescending(m => m.Name);
 
@@ -1438,7 +1443,14 @@ namespace ServiceCore
         public GetResponse<ProjectPaymentGroupBO> GetProjectPaymentGroup(int groupid)
         {
             var response = new GetResponse<ProjectPaymentGroupBO>();
-            var e = _uow.PaymentGroups.GetNoTracking().FirstOrDefault(m => m.Id == groupid);
+            var e = _uow.PaymentGroups
+                .GetNormal()
+                .Include(g => g.VatType)
+                .Include(g => g.InvoicingPaymentStages)
+                    .ThenInclude(s => s.Doc)
+                .Include(g => g.InvoicingPaymentStages)
+                    .ThenInclude(s => s.InvoicesDetails)
+                .FirstOrDefault(m => m.Id == groupid);
 
             var bo = new ProjectPaymentGroupBO();
             var err = ProjectPaymentGroupTranslator.TranslateEntityToBO(e, bo);
@@ -1446,6 +1458,7 @@ namespace ServiceCore
             else response.AddError(err.ToString());
             return response;
         }
+
 
         public GetResponse<IdNameBO> GetProjectPaymentGroupsForSelect(int projectid)
         {

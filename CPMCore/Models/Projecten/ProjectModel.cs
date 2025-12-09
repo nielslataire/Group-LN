@@ -16,6 +16,7 @@ namespace CPMCore.Models.Projecten
         {
             _project = new ProjectBO();
             _countries = new List<IdNameBO>();
+            IssuerCompanies = new List<ProjectIssuerCompanyOptionVM>();
         }
         private ProjectBO _project;
         public ProjectBO Project
@@ -65,6 +66,7 @@ namespace CPMCore.Models.Projecten
                 _selectedPostalCode = value;
             }
         }
+        public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; }
     }
 
     public class EditProjectDetail
@@ -74,6 +76,7 @@ namespace CPMCore.Models.Projecten
             _project = new ProjectBO();
             _countries = new List<IdNameBO>();
             _facebookplaces = new List<FacebookPlaceBO>();
+            IssuerCompanies = new List<ProjectIssuerCompanyOptionVM>();
         }
         // Projectgegevens
         private ProjectBO _project;
@@ -216,6 +219,7 @@ namespace CPMCore.Models.Projecten
             }
         }
         private FacebookPlaceBO _selectedfacebookplace;
+        public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; }
         [ValidateNever]
         public FacebookPlaceBO SelectedFacebookPlace
         {
@@ -2073,8 +2077,10 @@ namespace CPMCore.Models.Projecten
     {
             public int ProjectId { get; set; }
             public string ProjectName { get; set; } = "";
+        public int? IssuerCompanyIdBuilder { get; set; }
+        public int? IssuerCompanyIdLandOwner { get; set; }
 
-            public List<ClientAccountWithInvoicableBO> ClientAccounts { get; set; } = new();
+        public List<ClientAccountWithInvoicableBO> ClientAccounts { get; set; } = new();
             public List<ClientAccountWithInvoicableChangeOrderBO> ClientChangeOrders { get; set; } = new();
 
             public List<ClientUtilityCostBO> ClientUtilityCosts { get; set; } = new();
@@ -3556,6 +3562,12 @@ namespace CPMCore.Models.Projecten
                 _projectname = value;
             }
         }
+    }
+
+    public class ProjectIssuerCompanyOptionVM
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 
     // SHARED

@@ -4,6 +4,7 @@ using CPMCore.Models;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
+using CPMCore.Models.Invoicing;
 using DALCore;
 using FacadeCore;
 using FluentFTP;
@@ -20,6 +21,7 @@ using QuestPDF.Infrastructure;
 using Rotativa.AspNetCore;
 using Rotativa.AspNetCore.Options;
 using ServiceCore;
+using ServiceCore.Invoicing;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
@@ -36,6 +38,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using System.Globalization;
 
 
 namespace CPMCore.Controllers
@@ -3925,6 +3928,14 @@ namespace CPMCore.Controllers
                 ProjectName = projectService.GetProjectNameById(projectid)
             };
 
+            var projectResponse = projectService.GetProjectByID(projectid);
+            if (projectResponse.Success && projectResponse.Value is not null)
+            {
+                model.ProjectName = projectResponse.Value.Name;
+                model.IssuerCompanyIdBuilder = projectResponse.Value.IssuerCompanyIdBuilder;
+                model.IssuerCompanyIdLandOwner = projectResponse.Value.IssuerCompanyIdLandOwner;
+            }
+
             // ===== Schijven (vordering der werken) =====
             var respUnits = projectService.GetProjectInvoicableUnits(projectid);
             if (respUnits.Success)
@@ -3992,10 +4003,190 @@ namespace CPMCore.Controllers
 
             return View(model);
         }
+
+        [HttpGet]
+        public IActionResult PaymentStages(int projectid)
+        {
+            var projectService = ServiceFactory.GetProjectService();
+
+            var model = new ProjectPaymentStagesModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid)
+            };
+
+            var response = projectService.GetProjectPaymentGroups(projectid);
+            if (response.Success)
+                model.Groups = response.Values;
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult PaymentStagesAddUpdate(int projectid, int groupid = 0)
+        {
+            var projectService = ServiceFactory.GetProjectService();
+            var model = new ProjectPaymentStagesAddUpdateModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid)
+            };
+
+            if (groupid == 0)
+            {
+                model.Stages.Add(new ProjectPaymentStageBO());
+            }
+            else
+            {
+                var response = projectService.GetProjectPaymentGroup(groupid);
+                if (response.Success && response.Value is not null)
+                {
+                    model.Group = response.Value;
+                    foreach (var stage in model.Group.PaymentStages)
+                    {
+                        model.Stages.Add(stage);
+                    }
+                }
+
+                if (model.Stages.Count == 0)
+                    model.Stages.Add(new ProjectPaymentStageBO());
+            }
+
+            ViewBag.VatTypes = GetVatTypeSelectList(projectid);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult PaymentStagesAddUpdate(ProjectPaymentStagesAddUpdateModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.VatTypes = GetVatTypeSelectList(model.ProjectId);
+                return View(model);
+            }
+
+            foreach (var stage in model.Stages)
+            {
+                stage.GroupId = model.Group.Id;
+                model.Group.PaymentStages.Add(stage);
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            model.Group.ProjectId = model.ProjectId;
+            var response = service.InsertUpdateProjectPaymentGroup(model.Group);
+
+            if (response.Success)
+            {
+                AddMessage("success", $"De betalingsschijven zijn met succes aan het project {model.ProjectName} toegevoegd", "Geslaagd!");
+                return RedirectToAction("PaymentStages", new { projectid = model.ProjectId });
+            }
+
+            AddMessage("error", $"De betalingsschijven zijn NIET aan het project {model.ProjectName} toegevoegd", "Fout!");
+            ViewBag.VatTypes = GetVatTypeSelectList(model.ProjectId);
+            return View(model);
+        }
+
+        [HttpPost]
+        public PartialViewResult BlankStageRow()
+        {
+            return PartialView("Partials/_PaymentStageRow", new ProjectPaymentStageBO());
+        }
+
+        [HttpGet]
+        public IActionResult PaymentGroupLink(int projectid)
+        {
+            var projectService = ServiceFactory.GetProjectService();
+            var unitService = ServiceFactory.GetUnitService();
+
+            var model = new ProjectPaymentGroupLinkModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid),
+                Units = new List<UnitBO>(),
+                PaymentGroups = new List<IdNameBO>()
+            };
+
+            var response = projectService.GetProjectPaymentGroupsForSelect(projectid);
+            if (response.Success)
+                model.PaymentGroups = response.Values;
+
+            var responseUnits = unitService.GetUnitsByProjectId(projectid);
+            if (responseUnits.Success)
+                model.Units = responseUnits.Values;
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult PaymentGroupLink(ProjectPaymentGroupLinkModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                AddMessage("Error", "De betalingsschijven zijn NIET gelinkt", "Fout!");
+                var projectService = ServiceFactory.GetProjectService();
+                var unitService = ServiceFactory.GetUnitService();
+
+                var responseGroups = projectService.GetProjectPaymentGroupsForSelect(model.ProjectId);
+                if (responseGroups.Success)
+                    model.PaymentGroups = responseGroups.Values;
+
+                var responseUnits = unitService.GetUnitsByProjectId(model.ProjectId);
+                if (responseUnits.Success)
+                    model.Units = responseUnits.Values;
+
+                return View(model);
+            }
+
+            var service = ServiceFactory.GetProjectService();
+            model.Units ??= new List<UnitBO>();
+            foreach (var unit in model.Units)
+            {
+                if (unit.PaymentGroupId.HasValue && unit.PaymentGroupId.Value > 0)
+                    service.LinkPaymentGroupToUnit(unit.Id, unit.PaymentGroupId.Value);
+            }
+
+            AddMessage("success", "De betalingsschijven zijn met succes gelinkt", "Geslaagd!");
+            return RedirectToAction("PaymentStages", new { projectid = model.ProjectId });
+        }
+
+        [HttpPost]
+        public JsonResult PaymentStagesInvoicable(int stageid, bool value)
+        {
+            var service = ServiceFactory.GetProjectService();
+            var response = service.UpdateProjectPaymentStageInvoicable(stageid, value);
+            return Json(new { success = response.Success });
+        }
+
+        private List<SelectListItem> GetVatTypeSelectList(int projectId)
+        {
+            var vatTypes = new List<SelectListItem>();
+            var projectService = ServiceFactory.GetProjectService();
+            var projectResponse = projectService.GetProjectByID(projectId);
+            var issuerId = projectResponse.Success ? projectResponse.Value?.IssuerCompanyIdBuilder : null;
+
+            if (!issuerId.HasValue)
+                return vatTypes;
+
+            var issuerService = new IssuerCompanyService(ServiceFactory.CreateUoW());
+            var issuerVatTypes = issuerService.ListVatTypeAsync(issuerId.Value).GetAwaiter().GetResult();
+            vatTypes = issuerVatTypes
+                .Select(v => new SelectListItem
+                {
+                    Value = v.Id.ToString(CultureInfo.InvariantCulture),
+                    Text = string.IsNullOrWhiteSpace(v.Code)
+                        ? $"{v.BasePercentage:0.##}%"
+                        : $"{v.Code} ({v.BasePercentage:0.##}%)"
+                })
+                .ToList();
+
+            return vatTypes;
+        }
         // POST: schijven factureren
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult MakeInvoices([FromBody] MakeInvoicesRequest request)
+        public async Task<IActionResult> MakeInvoices([FromBody] MakeInvoicesRequest request)
         {
             if (request?.Invoices == null || request.Invoices.Count == 0)
                 return Json(new { projectid = 0 });
@@ -4007,6 +4198,10 @@ namespace CPMCore.Controllers
             var response = new Response();
             int projectId = 0;
 
+            var drafts = new List<InvoiceDraftBO>();
+            using var uow = ServiceFactory.CreateUoW();
+            var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
+
             // Alle betrokken klanten ophalen
             var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
             var clientResp = clientService.GetClientAccountByIds(clientIds);
@@ -4015,6 +4210,7 @@ namespace CPMCore.Controllers
             foreach (var client in clientAccounts)
             {
                 var iu = new List<UnitWithStagesBO>();
+                var stageMap = new List<ProjectPaymentStageBO>();
 
                 // Units + stages
                 foreach (var unitId in request.Invoices.Where(i => i.ClientAccountId == client.Id).Select(i => i.Unitid).Distinct())
@@ -4027,7 +4223,11 @@ namespace CPMCore.Controllers
                         foreach (var item in request.Invoices.Where(i => i.Unitid == unitbo.Unit.Id))
                         {
                             var rStage = projectService.GetProjectPaymentStage(item.StageId);
-                            if (rStage.Success) unitbo.PaymentStages.Add(rStage.Value);
+                            if (rStage.Success)
+                            {
+                                unitbo.PaymentStages.Add(rStage.Value);
+                                stageMap.Add(rStage.Value);
+                            }
                         }
                         iu.Add(unitbo);
                     }
@@ -4047,18 +4247,45 @@ namespace CPMCore.Controllers
                     }
                 }
 
-                //// === JOUW bestaande factuur-constructie ===
-                //var result = MakeNewWordInvoiceFTP(client, iu, project, settings);
-                //// Bovenstaande functie genereerde vroeger een Word; vervang intern door
-                //// jouw nieuwe implementatie die InvoiceBO + Rows maakt en:
-                ////  - PDF = _pdf.Render(...)
-                ////  - UBL = _ubl.BuildUblXml(...)
-                ////  - (optioneel) _ubl.SendToPeppolAsync(...)
+                var stageIds = request.Invoices
+                     .Where(i => i.ClientAccountId == client.Id)
+                     .Select(i => i.StageId)
+                     .Distinct()
+                     .ToList();
 
-                //if (!result.Success) response.AddError(result.Messages);
+                if (stageIds.Count > 0 && project.Id > 0)
+                {
+                    var issuerCompanyId = project.IssuerCompanyIdBuilder ?? request.Invoices.First().CompanyId;
+                    if (issuerCompanyId <= 0)
+                    {
+                        response.AddError("Geen facturatiebedrijf geselecteerd voor het project.");
+                        continue;
+                    }
+                    var paymentGroupId = stageMap.FirstOrDefault(s => stageIds.Contains(s.Id))?.GroupId;
+                    drafts.Add(BuildStageInvoiceDraft(
+                        issuerCompanyId,
+                        client.Id,
+                        null,
+                        stageIds,
+                        project,
+                        paymentGroupId));
+                }
 
                 projectId = project.Id;
             }
+            foreach (var draft in drafts)
+            {
+                try
+                {
+                    var (id, _) = await cmd.CreateWithLinesAsync(draft, issueNow: false);
+                    await cmd.IssueDraftAsync(id, issueDate: null);
+                }
+                catch (Exception ex)
+                {
+                    response.AddError(ex.Message);
+                }
+            }
+
 
             if (response.Success)
             {
@@ -4075,7 +4302,7 @@ namespace CPMCore.Controllers
         // POST: meerwerken factureren
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult MakeInvoicesCO([FromBody] MakeInvoicesCoRequest request)
+        public async Task<IActionResult> MakeInvoicesCO([FromBody] MakeInvoicesCoRequest request)
         {
             if (request?.Invoices == null || request.Invoices.Count == 0)
                 return Json(new { projectid = 0 });
@@ -4086,6 +4313,9 @@ namespace CPMCore.Controllers
 
             var response = new Response();
             int projectId = 0;
+
+            using var uow = ServiceFactory.CreateUoW();
+            var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
 
             var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
             var clientResp = clientService.GetClientAccountByIds(clientIds);
@@ -4126,8 +4356,34 @@ namespace CPMCore.Controllers
                     }
                 }
 
-                //var result = MakeNewWordInvoiceCOFTP(client, changeOrders, units, project, settings);
-                //if (!result.Success) response.AddError(result.Messages);
+                if (changeOrders.Count > 0 && project.Id > 0)
+                {
+                    var issuerCompanyId = project.IssuerCompanyIdBuilder ?? request.Invoices.FirstOrDefault()?.CompanyId;
+                    if (!issuerCompanyId.HasValue || issuerCompanyId.Value <= 0)
+                    {
+                        response.AddError("Geen facturatiebedrijf geselecteerd voor het project.");
+                        continue;
+                    }
+                    var coDraft = BuildChangeOrderInvoiceDraft(
+                        issuerCompanyId,
+                        client.Id,
+                        changeOrders,
+                        settings,
+                        project);
+
+                    if (coDraft != null)
+                    {
+                        try
+                        {
+                            var (id, _) = await cmd.CreateWithLinesAsync(coDraft, issueNow: false);
+                            await cmd.IssueDraftAsync(id, issueDate: null);
+                        }
+                        catch (Exception ex)
+                        {
+                            response.AddError(ex.Message);
+                        }
+                    }
+                }
 
                 projectId = project.Id;
             }
@@ -4155,6 +4411,75 @@ namespace CPMCore.Controllers
             public List<ClientAccountChangeOrderInvoiceBO> Invoices { get; set; } = new();
         }
 
+        private static InvoiceDraftBO BuildStageInvoiceDraft(
+                   int issuerCompanyId,
+                   int? clientAccountId,
+                   int? clientContactId,
+                   IEnumerable<int> stageIds,
+                   ProjectBO project,
+                   int? paymentGroupId)
+        {
+            var draft = new InvoiceDraftBO
+            {
+                IssuerCompanyId = issuerCompanyId,
+                InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
+                Mode = InvoiceMode.Stages,
+                StageIds = stageIds?.Distinct().ToList() ?? new List<int>(),
+                ProjectId = project.Id,
+                PaymentGroupId = paymentGroupId
+            };
+
+            if (clientAccountId.HasValue)
+                (draft.CompanyId, draft.ClientType, draft.ClientId) = (null, (int)InvoicePartyType.ClientAccount, clientAccountId);
+            else if (clientContactId.HasValue)
+                (draft.CompanyId, draft.ClientType, draft.ClientId) = (null, (int)InvoicePartyType.ClientContact, clientContactId);
+
+            return draft;
+        }
+
+        private static InvoiceDraftBO? BuildChangeOrderInvoiceDraft(
+            int? issuerCompanyId,
+            int clientAccountId,
+            IEnumerable<ChangeOrderBO> changeOrders,
+            ProjectSalesSettingsBO? settings,
+            ProjectBO project)
+        {
+            if (!issuerCompanyId.HasValue || issuerCompanyId.Value <= 0)
+                return null;
+
+            var vatPct = settings?.VatPercentage ?? 21m;
+            var lines = new List<InvoiceLineBO>();
+
+            foreach (var order in changeOrders)
+            {
+                foreach (var detail in order.Details)
+                {
+                    lines.Add(new InvoiceLineBO
+                    {
+                        Text = detail.Description,
+                        Price = detail.Totaal,
+                        VatPercentage = vatPct,
+                        LineType = "ChangeOrders",
+                        GroupName = "Wijzigingsopdrachten",
+                        ChangeOrderDetailId = detail.Id
+                    });
+                }
+            }
+
+            if (lines.Count == 0)
+                return null;
+
+            return new InvoiceDraftBO
+            {
+                IssuerCompanyId = issuerCompanyId.Value,
+                InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
+                Mode = InvoiceMode.ChangeOrders,
+                ClientType = (int)InvoicePartyType.ClientAccount,
+                ClientId = clientAccountId,
+                Lines = lines,
+                ProjectId = project.Id
+            };
+        }
 
         //SHARED
         public void ChangeOrderFillInSelectList(ProjectChangeOrderAddUpdateModel model)
@@ -4174,6 +4499,8 @@ namespace CPMCore.Controllers
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
+            model.IssuerCompanies = GetIssuerCompanies();
+
             var cservice = ServiceFactory.GetCountryService();
             var cresponse = cservice.GetVisibleCountriesForSelect();
             if (cresponse.Success && cresponse.Values is not null)
@@ -4190,6 +4517,8 @@ namespace CPMCore.Controllers
         private void FillInAddSelectListsDetailEdit(EditProjectDetail model)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
+
+            model.IssuerCompanies = GetIssuerCompanies();
 
             var cservice = ServiceFactory.GetCountryService();
             var cresponse = cservice.GetVisibleCountriesForSelect();
@@ -4210,6 +4539,15 @@ namespace CPMCore.Controllers
                 model.Statuses = response.Values;
             }
 
+        }
+
+        private List<ProjectIssuerCompanyOptionVM> GetIssuerCompanies()
+        {
+            using var uow = ServiceFactory.CreateUoW();
+            return uow.IssuerCompanies.GetNoTracking()
+                .OrderBy(i => i.Name)
+                .Select(i => new ProjectIssuerCompanyOptionVM { Id = i.Id, Name = i.Name })
+                .ToList();
         }
 
         private void FillInAddSelectListsDetail(ref ShowProjectDetail model)

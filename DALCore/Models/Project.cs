@@ -79,6 +79,10 @@ public partial class Project
 
     public int ProjectType { get; set; }
 
+    public int? IssuerCompanyIdBuilder { get; set; }
+
+    public int? IssuerCompanyIdLandOwner { get; set; }
+
     public virtual CompanyInfo Architect { get; set; }
 
     public virtual AspNetUsers1 AspNetUser { get; set; }
@@ -100,6 +104,10 @@ public partial class Project
     public virtual ICollection<IncommingInvoices> IncommingInvoices { get; set; } = new List<IncommingInvoices>();
 
     public virtual ICollection<InvoicingPaymentGroup> InvoicingPaymentGroup { get; set; } = new List<InvoicingPaymentGroup>();
+
+    public virtual IssuerCompany IssuerCompanyIdBuilderNavigation { get; set; }
+
+    public virtual IssuerCompany IssuerCompanyIdLandOwnerNavigation { get; set; }
 
     public virtual PostalCode PostalCode { get; set; }
 

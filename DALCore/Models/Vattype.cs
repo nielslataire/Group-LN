@@ -23,6 +23,8 @@ public partial class Vattype
 
     public string InvoiceMention { get; set; }
 
+    public virtual ICollection<InvoicingPaymentGroup> InvoicingPaymentGroup { get; set; } = new List<InvoicingPaymentGroup>();
+
     public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
 
     public virtual IssuerCompany IssuerCompanyNavigation { get; set; }

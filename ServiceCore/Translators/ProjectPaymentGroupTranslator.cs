@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BOCore;
 using DALCore.Models;
 using DALCore;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace ServiceCore.Translators
@@ -21,7 +22,8 @@ namespace ServiceCore.Translators
             bo.Id = _entity.Id;
             bo.Name = _entity.Name;
             bo.ProjectId = _entity.ProjectId;
-            bo.VatPercentage = _entity.VatPercentage;
+            bo.VatTypeId = _entity.VatTypeId;
+            bo.VatPercentage = _entity.VatType?.BasePercentage ?? _entity.VatPercentage;
             foreach (var item in _entity.InvoicingPaymentStages)
             {
                 ProjectPaymentStageBO stage = new ProjectPaymentStageBO();
@@ -41,7 +43,45 @@ namespace ServiceCore.Translators
                 return ErrorCode.BoNull;
             _entity.Name = bo.Name;
             _entity.ProjectId = bo.ProjectId;
-            _entity.VatPercentage = bo.VatPercentage;
+            _entity.VatTypeId = bo.VatTypeId;
+            if (bo.VatTypeId.HasValue)
+            {
+                var vatType = uow.VatTypes.GetNoTracking().FirstOrDefault(v => v.Id == bo.VatTypeId.Value);
+                _entity.VatPercentage = vatType?.BasePercentage;
+            }
+            else
+            {
+                var project = uow.Projects.GetNoTracking()
+                    .Include(p => p.IssuerCompanyIdBuilderNavigation)
+                    .FirstOrDefault(p => p.ProjectId == _entity.ProjectId);
+                var issuerId = project?.IssuerCompanyIdBuilder;
+                var defaultVatTypeId = project?.IssuerCompanyIdBuilderNavigation?.DefaultVatTypeId
+                    ?? (issuerId.HasValue
+                        ? uow.IssuerCompanies.GetNoTracking()
+                            .Where(i => i.Id == issuerId.Value)
+                            .Select(i => i.DefaultVatTypeId)
+                            .FirstOrDefault()
+                        : null);
+
+                var vatTypeLookup = defaultVatTypeId.HasValue
+                    ? uow.VatTypes.GetNoTracking().FirstOrDefault(v => v.Id == defaultVatTypeId.Value)
+                    : issuerId.HasValue
+                        ? uow.VatTypes.GetNoTracking()
+                            .Where(v => v.IssuerCompanyId == issuerId.Value)
+                            .OrderByDescending(v => v.BasePercentage)
+                            .FirstOrDefault()
+                        : null;
+
+                if (vatTypeLookup != null)
+                {
+                    _entity.VatTypeId = vatTypeLookup.Id;
+                    _entity.VatPercentage = vatTypeLookup.BasePercentage;
+                }
+                else
+                {
+                    _entity.VatPercentage = bo.VatPercentage;
+                }
+            }
             var err = HandleStages(_entity, bo.PaymentStages, uow);
             if ((err != ErrorCode.Success))
                 return err;

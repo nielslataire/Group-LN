@@ -1,0 +1,22 @@
+﻿﻿@using HtmlHelpers.BeginCollectionItemCore
+@model BOCore.ProjectPaymentStageBO
+
+<div class="form-group payment-stage-row mb-2">
+    @using (Html.BeginCollectionItem("Stages"))
+    {
+        @Html.HiddenFor(m => m.Id)
+        @Html.HiddenFor(m => m.GroupId)
+        @Html.HiddenFor(m => m.Invoicable)
+        <div class="row align-items-center">
+            <div class="col-md-7 mb-2 mb-md-0">
+                @Html.TextBoxFor(m => m.Name, new { @class = "form-control form-control-modern", placeholder = "Schijfnaam" })
+            </div>
+            <div class="col-md-4 mb-2 mb-md-0">
+                @Html.EditorFor(m => m.Percentage, new { htmlAttributes = new { @class = "form-control form-control-modern", placeholder = "%" } })
+            </div>
+            <div class="col-md-1 text-end">
+                <a href="#" class="deleteRow text-danger" title="Verwijderen"><i class="fa fa-times"></i></a>
+            </div>
+        </div>
+    }
+</div>

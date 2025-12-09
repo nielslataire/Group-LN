@@ -55,6 +55,8 @@ Public Class ProjectPaymentGroupBO
             _vatpercentage = value
         End Set
     End Property
+    Public Property VatTypeId As Integer?
+
 
 
 

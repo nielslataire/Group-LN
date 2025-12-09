@@ -1,0 +1,108 @@
+﻿﻿@using CPMCore.Controllers
+@using CPMCore.Models
+@model CPMCore.Models.Projecten.ProjectPaymentStagesAddUpdateModel
+@using BOCore
+@using HtmlHelpers.BeginCollectionItemCore
+
+@{
+    ViewData["Title"] = "Project – " + Model.ProjectName;
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+        {
+            new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+            new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+            new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+            new Breadcrumb("Betalingsschijven", nameof(ProjectenController.PaymentStages) + "?projectid=" + Model.ProjectId, "Projecten", true),
+            new Breadcrumb(Model.Group.Id == 0 ? "Toevoegen" : "Bewerken", nameof(ProjectenController.PaymentStagesAddUpdate), "Projecten", false)
+        };
+    var vatTypes = ViewBag.VatTypes as List<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                    <h1 class="font-weight-bold mb-0 mt-0">Betalingsschijven</h1>
+                    <h5 class="mb-4 mt-0">@(Model.Group.Id == 0 ? "Betalingsgroep toevoegen" : "Betalingsgroep bewerken")</h5>
+                </div>
+                <div class="col-sm-auto px-0">
+                    <a class="btn btn-default btn-md px-3" href="@Url.Action("PaymentStages", "Projecten", new { projectid = Model.ProjectId })">
+                        <i class="fa fa-arrow-left me-2"></i>Terug naar overzicht
+                    </a>
+                </div>
+            </div>
+
+            @await Html.PartialAsync("_ValidationSummary", ViewData.ModelState)
+
+            <div class="card card-modern">
+                <div class="card-body">
+                    <form asp-action="PaymentStagesAddUpdate" method="post" class="form-horizontal" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        @Html.HiddenFor(m => m.ProjectId)
+                        @Html.HiddenFor(m => m.ProjectName)
+                        @Html.HiddenFor(m => m.Group.Id)
+                        <div class="row mb-3">
+                            <div class="col-md-7">
+                                <label asp-for="Group.Name" class="control-label">Naam betalingsgroep</label>
+                                @Html.TextBoxFor(m => m.Group.Name, new { @class = "form-control form-control-modern" })
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Group.VatTypeId" class="control-label">BTW type</label>
+                                    @Html.DropDownListFor(m => m.Group.VatTypeId, vatTypes, "Selecteer ...", new { @class = "form-control form-control-modern" })
+                            </div>
+                        </div>
+
+                        <hr />
+                        <h4 class="mb-3">Betalingsschijven</h4>
+                        <div class="row fw-semibold mb-2">
+                            <div class="col-md-7">Naam</div>
+                            <div class="col-md-4">Percentage</div>
+                            <div class="col-md-1 text-end">&nbsp;</div>
+                        </div>
+                        <div id="editorRows">
+                            @foreach (var item in Model.Stages)
+                            {
+                                @await Html.PartialAsync("Partials/_PaymentStageRow", item)
+                            }
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <button type="button" class="btn btn-default btn-md w-100" id="btnAddStage">
+                                    <i class="fa fa-plus me-2"></i>Schijf toevoegen
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-md w-100">Betalingsschijven opslaan</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+    <script>
+        $(function () {
+            $('#btnAddStage').on('click', function () {
+                $.ajax({
+                    url: '@Url.Action("BlankStageRow", "Projecten")',
+                    cache: false,
+                    type: 'POST',
+                    success: function (html) {
+                        $('#editorRows').append(html);
+                    }
+                });
+            });
+
+            $(document).on('click', 'a.deleteRow', function (e) {
+                e.preventDefault();
+                $(this).closest('.payment-stage-row').remove();
+            });
+        });
+    </script>
+}

@@ -1455,6 +1455,10 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_InvoicingPaymentGroup_Project");
+
+            entity.HasOne(d => d.VatType).WithMany(p => p.InvoicingPaymentGroup)
+                .HasForeignKey(d => d.VatTypeId)
+                .HasConstraintName("FK_InvoicingPaymentGroup_VatType");
         });
 
         modelBuilder.Entity<InvoicingPaymentStages>(entity =>
@@ -1787,6 +1791,14 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.EpbReporter).WithMany(p => p.ProjectEpbReporter)
                 .HasForeignKey(d => d.EpbReporterId)
                 .HasConstraintName("FK_Project_CompanyInfo3");
+
+            entity.HasOne(d => d.IssuerCompanyIdBuilderNavigation).WithMany(p => p.ProjectIssuerCompanyIdBuilderNavigation)
+                .HasForeignKey(d => d.IssuerCompanyIdBuilder)
+                .HasConstraintName("FK_Project_IssuerCompanyBuilder");
+
+            entity.HasOne(d => d.IssuerCompanyIdLandOwnerNavigation).WithMany(p => p.ProjectIssuerCompanyIdLandOwnerNavigation)
+                .HasForeignKey(d => d.IssuerCompanyIdLandOwner)
+                .HasConstraintName("FK_Project_IssuerCompanyLandOwner");
 
             entity.HasOne(d => d.PostalCode).WithMany(p => p.Project)
                 .HasForeignKey(d => d.PostalCodeId)

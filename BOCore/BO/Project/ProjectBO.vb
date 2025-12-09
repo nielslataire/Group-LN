@@ -168,6 +168,26 @@ Public Class ProjectBO
             _builder = value
         End Set
     End Property
+    Private _issuerCompanyIdBuilder As Integer?
+    <Display(Name:="Facturatiebedrijf aannemer")>
+    Public Property IssuerCompanyIdBuilder() As Integer?
+        Get
+            Return _issuerCompanyIdBuilder
+        End Get
+        Set(ByVal value As Integer?)
+            _issuerCompanyIdBuilder = value
+        End Set
+    End Property
+    Private _issuerCompanyIdLandOwner As Integer?
+    <Display(Name:="Facturatiebedrijf grondeigenaar")>
+    Public Property IssuerCompanyIdLandOwner() As Integer?
+        Get
+            Return _issuerCompanyIdLandOwner
+        End Get
+        Set(ByVal value As Integer?)
+            _issuerCompanyIdLandOwner = value
+        End Set
+    End Property
     Private _executiondays As Integer?
     <Display(Name:="Uitvoeringstermijn")>
     Public Property ExecutionDays() As Integer?

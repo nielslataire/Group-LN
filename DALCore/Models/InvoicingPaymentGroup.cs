@@ -15,6 +15,8 @@ public partial class InvoicingPaymentGroup
 
     public decimal? VatPercentage { get; set; }
 
+    public int? VatTypeId { get; set; }
+
     public virtual ICollection<InvoicingPaymentStages> InvoicingPaymentStages { get; set; } = new List<InvoicingPaymentStages>();
 
     public virtual Project Project { get; set; }
@@ -22,4 +24,6 @@ public partial class InvoicingPaymentGroup
     public virtual ICollection<UnitConstructionValue> UnitConstructionValue { get; set; } = new List<UnitConstructionValue>();
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
+
+    public virtual Vattype VatType { get; set; }
 }

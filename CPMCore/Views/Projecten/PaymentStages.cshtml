@@ -1,0 +1,158 @@
+﻿﻿@using CPMCore.Controllers
+@using CPMCore.Models
+@model CPMCore.Models.Projecten.ProjectPaymentStagesModel
+@using BOCore
+
+@{
+    ViewData["Title"] = "Project – " + Model.ProjectName;
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+        {
+            new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
+            new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
+            new Breadcrumb(Model.ProjectName, nameof(ProjectenController.Detail) + "?projectid=" + Model.ProjectId, "Projecten", true),
+            new Breadcrumb("Betalingsschijven", nameof(ProjectenController.PaymentStages), "Projecten", false)
+        };
+}
+
+<style>
+    .invoice-tab-nav {
+        background-color: #f3f5f7;
+        border-radius: 6px;
+        padding: 6px;
+        gap: 4px;
+    }
+
+        .invoice-tab-nav .nav-link {
+            color: #6c757d;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            padding: 10px 16px;
+        }
+
+            .invoice-tab-nav .nav-link.active {
+                background-color: #ffffff;
+                color: #1f2d3d;
+                border-color: #e3e6ea;
+                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+            }
+</style>
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Betalingsschijven</h1>
+                        <h5 class="mb-4 mt-0">Overzicht van alle betalingsgroepen en schijven</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        <a class="btn btn-default btn-md px-3 me-1" href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId })">
+                            <i class="fa fa-plus me-2"></i>Betalingsschijven toevoegen
+                        </a>
+                        <a class="btn btn-default btn-md px-3" href="@Url.Action("PaymentGroupLink", "Projecten", new { projectid = Model.ProjectId })">
+                            <i class="fa fa-link me-2"></i>Koppelen
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Groups?.Any() == true)
+            {
+                <ul class="nav nav-pills invoice-tab-nav mb-4" role="tablist">
+                    @for (int i = 0; i < Model.Groups.Count; i++)
+                    {
+                        var group = Model.Groups[i];
+                        var activeClass = i == 0 ? "active" : string.Empty;
+                        <li class="nav-item">
+                            <a class="nav-link @activeClass" href="#" data-target="#group-@group.Id">@group.Name</a>
+                        </li>
+                    }
+                </ul>
+
+                @for (int i = 0; i < Model.Groups.Count; i++)
+                {
+                    var group = Model.Groups[i];
+                    var hiddenClass = i == 0 ? string.Empty : "d-none";
+                    <div class="card card-modern mt-4 payment-group-card @hiddenClass" id="group-@group.Id">
+                        <div class="card-header border-0 pb-0 d-flex justify-content-between align-items-start">
+                            <div>
+                                <h2 class="card-title mb-1">@group.Name</h2>
+                                <p class="mb-0 text-muted">@group.VatPercentage?.ToString("0.##")% BTW</p>
+                            </div>
+                            <a class="btn btn-primary btn-sm" href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId, groupid = group.Id })">
+                                <i class="fa fa-edit me-2"></i>Betalingsgroep bewerken
+                            </a>
+                        </div>
+                        <div class="card-body pt-2">
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead>
+                                        <tr class="table-secondary">
+                                            <th>Schijf</th>
+                                            <th class="text-end" style="white-space:nowrap;">Percentage</th>
+                                            <th class="text-end" style="white-space:nowrap;">Factureerbaar</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var stage in group.PaymentStages)
+                                        {
+                                            var inputId = $"stage-{stage.Id}";
+                                            <tr>
+                                                <td>@stage.Name</td>
+                                                <td class="text-end">@stage.Percentage.ToString("0.00") @Html.Raw("%")</td>
+                                                <td class="text-end">
+                                                    <div class="checkbox-custom checkbox-default d-inline-block">
+                                                        <input type="checkbox"
+                                                               id="@inputId"
+                                                               class="chkInvoicable"
+                                                               data-id="@stage.Id"
+                                                               @(stage.Invoicable ? "checked=\"checked\"" : string.Empty)
+                                                               @(stage.InvoiceCount > 0 ? "disabled=\"disabled\"" : string.Empty) />
+                                                        <label for="@inputId"></label>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-info mt-4">Er zijn nog geen betalingsgroepen voor dit project.</div>
+            }
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+    <script>
+        $(function () {
+            $('.invoice-tab-nav .nav-link').on('click', function (e) {
+                e.preventDefault();
+                var target = $(this).data('target');
+
+                $('.invoice-tab-nav .nav-link').removeClass('active');
+                $(this).addClass('active');
+
+                $('.payment-group-card').addClass('d-none');
+                $(target).removeClass('d-none');
+            });
+
+            $(document).on('change', '.chkInvoicable', function () {
+                var checkbox = $(this);
+                $.ajax({
+                    url: '@Url.Action("PaymentStagesInvoicable", "Projecten")',
+                    type: 'POST',
+                    data: { stageid: checkbox.data('id'), value: checkbox.is(':checked') }
+                });
+            });
+        });
+    </script>
+}

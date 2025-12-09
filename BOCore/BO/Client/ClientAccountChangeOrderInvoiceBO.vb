@@ -30,4 +30,13 @@ Public Class ClientAccountChangeOrderInvoiceBO
             _codId = value
         End Set
     End Property
+    Private _companyId As Integer
+    Public Property CompanyId() As Integer
+        Get
+            Return _companyId
+        End Get
+        Set(ByVal value As Integer)
+            _companyId = value
+        End Set
+    End Property
 End Class
