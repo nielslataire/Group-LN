@@ -6,12 +6,12 @@ Subject: Website Group LN - informatieaanvraag
 <head>
     <!-- Web Fonts  -->
 
-    <link href="http://www.groupln.be/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="http://www.groupln.be/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-    <link href="http://www.groupln.be/content/theme.css" rel="stylesheet">
-    <link href="http://www.groupln.be/content/theme-elements.css" rel="stylesheet">
-    <link href="http://www.groupln.be/content/custom.css" rel="stylesheet">
-    <link href="http://www.groupln.be/content/skins/skin-corporate-3.css" rel="stylesheet">
+    <link href="https://www.groupln.be/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://www.groupln.be/vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://www.groupln.be/content/theme.css" rel="stylesheet">
+    <link href="https://www.groupln.be/content/theme-elements.css" rel="stylesheet">
+    <link href="https://www.groupln.be/content/custom.css" rel="stylesheet">
+    <link href="https://www.groupln.be/content/skins/skin-corporate-3.css" rel="stylesheet">
 
 
 

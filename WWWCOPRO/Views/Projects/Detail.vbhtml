@@ -126,7 +126,7 @@ End Section
                                 </td>
                                 <td Class="font-size-xl font-weight-bold pt-sm pb-sm background-color-primary text-light">
 
-                                    @Html.DisplayFor(Function(m) m.SalesData.StartingPrice)
+                                    @WWWCOPRO.Extensions.ToEuroCurrency(Model.SalesData.StartingPrice)
                                 </td>
                             </text>
                         ElseIf Model.SalesData.PercentageLivingUnitsSold < 15 Then
@@ -339,7 +339,7 @@ End Section
                                                     <td class="text-center hidden-xs">@(If(isAvailable And terras > 0, String.Format("{0:n0}", terras) & " m²", "-"))</td>
                                                     <td class="text-center hidden-xs">@(If(isAvailable And tuin > 0, String.Format("{0:n0}", tuin) & " m²", "-"))</td>
                                                     <td class="text-center hidden-xs">@(If(isAvailable And slpk > 0, slpk, "-"))</td>
-                                                    <td class="text-center">@(If(isAvailable, Html.DisplayFor(Function(m) unit.TotalValue), "Verkocht"))</td>
+                                                    <td class="text-center">@(If(isAvailable, WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue), "Verkocht"))</td>
                                                     <td class="text-center">
                                                         @If isAvailable AndAlso unit.Plan IsNot Nothing Then
                                                             @<a href="#modalsendplan"
@@ -387,7 +387,7 @@ End Section
                                                     <td class="text-center hidden-xs">@(If(isAvailable And surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
                                                     <td class="text-center hidden-xs">@(If(isAvailable And ground > 0, String.Format("{0:n0}", ground) & " m²", "-"))</td>
                                                     <td class="text-center hidden-xs">@(If(isAvailable And slpk > 0, slpk, "-"))</td>
-                                                    <td class="text-center">@(If(isAvailable, Html.DisplayFor(Function(m) unit.TotalValue), "Verkocht"))</td>
+                                                    <td class="text-center">@(If(isAvailable, WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue), "Verkocht"))</td>
                                                     <td class="text-center">
                                                         @If isAvailable AndAlso unit.Plan IsNot Nothing Then
                                                             @<a href="#modalsendplan"
@@ -431,7 +431,7 @@ End Section
                                                     <td class="text-center">@unit.Name</td>
                                                     <td class="hidden-xs text-center">@unit.Level</td>
                                                     <td class="text-center hidden-xs">@(If(isAvailable And surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
-                                                    <td class="text-center">@(If(isAvailable, Html.DisplayFor(Function(m) unit.TotalValue), "Verkocht"))</td>
+                                                    <td class="text-center">@(If(isAvailable, WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue), "Verkocht"))</td>
                                                     <td class="text-center">
                                                         @If isAvailable AndAlso unit.Plan IsNot Nothing Then
                                                             @<a href="#modalsendplan"

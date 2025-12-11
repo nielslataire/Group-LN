@@ -68,7 +68,7 @@ color:#445566;
                                                 <table width="640" cellpadding="0" cellspacing="0" border="0" align="center" class="devicewidth" style="border-left: 1px;">
                                                     <tbody>
                                                         <tr>
-                                                            <td class="logo" width="254" height="100" align="left" style="color: #009336; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 11px; line-height: normal; font-family: arial, sans-serif; padding-left: 4px; padding-bottom: 5px;"><a href="http://www.groupln.be" style="color: #009336; text-decoration: none;" target="_blank"><img alt="Group LN - Projectontwikkeling" height="70" border="0" style="border: none; font-family: arial, sans-serif; color: rgb(0, 0, 0); font-weight: bold; font-size: 30px;" src="http://www.groupln.be/content/img/logo-default.png" saveddisplaymode=""></a></td>
+                                                            <td class="logo" width="254" height="100" align="left" style="color: #009336; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: normal; font-stretch: normal; font-size: 11px; line-height: normal; font-family: arial, sans-serif; padding-left: 4px; padding-bottom: 5px;"><a href="http://www.groupln.be" style="color: #009336; text-decoration: none;" target="_blank"><img alt="Group LN - Projectontwikkeling" height="70" border="0" style="border: none; font-family: arial, sans-serif; color: rgb(0, 0, 0); font-weight: bold; font-size: 30px;" src="https://www.groupln.be/content/img/logo-default.png" saveddisplaymode=""></a></td>
                                                             <td class="tdhide" width="385" align="left">&nbsp;</td>
                                                         </tr>
                                                     </tbody>
@@ -169,7 +169,7 @@ color:#445566;
                                                         </tr>
                                                     </tbody>
                                                 </table>
-                                                <img class="emailImage" width="640" src="http://www.groupln.be/uploads/pictures/@(ViewBag.Image)" alt="@ViewBag.Imagecaption" saveddisplaymode="block">
+                                                <img class="emailImage" width="640" src="https://www.groupln.be/uploads/pictures/@(ViewBag.Image)" alt="@ViewBag.Imagecaption" saveddisplaymode="block">
                                                 <table bgcolor="#FFFFFF" width="640" cellpadding="0" cellspacing="0" border="0" align="center" class="devicewidth">
                                                     <tbody>
                                                         <tr>
@@ -229,7 +229,7 @@ color:#445566;
                                                                                     <tbody>
                                                                                         <tr>
                                                                                             <td style="width: 200px; height: 46px; background: #009336; font-size: 18px; line-height: 18px; text-align: center; border-radius: 3px;">
-                                                                                                <a href="http://www.groupln.be/woonprojecten/@(ViewBag.Slug)" target="_blank" style="font-family: helvetica, sans-serif; font-size: 18px; line-height: 18px; color: rgb(255, 255, 255); text-decoration: none; display: block; padding: 12px;"><strong style="font-weight: normal;">Project bekijken</strong></a>
+                                                                                                <a href="https://www.groupln.be/woonprojecten/@(ViewBag.Slug)" target="_blank" style="font-family: helvetica, sans-serif; font-size: 18px; line-height: 18px; color: rgb(255, 255, 255); text-decoration: none; display: block; padding: 12px;"><strong style="font-weight: normal;">Project bekijken</strong></a>
                                                                                             </td>
                                                                                         </tr>
                                                                                     </tbody>

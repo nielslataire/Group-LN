@@ -36,6 +36,7 @@ namespace ServiceCore
                 .Include(m => m.InverseAttachedUnit)
                 .Include(m => m.LevelNavigation)
                 .Include(m => m.UnitConstructionValue)
+                .ThenInclude(m => m.PaymentGroup)
                 .FirstOrDefault();
 
             var bo = new UnitBO();

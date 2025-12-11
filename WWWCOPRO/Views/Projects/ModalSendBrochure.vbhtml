@@ -90,8 +90,12 @@ End Using
                 url: '@Url.Action("SendBrochure", "Projects")',
                 data:  $('#FormSendBrochure').serialize(),
                 type: 'POST',
+                cache: false,
                 success: function (result) {
                     $("#modalsendbrochurepanel").html(result);
+                },
+                error: function () {
+                    $("#modalsendbrochurepanel").html('<div class="panel-body"><div class="alert alert-danger">Er ging iets mis bij het verzenden van de brochure. Probeer het opnieuw of contacteer ons op 09/216.49.50.</div></div>');
                 },
                 complete: function () {
                     $button.prop("disabled", false);

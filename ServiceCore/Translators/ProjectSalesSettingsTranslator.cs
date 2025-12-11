@@ -33,10 +33,13 @@ namespace ServiceCore.Translators
                 bo.FixedCertificateCost = _entity.FixedCertificateCost;
             if (_entity.MortageRegistrationCost is not null)
                 bo.MortageRegistrationCost = _entity.MortageRegistrationCost;
-            if (_entity.BankAccountNumber is not null)
-                bo.BankAccountNumber = _entity.BankAccountNumber;
-            if (_entity.RegistrationType is not null)
-                bo.RegistrationType = (RegistrationType)_entity.RegistrationType;
+            if (_entity.BankAccountId is not null)
+                bo.BankAccountId = _entity.BankAccountId;
+
+            var iban = _entity.BankAccountNumber ?? _entity.BankAccount?.Iban;
+            if (!string.IsNullOrWhiteSpace(iban))
+                bo.BankAccountNumber = iban;
+            bo.RegistrationType = (RegistrationType)_entity.RegistrationType;
             if (_entity.SurveyorCost is not null)
                 bo.SurveyorCost = _entity.SurveyorCost;
             if (_entity.ParcelCost is not null)
@@ -60,6 +63,7 @@ namespace ServiceCore.Translators
             _entity.FixedCertificateCost = bo.FixedCertificateCost;
             _entity.MortageRegistrationCost = bo.MortageRegistrationCost;
             _entity.BankAccountNumber = bo.BankAccountNumber;
+            _entity.BankAccountId = bo.BankAccountId;
             _entity.SaleVisible = bo.SaleVisible;
             _entity.RegistrationType = (int)bo.RegistrationType;
             _entity.SurveyorCost = bo.SurveyorCost;

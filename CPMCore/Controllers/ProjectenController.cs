@@ -39,6 +39,8 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using System.Globalization;
+using Microsoft.Extensions.DependencyInjection;
+using System.Data.Entity;
 
 
 namespace CPMCore.Controllers
@@ -3587,7 +3589,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         [Breadcrumb("Verkoopsinstellingen", FromAction = "DetailSales")]
         //[Breadcrumb("Verkoopsinstellingen")]
-        public IActionResult SalesSettings(int projectid)
+        public async Task<IActionResult> SalesSettings(int projectid)
         {
             // 1) Veilige referrer voor je "terug"-link (enkel van dezelfde host)
             var refHeader = Request.Headers["Referer"].ToString();
@@ -3605,10 +3607,15 @@ namespace CPMCore.Controllers
             var service = ServiceFactory.GetProjectService();
             var response = service.GetSalesSettings(projectid);
             if (response.Success) viewModel.Settings = response.Value;
+            else viewModel.Settings = new ProjectSalesSettingsBO { ProjectId = projectid };
 
             var presponse = service.GetProjectByID(projectid);
-            if (presponse.Success) viewModel.Project = presponse.Value;
+            if (presponse.Success)
+            {
+                viewModel.Project = presponse.Value;
+            }
 
+            await PopulateBankAccountsAsync(viewModel);
 
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -3637,14 +3644,42 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost]
-        public IActionResult SalesSettings(ProjectSalesSettingsModel model)
+        public async Task<IActionResult> SalesSettings(ProjectSalesSettingsModel model)
         {
             if (!ModelState.IsValid)
             {
+                await PopulateBankAccountsAsync(model);
                 return View(model);
             }
 
             var service = ServiceFactory.GetProjectService();
+
+            if (model.Project == null || model.Project.Id == 0)
+            {
+                var projectResponse = service.GetProjectByID(model.ProjectId);
+                if (projectResponse.Success)
+                {
+                    model.Project = projectResponse.Value;
+                }
+            }
+
+            if (model.Project?.IssuerCompanyIdBuilder == null)
+            {
+                ModelState.AddModelError("Settings.BankAccountId", "Selecteer eerst een bouwer zodat de projectrekening kan worden gekoppeld.");
+                model.MissingBuilder = true;
+                model.BuilderWarning = "Er is geen bouwer gekoppeld aan dit project. Kies eerst een bouwer om een projectrekening te selecteren.";
+                await PopulateBankAccountsAsync(model);
+                return View(model);
+            }
+
+            await EnsureBankAccountAsync(model);
+
+            if (model.Settings?.BankAccountId == null && string.IsNullOrWhiteSpace(model.NewBankAccountIban))
+            {
+                ModelState.AddModelError("Settings.BankAccountId", "Selecteer of maak een projectrekening aan.");
+                await PopulateBankAccountsAsync(model);
+                return View(model);
+            }
 
             // Eerste bewerking
             var response1 = service.InsertUpdateSalesSettings(model.Settings);
@@ -3728,6 +3763,135 @@ namespace CPMCore.Controllers
            
 
 
+        }
+
+        private async Task PopulateBankAccountsAsync(ProjectSalesSettingsModel model)
+        {
+            if (model.Settings == null)
+            {
+                model.Settings = new ProjectSalesSettingsBO { ProjectId = model.ProjectId };
+            }
+
+            if (model.Project == null || model.Project.Id == 0)
+            {
+                var projectResponse = ServiceFactory.GetProjectService().GetProjectByID(model.ProjectId);
+                if (projectResponse.Success)
+                {
+                    model.Project = projectResponse.Value;
+                }
+            }
+
+            var builderId = model.Project?.IssuerCompanyIdBuilder;
+            if (builderId == null)
+            {
+                model.MissingBuilder = true;
+                model.BuilderWarning ??= "Er is geen bouwer gekoppeld aan dit project. Kies eerst een bouwer om een projectrekening te selecteren.";
+                model.BankAccounts = new List<SelectListItem>();
+                return;
+            }
+
+            using var scope = HttpContext.RequestServices.CreateScope();
+            var bankService = scope.ServiceProvider.GetRequiredService<IIssuerBankAccountService>();
+            var accounts = await bankService.ListByIssuerAsync(builderId.Value);
+            model.MissingBuilder = false;
+
+            IssuerBankAccountBO? selectedAccount = null;
+            if (model.Settings?.BankAccountId is int selectedId)
+            {
+                selectedAccount = accounts.FirstOrDefault(a => a.Id == selectedId) ?? await bankService.GetAsync(selectedId);
+            }
+
+            model.Settings.BankAccountNumber ??= selectedAccount?.Iban;
+            model.BankAccounts = BuildBankAccountSelectList(accounts, model.Settings.BankAccountId, selectedAccount);
+        }
+
+        private static List<SelectListItem> BuildBankAccountSelectList(
+            IEnumerable<IssuerBankAccountBO> accounts,
+            int? selectedId,
+            IssuerBankAccountBO? selectedAccount = null)
+        {
+            var list = accounts
+                .OrderByDescending(a => a.IsDefault)
+                .ThenBy(a => a.DisplayName)
+                .Select(a => new SelectListItem
+                {
+                    Value = a.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(a.DisplayName)
+                        ? a.Iban
+                        : $"{a.DisplayName} ({a.Iban}){(a.IsDefault ? " - standaard" : string.Empty)}",
+                    Selected = selectedId.HasValue && a.Id == selectedId.Value
+                })
+                .ToList();
+
+            if (selectedAccount != null && list.All(l => l.Value != selectedAccount.Id.ToString()))
+            {
+                list.Insert(0, new SelectListItem
+                {
+                    Value = selectedAccount.Id.ToString(),
+                    Text = string.IsNullOrWhiteSpace(selectedAccount.DisplayName)
+                        ? selectedAccount.Iban
+                        : $"{selectedAccount.DisplayName} ({selectedAccount.Iban})",
+                    Selected = true
+                });
+            }
+
+            return list;
+        }
+
+        private async Task EnsureBankAccountAsync(ProjectSalesSettingsModel model)
+        {
+            var builderId = model.Project?.IssuerCompanyIdBuilder;
+            var iban = model.NewBankAccountIban?.Trim();
+            var selectedId = model.Settings?.BankAccountId;
+
+            if (builderId == null)
+            {
+                await PopulateBankAccountsAsync(model);
+                return;
+            }
+
+            using var scope = HttpContext.RequestServices.CreateScope();
+            var bankService = scope.ServiceProvider.GetRequiredService<IIssuerBankAccountService>();
+            var db = scope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
+
+            var accounts = await bankService.ListByIssuerAsync(builderId.Value);
+
+            IssuerBankAccountBO? selectedAccount = null;
+            if (selectedId.HasValue)
+            {
+                selectedAccount = accounts.FirstOrDefault(a => a.Id == selectedId.Value) ?? await bankService.GetAsync(selectedId.Value);
+            }
+
+            if (selectedAccount == null && !string.IsNullOrWhiteSpace(iban))
+            {
+                var existingAccount = db.IssuerBankAccount.FirstOrDefault(a => a.Iban == iban);
+                if (existingAccount == null)
+                {
+                    var newAccount = new IssuerBankAccountBO
+                    {
+                        IssuerCompanyId = 1,
+                        Iban = iban,
+                        Bic = string.Empty,
+                        DisplayName = string.IsNullOrWhiteSpace(model.Project?.Name)
+                            ? $"Project {model.ProjectId}"
+                            : model.Project!.Name,
+                        IsDefault = false
+                    };
+
+                    var newId = await bankService.CreateAsync(newAccount);
+                    selectedId = newId;
+                    selectedAccount = await bankService.GetAsync(newId);
+                }
+                else
+                {
+                    selectedId = existingAccount.Id;
+                    selectedAccount = await bankService.GetAsync(existingAccount.Id);
+                }
+            }
+
+            model.Settings.BankAccountId = selectedId;
+            model.Settings.BankAccountNumber = selectedAccount?.Iban ?? model.Settings.BankAccountNumber;
+            model.BankAccounts = BuildBankAccountSelectList(accounts, model.Settings.BankAccountId, selectedAccount);
         }
 
         [HttpPost]
@@ -3917,6 +4081,9 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult Invoicing(int projectid)
         {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+
             // In je bestaande code gaat dit via ServiceFactory.
             var projectService = ServiceFactory.GetProjectService();
             var clientService = ServiceFactory.GetClientService();
@@ -4001,6 +4168,27 @@ namespace CPMCore.Controllers
             //    }
             //}
 
+
+
+            //BREADCRUMBS
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Invoicing", "Projecten", "Facturatie")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
+
             return View(model);
         }
 
@@ -4018,6 +4206,23 @@ namespace CPMCore.Controllers
             var response = projectService.GetProjectPaymentGroups(projectid);
             if (response.Success)
                 model.Groups = response.Values;
+
+            var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = dashboard,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(nameof(PaymentStages), "Projecten", "Betalingsschijven")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
 
             return View(model);
         }
@@ -4053,6 +4258,28 @@ namespace CPMCore.Controllers
             }
 
             ViewBag.VatTypes = GetVatTypeSelectList(projectid);
+
+            var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = dashboard,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var paymentStages = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(nameof(PaymentStages), "Projecten", "Betalingsschijven")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode(nameof(PaymentStagesAddUpdate), "Projecten", model.Group.Id == 0 ? "Betalingsgroep toevoegen" : "Betalingsgroep bewerken")
+            {
+                Parent = paymentStages,
+                RouteValues = new { projectid = projectid, groupid = groupid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
             return View(model);
         }
 
@@ -4268,7 +4495,10 @@ namespace CPMCore.Controllers
                         null,
                         stageIds,
                         project,
-                        paymentGroupId));
+                        settings,
+                        iu,
+                        paymentGroupId,
+                        (DALCore.Models.cpmRunningContext)uow.Context));
                 }
 
                 projectId = project.Id;
@@ -4412,27 +4642,152 @@ namespace CPMCore.Controllers
         }
 
         private static InvoiceDraftBO BuildStageInvoiceDraft(
-                   int issuerCompanyId,
-                   int? clientAccountId,
-                   int? clientContactId,
-                   IEnumerable<int> stageIds,
-                   ProjectBO project,
-                   int? paymentGroupId)
+                           int issuerCompanyId,
+                           int? clientAccountId,
+                           int? clientContactId,
+                           IEnumerable<int> stageIds,
+                           ProjectBO project,
+                           ProjectSalesSettingsBO settings,
+                           IEnumerable<UnitWithStagesBO> units,
+                           int? paymentGroupId,
+                           DALCore.Models.cpmRunningContext db)
         {
+            var groupedStageIds = stageIds?.Distinct().ToList() ?? new List<int>();
+
             var draft = new InvoiceDraftBO
             {
                 IssuerCompanyId = issuerCompanyId,
                 InvoiceDate = DateOnly.FromDateTime(DateTime.Today),
                 Mode = InvoiceMode.Stages,
-                StageIds = stageIds?.Distinct().ToList() ?? new List<int>(),
+                StageIds = groupedStageIds,
                 ProjectId = project.Id,
                 PaymentGroupId = paymentGroupId
             };
 
+            decimal ownerPercentage = 100m;
+            string? invoiceExtra = null;
+
             if (clientAccountId.HasValue)
+            {
                 (draft.CompanyId, draft.ClientType, draft.ClientId) = (null, (int)InvoicePartyType.ClientAccount, clientAccountId);
+
+                var accountInfo = db.ClientAccount
+                    .AsNoTracking()
+                    .Where(c => c.Id == clientAccountId.Value)
+                    .Select(c => new { c.OwnerPercentage, c.InvoiceExtra })
+                    .FirstOrDefault();
+
+                ownerPercentage = accountInfo?.OwnerPercentage ?? 100m;
+                invoiceExtra = accountInfo?.InvoiceExtra;
+            }
             else if (clientContactId.HasValue)
+            {
                 (draft.CompanyId, draft.ClientType, draft.ClientId) = (null, (int)InvoicePartyType.ClientContact, clientContactId);
+
+                var contactInfo = db.ClientContacts
+                    .AsNoTracking()
+                    .Where(c => c.Id == clientContactId.Value)
+                    .Select(c => new
+                    {
+                        c.CoOwnerPercentage,
+                        AccountOwnerPct = c.ClientAccount.OwnerPercentage,
+                        AccountInvoiceExtra = c.ClientAccount.InvoiceExtra
+                    })
+                    .FirstOrDefault();
+
+                ownerPercentage = contactInfo?.CoOwnerPercentage ?? contactInfo?.AccountOwnerPct ?? 100m;
+                invoiceExtra = contactInfo?.AccountInvoiceExtra;
+            }
+
+            if (!string.IsNullOrWhiteSpace(invoiceExtra))
+                draft.FooterDescription = invoiceExtra;
+
+            int? issuerBankAccountId = settings?.BankAccountId;
+            if (!issuerBankAccountId.HasValue && !string.IsNullOrWhiteSpace(settings?.BankAccountNumber))
+            {
+                issuerBankAccountId = db.IssuerBankAccount
+                    .Where(b => b.IssuerCompanyId == issuerCompanyId && b.Iban == settings.BankAccountNumber)
+                    .Select(b => (int?)b.Id)
+                    .FirstOrDefault();
+            }
+
+            draft.IssuerBankAccountId = issuerBankAccountId;
+
+            var group = paymentGroupId.HasValue
+                ? db.InvoicingPaymentGroup.FirstOrDefault(g => g.Id == paymentGroupId.Value)
+                : null;
+
+            if (group?.VatTypeId is int vatTypeId)
+                draft.SelectedVatTypeId = vatTypeId;
+
+            var groupVat = group?.VatPercentage;
+            var stageLines = new List<InvoiceLineBO>();
+            var detailLines = new List<string>();
+            string? headerUnitDescription = null;
+            string? headerAddress = null;
+            string? headerCity = project?.Postalcode?.Gemeente;
+
+            foreach (var unit in units)
+            {
+                var unitName = unit.Unit?.Type != null
+                    ? $"{unit.Unit.Type.Name} {unit.Unit.Name}".Trim()
+                    : unit.Unit?.Name ?? string.Empty;
+
+                var unitBaseValue = unit.Unit?.ConstructionValues?
+                    .Where(v => v.ValueSold > 0 && v.PaymentGroupId == paymentGroupId)
+                    .Sum(v => v.ValueSold ?? 0m) ?? 0m;
+
+                if (unitBaseValue > 0)
+                {
+                    var ownerPortion = Math.Round(unitBaseValue * ownerPercentage / 100m, 2, MidpointRounding.AwayFromZero);
+                    detailLines.Add($"{ownerPercentage:0.##}% van de bouwwaarde van {unitName} : {ownerPortion:N2} €");
+
+                    headerUnitDescription ??= unitName;
+                    headerAddress ??= string.Join(" ", new[]
+                    {
+                        unit.Unit?.Street,
+                        unit.Unit?.HouseNumber,
+                        unit.Unit?.BusNumber
+                    }.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!.Trim()));
+                }
+
+                foreach (var cv in unit.Unit?.ConstructionValues?.Where(v => v.ValueSold > 0 && v.PaymentGroupId == paymentGroupId) ?? Enumerable.Empty<UnitConstructionValueBO>())
+                {
+                    foreach (var stage in unit.PaymentStages.Where(s => groupedStageIds.Contains(s.Id) && s.GroupId == paymentGroupId))
+                    {
+                        var stagePercentage = stage.Percentage;
+                        var price = Math.Round((cv.ValueSold ?? 0m) * stagePercentage / 100m, 2, MidpointRounding.AwayFromZero);
+                        var vatPct = stage.VatPercentage.HasValue && stage.VatPercentage.Value != 0
+                            ? stage.VatPercentage.Value
+                            : (groupVat ?? 21m);
+
+                        stageLines.Add(new InvoiceLineBO
+                        {
+                            Text = $"{stage.Percentage:0.##}% - {stage.Name}",
+                            Price = price,
+                            VatPercentage = vatPct,
+                            VatTypeId = draft.SelectedVatTypeId,
+                            PaymentStageId = stage.Id,
+                            GroupName = unitName,
+                            LineType = "Stages",
+                            UnitId = unit.Unit?.Id
+                        });
+                    }
+                }
+            }
+
+            if (stageLines.Count > 0)
+            {
+                draft.Lines = stageLines;
+
+                var unitDescriptor = headerUnitDescription ?? string.Empty;
+                var projectPart = string.IsNullOrWhiteSpace(project?.Name) ? string.Empty : $" in project {project.Name}";
+                var addressPart = string.IsNullOrWhiteSpace(headerAddress) ? string.Empty : $", {headerAddress}";
+                var cityPart = string.IsNullOrWhiteSpace(headerCity) ? string.Empty : $" te {headerCity}";
+                var headerText = $"Voor de bouwwaarde van {unitDescriptor}{projectPart}{addressPart}{cityPart} ingevolge verkoopsovereenkomst.".Trim();
+                draft.HeaderDescription = headerText;
+                draft.DetailDescription = string.Join("\n", detailLines);
+            }
 
             return draft;
         }

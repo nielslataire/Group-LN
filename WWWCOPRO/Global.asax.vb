@@ -13,7 +13,7 @@ Imports System.Globalization
 Public Class MvcApplication
     Inherits System.Web.HttpApplication
 
-  
+
 
     Sub Application_Start()
         'Dim cultureinfo As CultureInfo = New CultureInfo("nl-BE")
@@ -26,4 +26,7 @@ Public Class MvcApplication
         RouteConfig.RegisterRoutes(RouteTable.Routes)
         BundleConfig.RegisterBundles(BundleTable.Bundles)
     End Sub
+
+
+
 End Class

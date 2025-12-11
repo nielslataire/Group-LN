@@ -1916,6 +1916,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ProjectSalesSettings>(entity =>
         {
+            entity.HasIndex(e => e.BankAccountId, "IX_ProjectSalesSettings_BankAccountId");
+
             entity.Property(e => e.BankAccountNumber).HasMaxLength(50);
             entity.Property(e => e.BaseCertificateCost).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.ConnectionFees).HasColumnType("decimal(19, 4)");
@@ -1928,6 +1930,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Vatpercentage)
                 .HasColumnType("decimal(19, 4)")
                 .HasColumnName("VATPercentage");
+
+            entity.HasOne(d => d.BankAccount).WithMany(p => p.ProjectSalesSettings)
+                .HasForeignKey(d => d.BankAccountId)
+                .HasConstraintName("FK_ProjectSalesSettings_IssuerBankAccount");
 
             entity.HasOne(d => d.Project).WithMany(p => p.ProjectSalesSettings)
                 .HasForeignKey(d => d.Projectid)

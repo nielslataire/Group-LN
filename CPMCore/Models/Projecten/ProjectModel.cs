@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.IO;
 using System;
 
@@ -1648,6 +1649,10 @@ namespace CPMCore.Models.Projecten
 
         }
 
+        public List<SelectListItem> BankAccounts { get; set; } = new();
+        public string? NewBankAccountIban { get; set; }
+        public bool MissingBuilder { get; set; }
+        public string? BuilderWarning { get; set; }
         private int _projectid;
         public int ProjectId
         {

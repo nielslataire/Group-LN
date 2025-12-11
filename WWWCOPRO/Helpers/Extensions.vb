@@ -1,5 +1,13 @@
-﻿Public Module Extensions
-    <System.Runtime.CompilerServices.Extension> _
+﻿Imports System.Globalization
+
+Public Module Extensions
+    Private ReadOnly EuroCultureInfo As CultureInfo = CultureInfo.CreateSpecificCulture("nl-BE")
+
+    Sub New()
+        EuroCultureInfo.NumberFormat.CurrencySymbol = "€"
+        EuroCultureInfo.NumberFormat.CurrencyDecimalDigits = 2
+    End Sub
+    <System.Runtime.CompilerServices.Extension>
     Public Function TrimTo(s As String, size As Integer) As String
         If s Is Nothing OrElse s.Length < size Then
             Return s
@@ -11,7 +19,7 @@
         'If s.Length > size Then s = String.Format("{0}{1}", s.Substring(0, size), "...")
         'Return s
     End Function
-    <System.Runtime.CompilerServices.Extension> _
+    <System.Runtime.CompilerServices.Extension>
     Public Function GenerateSlug(phrase As String) As String
         Dim str As String = RemoveAccent(phrase).ToLower()
         str = Regex.Replace(str, "[^a-z0-9\s-]", "")
@@ -24,5 +32,15 @@
         Dim bytes As Byte() = System.Text.Encoding.GetEncoding("Cyrillic").GetBytes(txt)
         Return System.Text.Encoding.ASCII.GetString(bytes)
 
+    End Function
+    <System.Runtime.CompilerServices.Extension>
+    Public Function ToEuroCurrency(amount As Decimal) As String
+        Return String.Format(EuroCultureInfo, "{0:C2}", amount)
+    End Function
+
+    <System.Runtime.CompilerServices.Extension>
+    Public Function ToEuroCurrency(amount As Decimal?) As String
+        If Not amount.HasValue Then Return String.Empty
+        Return ToEuroCurrency(amount.Value)
     End Function
 End Module

@@ -812,6 +812,7 @@ namespace ServiceCore
             {
                 var contact = await _db.ClientContacts
                     .AsNoTracking()
+                    .Include(c => c.ClientAccount)
                     .FirstOrDefaultAsync(c => c.Id == bo.ClientId, ct)
                     ?? throw new InvalidOperationException("Contact niet gevonden.");
 
@@ -843,7 +844,7 @@ namespace ServiceCore
                     Clean(ComposeAddress(street, house, null, box)),
                     NormalizePostalCodeId(postalCodeId),
                     Clean(contact.Vatnumber),
-                    null
+                    Clean(contact.ClientAccount?.InvoiceExtra)
                 );
             }
 

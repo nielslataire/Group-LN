@@ -491,8 +491,8 @@ namespace CPMCore.Controllers
             // Postcodes en contacten koppelen
             model.ClientAccount.Postalcode.PostcodeId = model.SelectedPostalcode;
             model.ClientAccount.InvoicePostalcode.PostcodeId = model.SelectedInvoicePostalcode;
-            model.ClientAccount.CoOwners = coowners;
-            model.ClientAccount.Contacts = contacts;
+            model.ClientAccount.CoOwners = model.ClientAccount.CoOwners?.Any() == true ? model.ClientAccount.CoOwners : coowners;
+            model.ClientAccount.Contacts = model.ClientAccount.Contacts?.Any() == true ? model.ClientAccount.Contacts : contacts;
 
             var clientService = ServiceFactory.GetClientService();
             var unitService = ServiceFactory.GetUnitService();
@@ -589,9 +589,14 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost]
-        public PartialViewResult AddCoOwner(string Name, string Forename, string Salutation, string Street, string Housenumber, string Busnumber, int Zipcode, string Phone, string Cellphone, string Email, int OwnerType, string OwnerPercentage, string VatNumber, string CompanyName, string InvoiceAddress, string InvoiceStreet, string InvoiceHousenumber, string InvoiceBusnumber, string InvoiceZipcode)
+        public PartialViewResult AddCoOwner(string Name, string Forename, string Salutation, string Street, string Housenumber, string Busnumber, int Zipcode, string Phone, string Cellphone, string Email, int OwnerType, string OwnerPercentage, string VatNumber, string CompanyName, string InvoiceAddress, string InvoiceStreet, string InvoiceHousenumber, string InvoiceBusnumber, string InvoiceZipcode, bool RequiresDigitalInvoice, bool AttachUblByDefault)
         {
-            ClientContactBO nCoOwner = new ClientContactBO();
+            ClientContactBO nCoOwner = new ClientContactBO
+            {
+                IsCoOwner = true,
+                RequiresDigitalInvoice = RequiresDigitalInvoice,
+                AttachUblByDefault = AttachUblByDefault
+            };
             // ophalen postcode
             // Dim pservice = ServiceFactory.GetPostalcodeService()
             // Dim presponse = pservice.GetPostalcodeById(Zipcode)
@@ -605,7 +610,9 @@ namespace CPMCore.Controllers
             nCoOwner.Postalcode.PostcodeId = Zipcode;
             nCoOwner.VATnumber = VatNumber;
             nCoOwner.CompanyName = CompanyName;
-            if (InvoiceAddress == "True")
+            var hasInvoiceAddress = bool.TryParse(InvoiceAddress, out var invoiceAddressFlag) && invoiceAddressFlag;
+            nCoOwner.InvoiceAddress = hasInvoiceAddress;
+            if (hasInvoiceAddress)
             {
                 nCoOwner.InvoiceStreet = InvoiceStreet;
                 nCoOwner.InvoiceHousenumber = InvoiceHousenumber;
@@ -640,21 +647,38 @@ namespace CPMCore.Controllers
                 }
             }
             nCoOwner.CoOwnerPercentage = decimal.Parse(OwnerPercentage);
+            var countryService = ServiceFactory.GetCountryService();
+            var countryResponse = countryService.GetVisibleCountriesForSelect();
+            var ownerTypeService = ServiceFactory.GetClientService();
+            var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
+
+            ViewData["Countries"] = countryResponse.Success
+                ? countryResponse.Values.Select(c => new SelectListItem { Value = c.ID.ToString(), Text = c.Display }).ToList()
+                : new List<SelectListItem>();
+            ViewData["OwnerTypes"] = ownerTypeResponse.Success
+                ? ownerTypeResponse.Values.Where(o => o.ID != 1).Select(o => new SelectListItem { Value = o.ID.ToString(), Text = o.Display }).ToList()
+                : new List<SelectListItem>();
+            ViewData["CoOwnerCollectionName"] = "ClientAccount.CoOwners";
             ViewData["mode"] = "add";
             return PartialView("_CoOwnerRow", nCoOwner);
         }
-
         private void FillInAddSelectLists(ref AddClientAccountModel model)
         {
             var cservice = ServiceFactory.GetCountryService();
             var cresponse = cservice.GetVisibleCountriesForSelect();
             if ((cresponse.Success))
                 model.Countries = cresponse.Values;
-            var defCountry = model.Countries.Where(m => m.Group == "19").FirstOrDefault();
-            if (model.SelectedCountry == 0)
+            var defCountry = model.Countries.Where(m => m.ID == 19).FirstOrDefault();
+            if (defCountry != null)
             {
-                if ((defCountry != null))
+                if (model.SelectedCountry == 0)
                     model.SelectedCountry = defCountry.ID;
+                if (model.SelectedInvoiceCountry == 0)
+                    model.SelectedInvoiceCountry = defCountry.ID;
+                if (model.SelectedCoOwnerCountry == 0)
+                    model.SelectedCoOwnerCountry = defCountry.ID;
+                if (model.SelectedCoOwnerInvoiceCountry == 0)
+                    model.SelectedCoOwnerInvoiceCountry = defCountry.ID;
             }
             var oservice = ServiceFactory.GetClientService();
             var oresponse = oservice.GetOwnerTypesForSelect();

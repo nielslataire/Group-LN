@@ -24,4 +24,6 @@ public partial class IssuerBankAccount
     public DateOnly? ValidTo { get; set; }
 
     public virtual IssuerCompany IssuerCompany { get; set; }
+
+    public virtual ICollection<ProjectSalesSettings> ProjectSalesSettings { get; set; } = new List<ProjectSalesSettings>();
 }

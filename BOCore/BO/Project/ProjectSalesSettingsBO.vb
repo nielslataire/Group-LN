@@ -104,6 +104,16 @@ Public Class ProjectSalesSettingsBO
             _mortageregistrationcost = value
         End Set
     End Property
+    Private _bankaccountid As Integer?
+    <Display(Name:="Projectrekening")>
+    Public Property BankAccountId() As Integer?
+        Get
+            Return _bankaccountid
+        End Get
+        Set(ByVal value As Integer?)
+            _bankaccountid = value
+        End Set
+    End Property
     Private _bankaccountnumber As String
     <Display(Name:="Projectrekening")>
     Public Property BankAccountNumber() As String

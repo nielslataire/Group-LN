@@ -90,7 +90,7 @@ end section
                                                 <span class="thumb-info-price background-color-secondary text-color-light text-mg p-sm pl-md pr-md">
                                                     @If startingPrice > 0 Then
                                                         @<text>
-                                                            Vanaf @formattedStartingPrice
+                                                            Vanaf @WWWCOPRO.Extensions.ToEuroCurrency(startingPrice)
                                                         </text>
                                                     Else
                                                         @<text>

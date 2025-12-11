@@ -4,7 +4,7 @@
 <head>
     <!-- Google Tag Manager -->
     <script>
-    (function (w, d, s, l, i) {
+        (function (w, d, s, l, i) {
             w[l] = w[l] || []; w[l].push({
                 'gtm.start':
                     new Date().getTime(), event: 'gtm.js'
@@ -31,7 +31,7 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <!-- Web Fonts  -->
-    <link href="http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800%7CShadows+Into+Light" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800%7CShadows+Into+Light" rel="stylesheet" type="text/css">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     @Styles.Render("~/Vendor/css")
     @Styles.Render("~/Content/theme")
@@ -187,9 +187,10 @@
                     <div class="col-md-2">
                         <h4><strong>Sociale</strong> Media</h4>
                         <ul class="social-icons">
-                            <li class="social-icons-facebook"><a href="http://www.facebook.com/GROUPLN" target="_blank" title="Facebook"><i class="fa fa-facebook"></i></a></li>
+                            <li class="social-icons-facebook"><a href="https://www.facebook.com/GROUPLN" target="_blank" title="Facebook"><i class="fa fa-facebook"></i></a></li>
                             @*<li class="social-icons-twitter"><a href="http://www.twitter.com/" target="_blank" title="Twitter"><i class="fa fa-twitter"></i></a></li>*@
-                            <li class="social-icons-linkedin"><a href="http://www.linkedin.com/company/bouwteam-copro" target="_blank" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
+                            <li class="social-icons-linkedin"><a href="https://www.linkedin.com/company/group-ln" target="_blank" title="Linkedin"><i class="fa fa-linkedin"></i></a></li>
+                            <li class="social-icons-instagram"><a href="https://www.instagram.com/group.ln/" target="_blank" title="Linkedin"><i class="fa fa-instagram"></i></a></li>
                         </ul>
                     </div>
                 </div>

@@ -46,6 +46,7 @@
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        @Html.AntiForgeryToken()
         <div class="inner-body">
             <div class="row">
                 <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
@@ -321,10 +322,13 @@
             });
         })();
 
+        const stageCheckboxes = document.querySelectorAll('.chkInvoice');
+
+
         (function () {
             const clientCheckboxes = document.querySelectorAll('.chkClient');
             const unitCheckboxes = document.querySelectorAll('.chkUnit');
-            const stageCheckboxes = document.querySelectorAll('.chkInvoice');
+
 
             function updateUnitCheckbox(unitId, clientId) {
                 const unitCheckbox = document.querySelector(`.chkUnit[data-unitid="${unitId}"][data-clientaccountid="${clientId}"]`);

@@ -26,7 +26,7 @@ End Code
         <div class="col-md-6">
             <span class="thumb-info thumb-info-side-image thumb-info-no-zoom mb-xl">
                 <span class="thumb-info-side-image-wrapper p-none hidden-xs">
-                    <img src="@Url.Content("~/content/img/team/ignace.jpg")" class="img-responsive" alt="" style="width: 195px;">
+                    <img src="@Url.Content("~/content/img/team/ignace.jpg")" class="img-responsive" alt="Group LN - Ignace Lataire" style="width: 195px;">
                 </span>
                 <span class="thumb-info-caption">
                     <span class="thumb-info-caption-text">
@@ -45,7 +45,7 @@ End Code
         <div class="col-md-6">
             <span class="thumb-info thumb-info-side-image thumb-info-no-zoom mb-xl">
                 <span class="thumb-info-side-image-wrapper p-none hidden-xs">
-                    <img src="@Url.Content("~/content/img/team/nele.jpg")" class="img-responsive" alt="" style="width: 195px;">
+                    <img src="@Url.Content("~/content/img/team/nele.jpg")" class="img-responsive" alt="Group LN - Nele Lataire" style="width: 195px;">
                 </span>
                 <span class="thumb-info-caption">
                     <span class="thumb-info-caption-text">
@@ -68,7 +68,7 @@ End Code
         <div class="col-md-6">
             <span class="thumb-info thumb-info-side-image thumb-info-no-zoom mb-xl">
                 <span class="thumb-info-side-image-wrapper p-none hidden-xs">
-                    <img src="@Url.Content("~/content/img/team/niels.jpg")" class="img-responsive" alt="" style="width: 195px;">
+                    <img src="@Url.Content("~/content/img/team/niels.jpg")" class="img-responsive" alt="Group LN - Niels Lataire" style="width: 195px;">
                 </span>
                 <span class="thumb-info-caption">
                     <span class="thumb-info-caption-text">
@@ -87,7 +87,7 @@ End Code
         <div class="col-md-6">
             <span class="thumb-info thumb-info-side-image thumb-info-no-zoom mb-xl">
                 <span class="thumb-info-side-image-wrapper p-none hidden-xs">
-                    <img src="@Url.Content("~/content/img/team/nico.jpg")" class="img-responsive" alt="" style="width: 195px;">
+                    <img src="@Url.Content("~/content/img/team/nico.jpg")" class="img-responsive" alt="Group LN - Nico Decuyper" style="width: 195px;">
                 </span>
                 <span class="thumb-info-caption">
                     <span class="thumb-info-caption-text">
@@ -110,7 +110,7 @@ End Code
         <div class="col-md-6">
             <span class="thumb-info thumb-info-side-image thumb-info-no-zoom mb-xl ">
                 <span class="thumb-info-side-image-wrapper p-none hidden-xs">
-                    <img src="@Url.Content("~/content/img/team/sheila.jpg")" class="img-responsive" alt="" style="width: 195px;">
+                    <img src="@Url.Content("~/content/img/team/sheila.jpg")" class="img-responsive" alt="Group LN - Sheila Toussaint" style="width: 195px;">
                 </span>
                 <span class="thumb-info-caption">
                     <span class="thumb-info-caption-text">
@@ -129,7 +129,7 @@ End Code
         <div class="col-md-6">
             <span class="thumb-info thumb-info-side-image thumb-info-no-zoom mb-xl">
                 <span class="thumb-info-side-image-wrapper p-none hidden-xs">
-                    <img src="@Url.Content("~/content/img/team/stefanie.jpeg")" class="img-responsive" alt="" style="width: 195px;">
+                    <img src="@Url.Content("~/content/img/team/stefanie.jpeg")" class="img-responsive" alt="Group LN - Stefanie De Smul" style="width: 195px;">
                 </span>
                 <span class="thumb-info-caption">
                     <span class="thumb-info-caption-text">

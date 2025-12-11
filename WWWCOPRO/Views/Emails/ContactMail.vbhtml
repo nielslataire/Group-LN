@@ -16,8 +16,8 @@ Subject: Group LN - uw contactvraag
                             <table width="100%" cellspacing="0" cellpadding="0" border="0">
                                 <tr>
                                     <td style="width:220px;" valign="middle">
-                                        <a href="http://www.groupln.be" target="_blank" style="text-decoration:none; color:#009336;">
-                                            <img src="http://www.copro-bouwteam.be/content/img/logo-default.png" alt="Group LN" height="54" style="display:block; border:0;" />
+                                        <a href="https://www.groupln.be" target="_blank" style="text-decoration:none; color:#009336;">
+                                            <img src="http://www.groupln.be/content/img/logo-default.png" alt="Group LN" height="54" style="display:block; border:0;" />
                                         </a>
                                     </td>
                                     <td align="right" style="color:#8a8a8a; font-size:11px; font-weight:bold; letter-spacing:0.5px; text-transform:uppercase;">

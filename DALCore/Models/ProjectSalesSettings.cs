@@ -35,5 +35,9 @@ public partial class ProjectSalesSettings
 
     public decimal? ParcelCost { get; set; }
 
+    public int? BankAccountId { get; set; }
+
+    public virtual IssuerBankAccount BankAccount { get; set; }
+
     public virtual Project Project { get; set; }
 }

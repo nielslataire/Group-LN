@@ -1519,7 +1519,10 @@ namespace ServiceCore
         public GetResponse<ProjectPaymentStageBO> GetProjectPaymentStage(int stageid)
         {
             var response = new GetResponse<ProjectPaymentStageBO>();
-            var e = _uow.PaymentStages.GetNoTracking().FirstOrDefault(m => m.Id == stageid);
+            var e = _uow.PaymentStages
+                .GetNoTracking()
+                .Include(m => m.Group)
+                .FirstOrDefault(m => m.Id == stageid);
 
             var bo = new ProjectPaymentStageBO();
             var err = ProjectPaymentStageTranslator.TranslateEntityToBO(e, bo);

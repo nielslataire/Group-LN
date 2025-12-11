@@ -22,6 +22,19 @@
         gap: 4px;
     }
 
+    .payment-stages-table {
+        table-layout: fixed;
+    }
+
+        .payment-stages-table .col-stage-name {
+            width: auto;
+        }
+
+        .payment-stages-table .col-percentage,
+        .payment-stages-table .col-invoicable {
+            width: 170px;
+        }
+
         .invoice-tab-nav .nav-link {
             color: #6c757d;
             font-weight: 600;
@@ -51,9 +64,6 @@
                     <div class="col-sm-auto px-0">
                         <a class="btn btn-default btn-md px-3 me-1" href="@Url.Action("PaymentStagesAddUpdate", "Projecten", new { projectid = Model.ProjectId })">
                             <i class="fa fa-plus me-2"></i>Betalingsschijven toevoegen
-                        </a>
-                        <a class="btn btn-default btn-md px-3" href="@Url.Action("PaymentGroupLink", "Projecten", new { projectid = Model.ProjectId })">
-                            <i class="fa fa-link me-2"></i>Koppelen
                         </a>
                     </div>
                 </div>
@@ -88,7 +98,12 @@
                         </div>
                         <div class="card-body pt-2">
                             <div class="table-responsive">
-                                <table class="table align-middle mb-0">
+                                <table class="table align-middle mb-0 payment-stages-table">
+                                    <colgroup>
+                                        <col class="col-stage-name" />
+                                        <col class="col-percentage" />
+                                        <col class="col-invoicable" />
+                                    </colgroup>
                                     <thead>
                                         <tr class="table-secondary">
                                             <th>Schijf</th>

@@ -11,7 +11,7 @@ End Code
             <li data-transition="fade">
 
                 <img src="@Url.Content("~/content/img/slides/slide1.jpg")"
-                     alt="Residentie Scheldepunt - Gent"
+                     alt="Villa Cauxyde - Koksijde"
                      data-bgposition="right center"
                      data-bgpositionend="center center"
                      data-bgfit="cover"
@@ -38,7 +38,7 @@ End Code
                      data-x="20"
                      data-y="50"
                      data-start="500"
-                     data-transform_in="y:[-300%];opacity:0;s:500;">GENT</div>
+                     data-transform_in="y:[-300%];opacity:0;s:500;">KOKSIJDE</div>
 
                 @*<div class="tp-caption"
                      data-x="480"
@@ -46,26 +46,26 @@ End Code
                      data-start="1000"
                      data-transform_in="x:[300%];opacity:0;s:500;"><img src="~/content/img/slides/slide-title-border-light.png" alt=""></div>*@
 
-                <div class="tp-caption main-label tp-caption-overlay-opacity"
-                     data-x="20"
-                     data-y="80"
-                     data-start="1000"
-                     data-whitespace="nowrap"
-                     data-transform_in="y:[100%];s:500;"
-                     data-transform_out="opacity:0;s:500;"
-                     data-mask_in="x:0px;y:0px;">Res. Scheldepunt</div>
+            <div class="tp-caption main-label tp-caption-overlay-opacity"
+                 data-x="20"
+                 data-y="80"
+                 data-start="1000"
+                 data-whitespace="nowrap"
+                 data-transform_in="y:[100%];s:500;"
+                 data-transform_out="opacity:0;s:500;"
+                 data-mask_in="x:0px;y:0px;">Villa Cauxyde</div>
 
                 <div class="tp-caption bottom-label tp-caption-overlay-opacity"
                      data-x="20"
                      data-y="130"
                      data-start="1500"
-                     data-transform_in="y:[100%];opacity:0;s:500;">28 appartementen en 10 lofts met ondergrondse parkeergarage</div>
+                     data-transform_in="y:[100%];opacity:0;s:500;">2 luxevilla's in het centrum van Koksijde</div>
 
             </li>
             <li data-transition="fade">
 
                 <img src="@Url.Content("~/content/img/slides/slide2.jpg")"
-                     alt="Residentie Muelenaers - Westrozebeke"
+                     alt="Verkaveling Keerstraat - Erpe-Mere"
                      data-bgposition="right center"
                      data-bgpositionend="center center"
                      data-bgfit="cover"
@@ -86,7 +86,7 @@ End Code
                      data-x="right"
                      data-y="50"
                      data-start="500"
-                     data-transform_in="y:[-300%];opacity:0;s:500;">WESTROZEBEKE</div>
+                     data-transform_in="y:[-300%];opacity:0;s:500;">ERPE-MERE</div>
 
                 <div class="tp-caption main-label tp-caption-overlay-opacity"
                      data-x="right"
@@ -94,19 +94,19 @@ End Code
                      data-start="1000"
                      style="z-index: 5"
                      data-transform_in="y:[100%];s:500;"
-                     data-transform_out="opacity:0;s:500;">Res. Muelenaers</div>
+                     data-transform_out="opacity:0;s:500;">Verkaveling Keerstraat</div>
 
                 <div class="tp-caption bottom-label tp-caption-overlay-opacity"
                      data-x="right"
                      data-y="130"
                      data-start="1500"
-                     data-transform_in="y:[100%];opacity:0;s:500;">15 apppartementen en 4 woningen, met binnenplaats.</div>
+                     data-transform_in="y:[100%];opacity:0;s:500;">4 stijlvolle woningen in het landelijke Vlekkem.</div>
 
             </li>
             <li data-transition="fade">
 
                 <img src="@Url.Content("~/content/img/slides/slide3.jpg")"
-                     alt="Residentie Zuidleie - Beernem"
+                     alt="3 woningen - Landegem - Renaat de Rudderstraat"
                      data-bgposition="right center"
                      data-bgpositionend="center center"
                      data-bgfit="cover"
@@ -127,7 +127,7 @@ End Code
                      data-x="left"
                      data-y="50"
                      data-start="500"
-                     data-transform_in="y:[-300%];opacity:0;s:500;">BEERNEM</div>
+                     data-transform_in="y:[-300%];opacity:0;s:500;">LANDEGEM</div>
 
                 <div class="tp-caption main-label tp-caption-overlay-opacity"
                      data-x="left"
@@ -135,13 +135,13 @@ End Code
                      data-start="1000"
                      style="z-index: 5"
                      data-transform_in="y:[100%];s:500;"
-                     data-transform_out="opacity:0;s:500;">Res. Zuidleie</div>
+                     data-transform_out="opacity:0;s:500;">3 woningen</div>
 
                 <div class="tp-caption bottom-label tp-caption-overlay-opacity"
                      data-x="left"
                      data-y="130"
                      data-start="1500"
-                     data-transform_in="y:[100%];opacity:0;s:500;">32 appartementen met ondergrondse parkeergelegenheid.</div>
+                     data-transform_in="y:[100%];opacity:0;s:500;">Moderne woningen dichtbij Gent.</div>
 
             </li>
         </ul>
@@ -156,7 +156,7 @@ End Code
                 <div>
                     <span class="thumb-info thumb-info-lighten thumb-info-centered-info thumb-info-no-borders mt-lg">
                         <span class="thumb-info-wrapper">
-                            <img src="@Url.content("~/content/img/bureel.jpg")" class="img-responsive" alt="">
+                            <img src="@Url.content("~/content/img/bureel.jpg")" class="img-responsive" alt="Bureel Group LN">
                            
                         </span>
                     </span>
@@ -168,6 +168,7 @@ End Code
                 <a class="btn btn-default mr-xs mb-sm" href="@Url.Action("Index","AboutUs")">Lees Meer</a>
             </div>
             <div class="col-md-8">
+                <h1 style="display:none;">Home</h1>
                 <h2 class="mb-xl"><strong>Onze</strong> troeven</h2>
 
                 <div class="row">

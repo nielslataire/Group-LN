@@ -23,10 +23,10 @@
 }
 <div class="row">
 <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-	<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+		<div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
 			<div class="row align-items-center">
 				<div class="col-sm-auto d-flex align-items-center">
-					<a href="@Url.Action("DetailSales", "Projecten",new {projectid = Model.ProjectId})" class="text-decoration-none text-reset d-flex align-items-center">
+					<a href="@Url.Action("DetailSales", "Projecten", new { projectid = Model.ProjectId })" class="text-decoration-none text-reset d-flex align-items-center">
 						<i class="bx bx-chevron-left fs-1"></i>
 					</a>
 				</div>
@@ -35,9 +35,16 @@
 					<h5 class="mb-4 mt-0">Bewerk hier de verkoopinstellingen van het project</h5>
 				</div>
 			</div>
+		</div>
+</div>
+</div>
+@if (Model.MissingBuilder)
+{
+	<div class="alert alert-warning alert-dismissible fade show" role="alert">
+		<i class="bx bx-error-circle"></i> @Model.BuilderWarning
+		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
 	</div>
-</div>
-</div>
+}
 @using (Html.BeginForm("UpdateSalesSettings", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
 {
 
@@ -87,11 +94,27 @@
 							</div>
 
 						<div class="row  align-items-center pb-3">
-							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">@Html.LabelFor(m => m.Settings.BankAccountNumber)</label>
+							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">@Html.LabelFor(m => m.Settings.BankAccountId, "Projectrekening")</label>
 							<div class="col-lg-9">
-								@Html.TextBoxFor(m => m.Settings.BankAccountNumber, new { placeholder = "Rekeningnummer projectrekening", @class = "form-control form-control-modern" })
+								@if (Model.BankAccounts != null && Model.BankAccounts.Any())
+									{
+										@Html.DropDownListFor(m => m.Settings.BankAccountId, Model.BankAccounts, "Selecteer een projectrekening", new { @class = "form-control form-control-modern" })
+										<small class="text-muted">Rekeningen behorend bij de geselecteerde bouwer.</small>
+									}
+									else
+									{
+										<p class="mb-1 text-muted">Geen rekeningen gevonden voor deze bouwer. Vul hieronder een IBAN in om een projectrekening aan te maken.</p>
+									}
+									<div class="mt-2">
+										@Html.TextBoxFor(m => m.NewBankAccountIban, new { placeholder = "Nieuw IBAN voor projectrekening", @class = "form-control form-control-modern" })
+										<small class="text-muted">Ontbrekende rekeningen worden automatisch aangemaakt bij issuer 1 met de projectnaam als omschrijving.</small>
+									</div>
+									<div>
+										@Html.ValidationMessageFor(m => m.Settings.BankAccountId, "", new { @class = "text-danger" })
+										@Html.ValidationMessageFor(m => m.NewBankAccountIban, "", new { @class = "text-danger" })
+									</div>
+								</div>
 							</div>
-						</div>
 						</div>
 					</div>
 				</div>

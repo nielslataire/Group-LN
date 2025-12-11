@@ -17,6 +17,13 @@
     var vatTypes = ViewBag.VatTypes as List<SelectListItem> ?? new List<SelectListItem>();
 }
 
+<style>
+    .payment-stage-row .deleteRow.disabled {
+        pointer-events: none;
+        opacity: 0.6;
+    }
+</style>
+
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
@@ -88,21 +95,139 @@
 @section PageScripts {
     <script>
         $(function () {
-            $('#btnAddStage').on('click', function () {
-                $.ajax({
+            const editorRows = $('#editorRows');
+            const addButton = $('#btnAddStage');
+            let autoRowRequest = null;
+
+            function parsePercentage(value) {
+                const normalized = (value || '').toString().replace(',', '.');
+                const parsed = parseFloat(normalized);
+                return isNaN(parsed) ? 0 : parsed;
+            }
+
+            function calculateTotal() {
+                let total = 0;
+                editorRows.find('input[name$=".Percentage"]:enabled').each(function () {
+                    total += parsePercentage($(this).val());
+                });
+                return total;
+            }
+
+            function addStageRow(isAuto = false) {
+                if (isAuto && autoRowRequest) {
+                    // Als er al een auto-row request loopt, gebruik die
+                    return autoRowRequest;
+                }
+
+                const request = $.ajax({
                     url: '@Url.Action("BlankStageRow", "Projecten")',
                     cache: false,
-                    type: 'POST',
-                    success: function (html) {
-                        $('#editorRows').append(html);
+                    type: 'POST'
+                }).done(function (html) {
+                    const $row = $(html);
+                    if (isAuto) {
+                        $row.addClass('auto-stage').attr('data-placeholder', 'true');
+                    }
+                    editorRows.append($row);
+                }).always(function () {
+                    if (isAuto) {
+                        autoRowRequest = null;
                     }
                 });
+
+                if (isAuto) {
+                    autoRowRequest = request;
+                }
+
+                return request;
+            }
+
+            function disableAutoRow($row) {
+                $row.find('input').val('').prop('disabled', true);
+                $row.find('.deleteRow').addClass('disabled').attr('aria-disabled', 'true');
+            }
+
+            function enableAutoRow($row) {
+                $row.find('input').prop('disabled', false);
+                $row.find('.deleteRow').removeClass('disabled').removeAttr('aria-disabled');
+            }
+
+            // === BELANGRIJK: "0" niet als echte waarde tellen ===
+            function rowHasValue($row) {
+                const nameValue = $.trim($row.find('input[name$=".Name"]').val());
+                const percentageRaw = $.trim($row.find('input[name$=".Percentage"]').val());
+                const percentage = parsePercentage(percentageRaw);
+
+                // We beschouwen "0" of lege percentage als "geen waarde"
+                return nameValue.length > 0 || percentage > 0;
+            }
+
+            function ensureAutoRow() {
+                const total = calculateTotal();
+
+                // Safeguard: nooit meer dan 1 placeholder
+                let $placeholders = editorRows.find('.payment-stage-row[data-placeholder="true"]');
+                if ($placeholders.length > 1) {
+                    // Verwijder alle extra placeholders, laat enkel de eerste
+                    $placeholders.slice(1).remove();
+                }
+                let $placeholder = editorRows.find('.payment-stage-row[data-placeholder="true"]').first();
+
+                if (total >= 100) {
+                    // Niets meer nodig, maar zorg dat placeholder niet meer invulbaar is
+                    if ($placeholder.length) {
+                        disableAutoRow($placeholder);
+                    }
+                    return;
+                }
+
+                if ($placeholder.length) {
+                    enableAutoRow($placeholder);
+
+                    // Als de user iets invult in de placeholder:
+                    if (rowHasValue($placeholder)) {
+                        // Deze rij wordt een "normale" rij
+                        $placeholder.removeAttr('data-placeholder').removeClass('auto-stage');
+
+                        // Re-run: er is nog geen placeholder, total < 100 → nieuwe placeholder maken
+                        ensureAutoRow();
+                    }
+                    return;
+                }
+
+                // Geen placeholder en total < 100 → nieuwe placeholder aanmaken
+                addStageRow(true).done(function () {
+                    const appended = editorRows.find('.payment-stage-row[data-placeholder="true"]').last();
+                    enableAutoRow(appended);
+                });
+            }
+
+            addButton.on('click', function () {
+                addStageRow().done(ensureAutoRow);
             });
 
             $(document).on('click', 'a.deleteRow', function (e) {
                 e.preventDefault();
+                if ($(this).hasClass('disabled')) {
+                    return;
+                }
                 $(this).closest('.payment-stage-row').remove();
+                ensureAutoRow();
             });
+
+            // Je kan deze evt. beperken tot het Percentage-veld en 'change'/'blur'
+            $(document).on('input change', '.payment-stage-row input', ensureAutoRow);
+
+            $('form').on('submit', function (e) {
+                const total = calculateTotal();
+                if (Math.abs(total - 100) > 0.01) {
+                    e.preventDefault();
+                    alert('Het totaal van de betalingsschijven moet 100% zijn.');
+                }
+            });
+
+            ensureAutoRow();
         });
     </script>
 }
+
