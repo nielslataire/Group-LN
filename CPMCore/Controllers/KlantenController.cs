@@ -462,7 +462,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, [Bind(Prefix = "ClientAccount.CoOwners")] List<ClientContactBO> coowners, List<UnitBO> units)
+        public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, List<UnitBO> units)
         {
             var Referrer = TempData["Referrer"];
             var errors = new Dictionary<string, ModelErrorCollection>();
@@ -491,7 +491,7 @@ namespace CPMCore.Controllers
             // Postcodes en contacten koppelen
             model.ClientAccount.Postalcode.PostcodeId = model.SelectedPostalcode;
             model.ClientAccount.InvoicePostalcode.PostcodeId = model.SelectedInvoicePostalcode;
-            model.ClientAccount.CoOwners = model.ClientAccount.CoOwners?.Any() == true ? model.ClientAccount.CoOwners : coowners;
+            //model.ClientAccount.CoOwners = model.ClientAccount.CoOwners?.Any() == true ? model.ClientAccount.CoOwners : coowners;
             model.ClientAccount.Contacts = model.ClientAccount.Contacts?.Any() == true ? model.ClientAccount.Contacts : contacts;
 
             var clientService = ServiceFactory.GetClientService();
@@ -690,7 +690,7 @@ namespace CPMCore.Controllers
             if ((uresponse.Success))
                 model.AvailableUnits = uresponse.Values;
         }
-        public PartialViewResult BlankContactRow(string collectionName = "Client.Contacts")
+        public PartialViewResult BlankContactRow(string collectionName = "ClientAccount.Contacts")
         {
             var viewData = new ViewDataDictionary<ClientContactBO>(ViewData, new ClientContactBO())
             {
@@ -703,7 +703,7 @@ namespace CPMCore.Controllers
                 ViewData = viewData
             };
         }
-        public PartialViewResult BlankCoOwnerRow()
+        public PartialViewResult BlankCoOwnerRow(string collectionName = "ClientAccount.CoOwners")
         {
             var countryService = ServiceFactory.GetCountryService();
             var countryResponse = countryService.GetVisibleCountriesForSelect();
