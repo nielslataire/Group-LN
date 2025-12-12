@@ -438,6 +438,8 @@
 												Value = o.ID.ToString(),
 												Text = o.Display
 											}).ToList();
+
+											ViewData["CoOwnerCollectionName"] = "ClientAccount.CoOwners";
 										}
 										<div id="coownerContainer">
 											@foreach (var CoOwner in Model.Client.CoOwners)
@@ -667,19 +669,19 @@
 				dropdownAutoWidth: true,
 				placeholder: 'Selecteer een of meerdere activiteiten'
 			});
-			$(function () {
-				$('.coOwnerRow').each(function () {
-					initCoOwnerItem($(this));
-				});
-			});
-			$('#btnAddCoOwner').on('click', function () {
+		$(function () {
+									  $('.coOwnerRow').each(function () {
+											  initCoOwnerItem($(this));
+									  });
+							  });
+							  $('#btnAddCoOwner').on('click', function () {
 
-				$.get('@Url.Action("BlankCoOwnerRow")', function (html) {
-					const $newItem = $(html);
-					$('#coownerContainer').append($newItem);
-					initCoOwnerItem($newItem);
+									  $.get('@Url.Action("BlankCoOwnerRow", new { collectionName = "ClientAccount.CoOwners" })', function (html) {
+											  const $newItem = $(html);
+											  $('#coownerContainer').append($newItem);
+											  initCoOwnerItem($newItem);
 
-				});
+									  });
 			});
 		$('#btnAddGifts').on('click', function () {
 			$.get('@Url.Action("BlankGiftRow")', function (html) {
