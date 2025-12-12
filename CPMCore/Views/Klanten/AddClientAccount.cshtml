@@ -504,22 +504,83 @@
 								return false;
 						});
 
-						function initCoOwnerRow($row) {
-								toggleCoOwnerCompany($row.find('.toggle-CoOwnerCompany'));
-								toggleCoOwnerInvoice($row.find('.toggle-CoOwnerInvoice'));
+							function initCoOwnerRow($row) {
+																initCoOwnerPostcodeSelect($row);
+																toggleCoOwnerCompany($row.find('.toggle-CoOwnerCompany'));
+																toggleCoOwnerInvoice($row.find('.toggle-CoOwnerInvoice'));
 
 								$row.find('.toggle-CoOwnerCompany').on('change', function () {
 										toggleCoOwnerCompany($(this));
 								});
 
-								$row.find('.toggle-CoOwnerInvoice').on('change', function () {
-										toggleCoOwnerInvoice($(this));
-								});
-						}
+																$row.find('.toggle-CoOwnerInvoice').on('change', function () {
+																				toggleCoOwnerInvoice($(this));
+																});
+												}
 
-						function toggleCoOwnerCompany($checkbox) {
-								var $row = $checkbox.closest('.coOwnerRow');
-								var isCompany = $checkbox.is(':checked');
+												function initCoOwnerPostcodeSelect($row) {
+																$row.find('.select2-postcode').each(function () {
+																				const $select = $(this);
+																				const countryFieldId = $select.data('country-field-id');
+																				const targetFieldId = $select.data('target-id');
+																				const $countryField = $('#' + countryFieldId.replace(/\./g, '_'));
+																				const $hiddenTarget = $('#' + targetFieldId.replace(/\./g, '_'));
+
+																				if (!$countryField.val() || $countryField.val() === '0') {
+																								$countryField.val('19');
+																				}
+
+																				$select.select2({
+																								minimumInputLength: 3,
+																								theme: 'bootstrap',
+																								dropdownAutoWidth: true,
+																								placeholder: "Gemeente",
+																								ajax: {
+																												url: '@Url.Action("GetPostcodesByCountry", "Shared")',
+																												cache: false,
+																												type: 'POST',
+																												data: function (params) {
+																																let countryId = $countryField.val();
+																																if (countryId == 0) countryId = 19;
+																																return {
+																																				term: params.term,
+																																				CountryId: countryId
+																																};
+																												},
+																												processResults: function (data) {
+																																return {
+																																				results: $.map(data, function (item) {
+																																								return { id: item.id, text: item.text };
+																																				})
+																																};
+																												}
+																								}
+																				});
+
+																				$select.on('select2:select', function (e) {
+																								$hiddenTarget.val(e.params.data.id);
+																				});
+
+																				const existingId = $hiddenTarget.val();
+																				if (existingId) {
+																								$.get('@Url.Action("GetPostcodeById", "Shared")', { id: existingId }, function (data) {
+																												if (data) {
+																																const option = new Option(data.text, data.id, true, true);
+																																$select.append(option).trigger('change');
+																												}
+																								});
+																				}
+
+																				const $invoiceCountrySelect = $row.find('select[name$="InvoicePostalcode.Country.CountryId"]');
+																				if ($invoiceCountrySelect.length && (!$invoiceCountrySelect.val() || $invoiceCountrySelect.val() === '0')) {
+																								$invoiceCountrySelect.val('19');
+																				}
+																});
+												}
+
+												function toggleCoOwnerCompany($checkbox) {
+																var $row = $checkbox.closest('.coOwnerRow');
+																var isCompany = $checkbox.is(':checked');
 								var $companyFields = $row.find('.CoOwnerBedrijfsgegevens');
 								var $personFields = $row.find('select[name$="Salutation"], input[name$="Name"], input[name$="Firstname"]');
 
