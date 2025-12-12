@@ -244,10 +244,10 @@
 								}).ToList();
 								ViewData["Countries"] = coOwnerCountries;
 								ViewData["OwnerTypes"] = coOwnerOwnerTypes;
-								ViewData["CoOwnerCollectionName"] = "coowners";
+								ViewData["CoOwnerCollectionName"] = "ClientAccount.CoOwners";
 							}
 							<div class="d-flex justify-content-end">
-								<a href="@Url.Action("BlankCoOwnerRow", "Klanten", new { collectionName = "ClientAccount.CoOwners" }))" class="btn btn-default btn-md" id="addCoOwner">
+								<a href="@Url.Action("BlankCoOwnerRow", "Klanten", new { collectionName = "ClientAccount.CoOwners" })" class="btn btn-default btn-md" id="addCoOwner">
 									<i class="fa fa-plus me-3"></i>Mede-eigenaar toevoegen
 								</a>
 							</div>
@@ -483,19 +483,30 @@
 				return false;
 			});
 
+						// Contacten toevoegen
+
 		// Mede-eigenaar toevoegen
-						$("#addCoOwner").click(function () {
-								$.ajax({
-										url: this.href,
-										cache: false,
-										success: function (html) {
-												var $row = $(html);
-												$("#coOwnerRows").append($row);
-												initCoOwnerRow($row);
-										}
-								});
-								return false;
-						});
+						// $("#addCoOwner").click(function () {
+						// 		$.ajax({
+						// 				url: this.href,
+						// 				cache: false,
+						// 				success: function (html) {
+						// 						var $row = $(html);
+						// 						$("#coOwnerRows").append($row);
+						// 						initCoOwnerRow($row);
+						// 				}
+						// 		});
+						// 		return false;
+						// });
+
+									$("#addCoOwner").click(function () {
+				$.ajax({
+					url: this.href,
+					cache: false,
+					success: function (html) { $("#coOwnerRows").append(html); }
+				});
+				return false;
+			});
 
 						// Mede-eigenaar verwijderen
 						$(document).on('click', 'a.deleteCoOwnerRow', function () {

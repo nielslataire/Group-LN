@@ -111,10 +111,6 @@
                     <div class="row align-items-center pb-3">
                         <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Land</label>
 
-                        <div class="col-lg-3 col-xl-2">
-                            @Html.DropDownListFor(m => m.Postalcode.Country.CountryId, new SelectList(countries, "Value", "Text", Model.Postalcode.Country.CountryId), new { @class = "form-control form-control-modern populate" })
-                        </div>
-
                         <div class="col-lg-6 col-xl-6">
                             @Html.HiddenFor(m => m.Postalcode.PostcodeId)
                             @Html.HiddenFor(m => m.Postalcode.Country.CountryId)

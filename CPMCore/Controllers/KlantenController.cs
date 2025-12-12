@@ -720,17 +720,21 @@ namespace CPMCore.Controllers
 
 
             // ❗️ Haal de lijsten uit je service of statisch (pas dit aan naar je situatie)
-            var countries = countryResponse.Values; ; // bijv. List<CountryBO>
+            var countries = countryResponse.Success
+                ? countryResponse.Values
+                : Enumerable.Empty<IdNameBO>();
             var ownerTypeService = ServiceFactory.GetClientService();
             var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
-            var ownerTypes = ownerTypeResponse.Values.Where(o => o.ID != 1);
+            var ownerTypes = ownerTypeResponse.Success
+                ? ownerTypeResponse.Values.Where(o => o.ID != 1)
+                : Enumerable.Empty<IdNameBO>();
 
 
             var viewData = new ViewDataDictionary<ClientContactBO>(ViewData, client)
                 {
                     { "Countries", countries.Select(c => new SelectListItem { Value = c.ID.ToString(), Text = c.Display }).ToList() },
                     { "OwnerTypes", ownerTypes.Select(o => new SelectListItem { Value = o.ID.ToString(), Text = o.Display }).ToList() },
-                    { "CoOwnerCollectionName", "ClientAccount.CoOwners" }
+                    { "CoOwnerCollectionName", collectionName }
                 };
 
             return new PartialViewResult
