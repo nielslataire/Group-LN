@@ -21,6 +21,7 @@
                 <div class="form-group">
                     <div class="row align-items-center pb-3">
                         <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
+                        @Html.HiddenFor(m => m.Id)
                         @Html.HiddenFor(m => m.IsCoOwner)
                         <div class="col-lg-2 col-xl-2">
                             @Html.DropDownListFor(

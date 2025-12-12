@@ -393,7 +393,9 @@
 								<div class="row mt-4">
 									<div class="form-group">
 										<div id="editorRows">
-
+											@{
+											ViewData["ContactCollectionName"] = "Client.Contacts";
+											}
 											@foreach (var item in Model.Client.Contacts)
 											{
 												@Html.Partial("_ContactRow", item)
@@ -439,7 +441,7 @@
 												Text = o.Display
 											}).ToList();
 
-											ViewData["CoOwnerCollectionName"] = "ClientAccount.CoOwners";
+											ViewData["CoOwnerCollectionName"] = "Client.CoOwners";
 										}
 										<div id="coownerContainer">
 											@foreach (var CoOwner in Model.Client.CoOwners)
@@ -676,7 +678,7 @@
 							  });
 							  $('#btnAddCoOwner').on('click', function () {
 
-									  $.get('@Url.Action("BlankCoOwnerRow", new { collectionName = "ClientAccount.CoOwners" })', function (html) {
+									  $.get('@Url.Action("BlankCoOwnerRow", new { collectionName = "Client.CoOwners" })', function (html) {
 											  const $newItem = $(html);
 											  $('#coownerContainer').append($newItem);
 											  initCoOwnerItem($newItem);
