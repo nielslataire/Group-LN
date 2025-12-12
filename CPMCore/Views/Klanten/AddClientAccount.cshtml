@@ -199,11 +199,14 @@
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5 ">
 							<div class="d-flex justify-content-end">
-								<a href="@Url.Action("BlankContactRow", "Klanten", null)" class="btn btn-default btn-md" id="addContact"><i class="fa fa-plus me-3"></i>Contactgegevens Toevoegen</a>
+								<a href="@Url.Action("BlankContactRow", "Klanten", new { collectionName = "ClientAccount.Contacts" })" class="btn btn-default btn-md" id="addContact"><i class="fa fa-plus me-3"></i>Contactgegevens Toevoegen</a>
 							</div>
 							<div class="row mt-4">
 								<div class="form-group">
 									<div id="editorRows">
+										@{
+											ViewData["ContactCollectionName"] = "ClientAccount.Contacts";
+										}
 										@foreach (var item in Model.ClientAccount.Contacts)
 										{
 											@Html.Partial("_ContactRow", item)
@@ -211,7 +214,7 @@
 									</div>
 								</div>
 							</div>
-						</div>
+							</div>
 					</div>
 				</div>
 			</section>
@@ -228,10 +231,24 @@
 							<p class="card-big-info-desc">Voeg hier extra eigenaars toe</p>
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5 ">
+							@{
+								var coOwnerCountries = Model.Countries.Select(c => new SelectListItem
+								{
+									Value = c.ID.ToString(),
+									Text = c.Display
+								}).ToList();
+								var coOwnerOwnerTypes = Model.OwnerTypes.Where(o => o.ID != 1).Select(o => new SelectListItem
+								{
+									Value = o.ID.ToString(),
+									Text = o.Display
+								}).ToList();
+								ViewData["Countries"] = coOwnerCountries;
+								ViewData["OwnerTypes"] = coOwnerOwnerTypes;
+								ViewData["CoOwnerCollectionName"] = "ClientAccount.CoOwners";
+							}
 							<h2 class="card-title mb-3">Eigenaarslijst</h2>
 							<div class="form-group">
 								<table class="table table-ecommerce-simple table-striped mb-0" id="datatable-owners-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true">
-
 									<thead>
 										<tr>
 											<th>Eigenaar</th>
@@ -276,12 +293,12 @@
 									<input type="text" class="form-control form-control-modern" placeholder="Voornaam" name="txtCoOwnerForeName" id="txtCoOwnerForeName" disabled="">
 								</div>
 							</div>
-							<div class="row align-items-center pb-3">
-								<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Type eigenaar</label>
-								<div class="col-lg-4 col-xl-4">
-									@Html.DropDownListFor(m => m.SelectedCoOwnerType, new SelectList(Model.OwnerTypes, "ID", "Display", Model.SelectedCoOwnerType), new { @class = "form-control form-control-modern populate", id = "lstCoOwnerType", disabled = "" })
-								</div>
-								<div class="col-lg-4 col-xl-4">
+								<div class="row align-items-center pb-3">
+									<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Type eigenaar</label>
+									<div class="col-lg-4 col-xl-4">
+										@Html.DropDownListFor(m => m.SelectedCoOwnerType, new SelectList(coOwnerOwnerTypes, "Value", "Text", Model.SelectedCoOwnerType), new { @class = "form-control form-control-modern populate", id = "lstCoOwnerType", disabled = "" })
+									</div>
+									<div class="col-lg-4 col-xl-4">
 										<div class="input-group">
 											<span class="input-group-text">
 												<i class="fa fa-percentage"></i>
@@ -335,6 +352,18 @@
 											<i class="bx bx-mobile"></i>
 										</span>
 										<input type="text" class="form-control form-control-modern" placeholder="Mobiel" data-plugin-masked-input="" data-input-mask="9999/99.99.99" name="txtCoOwnerCellphone" id="txtCoOwnerCellphone" disabled="">
+									</div>
+								</div>
+								<div class="col-lg-2 col-xl-2">
+									<div class="form-check form-switch">
+										<input type="checkbox" class="form-check-input" id="toggleCoOwnerDigitalInvoice" disabled="">
+										<label class="form-check-label" for="toggleCoOwnerDigitalInvoice">Digitale facturatie</label>
+									</div>
+								</div>
+								<div class="col-lg-2 col-xl-2">
+									<div class="form-check form-switch">
+										<input type="checkbox" class="form-check-input" id="toggleCoOwnerAttachUbl" disabled="">
+										<label class="form-check-label" for="toggleCoOwnerAttachUbl">UBL</label>
 									</div>
 								</div>
 							</div>
@@ -557,13 +586,13 @@
 				});
 			}
 
-			// Recalculate percentage sum voor mede-eigenaren
-			function recalcCoOwnerPercentage() {
-				var sum = 100.00;
-				$('.percentage').each(function () {
-					var p = $(this).text().replace(",", ".");
-					sum -= parseFloat(p) || 0;
-				});
+		// Recalculate percentage sum voor mede-eigenaren
+								function recalcCoOwnerPercentage() {
+										var sum = 100.00;
+										$('.percentage').each(function () {
+												var p = ($(this).val() || '').toString().replace(",", ".");
+												sum -= parseFloat(p) || 0;
+										});
 				$('#txtCoOwnerPercentage').attr("max", sum - 0.01);
 				$('#ownerpercentage').html(sum.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
 			}
@@ -599,10 +628,10 @@
 				);
 			});
 
-			// Checkbox facturatieadres mede-eigenaar
-			$('#checkboxCoOnwerInvoiceAddress').change(function () {
-				toggleInvoiceAddress('#checkboxCoOnwerInvoiceAddress', '.CoOwnerInvoiceAddress');
-			});
+		// Checkbox facturatieadres mede-eigenaar
+							   $('#checkboxCoOnwerInvoiceAddress').change(function () {
+									   toggleInvoiceAddress('#checkboxCoOnwerInvoiceAddress', '.CoOwnerInvoiceAddress');
+							   });
 
 			// Land selecties bijhouden
 			var iCountryId = $("#lstCompanyCountries").val();
@@ -664,13 +693,13 @@
 				return false;
 			});
 
-			// Mede-eigenaar toevoegen
-			$('#btnAddCoOwner').click(function () {
-				var sum = 100.00;
-				$('.percentage').each(function () {
-					var p = parseFloat($(this).text().replace(",", ".")) || 0;
-					sum -= p;
-				});
+		  // Mede-eigenaar toevoegen
+						$('#btnAddCoOwner').click(function () {
+								var sum = 100.00;
+								$('.percentage').each(function () {
+										var p = parseFloat(($(this).val() || '').toString().replace(",", ".")) || 0;
+										sum -= p;
+								});
 
 				var $fieldsToValidate = [
 					'#txtCoOwnerName',
@@ -711,34 +740,39 @@
 						Phone: $('#txtCoOwnerPhone').val(),
 						Cellphone: $('#txtCoOwnerCellphone').val(),
 						Email: $('#txtCoOwnerEmail').val(),
-						OwnerType: $('#lstCoOwnerType').val(),
-						OwnerPercentage: $('#txtCoOwnerPercentage').val(),
-						VatNumber: $('#txtCoOwnerVATNumber').val(),
-						CompanyName: $('#txtCoOwnerCompanyName').val(),
-						InvoiceAddress: $('#checkboxCoOwnerInvoiceAddress').val(),
-						InvoiceStreet: $('#txtCoOwnerInvoiceStreet').val(),
-						InvoiceHousenumber: $('#txtCoOwnerInvoiceHousenumber').val(),
-						InvoiceBusnumber: $('#txtCoOwnerInvoiceBusnumber').val(),
-						InvoiceZipcode: $('#txtCoOwnerInvoicePostalcode').val()
+						 OwnerType: $('#lstCoOwnerType').val(),
+												OwnerPercentage: $('#txtCoOwnerPercentage').val(),
+												VatNumber: $('#txtCoOwnerVATNumber').val(),
+												CompanyName: $('#txtCoOwnerCompanyName').val(),
+												InvoiceAddress: $('#checkboxCoOnwerInvoiceAddress').is(':checked'),
+												InvoiceStreet: $('#txtCoOwnerInvoiceStreet').val(),
+												InvoiceHousenumber: $('#txtCoOwnerInvoiceHousenumber').val(),
+												InvoiceBusnumber: $('#txtCoOwnerInvoiceBusnumber').val(),
+												InvoiceZipcode: $('#txtCoOwnerInvoicePostalcode').val(),
+												RequiresDigitalInvoice: $('#toggleCoOwnerDigitalInvoice').is(':checked'),
+												AttachUblByDefault: $('#toggleCoOwnerAttachUbl').is(':checked')
 					},
 					cache: false,
 					traditional: true,
 					type: 'POST',
 					success: function (result) {
-						$('#CoOwnerRows').append(result);
 
 						// Reset velden
-						$('#txtCoOwnerName, #txtCoOwnerForeName, #txtCoOwnerStreet, #txtCoOwnerHousenumber, #txtCoOwnerBusnumber, #txtCoOwnerEmail, #txtCoOwnerPhone, #txtCoOwnerCellphone, #txtCoOwnerPercentage, #txtCoOwnerVATNumber, #txtCoOwnerCompanyName').val(null);
-						$('#lstSalutationCoOwner').val(0);
-						$('#lstCoOwnerType').val('1');
-						$('#lstCoOwnerCountries').val('19');
-						$('#txtCoOwnerInvoiceStreet, #txtCoOwnerInvoiceHousenumber, #txtCoOwnerInvoiceBusnumber').val(null);
-						$('#lstCoOwnerInvoiceCountries').val('19');
+						$('#CoOwnerRows').append(result);
 
-						recalcCoOwnerPercentage();
-					}
-				});
-			});
+												$('#txtCoOwnerName, #txtCoOwnerForeName, #txtCoOwnerStreet, #txtCoOwnerHousenumber, #txtCoOwnerBusnumber, #txtCoOwnerEmail, #txtCoOwnerPhone, #txtCoOwnerCellphone, #txtCoOwnerPercentage, #txtCoOwnerVATNumber, #txtCoOwnerCompanyName').val(null);
+												$('#toggleCoOwnerDigitalInvoice, #toggleCoOwnerAttachUbl, #checkboxCoOnwerInvoiceAddress, #checkboxCoOwnerCompany').prop('checked', false);
+												$('#lstSalutationCoOwner').val(0);
+												var defaultCoOwnerType = $('#lstCoOwnerType option:first').val();
+												$('#lstCoOwnerType').val(defaultCoOwnerType);
+												$('#lstCoOwnerCountries').val('19');
+												$('#txtCoOwnerInvoiceStreet, #txtCoOwnerInvoiceHousenumber, #txtCoOwnerInvoiceBusnumber').val(null);
+												$('#lstCoOwnerInvoiceCountries').val('19');
+
+												recalcCoOwnerPercentage();
+										}
+								});
+						});
 
 			// Mede-eigenaar verwijderen
 			$(document).on('click', 'a.deleteCoOwnerRow', function () {
@@ -768,20 +802,23 @@
 					'#txtCoOwnerCellphone',
 					'#txtCoOwnerPercentage',
 					'#txtCoOwnerPostalcode',
-					'#txtCoOwnerInvoicePostalcode',
-					'#lstSalutationCoOwner',
-					'#lstCoOwnerType',
-					'#lstCoOwnerCountries',
-					'#lstCoOwnerInvoiceCountries',
-					'#btnAddCoOwner',
-					'#checkboxCoOwnerCompany',
-					'#txtCoOwnerVATNumber',
-					'#txtCoOwnerCompanyName',
-					'#txtCoOwnerInvoiceStreet',
-					'#txtCoOwnerInvoiceHousenumber',
-					'#txtCoOwnerInvoiceBusnumber',
-					'#checkboxCoOnwerInvoiceAddress'
-				];
+									 '#txtCoOwnerInvoicePostalcode',
+										'#lstSalutationCoOwner',
+										'#lstCoOwnerType',
+										'#lstCoOwnerCountries',
+										'#lstCoOwnerInvoiceCountries',
+										'#btnAddCoOwner',
+										'#checkboxCoOwnerCompany',
+										'#txtCoOwnerVATNumber',
+										'#txtCoOwnerCompanyName',
+										'#txtCoOwnerInvoiceStreet',
+										'#txtCoOwnerInvoiceHousenumber',
+										'#txtCoOwnerInvoiceBusnumber',
+										'#checkboxCoOnwerInvoiceAddress',
+										'#toggleCoOwnerDigitalInvoice',
+										'#toggleCoOwnerAttachUbl'
+								];
+
 
 				toggleFields.forEach(function (field) {
 					if (disableFields) {

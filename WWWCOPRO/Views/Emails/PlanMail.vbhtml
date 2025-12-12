@@ -204,7 +204,7 @@
             </style>
 
             <!-- HEADER -->
-            <table width="100%" bgcolor="#f0f1f4" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
+            <table width="100%" bgcolor="#fff" cellpadding="0" cellspacing="0" border="0" id="backgroundTable">
                 <tbody>
                     <tr>
                         <td>
@@ -292,11 +292,19 @@
             </table>
 
             <!-- IMAGE -->
-            <img class="emailImage"
-                 width="640"
-                 src="http://www.groupln.be/uploads/pictures/@Model.Image"
-                 alt="@Model.Imagecaption">
-
+            <table width="640" bgcolor="#fff" align="center" class="devicewidth">
+                <tbody>
+                    <tr>
+                        <td>
+                            <img class="emailImage"
+                                 width="640"
+                                 src="http://www.groupln.be/uploads/pictures/@Model.Image"
+                                 alt="@Model.Imagecaption">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+          
 
             <!-- CONTACT + BUTTON -->
             <table width="640" bgcolor="#fff" align="center" class="devicewidth">

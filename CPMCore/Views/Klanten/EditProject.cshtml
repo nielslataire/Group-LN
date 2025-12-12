@@ -431,7 +431,9 @@
 												Text = c.Display
 											}).ToList();
 
-											ViewData["OwnerTypes"] = Model.OwnerTypes.Select(o => new SelectListItem
+											ViewData["OwnerTypes"] = Model.OwnerTypes
+											.Where(o => o.ID != 1)
+											.Select(o => new SelectListItem
 											{
 												Value = o.ID.ToString(),
 												Text = o.Display

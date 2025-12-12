@@ -1,8 +1,10 @@
 ﻿@model BOCore.ClientContactBO
 @using HtmlHelpers.BeginCollectionItemCore
-
+@{
+    var collectionName = ViewData["ContactCollectionName"] as string ?? "ClientAccount.Contacts";
+}
 <div class="contactRow">
-    @using (Html.BeginCollectionItem("Client.Contacts")){
+    @using (Html.BeginCollectionItem(collectionName)){
         <section class="card mb-4">
             <div class="card-body border p-4">
                 <div class="d-flex justify-content-between align-items-start mb-1">

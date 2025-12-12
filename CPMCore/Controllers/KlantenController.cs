@@ -462,7 +462,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, List<ClientContactBO> coowners, List<UnitBO> units)
+        public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, [Bind(Prefix = "ClientAccount.CoOwners")] List<ClientContactBO> coowners, List<UnitBO> units)
         {
             var Referrer = TempData["Referrer"];
             var errors = new Dictionary<string, ModelErrorCollection>();
@@ -662,6 +662,7 @@ namespace CPMCore.Controllers
             ViewData["mode"] = "add";
             return PartialView("_CoOwnerRow", nCoOwner);
         }
+
         private void FillInAddSelectLists(ref AddClientAccountModel model)
         {
             var cservice = ServiceFactory.GetCountryService();
@@ -689,9 +690,18 @@ namespace CPMCore.Controllers
             if ((uresponse.Success))
                 model.AvailableUnits = uresponse.Values;
         }
-        public PartialViewResult BlankContactRow()
+        public PartialViewResult BlankContactRow(string collectionName = "Client.Contacts")
         {
-            return PartialView("_ContactRow", new ClientContactBO());
+            var viewData = new ViewDataDictionary<ClientContactBO>(ViewData, new ClientContactBO())
+            {
+                { "ContactCollectionName", collectionName }
+            };
+
+            return new PartialViewResult
+            {
+                ViewName = "_ContactRow",
+                ViewData = viewData
+            };
         }
         public PartialViewResult BlankCoOwnerRow()
         {
@@ -713,13 +723,14 @@ namespace CPMCore.Controllers
             var countries = countryResponse.Values; ; // bijv. List<CountryBO>
             var ownerTypeService = ServiceFactory.GetClientService();
             var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
-            var ownerTypes = ownerTypeResponse.Values;
+            var ownerTypes = ownerTypeResponse.Values.Where(o => o.ID != 1);
 
 
             var viewData = new ViewDataDictionary<ClientContactBO>(ViewData, client)
                 {
                     { "Countries", countries.Select(c => new SelectListItem { Value = c.ID.ToString(), Text = c.Display }).ToList() },
-                    { "OwnerTypes", ownerTypes.Select(o => new SelectListItem { Value = o.ID.ToString(), Text = o.Display }).ToList() }
+                    { "OwnerTypes", ownerTypes.Select(o => new SelectListItem { Value = o.ID.ToString(), Text = o.Display }).ToList() },
+                    { "CoOwnerCollectionName", "ClientAccount.CoOwners" }
                 };
 
             return new PartialViewResult
