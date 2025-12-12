@@ -720,12 +720,12 @@ namespace CPMCore.Controllers
 
 
             // ❗️ Haal de lijsten uit je service of statisch (pas dit aan naar je situatie)
-            var countries = countryResponse.Success
+            var countries = countryResponse.Success && countryResponse.Values != null
                 ? countryResponse.Values
                 : Enumerable.Empty<IdNameBO>();
             var ownerTypeService = ServiceFactory.GetClientService();
             var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
-            var ownerTypes = ownerTypeResponse.Success
+            var ownerTypes = ownerTypeResponse.Success && ownerTypeResponse.Values != null
                 ? ownerTypeResponse.Values.Where(o => o.ID != 1)
                 : Enumerable.Empty<IdNameBO>();
 
@@ -739,7 +739,7 @@ namespace CPMCore.Controllers
 
             return new PartialViewResult
             {
-                ViewName = "_CoOwnerRow",
+                ViewName = "Partials/_CoOwnerRow",
                 ViewData = viewData
             };
         }

@@ -256,7 +256,7 @@
 									<div id="coOwnerRows">
 										@foreach (var item in Model.ClientAccount.CoOwners)
 										{
-											@Html.Partial("_CoOwnerRow", item)
+											@Html.Partial("Partials/_CoOwnerRow", item)
 										}
 									</div>
 								</div>
@@ -483,32 +483,22 @@
 				return false;
 			});
 
-						// Contacten toevoegen
 
 		// Mede-eigenaar toevoegen
-						// $("#addCoOwner").click(function () {
-						// 		$.ajax({
-						// 				url: this.href,
-						// 				cache: false,
-						// 				success: function (html) {
-						// 						var $row = $(html);
-						// 						$("#coOwnerRows").append($row);
-						// 						initCoOwnerRow($row);
-						// 				}
-						// 		});
-						// 		return false;
-						// });
+		$("#addCoOwner").click(function () {
+						$.ajax({
+							url: this.href,
+							cache: false,
+							success: function (html) {
+								var $row = $(html);
+								$("#coOwnerRows").append($row);
+								initCoOwnerRow($row);
+							}
+						});
+						return false;
+					});
 
-									$("#addCoOwner").click(function () {
-				$.ajax({
-					url: this.href,
-					cache: false,
-					success: function (html) { $("#coOwnerRows").append(html); }
-				});
-				return false;
-			});
-
-						// Mede-eigenaar verwijderen
+		// Mede-eigenaar verwijderen
 						$(document).on('click', 'a.deleteCoOwnerRow', function () {
 								$(this).closest('.coOwnerRow').remove();
 								return false;
