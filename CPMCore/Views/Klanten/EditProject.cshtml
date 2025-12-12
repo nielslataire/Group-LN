@@ -388,7 +388,7 @@
 							</div>
 							<div class="col-lg-3-5 col-xl-4-5">
 								<div class="d-flex justify-content-end">
-									<a href="@Url.Action("BlankContactRow", "Klanten", null)" class="btn btn-default btn-md" id="addContact"><i class="fa fa-plus me-3"></i>Contactgegevens Toevoegen</a>
+									<a href="@Url.Action("BlankContactRow", "Klanten", new { collectionName = "Client.Contacts" })" class="btn btn-default btn-md" id="addContact"><i class="fa fa-plus me-3"></i>Contactgegevens Toevoegen</a>
 								</div>
 								<div class="row mt-4">
 									<div class="form-group">
@@ -556,10 +556,14 @@
 			// 1. Select2 Postcode Dropdown Initialisatie
 			$item.find('.select2-postcode').each(function () {
 				const $select = $(this);
-				const countryFieldId = $select.data('country-field-id');
-				const targetFieldId = $select.data('target-id');
-				const $countryField = $('#' + countryFieldId.replace(/\./g, '_'));
-				const $hiddenTarget = $('#' + targetFieldId.replace(/\./g, '_'));
+								const countryFieldId = $select.data('country-field-id');
+								const targetFieldId = $select.data('target-id');
+								const $countryField = $('#' + countryFieldId.replace(/\./g, '_'));
+								const $hiddenTarget = $('#' + targetFieldId.replace(/\./g, '_'));
+
+								if (!$countryField.val() || $countryField.val() === '0') {
+										$countryField.val('19');
+								}
 
 				$select.select2({
 					minimumInputLength: 3,
@@ -821,17 +825,16 @@
 		$('.Currencymask').mask("#.##0,00", { reverse: true });
 
 		// Contacten toevoegen
-		$('#addContact').on('click', function (e) {
-		  e.preventDefault();
-		  $.ajax({
-			url: this.href,
-			cache: false,
-			success: function (html) {
-			  var $html = $(html);
-			  $('#editorRows').append($html);
-			}
-		  });
-		});
+				$(document).on('click', '#addContact', function (e) {
+						e.preventDefault();
+						$.ajax({
+								url: this.href,
+								cache: false,
+								success: function (html) {
+										$('#editorRows').append($(html));
+								}
+						});
+				});
 
 		// Contact verwijderen
 		$(document).on('click', 'a.deleteContact', function (e) {
@@ -839,7 +842,7 @@
 		  $(this).closest('.contactRow').remove();
 		});
 		// CoOwner verwijderen
-		$(document).on('click', 'a.deleteCoOwner', function () {
+		 $(document).on('click', 'a.deleteCoOwnerRow', function () {
 			$(this).closest('.coOwnerRow').remove();
 			return false;
 		});

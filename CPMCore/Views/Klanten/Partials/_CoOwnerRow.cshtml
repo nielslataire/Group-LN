@@ -127,6 +127,12 @@
                             @Html.HiddenFor(m => m.Postalcode.Country.CountryId)
                             <select class="form-control form-control-modern select2-postcode populate" data-country-field-id="@Html.IdFor(m => m.Postalcode.Country.CountryId)" data-target-id="@Html.IdFor(m => m.Postalcode.PostcodeId)">
                                 <option></option> <!-- Placeholder -->
+                            @if (Model.Postalcode?.PostcodeId > 0)
+                                {
+                                    <option value="@Model.Postalcode.PostcodeId" selected>
+                                        @Model.Postalcode.Postcode - @Model.Postalcode.Gemeente
+                                    </option>
+                                }
                             </select>
                         </div>
                     </div>
@@ -166,6 +172,12 @@
                                 @Html.HiddenFor(m => m.InvoicePostalcode.Country.CountryId)
                                 <select class="form-control form-control-modern select2-postcode populate" data-country-field-id="@Html.IdFor(m => m.InvoicePostalcode.Country.CountryId)" data-target-id="@Html.IdFor(m => m.InvoicePostalcode.PostcodeId)">
                                     <option></option> <!-- Placeholder -->
+                                    @if (Model.InvoicePostalcode?.PostcodeId > 0)
+                                    {
+                                        <option value="@Model.InvoicePostalcode.PostcodeId" selected>
+                                            @Model.InvoicePostalcode.Postcode - @Model.InvoicePostalcode.Gemeente
+                                        </option>
+                                    }
                                 </select>
 
                             </div>
