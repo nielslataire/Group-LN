@@ -4428,6 +4428,7 @@ namespace CPMCore.Controllers
             var drafts = new List<InvoiceDraftBO>();
             using var uow = ServiceFactory.CreateUoW();
             var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
+            var db = (DALCore.Models.cpmRunningContext)uow.Context;
 
             // Alle betrokken klanten ophalen
             var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
@@ -4482,6 +4483,14 @@ namespace CPMCore.Controllers
 
                 if (stageIds.Count > 0 && project.Id > 0)
                 {
+                    var coowners = db.ClientContacts
+                       .AsNoTracking()
+                       .Where(cc => cc.ClientAccountId == client.Id && cc.IsCoOwner && cc.CoOwnerPercentage.HasValue)
+                       .Select(cc => new { cc.Id, cc.CoOwnerPercentage })
+                       .ToList();
+
+                    var coOwnerTotal = coowners.Sum(c => c.CoOwnerPercentage ?? 0m);
+                    var mainOwnerShare = Math.Max(0m, 100m - coOwnerTotal);
                     var issuerCompanyId = project.IssuerCompanyIdBuilder ?? request.Invoices.First().CompanyId;
                     if (issuerCompanyId <= 0)
                     {
@@ -4489,26 +4498,50 @@ namespace CPMCore.Controllers
                         continue;
                     }
                     var paymentGroupId = stageMap.FirstOrDefault(s => stageIds.Contains(s.Id))?.GroupId;
-                    drafts.Add(BuildStageInvoiceDraft(
-                        issuerCompanyId,
-                        client.Id,
-                        null,
-                        stageIds,
-                        project,
-                        settings,
-                        iu,
-                        paymentGroupId,
-                        (DALCore.Models.cpmRunningContext)uow.Context));
+                    var mainDraft = BuildStageInvoiceDraft(
+                       issuerCompanyId,
+                       client.Id,
+                       null,
+                       stageIds,
+                       project,
+                       settings,
+                       iu,
+                       paymentGroupId,
+                       mainOwnerShare,
+                       db);
+
+                    if (mainDraft != null)
+                        drafts.Add(mainDraft);
+
+                    foreach (var coowner in coowners)
+                    {
+                        if (coowner.CoOwnerPercentage.GetValueOrDefault() <= 0m)
+                            continue;
+
+                        var coownerDraft = BuildStageInvoiceDraft(
+                            issuerCompanyId,
+                            null,
+                            coowner.Id,
+                            stageIds,
+                            project,
+                            settings,
+                            iu,
+                            paymentGroupId,
+                            coowner.CoOwnerPercentage ?? 0m,
+                            db);
+
+                        if (coownerDraft != null)
+                            drafts.Add(coownerDraft);
+                    }
                 }
 
-                projectId = project.Id;
+                    projectId = project.Id;
             }
             foreach (var draft in drafts)
             {
                 try
                 {
-                    var (id, _) = await cmd.CreateWithLinesAsync(draft, issueNow: false);
-                    await cmd.IssueDraftAsync(id, issueDate: null);
+                    await cmd.CreateWithLinesAsync(draft, issueNow: false);
                 }
                 catch (Exception ex)
                 {
@@ -4519,7 +4552,7 @@ namespace CPMCore.Controllers
 
             if (response.Success)
             {
-                AddMessage("success", "De facturen zijn aangemaakt", "Gelukt!");
+                AddMessage("success", "De conceptfacturen zijn aangemaakt", "Gelukt!");
                 return Json(new { projectid = projectId });
             }
             else
@@ -4605,8 +4638,7 @@ namespace CPMCore.Controllers
                     {
                         try
                         {
-                            var (id, _) = await cmd.CreateWithLinesAsync(coDraft, issueNow: false);
-                            await cmd.IssueDraftAsync(id, issueDate: null);
+                            await cmd.CreateWithLinesAsync(coDraft, issueNow: false);
                         }
                         catch (Exception ex)
                         {
@@ -4620,7 +4652,7 @@ namespace CPMCore.Controllers
 
             if (response.Success)
             {
-                AddMessage("success", "De facturen zijn aangemaakt", "Gelukt!");
+                AddMessage("success", "De conceptfacturen zijn aangemaakt", "Gelukt!");
                 return Json(new { projectid = projectId });
             }
             else
@@ -4641,16 +4673,17 @@ namespace CPMCore.Controllers
             public List<ClientAccountChangeOrderInvoiceBO> Invoices { get; set; } = new();
         }
 
-        private static InvoiceDraftBO BuildStageInvoiceDraft(
-                           int issuerCompanyId,
-                           int? clientAccountId,
-                           int? clientContactId,
-                           IEnumerable<int> stageIds,
-                           ProjectBO project,
-                           ProjectSalesSettingsBO settings,
-                           IEnumerable<UnitWithStagesBO> units,
-                           int? paymentGroupId,
-                           DALCore.Models.cpmRunningContext db)
+        private static InvoiceDraftBO? BuildStageInvoiceDraft(
+                                  int issuerCompanyId,
+                                  int? clientAccountId,
+                                  int? clientContactId,
+                                  IEnumerable<int> stageIds,
+                                  ProjectBO project,
+                                  ProjectSalesSettingsBO settings,
+                                  IEnumerable<UnitWithStagesBO> units,
+                                  int? paymentGroupId,
+                                  decimal? ownerPercentageOverride,
+                                  DALCore.Models.cpmRunningContext db)
         {
             var groupedStageIds = stageIds?.Distinct().ToList() ?? new List<int>();
 
@@ -4664,7 +4697,7 @@ namespace CPMCore.Controllers
                 PaymentGroupId = paymentGroupId
             };
 
-            decimal ownerPercentage = 100m;
+            decimal ownerPercentage = ownerPercentageOverride ?? 100m;
             string? invoiceExtra = null;
 
             if (clientAccountId.HasValue)
@@ -4677,7 +4710,8 @@ namespace CPMCore.Controllers
                     .Select(c => new { c.OwnerPercentage, c.InvoiceExtra })
                     .FirstOrDefault();
 
-                ownerPercentage = accountInfo?.OwnerPercentage ?? 100m;
+                if (!ownerPercentageOverride.HasValue)
+                    ownerPercentage = accountInfo?.OwnerPercentage ?? 100m;
                 invoiceExtra = accountInfo?.InvoiceExtra;
             }
             else if (clientContactId.HasValue)
@@ -4695,12 +4729,16 @@ namespace CPMCore.Controllers
                     })
                     .FirstOrDefault();
 
-                ownerPercentage = contactInfo?.CoOwnerPercentage ?? contactInfo?.AccountOwnerPct ?? 100m;
+                if (!ownerPercentageOverride.HasValue)
+                    ownerPercentage = contactInfo?.CoOwnerPercentage ?? contactInfo?.AccountOwnerPct ?? 100m;
                 invoiceExtra = contactInfo?.AccountInvoiceExtra;
             }
 
             if (!string.IsNullOrWhiteSpace(invoiceExtra))
                 draft.FooterDescription = invoiceExtra;
+
+            if (ownerPercentage <= 0m)
+                return null;
 
             int? issuerBankAccountId = settings?.BankAccountId;
             if (!issuerBankAccountId.HasValue && !string.IsNullOrWhiteSpace(settings?.BankAccountNumber))
@@ -4756,7 +4794,10 @@ namespace CPMCore.Controllers
                     foreach (var stage in unit.PaymentStages.Where(s => groupedStageIds.Contains(s.Id) && s.GroupId == paymentGroupId))
                     {
                         var stagePercentage = stage.Percentage;
-                        var price = Math.Round((cv.ValueSold ?? 0m) * stagePercentage / 100m, 2, MidpointRounding.AwayFromZero);
+                        var price = Math.Round(
+                            (cv.ValueSold ?? 0m) * ownerPercentage / 100m * stagePercentage / 100m,
+                            2,
+                            MidpointRounding.AwayFromZero);
                         var vatPct = stage.VatPercentage.HasValue && stage.VatPercentage.Value != 0
                             ? stage.VatPercentage.Value
                             : (groupVat ?? 21m);

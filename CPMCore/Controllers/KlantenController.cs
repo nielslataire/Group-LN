@@ -1,34 +1,35 @@
 ﻿using BOCore;
 using CPMCore.Models;
 using CPMCore.Models.Klanten;
+using CPMCore.Models.Projecten;
 using CPMCore.Service;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
-using static System.Net.Mime.MediaTypeNames;
-using NuGet.Configuration;
-using ServiceCore;
+using CPMCore.Services.Octopus;
+using DALCore.Models;
 using DinkToPdf;
 using Humanizer;
-using DALCore.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.EntityFrameworkCore;
-using CPMCore.Models.Projecten;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
+using NuGet.Configuration;
+using ServiceCore;
 using SmartBreadcrumbs.Attributes;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CPMCore.Services.Octopus;
-using System.Data;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace CPMCore.Controllers
 {
@@ -631,22 +632,13 @@ namespace CPMCore.Controllers
             var sservice = ServiceFactory.GetClientService();
             var sresponse = sservice.GetClientOwnerTypeById(OwnerType);
             nCoOwner.CoOwnerType = sresponse.Value;
-            try
+            var nlCulture = CultureInfo.GetCultureInfo("nl-BE");
+            if (!decimal.TryParse(OwnerPercentage, NumberStyles.Number, nlCulture, out var parsedPercentage))
             {
-                nCoOwner.CoOwnerPercentage = decimal.Parse(OwnerPercentage);
+                decimal.TryParse(OwnerPercentage, NumberStyles.Number, CultureInfo.InvariantCulture, out parsedPercentage);
             }
-            catch (Exception ex)
-            {
-                try
-                {
-                    OwnerPercentage = OwnerPercentage.Replace(".", ",");
-                    nCoOwner.CoOwnerPercentage = decimal.Parse(OwnerPercentage);
-                }
-                catch (Exception ex2)
-                {
-                }
-            }
-            nCoOwner.CoOwnerPercentage = decimal.Parse(OwnerPercentage);
+
+            nCoOwner.CoOwnerPercentage = parsedPercentage;
             var countryService = ServiceFactory.GetCountryService();
             var countryResponse = countryService.GetVisibleCountriesForSelect();
             var ownerTypeService = ServiceFactory.GetClientService();
@@ -1184,12 +1176,14 @@ namespace CPMCore.Controllers
                     }
 
                     model.SelectedPostalcode.CountryId = client.Postalcode.Country.CountryId;
+                    model.SelectedPostalcode.PostalCodeId = client.Postalcode.PostcodeId ?? 0;
                     model.SelectedPostalcodeId = client.Postalcode.PostcodeId ?? 0;
 
                     if (client.InvoicePostalcode.PostcodeId != 0)
                     {
                         model.SelectedInvoicePostalcode.CountryId = client.InvoicePostalcode.Country.CountryId;
                         model.SelectedInvoicePostalcode.PostalCodeId = client.InvoicePostalcode.PostcodeId ?? 0;
+                        model.SelectedInvoicePostalcodeId = client.InvoicePostalcode.PostcodeId ?? 0;
                     }
 
                     ViewData["PostcodeDisplayName"] = $"{client.Postalcode.Postcode} - {client.Postalcode.Gemeente}";
@@ -1433,7 +1427,15 @@ namespace CPMCore.Controllers
                 .FirstOrDefault(c => c.Group == "19");
             if (defaultCountry != null)
             {
-                model.SelectedPostalcode.CountryId = defaultCountry.ID;
+                if (model.SelectedPostalcode.CountryId == 0)
+                {
+                    model.SelectedPostalcode.CountryId = defaultCountry.ID;
+                }
+
+                if (model.SelectedInvoicePostalcode.CountryId == 0)
+                {
+                    model.SelectedInvoicePostalcode.CountryId = defaultCountry.ID;
+                }
             }
 
             var ownerTypeService = ServiceFactory.GetClientService();

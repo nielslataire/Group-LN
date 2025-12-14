@@ -220,7 +220,14 @@
 											@Html.DropDownListFor(m => m.Client.Postalcode.Country.CountryId, new SelectList(Model.SelectedPostalcode.Countries, "ID", "Display", Model.Client.Postalcode.Country.CountryId), new { @class = "form-control form-control-modern populate", id = "lstCompanyCountries" })
 										</div>
 										<div class="col-lg-6 col-xl-6">
-											<select asp-for="SelectedPostalcodeId" id="txtPostalcode" class="form-control form-control-modern populate"></select>
+											<select asp-for="SelectedPostalcodeId" id="txtPostalcode" class="form-control form-control-modern populate">
+												@if (Model.Client?.Postalcode?.PostcodeId.HasValue == true)
+												{
+													<option value="@Model.Client.Postalcode.PostcodeId">
+														@Model.Client.Postalcode.Postcode - @Model.Client.Postalcode.Gemeente
+													</option>
+												}
+											</select>
 											<span asp-validation-for="SelectedPostalcodeId" class="text-danger"></span>
 										</div>
 									</div>
@@ -285,7 +292,35 @@
 
 											<div class="col-lg-6 col-xl-6">
 												@Html.HiddenFor(m => m.Client.InvoicePostalcode.PostcodeId)
-												<select asp-for="SelectedInvoicePostalcodeId" id="txtInvoicePostalcode" class="form-control form-control-modern populate"></select>
+												<select asp-for="SelectedInvoicePostalcodeId" id="txtInvoicePostalcode" class="form-control form-control-modern populate">
+													@if (Model.Client?.InvoicePostalcode?.PostcodeId.HasValue == true)
+													{
+														<option value="@Model.Client.InvoicePostalcode.PostcodeId">
+															@Model.Client.InvoicePostalcode.Postcode - @Model.Client.InvoicePostalcode.Gemeente
+														</option>
+													}
+												</select>
+											</div>
+										</div>
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Extra factuur info</label>
+											<div class="col-lg-7 col-xl-6">
+												@Html.TextAreaFor(m => m.Client.InvoiceExtra, new { placeholder = "Extra facturatie info", @class = "form-control form-control-modern", rows = "2" })
+											</div>
+										</div>
+										<div class="row align-items-center pb-3">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
+											<div class="col-lg-3 col-xl-3">
+												<div class="form-check form-switch">
+													@Html.CheckBoxFor(m => m.Client.RequiresDigitalInvoice, new { @class = "form-check-input" })
+													<label class="form-check-label" for="@Html.IdFor(m => m.Client.RequiresDigitalInvoice)">Digitale factuur</label>
+												</div>
+											</div>
+											<div class="col-lg-3 col-xl-3">
+												<div class="form-check form-switch">
+													@Html.CheckBoxFor(m => m.Client.AttachUblByDefault, new { @class = "form-check-input" })
+													<label class="form-check-label" for="@Html.IdFor(m => m.Client.AttachUblByDefault)">UBL</label>
+												</div>
 											</div>
 										</div>
 									</div>
@@ -720,14 +755,15 @@
 
 
 
-			// --- Formulier correct formatten bij submit ---
-			$('#myForm').on('submit', function () {
-				$('.Currencymask').each(function () {
-					var val = $(this).val();
-					var cleanVal = val.replace(/\./g, ''); // verwijder duizendtallen
-					$(this).val(cleanVal);
-				});
-			});
+			 // --- Formulier correct formatten bij submit ---
+						$('#myForm').on('submit', function () {
+								$('.Currencymask').each(function () {
+										var val = $(this).val();
+										var cleanVal = val.replace(/\./g, ''); // verwijder duizendtallen
+										$(this).val(cleanVal);
+								});
+
+						});
 
 			// --- Checkbox: toggle bedrijfsgegevens ---
 			function toggleCompanyFields() {
@@ -804,10 +840,11 @@
 			}
 
 
-			// Initialiseer Select2 voor postalcode
-			initSelect2("#txtPostalcode",@Model.Client.Postalcode.Country.CountryId,"Selecteer uw gemeente",@Model.Client.Postalcode.PostcodeId,"@Model.Client.Postalcode.Postcode","@Model.Client.Postalcode.Gemeente");
-			initSelect2("#txtInvoicePostalcode",@Model.Client.InvoicePostalcode.Country.CountryId,"Selecteer uw gemeente",@(Model.Client.InvoicePostalcode.PostcodeId.HasValue? Model.Client.InvoicePostalcode.PostcodeId.ToString() : "null"),"@Model.Client.InvoicePostalcode.Postcode","@Model.Client.InvoicePostalcode.Gemeente");
+		const clientInvoiceCountryId = @((Model.Client.InvoicePostalcode?.Country?.CountryId ?? 0) > 0 ? Model.Client.InvoicePostalcode.Country.CountryId : 19);
 
+						initSelect2("#txtPostalcode",@Model.Client.Postalcode.Country.CountryId,"Selecteer uw gemeente",@Model.Client.Postalcode.PostcodeId,"@Model.Client.Postalcode.Postcode","@Model.Client.Postalcode.Gemeente");
+						initSelect2("#txtInvoicePostalcode",clientInvoiceCountryId,"Selecteer uw gemeente",@(Model.Client.InvoicePostalcode.PostcodeId.HasValue? Model.Client.InvoicePostalcode.PostcodeId.ToString() : "null"),"@Model.Client.InvoicePostalcode.Postcode","@Model.Client.InvoicePostalcode.Gemeente");
+						
 						// --- Currency mask bij opmaak ---
 								$('.Currencymask').each(function () {
 			var val = $(this).val();

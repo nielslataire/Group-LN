@@ -296,6 +296,24 @@ Public Class ClientAccountBO
             m_invoiceextra = value
         End Set
     End Property
+    Private m_requiresdigitalinvoice As Boolean
+    Public Property RequiresDigitalInvoice() As Boolean
+        Get
+            Return m_requiresdigitalinvoice
+        End Get
+        Set(ByVal value As Boolean)
+            m_requiresdigitalinvoice = value
+        End Set
+    End Property
+    Private m_attachUblByDefault As Boolean
+    Public Property AttachUblByDefault() As Boolean
+        Get
+            Return m_attachUblByDefault
+        End Get
+        Set(ByVal value As Boolean)
+            m_attachUblByDefault = value
+        End Set
+    End Property
 
     'HELPER
     Public ReadOnly Property DisplayName() As String

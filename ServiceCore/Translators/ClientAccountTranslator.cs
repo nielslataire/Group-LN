@@ -40,6 +40,8 @@ namespace ServiceCore.Translators
             bo.InvoiceHousenumber = _entity.InvoiceHousenumber;
             bo.InvoiceBusnumber = _entity.InvoiceBusnumber;
             bo.InvoiceExtra = _entity.InvoiceExtra;
+            bo.RequiresDigitalInvoice = _entity.RequiresDigitalInvoice;
+            bo.AttachUblByDefault = _entity.AttachUblByDefault;
 
             if (_entity.ExecutionDays is not null)
                 bo.ExecutionDays = _entity.ExecutionDays;
@@ -161,6 +163,8 @@ namespace ServiceCore.Translators
             entity.InvoiceBusnumber = bo.InvoiceBusnumber;
             entity.InvoiceExtra = bo.InvoiceExtra;
             entity.OctopusRelationId = bo.OctopusRelationId;
+            entity.RequiresDigitalInvoice = bo.RequiresDigitalInvoice;
+            entity.AttachUblByDefault = bo.AttachUblByDefault;
 
             // 2) OwnerType
             if (bo.OwnerType != null && bo.OwnerType.Id != 0)
