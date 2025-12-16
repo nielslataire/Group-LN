@@ -279,7 +279,7 @@ Namespace Controllers
                 .RequestTitle = "Website Group LN - Nieuwe planaanvraag",
                 .Unit = unit.Type.Name & " " & unit.Name,
                 .Question = "",
-                .To = "niels.lataire@groupln.be"
+                .To = model.Email
             })
 
                     msg2.Body = internalHtml
@@ -423,7 +423,7 @@ Namespace Controllers
                 .RequestTitle = "Website Group LN - Nieuwe documentaanvraag",
                 .Unit = "",
                 .Question = "",
-                .To = "niels.lataire@groupln.be"
+                .To = model.Email
             })
 
                     msg2.Body = internalHtml
@@ -586,7 +586,7 @@ Namespace Controllers
                 .RequestTitle = "Website Group LN - Nieuwe brochureaanvraag",
                 .Unit = "",
                 .Question = "",
-                .To = "niels.lataire@groupln.be"
+                .To = model.Email
             })
 
                     msg2.Body = internalHtml
