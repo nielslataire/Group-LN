@@ -329,21 +329,30 @@
 @section PageScripts
 {
 	<script src="~/lib/select2/js/select2.js"></script>
-	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+@* 	<script src="~/lib/jquery-validation/jquery.validate.js"></script> *@
 	<script src="~/lib/bootstrap-wizard/jquery.bootstrap.wizard.js"></script>
 	<script src="~/lib/dropzone/dropzone.js"></script>
 	<script src="~/lib/jquery-mask/jquery.mask.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+	<script src="~/js/currency.js"></script>
 
 	<script>
 		$(document).ready(function () {
 
-			// --- Hel
-			// 
-			// 
-			// 
-			//  functies ---
+			// ==============================
+			// CurrencyMask helpers
+			// ==============================
+			function applyCurrencyMasks(target) {
+				if (target) {
+					CurrencyMask.init(target);
+				} else {
+					CurrencyMask.init('.Currencymask');
+				}
+			}
 
-			// Toggle bedrijfsgegevens afhankelijk van checkbox
+			// ==============================
+			// Toggle bedrijfsgegevens
+			// ==============================
 			function toggleCompanyFields(checkboxId, salutationId, nameId, vatId, companyNameId, bedrijfsClass) {
 				if ($(checkboxId).is(":checked")) {
 					$(salutationId).attr("disabled", "disabled");
@@ -360,16 +369,13 @@
 				}
 			}
 
-			// Toggle facturatieadres zichtbaar
 			function toggleInvoiceAddress(checkboxId, containerClass) {
-				if ($(checkboxId).is(":checked")) {
-					$(containerClass).removeAttr("hidden");
-				} else {
-					$(containerClass).attr("hidden", "hidden");
-				}
+				$(containerClass).toggleClass('d-none', !$(checkboxId).is(":checked"));
 			}
 
-			// Select2 init functie met focus open dropdown en ajax
+			// ==============================
+			// Select2 postcode helper
+			// ==============================
 			function initSelect2(id, countryId, placeholder) {
 				$(id).select2({
 					minimumInputLength: 3,
@@ -379,271 +385,109 @@
 					ajax: {
 						url: '@Url.Action("GetPostcodesByCountry", "Shared")',
 						cache: false,
-						traditional: true,
 						type: 'POST',
-						data: function (params) {
-							return {
-								term: params.term,
-								CountryId: countryId
-							};
-						},
-						processResults: function (data) {
-							return {
-								results: $.map(data, function (item) {
-									return { id: item.id, text: item.text };
-								})
-							};
-						}
+						data: params => ({
+							term: params.term,
+							CountryId: countryId
+						}),
+						processResults: data => ({
+							results: $.map(data, item => ({ id: item.id, text: item.text }))
+						})
 					}
 				});
 
-				// Open dropdown automatisch bij keyboard focus (tab)
-				$('#select2-' + id.replace('#','') + '-container').parent().on('focus', function () {
-					$(id).select2('open');
-				});
-
-				// Zorg dat dropdown sluit als je weg tabt
-				$(id).on('select2:closing', function (e) {
-					if ($(this).data('skipClose')) {
-						e.preventDefault();
-						$(this).data('skipClose', false);
-					}
-				});
+				$('#select2-' + id.replace('#','') + '-container')
+					.parent()
+					.on('focus', () => $(id).select2('open'));
 			}
 
-
-			// --- Event handlers ---
-
-			// Checkbox bedrijfsgegevens klant
-						$('#checkboxCompany').change(function () {
+			// ==============================
+			// Checkbox handlers
+			// ==============================
+			$('#checkboxCompany').change(function () {
 				toggleCompanyFields(
 					'#checkboxCompany',
 					'#lstSalutationAccount',
 					'#txtinputname',
 					'#txtVatNumber',
 					'#txtCompanyName',
-									'.bedrijfsgegevens'
-								);
-						});
+					'.bedrijfsgegevens'
+				);
+			});
 
-						// Checkbox facturatieadres klant
-						$('#checkboxInvoiceAddress').change(function () {
-								toggleInvoiceAddress('#checkboxInvoiceAddress', '.InvoiceAddress');
-						});
+			$('#checkboxInvoiceAddress').change(function () {
+				toggleInvoiceAddress('#checkboxInvoiceAddress', '.InvoiceAddress');
+			});
 
-						// Land selecties bijhouden
-						var iCountryId = $("#lstCompanyCountries").val();
-						var iClientInvoiceCountryId = $("#lstClientInvoiceCountries").val();
-
-						$("#lstCompanyCountries").change(function () { iCountryId = this.value; });
-						$("#lstClientInvoiceCountries").change(function () { iClientInvoiceCountryId = this.value; });
-
-			// Contacten toevoegen
+			// ==============================
+			// Contacten
+			// ==============================
 			$("#addContact").click(function () {
-				$.ajax({
-					url: this.href,
-					cache: false,
-					success: function (html) { $("#editorRows").append(html); }
-				});
+				$.get(this.href, html => $("#editorRows").append(html));
 				return false;
 			});
 
-			// Contact verwijderen
 			$(document).on('click', 'a.deleteContact', function () {
 				$(this).closest('.contactRow').remove();
 				return false;
 			});
 
-			// Eenheden toevoegen
+			// ==============================
+			// Eenheden
+			// ==============================
 			$('#btnAddUnits').click(function () {
-				var el = document.getElementById('lstUnits');
-				var options = el && el.options;
-				for (var i = 0; i < options.length; i++) {
-					var opt = options[i];
-					if (opt.selected) {
-						$.ajax({
-							url: '@Url.Action("AddSelectedUnits", "Klanten")',
-							data: { UnitId: opt.value, UnitName: opt.text, UnitGroup: $(opt).parent().attr("label") },
-							cache: false,
-							traditional: true,
-							type: 'POST',
-							success: function (result) {
-								$('#UnitRows').append(result);
-								applyCurrencyMasks(); // opnieuw toepassen op nieuwe velden
-							},
-						});
-					}
-				}
-				$("#lstUnits option:selected").attr('disabled', 'disabled');
+				$('#lstUnits option:selected').each(function () {
+					$.ajax({
+						url: '@Url.Action("AddSelectedUnits", "Klanten")',
+						data: {
+							UnitId: this.value,
+							UnitName: this.text,
+							UnitGroup: $(this).parent().attr("label")
+						},
+						type: 'POST',
+						success: function (html) {
+							const $row = $(html);
+							$('#UnitRows').append($row);
+							applyCurrencyMasks($row.find('.Currencymask'));
+						}
+					});
+				});
+
+				$("#lstUnits option:selected").attr('disabled', true);
 				$("#lstUnits").val(null).trigger("change");
 			});
 
-			// Eenheid verwijderen
 			$(document).on('click', 'a.deleterow', function () {
-				var $row = $(this).closest('tr');
-				var $id = $row.find('td').eq(0).text();
-				$("#lstUnits option[value=" + $id + "]").removeAttr('disabled').change();
+				const $row = $(this).closest('tr');
+				const id = $row.find('td').eq(0).text();
+				$("#lstUnits option[value=" + id + "]").removeAttr('disabled');
 				$row.remove();
 				return false;
 			});
 
-
-		// Mede-eigenaar toevoegen
-		$("#addCoOwner").click(function () {
-						$.ajax({
-							url: this.href,
-							cache: false,
-							success: function (html) {
-								var $row = $(html);
-								$("#coOwnerRows").append($row);
-								initCoOwnerRow($row);
-							}
-						});
-						return false;
-					});
-
-		// Mede-eigenaar verwijderen
-						$(document).on('click', 'a.deleteCoOwnerRow', function () {
-								$(this).closest('.coOwnerRow').remove();
-								return false;
-						});
-
-							function initCoOwnerRow($row) {
-																initCoOwnerPostcodeSelect($row);
-																toggleCoOwnerCompany($row.find('.toggle-CoOwnerCompany'));
-																toggleCoOwnerInvoice($row.find('.toggle-CoOwnerInvoice'));
-
-								$row.find('.toggle-CoOwnerCompany').on('change', function () {
-										toggleCoOwnerCompany($(this));
-								});
-
-																$row.find('.toggle-CoOwnerInvoice').on('change', function () {
-																				toggleCoOwnerInvoice($(this));
-																});
-												}
-
-												function initCoOwnerPostcodeSelect($row) {
-																$row.find('.select2-postcode').each(function () {
-																				const $select = $(this);
-																				const countryFieldId = $select.data('country-field-id');
-																				const targetFieldId = $select.data('target-id');
-																				const $countryField = $('#' + countryFieldId.replace(/\./g, '_'));
-																				const $hiddenTarget = $('#' + targetFieldId.replace(/\./g, '_'));
-
-																				if (!$countryField.val() || $countryField.val() === '0') {
-																								$countryField.val('19');
-																				}
-
-																				$select.select2({
-																								minimumInputLength: 3,
-																								theme: 'bootstrap',
-																								dropdownAutoWidth: true,
-																								placeholder: "Gemeente",
-																								ajax: {
-																												url: '@Url.Action("GetPostcodesByCountry", "Shared")',
-																												cache: false,
-																												type: 'POST',
-																												data: function (params) {
-																																let countryId = $countryField.val();
-																																if (countryId == 0) countryId = 19;
-																																return {
-																																				term: params.term,
-																																				CountryId: countryId
-																																};
-																												},
-																												processResults: function (data) {
-																																return {
-																																				results: $.map(data, function (item) {
-																																								return { id: item.id, text: item.text };
-																																				})
-																																};
-																												}
-																								}
-																				});
-
-																				$select.on('select2:select', function (e) {
-																								$hiddenTarget.val(e.params.data.id);
-																				});
-
-																				const existingId = $hiddenTarget.val();
-																				if (existingId) {
-																								$.get('@Url.Action("GetPostcodeById", "Shared")', { id: existingId }, function (data) {
-																												if (data) {
-																																const option = new Option(data.text, data.id, true, true);
-																																$select.append(option).trigger('change');
-																												}
-																								});
-																				}
-
-																				const $invoiceCountrySelect = $row.find('select[name$="InvoicePostalcode.Country.CountryId"]');
-																				if ($invoiceCountrySelect.length && (!$invoiceCountrySelect.val() || $invoiceCountrySelect.val() === '0')) {
-																								$invoiceCountrySelect.val('19');
-																				}
-																});
-												}
-
-												function toggleCoOwnerCompany($checkbox) {
-																var $row = $checkbox.closest('.coOwnerRow');
-																var isCompany = $checkbox.is(':checked');
-								var $companyFields = $row.find('.CoOwnerBedrijfsgegevens');
-								var $personFields = $row.find('select[name$="Salutation"], input[name$="Name"], input[name$="Firstname"]');
-
-								if (isCompany) {
-										$companyFields.removeClass('d-none');
-										$personFields.attr('disabled', 'disabled');
-								} else {
-										$companyFields.addClass('d-none');
-										$personFields.removeAttr('disabled');
-								}
-						}
-
-						function toggleCoOwnerInvoice($checkbox) {
-								var $row = $checkbox.closest('.coOwnerRow');
-								var $invoice = $row.find('.CoOwnerInvoiceAddress');
-								if ($checkbox.is(':checked')) {
-										$invoice.removeClass('d-none');
-								} else {
-										$invoice.addClass('d-none');
-								}
-						}
-
-						$('#coOwnerRows .coOwnerRow').each(function () {
-								initCoOwnerRow($(this));
-						});
-
-						// Toggle mede-eigenaren kaart bij start
-						function toggleCoOwnersCard() {
-								if ($('#lstOwnerTypes').val() === "1") {
-					$('.CoOwnersCard').hide();
-				} else {
-					$('.CoOwnersCard').show();
-				}
-						}
-						toggleCoOwnersCard();
-
-						// Bij wijziging eigenaar type
-						$('#lstOwnerTypes').on('change', toggleCoOwnersCard);
-
-						// --- Select2 initialisaties ---
-
-						initSelect2("#txtPostalcode", iCountryId, "Selecteer uw gemeente");
-						initSelect2("#txtInvoicePostalcode", iClientInvoiceCountryId, "Selecteer uw gemeente");
-
-			// --- Masked input ---
-
-			$('.Currencymask').mask("#.##0,00", { reverse: true });
-			$('.Surfacemask').mask("#.##0,00", { reverse: true });
-
-			// --- Form submission: currency clean up ---
-			$('#myForm').on('submit', function (e) {
-				$('.Currencymask').each(function () {
-					var val = $(this).val();
-					// Verwijder alle punten (duizendtallen), laat komma staan
-					var cleanVal = val.replace(/\./g, '');
-					$(this).val(cleanVal);
+			// ==============================
+			// Mede-eigenaars
+			// ==============================
+			$("#addCoOwner").click(function () {
+				$.get(this.href, html => {
+					const $row = $(html);
+					$("#coOwnerRows").append($row);
+					applyCurrencyMasks($row.find('.Currencymask'));
 				});
+				return false;
 			});
+
+			$(document).on('click', 'a.deleteCoOwnerRow', function () {
+				$(this).closest('.coOwnerRow').remove();
+				return false;
+			});
+
+			// ==============================
+			// Init bestaande masks
+			// ==============================
+			applyCurrencyMasks();
 
 		});
 	</script>
+
 }

@@ -128,7 +128,7 @@
 							<div class="form-group row align-items-center pb-3">
 								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondwaarde</label>
 								<div class="col-lg-7 col-xl-6">
-									@Html.EditorFor(m => m.AddUnit.LandValue)
+									@Html.EditorFor(m => m.AddUnit.LandValue, "Currency")
 								</div>
 							</div>
 							<div class="form-group">
@@ -179,66 +179,85 @@
 @section PageScripts
 {
 	<script src="~/lib/select2/js/select2.js"></script>
-	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
 	<script src="~/lib/dropzone/dropzone.js"></script>
-
+	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+	<script src="~/js/currency.js"></script>
 	<script>
-		//BIJ VERANDEREN VAN HOOFDTYPE
-		 $('#lstGroupTypes').on('change', function () {
+		// ==============================
+		// BIJ VERANDEREN VAN HOOFDTYPE
+		// ==============================
+		$('#lstGroupTypes').on('change', function () {
 
 			var val = $(this).val();
-			if(val){
+			if (val) {
 
 				var subitems = "";
 				$.getJSON("@Url.Action("GetSubType", "Projecten")", { id: val }, function (data) {
-					$.each(data,function(index, item){
-						subitems+="<option value='"+item.id+"'>"+item.display+"</option>"
+					$.each(data, function (index, item) {
+						subitems += "<option value='" + item.id + "'>" + item.display + "</option>";
 					});
 					$('#lstTypes').html(subitems);
 					$('#lstTypes').attr("disabled", false);
-
 				});
 			}
 			else {
-
 				$('#lstTypes').attr("disabled", true);
 			}
-
-		});
-				// on first focus (bubbles up to document), open the menu
-		$(document).on('focus', '.select2-selection.select2-selection--single', function (e) {
-		  $(this).closest(".select2-container").siblings('select:enabled').select2('open');
 		});
 
-		// steal focus during close - only capture once and stop propogation
+		// ==============================
+		// Select2 UX fixes (ongewijzigd)
+		// ==============================
+
+		// on first focus (bubbles up to document), open the menu
+		$(document).on('focus', '.select2-selection.select2-selection--single', function () {
+			$(this).closest(".select2-container")
+				   .siblings('select:enabled')
+				   .select2('open');
+		});
+
+		// steal focus during close - only capture once
 		$('select.select2').on('select2:closing', function (e) {
-		  $(e.target).data("select2").$selection.one('focus focusin', function (e) {
-			e.stopPropagation();
-		  });
+			$(e.target).data("select2").$selection.one('focus focusin', function (e) {
+				e.stopPropagation();
+			});
 		});
-		//autonumeric op textboxes uitvoeren
-		jQuery(function ($) {
-			$('.Currencymask').autoNumeric('init',{aSep:".",aDec:","});  //autoNumeric with defaults
+
+		// ==============================
+		// CurrencyMask init (ipv autoNumeric)
+		// ==============================
+		$(document).ready(function () {
+			CurrencyMask.init('.Currencymask');
 		});
-		//Nieuwe rij met bouwwaardes toevoegen
-				$("#btnAddConstructionValue").click(function() {
+
+		// ==============================
+		// Nieuwe rij met bouwwaardes toevoegen
+		// ==============================
+		$("#btnAddConstructionValue").click(function () {
 			$.ajax({
 				url: "BlankConstructionValueRow",
-				data: { unitid:0, projectid:@Model.ProjectId},
+				data: { unitid: 0, projectid: @Model.ProjectId },
 				cache: false,
 				traditional: true,
 				type: 'POST',
-				success: function(html) {
-					$("#ConstructionValueRows").append(html);
+				success: function (html) {
+					const $row = $(html);
+					$("#ConstructionValueRows").append($row);
 
+					// 🔑 CurrencyMask op nieuwe inputs
+					CurrencyMask.init($row.find('.Currencymask'));
 				}
 			});
 			return false;
 		});
-		//Bouwwaarde verwijderen
-		$(document).on('click', 'a.deleteConstructionRow', function () { // <-- changes
+
+		// ==============================
+		// Bouwwaarde verwijderen
+		// ==============================
+		$(document).on('click', 'a.deleteConstructionRow', function () {
 			$(this).closest('tr').remove();
 			return false;
 		});
-</script>
+	</script>
+
 }

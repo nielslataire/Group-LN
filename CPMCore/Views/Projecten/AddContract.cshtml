@@ -198,56 +198,61 @@
 {
 	<script src="~/lib/select2/js/select2.js"></script>
 	<script src="~/js/theme.admin.extension.js"></script>
-	<script src="~/js/examples/examples.advanced.form.js"></script>
+@* 	<script src="~/js/examples/examples.advanced.form.js"></script> *@
 	<script src="~/lib/select2/js/i18n/nl.js"></script>
-	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+@* 	<script src="~/lib/jquery-validation/jquery.validate.js"></script> *@
 	<script src="~/lib/dropzone/dropzone.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+	<script src="~/js/currency.js"></script>
 
 	<script>
-		function initEuroInput(selector) {
-		  return new AutoNumeric(selector, {
-			decimalCharacter: ',',
-			digitGroupSeparator: '.',
-			decimalPlaces: 2,
-			unformatOnSubmit: true
-		  });
+		// ==============================
+		// CurrencyMask helper (ipv AutoNumeric)
+		// ==============================
+		function initEuroInput(target) {
+			// target kan selector, element of NodeList zijn
+			CurrencyMask.init(target);
 		}
-			
+
 		$(function () {
 
-			//ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
+			// ==============================
+			// ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
+			// ==============================
 			$("#lstActivities").select2({
-						theme: 'bootstrap',
-						placeholder: 'Selecteer het lot',
-						width: '100%',
-						dropdownAutoWidth: true,
-						data:[]
+				theme: 'bootstrap',
+				placeholder: 'Selecteer het lot',
+				width: '100%',
+				dropdownAutoWidth: true,
+				data: []
 			});
 
-		
-
-			// ======= GARANTIE TYPE =======
-			$('#lstGuaranteeType').on('change', function (e) {
-
-				if ($('#lstGuaranteeType').val() == 2) {
+			// ==============================
+			// GARANTIE TYPE
+			// ==============================
+			$('#lstGuaranteeType').on('change', function () {
+				if ($(this).val() == 2) {
 					$("#Contract_GuaranteePercentage").removeAttr("disabled");
 				} else {
 					$("#Contract_GuaranteePercentage").attr("disabled", "disabled");
 				}
 			});
 
-			// ======= KORTING CONTANT =======
+			// ==============================
+			// KORTING CONTANT
+			// ==============================
 			$('#chkCashDiscount').on('change', function () {
 				const isChecked = $(this).prop('checked');
-				$('#Contract_CashDiscountPercentage, #txtCashDiscountPaymentTerm').prop('disabled', !isChecked);
+				$('#Contract_CashDiscountPercentage, #txtCashDiscountPaymentTerm')
+					.prop('disabled', !isChecked);
 			});
 
-			// ======= BEDRIJFSNAAM =======
+			// ==============================
+			// BEDRIJFSNAAM
+			// ==============================
 			const companyId = $('#txtCompany').val();
 			if (companyId && companyId !== "0") {
 				LoadActivities(companyId, '#lstActivities', '#btnAddActivities');
-				// GetActivities(companyId);
 			} else {
 				$('#ddlCompany').select2({
 					theme: 'bootstrap',
@@ -255,38 +260,35 @@
 					width: '100%',
 					placeholder: "Voer een bedrijfsnaam in...",
 					allowClear: true,
-					language:"nl",
+					language: "nl",
 					ajax: {
 						url: '@Url.Action("GetCompanys", "Projecten")',
 						type: 'POST',
 						dataType: 'json',
 						delay: 250,
-						data: function (params) {
-							return { term: params.term };
-						},
-						processResults: function (data) {
-							return {
-								results: $.map(data, function (item) {
-									return {
-										id: item.id,
-										text: item.text
-									};
-								})
-							};
-						},
+						data: params => ({ term: params.term }),
+						processResults: data => ({
+							results: $.map(data, item => ({
+								id: item.id,
+								text: item.text
+							}))
+						}),
 						cache: true
 					}
 				});
 				$('#lstActivities').prop('disabled', true);
 				$('#btnAddActivities').prop('disabled', true);
 			}
-		
-			// ======= INITIËLE CHECK CASH DISCOUNT =======
-			$('#chkCashDiscount').trigger('change');
 
+			// ==============================
+			// INITIËLE CHECK CASH DISCOUNT
+			// ==============================
+			$('#chkCashDiscount').trigger('change');
 		});
 
-		
+		// ==============================
+		// ACTIVITEITEN OPHALEN
+		// ==============================
 		function LoadActivities(companyId, selectSelector, buttonSelector) {
 			$.ajax({
 				type: 'POST',
@@ -303,7 +305,7 @@
 						$select.append(option);
 					});
 
-					$select.trigger('change'); // Notify Select2 or update binding
+					$select.trigger('change');
 				},
 				error: function (xhr, status, error) {
 					console.error('Fout bij ophalen activiteiten:', error);
@@ -311,7 +313,9 @@
 			});
 		}
 
-		// ======= ACTIVITEITEN TOEVOEGEN AAN CONTRACT =======
+		// ==============================
+		// ACTIVITEITEN TOEVOEGEN AAN CONTRACT
+		// ==============================
 		$('#btnAddActivities').click(function () {
 			var data = $('#lstActivities').select2('data');
 
@@ -324,61 +328,56 @@
 						traditional: true,
 						type: 'POST',
 						success: function (result) {
-							$('#ActivityRows').append(result);
-							// Voeg inputmask alleen toe als het nog niet bestaat
-							document.querySelectorAll('.Currencymask').forEach(el => {
-								if (!AutoNumeric.getAutoNumericElement(el)) {
-									initEuroInput(el);
-								}
-							});
+							const $row = $(result);
+							$('#ActivityRows').append($row);
+
+							// 🔑 CurrencyMask toepassen op nieuwe inputs
+							initEuroInput($row.find('.Currencymask'));
 						}
 					});
 
-					// Optioneel: disable de toegevoegde optie zodat die niet opnieuw gekozen kan worden
-					$("#lstActivities option[value='" + item.id + "']").attr('disabled', 'disabled');
+					// toegevoegde optie disablen
+					$("#lstActivities option[value='" + item.id + "']")
+						.attr('disabled', 'disabled');
 				});
 
-				// Selectie wissen
 				$("#lstActivities").val(null).trigger("change");
 			}
 
 			return false;
 		});
-	
-		// ======= ACTIVITEITEN VERWIJDEREN VAN CONTRACT =======
-		  $(document).on('click', 'button.deleterow', function () { // <-- changes
-					$(this).closest('div').parent('div').parent('div').remove();
-					const activiteitId = $(this).data('id'); // Haalt het ID uit data-id attribuut
-					$("#lstActivities option[value='" + activiteitId + "']").removeAttr('disabled');
-					return false;
-				});
-		
 
-		  $(document).ready(function () {
+		// ==============================
+		// ACTIVITEIT VERWIJDEREN
+		// ==============================
+		$(document).on('click', 'button.deleterow', function () {
+			$(this).closest('div').parent('div').parent('div').remove();
+			const activiteitId = $(this).data('id');
+			$("#lstActivities option[value='" + activiteitId + "']")
+				.removeAttr('disabled');
+			return false;
+		});
+
+		// ==============================
+		// DOCUMENT READY
+		// ==============================
+		$(document).ready(function () {
 
 			$('#ddlCompany').on('select2:select', function (e) {
 				const selectedData = e.params?.data;
 				if (selectedData && selectedData.id) {
 					$('#txtCompanyID').val(selectedData.id);
 					LoadActivities(selectedData.id, '#lstActivities', '#btnAddActivities');
-
-				} else {
-					console.warn('Geen geldig select2 item geselecteerd:', e);
 				}
 			});
-			$('#txtCompanyID').on('change', function (e) {
-				var data = $('#txtCompanyID').val();
-				LoadActivities(data, '#lstActivities', '#btnAddActivities');
-			});
-			new AutoNumeric('.Currencymask', {
-				  decimalCharacter: ',',
-				  digitGroupSeparator: '.',
-				  decimalPlaces: 2,
-				  unformatOnSubmit: true
+
+			$('#txtCompanyID').on('change', function () {
+				LoadActivities($(this).val(), '#lstActivities', '#btnAddActivities');
 			});
 
-		  });
-
-
+			// 🔑 init bestaande bedragen
+			initEuroInput('.Currencymask');
+		});
 	</script>
+
 }

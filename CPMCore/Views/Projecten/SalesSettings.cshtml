@@ -233,32 +233,35 @@
 	<script src="~/lib/select2/js/i18n/nl.js"></script>
 	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+	<script src="~/js/currency.js"></script>
 	<script src="~/lib/ios7-switch/ios7-switch.js"></script>
 
 	<script>
-
-			new AutoNumeric('.Currencymask', {
-				  decimalCharacter: ',',
-				  digitGroupSeparator: '.',
-				  decimalPlaces: 2,
-				  unformatOnSubmit: true
-			});
-
-
+		// ==============================
+		// CurrencyMask init (ipv AutoNumeric)
+		// ==============================
+		$(document).ready(function () {
+			CurrencyMask.init('.Currencymask');
+		});
 	</script>
+
 	<script>
+		// ==============================
+		// iOS switches (ongewijzigd)
+		// ==============================
 		document.addEventListener('DOMContentLoaded', function () {
-		  initIosSwitches();
+			initIosSwitches();
 		});
 
 		function initIosSwitches() {
-		  var $els = $('[data-plugin-ios-switch]');
-		  $els.each(function () {
-			var $el = $(this);
-			if (!$el.data('plugin-ios7Switch')) {
-			  $el.themePluginIOS7Switch(); // Porto init
-			}
-		  });
+			var $els = $('[data-plugin-ios-switch]');
+			$els.each(function () {
+				var $el = $(this);
+				if (!$el.data('plugin-ios7Switch')) {
+					$el.themePluginIOS7Switch(); // Porto init
+				}
+			});
 		}
 	</script>
+
 }

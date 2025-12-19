@@ -206,88 +206,91 @@
 {
 	<script src="~/lib/select2/js/select2.js"></script>
 	<script src="~/js/theme.admin.extension.js"></script>
-	<script src="~/js/examples/examples.advanced.form.js"></script>
 	<script src="~/lib/select2/js/i18n/nl.js"></script>
-	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
 	<script src="~/lib/dropzone/dropzone.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
-
+	<script src="~/js/currency.js"></script>
 	<script>
-		function initCurrencyMasks() {
-			document.querySelectorAll('.Currencymask').forEach(el => {
-				if (!AutoNumeric.getAutoNumericElement(el)) {
-					new AutoNumeric(el, {
-						decimalCharacter: ',',
-						digitGroupSeparator: '.',
-						decimalPlaces: 2,
-						unformatOnSubmit: true,
-						watchExternalChanges: true,       // belangrijk bij al ingevulde velden
-						modifyValueOnWheel: false         // optioneel om gebruikersfouten te voorkomen
-					});
-				}
-			});
+		// ==============================
+		// CurrencyMask helper (ipv AutoNumeric)
+		// ==============================
+		function initCurrencyMasks(target) {
+			// target optioneel: selector, element, NodeList
+			if (target) {
+				CurrencyMask.init(target);
+			} else {
+				CurrencyMask.init('.Currencymask');
+			}
 		}
-			
+
 		$(function () {
 
-			//ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
+			// ==============================
+			// ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
+			// ==============================
 			$("#lstActivities").select2({
-						theme: 'bootstrap',
-						placeholder: 'Selecteer het lot',
-						width: '100%',
-						dropdownAutoWidth: true,
-						data:[]
+				theme: 'bootstrap',
+				placeholder: 'Selecteer het lot',
+				width: '100%',
+				dropdownAutoWidth: true,
+				data: []
 			});
-			
 
-
-		
-
-			// ======= GARANTIE TYPE =======
-			$('#lstGuaranteeType').on('change', function (e) {
-
-				if ($('#lstGuaranteeType').val() == 2) {
+			// ==============================
+			// GARANTIE TYPE
+			// ==============================
+			$('#lstGuaranteeType').on('change', function () {
+				if ($(this).val() == 2) {
 					$("#Contract_GuaranteePercentage").removeAttr("disabled");
 				} else {
 					$("#Contract_GuaranteePercentage").attr("disabled", "disabled");
 				}
 			});
 
-			// ======= KORTING CONTANT =======
+			// ==============================
+			// KORTING CONTANT
+			// ==============================
 			$('#chkCashDiscount').on('change', function () {
 				const isChecked = $(this).prop('checked');
-				$('#Contract_CashDiscountPercentage, #txtCashDiscountPaymentTerm').prop('disabled', !isChecked);
+				$('#Contract_CashDiscountPercentage, #txtCashDiscountPaymentTerm')
+					.prop('disabled', !isChecked);
 			});
 
-		
-			// ======= INITIËLE CHECK CASH DISCOUNT =======
+			// ==============================
+			// INITIËLE CHECK CASH DISCOUNT
+			// ==============================
 			$('#chkCashDiscount').trigger('change');
-
 		});
 
-		
-
-		// ======= ACTIVITEITEN TOEVOEGEN AAN CONTRACT =======
+		// ==============================
+		// ACTIVITEITEN TOEVOEGEN AAN CONTRACT
+		// ==============================
 		$('#btnAddActivities').click(function () {
-			var data = $('#lstActivities').select2('data');
+			const data = $('#lstActivities').select2('data');
 
 			if (data && data.length > 0) {
 				data.forEach(function (item) {
 					$.ajax({
 						url: '@Url.Action("AddSelectedActivities", "Projecten")',
-						data: { ActivityId: item.id, ActivityName: item.text },
+						data: {
+							ActivityId: item.id,
+							ActivityName: item.text
+						},
 						cache: false,
 						traditional: true,
 						type: 'POST',
 						success: function (result) {
-							$('#ActivityRows').append(result);
-							// Voeg inputmask alleen toe als het nog niet bestaat
-							initCurrencyMasks();
+							const $row = $(result);
+							$('#ActivityRows').append($row);
+
+							// 🔑 CurrencyMask toepassen op nieuwe inputs
+							initCurrencyMasks($row.find('.Currencymask'));
 						}
 					});
 
-					// Optioneel: disable de toegevoegde optie zodat die niet opnieuw gekozen kan worden
-					$("#lstActivities option[value='" + item.id + "']").attr('disabled', 'disabled');
+					// Optioneel: disable toegevoegde optie
+					$("#lstActivities option[value='" + item.id + "']")
+						.attr('disabled', 'disabled');
 				});
 
 				// Selectie wissen
@@ -296,22 +299,25 @@
 
 			return false;
 		});
-	
-		// ======= ACTIVITEITEN VERWIJDEREN VAN CONTRACT =======
-		  $(document).on('click', 'button.deleterow', function () { // <-- changes
-					$(this).closest('div').parent('div').parent('div').remove();
-					const activiteitId = $(this).data('id'); // Haalt het ID uit data-id attribuut
-					$("#lstActivities option[value='" + activiteitId + "']").removeAttr('disabled');
-					return false;
-				});
-		
 
-		  $(document).ready(function () {
+		// ==============================
+		// ACTIVITEIT VERWIJDEREN
+		// ==============================
+		$(document).on('click', 'button.deleterow', function () {
+			$(this).closest('div').parent('div').parent('div').remove();
+			const activiteitId = $(this).data('id');
+			$("#lstActivities option[value='" + activiteitId + "']")
+				.removeAttr('disabled');
+			return false;
+		});
 
+		// ==============================
+		// DOCUMENT READY
+		// ==============================
+		$(document).ready(function () {
+			// 🔑 init bestaande bedragen
 			initCurrencyMasks();
-
-		  });
-
-
+		});
 	</script>
+
 }
