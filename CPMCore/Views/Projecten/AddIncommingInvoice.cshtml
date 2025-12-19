@@ -165,63 +165,24 @@
 {
 	<script src="~/lib/select2/js/select2.js"></script>
 	<script src="~/js/theme.admin.extension.js"></script>
-	<script src="~/js/examples/examples.advanced.form.js"></script>
+@* 	<script src="~/js/examples/examples.advanced.form.js"></script> *@
 	<script src="~/lib/select2/js/i18n/nl.js"></script>
-	<script src="~/lib/jquery-validation/jquery.validate.js"></script>
+@* 	<script src="~/lib/jquery-validation/jquery.validate.js"></script> *@
 	<script src="~/lib/dropzone/dropzone.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
+    <script src="~/js/currency.js"></script>
     <script>
-        // ==============================
-        // Belgische decimalen – jQuery validation
-        // ==============================
-        $.validator.methods.number = function (value, element) {
-            if (this.optional(element)) return true;
-            return /^-?\d+(?:[.,]\d+)?$/.test(value);
-        };
-
-        // ==============================
-        // Euro / Currency input init (selector OF element)
-        // ==============================
-        function initEuroInput(target) {
-            let elements = [];
-
-            if (typeof target === 'string') {
-                elements = document.querySelectorAll(target);
-            } else if (target instanceof HTMLElement) {
-                elements = [target];
-            } else if (target instanceof NodeList || Array.isArray(target)) {
-                elements = target;
-            }
-
-            elements.forEach(el => {
-                if (!AutoNumeric.getAutoNumericElement(el)) {
-                    const an = new AutoNumeric(el, {
-                        decimalCharacter: ',',
-                        decimalCharacterAlternative: '.',
-                        digitGroupSeparator: '.',
-                        decimalPlaces: 2,
-                        unformatOnSubmit: true
-                    });
-
-                    // 🔑 force correcte herformattering
-                    an.set(el.value || 0);
-                }
-            });
-        }
-
         // ==============================
         // Change order toggle
         // ==============================
         function change(theStatus) {
             const $row = $(theStatus).closest('.row');
             const $changeOrders = $row.find('#lstchangeorders');
-
             $changeOrders.prop('disabled', theStatus.value !== "3");
         }
 
         // ==============================
-        // Select2 init (activiteiten)
+        // Select2 init (activiteiten + contracten)
         // ==============================
         $(function () {
             $("#lstActivities").select2({
@@ -231,13 +192,12 @@
                 dropdownAutoWidth: true,
                 data: []
             });
+
             $('#lstProjectContracts').select2({
-            theme: 'bootstrap',
-            width: '100%'
+                theme: 'bootstrap',
+                width: '100%'
+            });
         });
-        });
-
-
 
         function getContractId() {
             return $('#lstProjectContracts').val();
@@ -254,7 +214,6 @@
                 $('#DetailRows').empty();
             }
         });
-
 
         // ==============================
         // Contractactiviteiten ophalen
@@ -398,10 +357,8 @@
                         const $row = $(result);
                         $('#DetailRows').append($row);
 
-                        // 🔑 init AutoNumeric ALLEEN in nieuwe row
-                        $row.find('.Currencymask').each(function () {
-                            initEuroInput(this);
-                        });
+                        // 🔑 currency.js gebruiken (i.p.v. initEuroInput)
+                        CurrencyMask.init($row.find('.Currencymask'));
                     }
                 });
             });
@@ -437,9 +394,10 @@
                 GetActivitiesCompany($(this).val());
             });
 
-            // init bestaande bedragen
-            initEuroInput('.Currencymask');
+            // 🔑 init bestaande bedragen via currency.js
+            CurrencyMask.init();
         });
     </script>
+
 
 }

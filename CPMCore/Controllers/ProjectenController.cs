@@ -1990,12 +1990,17 @@ namespace CPMCore.Controllers
         [HttpPost]
         public ActionResult EditIncommingInvoice(ProjectIncommingInvoiceAddUpdateModel model, List<IncommingInvoiceDetailBO> details)
         {
+
+
+
             // Koppel elk detail aan de factuur en voeg toe aan het model
             foreach (var invoiceRow in details)
             {
                 invoiceRow.IncommingInvoiceID = model.IncommingInvoice.Id;
                 model.IncommingInvoice.Details.Add(invoiceRow);
             }
+
+            DecimalNormalizationHelper.NormalizeDecimals(model, Request.Form);
 
             // Controleer of de totalen overeenkomen
             if (model.IncommingInvoice.ContractID is null && model.IncommingInvoice.CompanyId is null)

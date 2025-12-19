@@ -65,8 +65,12 @@ var connection = conStrBuilder.ConnectionString;
 
 
 // Add services to the container.
-builder.Services.AddControllersWithViews()
-    .AddSessionStateTempDataProvider();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
+})
+.AddSessionStateTempDataProvider();
+
 
 builder.Services.AddSession(options =>
 {
@@ -193,11 +197,7 @@ builder.Services.AddBreadcrumbs(Assembly.GetExecutingAssembly(), options =>
     // Optioneel: laat opties leeg, je gebruikt toch je eigen view
 });
 
-//VOOR BE CULTURE
-builder.Services.AddControllersWithViews(options =>
-{
-    options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
-});
+
 
 //builder.Services.AddBreadcrumbs(typeof(CPMCore.Controllers.HomeController).Assembly, options =>
 //{
@@ -229,14 +229,14 @@ app.UseSession();
 
 var supportedCultures = new[] { new CultureInfo("nl-BE") };
 
-var ro = new RequestLocalizationOptions
+var localizationOptions = new RequestLocalizationOptions
 {
     DefaultRequestCulture = new RequestCulture("nl-BE"),
     SupportedCultures = supportedCultures,
     SupportedUICultures = supportedCultures
 };
 
-app.UseRequestLocalization(ro);
+app.UseRequestLocalization(localizationOptions);
 
 app.UseRouting();
 
