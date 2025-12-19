@@ -1214,6 +1214,12 @@ namespace CPMCore.Controllers
                 model.ContractActivities = contractActivitiesResponse.Values;
             }
 
+            string breadcrumbTitle;
+                var group = model.ActivityGroups?.FirstOrDefault(g => g.ID == groupid);
+                breadcrumbTitle = group != null
+                    ? group.Name
+                    : "Groep";
+
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -1230,7 +1236,7 @@ namespace CPMCore.Controllers
                 Parent = projectDetail,
                 RouteValues = new { projectid = projectId }
             };
-            var projectRecalcAct = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("RecalculationDetail", "Projecten", model.Activity.Name)
+            var projectRecalcAct = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("RecalculationDetail", "Projecten", breadcrumbTitle)
             {
                 Parent = projectRecalc,
                 RouteValues = new {
@@ -1819,6 +1825,17 @@ namespace CPMCore.Controllers
         [HttpPost]
         public ActionResult AddIncommingInvoice(ProjectIncommingInvoiceAddUpdateModel model, List<IncommingInvoiceDetailBO> details)
         {
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Any())
+                    .Select(x => new {
+                        Field = x.Key,
+                        Errors = x.Value.Errors.Select(e => e.ErrorMessage)
+                    })
+                    .ToList();
+            }
             // Koppel elk detail aan de factuur en voeg toe aan het model
             foreach (var invoiceRow in details)
             {

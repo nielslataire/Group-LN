@@ -475,6 +475,7 @@ public class LeveranciersController : BaseController
                 Name = c.BedrijfsNaam,
                 EnterpriseNumber = c.Ondernemingsnummer,
                 Email = c.Email,
+                CountryCode = c.LandCode,
                 Phone = c.Telefoon1,
                 Mobile = c.Gsm,
                 ContractCount = c.Contract.Count,

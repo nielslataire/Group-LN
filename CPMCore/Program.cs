@@ -2,6 +2,8 @@
 using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Service;
+using CPMCore.Services.Octopus;
+using CPMCore.Services.Peppol;
 using DALCore;
 using DALCore.Models;
 using DinkToPdf;
@@ -13,6 +15,9 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using QuestPDF.Drawing;
+using QuestPDF.Infrastructure;
 using Rotativa.AspNetCore;
 using ServiceCore;
 using ServiceCore.Invoicing;
@@ -20,40 +25,62 @@ using ServiceCore.Invoicing.Pdf;
 using ServiceCore.Invoicing.Pdf.Sections;
 using SmartBreadcrumbs;
 using SmartBreadcrumbs.Extensions;
-using System.IO;
 using System.Data.SqlClient;
 using System.Globalization;
-using System.Reflection;
-using QuestPDF.Infrastructure;
-using QuestPDF.Drawing;
-using CPMCore.Services.Peppol;
+using System.IO;
 using System.Net.Http.Headers;
-using CPMCore.Services.Octopus;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // UserSecrets voor connectiestring
-ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
-IConfiguration configuration = configurationBuilder.AddUserSecrets<Program>().Build();
-string connectionString = configuration.GetSection("CPMRUNNING")["ConnectionString"].ToString();
-string DbPassword = configuration.GetSection("CPMRUNNING")["DbPassword"];
-string DbUser = configuration.GetSection("CPMRUNNING")["DbUser"];
+var configuration = builder.Configuration;
 
-var conStrBuilder = new SqlConnectionStringBuilder(connectionString);
-conStrBuilder.Password = DbPassword;
-conStrBuilder.UserID = DbUser;
-conStrBuilder.TrustServerCertificate = true;
+var connectionStringBase = configuration["CPMRUNNING:ConnectionString"]
+    ?? throw new Exception("CPMRUNNING:ConnectionString ontbreekt");
+
+var dbUser = configuration["CPMRUNNING:DbUser"]
+    ?? throw new Exception("CPMRUNNING:DbUser ontbreekt");
+
+var dbPassword = configuration["CPMRUNNING:DbPassword"]
+    ?? throw new Exception("CPMRUNNING:DbPassword ontbreekt");
+
+var conStrBuilder = new SqlConnectionStringBuilder(connectionStringBase)
+{
+    UserID = dbUser,
+    Password = dbPassword,
+    TrustServerCertificate = true
+};
+
 var connection = conStrBuilder.ConnectionString;
+//string connectionString = configuration.GetSection("CPMRUNNING")["ConnectionString"].ToString();
+//string DbPassword = configuration.GetSection("CPMRUNNING")["DbPassword"];
+//string DbUser = configuration.GetSection("CPMRUNNING")["DbUser"];
+
+//var conStrBuilder = new SqlConnectionStringBuilder(connectionString);
+//conStrBuilder.Password = DbPassword;
+//conStrBuilder.UserID = DbUser;
+//conStrBuilder.TrustServerCertificate = true;
+//var connection = conStrBuilder.ConnectionString;
+
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddSessionStateTempDataProvider();
+
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+});
 
 // Identity / UI context
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
     options.UseSqlServer(
         connection,
-        sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
-);
+        sqlServerOptions => sqlServerOptions.CommandTimeout(5000));
+
+});
 
 // ⬇️ JOUW DOMEIN CONTEXT (DALCore) — gebruikt dezelfde connection
 builder.Services.AddDbContext<cpmRunningContext>(options =>
@@ -78,6 +105,7 @@ builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupS
 builder.Services.AddScoped<IInvoiceCommunicationService, InvoiceCommunicationService>();
 builder.Services.AddScoped<IInvoiceUblBuilder, InvoiceUblBuilder>();
 builder.Services.AddScoped<IOctopusBookyearService, OctopusBookyearService>();
+builder.Services.AddScoped<IOctopusRelationSyncService, OctopusRelationSyncService>();
 builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(client =>
 {
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -165,6 +193,12 @@ builder.Services.AddBreadcrumbs(Assembly.GetExecutingAssembly(), options =>
     // Optioneel: laat opties leeg, je gebruikt toch je eigen view
 });
 
+//VOOR BE CULTURE
+builder.Services.AddControllersWithViews(options =>
+{
+    options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
+});
+
 //builder.Services.AddBreadcrumbs(typeof(CPMCore.Controllers.HomeController).Assembly, options =>
 //{
 //    // Voorbeeld extra opties...
@@ -190,6 +224,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseSession();
 
 
 var supportedCultures = new[] { new CultureInfo("nl-BE") };

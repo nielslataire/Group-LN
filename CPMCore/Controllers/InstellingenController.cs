@@ -28,6 +28,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using SystemTextJsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace CPMCore.Controllers;
 
@@ -43,6 +44,7 @@ public class InstellingenController : BaseController
     private readonly IOctopusApiClient _octopusClient;
     private readonly IOctopusTokenManager _octopusTokens;
     private readonly IOctopusBookyearService _octopusBookyears;
+    private readonly IOctopusRelationSyncService _octopusRelations;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -58,7 +60,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears)
+    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations)
     {
         _userManager = userManager;
         _logger = logger;
@@ -68,6 +70,7 @@ public class InstellingenController : BaseController
         _octopusClient = octopusClient;
         _octopusTokens = octopusTokens;
         _octopusBookyears = octopusBookyears;
+        _octopusRelations = octopusRelations;
     }
 
     [HttpGet]
@@ -338,6 +341,7 @@ public class InstellingenController : BaseController
         ViewBag.OctopusBookyears = await _octopusBookyears.ListByIssuerAsync(id, ct);
         ViewBag.OctopusVatCodes = await _issuers.ListVatTypeAsync(id, ct);
         ViewBag.InvoiceFieldOptions = GetInvoiceFieldOptions();
+        ViewBag.OctopusRelationSuggestions = ReadOctopusSuggestions();
 
         var customFields = await _issuers.ListOctopusCustomFieldsAsync(id, ct);
         var storedMappings = DeserializeCustomFieldMappings(bo?.OctopusCustomFieldMappingsJson);
@@ -690,6 +694,109 @@ public class InstellingenController : BaseController
     public async Task<IActionResult> IssuerCompanyOctopusSync(int issuerId, CancellationToken ct)
         => await SyncOctopusDossierAsync(issuerId, ct);
 
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/relations")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyOctopusRelations(int issuerId, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _octopusRelations.SyncRelationsAsync(issuerId, ct);
+            if (result.Suggestions.Any())
+            {
+                TempData["OctopusRelationSuggestions"] = SystemTextJsonSerializer.Serialize(result.Suggestions);
+                TempData["OctopusMessage"] = $"Relaties gesynchroniseerd. {result.Suggestions.Count} mogelijke matches vragen bevestiging.";
+                TempData["OctopusMessageType"] = "warning";
+                return RedirectToAction(nameof(IssuerCompanyRelationSuggestions), new { issuerId });
+            }
+            else
+            {
+                TempData["OctopusMessage"] = $"Relaties gesynchroniseerd. Nieuw: {result.SuppliersCreated} leveranciers, {result.ClientsCreated} klanten. Gekoppeld: {result.SuppliersLinked} leveranciers, {result.ClientsLinked} klanten. Klantenflag geüpdatet: {result.CustomerFlagsUpdated}.";
+                TempData["OctopusMessageType"] = "success";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Octopus relaties synchroniseren mislukt voor issuer {IssuerId}", issuerId);
+            TempData["OctopusMessage"] = $"Relaties ophalen mislukt: {ex.Message}";
+            TempData["OctopusMessageType"] = "danger";
+        }
+
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+    }
+
+    [HttpGet("IssuerCompanies/{issuerId:int}/Octopus/relations/suggestions")]
+    public async Task<IActionResult> IssuerCompanyRelationSuggestions(int issuerId, CancellationToken ct)
+    {
+        var issuer = await _issuers.GetAsync(issuerId, ct);
+        if (issuer == null)
+        {
+            return NotFound();
+        }
+
+        var suggestions = ReadOctopusSuggestions();
+        if (suggestions == null || suggestions.Count == 0)
+        {
+            TempData["OctopusMessage"] = "Geen koppelsuggesties gevonden.";
+            TempData["OctopusMessageType"] = "info";
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        TempData.Keep("OctopusRelationSuggestions");
+
+        var vm = new OctopusRelationSuggestionsVM
+        {
+            IssuerId = issuerId,
+            IssuerName = issuer.Name,
+            Suggestions = suggestions
+        };
+
+        ViewBag.OctopusMessage = TempData["OctopusMessage"];
+        ViewBag.OctopusMessageType = TempData["OctopusMessageType"];
+
+        return View("OctopusRelationSuggestions", vm);
+    }
+
+    [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/relations/link")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> IssuerCompanyConfirmRelationLink(int issuerId, OctopusRelationLinkRequest request, CancellationToken ct)
+    {
+        if (request == null)
+        {
+            return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+        }
+
+        request.IssuerId = request.IssuerId == 0 ? issuerId : request.IssuerId;
+
+        try
+        {
+            await _octopusRelations.LinkExistingAsync(request.IssuerId, request.IsSupplier, request.CandidateId, request.OctopusRelationId, ct);
+            var successMessage = "Relatie gekoppeld.";
+
+            if (IsAjaxRequest())
+            {
+                return Json(new { success = true, message = successMessage });
+            }
+
+            TempData["OctopusMessage"] = successMessage;
+            TempData["OctopusMessageType"] = "success";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Octopus relatie handmatig koppelen mislukt voor issuer {IssuerId}", request.IssuerId);
+            var errorMessage = $"Relatie koppelen mislukt: {ex.Message}";
+
+            if (IsAjaxRequest())
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, message = errorMessage });
+            }
+
+            TempData["OctopusMessage"] = errorMessage;
+            TempData["OctopusMessageType"] = "danger";
+        }
+
+        return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = request.IssuerId });
+    }
+
     private async Task<IActionResult> SyncOctopusDossierAsync(int issuerId, CancellationToken ct)
     {
         try
@@ -719,6 +826,38 @@ public class InstellingenController : BaseController
         }
 
         return RedirectToAction(nameof(IssuerCompaniesEdit), new { id = issuerId });
+    }
+
+    private IReadOnlyList<OctopusRelationSuggestion> ReadOctopusSuggestions()
+    {
+        if (TempData.TryGetValue("OctopusRelationSuggestions", out var raw) && raw is string json && !string.IsNullOrWhiteSpace(json))
+        {
+            return SystemTextJsonSerializer.Deserialize<List<OctopusRelationSuggestion>>(json) ?? new List<OctopusRelationSuggestion>();
+        }
+
+        return new List<OctopusRelationSuggestion>();
+    }
+
+    private bool IsAjaxRequest()
+    {
+        if (Request?.Headers == null)
+        {
+            return false;
+        }
+
+        if (Request.Headers.TryGetValue("X-Requested-With", out var requestedWith) &&
+            requestedWith.Any(v => string.Equals(v, "XMLHttpRequest", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (Request.Headers.TryGetValue("Accept", out var accepts) &&
+            accepts.Any(v => v != null && v.Contains("application/json", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     // POST /Admin/IssuerCompanies/Disable/5
@@ -1104,4 +1243,11 @@ public class InstellingenController : BaseController
     }
 
 
+}
+public class OctopusRelationLinkRequest
+{
+    public int IssuerId { get; set; }
+    public bool IsSupplier { get; set; }
+    public int CandidateId { get; set; }
+    public int? OctopusRelationId { get; set; }
 }

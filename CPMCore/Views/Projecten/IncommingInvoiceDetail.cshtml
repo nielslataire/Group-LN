@@ -295,11 +295,16 @@
                                 <div class="col-auto me-5">
                                     <h3 class="font-weight-bold text-color-dark text-4 mb-3">BTW</h3>
                                     <span class="d-flex align-items-center">
-                                        @((Model.Contract.Id != 0) ? $"{Model.Contract.VatPercentage} %" : "")
+                                      @{
+                                            bool hasContract = Model.Contract is not null && Model.Contract.Id != 0;
+                                            bool hasVat = hasContract && Model.Contract.VatPercentage.HasValue;
+                                            string vatDisplay = hasVat ? $"{Model.Contract.VatPercentage} %" : "";
+                                        }
+                                        @vatDisplay
                                         <i class="fas fa-chevron-right text-color-primary px-3"></i>
                                         @{
                                             decimal totaal = Model.IncommingInvoice.Details.Sum(m => m.Price);
-                                            decimal vatPercentage = Model.Contract.Id != 0 ? (decimal)Model.Contract.VatPercentage : 0;
+                                            decimal vatPercentage = hasVat ? Model.Contract.VatPercentage.Value : 0m;
                                             decimal btw = (totaal / 100m) * vatPercentage;
                                             string btwFormatted = btw.ToString("C", new System.Globalization.CultureInfo("nl-BE"));
                                         }

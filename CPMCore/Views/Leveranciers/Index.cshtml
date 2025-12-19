@@ -42,6 +42,17 @@
             white-space: nowrap;
         }
 
+        #datatable-suppliers {
+            table-layout: fixed;
+        }
+
+            #datatable-suppliers th,
+            #datatable-suppliers td {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
         #datatable-suppliers_wrapper .dataTables_paginate {
             margin-top: 1rem;
         }
@@ -142,8 +153,8 @@
                                     @supplier.Name
                                 </a>
                             </td>
-                            <td>@(string.IsNullOrWhiteSpace(supplier.EnterpriseNumber) ? "-" : supplier.EnterpriseNumber)</td>
-                            <td>@(string.IsNullOrWhiteSpace(phone) ? "-" : phone)</td>
+                            <td>@supplier.EnterpriseNumberDisplay</td>
+                            <td>@supplier.PrimaryPhoneDisplay</td>
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(supplier.Email))
                                 {
@@ -226,15 +237,15 @@
                     return true;
                 }
 
-                if (!selectedActivityIds.length) {
-                    return true;
-                }
+                // if (!selectedActivityIds.length) {
+                //     return true;
+                // }
 
                 const rowElement = settings.aoData[dataIndex]?.nTr;
-                const rowActivities = (rowElement?.dataset.activities || '')
-                    .toString()
-                    .split(',')
-                    .filter(Boolean);
+                // const rowActivities = (rowElement?.dataset.activities || '')
+                //     .toString()
+                //     .split(',')
+                //     .filter(Boolean);
 
                     if (selectedIssuerId) {
                     const rowIssuers = (rowElement?.dataset.issuers || '')
@@ -251,6 +262,11 @@
                     return true;
                 }
 
+                const rowActivities = (rowElement?.dataset.activities || '')
+                    .toString()
+                    .split(',')
+                    .filter(Boolean);
+
                 if (!rowActivities.length) {
                     return false;
                 }
@@ -263,10 +279,17 @@
                 order: [[0, 'asc']],
                 language: buildLanguage(entity),
                 columnDefs: [
-                    { targets: -1, orderable: false, searchable: false, className: 'text-end actions' }
+                         { targets: 0, width: '22%' },
+                          { targets: 1, width: '18%' },
+                          { targets: 2, width: '16%' },
+                          { targets: 3, width: '18%' },
+                          { targets: 4, width: '13%' },
+                          { targets: 5, width: '13%' },
+                          { targets: -1, orderable: false, searchable: false, className: 'text-end actions', width: '8%' }
                 ],
                 lengthChange: false,
                 autoWidth: false,
+                stateSave: true,
                 layout: {
                     topStart: {
                         buttons: [
@@ -305,6 +328,10 @@
             $('#issuer-filter').on('change', function () {
                 selectedIssuerId = $(this).val() || '';
                 table.draw();
+            });
+
+             table.on('column-visibility.dt draw.dt', function () {
+                table.columns.adjust();
             });
 
 

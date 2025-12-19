@@ -41,7 +41,7 @@
 						<div class="col-lg-2-5 col-xl-1-5">
 							<i class="card-big-info-icon bx bx-box"></i>
 							<h2 class="card-big-info-title">Algemene info</h2>
-							<p class="card-big-info-desc">Voeg hier de algemene info van de factuur in.</p>
+							<p class="card-big-info-desc">Voeg hier de algemene info van de factuur in. </p>
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5">
 							@await Html.PartialAsync("_ValidationSummary", ViewData.ModelState)
@@ -73,7 +73,7 @@
 									@Html.LabelFor(m => m.IncommingInvoice.InvoicePrice)
 								</label>
 								<div class="col-lg-8 col-xl-6">
-									@Html.EditorFor(m => m.IncommingInvoice.InvoicePrice)
+									@Html.EditorFor(m => m.IncommingInvoice.InvoicePrice, "Currency")
 								</div>
                             </div>
 							<div class="form-group row align-items-center pb-3">
@@ -124,7 +124,7 @@
 											<!-- Opties -->
 										</select> *@
 										<button type="button" class="btn btn-outline-secondary" id="btnAddActivities">
-											Toevoegen
+											Toevoegen 
 										</button>
 									</div>
 								</div>
@@ -171,286 +171,275 @@
 	<script src="~/lib/dropzone/dropzone.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
 
-	<script>
-		function initEuroInput(selector) {
-			document.querySelectorAll(selector).forEach(el => {
-				if (!AutoNumeric.getAutoNumericElement(el)) {
-					new AutoNumeric(el, {
-						decimalCharacter: ',',
-						digitGroupSeparator: '.',
-						decimalPlaces: 2,
-						unformatOnSubmit: true
-					});
-				}
-			});
-		}
-		// ======= BIJ HET VERANDEREN VAN EEN FACTUURLIJN NAAR MEERWERK KLANT =======
-		function change(theStatus) {
-			const $row = $(theStatus).closest('.row');
-			const $changeOrders = $row.find('#lstchangeorders');
+    <script>
+        // ==============================
+        // Belgische decimalen – jQuery validation
+        // ==============================
+        $.validator.methods.number = function (value, element) {
+            if (this.optional(element)) return true;
+            return /^-?\d+(?:[.,]\d+)?$/.test(value);
+        };
 
-			if (theStatus.value === "3") {
-				$changeOrders.prop('disabled', false);
-			} else {
-				$changeOrders.prop('disabled', true);
-			}
-		}
-		$(function () {
+        // ==============================
+        // Euro / Currency input init (selector OF element)
+        // ==============================
+        function initEuroInput(target) {
+            let elements = [];
 
-			//ACTIVITEITENLIJST VAN GESELECTEERD BEDRIJF
-			$("#lstActivities").select2({
-						theme: 'bootstrap',
-						placeholder: 'Selecteer het lot',
-						width: '100%',
-						dropdownAutoWidth: true,
-						data:[]
-			});
+            if (typeof target === 'string') {
+                elements = document.querySelectorAll(target);
+            } else if (target instanceof HTMLElement) {
+                elements = [target];
+            } else if (target instanceof NodeList || Array.isArray(target)) {
+                elements = target;
+            }
 
-		});
-		function getContractId() {
-			return $('#lstProjectContracts').val();  // Haalt de geselecteerde waarde van de dropdown op
-		}
-		// ======= BIJ HET SELECTEREN VAN EEN CONTRACT =======
-		$('#lstProjectContracts').on('change', function () {
-			var contractId = $(this).val(); // geeft rechtstreeks de ID
-			if (contractId) {
-				GetActivities(contractId);
-				$('#DetailRows').empty();
-			}
-		});
-		var options = {
-			tags: true,
-			createTag: function (params) {
-				return {
-					id: params.term,
-					text: params.term,
-					newOption: true
-				}
-			},
-			templateResult: function (data) {
-				var $result = $("<span></span>");
+            elements.forEach(el => {
+                if (!AutoNumeric.getAutoNumericElement(el)) {
+                    const an = new AutoNumeric(el, {
+                        decimalCharacter: ',',
+                        decimalCharacterAlternative: '.',
+                        digitGroupSeparator: '.',
+                        decimalPlaces: 2,
+                        unformatOnSubmit: true
+                    });
 
-				$result.text(data.text);
+                    // 🔑 force correcte herformattering
+                    an.set(el.value || 0);
+                }
+            });
+        }
 
-				if (data.newOption) {
-					$result.append(" <em>(new)</em>");
-				}
+        // ==============================
+        // Change order toggle
+        // ==============================
+        function change(theStatus) {
+            const $row = $(theStatus).closest('.row');
+            const $changeOrders = $row.find('#lstchangeorders');
 
-				return $result;
-			}
-		}
-		function GetActivities(contractid) {
-			$.ajax({
-				type: 'POST',
-				url: '@Url.Action("GetContractActivities", "Projecten")',
-				data: { contractid: contractid },
-				dataType: 'json',
-				success: function (data) {
-					var $select = $('#lstActivities');
+            $changeOrders.prop('disabled', theStatus.value !== "3");
+        }
 
-					// Reset selectie van bestaande contractactiviteiten
-					var selectedValues = $select.val(); // bewaar huidige selectie
-
-					// Destroy select2 tijdelijk om DOM manipulatie toe te staan
-					if ($select.hasClass("select2-hidden-accessible")) {
-						$select.select2('destroy');
-					}
-
-					// Verwijder alleen de optgroup met label 'Contractactiviteiten'
-					$select.find('optgroup[label="Contractactiviteiten"]').remove();
-
-					// Nieuwe optgroup aanmaken
-					var optgroup = $('<optgroup>', { label: 'Contractactiviteiten' });
-
-					// Voeg opties toe
-					$.each(data, function (i, item) {
-						$('<option>', {
-							value: item.id,
-							text: item.text
-						}).appendTo(optgroup);
-					});
-
-					// ✅ Voeg optgroup toe vóór andere elementen
-					$select.prepend(optgroup);
-
-					// Herinitialiseer Select2
-					$select.select2({
-						theme: 'bootstrap',
-						placeholder: 'Selecteer het lot',
-						width: '100%',
-						dropdownAutoWidth: true
-					});
-
-					// Herstel eerdere selectie indien nodig
-					if (selectedValues) {
-						$select.val(selectedValues).trigger('change');
-					}
-				},
-				error: function () {
-					console.error("Er ging iets mis bij het ophalen van de activiteiten.");
-				}
-			});
-		}
-			function GetActivitiesCompany(companyid) {
-			$.ajax({
-				type: 'POST',
-				url: '@Url.Action("GetCompanyActivities", "Projecten")',
-				data: { companyid: companyid },
-				dataType: 'json',
-				success: function (data) {
-					var $select = $('#lstActivities');
-
-					// Reset selectie van bestaande contractactiviteiten
-					var selectedValues = $select.val(); // bewaar huidige selectie
-
-					// Destroy select2 tijdelijk om DOM manipulatie toe te staan
-					if ($select.hasClass("select2-hidden-accessible")) {
-						$select.select2('destroy');
-					}
-
-					// Verwijder alleen de optgroup met label 'Contractactiviteiten'
-					$select.find('optgroup[label="Bedrijfsactiviteiten"]').remove();
-
-					// Nieuwe optgroup aanmaken
-					var optgroup = $('<optgroup>', { label: 'Bedrijfsactiviteiten' });
-
-					// Voeg opties toe
-					$.each(data, function (i, item) {
-						$('<option>', {
-							value: item.id,
-							text: item.text
-						}).appendTo(optgroup);
-					});
-
-					// ✅ Voeg optgroup toe vóór andere elementen
-					$select.prepend(optgroup);
-
-					// Herinitialiseer Select2
-					$select.select2({
-						theme: 'bootstrap',
-						placeholder: 'Selecteer het lot',
-						width: '100%',
-						dropdownAutoWidth: true
-					});
-
-					// Herstel eerdere selectie indien nodig
-					if (selectedValues) {
-						$select.val(selectedValues).trigger('change');
-					}
-				},
-				error: function () {
-					console.error("Er ging iets mis bij het ophalen van de activiteiten.");
-				}
-			});
-		}
-		//SELECT2 COMPANY
-		$('#ddlCompany').select2({
-					theme: 'bootstrap',
-					minimumInputLength: 3,
-					width: '100%',
-					placeholder: "Voer een bedrijfsnaam in...",
-					allowClear: true,
-					language:"nl",
-					ajax: {
-						url: '@Url.Action("GetCompanys", "Projecten")',
-						type: 'POST',
-						dataType: 'json',
-						delay: 250,
-						data: function (params) {
-							return { term: params.term };
-						},
-						processResults: function (data) {
-							return {
-								results: $.map(data, function (item) {
-									return {
-										id: item.id,
-										text: item.text
-									};
-								})
-							};
-						},
-						cache: true
-					}
-				});
-
-		// ======= ACTIVITEITEN TOEVOEGEN AAN CONTRACT =======
-				$('#btnAddActivities').click(function () {
-			const modelType = @Model.Type;
-			const companyId = modelType === 0 ? "0" : "@Model.IncommingInvoice.CompanyId";
-			const contractId = modelType === 0 ? "getContractId()" : "0";
-			const data = $('#lstActivities').select2('data');
-
-			if (data && data.length > 0) {
-				data.forEach(function (item) {
-					// Zoek het <option>-element bij het geselecteerde item
-					const option = $('#lstActivities option[value="' + item.id + '"]');
-
-					// Controleer of de parent optgroup het label 'Contractactiviteiten' heeft
-					const isContractActivity = option.parent('optgroup').attr('label') === 'Contractactiviteiten';
-
-					// Bepaal contractId op basis van de groep
-					const contractId = isContractActivity ? getContractId() : "0";
-
-					$.ajax({
-						url: '@Url.Action("AddIncommingInvoiceDetailRow", "Projecten")',
-						data: {
-							ActivityId: item.id,
-							ActivityName: item.text,
-							ContractId: contractId,
-							CompanyId: companyId
-						},
-						cache: false,
-						traditional: true,
-						type: 'POST',
-						success: function (result) {
-							$('#DetailRows').append(result);
-
-							// Voeg inputmask toe indien nog niet aanwezig
-							document.querySelectorAll('.Currencymask').forEach(el => {
-								if (!AutoNumeric.getAutoNumericElement(el)) {
-									initEuroInput(el);
-								}
-							});
-						}
-					});
-				});
-
-				// Reset selectie
-				$("#lstActivities").val(null).trigger("change");
-			}
-
-			return false;
-		});
-		
-	
-		// ======= ACTIVITEITEN VERWIJDEREN VAN CONTRACT =======
-		  $(document).on('click', 'button.deleterow', function () { // <-- changes
-					$(this).closest('div').parent('div').remove();
-					const activiteitId = $(this).data('id'); // Haalt het ID uit data-id attribuut
-					$("#lstActivities option[value='" + activiteitId + "']").removeAttr('disabled');
-					return false;
-				});
-		
-		$(document).ready(function () {
-
-			$('#ddlCompany').on('select2:select', function (e) {
-				const selectedData = e.params?.data;
-				if (selectedData && selectedData.id) {
-					$('#txtCompanyID').val(selectedData.id);
-					GetActivitiesCompany(selectedData.id);
-
-				} else {
-					console.warn('Geen geldig select2 item geselecteerd:', e);
-				}
-			});
-			$('#txtCompanyID').on('change', function (e) {
-				var data = $('#txtCompanyID').val();
-				GetActivitiesCompany(data);
-			});
-			initEuroInput('.Currencymask');
-
-		  });
+        // ==============================
+        // Select2 init (activiteiten)
+        // ==============================
+        $(function () {
+            $("#lstActivities").select2({
+                theme: 'bootstrap',
+                placeholder: 'Selecteer het lot',
+                width: '100%',
+                dropdownAutoWidth: true,
+                data: []
+            });
+            $('#lstProjectContracts').select2({
+            theme: 'bootstrap',
+            width: '100%'
+        });
+        });
 
 
-	</script>
+
+        function getContractId() {
+            return $('#lstProjectContracts').val();
+        }
+
+        // ==============================
+        // Contract wijzigen
+        // ==============================
+        $('#lstProjectContracts').on('select2:select', function (e) {
+            const contractId = e.params.data.id;
+
+            if (contractId) {
+                GetActivities(contractId);
+                $('#DetailRows').empty();
+            }
+        });
+
+
+        // ==============================
+        // Contractactiviteiten ophalen
+        // ==============================
+        function GetActivities(contractid) {
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetContractActivities", "Projecten")',
+                data: { contractid },
+                dataType: 'json',
+                success: function (data) {
+                    const $select = $('#lstActivities');
+                    const selectedValues = $select.val();
+
+                    if ($select.hasClass("select2-hidden-accessible")) {
+                        $select.select2('destroy');
+                    }
+
+                    $select.find('optgroup[label="Contractactiviteiten"]').remove();
+
+                    const optgroup = $('<optgroup>', { label: 'Contractactiviteiten' });
+                    $.each(data, function (_, item) {
+                        $('<option>', { value: item.id, text: item.text }).appendTo(optgroup);
+                    });
+
+                    $select.prepend(optgroup);
+
+                    $select.select2({
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer het lot',
+                        width: '100%',
+                        dropdownAutoWidth: true
+                    });
+
+                    if (selectedValues) {
+                        $select.val(selectedValues).trigger('change');
+                    }
+                },
+                error: function () {
+                    console.error("Fout bij ophalen contractactiviteiten");
+                }
+            });
+        }
+
+        // ==============================
+        // Bedrijfsactiviteiten ophalen
+        // ==============================
+        function GetActivitiesCompany(companyid) {
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetCompanyActivities", "Projecten")',
+                data: { companyid },
+                dataType: 'json',
+                success: function (data) {
+                    const $select = $('#lstActivities');
+                    const selectedValues = $select.val();
+
+                    if ($select.hasClass("select2-hidden-accessible")) {
+                        $select.select2('destroy');
+                    }
+
+                    $select.find('optgroup[label="Bedrijfsactiviteiten"]').remove();
+
+                    const optgroup = $('<optgroup>', { label: 'Bedrijfsactiviteiten' });
+                    $.each(data, function (_, item) {
+                        $('<option>', { value: item.id, text: item.text }).appendTo(optgroup);
+                    });
+
+                    $select.prepend(optgroup);
+
+                    $select.select2({
+                        theme: 'bootstrap',
+                        placeholder: 'Selecteer het lot',
+                        width: '100%',
+                        dropdownAutoWidth: true
+                    });
+
+                    if (selectedValues) {
+                        $select.val(selectedValues).trigger('change');
+                    }
+                },
+                error: function () {
+                    console.error("Fout bij ophalen bedrijfsactiviteiten");
+                }
+            });
+        }
+
+        // ==============================
+        // Company select2
+        // ==============================
+        $('#ddlCompany').select2({
+            theme: 'bootstrap',
+            minimumInputLength: 3,
+            width: '100%',
+            placeholder: "Voer een bedrijfsnaam in...",
+            allowClear: true,
+            language: "nl",
+            ajax: {
+                url: '@Url.Action("GetCompanys", "Projecten")',
+                type: 'POST',
+                dataType: 'json',
+                delay: 250,
+                data: params => ({ term: params.term }),
+                processResults: data => ({
+                    results: $.map(data, item => ({
+                        id: item.id,
+                        text: item.text
+                    }))
+                }),
+                cache: true
+            }
+        });
+
+        // ==============================
+        // Activiteiten toevoegen (AJAX row)
+        // ==============================
+        $('#btnAddActivities').click(function () {
+            const modelType = @Model.Type;
+            const companyId = modelType === 0 ? "0" : "@Model.IncommingInvoice.CompanyId";
+            const data = $('#lstActivities').select2('data');
+
+            if (!data || !data.length) return false;
+
+            data.forEach(item => {
+                const option = $('#lstActivities option[value="' + item.id + '"]');
+                const isContractActivity = option.parent('optgroup').attr('label') === 'Contractactiviteiten';
+                const contractId = isContractActivity ? getContractId() : "0";
+
+                $.ajax({
+                    url: '@Url.Action("AddIncommingInvoiceDetailRow", "Projecten")',
+                    type: 'POST',
+                    cache: false,
+                    traditional: true,
+                    data: {
+                        ActivityId: item.id,
+                        ActivityName: item.text,
+                        ContractId: contractId,
+                        CompanyId: companyId
+                    },
+                    success: function (result) {
+                        const $row = $(result);
+                        $('#DetailRows').append($row);
+
+                        // 🔑 init AutoNumeric ALLEEN in nieuwe row
+                        $row.find('.Currencymask').each(function () {
+                            initEuroInput(this);
+                        });
+                    }
+                });
+            });
+
+            $("#lstActivities").val(null).trigger("change");
+            return false;
+        });
+
+        // ==============================
+        // Activiteit verwijderen
+        // ==============================
+        $(document).on('click', 'button.deleterow', function () {
+            $(this).closest('.row').remove();
+            const activiteitId = $(this).data('id');
+            $("#lstActivities option[value='" + activiteitId + "']").prop('disabled', false);
+            return false;
+        });
+
+        // ==============================
+        // Document ready
+        // ==============================
+        $(document).ready(function () {
+
+            $('#ddlCompany').on('select2:select', function (e) {
+                const selectedData = e.params?.data;
+                if (selectedData?.id) {
+                    $('#txtCompanyID').val(selectedData.id);
+                    GetActivitiesCompany(selectedData.id);
+                }
+            });
+
+            $('#txtCompanyID').on('change', function () {
+                GetActivitiesCompany($(this).val());
+            });
+
+            // init bestaande bedragen
+            initEuroInput('.Currencymask');
+        });
+    </script>
+
 }

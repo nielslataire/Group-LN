@@ -25,7 +25,7 @@ namespace CPMCore.Services.Octopus
         Task<IReadOnlyList<OctopusVatCodeItem>> GetVatCodesAsync(string authenticateToken, string dossierToken, string dossierNumber, CancellationToken ct = default);
         Task<IReadOnlyList<OctopusCustomFieldResponse>> GetCustomFieldsAsync(string dossierToken, string dossierNumber, CancellationToken ct = default);
         Task<OctopusRelation?> FindRelationAsync(string dossierToken, string dossierNumber, OctopusRelationLookup lookup, CancellationToken ct = default);
-
+        Task<IReadOnlyList<OctopusRelation>> GetRelationsAsync(string dossierToken, string dossierNumber, CancellationToken ct = default);
         Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default);
 
         Task<bool> CreateInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceCreateRequest payload, CancellationToken ct = default);
@@ -239,6 +239,28 @@ namespace CPMCore.Services.Octopus
                            ?? new List<OctopusRelation>();
 
             return relations.FirstOrDefault();
+        }
+        public async Task<IReadOnlyList<OctopusRelation>> GetRelationsAsync(string dossierToken, string dossierNumber, CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/relations");
+            EnsureUrl(url, "Relaties ophalen");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return Array.Empty<OctopusRelation>();
+            }
+
+            await EnsureSuccessAsync(response, url);
+
+            var relations = await response.Content.ReadFromJsonAsync<List<OctopusRelation>>(cancellationToken: ct)
+                           ?? new List<OctopusRelation>();
+
+            return relations;
         }
 
         public async Task<OctopusRelation?> UpsertRelationAsync(string dossierToken, string dossierNumber, OctopusRelationRequest payload, CancellationToken ct = default)
@@ -681,6 +703,11 @@ namespace CPMCore.Services.Octopus
         public string? StreetAndNr { get; set; }
         [JsonPropertyName("firstname")]
         public string? Firstname { get; set; }
+        [JsonPropertyName("defaultBookingAccountClient")]
+        public int? DefaultBookingAccountClient { get; set; }
+
+        [JsonPropertyName("defaultBookingAccountSupplier")]
+        public int? DefaultBookingAccountSupplier { get; set; }
 
         [JsonPropertyName("postalCode")]
         public string? PostalCode { get; set; }
@@ -696,6 +723,14 @@ namespace CPMCore.Services.Octopus
 
         [JsonPropertyName("email")]
         public string? Email { get; set; }
+        [JsonPropertyName("mobile")]
+        public string? Mobile { get; set; }
+
+        [JsonPropertyName("ibanAccountNr")]
+        public string? IbanAccountNr { get; set; }
+
+        [JsonPropertyName("bicCode")]
+        public string? BicCode { get; set; }
 
         [JsonPropertyName("vatNr")]
         public string? VatNr { get; set; }

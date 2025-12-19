@@ -1,17 +1,24 @@
 ﻿@model decimal?
+@using System.Globalization
 
 @{
-    var culture = System.Globalization.CultureInfo.CreateSpecificCulture("nl-BE");
+    var culture = CultureInfo.CreateSpecificCulture("nl-BE");
     var formatted = Model.HasValue
-        ? Model.Value.ToString("N2", culture).Replace('\u00A0', ' ')  // NBSP → gewone spatie
+        ? Model.Value.ToString("N2", culture).Replace('\u00A0', ' ')
         : string.Empty;
 }
-<div class="input-group mb3">
-    @Html.TextBox("", formatted, new
+
+<div class="input-group mb-3">
+    @Html.TextBox(
+    "",
+        formatted,
+        new
         {
             @class = "form-control form-control-modern Currencymask",
             placeholder = ViewData.ModelMetadata.DisplayName,
-            autocomplete = "off"
+            autocomplete = "off",
+            inputmode = "decimal",
+            data_val_number = ""
         })
     <span class="input-group-text">€</span>
 </div>

@@ -1,0 +1,182 @@
+﻿@model CPMCore.Models.Instellingen.OctopusRelationSuggestionsVM
+@using CPMCore.Services.Octopus
+@using System.Linq
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    ViewData["Title"] = "Octopus-relaties koppelen";
+    var statusMessage = ViewBag.OctopusMessage as string;
+    var statusMessageType = ViewBag.OctopusMessageType as string ?? "info";
+    var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context);
+}
+
+<div class="row align-items-center mb-3">
+    <div class="col">
+        <h1 class="font-weight-bold mb-1">Octopus-relaties koppelen</h1>
+        <p class="mb-0 text-muted">Bevestig of er bestaande klanten of leveranciers zijn die overeenkomen met de Octopus-relaties van <strong>@Model.IssuerName</strong>.</p>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-default" href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = Model.IssuerId })">
+            <i class="bx bx-arrow-back me-1"></i> Terug naar instellingen
+        </a>
+    </div>
+    <input type="hidden" id="octopus-suggestions__request-token" value="@antiForgeryToken.RequestToken" />
+</div>
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <div class="alert alert-@statusMessageType alert-dismissible fade show" role="alert" id="status-alert">
+        @statusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Sluiten"></button>
+    </div>
+}
+
+<div id="link-feedback" class="mb-3"></div>
+
+<div id="suggestions-wrapper">
+    @if (!Model.Suggestions.Any())
+    {
+        <div class="alert alert-info" id="no-suggestions">
+            Geen koppelsuggesties om weer te geven.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var suggestion in Model.Suggestions)
+            {
+                var suggestionKey = $"{suggestion.RelationType}-{suggestion.OctopusRelationId?.ToString() ?? suggestion.RelationName}";
+                <div class="col-12 mb-3" data-suggestion-key="@suggestionKey">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary">@suggestion.RelationType</span>
+                                <strong>@suggestion.RelationName</strong>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(suggestion.VatNumber))
+                            {
+                                <small class="text-muted">BTW: @suggestion.VatNumber</small>
+                            }
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Selecteer de juiste bestaande relatie om te koppelen.</p>
+                            <div class="list-group">
+                                @foreach (var candidate in suggestion.Candidates)
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center" data-candidate-id="@candidate.Id">
+                                        <div>
+                                            <div class="fw-semibold">@candidate.Name</div>
+                                            <small class="text-muted">
+                                                @candidate.CandidateType
+                                                @if (!string.IsNullOrWhiteSpace(candidate.VatNumber))
+                                                {
+                                                    @:– BTW @candidate.VatNumber
+                                                }
+                                            </small>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm link-relation-btn"
+                                                data-candidate-id="@candidate.Id"
+                                                data-is-supplier="@(suggestion.RelationType == "Leverancier")"
+                                                data-octopus-relation-id="@(suggestion.OctopusRelationId?.ToString() ?? string.Empty)">
+                                            Koppelen
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                            <p class="mb-0 mt-2 text-muted">Geen match? Voeg handmatig een nieuwe @(suggestion.RelationType?.ToLowerInvariant()) toe en synchroniseer opnieuw.</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section PageScripts
+{
+    <script>
+        (function () {
+            const linkUrl = '@Url.Action("IssuerCompanyConfirmRelationLink", "Instellingen", new { issuerId = Model.IssuerId })';
+            const requestToken = document.getElementById('octopus-suggestions__request-token')?.value;
+            const feedback = document.getElementById('link-feedback');
+            const suggestionsWrapper = document.getElementById('suggestions-wrapper');
+
+            function showAlert(type, message) {
+                if (!feedback) return;
+
+                feedback.innerHTML = [
+                    '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">',
+                    message,
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Sluiten"></button>',
+                    '</div>'
+                ].join('');
+            }
+
+            function removeCandidate(button) {
+                const candidateRow = button.closest('[data-candidate-id]');
+                if (!candidateRow) return;
+
+                const card = candidateRow.closest('[data-suggestion-key]');
+                candidateRow.remove();
+
+                if (card && card.querySelectorAll('[data-candidate-id]').length === 0) {
+                    card.remove();
+                }
+
+                if (suggestionsWrapper && !suggestionsWrapper.querySelector('[data-suggestion-key]')) {
+                    suggestionsWrapper.innerHTML = '<div class="alert alert-success" id="no-suggestions">Alle suggesties zijn verwerkt.</div>';
+                }
+            }
+
+            document.querySelectorAll('.link-relation-btn').forEach(button => {
+                button.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const candidateId = parseInt(this.dataset.candidateId);
+                    const isSupplier = this.dataset.isSupplier === 'True' || this.dataset.isSupplier === 'true';
+                    const octopusRelationIdRaw = this.dataset.octopusRelationId;
+                    const octopusRelationId = octopusRelationIdRaw ? parseInt(octopusRelationIdRaw) : null;
+
+                    if (!candidateId || !linkUrl) {
+                        showAlert('danger', 'Ongeldige koppelinformatie.');
+                        return;
+                    }
+
+                    this.disabled = true;
+
+                    fetch(linkUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': requestToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            issuerId: @Model.IssuerId,
+                            candidateId: candidateId,
+                            isSupplier: isSupplier,
+                            octopusRelationId: octopusRelationId
+                        })
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json();
+                            }
+
+                            return response.json()
+                                .then(err => { throw new Error(err.message || 'Relatie koppelen mislukt.'); })
+                                .catch(() => { throw new Error('Relatie koppelen mislukt.'); });
+                        })
+                        .then(result => {
+                            const message = result && result.message ? result.message : 'Relatie gekoppeld.';
+                            showAlert('success', message);
+                            removeCandidate(this);
+                        })
+                        .catch(err => {
+                            showAlert('danger', err && err.message ? err.message : 'Relatie koppelen mislukt.');
+                            this.disabled = false;
+                        });
+                });
+            });
+        })();
+    </script>
+}

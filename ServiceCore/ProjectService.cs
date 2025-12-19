@@ -1094,8 +1094,10 @@ namespace ServiceCore
             var response = new GetResponse<ProjectSalesDataBO>();
 
             // Haal alle units van de betrokken projecten in één query
+            var projectIds = ids.ToArray(); // belangrijk: local array
+
             var units = _uow.Units.GetNoTracking()
-                .Where(u => ids.Contains(u.ProjectId))
+                .Where(u => projectIds.Contains(u.ProjectId))
                 .Select(u => new
                 {
                     u.Id,
@@ -1106,13 +1108,15 @@ namespace ServiceCore
                     u.Type,
                     u.LandValue,
                     u.LandValueSold,
-                    UnitConstructionValues = u.UnitConstructionValue.Select(v => new
-                    {
-                        v.Value,
-                        v.ValueSold
-                    })
+                    UnitConstructionValues = u.UnitConstructionValue
+                        .Select(v => new
+                        {
+                            v.Value,
+                            v.ValueSold
+                        })
                 })
-                .AsEnumerable(); // vanaf hier client-side evaluatie
+                .ToList(); // ⬅️ materialiseer HIER
+
 
             foreach (var pid in ids)
             {
@@ -1132,6 +1136,7 @@ namespace ServiceCore
                         (m.LandValue ?? 0m) +
                         (m.UnitConstructionValues.Sum(x => (decimal?)x.Value) ?? 0m))
                     .Sum();
+                //
 
                 // 💰 Totale waarde verkocht (grond + bouwsom verkocht)
                 decimal valueSold = u
@@ -1139,6 +1144,7 @@ namespace ServiceCore
                         (m.LandValueSold ?? 0m) +
                         (m.UnitConstructionValues.Sum(x => (decimal?)x.ValueSold) ?? 0m))
                     .Sum();
+                //
 
                 // 📊 Percentages
                 decimal percentageLiving = livingCount != 0
@@ -1162,6 +1168,8 @@ namespace ServiceCore
                         + (i.LandValue ?? 0m))
                     .DefaultIfEmpty(0m)
                     .Min();
+
+                //
 
                 response.AddValue(new ProjectSalesDataBO
                 {

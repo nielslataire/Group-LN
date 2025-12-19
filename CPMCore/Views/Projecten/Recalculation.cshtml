@@ -172,7 +172,30 @@
                                     <div class="summary">
                                         <p class="mb-1">Totaal Gefactureerd</p>
                                         <div class="info">
-                                            <strong class="amount">@String.Format("{0:C}", Model.IncommingInvoicesActivities.Sum(s => s.Price))</strong>
+                                              @{
+                                                var invoicesExclCustomerExtras = Model.IncommingInvoicesActivities
+                                                .Where(s => s.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
+                                                .ToList();
+                                                decimal invoicedExclCustomerExtras = invoicesExclCustomerExtras.Sum(s => (decimal?)s.Price) ?? 0;
+                                            }
+                                            <strong class="amount">@String.Format("{0:C}", invoicedExclCustomerExtras)</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <p class="mb-1">Meerwerken klanten</p>
+                                        <div class="info">
+                                            @{
+                                                decimal customerExtrasTotal = Model.IncommingInvoicesActivities
+                                                .Where(s => s.IncommingInvoiceType == IncommingInvoiceType.Meerwerk_Klant)
+                                                .Sum(s => (decimal?)s.Price) ?? 0;
+                                            }
+                                            <strong class="amount">@String.Format("{0:C}", customerExtrasTotal)</strong>
                                         </div>
                                     </div>
                                 </div>
@@ -207,6 +230,7 @@
 
                             // Som van alle inkomende factuurprijzen
                             decimal factuurSum = Model.IncommingInvoicesActivities
+                            .Where(f => f.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
                             .Sum(f => (decimal?)f.Price) ?? 0;
 
                             // Verschil: factuur - contract
@@ -256,6 +280,11 @@
                                         .Sum(s => (decimal?)s.Price) ?? 0;
 
                                         var incomingInvoiceSum = Model.IncommingInvoicesActivities
+                                        .Where(l => l.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
+                                        .Where(l => l.Activity.Group.ID == categorie.ID)
+                                        .Sum(t => (decimal?)t.Price) ?? 0;
+                                        var customerExtraSum = Model.IncommingInvoicesActivities
+                                        .Where(l => l.IncommingInvoiceType == IncommingInvoiceType.Meerwerk_Klant)
                                         .Where(l => l.Activity.Group.ID == categorie.ID)
                                         .Sum(t => (decimal?)t.Price) ?? 0;
 
@@ -303,6 +332,10 @@
                                         Gefactureerd:<br />
                                         <strong>@FormatCurrency(incomingInvoiceSum)</strong>
                                     </div>
+                                      <div class="col mb-3">
+                                        Meerwerken klanten:<br />
+                                        <strong>@FormatCurrency(customerExtraSum)</strong>
+                                    </div>
                                     <div class="col mb-3">
                                         Verschil Begroot vs Contract:<br />
                                         <strong class="@(verschilBegrootContract < 0 ? "text-danger" : "")">
@@ -332,6 +365,7 @@
                                                     <th class="text-end" style="width: 12%;">Begroot</th>
                                                     <th class="text-end" style="width: 12%;">Gecontracteerd</th>
                                                     <th class="text-end" style="width: 12%;">Gefactureerd</th>
+                                                    <th class="text-end" style="width: 12%;">Meerwerken klanten</th>
                                                     <th class="text-end" style="width: 12%;">Verschil Begroot vs Contract</th>
                                                     <th class="text-end" style="width: 12%;">Verschil Contract vs Factuur</th>
                                                     <th class="text-end" style="width: 12%;">Status</th>
@@ -347,8 +381,13 @@
                                                     var budgetActivitySum2 = Model.BudgetActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
                                                     var contractSum2 = Model.Contracts.SelectMany(s => s.Activities.Where(w => w.Activity.ID == activity.ID))
                                                     .GroupBy(g => g.ContractId)
-                                                    .Sum(s => s.Sum(t => t.Price));
-                                                    var incomingInvoiceSum2 = Model.IncommingInvoicesActivities.Where(l => l.Activity.ID == activity.ID).Sum(t => t.Price);
+                                                   .Sum(s => s.Sum(t => t.Price));
+                                                    var incomingInvoiceSum2 = Model.IncommingInvoicesActivities
+                                                    .Where(l => l.Activity.ID == activity.ID && l.IncommingInvoiceType != IncommingInvoiceType.Meerwerk_Klant)
+                                                    .Sum(t => t.Price);
+                                                    var customerExtrasSum2 = Model.IncommingInvoicesActivities
+                                                    .Where(l => l.Activity.ID == activity.ID && l.IncommingInvoiceType == IncommingInvoiceType.Meerwerk_Klant)
+                                                    .Sum(t => t.Price);
 
                                                     string status;
                                                     string badgeClass;
@@ -386,6 +425,12 @@
                                                         </td>
                                                         <td class="text-end">@String.Format("{0:C}", contractSum2)</td>
                                                         <td class="text-end">@String.Format("{0:C}", incomingInvoiceSum2)</td>
+                                                         <td class="text-end">
+                                                            @if (customerExtrasSum2 != 0)
+                                                            {
+                                                                @String.Format("{0:C}", customerExtrasSum2)
+                                                            }
+                                                        </td>
                                                         <td class="text-end @(budgetActivitySum2 - contractSum2 < 0 ? "text-danger" : "")">
                                                             @String.Format("{0:C}", budgetActivitySum2 - contractSum2)
                                                         </td>
