@@ -119,15 +119,10 @@
 								<span>Facturatie</span>
 							</a>
 							<ul class="nav nav-children">
-								<li>
-									@Html.ActionLink("BCO", "Index", "Invoices", new { issuerCompanyId = 1 }, "")
-								</li>
-								<li>
-									@Html.ActionLink("Group LN", "Index", "Invoices", new { issuerCompanyId = 2 }, "")
-								</li>
-								<li>
-									@Html.ActionLink("Home-Estate", "Index", "Invoices", new { issuerCompanyId = 3 }, "")
-								</li>
+								@foreach (var issuer in issuerCompanies)
+								{
+									<li>@Html.ActionLink(issuer.Name, "Index", "Invoices", new { issuerCompanyId = issuer.Id }, "")</li>
+								}
 							</ul>
 						</li>
 
