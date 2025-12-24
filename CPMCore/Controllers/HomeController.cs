@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SmartBreadcrumbs.Attributes;
 using System.Diagnostics;
+using System.Globalization;
 using System.Security.Claims;
 namespace CPMCore.Controllers;
 
@@ -76,5 +77,15 @@ public class HomeController : BaseController
     public IActionResult Error()
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+    }
+
+    [AllowAnonymous]
+    public IActionResult CultureTest()
+    {
+        return Content(
+            $"CurrentCulture: {CultureInfo.CurrentCulture.Name}\n" +
+            $"UICulture: {CultureInfo.CurrentUICulture.Name}\n" +
+            $"DefaultThread: {CultureInfo.DefaultThreadCurrentCulture?.Name}"
+        );
     }
 }

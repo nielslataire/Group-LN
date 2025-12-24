@@ -47,6 +47,7 @@ namespace DALCore
         public GenericRepository<UnitConstructionValue> UnitConstructionValues { get; }
         public GenericRepository<ClientAccount> ClientAccounts { get; }
         public GenericRepository<ClientContacts> ClientContacts { get; }
+        public GenericRepository<ContactRequests> ContactRequests { get; }
         public GenericRepository<ClientOwnerType> ClientOwnerTypes { get; }
         public GenericRepository<ClientGift> ClientGifts { get; }
         public GenericRepository<ClientPoa> ClientPoas { get; }
@@ -121,6 +122,7 @@ namespace DALCore
             UnitConstructionValues = new GenericRepository<UnitConstructionValue>(_context);
             ClientAccounts = new GenericRepository<ClientAccount>(_context);
             ClientContacts = new GenericRepository<ClientContacts>(_context);
+            ContactRequests = new GenericRepository<ContactRequests>(_context);
             ClientOwnerTypes = new GenericRepository<ClientOwnerType>(_context);
             ClientGifts = new GenericRepository<ClientGift>(_context);
             ClientPoas = new GenericRepository<ClientPoa>(_context);

@@ -10,8 +10,11 @@ window.CurrencyMask = (function () {
         decimalCharacterAlternative: '.',
         digitGroupSeparator: '.',
         decimalPlaces: 2,
+        decimalPlacesShownOnFocus: 2,
+        decimalPlacesShownOnBlur: 2,
         unformatOnSubmit: true,   // POST altijd 128.10
-        modifyValueOnWheel: false
+        modifyValueOnWheel: false,
+        outputFormat: 'number',
     };
 
     function init(target) {

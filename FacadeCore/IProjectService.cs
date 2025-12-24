@@ -102,6 +102,10 @@ namespace FacadeCore
         Response DeleteProjectDoc(List<int> ids);
         Response DeleteProjectDoc(List<ProjectDocBO> bos);
 
+        // Contact requests
+        Response InsertProjectContactRequest(ContactRequestBO request);
+        GetResponse<ContactRequestBO> GetProjectContactRequests(int projectid);
+
         // PaymentGroups
         GetResponse<ProjectPaymentGroupBO> GetProjectPaymentGroups(int projectid);
         GetResponse<ProjectPaymentGroupBO> GetProjectPaymentGroup(int groupid);

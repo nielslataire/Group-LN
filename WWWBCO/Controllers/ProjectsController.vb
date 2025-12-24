@@ -1,10 +1,11 @@
-﻿Imports System.Web.Mvc
+﻿Imports System.IO
+Imports System.Net
+Imports System.Net.Mail
+Imports System.Web.Hosting
+Imports System.Web.Mvc
 Imports BO
 Imports Facade
 Imports Postal
-Imports System.Net
-Imports System.Net.Mail
-Imports System.IO
 
 
 
@@ -38,6 +39,13 @@ Public Class ProjectsController
                 model.SalesSetttings = New ProjectSalesSettingsBO
                 model.SalesSetttings.SaleVisible = False
             End If
+            Dim companyservice = ServiceFactory.GetCompanyService
+            model.Developer = GetCompanySafe(companyservice, model.Data.Developer)
+            model.Builder = GetCompanySafe(companyservice, model.Data.Builder)
+            model.Architect = GetCompanySafe(companyservice, model.Data.Architect)
+            model.Engineer = GetCompanySafe(companyservice, model.Data.Engineer)
+            model.SecurityCoordinator = GetCompanySafe(companyservice, model.Data.SecurityCoordinator)
+            model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
             'ViewData("title") = "BCO - " & model.Data.Name
             'Metatags
             ViewBag.Metatitle = "BCO - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
@@ -100,6 +108,13 @@ Public Class ProjectsController
             model.SalesSetttings = New ProjectSalesSettingsBO
             model.SalesSetttings.SaleVisible = False
         End If
+        Dim companyservice = ServiceFactory.GetCompanyService
+        model.Developer = GetCompanySafe(companyservice, model.Data.Developer)
+        model.Builder = GetCompanySafe(companyservice, model.Data.Builder)
+        model.Architect = GetCompanySafe(companyservice, model.Data.Architect)
+        model.Engineer = GetCompanySafe(companyservice, model.Data.Engineer)
+        model.SecurityCoordinator = GetCompanySafe(companyservice, model.Data.SecurityCoordinator)
+        model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
         'Metatags
         ViewBag.Metatitle = "BCO - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
         ViewBag.MetaSubtitle = "Vanaf " & FormatCurrency(model.SalesData.StartingPrice, 0,,, TriState.True)
@@ -169,6 +184,20 @@ Public Class ProjectsController
             internalemail.RequestType = "planaanvraag"
             internalemail.RequestTitle = "Nieuwe planaanvraag"
             internalemail.Send()
+            Dim planRequest As New ContactRequestBO With {
+                .ProjectId = project.Id,
+                .UnitId = unit.Id,
+                .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
+                .DocumentFileName = unit.Plan,
+                .RequestType = "Plan",
+                .Firstname = model.Firstname,
+                .Lastname = model.Name,
+                .Email = model.Email,
+                .Phone = model.Phone,
+                .Origin = ResolveOrigin("ProjectsController.SendPlan"),
+                .SourceSite = "BCO"
+            }
+            SaveContactRequest(planRequest)
             Return PartialView("ModalSuccesPlan")
         Else
             Return PartialView("ModalFailPlan")
@@ -235,6 +264,21 @@ Public Class ProjectsController
             internalemail.RequestType = "documentaanvraag"
             internalemail.RequestTitle = "Nieuwe documentaanvraag"
             internalemail.Send()
+            Dim contactRequest As New ContactRequestBO With {
+                .ProjectId = project.Id,
+                .DocumentId = Doc.Docid,
+                .DocumentName = Doc.Name,
+                .DocumentFileName = Doc.Filename,
+                .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
+                .Firstname = model.Firstname,
+                .Lastname = model.Name,
+                .Email = model.Email,
+                .Phone = model.Phone,
+                .RequestType = "Document",
+                .Origin = ResolveOrigin("ProjectsController.SendDoc"),
+                .SourceSite = "BCO"
+            }
+            SaveContactRequest(contactRequest)
             Return PartialView("ModalSuccesDoc")
         Else
             Return PartialView("ModalFailDoc")
@@ -290,6 +334,21 @@ Public Class ProjectsController
             internalemail.RequestType = "brochureaanvraag"
             internalemail.RequestTitle = "Nieuwe brochureaanvraag"
             internalemail.Send()
+            Dim brochureRequest As New ContactRequestBO With {
+                .ProjectId = project.Id,
+                .DocumentId = Doc.Docid,
+                .DocumentName = Doc.Name,
+                .DocumentFileName = Doc.Filename,
+                .DocumentType = "Brochure",
+                .Firstname = model.Firstname,
+                .Lastname = model.Name,
+                .Email = model.Email,
+                .Phone = model.Phone,
+                .RequestType = "Brochure",
+                .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
+                .SourceSite = "BCO"
+            }
+            SaveContactRequest(brochureRequest)
             Return PartialView("ModalSuccesDoc")
         Else
             Return PartialView("ModalFailDoc")
@@ -336,6 +395,19 @@ Public Class ProjectsController
             internalemail.Firstname = model.Firstname
             internalemail.Question = model.Question
             internalemail.Send()
+            Dim mailRequest As New ContactRequestBO With {
+                .ProjectId = project.Id,
+                .Firstname = model.Firstname,
+                .Lastname = model.Name,
+                .Email = model.Email,
+                .Phone = model.Phone,
+                .RequestType = "ProjectContact",
+                .Question = model.Question,
+                .Subject = "Projectcontact",
+                .Origin = ResolveOrigin("ProjectsController.SendMail"),
+                .SourceSite = "BCO"
+            }
+            SaveContactRequest(mailRequest)
             Return PartialView("ModalSuccesMail")
         Else
             Return PartialView("ModalFailMail")
@@ -402,6 +474,62 @@ Public Class ProjectsController
         Return View(model)
 
     End Function
+    Private Function GetCompanySafe(companyService As ICompanyService, company As IdNameBO) As CompanyBO
+        If companyService Is Nothing Then Return New CompanyBO
+        If company Is Nothing OrElse company.ID = 0 Then Return New CompanyBO
+        Dim response = companyService.GetCompanyByID(company.ID)
+        If response.Success Then Return response.Values.FirstOrDefault
+        Return New CompanyBO
+    End Function
+    Private Sub SaveContactRequest(request As ContactRequestBO)
+        Try
+            If request Is Nothing Then Return
+            request.SourceSite = "BCO"
+            If request.CreatedAt = DateTime.MinValue Then request.CreatedAt = DateTime.UtcNow
+            ServiceFactory.GetProjectService.InsertProjectContactRequest(request)
+        Catch ex As Exception
+            LogError("CONTACTREQUEST SAVE FAILED", ex)
+        End Try
+    End Sub
+    Private Function ResolveOrigin(fallback As String) As String
+        Try
+            Dim referrer = Request.UrlReferrer
+            If referrer IsNot Nothing Then
+                Dim url = referrer.AbsoluteUri
+                If Not String.IsNullOrWhiteSpace(url) Then Return url
+            End If
+        Catch
+        End Try
+
+        Return fallback
+    End Function
+
+    Private Sub LogError(message As String, Optional ex As Exception = Nothing)
+        Try
+            Dim folder = HostingEnvironment.MapPath("~/App_Data/")
+            If Not Directory.Exists(folder) Then
+                Directory.CreateDirectory(folder)
+            End If
+
+            Dim logFile = Path.Combine(folder, "error-log.txt")
+
+            Using writer As New StreamWriter(logFile, True)
+                writer.WriteLine("--------------------------------------------------")
+                writer.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+                writer.WriteLine(message)
+
+                If ex IsNot Nothing Then
+                    writer.WriteLine("EXCEPTION:")
+                    writer.WriteLine(ex.ToString())
+                End If
+
+                writer.WriteLine()
+            End Using
+
+        Catch
+        End Try
+    End Sub
+
     Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
         Dim service = ServiceFactory.GetProjectService
         Dim response = service.GetLatestNews(4, 1039)

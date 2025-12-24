@@ -1,0 +1,216 @@
+﻿@model CPMCore.Models.Projecten.DetailContactsModel
+@{
+    ViewData["Title"] = Model.ProjectName;
+    var contacts = Model.Contacts ?? new List<BOCore.ContactRequestBO>();
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Contacten</h1>
+                        <h5 class="mb-4 mt-0">Aanvragen vanuit de websites</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+                        <a href="@Url.Action("AddContact", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-md">+ Contact toevoegen</a>
+                    </div>
+                </div>
+                @Html.HiddenFor(m => m.ProjectId, new { id = "txtProjectId" })
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bx bx-search"></i>
+                            </span>
+                            <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <div class="datatables-header-footer-wrapper mt-2">
+                            <table class="table table-responsive-md table-hover mb-0" id="datatable-contact-requests" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
+                                    <thead>
+                                        <tr>
+                                            <th>Datum</th>
+                                            <th>Type</th>
+                                            <th>Naam</th>
+                                            <th>E-mail</th>
+                                            <th>Telefoon</th>
+                                            <th>Document / Eenheid</th>
+                                            <th>Vraag / bericht</th>
+                                            <th>Bron</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var contact in contacts)
+                                        {
+                                            var fullName = !string.IsNullOrWhiteSpace(contact.Fullname)
+                                            ? contact.Fullname
+                                            : ($"{contact.Firstname} {contact.Lastname}").Trim();
+                                            var documentLabel = !string.IsNullOrWhiteSpace(contact.DocumentName)
+                                            ? contact.DocumentName
+                                            : "-";
+                                            if (!string.IsNullOrWhiteSpace(contact.DocumentType))
+                                            {
+                                                documentLabel = $"{documentLabel} ({contact.DocumentType})".Trim();
+                                            }
+                                            <tr>
+                                                <td>@contact.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                                <td>@contact.RequestType</td>
+                                                <td>@fullName</td>
+                                                <td>@contact.Email</td>
+                                                <td>@contact.Phone</td>
+                                                <td>@documentLabel</td>
+                                                <td class="text-break">@contact.Question</td>
+                                                <td>
+                                                    <div>@contact.SourceSite</div>
+                                                    <small class="text-muted">@contact.Origin</small>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/dataTables.rowGroup.js"></script>
+    <script src="https://cdn.datatables.net/rowgroup/1.5.1/js/rowGroup.dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script>
+            // ===== Naamgeving voor weergave =====
+        // Pas deze 2 woorden aan en alle taalregels volgen mee
+        const entity = {
+          singular: 'contact',
+          plural: 'contacten'
+        };
+
+        // Bouw de DataTables language-teksten in NL met dynamische naamgeving
+        function buildLanguage(e) {
+          const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+          const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+
+          return {
+            processing:     "Bezig met verwerken…",
+            search:         "Zoeken:",
+            lengthMenu:     "Toon _MENU_",
+            info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+            infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
+            infoFiltered:   "(gefilterd uit _MAX_ totaal)",
+            loadingRecords: "Bezig met laden…",
+            zeroRecords:    `Geen ${e.plural} om weer te geven`,
+            emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
+
+            aria: {
+              sortAscending:  ": activeer om oplopend te sorteren",
+              sortDescending: ": activeer om aflopend te sorteren"
+            }
+          };
+        }
+
+        // ===== Init DataTable =====
+        const table = new DataTable('#datatable-contact-requests', {
+          order: [[1, 'asc']],
+          language: buildLanguage(entity),
+          layout: {
+            topStart: {
+              buttons: [
+                {
+                  extend: 'excel',
+                  text: '<i class="fa fa-file-excel"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar Excel',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'pdf',
+                  text: '<i class="fa fa-file-pdf"></i>',
+                  className: 'btn btn-default me-2',
+                  titleAttr: 'Exporteer naar PDF',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  orientation: 'landscape',
+                  pageSize: 'A3',
+                  exportOptions: { columns: ':visible' }
+                },
+                {
+                  extend: 'colvis',
+                  text: '<i class="bx bx-filter me-2"></i><span>Alle kolommen</span>',
+                  titleAttr: 'Selecteer kolommen',
+                  attr: { "data-bs-toggle": "tooltip" },
+                  columns: ':not(.noVis)',
+                  init: function (api, node) {
+                    // styling fix
+                    $(node).removeClass('btn-secondary').addClass('btn btn-default');
+                  }
+                }
+              ]
+            }
+          }
+        });
+
+        // ===== UI-aanpassingen / custom knoppen =====
+        // Verberg standaard knoppen/search indien je eigen UI gebruikt
+        $(".buttons-excel").hide();
+        $(".buttons-pdf").hide();
+        $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
+
+        // Koppel custom export-knoppen
+        $("#btnExportExcel").on('click', function () {
+          $(".buttons-excel").trigger("click");
+        });
+        $("#btnExportPdf").on('click', function () {
+          $(".buttons-pdf").trigger("click");
+        });
+
+        // Verplaats knoppen naar een eigen container
+        table.buttons(0, null).containers().appendTo('#colvis-container');
+
+        // ===== Custom zoekveld =====
+        $('#search-term').on('keyup', function () {
+          table.search($(this).val()).draw();
+        });
+        // //BIj laden
+        //     $(document).ready(function () {
+        //     $('.deleteContract').magnificPopup({
+        //         type: 'inline',
+        //         src: 'deleteContract',
+        //     });
+
+        // });
+        // //Tonen van modal delete contract
+        // $('.deleteContract').click(function () {
+        //     var url = "/Projecten/ModalDeleteContract"; // the url to the controller
+        //     var id = $(this).attr('data-id'); // the id that's given to each button in the list
+        //     $.get(url + '/' + id, function (data) {
+        //         $('#delete-contract-container').html(data);
+        //     });
+        // });
+    </script>
+}

@@ -85,6 +85,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ConnectionSettlementSource> ConnectionSettlementSource { get; set; }
 
+    public virtual DbSet<ContactRequests> ContactRequests { get; set; }
+
     public virtual DbSet<Contract> Contract { get; set; }
 
     public virtual DbSet<ContractActivity> ContractActivity { get; set; }
@@ -199,7 +201,7 @@ public partial class cpmRunningContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;User ID=db_ab5fbb_testdb_admin;Password=840683P@s");
+        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -629,7 +631,6 @@ public partial class cpmRunningContext : DbContext
         {
             entity.HasIndex(e => e.OctopusRelationId, "IX_ClientAccount_OctopusRelationId");
 
-            entity.Property(e => e.AttachUblByDefault).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientAccount_AttachUblByDefault");
             entity.Property(e => e.BankAccountNumber).HasMaxLength(50);
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.CompanyName).HasMaxLength(100);
@@ -642,7 +643,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.InvoiceStreet).HasMaxLength(250);
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
-            entity.Property(e => e.RequiresDigitalInvoice).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientAccount_RequiresDigitalInvoice");
             entity.Property(e => e.Salutation).HasMaxLength(50);
             entity.Property(e => e.Street).HasMaxLength(250);
             entity.Property(e => e.Vatnumber)
@@ -702,7 +702,6 @@ public partial class cpmRunningContext : DbContext
         {
             entity.HasIndex(e => e.OctopusRelationId, "IX_ClientContacts_OctopusRelationId");
 
-            entity.Property(e => e.AttachUblByDefault).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientContacts_AttachUblByDefault");
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.Cellphone).HasMaxLength(50);
             entity.Property(e => e.ClientAccountId).HasColumnName("ClientAccountID");
@@ -720,7 +719,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name).HasMaxLength(200);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
-            entity.Property(e => e.RequiresDigitalInvoice).HasAnnotation("Relational:DefaultConstraintName", "DF_ClientContacts_RequiresDigitalInvoice");
             entity.Property(e => e.Salutation).HasMaxLength(50);
             entity.Property(e => e.Street).HasMaxLength(250);
             entity.Property(e => e.Vatnumber)
@@ -863,9 +861,7 @@ public partial class cpmRunningContext : DbContext
             entity.HasIndex(e => e.OctopusRelationId, "IX_CompanyInfo_OctopusRelationId");
 
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
-            entity.Property(e => e.AttachUblByDefault)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyInfo_AttachUblByDefault");
+            entity.Property(e => e.AttachUblByDefault).HasDefaultValue(true);
             entity.Property(e => e.Bank).HasMaxLength(50);
             entity.Property(e => e.BedrijfsNaam).HasMaxLength(250);
             entity.Property(e => e.Busnummer).HasMaxLength(50);
@@ -883,9 +879,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.PostCodeId).HasColumnName("PostCodeID");
             entity.Property(e => e.Postcode).HasMaxLength(50);
             entity.Property(e => e.RegistratieNr).HasMaxLength(50);
-            entity.Property(e => e.RequiresDigitalInvoice)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyInfo_RequiresDigitalInvoice");
+            entity.Property(e => e.RequiresDigitalInvoice).HasDefaultValue(true);
             entity.Property(e => e.Straat).HasMaxLength(250);
             entity.Property(e => e.Telefoon1).HasMaxLength(50);
             entity.Property(e => e.Telefoon2).HasMaxLength(50);
@@ -956,14 +950,12 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<CompanyLegalForm>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__CompanyL__3214EC07F60BE2E3");
+            entity.HasKey(e => e.Id).HasName("PK__CompanyL__3214EC074F53C0E8");
 
             entity.Property(e => e.Abbreviation)
                 .IsRequired()
                 .HasMaxLength(16);
-            entity.Property(e => e.IsActive)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_CompanyLegalForm_IsActive");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(100);
@@ -971,7 +963,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ConnectionAdvanceApplication>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC0730C94077");
+            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC07E661095D");
 
             entity.HasIndex(e => new { e.SettlementId, e.InvoiceLineId }, "UX_CAA_Settlement_Line").IsUnique();
 
@@ -988,7 +980,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ConnectionSettlement>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC07C85822FE");
+            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC0784BAF3C3");
 
             entity.Property(e => e.CreatedOn).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.PeriodLabel).HasMaxLength(100);
@@ -1000,7 +992,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ConnectionSettlementSource>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC07896BF7FA");
+            entity.HasKey(e => e.Id).HasName("PK__Connecti__3214EC07077E1BB4");
 
             entity.HasIndex(e => new { e.SettlementId, e.InvoiceDetailId }, "UX_CSS_Settlement_Line").IsUnique();
 
@@ -1013,6 +1005,48 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Settlement).WithMany(p => p.ConnectionSettlementSource)
                 .HasForeignKey(d => d.SettlementId)
                 .HasConstraintName("FK_CSS_Sett");
+        });
+
+        modelBuilder.Entity<ContactRequests>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ContactR__3214EC07ECCBFF00");
+
+            entity.HasIndex(e => e.CreatedAt, "IX_ContactRequests_CreatedAt");
+
+            entity.HasIndex(e => e.ProjectId, "IX_ContactRequests_Project");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.DocumentFileName).HasMaxLength(255);
+            entity.Property(e => e.DocumentName).HasMaxLength(255);
+            entity.Property(e => e.DocumentType).HasMaxLength(50);
+            entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.Firstname).HasMaxLength(150);
+            entity.Property(e => e.Fullname).HasMaxLength(300);
+            entity.Property(e => e.Lastname).HasMaxLength(150);
+            entity.Property(e => e.Origin).HasMaxLength(150);
+            entity.Property(e => e.Phone).HasMaxLength(75);
+            entity.Property(e => e.RequestType)
+                .IsRequired()
+                .HasMaxLength(50);
+            entity.Property(e => e.SourceSite)
+                .IsRequired()
+                .HasMaxLength(50);
+            entity.Property(e => e.Subject).HasMaxLength(255);
+
+            entity.HasOne(d => d.Document).WithMany(p => p.ContactRequests)
+                .HasForeignKey(d => d.DocumentId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ContactRequests_ProjectDocs");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ContactRequests)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ContactRequests_Project");
+
+            entity.HasOne(d => d.Unit).WithMany(p => p.ContactRequests)
+                .HasForeignKey(d => d.UnitId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ContactRequests_Units");
         });
 
         modelBuilder.Entity<Contract>(entity =>
@@ -1158,7 +1192,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<InvoiceAttachments>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceA__3214EC07C94BD304");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceA__3214EC071A05540B");
 
             entity.Property(e => e.BlobPath)
                 .IsRequired()
@@ -1172,12 +1206,12 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceAttachments)
                 .HasForeignKey(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceAt__Invoi__7ADC2F5E");
+                .HasConstraintName("FK__InvoiceAt__Invoi__12B3B8EF");
         });
 
         modelBuilder.Entity<InvoiceDunning>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceD__3214EC0712E1406F");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceD__3214EC07F1D0D5AD");
 
             entity.Property(e => e.FeeAmount).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.InterestPct).HasColumnType("decimal(9, 4)");
@@ -1187,12 +1221,12 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceDunning)
                 .HasForeignKey(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceDu__Invoi__7EACC042");
+                .HasConstraintName("FK__InvoiceDu__Invoi__168449D3");
         });
 
         modelBuilder.Entity<InvoiceEmailLog>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceE__3214EC0744B888D2");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceE__3214EC07C25B900A");
 
             entity.Property(e => e.CcAddress).HasMaxLength(400);
             entity.Property(e => e.ProviderId).HasMaxLength(100);
@@ -1210,14 +1244,14 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Invoice).WithMany(p => p.InvoiceEmailLog)
                 .HasForeignKey(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceEm__Invoi__770B9E7A");
+                .HasConstraintName("FK__InvoiceEm__Invoi__0EE3280B");
         });
 
         modelBuilder.Entity<InvoicePdfArchive>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceP__3214EC076B9B3928");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceP__3214EC07663B295E");
 
-            entity.HasIndex(e => e.InvoiceId, "UQ__InvoiceP__D796AAB40FF76CA6").IsUnique();
+            entity.HasIndex(e => e.InvoiceId, "UQ__InvoiceP__D796AAB4D71DBA6B").IsUnique();
 
             entity.Property(e => e.GeneratedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.Pdf).IsRequired();
@@ -1229,12 +1263,12 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Invoice).WithOne(p => p.InvoicePdfArchive)
                 .HasForeignKey<InvoicePdfArchive>(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoicePd__Invoi__0A1E72EE");
+                .HasConstraintName("FK__InvoicePd__Invoi__21F5FC7F");
         });
 
         modelBuilder.Entity<InvoiceRelations>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceR__3214EC07CB49EE97");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceR__3214EC07F21FA693");
 
             entity.Property(e => e.RelationType)
                 .IsRequired()
@@ -1243,29 +1277,28 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.ChildInvoice).WithMany(p => p.InvoiceRelationsChildInvoice)
                 .HasForeignKey(d => d.ChildInvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceRe__Child__733B0D96");
+                .HasConstraintName("FK__InvoiceRe__Child__0B129727");
 
             entity.HasOne(d => d.ParentInvoice).WithMany(p => p.InvoiceRelationsParentInvoice)
                 .HasForeignKey(d => d.ParentInvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceRe__Paren__7246E95D");
+                .HasConstraintName("FK__InvoiceRe__Paren__0A1E72EE");
         });
 
         modelBuilder.Entity<InvoiceSequence>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC0753928DA7");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07C0015E7E");
 
             entity.HasIndex(e => e.BookyearId, "IX_InvoiceSequence_BookyearId");
 
             entity.HasIndex(e => e.JournalId, "IX_InvoiceSequence_JournalId");
 
-            entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UQ__InvoiceS__F0F80679723D5DB7").IsUnique();
+            entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UQ__InvoiceS__F0F8067913A3BF5D").IsUnique();
 
             entity.HasIndex(e => new { e.SeriesId, e.FiscalYear }, "UX_InvoiceSequence_Series_Year").IsUnique();
 
             entity.HasOne(d => d.Bookyear).WithMany(p => p.InvoiceSequence)
                 .HasForeignKey(d => d.BookyearId)
-                .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_InvoiceSequence_OctopusBookyear");
 
             entity.HasOne(d => d.Journal).WithMany(p => p.InvoiceSequence)
@@ -1275,14 +1308,14 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Series).WithMany(p => p.InvoiceSequence)
                 .HasForeignKey(d => d.SeriesId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceSe__Serie__13A7DD28");
+                .HasConstraintName("FK__InvoiceSe__Serie__79E80B25");
         });
 
         modelBuilder.Entity<InvoiceSeries>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07170E86C5");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07FDB0333B");
 
-            entity.HasIndex(e => new { e.CompanyId, e.Code }, "UQ__InvoiceS__57B2D9E701310CCF").IsUnique();
+            entity.HasIndex(e => new { e.CompanyId, e.Code }, "UQ__InvoiceS__57B2D9E709A45DAF").IsUnique();
 
             entity.HasIndex(e => new { e.IssuerCompanyId, e.Code }, "UX_InvoiceSeries_Issuer_Code")
                 .IsUnique()
@@ -1302,9 +1335,9 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<InvoiceStatusLookup>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07481DD686");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceS__3214EC07D3387F9B");
 
-            entity.HasIndex(e => e.Name, "UQ__InvoiceS__737584F6A33D066A").IsUnique();
+            entity.HasIndex(e => e.Name, "UQ__InvoiceS__737584F63EFAAA38").IsUnique();
 
             entity.Property(e => e.Name)
                 .IsRequired()
@@ -1313,9 +1346,9 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<InvoiceUbl>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__InvoiceU__3214EC07758CAAB7");
+            entity.HasKey(e => e.Id).HasName("PK__InvoiceU__3214EC07B5C5A1FC");
 
-            entity.HasIndex(e => e.InvoiceId, "UQ__InvoiceU__D796AAB41BF664BB").IsUnique();
+            entity.HasIndex(e => e.InvoiceId, "UQ__InvoiceU__D796AAB4D60A460F").IsUnique();
 
             entity.Property(e => e.GeneratedAt).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.PeppolDocId).HasMaxLength(100);
@@ -1331,22 +1364,18 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Invoice).WithOne(p => p.InvoiceUbl)
                 .HasForeignKey<InvoiceUbl>(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__InvoiceUb__Invoi__0371755F");
+                .HasConstraintName("FK__InvoiceUb__Invoi__1B48FEF0");
         });
 
         modelBuilder.Entity<Invoices>(entity =>
         {
             entity.HasIndex(e => e.ProjectId, "IX_Invoice_Project");
 
-            entity.HasIndex(e => e.ClientId, "IX_Invoices_ClientId");
-
             entity.HasIndex(e => e.ClientIdClientAccount, "IX_Invoices_ClientId_ClientAccount");
 
             entity.HasIndex(e => e.ClientIdClientContacts, "IX_Invoices_ClientId_ClientContacts");
 
             entity.HasIndex(e => new { e.ClientId, e.ClientName }, "IX_Invoices_Client_Search");
-
-            entity.HasIndex(e => e.CompanyId, "IX_Invoices_CompanyId");
 
             entity.HasIndex(e => e.InvoiceMode, "IX_Invoices_InvoiceMode");
 
@@ -1363,10 +1392,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Adress).HasMaxLength(200);
             entity.Property(e => e.BankAccount).HasMaxLength(50);
             entity.Property(e => e.ClientIdClientAccount)
-                .HasComputedColumnSql("(case when [ClientType]=(1) then CONVERT([int],[ClientId])  end)", true)
+                .HasComputedColumnSql("(case when [ClientType]=(1) then CONVERT([int],[ClientId],(0))  end)", true)
                 .HasColumnName("ClientId_ClientAccount");
             entity.Property(e => e.ClientIdClientContacts)
-                .HasComputedColumnSql("(case when [ClientType]=(2) then CONVERT([int],[ClientId])  end)", true)
+                .HasComputedColumnSql("(case when [ClientType]=(2) then CONVERT([int],[ClientId],(0))  end)", true)
                 .HasColumnName("ClientId_ClientContacts");
             entity.Property(e => e.ClientName).HasMaxLength(200);
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
@@ -1412,15 +1441,15 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasOne(d => d.ReplacementOf).WithMany(p => p.InverseReplacementOf)
                 .HasForeignKey(d => d.ReplacementOfId)
-                .HasConstraintName("FK__Invoices__Replac__0DEF03D2");
+                .HasConstraintName("FK__Invoices__Replac__25C68D63");
 
             entity.HasOne(d => d.Series).WithMany(p => p.Invoices)
                 .HasForeignKey(d => d.SeriesId)
-                .HasConstraintName("FK__Invoices__Series__0C06BB60");
+                .HasConstraintName("FK__Invoices__Series__23DE44F1");
 
             entity.HasOne(d => d.Status).WithMany(p => p.Invoices)
                 .HasForeignKey(d => d.StatusId)
-                .HasConstraintName("FK__Invoices__Status__0CFADF99");
+                .HasConstraintName("FK__Invoices__Status__24D2692A");
         });
 
         modelBuilder.Entity<InvoicesDetails>(entity =>
@@ -1437,7 +1466,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LineType).HasMaxLength(20);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.Text).HasMaxLength(200);
-            entity.Property(e => e.UtilityIsAdvance).HasAnnotation("Relational:DefaultConstraintName", "DF_InvoicesDetails_UtilityIsAdvance");
             entity.Property(e => e.VatCode).HasMaxLength(50);
             entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
 
@@ -1460,7 +1488,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
-            entity.Property(e => e.VatPercentage).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.VatPercentage).HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.Project).WithMany(p => p.InvoicingPaymentGroup)
                 .HasForeignKey(d => d.ProjectId)
@@ -1492,7 +1520,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<IssuerBankAccount>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__IssuerBa__3214EC075DEB3F01");
+            entity.HasKey(e => e.Id).HasName("PK__IssuerBa__3214EC07E0591098");
 
             entity.HasIndex(e => e.IssuerCompanyId, "IX_IssuerBankAccount_IssuerCompanyId");
 
@@ -1509,14 +1537,12 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.IssuerCompany).WithOne(p => p.IssuerBankAccount)
                 .HasForeignKey<IssuerBankAccount>(d => d.IssuerCompanyId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__IssuerBan__Issue__1C3D2329");
+                .HasConstraintName("FK__IssuerBan__Issue__2E5BD364");
         });
 
         modelBuilder.Entity<IssuerCompany>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__IssuerCo__3214EC07F8C0F7AB");
-
-            entity.HasIndex(e => e.DefaultVatTypeId, "IX_IssuerCompany_DefaultVatTypeId");
+            entity.HasKey(e => e.Id).HasName("PK__IssuerCo__3214EC07021DEE0B");
 
             entity.Property(e => e.AddressLine1).HasMaxLength(200);
             entity.Property(e => e.AddressLine2).HasMaxLength(200);
@@ -1530,24 +1556,19 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(3)
                 .IsFixedLength();
             entity.Property(e => e.DefaultLanguage).HasMaxLength(5);
-            entity.Property(e => e.EinvoiceEnabled)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_EInvEnabled")
-                .HasColumnName("EInvoiceEnabled");
+            entity.Property(e => e.EinvoiceEnabled).HasColumnName("EInvoiceEnabled");
             entity.Property(e => e.Email).HasMaxLength(200);
             entity.Property(e => e.EmailSubjectTemplate).HasMaxLength(200);
             entity.Property(e => e.EnterpriseNumber).HasMaxLength(32);
             entity.Property(e => e.EpcBeneficiaryName).HasMaxLength(70);
             entity.Property(e => e.EpcBic).HasMaxLength(11);
             entity.Property(e => e.EpcIban).HasMaxLength(34);
-            entity.Property(e => e.EpcQrEnabled).HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_EpcEnabled");
             entity.Property(e => e.EpcRemittanceTemplate).HasMaxLength(140);
             entity.Property(e => e.EpcRemittanceType).HasMaxLength(10);
             entity.Property(e => e.FontFamily).HasMaxLength(100);
             entity.Property(e => e.InvoiceNumberPattern).HasMaxLength(80);
             entity.Property(e => e.InvoiceSendEmail).HasMaxLength(200);
-            entity.Property(e => e.IsActive)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF__IssuerCom__IsAct__1960B67E");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LegalName).HasMaxLength(200);
             entity.Property(e => e.LogoPath).HasMaxLength(400);
             entity.Property(e => e.Name)
@@ -1558,15 +1579,12 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.OctopusDossierToken).HasMaxLength(512);
             entity.Property(e => e.OctopusPassword).HasMaxLength(200);
             entity.Property(e => e.OctopusUsername).HasMaxLength(200);
-            entity.Property(e => e.PeppolEnabled).HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_PeppolEnabled");
             entity.Property(e => e.PeppolParticipantId).HasMaxLength(64);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.Phone2).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(16);
             entity.Property(e => e.TemplateKey).HasMaxLength(64);
-            entity.Property(e => e.UblAttachPdf)
-                .HasDefaultValue(true)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_IssuerCompany_UblAttachPdf");
+            entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
             entity.Property(e => e.VatNumber).HasMaxLength(32);
             entity.Property(e => e.Website).HasMaxLength(200);
 
@@ -1576,7 +1594,7 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasOne(d => d.DefaultPaymentTerm).WithMany(p => p.IssuerCompany)
                 .HasForeignKey(d => d.DefaultPaymentTermId)
-                .HasConstraintName("FK__IssuerCom__Defau__186C9245");
+                .HasConstraintName("FK__IssuerCom__Defau__2A8B4280");
 
             entity.HasOne(d => d.DefaultVatType).WithMany(p => p.IssuerCompany)
                 .HasForeignKey(d => d.DefaultVatTypeId)
@@ -1599,7 +1617,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<OctopusBookyearPeriods>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__OctopusB__3214EC070A6FFD27");
+            entity.HasKey(e => e.Id).HasName("PK__OctopusB__3214EC07C7548AD3");
 
             entity.HasIndex(e => e.BookyearId, "IX_OctopusBookyearPeriods_BookyearId");
 
@@ -1610,7 +1628,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<OctopusBookyears>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__OctopusB__3214EC072E362E4F");
+            entity.HasKey(e => e.Id).HasName("PK__OctopusB__3214EC07EB60FBBC");
 
             entity.HasIndex(e => new { e.IssuerCompanyId, e.BookyearKeyId }, "UX_OctopusBookyears_Issuer_BookyearKey").IsUnique();
 
@@ -1625,7 +1643,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<OctopusJournals>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__OctopusJ__3214EC0775C819F4");
+            entity.HasKey(e => e.Id).HasName("PK__OctopusJ__3214EC0773B6527F");
 
             entity.HasIndex(e => e.BookyearId, "IX_OctopusJournals_BookyearId");
 
@@ -1646,11 +1664,11 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<PaymentAllocations>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__PaymentA__3214EC07D74B24B8");
+            entity.HasKey(e => e.Id).HasName("PK__PaymentA__3214EC0764F3077A");
 
             entity.HasIndex(e => e.InvoiceId, "IX_PaymentAllocations_Invoice");
 
-            entity.HasIndex(e => new { e.PaymentId, e.InvoiceId }, "UQ__PaymentA__D62C009275F8C313").IsUnique();
+            entity.HasIndex(e => new { e.PaymentId, e.InvoiceId }, "UQ__PaymentA__D62C0092FA8B04F4").IsUnique();
 
             entity.Property(e => e.Amount).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
@@ -1658,17 +1676,17 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Invoice).WithMany(p => p.PaymentAllocations)
                 .HasForeignKey(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PaymentAl__Invoi__6E765879");
+                .HasConstraintName("FK__PaymentAl__Invoi__064DE20A");
 
             entity.HasOne(d => d.Payment).WithMany(p => p.PaymentAllocations)
                 .HasForeignKey(d => d.PaymentId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PaymentAl__Payme__6D823440");
+                .HasConstraintName("FK__PaymentAl__Payme__0559BDD1");
         });
 
         modelBuilder.Entity<PaymentTerms>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__PaymentT__3214EC070D79F509");
+            entity.HasKey(e => e.Id).HasName("PK__PaymentT__3214EC074A170AFB");
 
             entity.Property(e => e.Description).HasMaxLength(200);
             entity.Property(e => e.Name)
@@ -1678,7 +1696,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Payments>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Payments__3214EC075A6CB78C");
+            entity.HasKey(e => e.Id).HasName("PK__Payments__3214EC0785230180");
 
             entity.HasIndex(e => e.StructuredComm, "IX_Payments_StructuredComm");
 
@@ -1817,7 +1835,7 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasOne(d => d.IssuerCompanyIdLandOwnerNavigation).WithMany(p => p.ProjectIssuerCompanyIdLandOwnerNavigation)
                 .HasForeignKey(d => d.IssuerCompanyIdLandOwner)
-                .HasConstraintName("FK_Project_IssuerCompanyLandOwner");
+                .HasConstraintName("FK_Project_IssuerCompanyIdLandOwner");
 
             entity.HasOne(d => d.PostalCode).WithMany(p => p.Project)
                 .HasForeignKey(d => d.PostalCodeId)
@@ -1856,7 +1874,7 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ProjectConnectionKey>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__ProjectC__3214EC073732F72E");
+            entity.HasKey(e => e.Id).HasName("PK__ProjectC__3214EC07CF3642E5");
 
             entity.HasIndex(e => new { e.ProjectId, e.UnitId }, "UX_PCK_Project_Unit").IsUnique();
 
@@ -1876,7 +1894,6 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Filename)
                 .IsRequired()
                 .HasMaxLength(200);
-            entity.Property(e => e.IsBrochure).HasAnnotation("Relational:DefaultConstraintName", "DF_ProjectDocs_IsBrochure");
             entity.Property(e => e.Name).HasMaxLength(200);
 
             entity.HasOne(d => d.ClientAccount).WithMany(p => p.ProjectDocs)
@@ -2156,22 +2173,19 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Vattype>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__VATtype___3214EC0799E5BC79");
+            entity.HasKey(e => e.Id).HasName("PK__VATtype___3214EC076F2AD65D");
 
             entity.ToTable("VATtype");
 
             entity.HasIndex(e => new { e.IssuerCompanyId, e.Code }, "UX_VATtype_Issuer_Code").IsUnique();
 
-            entity.Property(e => e.BasePercentage)
-                .HasAnnotation("Relational:DefaultConstraintName", "DF_VATtype_BasePercentage")
-                .HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.BasePercentage).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.Code)
                 .IsRequired()
                 .HasMaxLength(50);
             entity.Property(e => e.Description)
                 .IsRequired()
                 .HasMaxLength(200);
-            entity.Property(e => e.Type).HasAnnotation("Relational:DefaultConstraintName", "DF_VATtype_Type");
 
             entity.HasOne(d => d.IssuerCompanyNavigation).WithMany(p => p.Vattype)
                 .HasForeignKey(d => d.IssuerCompanyId)

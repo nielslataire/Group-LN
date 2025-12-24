@@ -12,25 +12,15 @@
         @Html.HiddenFor(m => m.Activity.Name)
         <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Model.Activity.Name</label>
         <div class="col-lg-8 col-xl-6">
-            <div class="input-group mb-3">
-                @Html.EditorFor(m => m.Price, "Currency")
-                @* <span class="input-group-text">€</span>
-                @Html.TextBoxFor(m => m.Price, new
-                    {
-                        @class = "form-control form-control-modern Currencymask",
-                        @Value = Model.Price.HasValue ? Model.Price.Value.ToString("0.##", CultureInfo.InvariantCulture) : ""
-                    }) *@
-                @if (ViewData["mode"] == "edit")
-                {
-                    <button class="btn btn-danger deleteUnit" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" ms-2" data-id="@Model.Activity.ID"><i class="fa fa-trash"></i></button>
-
+          @Html.EditorFor(
+                m => m.Price,
+                "CurrencyWithActions",
+                null,
+                new {
+                    ShowDelete = ViewData["mode"]?.ToString() != "view",
+                    DeleteId = Model.Activity.ID
                 }
-                else if (ViewData["mode"] == "add")
-                {
-                    <button class="btn btn-danger deleterow" type="button" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@Model.Activity.ID"><i class="fa fa-trash"></i></button>
-
-                }
-            </div>
+            )
             
         </div>
 

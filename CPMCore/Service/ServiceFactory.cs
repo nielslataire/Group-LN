@@ -2,15 +2,30 @@
 using ServiceCore;
 using DALCore.Models;
 using DALCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace CPMCore.Service
 {
     public static class ServiceFactory
     {
+        private static DbContextOptions<cpmRunningContext>? _dbOptions;
+
+        public static void Configure(DbContextOptions<cpmRunningContext> options)
+        {
+            _dbOptions = options;
+        }
+
         // Elke call krijgt een verse UoW/DbContext
         public static UnitOfWorkCore CreateUoW()
-            => new UnitOfWorkCore(new cpmRunningContext());
+        {
+            if (_dbOptions is null)
+            {
+                throw new InvalidOperationException("ServiceFactory.Configure moet eerst worden aangeroepen met DbContextOptions uit appsettings.");
+            }
+
+            return new UnitOfWorkCore(new cpmRunningContext(_dbOptions));
+        }
 
         // ----- Non-cached getters (altijd nieuwe instance) -----
         public static IAuthenticationService GetAuthenticationService()

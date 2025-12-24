@@ -1,6 +1,9 @@
 ﻿Imports Postal
 Imports Facade
 Imports cpm
+Imports BO
+Imports System.IO
+Imports System.Web.Hosting
 Public Class ContactController
     Inherits System.Web.Mvc.Controller
 
@@ -61,6 +64,17 @@ Public Class ContactController
             internalemail.Message = model.Message
             internalemail.Phone = model.Phone
             internalemail.Send()
+            Dim contactRequest As New ContactRequestBO With {
+                .Fullname = model.ContactName,
+                .Email = model.EmailTo,
+                .Phone = model.Phone,
+                .Subject = model.Title,
+                .Question = model.Message,
+                .RequestType = "Contact",
+                .SourceSite = "BCO",
+                .Origin = ResolveOrigin("ContactController.Send")
+            }
+            SaveContactRequest(contactRequest)
             AddMessage("success", "Uw bericht is verstuurd naar BCO, wij nemen zo snel mogelijk contact met u op.", "Geslaagd!")
             Return RedirectToAction("Succes", "Contact")
         Else
@@ -89,5 +103,51 @@ Public Class ContactController
         TempData("MessageType") = messagetype
         TempData("MessageTitle") = messagetitle
     End Sub
-  
+    Private Sub SaveContactRequest(request As ContactRequestBO)
+        Try
+            If request Is Nothing Then Return
+            If request.CreatedAt = DateTime.MinValue Then request.CreatedAt = DateTime.UtcNow
+            ServiceFactory.GetProjectService.InsertProjectContactRequest(request)
+        Catch ex As Exception
+            LogError("CONTACTREQUEST SAVE FAILED", ex)
+        End Try
+    End Sub
+    Private Function ResolveOrigin(fallback As String) As String
+        Try
+            Dim referrer = Request.UrlReferrer
+            If referrer IsNot Nothing Then
+                Dim url = referrer.AbsoluteUri
+                If Not String.IsNullOrWhiteSpace(url) Then Return url
+            End If
+        Catch
+        End Try
+
+        Return fallback
+    End Function
+
+    Private Sub LogError(message As String, Optional ex As Exception = Nothing)
+        Try
+            Dim folder = HostingEnvironment.MapPath("~/App_Data/")
+            If Not Directory.Exists(folder) Then
+                Directory.CreateDirectory(folder)
+            End If
+
+            Dim logFile = Path.Combine(folder, "error-log.txt")
+
+            Using writer As New StreamWriter(logFile, True)
+                writer.WriteLine("--------------------------------------------------")
+                writer.WriteLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+                writer.WriteLine(message)
+
+                If ex IsNot Nothing Then
+                    writer.WriteLine("EXCEPTION:")
+                    writer.WriteLine(ex.ToString())
+                End If
+
+                writer.WriteLine()
+            End Using
+
+        Catch
+        End Try
+    End Sub
 End Class

@@ -61,6 +61,8 @@ public partial class Units
 
     public virtual ClientAccount ClientAccount { get; set; }
 
+    public virtual ICollection<ContactRequests> ContactRequests { get; set; } = new List<ContactRequests>();
+
     public virtual ICollection<Units> InverseAttachedUnit { get; set; } = new List<Units>();
 
     public virtual ICollection<Units> InverseLinkedUnit { get; set; } = new List<Units>();

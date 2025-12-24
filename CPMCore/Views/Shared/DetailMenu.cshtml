@@ -56,6 +56,12 @@
 						</a>
 					</li> *@
 					<li>
+						<a href="@Url.Action("DetailContacts", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailContacts" && currentController == "Projecten" ? "active" : "")">
+							Contacten
+						</a>
+					</li>
+					<li>
 						<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
 						   class="menu-item @(currentAction == "DetailPhotos" && currentController == "Projecten" ? "active" : "")">
 							Foto's

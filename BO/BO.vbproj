@@ -128,6 +128,7 @@
     <Compile Include="BO\LogBO.vb" />
     <Compile Include="BO\Project\Calculation\IncommingInvoiceActivityBO.vb" />
     <Compile Include="BO\Project\Calculation\ContractAdditionalOrderBO.vb" />
+    <Compile Include="BO\Project\ContactRequestBO.vb" />
     <Compile Include="BO\Project\IncommingInvoice\IncommingInvoiceDetailBO.vb" />
     <Compile Include="BO\Project\IncommingInvoice\IncommingInvoiceBO.vb" />
     <Compile Include="BO\Project\Unit\UnitConstructionValueBO.vb" />

@@ -91,6 +91,10 @@ Public Interface IProjectService
     Function DeleteProjectDoc(ids As List(Of Integer)) As Response
     Function DeleteProjectDoc(bos As List(Of ProjectDocBO)) As Response
 
+    'Contact requests
+    Function InsertProjectContactRequest(request As ContactRequestBO) As Response
+    Function GetProjectContactRequests(projectid As Integer) As GetResponse(Of ContactRequestBO)
+
     'PaymentGroups
     Function GetProjectPaymentGroups(projectid As Integer) As GetResponse(Of ProjectPaymentGroupBO)
     Function GetProjectPaymentGroup(groupid As Integer) As GetResponse(Of ProjectPaymentGroupBO)

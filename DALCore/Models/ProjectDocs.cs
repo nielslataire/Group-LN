@@ -27,6 +27,8 @@ public partial class ProjectDocs
 
     public virtual ClientAccount ClientAccount { get; set; }
 
+    public virtual ICollection<ContactRequests> ContactRequests { get; set; } = new List<ContactRequests>();
+
     public virtual ICollection<InvoicingPaymentStages> InvoicingPaymentStages { get; set; } = new List<InvoicingPaymentStages>();
 
     public virtual Project Project { get; set; }

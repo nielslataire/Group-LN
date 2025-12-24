@@ -551,6 +551,40 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpGet]
+        [Breadcrumb("Contacten", FromAction = "Detail")]
+        public ActionResult DetailContacts(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var service = ServiceFactory.GetProjectService();
+            var model = new DetailContactsModel
+            {
+                ProjectId = projectid,
+                ProjectName = service.GetProjectNameById(projectid)
+            };
+
+            var response = service.GetProjectContactRequests(projectid);
+            if (response.Success) model.Contacts = response.Values;
+
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContacts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContacts", "Projecten", "Contacten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = projectContacts;
+
+            return View(model);
+        }
+        [HttpGet]
         //[Breadcrumb("Eenheid toevoegen")]
         [Breadcrumb("Eenheid toevoegen", FromAction = "DetailUnits")]
         public ActionResult AddUnit(int projectid)

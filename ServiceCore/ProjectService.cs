@@ -1421,6 +1421,52 @@ namespace ServiceCore
         public Response DeleteProjectDoc(List<ProjectDocBO> bos)
             => DeleteProjectDoc(bos.Select(s => s.Docid).ToList());
 
+        // ===== Contact Requests =====
+        public Response InsertProjectContactRequest(ContactRequestBO request)
+        {
+            var response = new Response();
+            if (request == null)
+            {
+                response.AddError("Contactaanvraag is leeg");
+                return response;
+            }
+
+            var entity = _uow.ContactRequests.GetNew();
+            var err = ContactRequestTranslator.TranslateBOToEntity(entity, request);
+            if (err != ErrorCode.Success)
+            {
+                response.AddError(err.ToString());
+                return response;
+            }
+
+            var saved = _uow.SaveChanges();
+            response.InsertedId = entity.Id;
+            response.AddSaveChangesResult(saved, "Contactaanvraag opgeslagen", "Contactaanvraag niet opgeslagen");
+            return response;
+        }
+
+        public GetResponse<ContactRequestBO> GetProjectContactRequests(int projectid)
+        {
+            var response = new GetResponse<ContactRequestBO>();
+            var query = _uow.ContactRequests.GetNoTracking();
+
+            if (projectid > 0)
+                query = query.Where(c => c.ProjectId == projectid);
+
+            var entities = query.OrderByDescending(c => c.CreatedAt).ToList();
+
+            foreach (var e in entities)
+            {
+                var bo = new ContactRequestBO();
+                var err = ContactRequestTranslator.TranslateEntityToBO(e, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
+            }
+
+            return response;
+        }
+
+
 
         // ===== PaymentGroups =====
         public GetResponse<ProjectPaymentGroupBO> GetProjectPaymentGroups(int projectid)

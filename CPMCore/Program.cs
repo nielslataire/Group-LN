@@ -9,6 +9,7 @@ using DALCore.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using FacadeCore;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
@@ -32,6 +33,11 @@ using System.Net.Http.Headers;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var cultureInfo = new CultureInfo("nl-BE");
+
+CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
+CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
 
 // UserSecrets voor connectiestring
 var configuration = builder.Configuration;
@@ -86,12 +92,21 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 });
 
+var domainDbOptions = new DbContextOptionsBuilder<cpmRunningContext>()
+    .UseSqlServer(
+        connection,
+        sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
+    .Options;
+
 // ⬇️ JOUW DOMEIN CONTEXT (DALCore) — gebruikt dezelfde connection
 builder.Services.AddDbContext<cpmRunningContext>(options =>
     options.UseSqlServer(
         connection,
         sqlServerOptions => sqlServerOptions.CommandTimeout(5000))
 );
+
+// Maak de options ook beschikbaar voor ServiceFactory (gebruik static helpers)
+ServiceFactory.Configure(domainDbOptions);
 
 // ⬇️ UnitOfWork + Services via DI (scoped per request)
 builder.Services.AddScoped<DALCore.UnitOfWorkCore, DALCore.UnitOfWorkCore>();
@@ -144,6 +159,7 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
     new SynchronizedConverter(new PdfTools())
 );
 
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -162,11 +178,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddDefaultTokenProviders()
 .AddRoleManager<RoleManager<IdentityRole>>();
 
-//builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-//    options.SignIn.RequireConfirmedAccount = true)
-//    .AddEntityFrameworkStores<ApplicationDbContext>()
-//    .AddDefaultUI()
-//    .AddDefaultTokenProviders();
+//////////////builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+//////////////    options.SignIn.RequireConfirmedAccount = true)
+//////////////    .AddEntityFrameworkStores<ApplicationDbContext>()
+//////////////    .AddDefaultUI()
+//////////////    .AddDefaultTokenProviders();
 
 builder.Services.AddAuthorization();
 //builder.Services.AddRazorPages();

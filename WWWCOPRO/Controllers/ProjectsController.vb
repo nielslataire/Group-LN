@@ -46,23 +46,18 @@ Namespace Controllers
                 End If
                 'Developer
                 Dim companyservice = ServiceFactory.GetCompanyService
-                Dim response2 = companyservice.GetCompanyByID(model.Data.Developer.ID)
-                If (response.Success) Then model.Developer = response2.Values.FirstOrDefault
+                model.Developer = GetCompanySafe(companyservice, model.Data.Developer)
                 'Builder
-                response2 = companyservice.GetCompanyByID(model.Data.Builder.ID)
-                If (response.Success) Then model.Builder = response2.Values.FirstOrDefault
+                model.Builder = GetCompanySafe(companyservice, model.Data.Builder)
                 'Architect
-                response2 = companyservice.GetCompanyByID(model.Data.Architect.ID)
-                If (response.Success) Then model.Architect = response2.Values.FirstOrDefault
+                model.Architect = GetCompanySafe(companyservice, model.Data.Architect)
                 'Engineer
-                response2 = companyservice.GetCompanyByID(model.Data.Engineer.ID)
-                If (response.Success) Then model.Engineer = response2.Values.FirstOrDefault
+                model.Engineer = GetCompanySafe(companyservice, model.Data.Engineer)
                 'Securitycoordinator
-                response2 = companyservice.GetCompanyByID(model.Data.SecurityCoordinator.ID)
-                If (response.Success) Then model.SecurityCoordinator = response2.Values.FirstOrDefault
+                model.SecurityCoordinator = GetCompanySafe(companyservice, model.Data.SecurityCoordinator)
                 'EPB Reporter
-                response2 = companyservice.GetCompanyByID(model.Data.EpbReporter.ID)
-                If (response.Success) Then model.EpbReporter = response2.Values.FirstOrDefault
+                model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
+
                 ViewData("title") = "Group LN - " & model.Data.Name
                 ViewBag.Metatitle = "Group LN - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
                 ViewBag.MetaSubtitle = "Vanaf " & Extensions.ToEuroCurrency(model.SalesData.StartingPrice)
@@ -131,23 +126,18 @@ Namespace Controllers
             End If
             'Developer
             Dim companyservice = ServiceFactory.GetCompanyService
-            Dim response2 = companyservice.GetCompanyByID(model.Data.Developer.ID)
-            If (response.Success) Then model.Developer = response2.Values.FirstOrDefault
+            model.Developer = GetCompanySafe(companyservice, model.Data.Developer)
             'Builder
-            response2 = companyservice.GetCompanyByID(model.Data.Builder.ID)
-            If (response.Success) Then model.Builder = response2.Values.FirstOrDefault
+            model.Builder = GetCompanySafe(companyservice, model.Data.Builder)
             'Architect
-            response2 = companyservice.GetCompanyByID(model.Data.Architect.ID)
-            If (response.Success) Then model.Architect = response2.Values.FirstOrDefault
+            model.Architect = GetCompanySafe(companyservice, model.Data.Architect)
             'Engineer
-            response2 = companyservice.GetCompanyByID(model.Data.Engineer.ID)
-            If (response.Success) Then model.Engineer = response2.Values.FirstOrDefault
+            model.Engineer = GetCompanySafe(companyservice, model.Data.Engineer)
             'Securitycoordinator
-            response2 = companyservice.GetCompanyByID(model.Data.SecurityCoordinator.ID)
-            If (response.Success) Then model.SecurityCoordinator = response2.Values.FirstOrDefault
+            model.SecurityCoordinator = GetCompanySafe(companyservice, model.Data.SecurityCoordinator)
             'EPB Reporter
-            response2 = companyservice.GetCompanyByID(model.Data.EpbReporter.ID)
-            If (response.Success) Then model.EpbReporter = response2.Values.FirstOrDefault
+            model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
+
             ViewData("title") = "Group LN - " & model.Data.Name
             'Metatags
             ViewBag.Metatitle = "Group LN - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
@@ -299,6 +289,20 @@ Namespace Controllers
                 ' ---------------------------------------------------------
                 ' 5. Succes
                 ' ---------------------------------------------------------
+                Dim planRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .UnitId = unit.Id,
+                    .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
+                    .DocumentFileName = unit.Plan,
+                    .RequestType = "Plan",
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .Origin = ResolveOrigin("ProjectsController.SendPlan"),
+                    .SourceSite = "Group LN"
+                }
+                SaveContactRequest(planRequest)
                 Return PartialView("ModalSuccesPlan")
 
             Catch ex As Exception
@@ -444,6 +448,21 @@ Namespace Controllers
                 ' ---------------------------------------------------------
                 ' 5. Succes
                 ' ---------------------------------------------------------
+                Dim contactRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .DocumentId = Doc.Docid,
+                    .DocumentName = Doc.Name,
+                    .DocumentFileName = Doc.Filename,
+                    .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "Document",
+                    .Origin = ResolveOrigin("ProjectsController.SendDoc"),
+                    .SourceSite = "Group LN"
+                }
+                SaveContactRequest(contactRequest)
                 Return PartialView("ModalSuccesDoc")
 
             Catch ex As Exception
@@ -452,6 +471,30 @@ Namespace Controllers
             End Try
 
         End Function
+        Private Sub SaveContactRequest(request As ContactRequestBO)
+            Try
+                If request Is Nothing Then Return
+                request.SourceSite = "Group LN"
+                If request.CreatedAt = DateTime.MinValue Then request.CreatedAt = DateTime.UtcNow
+                ServiceFactory.GetProjectService.InsertProjectContactRequest(request)
+            Catch ex As Exception
+                LogError("CONTACTREQUEST SAVE FAILED", ex)
+            End Try
+        End Sub
+
+        Private Function ResolveOrigin(fallback As String) As String
+            Try
+                Dim referrer = Request.UrlReferrer
+                If referrer IsNot Nothing Then
+                    Dim url = referrer.AbsoluteUri
+                    If Not String.IsNullOrWhiteSpace(url) Then Return url
+                End If
+            Catch
+            End Try
+
+            Return fallback
+        End Function
+
 
         Private Sub LogError(message As String, Optional ex As Exception = Nothing)
             Try
@@ -607,6 +650,21 @@ Namespace Controllers
                 ' ---------------------------------------------------------
                 ' 5. Succes
                 ' ---------------------------------------------------------
+                Dim contactRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .DocumentId = Doc.Docid,
+                    .DocumentName = Doc.Name,
+                    .DocumentFileName = Doc.Filename,
+                    .DocumentType = "Brochure",
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "Brochure",
+                    .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
+                    .SourceSite = "Group LN"
+                }
+                SaveContactRequest(contactRequest)
                 Return PartialView("ModalSuccesDoc")
 
             Catch ex As Exception
@@ -729,6 +787,19 @@ Namespace Controllers
                 internalemail.Firstname = model.Firstname
                 internalemail.Question = model.Question
                 internalemail.Send()
+                Dim mailRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "ProjectContact",
+                    .Question = model.Question,
+                    .Subject = "Projectcontact",
+                    .Origin = ResolveOrigin("ProjectsController.SendMail"),
+                    .SourceSite = "Group LN"
+                }
+                SaveContactRequest(mailRequest)
                 Return PartialView("ModalSuccesMail")
             Else
                 Return PartialView("ModalFailMail")
@@ -837,6 +908,14 @@ Namespace Controllers
                 Next
             End If
             Return news
+        End Function
+        Private Function GetCompanySafe(companyService As ICompanyService, company As IdNameBO) As CompanyBO
+            If companyService Is Nothing Then Return New CompanyBO
+            If company Is Nothing OrElse company.ID = 0 Then Return New CompanyBO
+
+            Dim response = companyService.GetCompanyByID(company.ID)
+            If response.Success Then Return response.Values.FirstOrDefault
+            Return New CompanyBO
         End Function
     End Class
 

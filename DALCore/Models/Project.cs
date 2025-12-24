@@ -91,6 +91,8 @@ public partial class Project
 
     public virtual ICollection<ConnectionSettlement> ConnectionSettlement { get; set; } = new List<ConnectionSettlement>();
 
+    public virtual ICollection<ContactRequests> ContactRequests { get; set; } = new List<ContactRequests>();
+
     public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();
 
     public virtual ProjectPictures DefaultPicture { get; set; }

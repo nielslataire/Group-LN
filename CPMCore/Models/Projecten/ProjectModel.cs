@@ -902,7 +902,34 @@ namespace CPMCore.Models.Projecten
             }
         }
     }
+    public class DetailContactsModel
+    {
+        public DetailContactsModel()
+        {
+            _contacts = new List<ContactRequestBO>();
+        }
 
+        private List<ContactRequestBO> _contacts;
+        public List<ContactRequestBO> Contacts
+        {
+            get { return _contacts; }
+            set { _contacts = value; }
+        }
+
+        private int _projectid;
+        public int ProjectId
+        {
+            get { return _projectid; }
+            set { _projectid = value; }
+        }
+
+        private string _projectname;
+        public string ProjectName
+        {
+            get { return _projectname; }
+            set { _projectname = value; }
+        }
+    }
     public class DetailDocsModel
     {
         public DetailDocsModel()

@@ -47,6 +47,12 @@ Public Class ProjectModel
 End Class
 Public Class ProjectDetailModel
     Public Sub New()
+        _developer = New CompanyBO
+        _builder = New CompanyBO
+        _architect = New CompanyBO
+        _Engineer = New CompanyBO
+        _securitycoordinator = New CompanyBO
+        _epbreporter = New CompanyBO
         _news = New List(Of ProjectNewsBO)
         _units = New List(Of UnitWithDetailsBO)
         _salesdata = New ProjectSalesDataBO
@@ -114,6 +120,66 @@ Public Class ProjectDetailModel
         End Get
         Set(ByVal value As ProjectDocBO)
             _brochuredoc = value
+        End Set
+    End Property
+    Private _developer As CompanyBO
+    <Display(Name:="Projectontwikkelaar")>
+    Public Property Developer() As CompanyBO
+        Get
+            Return _developer
+        End Get
+        Set(ByVal value As CompanyBO)
+            _developer = value
+        End Set
+    End Property
+    Private _builder As CompanyBO
+    <Display(Name:="Bouwheer")>
+    Public Property Builder() As CompanyBO
+        Get
+            Return _builder
+        End Get
+        Set(ByVal value As CompanyBO)
+            _builder = value
+        End Set
+    End Property
+    Private _architect As CompanyBO
+    <Display(Name:="Architect")>
+    Public Property Architect() As CompanyBO
+        Get
+            Return _architect
+        End Get
+        Set(ByVal value As CompanyBO)
+            _architect = value
+        End Set
+    End Property
+    Private _Engineer As CompanyBO
+    <Display(Name:="Ingenieur Stabiliteit")>
+    Public Property Engineer() As CompanyBO
+        Get
+            Return _Engineer
+        End Get
+        Set(ByVal value As CompanyBO)
+            _Engineer = value
+        End Set
+    End Property
+    Private _securitycoordinator As CompanyBO
+    <Display(Name:="Veiligheidscoördinator")>
+    Public Property SecurityCoordinator() As CompanyBO
+        Get
+            Return _securitycoordinator
+        End Get
+        Set(ByVal value As CompanyBO)
+            _securitycoordinator = value
+        End Set
+    End Property
+    Private _epbreporter As CompanyBO
+    <Display(Name:="EPB-verslaggever")>
+    Public Property EpbReporter() As CompanyBO
+        Get
+            Return _epbreporter
+        End Get
+        Set(ByVal value As CompanyBO)
+            _epbreporter = value
         End Set
     End Property
 

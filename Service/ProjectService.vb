@@ -2,6 +2,9 @@
 Imports Facade
 Imports DAL
 Imports System.Text.RegularExpressions
+Imports System.Data.SqlClient
+Imports System.Data.Entity.Core.EntityClient
+Imports System.Configuration
 
 Public Class ProjectService
     Implements IProjectService
@@ -1234,6 +1237,111 @@ Public Class ProjectService
         Return DeleteProjectDoc(bos.Select(Function(s) s.Docid).ToList())
     End Function
 
+    'Contact requests
+    Public Function InsertProjectContactRequest(request As ContactRequestBO) As Response Implements IProjectService.InsertProjectContactRequest
+        Dim response As New Response()
+
+        If request Is Nothing Then
+            response.AddError("Contactaanvraag is leeg")
+            Return response
+        End If
+
+        Dim providerConn = GetProviderConnectionString()
+        If String.IsNullOrWhiteSpace(providerConn) Then
+            response.AddError("Connectiestring niet gevonden")
+            Return response
+        End If
+
+        Try
+            If request.CreatedAt = DateTime.MinValue Then request.CreatedAt = DateTime.UtcNow
+
+            Using conn As New SqlConnection(providerConn)
+                Const sql As String = "INSERT INTO ContactRequests (CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question) OUTPUT INSERTED.Id VALUES (@CreatedAt, @SourceSite, @Origin, @RequestType, @ProjectId, @UnitId, @DocumentId, @DocumentName, @DocumentFileName, @DocumentType, @Firstname, @Lastname, @Fullname, @Email, @Phone, @Subject, @Question)"
+                Using cmd As New SqlCommand(sql, conn)
+                    cmd.Parameters.AddWithValue("@CreatedAt", request.CreatedAt)
+                    cmd.Parameters.AddWithValue("@SourceSite", If(String.IsNullOrWhiteSpace(request.SourceSite), "Unknown", request.SourceSite))
+                    cmd.Parameters.AddWithValue("@Origin", If(String.IsNullOrWhiteSpace(request.Origin), CType(DBNull.Value, Object), request.Origin))
+                    cmd.Parameters.AddWithValue("@RequestType", If(String.IsNullOrWhiteSpace(request.RequestType), "Onbekend", request.RequestType))
+                    cmd.Parameters.AddWithValue("@ProjectId", If(request.ProjectId.HasValue, CType(request.ProjectId, Object), DBNull.Value))
+                    cmd.Parameters.AddWithValue("@UnitId", If(request.UnitId.HasValue, CType(request.UnitId, Object), DBNull.Value))
+                    cmd.Parameters.AddWithValue("@DocumentId", If(request.DocumentId.HasValue, CType(request.DocumentId, Object), DBNull.Value))
+                    cmd.Parameters.AddWithValue("@DocumentName", If(String.IsNullOrWhiteSpace(request.DocumentName), CType(DBNull.Value, Object), request.DocumentName))
+                    cmd.Parameters.AddWithValue("@DocumentFileName", If(String.IsNullOrWhiteSpace(request.DocumentFileName), CType(DBNull.Value, Object), request.DocumentFileName))
+                    cmd.Parameters.AddWithValue("@DocumentType", If(String.IsNullOrWhiteSpace(request.DocumentType), CType(DBNull.Value, Object), request.DocumentType))
+                    cmd.Parameters.AddWithValue("@Firstname", If(String.IsNullOrWhiteSpace(request.Firstname), CType(DBNull.Value, Object), request.Firstname))
+                    cmd.Parameters.AddWithValue("@Lastname", If(String.IsNullOrWhiteSpace(request.Lastname), CType(DBNull.Value, Object), request.Lastname))
+                    Dim fullname As String = request.Fullname
+                    If String.IsNullOrWhiteSpace(fullname) Then fullname = (request.Firstname & " " & request.Lastname).Trim()
+                    cmd.Parameters.AddWithValue("@Fullname", If(String.IsNullOrWhiteSpace(fullname), CType(DBNull.Value, Object), fullname))
+                    cmd.Parameters.AddWithValue("@Email", If(String.IsNullOrWhiteSpace(request.Email), CType(DBNull.Value, Object), request.Email))
+                    cmd.Parameters.AddWithValue("@Phone", If(String.IsNullOrWhiteSpace(request.Phone), CType(DBNull.Value, Object), request.Phone))
+                    cmd.Parameters.AddWithValue("@Subject", If(String.IsNullOrWhiteSpace(request.Subject), CType(DBNull.Value, Object), request.Subject))
+                    cmd.Parameters.AddWithValue("@Question", If(String.IsNullOrWhiteSpace(request.Question), CType(DBNull.Value, Object), request.Question))
+
+                    conn.Open()
+                    Dim newId = cmd.ExecuteScalar()
+                    If newId IsNot Nothing Then response.InsertedId = Convert.ToInt32(newId)
+                End Using
+            End Using
+
+        Catch ex As Exception
+            response.AddError(ex.Message)
+        End Try
+
+        Return response
+    End Function
+
+    Public Function GetProjectContactRequests(projectid As Integer) As GetResponse(Of ContactRequestBO) Implements IProjectService.GetProjectContactRequests
+        Dim response As New GetResponse(Of ContactRequestBO)
+        Dim providerConn = GetProviderConnectionString()
+        If String.IsNullOrWhiteSpace(providerConn) Then
+            response.AddError("Connectiestring niet gevonden")
+            Return response
+        End If
+
+        Try
+            Using conn As New SqlConnection(providerConn)
+                Dim sql As String = "SELECT Id, CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question FROM ContactRequests"
+                If projectid > 0 Then
+                    sql &= " WHERE ProjectId = @ProjectId"
+                End If
+                sql &= " ORDER BY CreatedAt DESC"
+
+                Using cmd As New SqlCommand(sql, conn)
+                    If projectid > 0 Then cmd.Parameters.AddWithValue("@ProjectId", projectid)
+                    conn.Open()
+                    Using reader = cmd.ExecuteReader()
+                        While reader.Read()
+                            Dim bo As New ContactRequestBO()
+                            bo.Id = reader.GetInt32(0)
+                            bo.CreatedAt = reader.GetDateTime(1)
+                            bo.SourceSite = SafeGetString(reader, 2)
+                            bo.Origin = SafeGetString(reader, 3)
+                            bo.RequestType = SafeGetString(reader, 4)
+                            bo.ProjectId = SafeGetNullableInt(reader, 5)
+                            bo.UnitId = SafeGetNullableInt(reader, 6)
+                            bo.DocumentId = SafeGetNullableInt(reader, 7)
+                            bo.DocumentName = SafeGetString(reader, 8)
+                            bo.DocumentFileName = SafeGetString(reader, 9)
+                            bo.DocumentType = SafeGetString(reader, 10)
+                            bo.Firstname = SafeGetString(reader, 11)
+                            bo.Lastname = SafeGetString(reader, 12)
+                            bo.Fullname = SafeGetString(reader, 13)
+                            bo.Email = SafeGetString(reader, 14)
+                            bo.Phone = SafeGetString(reader, 15)
+                            bo.Subject = SafeGetString(reader, 16)
+                            bo.Question = SafeGetString(reader, 17)
+                            response.AddValue(bo)
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            response.AddError(ex.Message)
+        End Try
+
+        Return response
+    End Function
 
     'PaymentGroups
     Public Function GetProjectPaymentGroups(projectid As Integer) As GetResponse(Of ProjectPaymentGroupBO) Implements IProjectService.GetProjectPaymentGroups
@@ -2230,5 +2338,26 @@ Public Class ProjectService
     End Function
 
 
+    Private Function GetProviderConnectionString() As String
+        Dim cs As String = Nothing
+        If Global.System.Configuration.ConfigurationManager.ConnectionStrings("testdbEntities") IsNot Nothing Then
+            cs = Global.System.Configuration.ConfigurationManager.ConnectionStrings("testdbEntities").ConnectionString
+        End If
+
+        If String.IsNullOrWhiteSpace(cs) Then Return ""
+
+        Dim builder As New EntityConnectionStringBuilder(cs)
+        Return builder.ProviderConnectionString
+    End Function
+
+    Private Function SafeGetString(reader As SqlDataReader, ordinal As Integer) As String
+        If reader.IsDBNull(ordinal) Then Return Nothing
+        Return reader.GetString(ordinal)
+    End Function
+
+    Private Function SafeGetNullableInt(reader As SqlDataReader, ordinal As Integer) As Integer?
+        If reader.IsDBNull(ordinal) Then Return Nothing
+        Return reader.GetInt32(ordinal)
+    End Function
 
 End Class
