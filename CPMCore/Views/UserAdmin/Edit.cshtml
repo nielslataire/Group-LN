@@ -7,9 +7,17 @@
 <section class="card">
     <header class="card-header">
         <h2 class="card-title">@ViewData["Title"]</h2>
-        <p class="card-subtitle">Werk gegevens en rollen bij.</p>
+        <p class="card-subtitle">Werk gegevens, rollen en Entra-koppeling bij.</p>
     </header>
     <div class="card-body">
+        @if (TempData["Message"] != null)
+        {
+            <div class="alert alert-success">@TempData["Message"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
         @using (Html.BeginForm("Edit", "UserAdmin", FormMethod.Post))
         {
             @Html.AntiForgeryToken()
@@ -54,27 +62,61 @@
             </div>
 
             <div class="row mb-4">
-                <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.SelectedRoles)</label>
+                <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.IsActive)</label>
+                <div class="col-sm-9">
+                    <div class="form-check">
+                        @Html.CheckBoxFor(m => m.IsActive, new { @class = "form-check-input" })
+                        <label class="form-check-label">Toegang toestaan</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.SelectedPermissions)</label>
                 <div class="col-sm-9">
                     <div class="row">
-                        @for (var i = 0; i < Model.AvailableRoles.Count; i++)
+                        @for (var i = 0; i < Model.AvailablePermissions.Count; i++)
                         {
-                            var role = Model.AvailableRoles[i];
+                            var permission = Model.AvailablePermissions[i];
                             <div class="col-sm-6 mb-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="SelectedRoles" value="@role" @(Model.SelectedRoles.Contains(role) ? "checked" : string.Empty) />
-                                    <label class="form-check-label">@role</label>
+                                    <input class="form-check-input" type="checkbox" name="SelectedPermissions" value="@permission" @(Model.SelectedPermissions.Contains(permission) ? "checked" : string.Empty) />
+                                    <label class="form-check-label">@permission</label>
                                 </div>
                             </div>
                         }
                     </div>
-                    @Html.ValidationMessageFor(m => m.SelectedRoles, "", new { @class = "text-danger" })
+                    @Html.ValidationMessageFor(m => m.SelectedPermissions, "", new { @class = "text-danger" })
                 </div>
             </div>
 
             <div class="text-end">
                 <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Annuleren</a>
                 <button type="submit" class="btn btn-primary">Opslaan</button>
+            </div>
+        }
+        <hr class="my-4" />
+
+        <h4>Entra koppeling</h4>
+        <p class="text-muted">De Entra Object ID is readonly en wordt gebruikt om de gebruiker bij aanmelding te koppelen.</p>
+        <div class="row mb-3">
+            <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.EntraObjectId)</label>
+            <div class="col-sm-9">
+                <input class="form-control" value="@Model.EntraObjectId" readonly />
+            </div>
+        </div>
+        @using (Html.BeginForm("LinkEntra", "UserAdmin", FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.Id)
+            <div class="row mb-3">
+                <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.LinkEntraObjectId)</label>
+                <div class="col-sm-9">
+                    @Html.TextBoxFor(m => m.LinkEntraObjectId, new { @class = "form-control", placeholder = "00000000-0000-0000-0000-000000000000" })
+                </div>
+            </div>
+            <div class="text-end">
+                <button type="submit" class="btn btn-outline-primary">Koppelen</button>
             </div>
         }
     </div>

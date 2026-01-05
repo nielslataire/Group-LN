@@ -189,7 +189,7 @@
                                 </div>
                                 <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_AspNetUserID">@Html.LabelFor(m => m.Project.AspNetUserID)</label>
                                 <div class="col-lg-3 col-xl-3">
-                                    @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "Displayname", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern" })
+                                    @Html.DropDownListFor(m => m.Project.AspNetUserID, new SelectList(Model.Users, "Id", "DisplayName", Model.Project.AspNetUserID), "Selecteer een verantwoordelijke", new { @class = "form-control form-control-modern" })
                                 </div>
                             </div>
 

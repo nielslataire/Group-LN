@@ -1,35 +1,36 @@
 using BOCore;
+using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Service;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using SmartBreadcrumbs.Attributes;
 using System.Diagnostics;
 using System.Globalization;
-using System.Security.Claims;
+
 namespace CPMCore.Controllers;
 
 [Authorize]
 public class HomeController : BaseController
 {
     private readonly ILogger<HomeController> _logger;
-    private UserManager<ApplicationUser> _userManager;
 
-    public HomeController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger)
+    public HomeController(ILogger<HomeController> logger)
     {
-        _userManager = userManager;
         _logger = logger;
     }
+
     [DefaultBreadcrumb("Dashboard")]
     public IActionResult Index()
     {
         var model = new Models.Home.HomeModel();
         var service = ServiceFactory.GetProjectService();
-        var response = service.GetProjectsForList(0, (int)ProjectStatusType.Uitvoering, _userManager.GetUserId(User).ToString());
+        var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
+
+        var response = service.GetProjectsForList(0, (int)ProjectStatusType.Uitvoering, currentUserCode);
         if ((response.Success))
             model.Projects = response.Values;
-        response = service.GetProjectsForList(0, (int)ProjectStatusType.Opgeleverd, _userManager.GetUserId(User).ToString());
+        response = service.GetProjectsForList(0, (int)ProjectStatusType.Opgeleverd, currentUserCode);
         if ((response.Success))
             model.OldProjects = response.Values;
         var service2 = ServiceFactory.GetClientService();
@@ -39,10 +40,10 @@ public class HomeController : BaseController
             model.Statuses = response3.Values;
         if ((response2.Success))
             model.DeedofSaleWarnings = response2.Values;
-      if (!User.IsInRole("Admin"))
+        if (!User.IsInRole("Admin"))
         {
             var iservice = ServiceFactory.GetInsuranceService();
-            var iresponse = iservice.CheckInsurances(_userManager.GetUserId(User).ToString());
+            var iresponse = iservice.CheckInsurances(currentUserCode);
             if ((iresponse.Success))
                 model.InsuranceWarnings = iresponse.Values;
         }
@@ -55,7 +56,7 @@ public class HomeController : BaseController
         }
         if (!User.IsInRole("Admin"))
         {
-            var iresponse = service.CheckProjectFinished(_userManager.GetUserId(User).ToString());
+            var iresponse = service.CheckProjectFinished(currentUserCode);
             if ((iresponse.Success))
                 model.ProjectInfo = iresponse.Values;
         }
@@ -68,24 +69,10 @@ public class HomeController : BaseController
         return View(model);
     }
 
-    //public IActionResult Privacy()
-    //{
-    //    return View();
-    //}
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-    }
-
-    [AllowAnonymous]
-    public IActionResult CultureTest()
-    {
-        return Content(
-            $"CurrentCulture: {CultureInfo.CurrentCulture.Name}\n" +
-            $"UICulture: {CultureInfo.CurrentUICulture.Name}\n" +
-            $"DefaultThread: {CultureInfo.DefaultThreadCurrentCulture?.Name}"
-        );
     }
 }

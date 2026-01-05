@@ -27,5 +27,9 @@ public partial class Users
 
     public int Id { get; set; }
 
+    public string EntraObjectId { get; set; }
+
+    public bool IsActive { get; set; }
+
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
 }

@@ -7,7 +7,7 @@ using CPMCore.Services.Octopus;
 using DALCore.Models;
 using DinkToPdf;
 using Humanizer;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -33,6 +33,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace CPMCore.Controllers
 {
+    [Authorize(Policy = "Permission:Klanten")]
     public class KlantenController : BaseController
     {
         private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
@@ -42,15 +43,13 @@ namespace CPMCore.Controllers
             AllowTrailingCommas = true
         };
         private readonly ILogger<HomeController> _logger;
-        private UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration Configuration;
         private readonly cpmRunningContext _db;
         private readonly IOctopusApiClient _octopusClient;
         private readonly IOctopusTokenManager _octopusTokens;
 
-        public KlantenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
+        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
         {
-            _userManager = userManager;
             _logger = logger;
             Configuration = configuration;
             _db = db;

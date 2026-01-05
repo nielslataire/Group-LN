@@ -18,7 +18,7 @@ using CPMCore.Services.Octopus;
 
 namespace CPMCore.Controllers;
 
-[Authorize]
+[Authorize(Policy = "Permission:Leveranciers")]
 public class LeveranciersController : BaseController
 {
     private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
@@ -1007,7 +1007,7 @@ public class LeveranciersController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Administrator")]
+    [Authorize(Policy = "CpmAdmin")]
     public async Task<IActionResult> ModalDelete(int id, CancellationToken ct)
     {
         var supplier = await _db.CompanyInfo
@@ -1029,7 +1029,7 @@ public class LeveranciersController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Roles = "Admin,Administrator")]
+    [Authorize(Policy = "CpmAdmin")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
         var entity = await _db.CompanyInfo.FindAsync(new object[] { id }, ct);

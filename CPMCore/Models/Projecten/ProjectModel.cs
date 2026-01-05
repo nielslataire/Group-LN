@@ -132,9 +132,9 @@ namespace CPMCore.Models.Projecten
                 _countries = value;
             }
         }
-        private IEnumerable<ApplicationUser> _users;
+        private IEnumerable<CpmUserOption> _users;
         [ValidateNever]
-        public IEnumerable<ApplicationUser> Users
+        public IEnumerable<CpmUserOption> Users
         {
             get
             {
@@ -389,8 +389,8 @@ namespace CPMCore.Models.Projecten
                 _countries = value;
             }
         }
-        private IEnumerable<ApplicationUser> _users;
-        public IEnumerable<ApplicationUser> Users
+        private IEnumerable<CpmUserOption> _users;
+        public IEnumerable<CpmUserOption> Users
         {
             get
             {

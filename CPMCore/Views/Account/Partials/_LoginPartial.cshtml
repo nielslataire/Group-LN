@@ -1,19 +1,17 @@
-﻿@using CPMCore.Models
-@inject SignInManager<ApplicationUser> SignInManager
-@inject UserManager<ApplicationUser> UserManager
+﻿@using CPMCore.Helpers
 
-@if (SignInManager.IsSignedIn(User))
+@if (User?.Identity?.IsAuthenticated == true)
 {
-    var currentUser = await UserManager.GetUserAsync(User);
+    var displayName = User.GetCpmDisplayName() ?? "Gebruiker";
     <ul class="nav nav-pills">
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">
-                <i class="bx bx-user-circle"></i> @currentUser?.Displayname
+                <i class="bx bx-user-circle"></i> @displayName
             </a>
             <div class="dropdown-menu dropdown-menu-end">
-                <a class="dropdown-item" href="@Url.Action("UserProfile", "Account", new { userId = currentUser?.Id })"><i class="bx bx-id-card"></i> Profiel</a>
+                <div class="dropdown-item-text text-muted small">@User.GetCpmEmail()</div>
                 <div class="dropdown-divider"></div>
-                <a class="dropdown-item" href="@Url.Action("Logout", "Account")"><i class="bx bx-log-out"></i> Afmelden</a>
+                <a class="dropdown-item" href="@Url.Action("SignOut", "Account")"><i class="bx bx-log-out"></i> Afmelden</a>
             </div>
         </li>
     </ul>
@@ -22,10 +20,7 @@ else
 {
     <ul class="nav nav-pills">
         <li class="nav-item">
-            <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="bx bx-log-in"></i> Login</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="@Url.Action("Register", "Account")"><i class="bx bx-user-plus"></i> Registreren</a>
+            <a class="nav-link" href="@Url.Action("Login", "Account")"><i class="bx bx-log-in"></i> Aanmelden</a>
         </li>
     </ul>
 }

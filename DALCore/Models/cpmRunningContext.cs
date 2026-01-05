@@ -2130,12 +2130,14 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Id)
                 .ValueGeneratedNever()
                 .HasColumnName("ID");
+            entity.Property(e => e.EntraObjectId).HasMaxLength(100);
             entity.Property(e => e.Familienaam).HasMaxLength(100);
             entity.Property(e => e.Functie).HasMaxLength(100);
             entity.Property(e => e.Gsm)
                 .HasMaxLength(50)
                 .HasColumnName("GSM");
             entity.Property(e => e.Initiaal).HasMaxLength(50);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Password).HasMaxLength(50);
             entity.Property(e => e.Type).HasColumnType("decimal(18, 0)");
             entity.Property(e => e.UserId)

@@ -10,7 +10,6 @@ using CPMCore.Services.Octopus;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +36,6 @@ namespace CPMCore.Controllers;
 public class InstellingenController : BaseController
 {
     private readonly ILogger<HomeController> _logger;
-    private UserManager<ApplicationUser> _userManager;
     private readonly IIssuerCompanyService _issuers;
     private readonly IIssuerBankAccountService _bank;
     private readonly IIssuerSeriesService _series;
@@ -60,9 +58,8 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations)
-    {
-        _userManager = userManager;
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations)
+    { 
         _logger = logger;
         _issuers = issuers;
         _bank = bank;

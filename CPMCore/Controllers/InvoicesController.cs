@@ -35,6 +35,7 @@ using System.Security.Claims;
 
 namespace CPMCore.Controllers
 {
+    [Authorize(Policy = "Permission:Boekhouding")]
     public class InvoicesController : Controller
     {
         private const string ControllerName = "Invoices";

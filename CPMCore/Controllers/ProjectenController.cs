@@ -6,10 +6,11 @@ using CPMCore.Models.Projecten;
 using CPMCore.Service;
 using CPMCore.Models.Invoicing;
 using DALCore;
+using DALCore.Models;
 using FacadeCore;
 using FluentFTP;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.CodeAnalysis;
@@ -40,16 +41,16 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
-using System.Data.Entity;
+
 
 
 namespace CPMCore.Controllers
 {
-
+    [Authorize(Policy = "Permission:Projecten")]
     public class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
-        private UserManager<ApplicationUser> _userManager;
+        private readonly cpmRunningContext _db;
         private readonly IConfiguration Configuration;
         private readonly IWebHostEnvironment _env;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
@@ -60,12 +61,12 @@ namespace CPMCore.Controllers
         "image/jpeg", "image/jpg", "image/png", "image/gif"
     };
 
-        public ProjectenController(UserManager<ApplicationUser> userManager, ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db)
         {
-            _userManager = userManager;
             _logger = logger;
             Configuration = configuration;
             _env = env;
+            _db = db;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -441,7 +442,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 FillInAddSelectListsDetailEdit(model);
-                model.Users = _userManager.Users?.AsEnumerable().OrderBy(m => m.Displayname).ToList() ?? Enumerable.Empty<ApplicationUser>();
+                model.Users = GetOrderedUsers();
                 return View(model);
             }
 
@@ -465,18 +466,19 @@ namespace CPMCore.Controllers
             model.Users = GetOrderedUsers();
             return View(model);
         }
-        private IEnumerable<ApplicationUser> GetOrderedUsers()
+        private IEnumerable<CpmUserOption> GetOrderedUsers()
         {
-            if (_userManager.Users is null)
-            {
-                return Enumerable.Empty<ApplicationUser>();
-            }
+            var usersQuery = Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsNoTracking(_db.Users);
 
-            var users = _userManager.Users.ToList();
-
-            return users
-                .OrderBy(user => user.Name)
-                .ThenBy(user => user.Forename)
+            return usersQuery
+                .OrderBy(user => user.Familienaam)
+                .ThenBy(user => user.Voornaam)
+                .Select(user => new CpmUserOption
+                {
+                    Id = user.UserId ?? string.Empty,
+                    DisplayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
+                        .Where(value => !string.IsNullOrWhiteSpace(value)))
+                })
                 .ToList();
         }
 

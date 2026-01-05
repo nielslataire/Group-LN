@@ -1,17 +1,9 @@
-﻿@using Microsoft.AspNetCore.Identity
+﻿@using CPMCore.Helpers
 @using Microsoft.AspNetCore.Authorization
 
-@inject UserManager<ApplicationUser> userManager
-@* @inject SignInManager<ApplicationUser> SignInManager
-@inject IAuthorizationService AuthorizationService *@
 @{
-	var user = await userManager.GetUserAsync(User);
-	// var userDisplayName = user.Displayname;
-	// var userEmail = user.Email;
-	// var userFunction = user.JobFunction;
-	var userDisplayName = "";
-	var userEmail = "";
-	var userFunction ="";
+	var userDisplayName = User.GetCpmDisplayName() ?? string.Empty;
+	var userEmail = User.GetCpmEmail() ?? string.Empty;
 }
 <!doctype html> 
 <html class="fixed sidebar-light @ViewBag.sidebarcollapsed">
@@ -132,11 +124,11 @@
 
 									<li>
 										<p class="clearfix mb-1">
-											<span class="message float-start">Uploading something big</span>
-											<span class="message float-end text-dark">33%</span>
+											<span class="message float-start">Uploading Sales Data</span>
+											<span class="message float-end text-dark">24%</span>
 										</p>
-										<div class="progress progress-xs light mb-1">
-											<div class="progress-bar" role="progressbar" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100" style="width: 33%;"></div>
+										<div class="progress progress-xs light">
+											<div class="progress-bar" role="progressbar" aria-valuenow="24" aria-valuemin="0" aria-valuemax="100" style="width: 24%;"></div>
 										</div>
 									</li>
 								</ul>
@@ -259,23 +251,22 @@
 @* 				<span class="separator"></span> *@
 				<div id="userbox" class="userbox">
 					<a href="#" data-bs-toggle="dropdown">
+						<figure class="profile-picture">
+							<img src="~/img/%21logged-user.jpg" alt="@userDisplayName" class="rounded-circle" data-lock-picture="~/img/%21logged-user.jpg" />
+						</figure>
 						<div class="profile-info" data-lock-name="@userDisplayName" data-lock-email="@userEmail">
 							<span class="name">@userDisplayName</span>
-							<span class="role">@userFunction</span>
+							<span class="role">@userEmail</span>
 						</div>
+
 						<i class="fa custom-caret"></i>
 					</a>
+
 					<div class="dropdown-menu">
-						<ul class="list-unstyled mb-2">
+						<ul class="list-unstyled">
 							<li class="divider"></li>
 							<li>
-								<a role="menuitem" tabindex="-1" href="@Url.Action("UserProfile", "Account")"><i class="bx bx-user-circle"></i> Mijn Profiel</a>
-							</li>
-@* 							<li>
-								<a role="menuitem" tabindex="-1" href="#" data-lock-screen="true"><i class="bx bx-lock"></i> Vergrendelen</a>
-							</li> *@
-							<li>
-								<a role="menuitem" tabindex="-1" href="@Url.Action("Logout", "Account")"><i class="bx bx-power-off"></i> Uitloggen</a>
+								<a role="menuitem" tabindex="-1" href="@Url.Action("SignOut", "Account")"><i class="bx bx-log-out"></i> Afmelden</a>
 							</li>
 						</ul>
 					</div>
@@ -288,7 +279,7 @@
 
 		<div class="inner-wrapper">
 			<!-- start: sidebar -->
-			<partial name="_LeftSidebarPartial" />
+			@await Html.PartialAsync("_LeftSidebarPartial")
 			<!-- end: sidebar -->
 			<section role="main" class="content-body">
 				<header class="page-header">

@@ -1,14 +1,12 @@
-﻿@using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Authorization
-
+﻿@using CPMCore.Helpers
 @using FacadeCore
-@inject UserManager<ApplicationUser> UserManager
 @inject IIssuerCompanyService IssuerCompanyService
 @{
 	var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 	var issuerCompanies = (await IssuerCompanyService.GetAllAsync())
 		.OrderBy(i => i.Name)
 		.ToList();
+	var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 }
 
 
@@ -62,30 +60,6 @@
 							}
 						</ul>
 					</li>
-					<li class="nav-parent" style="display:none">
-						<a>
-							<i class="fa fa-user" aria-hidden="true"></i>
-							<span>Klanten                 </span>
-						</a>
-						<ul class="nav nav-children">
-							<li>
-								<a href="ui-elements-typography.html">
-									Zoeken
-								</a>
-							</li>
-							<li class="nav-parent">
-								<a>
-									Lijsten
-								</a>
-							</li>
-							<li>
-								<a href="ui-elements-tabs.html">
-									Toevoegen
-								</a>
-							</li>
-
-						</ul>
-					</li>
 					<li class="nav-parent">
 						<a>
 							<i class="fa fa-city" aria-hidden="true"></i>
@@ -98,8 +72,8 @@
 
 							</li>
 							<li>
-							<a href="@(Url.Action("ProjectsByUserId", "Projecten", new { UserId = UserManager.GetUserId(User)}))">
-									Eigen Projecten 
+								<a href="@(Url.Action("ProjectsByUserId", "Projecten", new { UserId = currentUserCode }))">
+									Eigen Projecten
 								</a>
 							</li>
 							<li>
@@ -127,34 +101,17 @@
 						</li>
 
 					}
-					<li class="nav-parent">
+					<li class="nav-parent @(currentController == "Instellingen" ? "nav-active nav-expanded" : string.Empty)">
 						<a>
-							<i class="fa fa-cog" aria-hidden="true"></i>
+							<i class="fa fa-gear" aria-hidden="true"></i>
 							<span>Instellingen</span>
 						</a>
 						<ul class="nav nav-children">
-
-						@if (User.IsInRole("Admin") || User.IsInRole("Administrator"))
-						{
-									<li>
-										@Html.ActionLink("Mijn bedrijven", "IssuerCompanies", "Instellingen")
-									</li>
-									<li>
-										@Html.ActionLink("Instellingen", "Index", "Instellingen")
-									</li>
-									<li>
-										@Html.ActionLink("Gebruikers beheren", "Index", "UserAdmin")
-									</li>
-									<li>
-										@Html.ActionLink("Rollen beheren", "Index", "AppRoles")
-									</li>
-									<li>
-                                    @Html.ActionLink("Verlofdagen - weerverlet", "VacationDays", "Instellingen")
-								</li>
-							}
-                            <li>
-                                @Html.ActionLink("Activiteiten beheren", "Activiteiten", "Admin")       
-                            </li>
+							<li>@Html.ActionLink("Instellingen", "Index", "Instellingen")</li>
+							<li>@Html.ActionLink("Vakantiedagen", "Vacationdays", "Instellingen")</li>
+							<li>@Html.ActionLink("Mijn bedrijven", "IssuerCompanies", "Instellingen")</li>
+							<li>@Html.ActionLink("Gebruikers", "Index", "UserAdmin")</li>
+							<li>@Html.ActionLink("Rollen", "Index", "AppRoles")</li>
                         </ul>
                     </li>
 					<li class="nav-parent">

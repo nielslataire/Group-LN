@@ -5,17 +5,33 @@ namespace CPMCore.Models
 {
     public class UserListItemViewModel
     {
-        public string Id { get; set; } = string.Empty;
+        public int Id { get; set; }
         public string DisplayName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = new();
+        public string? EntraObjectId { get; set; }
+        public bool IsActive { get; set; }
+        public List<string> Permissions { get; set; } = new();
+    }
+
+    public class EntraUserListItemViewModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? UserPrincipalName { get; set; }
+    }
+
+    public class UserAdminIndexViewModel
+    {
+        public List<UserListItemViewModel> LocalUsers { get; set; } = new();
+        public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
     }
 
     public class EditUserViewModel
     {
         [Required]
-        public string Id { get; set; } = string.Empty;
+        public int Id { get; set; }
 
         [Required]
         [Display(Name = "Gebruikersnaam")]
@@ -38,9 +54,18 @@ namespace CPMCore.Models
         [Display(Name = "GSM")]
         public string? Cellphone { get; set; }
 
-        public List<string> AvailableRoles { get; set; } = new();
+        [Display(Name = "Entra Object ID")]
+        public string? EntraObjectId { get; set; }
+
+        [Display(Name = "Actief")]
+        public bool IsActive { get; set; }
+
+        [Display(Name = "Nieuwe Entra Object ID")]
+        public string? LinkEntraObjectId { get; set; }
+
+        public List<string> AvailablePermissions { get; set; } = new();
 
         [Display(Name = "Rollen")]
-        public List<string> SelectedRoles { get; set; } = new();
+        public List<string> SelectedPermissions { get; set; } = new();
     }
 }

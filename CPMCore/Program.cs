@@ -1,22 +1,25 @@
-﻿using CPMCore.Data;
-using CPMCore.Helpers;
+﻿using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Service;
 using CPMCore.Services.Octopus;
 using CPMCore.Services.Peppol;
+using CPMCore.Services;
+using CPMCore.Services.Authorization;
 using DALCore;
 using DALCore.Models;
 using DinkToPdf;
 using DinkToPdf.Contracts;
 using FacadeCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Web;
 using QuestPDF.Drawing;
 using QuestPDF.Infrastructure;
 using Rotativa.AspNetCore;
@@ -84,13 +87,13 @@ builder.Services.AddSession(options =>
 });
 
 // Identity / UI context
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlServer(
-        connection,
-        sqlServerOptions => sqlServerOptions.CommandTimeout(5000));
+//builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//{
+//    options.UseSqlServer(
+//        connection,
+//        sqlServerOptions => sqlServerOptions.CommandTimeout(5000));
 
-});
+//});
 
 var domainDbOptions = new DbContextOptionsBuilder<cpmRunningContext>()
     .UseSqlServer(
@@ -160,43 +163,117 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
 );
 
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+//builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+//{
+//    options.SignIn.RequireConfirmedAccount = false;
+
+//    options.Password.RequireDigit = true;
+//    options.Password.RequireLowercase = true;
+//    options.Password.RequireNonAlphanumeric = true;
+//    options.Password.RequireUppercase = true;
+//    options.Password.RequiredLength = 6;
+//    options.Password.RequiredUniqueChars = 1;
+
+//})
+//.AddRoles<IdentityRole>()
+//.AddEntityFrameworkStores<ApplicationDbContext>()
+//.AddDefaultUI()
+//.AddDefaultTokenProviders()
+//.AddRoleManager<RoleManager<IdentityRole>>();
+
+////////////////builder.Services.AddDefaultIdentity<IdentityUser>(options =>
+////////////////    options.SignIn.RequireConfirmedAccount = true)
+////////////////    .AddEntityFrameworkStores<ApplicationDbContext>()
+////////////////    .AddDefaultUI()
+////////////////    .AddDefaultTokenProviders();
+
+//builder.Services.AddAuthorization();
+////builder.Services.AddRazorPages();
+
+//builder.Services.ConfigureApplicationCookie(options =>
+//{
+//    // Cookie settings
+//    options.Cookie.HttpOnly = true;
+//    options.ExpireTimeSpan = TimeSpan.FromDays(14);
+
+//    options.LoginPath = "/Account/Login";
+//    options.AccessDeniedPath = "/Account/AccessDenied";
+//    options.SlidingExpiration = true;
+//});
+
+builder.Services.AddScoped<ICpmUserAccessService, CpmUserAccessService>();
+
+builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
+    .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
+    .EnableTokenAcquisitionToCallDownstreamApi()
+    .AddMicrosoftGraph(configuration.GetSection("Graph"))
+    .AddInMemoryTokenCaches();
+
+builder.Services.AddAuthorization(options =>
 {
-    options.SignIn.RequireConfirmedAccount = false;
+options.FallbackPolicy = new AuthorizationPolicyBuilder()
+    .RequireAuthenticatedUser()
+    .RequireClaim(CPMCore.Helpers.CpmClaims.UserId)
+    .Build();
+options.AddPolicy("CpmAdmin", policy =>
+    policy.RequireAssertion(context =>
+        context.User.Claims
+            .Where(claim => claim.Type == System.Security.Claims.ClaimTypes.Role)
+            .Any(claim =>
+                string.Equals(claim.Value, "Admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(claim.Value, "Administrator", StringComparison.OrdinalIgnoreCase))));
+});
 
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequiredLength = 6;
-    options.Password.RequiredUniqueChars = 1;
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
-})
-.AddRoles<IdentityRole>()
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultUI()
-.AddDefaultTokenProviders()
-.AddRoleManager<RoleManager<IdentityRole>>();
-
-//////////////builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-//////////////    options.SignIn.RequireConfirmedAccount = true)
-//////////////    .AddEntityFrameworkStores<ApplicationDbContext>()
-//////////////    .AddDefaultUI()
-//////////////    .AddDefaultTokenProviders();
-
-builder.Services.AddAuthorization();
-//builder.Services.AddRazorPages();
-
-builder.Services.ConfigureApplicationCookie(options =>
+builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
-    // Cookie settings
     options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromDays(14);
-
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.SlidingExpiration = true;
 });
+builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
+{
+    options.TokenValidationParameters.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
+    options.Events.OnTokenValidated = async context =>
+    {
+        var oid = context.Principal?.FindFirst("oid")?.Value
+            ?? context.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
+            ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var candidateEmails = new[]
+        {
+            context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
+            context.Principal?.FindFirst("preferred_username")?.Value,
+            context.Principal?.FindFirst("upn")?.Value,
+            context.Principal?.FindFirst("email")?.Value,
+            context.Principal?.FindFirst("mail")?.Value
+        };
+
+        var logger = context.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Authentication");
+
+        logger.LogInformation(
+            "Entra login claims: oid={Oid}, emails={Emails}",
+            oid ?? "<null>",
+            string.Join(", ", candidateEmails.Where(value => !string.IsNullOrWhiteSpace(value))));
+
+        var accessService = context.HttpContext.RequestServices.GetRequiredService<ICpmUserAccessService>();
+        var accessResult = await accessService.ResolveAsync(oid, candidateEmails, context.HttpContext.RequestAborted);
+
+        if (accessResult == null || context.Principal?.Identity is not System.Security.Claims.ClaimsIdentity identity)
+        {
+            context.Fail("Geen toegang tot CPMCore.");
+            return;
+        }
+
+        accessService.ApplyClaims(identity, accessResult);
+    };
+});
+
 
 // Custom locations zoeker toevoegen
 builder.Services.Configure<RazorViewEngineOptions>(options =>

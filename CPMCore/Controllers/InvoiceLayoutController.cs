@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 namespace CPMCore.Controllers
 {
 
-    [Authorize]
+    [Authorize(Policy = "Permission:Admin")]
     public class InvoiceLayoutController : BaseController
     {
         private readonly IInvoicePdfService _pdfService;
