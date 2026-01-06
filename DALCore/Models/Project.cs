@@ -53,7 +53,7 @@ public partial class Project
 
     public decimal? FacebookAlbumId { get; set; }
 
-    public string AspNetUserId { get; set; }
+    public string? AspNetUserId { get; set; }
 
     public decimal? TotalLandShare { get; set; }
 
@@ -85,7 +85,7 @@ public partial class Project
 
     public virtual CompanyInfo Architect { get; set; }
 
-    public virtual AspNetUsers1 AspNetUser { get; set; }
+    public virtual Users User { get; set; }
 
     public virtual CompanyInfo Builder { get; set; }
 

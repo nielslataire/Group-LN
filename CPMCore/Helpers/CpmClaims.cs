@@ -9,6 +9,7 @@ public static class CpmClaims
     public const string DisplayName = "cpm:display-name";
     public const string Email = "cpm:email";
     public const string EntraObjectId = "cpm:entra-oid";
+    public const string Permission = "cpm:permission";
 }
 
 public static class ClaimsPrincipalExtensions

@@ -28,6 +28,44 @@ namespace CPMCore.Models
         public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
     }
 
+    public class CreateUserViewModel
+    {
+        [Required]
+        [Display(Name = "Gebruikersnaam")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = string.Empty;
+
+        [Display(Name = "Naam")]
+        public string? Name { get; set; }
+
+        [Display(Name = "Voornaam")]
+        public string? Forename { get; set; }
+
+        [Display(Name = "Functie")]
+        public string? JobFunction { get; set; }
+
+        [Display(Name = "GSM")]
+        public string? Cellphone { get; set; }
+
+        [Display(Name = "Actief")]
+        public bool IsActive { get; set; } = true;
+
+        [Display(Name = "Entra gebruiker")]
+        public string? SelectedEntraObjectId { get; set; }
+
+        public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
+
+        public List<string> AvailablePermissions { get; set; } = new();
+
+        [Display(Name = "Rollen")]
+        public List<string> SelectedPermissions { get; set; } = new();
+    }
+
+
     public class EditUserViewModel
     {
         [Required]
@@ -62,10 +100,18 @@ namespace CPMCore.Models
 
         [Display(Name = "Nieuwe Entra Object ID")]
         public string? LinkEntraObjectId { get; set; }
+        public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
 
         public List<string> AvailablePermissions { get; set; } = new();
 
         [Display(Name = "Rollen")]
         public List<string> SelectedPermissions { get; set; } = new();
+    }
+
+    public class UserDeleteViewModel
+    {
+        public int Id { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
     }
 }

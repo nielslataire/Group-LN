@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
+using Microsoft.Identity.Web;
+using Azure.Identity;
 
 namespace CPMCore.Controllers;
 
@@ -12,15 +14,19 @@ public class UserAdminController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly ILogger<UserAdminController> _logger;
-    private readonly GraphServiceClient _graphClient;
+    private readonly GraphServiceClient? _graphClient;
 
-    public UserAdminController(cpmRunningContext db, ILogger<UserAdminController> logger, GraphServiceClient graphClient)
+    public UserAdminController(
+           cpmRunningContext db,
+           ILogger<UserAdminController> logger,
+           IConfiguration configuration)
     {
         _db = db;
         _logger = logger;
-        _graphClient = graphClient;
+        _graphClient = CreateGraphClient(configuration, logger);
     }
 
+    [AuthorizeForScopes(ScopeKeySection = "Graph:Scopes")]
     public async Task<IActionResult> Index()
     {
         var permissionsByUser = await _db.PermissionPerUser
@@ -58,31 +64,7 @@ public class UserAdminController : BaseController
                 Permissions = permissions
             };
         }).ToList();
-        var entraUsers = new List<EntraUserListItemViewModel>();
-
-        var page = await _graphClient.Users
-            .Request()
-            .Select("id,displayName,mail,userPrincipalName")
-            .Top(999)
-            .GetAsync();
-
-        while (page != null)
-        {
-            if (page.CurrentPage != null)
-            {
-                entraUsers.AddRange(page.CurrentPage.Select(u => new EntraUserListItemViewModel
-                {
-                    Id = u.Id ?? "",
-                    DisplayName = u.DisplayName ?? "",
-                    Email = u.Mail ?? "",
-                    UserPrincipalName = u.UserPrincipalName ?? ""
-                }));
-            }
-
-            page = page.NextPageRequest != null
-                ? await page.NextPageRequest.GetAsync()
-                : null;
-        }
+        var entraUsers = await LoadEntraUsersAsync();
 
         return View(new UserAdminIndexViewModel
         {
@@ -90,6 +72,164 @@ public class UserAdminController : BaseController
             EntraUsers = entraUsers
         });
     }
+
+    private static GraphServiceClient? CreateGraphClient(IConfiguration configuration, ILogger logger)
+    {
+        var tenantId = configuration["AzureAd:TenantId"];
+        var clientId = configuration["AzureAd:ClientId"];
+        var clientSecret = configuration["AzureAd:ClientSecret"];
+
+        if (string.IsNullOrWhiteSpace(tenantId)
+            || string.IsNullOrWhiteSpace(clientId)
+            || string.IsNullOrWhiteSpace(clientSecret))
+        {
+            logger.LogWarning(
+                "Graph client not configured because AzureAd settings are missing. TenantId={TenantId}, ClientId={ClientId}.",
+                tenantId ?? "<null>",
+                clientId ?? "<null>");
+            return null;
+        }
+
+        var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+        return new GraphServiceClient(credential, new[] { "https://graph.microsoft.com/.default" });
+    }
+
+    private async Task<List<EntraUserListItemViewModel>> LoadEntraUsersAsync()
+    {
+        var entraUsers = new List<EntraUserListItemViewModel>();
+        if (_graphClient == null)
+            return entraUsers;
+        var page = await _graphClient.Users
+                .Request()
+                .Select("id,displayName,mail,userPrincipalName")
+                .Top(999)
+                .GetAsync();
+
+            while (page != null)
+            {
+                if (page.CurrentPage != null)
+                {
+                    entraUsers.AddRange(page.CurrentPage.Select(u => new EntraUserListItemViewModel
+                    {
+                        Id = u.Id ?? "",
+                        DisplayName = u.DisplayName ?? "",
+                        Email = u.Mail ?? "",
+                        UserPrincipalName = u.UserPrincipalName ?? ""
+                    }));
+                }
+
+                page = page.NextPageRequest != null
+                    ? await page.NextPageRequest.GetAsync()
+                    : null;
+            }
+    
+
+            return entraUsers
+            .OrderBy(u => u.DisplayName)
+            .ThenBy(u => u.UserPrincipalName)
+            .ToList();
+    }
+
+
+    [HttpGet]
+    public async Task<IActionResult> Create()
+    {
+        var permissions = await _db.Permission
+            .AsNoTracking()
+            .OrderBy(p => p.PermissionName)
+            .Select(p => p.PermissionName)
+            .ToListAsync();
+
+        var vm = new CreateUserViewModel
+        {
+            AvailablePermissions = permissions,
+            EntraUsers = await LoadEntraUsersAsync()
+        };
+
+        return View(vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(CreateUserViewModel model)
+    {
+        model.AvailablePermissions = await _db.Permission
+            .AsNoTracking()
+            .OrderBy(p => p.PermissionName)
+            .Select(p => p.PermissionName)
+            .ToListAsync();
+        model.EntraUsers = await LoadEntraUsersAsync();
+
+        if (await _db.Users.AnyAsync(u => u.UserId == model.UserName))
+        {
+            ModelState.AddModelError(nameof(model.UserName), "Deze gebruikersnaam bestaat al.");
+        }
+
+        if (await _db.Users.AnyAsync(u => u.Email == model.Email))
+        {
+            ModelState.AddModelError(nameof(model.Email), "Dit e-mailadres bestaat al.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(model.SelectedEntraObjectId))
+        {
+            var entraId = model.SelectedEntraObjectId.Trim();
+            if (await _db.Users.AnyAsync(u => u.EntraObjectId == entraId))
+            {
+                ModelState.AddModelError(nameof(model.SelectedEntraObjectId), "Dit Entra Object ID is al gekoppeld aan een andere gebruiker.");
+            }
+        }
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var nextId = await _db.Users.AnyAsync()
+            ? await _db.Users.MaxAsync(u => u.Id) + 1
+            : 1;
+
+        var user = new Users
+        {
+            Id = nextId,
+            UserId = model.UserName,
+            Email = model.Email,
+            Familienaam = model.Name ?? string.Empty,
+            Voornaam = model.Forename ?? string.Empty,
+            Functie = model.JobFunction ?? string.Empty,
+            Gsm = model.Cellphone ?? string.Empty,
+            IsActive = model.IsActive,
+            EntraObjectId = string.IsNullOrWhiteSpace(model.SelectedEntraObjectId)
+                ? null
+                : model.SelectedEntraObjectId.Trim(),
+            Password = string.Empty
+        };
+
+        _db.Users.Add(user);
+
+        var selected = model.SelectedPermissions ?? new List<string>();
+        if (selected.Count > 0)
+        {
+            var permissionIds = await _db.Permission
+                .Where(p => selected.Contains(p.PermissionName))
+                .Select(p => p.PermissionId)
+                .ToListAsync();
+
+            foreach (var permissionId in permissionIds)
+            {
+                _db.PermissionPerUser.Add(new PermissionPerUser
+                {
+                    PermissionId = permissionId,
+                    UserId = user.Id
+                });
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        TempData["Message"] = "Gebruiker toegevoegd.";
+        _logger.LogInformation("Gebruiker {User} toegevoegd via UserAdmin.", user.UserId);
+
+        return RedirectToAction(nameof(Index));
+    }
+
 
 
     [HttpGet]
@@ -124,7 +264,8 @@ public class UserAdminController : BaseController
             EntraObjectId = user.EntraObjectId,
             IsActive = user.IsActive,
             AvailablePermissions = permissions,
-            SelectedPermissions = selectedPermissions
+            SelectedPermissions = selectedPermissions,
+            EntraUsers = await LoadEntraUsersAsync()
         };
 
         return View(vm);
@@ -139,6 +280,7 @@ public class UserAdminController : BaseController
             .OrderBy(p => p.PermissionName)
             .Select(p => p.PermissionName)
             .ToListAsync();
+        model.EntraUsers = await LoadEntraUsersAsync();
 
         if (!ModelState.IsValid)
             return View(model);
@@ -154,6 +296,21 @@ public class UserAdminController : BaseController
         user.Functie = model.JobFunction ?? string.Empty;
         user.Gsm = model.Cellphone ?? string.Empty;
         user.IsActive = model.IsActive;
+
+        if (!string.IsNullOrWhiteSpace(model.LinkEntraObjectId))
+        {
+            var trimmed = model.LinkEntraObjectId.Trim();
+            var alreadyLinked = await _db.Users
+                .AnyAsync(u => u.EntraObjectId == trimmed && u.Id != user.Id);
+
+            if (alreadyLinked)
+            {
+                ModelState.AddModelError(nameof(model.LinkEntraObjectId), "Dit Entra Object ID is al gekoppeld aan een andere gebruiker.");
+                return View(model);
+            }
+
+            user.EntraObjectId = trimmed;
+        }
 
         var currentPermissions = await _db.PermissionPerUser
             .Where(p => p.UserId == user.Id)
@@ -216,5 +373,56 @@ public class UserAdminController : BaseController
 
         TempData["Message"] = "Entra account gekoppeld.";
         return RedirectToAction(nameof(Edit), new { id });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ModalDelete(int id)
+    {
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+            return NotFound();
+
+        var displayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
+            .Where(value => !string.IsNullOrWhiteSpace(value)));
+
+        var vm = new UserDeleteViewModel
+        {
+            Id = user.Id,
+            DisplayName = string.IsNullOrWhiteSpace(displayName) ? user.UserId ?? string.Empty : displayName,
+            UserName = user.UserId ?? string.Empty
+        };
+
+        return PartialView("Modals/_ModalDeleteUser", vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+            return NotFound();
+
+        var projects = await _db.Project
+            .Where(p => p.AspNetUserId == user.UserId)
+            .ToListAsync();
+
+        foreach (var project in projects)
+        {
+            project.AspNetUserId = null;
+        }
+
+        var permissions = await _db.PermissionPerUser
+            .Where(p => p.UserId == user.Id)
+            .ToListAsync();
+
+        _db.PermissionPerUser.RemoveRange(permissions);
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+
+        TempData["Message"] = "Gebruiker verwijderd.";
+        return RedirectToAction(nameof(Index));
     }
 }

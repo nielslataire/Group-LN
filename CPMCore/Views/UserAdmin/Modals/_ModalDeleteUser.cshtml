@@ -1,0 +1,16 @@
+﻿@model CPMCore.Models.UserDeleteViewModel
+
+<div class="modal-wrapper">
+    <div class="modal-title">Gebruiker verwijderen</div>
+    <div class="modal-text">
+        <p>Ben je zeker dat je gebruiker <strong>@Model.DisplayName</strong> (@Model.UserName) wil verwijderen?</p>
+    </div>
+    <div class="modal-footer">
+        @using (Html.BeginForm("Delete", "UserAdmin", new { id = Model.Id }, FormMethod.Post, null, new { @class = "d-inline" }))
+        {
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-danger">Verwijderen</button>
+        }
+        <button class="btn btn-default modal-dismiss">Annuleren</button>
+    </div>
+</div>

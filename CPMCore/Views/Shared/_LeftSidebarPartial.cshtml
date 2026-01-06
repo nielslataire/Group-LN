@@ -7,6 +7,11 @@
 		.OrderBy(i => i.Name)
 		.ToList();
 	var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
+	var canSeeKlanten = User.IsInRole("Klanten");
+	var canSeeLeveranciers = User.IsInRole("Leveranciers");
+	var canSeeBoekhouding = User.IsInRole("Boekhouding");
+	var canSeeProjects = User.IsInRole("Projecten");
+	var canSeeAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator");
 }
 
 
@@ -33,7 +38,8 @@
 							<span>Dashboard</span>
 						</a>
 					</li>
-
+										@if (canSeeLeveranciers)
+					{
 					<li class="nav-parent @(currentController == "Leveranciers" ? "nav-active nav-expanded" : string.Empty)">
 						<a>
 							<i class="fa fa-truck" aria-hidden="true"></i>
@@ -47,6 +53,9 @@
 							}
 						</ul>
 					</li>
+					}
+										@if (canSeeKlanten)
+					{
 					<li class="nav-parent @(currentController == "Klanten" ? "nav-active nav-expanded" : string.Empty)">
 						<a>
 							<i class="fa fa-users" aria-hidden="true"></i>
@@ -60,32 +69,30 @@
 							}
 						</ul>
 					</li>
-					<li class="nav-parent">
-						<a>
-							<i class="fa fa-city" aria-hidden="true"></i>
-							<span>Projecten</span>
-						</a>
-						<ul class="nav nav-children">
-							<li>
-
-								@Html.ActionLink("Overzicht", "Index", "Projecten")
-
-							</li>
-							<li>
-								<a href="@(Url.Action("ProjectsByUserId", "Projecten", new { UserId = currentUserCode }))">
-									Eigen Projecten
-								</a>
-							</li>
-							<li>
-
-								@Html.ActionLink("Weerverlet", "Weather", "Projecten")
-
-
-							</li>
-
-						</ul>
-					</li>
-					@if (User.IsInRole("Boekhouding"))
+					}
+					@if (canSeeProjects)
+					{
+						<li class="nav-parent">
+							<a>
+								<i class="fa fa-city" aria-hidden="true"></i>
+								<span>Projecten</span>
+							</a>
+							<ul class="nav nav-children">
+								<li>
+									@Html.ActionLink("Overzicht", "Index", "Projecten")
+								</li>
+								<li>
+									<a href="@(Url.Action("ProjectsByUserId", "Projecten", new { UserId = currentUserCode }))">
+										Eigen Projecten
+									</a>
+								</li>
+								<li>
+									@Html.ActionLink("Weerverlet", "Weather", "Projecten")
+								</li>
+							</ul>
+						</li>
+					}
+					@if (canSeeBoekhouding)
 					{
 						<li class="nav-parent">
 							<a>
@@ -107,11 +114,14 @@
 							<span>Instellingen</span>
 						</a>
 						<ul class="nav nav-children">
+							@if (canSeeAdmin)
+							{
 							<li>@Html.ActionLink("Instellingen", "Index", "Instellingen")</li>
 							<li>@Html.ActionLink("Vakantiedagen", "Vacationdays", "Instellingen")</li>
 							<li>@Html.ActionLink("Mijn bedrijven", "IssuerCompanies", "Instellingen")</li>
 							<li>@Html.ActionLink("Gebruikers", "Index", "UserAdmin")</li>
 							<li>@Html.ActionLink("Rollen", "Index", "AppRoles")</li>
+							}
                         </ul>
                     </li>
 					<li class="nav-parent">

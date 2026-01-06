@@ -468,17 +468,24 @@ namespace CPMCore.Controllers
         }
         private IEnumerable<CpmUserOption> GetOrderedUsers()
         {
-            var usersQuery = Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsNoTracking(_db.Users);
-
-            return usersQuery
+            var users = _db.Users
+                .AsNoTracking()
                 .OrderBy(user => user.Familienaam)
                 .ThenBy(user => user.Voornaam)
-                .Select(user => new CpmUserOption
+                .Select(user => new
                 {
-                    Id = user.UserId ?? string.Empty,
-                    DisplayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
-                        .Where(value => !string.IsNullOrWhiteSpace(value)))
+                    user.UserId,
+                    user.Voornaam,
+                    user.Familienaam
                 })
+                .ToList();
+
+            return users.Select(user => new CpmUserOption
+            {
+                Id = user.UserId ?? string.Empty,
+                DisplayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
+                        .Where(value => !string.IsNullOrWhiteSpace(value)))
+            })
                 .ToList();
         }
 

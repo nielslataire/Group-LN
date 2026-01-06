@@ -90,7 +90,7 @@ public class CpmUserAccessService : ICpmUserAccessService
         return await _db.PermissionPerUser
             .AsNoTracking()
             .Where(p => p.UserId == userId)
-            .Select(p => p.PermissionNavigation.PermissionName)
+            .Select(p => p.PermissionNavigation.PermissionName.Trim())
             .Distinct()
             .OrderBy(p => p)
             .ToListAsync(ct);
@@ -113,7 +113,12 @@ public class CpmUserAccessService : ICpmUserAccessService
 
         foreach (var permission in accessResult.Permissions)
         {
-            identity.AddClaim(new Claim(ClaimTypes.Role, permission));
+            var normalized = permission?.Trim();
+            if (string.IsNullOrWhiteSpace(normalized))
+                continue;
+
+            identity.AddClaim(new Claim(CpmClaims.Permission, normalized));
+            identity.AddClaim(new Claim(ClaimTypes.Role, normalized));
         }
     }
 

@@ -1,5 +1,6 @@
-﻿using System.Security.Claims;
+﻿using CPMCore.Helpers;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace CPMCore.Services.Authorization;
 
@@ -7,9 +8,11 @@ public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionReq
 {
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
-        if (context.User?.Claims.Any(claim =>
-                claim.Type == ClaimTypes.Role
-                && string.Equals(claim.Value, requirement.Permission, StringComparison.OrdinalIgnoreCase)) == true)
+        var matched = context.User?.Claims.Any(claim =>
+            (claim.Type == ClaimTypes.Role || claim.Type == CpmClaims.Permission)
+            && string.Equals(claim.Value, requirement.Permission, StringComparison.OrdinalIgnoreCase)) == true;
+
+        if (matched)
         {
             context.Succeed(requirement);
         }

@@ -137,7 +137,9 @@ namespace ServiceCore.Translators
             _entity.StartDateConstruction = bo.StartDateConstruction;
             _entity.Street = bo.Street;
             _entity.FacebookAlbumId = bo.FacebookAlbumId;
-            _entity.AspNetUserId = bo.AspNetUserID;
+            _entity.AspNetUserId = string.IsNullOrWhiteSpace(bo.AspNetUserID)
+                  ? null
+                  : bo.AspNetUserID;
             _entity.TotalLandShare = bo.TotalLandShare;
             _entity.FacebookPlaceId = bo.FacebookPlaceId;
             _entity.ProjectFolder = bo.ProjectFolder;

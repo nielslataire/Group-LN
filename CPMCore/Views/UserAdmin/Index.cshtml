@@ -10,6 +10,7 @@
             <h2 class="card-title mb-0">Gebruikersbeheer</h2>
             <p class="card-subtitle">Beheer CPMCore-gebruikers, rollen en Entra-koppelingen.</p>
         </div>
+        <a href="@Url.Action("Create", "UserAdmin")" class="btn btn-primary btn-md">+ Gebruiker toevoegen</a>
     </header>
     <div class="card-body">
         @if (TempData["Message"] != null)
@@ -73,7 +74,14 @@
                                 }
                             </td>
                             <td class="text-end">
-                                <a class="btn btn-sm btn-primary" href="@Url.Action("Edit", new { id = user.Id })"><i class="bx bx-edit"></i> Bewerken</a>
+                                <a class="ms-1 me-1" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("Edit", new { id = user.Id })">
+                                    <i class="bx bx-pencil fs-5"></i>
+                                    <span class="visually-hidden">Bewerken</span>
+                                </a>
+                                <a href="#modaldeleteuser" data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteUser ms-1 me-1" data-id="@user.Id">
+                                    <i class="bx bx-trash fs-5 text-danger"></i>
+                                    <span class="visually-hidden">Verwijderen</span>
+                                </a>
                             </td>
                         </tr>
                     }
@@ -82,7 +90,9 @@
         </div>
     </div>
 </section>
-
+<div id="modaldeleteuser" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-user-container"></div>
+</div>
 <section class="card mt-4">
     <header class="card-header d-flex justify-content-between align-items-center">
         <div>
@@ -116,3 +126,32 @@
         </div>
     </div>
 </section>
+
+@section PageScripts
+{
+    <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
+    <script>
+        (function () {
+            const deleteUrl = '@Url.Action("ModalDelete", "UserAdmin")';
+
+            function loadDeleteModal(id) {
+                $.get(deleteUrl, { id })
+                    .done(function (html) {
+                        $("#delete-user-container").html(html);
+                        $.magnificPopup.open({
+                            items: {
+                                src: "#modaldeleteuser",
+                                type: "inline"
+                            }
+                        });
+                    });
+            }
+
+            $(document).on("click", ".deleteUser", function (event) {
+                event.preventDefault();
+                const id = $(this).data("id");
+                loadDeleteModal(id);
+            });
+        })();
+    </script>
+}

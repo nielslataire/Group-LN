@@ -1,27 +1,18 @@
-﻿@model CPMCore.Models.EditUserViewModel
+﻿@model CPMCore.Models.CreateUserViewModel
 @{
-    ViewData["Title"] = "Gebruiker bewerken";
+    ViewData["Title"] = "Gebruiker toevoegen";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <section class="card">
     <header class="card-header">
         <h2 class="card-title">@ViewData["Title"]</h2>
-        <p class="card-subtitle">Werk gegevens, rollen en Entra-koppeling bij.</p>
+        <p class="card-subtitle">Voeg een nieuwe CPMCore-gebruiker toe.</p>
     </header>
     <div class="card-body">
-        @if (TempData["Message"] != null)
-        {
-            <div class="alert alert-success">@TempData["Message"]</div>
-        }
-        @if (TempData["Error"] != null)
-        {
-            <div class="alert alert-danger">@TempData["Error"]</div>
-        }
-        @using (Html.BeginForm("Edit", "UserAdmin", FormMethod.Post))
+        @using (Html.BeginForm("Create", "UserAdmin", FormMethod.Post))
         {
             @Html.AntiForgeryToken()
-            @Html.HiddenFor(m => m.Id)
             <div class="row mb-3">
                 <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.UserName)</label>
                 <div class="col-sm-9">
@@ -60,7 +51,6 @@
                     @Html.TextBoxFor(m => m.Cellphone, new { @class = "form-control" })
                 </div>
             </div>
-
             <div class="row mb-4">
                 <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.IsActive)</label>
                 <div class="col-sm-9">
@@ -70,7 +60,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="row mb-4">
                 <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.SelectedPermissions)</label>
                 <div class="col-sm-9">
@@ -86,47 +75,34 @@
                             </div>
                         }
                     </div>
-                    @Html.ValidationMessageFor(m => m.SelectedPermissions, "", new { @class = "text-danger" })
                 </div>
             </div>
-
-            <div class="text-end">
-                <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Annuleren</a>
-                <button type="submit" class="btn btn-primary">Opslaan</button>
-            </div>
-        }
-        <hr class="my-4" />
-
-        <h4>Entra koppeling</h4>
-        <p class="text-muted">De Entra Object ID is readonly en wordt gebruikt om de gebruiker bij aanmelding te koppelen.</p>
-        <div class="row mb-3">
-            <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.EntraObjectId)</label>
-            <div class="col-sm-9">
-                <input class="form-control" value="@Model.EntraObjectId" readonly />
-            </div>
-        </div>
-        @using (Html.BeginForm("LinkEntra", "UserAdmin", FormMethod.Post))
-        {
-            @Html.AntiForgeryToken()
-            @Html.HiddenFor(m => m.Id)
-            <div class="row mb-3">
-                <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.LinkEntraObjectId)</label>
+            <div class="row mb-4">
+                <label class="col-sm-3 col-form-label text-sm-end">@Html.DisplayNameFor(m => m.SelectedEntraObjectId)</label>
                 <div class="col-sm-9">
-                    <select class="form-select" name="LinkEntraObjectId">
-                        <option value="">Selecteer een Entra gebruiker</option>
+                    <select class="form-select" name="SelectedEntraObjectId">
+                        <option value="">Geen Entra koppeling</option>
                         @foreach (var entraUser in Model.EntraUsers)
                         {
                             var label = string.IsNullOrWhiteSpace(entraUser.DisplayName)
                             ? entraUser.UserPrincipalName
                             : $"{entraUser.DisplayName} ({entraUser.UserPrincipalName ?? entraUser.Email})";
-                            <option value="@entraUser.Id">@label</option>
+                            if (entraUser.Id == Model.SelectedEntraObjectId)
+                            {
+                                <option value="@entraUser.Id" selected>@label</option>
+                            }
+                            else
+                            {
+                                <option value="@entraUser.Id">@label</option>
+                            }
                         }
                     </select>
-                    @Html.ValidationMessageFor(m => m.LinkEntraObjectId, "", new { @class = "text-danger" })
+                    @Html.ValidationMessageFor(m => m.SelectedEntraObjectId, "", new { @class = "text-danger" })
                 </div>
             </div>
             <div class="text-end">
-                <button type="submit" class="btn btn-outline-primary">Koppelen</button>
+                <a class="btn btn-outline-secondary" href="@Url.Action("Index")">Annuleren</a>
+                <button type="submit" class="btn btn-primary">Opslaan</button>
             </div>
         }
     </div>
