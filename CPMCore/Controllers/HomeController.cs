@@ -27,17 +27,31 @@ public class HomeController : BaseController
         var service = ServiceFactory.GetProjectService();
         var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 
-        var response = service.GetProjectsForList(0, (int)ProjectStatusType.Uitvoering, currentUserCode);
-        if ((response.Success))
-            model.Projects = response.Values;
-        response = service.GetProjectsForList(0, (int)ProjectStatusType.Opgeleverd, currentUserCode);
-        if ((response.Success))
-            model.OldProjects = response.Values;
+        var response = service.GetProjectsForList(0, 0, currentUserCode);
+        if (response.Success)
+        {
+            var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
+            var opgeleverdStatusId = (int)ProjectStatusType.Opgeleverd;
+
+            model.Projects = response.Values
+                .OrderBy(p => p.Status.Id == uitvoeringStatusId ? 0 : p.Status.Id == opgeleverdStatusId ? 2 : 1)
+                .ThenBy(p => p.Status.Name)
+                .ThenBy(p => p.Name)
+                .ToList();
+        }
         var service2 = ServiceFactory.GetClientService();
         var response2 = service2.GetClientAccountsByDateDeedofSale();
         var response3 = service.GetStatuses();
         if ((response3.Success))
-            model.Statuses = response3.Values;
+        {
+            var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
+            var opgeleverdStatusId = (int)ProjectStatusType.Opgeleverd;
+
+            model.Statuses = response3.Values
+                .OrderBy(s => s.Id == uitvoeringStatusId ? 0 : s.Id == opgeleverdStatusId ? 2 : 1)
+                .ThenBy(s => s.Name)
+                .ToList();
+        }
         if ((response2.Success))
             model.DeedofSaleWarnings = response2.Values;
         if (!User.IsInRole("Admin"))

@@ -1,0 +1,342 @@
+﻿@model CPMCore.Models.Instellingen.ActivitySettingsViewModel
+@{
+    ViewData["Title"] = "Activiteiten";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+}
+
+<style>
+    .invoice-tab-nav {
+        background-color: #f3f5f7;
+        border-radius: 6px;
+        padding: 6px;
+        gap: 4px;
+    }
+
+        .invoice-tab-nav .nav-link {
+            color: #6c757d;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            padding: 10px 16px;
+        }
+
+            .invoice-tab-nav .nav-link.active {
+                background-color: #ffffff;
+                color: #1f2d3d;
+                border-color: #e3e6ea;
+                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+            }
+</style>
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Activiteitenbeheer</h1>
+            <h5 class="mb-4 mt-0">Beheer activiteiten en activiteitgroepen voor calculaties.</h5>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<ul class="nav nav-pills invoice-tab-nav mb-4" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" href="#" data-settings-section="activiteiten">Activiteiten</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-settings-section="groepen">Activiteitgroepen</a>
+    </li>
+</ul>
+
+<div id="activiteiten-section" class="settings-section">
+
+
+    <section class="card card-modern mb-4">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Activiteit toevoegen</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-action="ActivityCreate" asp-controller="Instellingen">
+                @Html.AntiForgeryToken()
+                <div class="row align-items-end">
+                    <div class="col-lg-6 mb-3 mb-lg-0">
+                        <label class="form-label">Naam</label>
+                        <input name="name" class="form-control form-control-modern" required />
+                    </div>
+                    <div class="col-lg-4 mb-3 mb-lg-0">
+                        <label class="form-label">Activiteitgroep</label>
+                        <select name="groupId" class="form-control form-control-modern" required>
+                            @foreach (var group in Model.ActivityGroups)
+                            {
+                                <option value="@group.ID">@group.Lot - @group.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <div class="card card-modern mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-6">
+                    <label class="form-label mb-1" for="search-activity-term">Zoek activiteit</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bx bx-search"></i></span>
+                        <input id="search-activity-term" type="text" class="form-control form-control-modern me-2" placeholder="Zoek activiteit..." />
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <label class="form-label mb-1" for="activitygroup-filter">Filter op activiteitgroep</label>
+                    <div class="input-group input-group-select-append">
+                        <span class="input-group-text">
+                            <i class="fas fa-filter"></i>
+                        </span>
+                        <select id="activitygroup-filter" class="form-control form-control-modern">
+                            <option value="">Alle activiteitgroepen</option>
+                            @foreach (var group in Model.ActivityGroups)
+                            {
+                                <option value="@group.ID">@group.Lot - @group.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="card card-modern">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Activiteiten</h2>
+        </div>
+        <div class="card-body pt-2">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="datatable-activities">
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>Activiteitgroep</th>
+                            <th class="text-end">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var activity in Model.Activities)
+                        {
+                            <tr data-group-id="@(activity.Group?.ID ?? 0)">
+                                <form method="post" asp-action="ActivityUpdate" asp-controller="Instellingen">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@activity.ID" />
+                                <td>
+                                    <span class="d-none">@activity.Name</span>
+                                    <input name="name" value="@activity.Name" class="form-control form-control-sm" />
+                                </td>
+                                <td>
+                                    <select name="groupId" class="form-control form-control-sm" required>
+                                        @foreach (var group in Model.ActivityGroups)
+                                        {
+                                            var isSelected = activity.Group != null && activity.Group.ID == group.ID;
+                                            <option value="@group.ID" selected="@(isSelected ? "selected" : null)">@group.Lot - @group.Name</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td class="actions text-end">
+                                    <button class="btn btn-link p-0 ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Opslaan">
+                                        <i class="bx bx-save fs-5"></i>
+                                        <span class="visually-hidden">Opslaan</span>
+                                    </button>
+                                    <button type="submit"
+                                            formmethod="post"
+                                            formaction="@Url.Action("ActivityDelete", "Instellingen", new { id = activity.ID })"
+                                            class="btn btn-link p-0 ms-1 me-1"
+                                            data-toggle="tooltip"
+                                            data-placement="top"
+                                            title="Verwijderen"
+                                            onclick="return confirm('Deze activiteit verwijderen?');">
+                                        <i class="bx bx-trash fs-5 text-danger"></i>
+                                        <span class="visually-hidden">Verwijderen</span>
+                                    </button>
+                                </td>
+                                </form>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div id="groepen-section" class="settings-section d-none">
+    <section class="card card-modern mb-4">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Activiteitgroep toevoegen</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-action="ActivityGroupCreate" asp-controller="Instellingen">
+                @Html.AntiForgeryToken()
+                <div class="row align-items-end">
+                    <div class="col-lg-6 mb-3 mb-lg-0">
+                        <label class="form-label">Naam</label>
+                        <input name="name" class="form-control form-control-modern" required />
+                    </div>
+                    <div class="col-lg-4 mb-3 mb-lg-0">
+                        <label class="form-label">Lot</label>
+                        <input type="number" name="lot" class="form-control form-control-modern" required />
+                    </div>
+                    <div class="col-lg-2">
+                        <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <section class="card card-modern">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Activiteitgroepen</h2>
+        </div>
+        <div class="card-body pt-2">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>Lot</th>
+                            <th class="text-end">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var group in Model.ActivityGroups)
+                        {
+                            <tr>
+                                <form method="post" asp-action="ActivityGroupUpdate" asp-controller="Instellingen">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@group.ID" />
+                                <td>
+                                    <input name="name" value="@group.Name" class="form-control form-control-sm" />
+                                </td>
+                                <td>
+                                    <input type="number" name="lot" value="@group.Lot" class="form-control form-control-sm" />
+                                </td>
+                                <td class="actions text-end">
+                                    <button class="btn btn-link p-0 ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Opslaan">
+                                        <i class="bx bx-save fs-5"></i>
+                                        <span class="visually-hidden">Opslaan</span>
+                                    </button>
+                                    <button type="submit"
+                                            formmethod="post"
+                                            formaction="@Url.Action("ActivityGroupDelete", "Instellingen", new { id = group.ID })"
+                                            class="btn btn-link p-0 ms-1 me-1"
+                                            data-toggle="tooltip"
+                                            data-placement="top"
+                                            title="Verwijderen"
+                                            onclick="return confirm('Deze activiteitgroep verwijderen?');">
+                                        <i class="bx bx-trash fs-5 text-danger"></i>
+                                        <span class="visually-hidden">Verwijderen</span>
+                                    </button>
+                                </td>
+                                </form>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section PageScripts
+{
+    <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        (function () {
+            const sectionLinks = document.querySelectorAll('[data-settings-section]');
+            const sections = {
+                activiteiten: document.getElementById('activiteiten-section'),
+                groepen: document.getElementById('groepen-section')
+            };
+            const searchTerm = document.getElementById('search-activity-term');
+            const groupFilter = document.getElementById('activitygroup-filter');
+
+            function showSection(key) {
+                Object.values(sections).forEach(section => section.classList.add('d-none'));
+                sectionLinks.forEach(link => link.classList.remove('active'));
+
+                if (sections[key]) {
+                    sections[key].classList.remove('d-none');
+                }
+
+                const activeLink = document.querySelector(`[data-settings-section="${key}"]`);
+                if (activeLink) {
+                    activeLink.classList.add('active');
+                }
+            }
+
+            sectionLinks.forEach(link => {
+                link.addEventListener('click', event => {
+                    event.preventDefault();
+                    showSection(link.dataset.settingsSection);
+                });
+            });
+
+            const table = $('#datatable-activities').DataTable({
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: true,
+                lengthChange: false,
+                pageLength: 25,
+                language: {
+                    zeroRecords: 'Geen activiteiten om weer te geven',
+                    emptyTable: 'Er zijn geen activiteiten om weer te geven',
+                    search: 'Zoek:',
+                    paginate: {
+                        previous: 'Vorige',
+                        next: 'Volgende'
+                    }
+                }
+            });
+
+            $('.dataTables_filter, .dt-search').hide();
+
+            searchTerm?.addEventListener('input', function () {
+                table.column(0).search(this.value).draw();
+            });
+
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                if (settings.nTable.id !== 'datatable-activities') {
+                    return true;
+                }
+
+                const selectedGroup = groupFilter?.value;
+                if (!selectedGroup) {
+                    return true;
+                }
+
+                const rowGroup = table.row(dataIndex).node().getAttribute('data-group-id') || '';
+                return rowGroup === selectedGroup;
+            });
+
+            groupFilter?.addEventListener('change', function () {
+                table.draw();
+            });
+        })();
+    </script>
+}

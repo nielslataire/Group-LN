@@ -84,6 +84,138 @@ public class InstellingenController : BaseController
         return View();
     }
 
+    [HttpGet]
+    [Breadcrumb("Activiteiten")]
+    public IActionResult Activities()
+    {
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = dashboard
+        };
+        var instellingenActivities = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Activities", "Instellingen", "Activiteiten")
+        {
+            Parent = instellingenIndex
+        };
+
+        ViewData["BreadcrumbNode"] = instellingenActivities;
+
+        var service = ServiceFactory.GetActivityService();
+        var activitiesResponse = service.GetActivities();
+        var groupsResponse = service.GetActivityGroups();
+
+        var model = new ActivitySettingsViewModel
+        {
+            Activities = activitiesResponse.Values?.OrderBy(a => a.Name).ToList() ?? new List<ActivityBO>(),
+            ActivityGroups = groupsResponse.Values?.OrderBy(g => g.Lot).ThenBy(g => g.Name).ToList() ?? new List<ActivityGroupBO>()
+        };
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ActivityCreate(string name, int groupId)
+    {
+        if (groupId <= 0)
+        {
+            TempData["Error"] = "Selecteer een activiteitgroep.";
+            return RedirectToAction(nameof(Activities));
+        }
+
+        var service = ServiceFactory.GetActivityService();
+        var activity = new ActivityBO
+        {
+            Name = name?.Trim() ?? string.Empty,
+            Group = new ActivityGroupBO { ID = groupId }
+        };
+
+        var response = service.InsertUpdate(activity);
+        SetActivityResponseMessage(response, "Activiteit toegevoegd.");
+
+        return RedirectToAction(nameof(Activities));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ActivityUpdate(int id, string name, int groupId)
+    {
+        if (groupId <= 0)
+        {
+            TempData["Error"] = "Selecteer een activiteitgroep.";
+            return RedirectToAction(nameof(Activities));
+        }
+
+        var service = ServiceFactory.GetActivityService();
+        var activity = new ActivityBO
+        {
+            ID = id,
+            Name = name?.Trim() ?? string.Empty,
+            Group = new ActivityGroupBO { ID = groupId }
+        };
+
+        var response = service.InsertUpdate(activity);
+        SetActivityResponseMessage(response, "Activiteit bijgewerkt.");
+
+        return RedirectToAction(nameof(Activities));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ActivityDelete(int id)
+    {
+        var service = ServiceFactory.GetActivityService();
+        var response = service.Delete(new List<int> { id });
+        SetActivityResponseMessage(response, "Activiteit verwijderd.");
+
+        return RedirectToAction(nameof(Activities));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ActivityGroupCreate(string name, int lot)
+    {
+        var service = ServiceFactory.GetActivityService();
+        var group = new ActivityGroupBO
+        {
+            Name = name?.Trim() ?? string.Empty,
+            Lot = lot
+        };
+
+        var response = service.InsertUpdateGroup(group);
+        SetActivityResponseMessage(response, "Activiteitgroep toegevoegd.");
+
+        return RedirectToAction(nameof(Activities));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ActivityGroupUpdate(int id, string name, int lot)
+    {
+        var service = ServiceFactory.GetActivityService();
+        var group = new ActivityGroupBO
+        {
+            ID = id,
+            Name = name?.Trim() ?? string.Empty,
+            Lot = lot
+        };
+
+        var response = service.InsertUpdateGroup(group);
+        SetActivityResponseMessage(response, "Activiteitgroep bijgewerkt.");
+
+        return RedirectToAction(nameof(Activities));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult ActivityGroupDelete(int id)
+    {
+        var service = ServiceFactory.GetActivityService();
+        var response = service.DeleteGroup(new List<int> { id });
+        SetActivityResponseMessage(response, "Activiteitgroep verwijderd.");
+
+        return RedirectToAction(nameof(Activities));
+    }
 
     //VAKANTIEDAGEN
     [HttpGet]
@@ -1161,6 +1293,18 @@ public class InstellingenController : BaseController
         TempData["Message"] = message;
         TempData["MessageType"] = messagetype;
         TempData["MessageTitle"] = messagetitle;
+    }
+
+    private void SetActivityResponseMessage(Response response, string fallbackSuccessMessage)
+    {
+        if (response.Success)
+        {
+            TempData["Message"] = response.Messages?.FirstOrDefault()?.Message ?? fallbackSuccessMessage;
+            return;
+        }
+
+        var errorMessage = response.Messages?.FirstOrDefault(m => m.Type == MessageType.Error)?.Message;
+        TempData["Error"] = string.IsNullOrWhiteSpace(errorMessage) ? "Er ging iets mis bij het bewaren." : errorMessage;
     }
 
     private static List<OctopusCustomFieldMappingBO> DeserializeCustomFieldMappings(string? json)

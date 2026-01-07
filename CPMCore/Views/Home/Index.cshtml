@@ -29,23 +29,20 @@
 <script src="~/lib/pnotify/pnotify.custom.js"></script>
 <script src="https://unpkg.com/isotope-layout@3.0.6/dist/isotope.pkgd.min.js"></script>
 	<script>
-		$(document).ready(function(){
-		  // Initialize Isotope
-		  var $grid = $('.row').isotope({
-			itemSelector: '.filteritem',
-			layoutMode: 'fitRows'
-		  });
+		$(document).ready(function () {
+			var $grid = $('#project-grid').isotope({
+				itemSelector: '.filteritem',
+				layoutMode: 'fitRows'
+			});
 
-		  // Filter items when a filter link is clicked
-		  $('.filter-link').on('click', function(e){
-			e.preventDefault();
-			var filterValue = $(this).attr('data-filter');
-			$grid.isotope({ filter: filterValue });
+			$('.filter-link').on('click', function (e) {
+				e.preventDefault();
+				var filterValue = $(this).attr('data-filter');
+				$grid.isotope({ filter: filterValue });
 
-			// Toggle active class on the filter links
-			$('.filter-link').removeClass('active');
-			$(this).addClass('active');
-		  });
+				$('.filter-link').removeClass('active');
+				$(this).addClass('active');
+			});
 		});
 	</script>
 }
@@ -59,7 +56,7 @@
 	<div class="row row-gutter-sm mb-5">
 		<div class="col-lg-3-5 col-xl-4-5">
 
-			<div class="row row-gutter-sm">
+		<div class="row row-gutter-sm" id="project-grid">
 
 				@foreach (var project in Model.Projects)
 				{
@@ -84,7 +81,7 @@
 						</div>
 					</div>
 				}
-				@foreach (var project in Model.OldProjects.OrderByDescending(m => m.DeliveryDate))
+				@* @foreach (var project in Model.OldProjects.OrderByDescending(m => m.DeliveryDate))
 				{
 						<div class="col-sm-12 col-xl-3 mb-4 filteritem Status@(project.Status.Id)">
 						<div class="card card-modern card-modern-alt-padding">
@@ -109,7 +106,7 @@
 							</div>
 						</div>
 					</div>
-				}
+				} *@
 
 			</div>
 
