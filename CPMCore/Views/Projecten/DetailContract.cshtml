@@ -1,0 +1,288 @@
+﻿@using System.Globalization
+@using BOCore
+@model CPMCore.Models.Projecten.ProjectContractDetailModel
+
+@{
+    ViewData["Title"] = $"{Model.ProjectName} - Contract detail";
+    var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
+    var invoiceCount = Model.IncommingInvoices?.Count ?? 0;
+    var activityCount = Model.Contract?.Activities?.Count ?? 0;
+    var companyName = Model.Contract?.Company?.Display ?? Model.Company?.Bedrijfsnaam ?? "Contract";
+    var addressLine = string.IsNullOrWhiteSpace(Model.Company?.Straat)
+        ? "-"
+        : $"{Model.Company.Straat} {Model.Company.Huisnummer}{(string.IsNullOrWhiteSpace(Model.Company.Busnummer) ? string.Empty : $" bus {Model.Company.Busnummer}")}";
+    var cityLine = string.IsNullOrWhiteSpace(Model.Company?.Postcode?.Postcode) && string.IsNullOrWhiteSpace(Model.Company?.Postcode?.Gemeente)
+        ? "-"
+        : $"{Model.Company?.Postcode?.Postcode} {Model.Company?.Postcode?.Gemeente}".Trim();
+}
+
+@section PageStyle
+{
+    <style>
+        .supplier-tab-nav {
+            background-color: #f3f5f7;
+            border-radius: 6px;
+            padding: 6px;
+            gap: 4px;
+        }
+
+            .supplier-tab-nav .nav-link {
+                color: #6c757d;
+                font-weight: 600;
+                border-radius: 6px;
+                border: 1px solid transparent;
+                padding: 10px 16px;
+            }
+
+                .supplier-tab-nav .nav-link.active {
+                    background-color: #ffffff;
+                    color: #1f2d3d;
+                    border-color: #e3e6ea;
+                    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+                }
+    </style>
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
+                <div class="col-sm-auto mb-3 mb-sm-0">
+                    <div class="d-flex align-items-center">
+                        <a href="@Url.Action("DetailContracts", "Projecten", new { projectid = Model.ProjectId })" class="text-decoration-none text-reset d-flex align-items-center me-3">
+                            <i class="bx bx-chevron-left fs-1"></i>
+                        </a>
+                        <div>
+                            <h1 class="fw-bold mb-0">@companyName</h1>
+                            <h5 class="mb-0 text-muted">Contract detail</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-pills supplier-tab-nav mb-4" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" data-section-toggle="contract">Contract</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section-toggle="facturen">Facturen (@invoiceCount)</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section-toggle="leverancier">Leverancier</a>
+                </li>
+            </ul>
+
+            <div id="contract-detail-section" class="supplier-section">
+                <section class="card card-modern card-big-info">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-2-5">
+                                <i class="card-big-info-icon bx bx-file"></i>
+                                <h2 class="card-big-info-title">Contract</h2>
+                                <p class="card-big-info-desc">Detail van het contract en de gekoppelde loten.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-3-5">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Leverancier</span>
+                                        <div class="text-muted">@companyName</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Contract getekend</span>
+                                        <div class="text-muted">@(Model.Contract?.ContractSigned == true ? "Ja" : "Nee")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">BTW %</span>
+                                        <div class="text-muted">@(Model.Contract?.VatPercentage is null ? "-" : Model.Contract.VatPercentage.Value.ToString("N2"))</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Betaaltermijn</span>
+                                        <div class="text-muted">@(Model.Contract?.PaymentTerm is null ? "-" : $"{Model.Contract.PaymentTerm} dagen")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Korting contant</span>
+                                        <div class="text-muted">
+                                            @(Model.Contract?.CashDiscount == true
+                                                                                        ? $"{Model.Contract.CashDiscountPercentage?.ToString("N2")} binnen de {Model.Contract.CashDiscountPaymentTerm} dagen"
+                                                                                        : "-")
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Borg</span>
+                                        <div class="text-muted">
+                                            @(Model.Contract?.GuaranteeType == BOCore.ContractGuaranteeType.FinancialGuarantee
+                                                                                        ? $"{Model.Contract.GuaranteePercentage?.ToString("N2")} {Model.Contract.GuaranteeType.GetDisplayName()}"
+                                                                                        : Model.Contract?.GuaranteeType.GetDisplayName() ?? "-")
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <span class="fw-semibold fs-6">Loten (@activityCount)</span>
+                                    @if (Model.Contract?.Activities?.Any() == true)
+                                    {
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-hover mb-0">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Lot</th>
+                                                        <th class="text-end">Prijs</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var activity in Model.Contract.Activities)
+                                                    {
+                                                        <tr>
+                                                            <td>@activity.Activity?.Name</td>
+                                                            <td class="text-end">@(activity.Price.HasValue? activity.Price.Value.ToString("C", currencyCulture) : "-")</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-muted mt-2">Geen loten gekoppeld.</div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div id="contract-invoices-section" class="supplier-section d-none">
+                <section class="card card-modern">
+                    <div class="card-body">
+                        @if (Model.IncommingInvoices?.Any() == true)
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-15">Factuurdatum </th>
+                                            <th class="w-15">Externe referentie</th>
+                                            <th class="w-70 text-end">Factuurbedrag</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var invoice in Model.IncommingInvoices)
+                                        {
+                                            <tr class="invoice-row" data-invoice-href="@Url.Action("IncommingInvoiceDetail", "Projecten", new { projectid = Model.ProjectId, invoiceid = invoice.Id })">
+                                                <td class="w-15">@invoice.IncommingInvoiceDate.ToString("dd/MM/yyyy")</td>
+                                                <td class="w-15">@(string.IsNullOrWhiteSpace(invoice.InvoiceExternalId) ? "-" : invoice.InvoiceExternalId)</td>
+                                                <td class="w-70 text-end">@invoice.InvoicePrice.ToString("C", currencyCulture)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="mb-0 text-muted">Er zijn nog geen facturen gekoppeld aan deze leverancier. </p>
+                        }
+                    </div>
+                </section>
+            </div>
+
+            <div id="supplier-detail-section" class="supplier-section d-none">
+                <section class="card card-modern card-big-info">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-2-5">
+                                <i class="card-big-info-icon bx bx-building-house"></i>
+                                <h2 class="card-big-info-title">Leverancier</h2>
+                                <p class="card-big-info-desc">Gegevens van de leverancier voor dit contract.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-3-5">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Bedrijfsnaam</span>
+                                        <div class="text-muted">@(!string.IsNullOrWhiteSpace(Model.Company?.Bedrijfsnaam) ? Model.Company.Bedrijfsnaam : "-")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Ondernemingsnummer</span>
+                                        <div class="text-muted">@(!string.IsNullOrWhiteSpace(Model.Company?.OndNr) ? Model.Company.OndNr : "-")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Telefoon</span>
+                                        <div class="text-muted">@(!string.IsNullOrWhiteSpace(Model.Company?.Telefoon1) ? Model.Company.Telefoon1 : "-")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">GSM</span>
+                                        <div class="text-muted">@(!string.IsNullOrWhiteSpace(Model.Company?.GSM) ? Model.Company.GSM : "-")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Email</span>
+                                        <div class="text-muted">@(!string.IsNullOrWhiteSpace(Model.Company?.Email) ? Model.Company.Email : "-")</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <span class="fw-semibold fs-6">Website</span>
+                                        <div class="text-muted">
+                                            @if (!string.IsNullOrWhiteSpace(Model.Company?.URL))
+                                            {
+                                                <a href="@Model.Company.URL" target="_blank" rel="noopener">@Model.Company.URL</a>
+                                            }
+                                            else
+                                            {
+                                                <text>-</text>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <span class="fw-semibold fs-6">Adres</span>
+                                        <div class="text-muted">
+                                            @addressLine
+                                            <br />
+                                            @cityLine
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+    <script>
+        (function () {
+            const sectionButtons = document.querySelectorAll('[data-section-toggle]');
+            const sections = {
+                contract: document.getElementById('contract-detail-section'),
+                facturen: document.getElementById('contract-invoices-section'),
+                leverancier: document.getElementById('supplier-detail-section')
+            };
+
+            sectionButtons.forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+
+                    const target = button.getAttribute('data-section-toggle');
+
+                    sectionButtons.forEach((btn) => btn.classList.remove('active'));
+                    button.classList.add('active');
+
+                    Object.values(sections).forEach((section) => section?.classList.add('d-none'));
+                    sections[target]?.classList.remove('d-none');
+                });
+            });
+
+            document.querySelectorAll('[data-invoice-href]').forEach((row) => {
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', () => {
+                    const href = row.getAttribute('data-invoice-href');
+                    if (href) {
+                        window.location.href = href;
+                    }
+                });
+            });
+        })();
+    </script>
+}

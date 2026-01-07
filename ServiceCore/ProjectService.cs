@@ -2319,6 +2319,29 @@ namespace ServiceCore
 
             return response;
         }
+        public GetResponse<IncommingInvoiceBO> GetProjectIncommingInvoicesByCompany(int projectid, int companyid)
+        {
+            var response = new GetResponse<IncommingInvoiceBO>();
+
+            var entities = _uow.IncommingInvoices.GetNoTracking()
+                .Where(m => m.ProjectId == projectid &&
+                    ((m.CompanyId.HasValue && m.CompanyId.Value == companyid) ||
+                     (m.ContractId.HasValue && m.Contract.CompanyId == companyid)))
+                .Include(m => m.Company)
+                .Include(m => m.Project)
+                .Include(m => m.Contract)
+                    .ThenInclude(c => c.Company);
+
+            foreach (var entity in entities)
+            {
+                var bo = new IncommingInvoiceBO();
+                var err = IncommingInvoiceTranslator.TranslateEntityToBO(entity, bo);
+                if (err == ErrorCode.Success) response.AddValue(bo);
+                else response.AddError(err.ToString());
+            }
+
+            return response;
+        }
 
         public Response InsertUpdateProjectIncommingInvoice(IncommingInvoiceBO invoice)
         {

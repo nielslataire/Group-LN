@@ -1093,8 +1093,70 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = projectContracts;
             return View(model);
         }
-        [HttpGet]
 
+        [HttpGet]
+        [Breadcrumb("Leverancier detail", FromAction = "DetailContracts")]
+        public ActionResult DetailContract(int projectid, int contractid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var model = new ProjectContractDetailModel();
+            var projectService = ServiceFactory.GetProjectService();
+            var companyService = ServiceFactory.GetCompanyService();
+
+            model.ProjectId = projectid;
+            model.ProjectName = projectService.GetProjectNameById(projectid);
+
+            var contractResponse = projectService.GetContract(contractid);
+            if (contractResponse.Success)
+            {
+                model.Contract = contractResponse.Value;
+            }
+
+            var companyId = model.Contract?.Company?.ID ?? 0;
+            if (companyId > 0)
+            {
+                var companyResponse = companyService.GetCompanyByID(companyId);
+                if (companyResponse.Success)
+                {
+                    model.Company = companyResponse.Value;
+                }
+
+                var invoiceResponse = projectService.GetProjectIncommingInvoicesByCompany(projectid, companyId);
+                if (invoiceResponse.Success)
+                {
+                    model.IncommingInvoices = invoiceResponse.Values
+                        .OrderByDescending(m => m.IncommingInvoiceDate)
+                        .ToList();
+                }
+            }
+
+            var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var contractDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContract", "Projecten", model.Contract?.Company?.Display ?? "Contract detail")
+            {
+                Parent = projectContracts,
+                RouteValues = new { projectid = projectid, contractid = contractid }
+            };
+            ViewData["BreadcrumbNode"] = contractDetail;
+
+            return View(model);
+        }
+
+        [HttpGet]
         //[Breadcrumb("Nacalculatie")]
         [Breadcrumb("Nacalculatie", FromAction = "Detail")]
         public ActionResult Recalculation(int projectid)

@@ -163,6 +163,7 @@ namespace FacadeCore
 
         // Incomming Invoices
         GetResponse<IncommingInvoiceBO> GetIncommingInvoice(int invoiceid);
+        GetResponse<IncommingInvoiceBO> GetProjectIncommingInvoicesByCompany(int projectid, int companyid);
         Response InsertUpdateProjectIncommingInvoice(IncommingInvoiceBO invoice);
         GetResponse<IncommingInvoiceActivityBO> GetProjectIncommingInvoicesForRecalculation(int projectid);
         GetResponse<IncommingInvoiceActivityBO> GetProjectIncommingInvoicesByActivity(int projectid, int activityid);

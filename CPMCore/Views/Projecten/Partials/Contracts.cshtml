@@ -100,8 +100,9 @@
 								}
 							</td>					
 							<td class="actions">
-								<a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken"  id="editContract" href="@Url.Action("EditContract", "Projecten", new {projectid = Model.ProjectId, contractid = item.Id})"><i class="fa fa-edit"></i></a>
-								<a href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-trash "></i></a>
+							    <a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = item.Id })"><i class="fa fa-eye fs-5"></i></a>
+									<a class="ms-1 me-1"  data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editContract" href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = item.Id })"><i class="fa fa-edit fs-5"></i></a>
+									<a class="ms-1 me-1" href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-trash fs-5 text-danger"></i></a>
 												
 							</td>
 						</tr>

@@ -3596,6 +3596,81 @@ namespace CPMCore.Models.Projecten
         }
     }
 
+    public class ProjectContractDetailModel
+    {
+        public ProjectContractDetailModel()
+        {
+            _contract = new ContractBO();
+            _company = new CompanyBO();
+            _incommingInvoices = new List<IncommingInvoiceBO>();
+        }
+
+        private int _projectid;
+        public int ProjectId
+        {
+            get
+            {
+                return _projectid;
+            }
+            set
+            {
+                _projectid = value;
+            }
+        }
+
+        private string _projectname;
+        public string ProjectName
+        {
+            get
+            {
+                return _projectname;
+            }
+            set
+            {
+                _projectname = value;
+            }
+        }
+
+        private ContractBO _contract;
+        public ContractBO Contract
+        {
+            get
+            {
+                return _contract;
+            }
+            set
+            {
+                _contract = value;
+            }
+        }
+
+        private CompanyBO _company;
+        public CompanyBO Company
+        {
+            get
+            {
+                return _company;
+            }
+            set
+            {
+                _company = value;
+            }
+        }
+
+        private List<IncommingInvoiceBO> _incommingInvoices;
+        public List<IncommingInvoiceBO> IncommingInvoices
+        {
+            get
+            {
+                return _incommingInvoices;
+            }
+            set
+            {
+                _incommingInvoices = value;
+            }
+        }
+    }
+
     public class ProjectIssuerCompanyOptionVM
     {
         public int Id { get; set; }
