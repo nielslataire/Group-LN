@@ -10,7 +10,8 @@
         const cityInput = $('#City');
         const departmentRows = $('#departmentRows');
         const contactRows = $('#contactRows');
-        const vatNumberInput = $('#enterprise-number');
+        const enterpriseNumberInput = $('#enterprise-number');
+        const vatNumberInput = $('#vat-number');
         const vatCountrySelect = $('#EnterpriseNumberCountryCode');
         const vatModalElement = document.getElementById('vat-lookup-modal');
         const vatLookupName = $('#vatLookupName');
@@ -100,6 +101,7 @@
                 theme: 'bootstrap',
                 dropdownAutoWidth: true,
                 placeholder: 'Selecteer uw gemeente',
+                selectOnClose: true,
                 ajax: {
                     url: '@Url.Action("GetPostcodesByCountry", "Shared")',
                     cache: false,
@@ -119,6 +121,11 @@
                         };
                     }
                 }
+            });
+             const container = element.next('.select2');
+            container.find('.select2-selection').attr('tabindex', '0');
+            container.on('focus', '.select2-selection', function () {
+                element.select2('open');
             });
         }
 
@@ -400,38 +407,97 @@
                 });
             });
         }
-         function applyPhoneMask(element) {
-            if (typeof Inputmask === 'undefined' || !element) {
-                return;
-            }
+    function syncVatNumber() {
+               if (!vatNumberInput.length || !vatCountrySelect.length) {
+                   return;
+               }
 
-            const input = $(element);
-            if (input.data('maskApplied')) {
-                return;
-            }
+               const country = (vatCountrySelect.val() || '').toString().toUpperCase();
+               if (country !== belgianIso) {
+                   return;
+               }
 
-            Inputmask({
-                mask: ['+99 999 99 99 99', '0 999 99 99 99', '999 99 99 99'],
-                greedy: false,
-                showMaskOnHover: false,
-                clearIncomplete: false,
-                placeholder: '_',
-                keepStatic: true
-            }).mask(element);
+               if (!vatNumberInput.val()) {
+                   vatNumberInput.val(enterpriseNumberInput.val() || '');
+               }
+           }
+            function applyInputMask(element, options) {
+               if (!element) {
+                   return;
+               }
 
-            input.data('maskApplied', true);
-        }
+               const input = $(element);
+               if (input.data('maskApplied')) {
+                   return;
+               }
 
-        function initInputMasks(scope) {
-            if (typeof Inputmask === 'undefined') {
-                return;
-            }
+               if (typeof Inputmask !== 'undefined') {
+                   Inputmask(options).mask(element);
+                   input.data('maskApplied', true);
+                   return;
+               }
 
-            const target = scope && scope.length ? scope : $(document);
-            target.find('.phone-mask, .mobile-mask').each(function () {
-                applyPhoneMask(this);
-            });
-        }
+               if (typeof $.fn.inputmask === 'function') {
+                   input.inputmask(options);
+                   input.data('maskApplied', true);
+               }
+           }
+
+           function applyPhoneMask(element) {
+               applyInputMask(element, {
+                   mask: ['+99 999 99 99 99', '0 999 99 99 99', '999 99 99 99'],
+                   greedy: false,
+                   showMaskOnHover: false,
+                   clearIncomplete: false,
+                   placeholder: '_',
+                   keepStatic: true
+               });
+           }
+
+           function applyUrlMask(element) {
+               if (!element) {
+                   return;
+               }
+
+               const input = $(element);
+               if (input.data('maskApplied')) {
+                   return;
+               }
+
+               applyInputMask(element, {
+                   mask: 'https://*{1,}',
+                   placeholder: '',
+                   showMaskOnHover: false,
+                   clearIncomplete: false
+               });
+
+               if (!input.data('urlPrefixBound')) {
+                   input.on('focus blur', function () {
+                       const value = (input.val() || '').toString();
+                       if (!value) {
+                           input.val('https://');
+                       } else if (!value.startsWith('https://')) {
+                           const normalized = value.replace(/^https?:\/\//i, '');
+                           input.val(`https://${normalized}`);
+                       }
+                   });
+                   input.data('urlPrefixBound', true);
+               }
+           }
+
+           function initInputMasks(scope) {
+               if (typeof Inputmask === 'undefined' && typeof $.fn.inputmask !== 'function') {
+                   return;
+               }
+
+               const target = scope && scope.length ? scope : $(document);
+               target.find('.phone-mask, .mobile-mask').each(function () {
+                   applyPhoneMask(this);
+               });
+               target.find('.url-mask').each(function () {
+                   applyUrlMask(this);
+               });
+           }
 
         function bindEmailValidation(input) {
             const field = $(input);
@@ -481,9 +547,17 @@
          togglePostalMode();
          initInputMasks();
          initEmailValidation();
+         syncVatNumber();
 
          countrySelect.on('change', function () {
              togglePostalMode();
+         });
+         enterpriseNumberInput.on('input', function () {
+             syncVatNumber();
+         });
+
+         vatCountrySelect.on('change', function () {
+             syncVatNumber();
          });
 
          $('#add-department').on('click', function (e) {

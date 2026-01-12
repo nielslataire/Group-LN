@@ -1,4 +1,5 @@
-﻿using DALCore.Models;
+﻿using CPMCore.Models.Leveranciers;
+using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
@@ -326,6 +327,8 @@ namespace CPMCore.Services.Octopus
             {
                 BedrijfsNaam = relation.Name ?? relation.Firstname ?? string.Empty,
                 Ondernemingsnummer = normalizedVat,
+                VatNumber = normalizedVat,
+                VatStatus = SupplierFormViewModel.VatStatusBtwPlichtig,
                 Straat = relation.StreetAndNr,
                 Postcode = relation.PostalCode,
                 Gemeente = relation.City,

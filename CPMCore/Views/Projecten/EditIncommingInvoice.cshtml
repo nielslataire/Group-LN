@@ -183,6 +183,106 @@
 			const $changeOrders = $row.find('#lstchangeorders');
 			$changeOrders.prop('disabled', theStatus.value !== "3");
 		}
+				function formatDateDigits(value) {
+			const digits = value.replace(/\D/g, '').slice(0, 8);
+			const parts = [];
+
+			if (digits.length > 0) {
+				parts.push(digits.substring(0, Math.min(2, digits.length)));
+			}
+			if (digits.length > 2) {
+				parts.push(digits.substring(2, Math.min(4, digits.length)));
+			}
+			if (digits.length > 4) {
+				parts.push(digits.substring(4, Math.min(8, digits.length)));
+			}
+
+			return { digits, formatted: parts.join('/') };
+		}
+
+		function normalizeDateValue(digits) {
+			const today = new Date();
+			const currentYear = today.getFullYear();
+			const currentMonth = today.getMonth() + 1;
+
+			let day;
+			let month;
+			let year;
+
+			if (digits.length <= 2) {
+				day = parseInt(digits, 10);
+				month = currentMonth;
+				year = currentYear;
+			} else if (digits.length <= 4) {
+				day = parseInt(digits.substring(0, 2), 10);
+				month = parseInt(digits.substring(2), 10);
+				year = currentYear;
+			} else if (digits.length <= 6) {
+				day = parseInt(digits.substring(0, 2), 10);
+				month = parseInt(digits.substring(2, 4), 10);
+				const yearPart = digits.substring(4);
+				year = yearPart.length === 2
+					? 2000 + parseInt(yearPart, 10)
+					: currentYear;
+			} else {
+				day = parseInt(digits.substring(0, 2), 10);
+				month = parseInt(digits.substring(2, 4), 10);
+				year = parseInt(digits.substring(4, 8), 10);
+			}
+
+			if (!day || !month || !year) {
+				return null;
+			}
+
+			const candidate = new Date(year, month - 1, day);
+			if (candidate.getFullYear() !== year || candidate.getMonth() + 1 !== month || candidate.getDate() !== day) {
+				return null;
+			}
+
+			const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+			if (candidate > todayMidnight) {
+				return null;
+			}
+
+			return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+		}
+
+		function bindIncomingInvoiceDateInput() {
+			const input = $('#IncommingInvoice_IncommingInvoiceDate');
+			if (!input.length) {
+				return;
+			}
+
+			input.on('input', function () {
+				const result = formatDateDigits(input.val() || '');
+				input.val(result.formatted);
+				input.removeClass('is-invalid');
+			});
+
+			function normalizeAndValidate() {
+				const result = formatDateDigits(input.val() || '');
+				if (!result.digits) {
+					input.removeClass('is-invalid');
+					return;
+				}
+
+				const normalized = normalizeDateValue(result.digits);
+				if (!normalized) {
+					input.addClass('is-invalid');
+					return;
+				}
+
+				input.removeClass('is-invalid');
+				input.val(normalized);
+			}
+
+			input.on('blur', normalizeAndValidate);
+			input.on('keydown', function (event) {
+				if (event.key === 'Enter') {
+					normalizeAndValidate();
+				}
+			});
+		}
 
 		$(document).ready(function () {
 
@@ -215,6 +315,7 @@
 			$('#txtCompanyID').on('change', function () {
 				GetActivitiesCompany($(this).val());
 			});
+			bindIncomingInvoiceDateInput();
 		});
 
 		// ==============================
@@ -264,6 +365,8 @@
 			$(this).closest('.row').remove();
 			return false;
 		});
+
+
 	</script>
 
 

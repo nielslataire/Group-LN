@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using CPMCore.Helpers;
 
 namespace CPMCore.Models.Leveranciers;
 
@@ -38,7 +39,7 @@ public class SupplierListItemViewModel
             return string.IsNullOrWhiteSpace(Mobile) ? null : Mobile;
         }
     }
-    public string EnterpriseNumberDisplay => FormatEnterpriseNumber(EnterpriseNumber, CountryCode) ?? "-";
+    public string EnterpriseNumberDisplay => EnterpriseNumberFormatter.Format(EnterpriseNumber, CountryCode) ?? "-";
 
     public string PrimaryPhoneDisplay => FormatPhoneNumber(PrimaryPhone) ?? "-";
 

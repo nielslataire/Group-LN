@@ -3249,7 +3249,7 @@ END";
             }
 
             var vatNumber = FormatVatNumberForOctopus(
-               invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.Ondernemingsnummer,
+                invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.VatNumber ?? company?.Ondernemingsnummer,
                 clientAccount?.InvoicePostalCode?.Country?.LandIsocode
                     ?? clientAccount?.PostalCode?.Country?.LandIsocode
                     ?? clientContact?.InvoicePostalCode?.Country?.LandIsocode
@@ -3313,7 +3313,7 @@ END";
             var isCompany = !string.IsNullOrWhiteSpace(clientAccount?.CompanyName)
                 || (!string.IsNullOrWhiteSpace(clientAccount?.Vatnumber))
                 || (!string.IsNullOrWhiteSpace(invoice.VatNumber) && invoice.ClientType != (int)InvoicePartyType.ClientContact)
-                || (!string.IsNullOrWhiteSpace(company?.Ondernemingsnummer));
+                || (!string.IsNullOrWhiteSpace(company?.VatNumber) || !string.IsNullOrWhiteSpace(company?.Ondernemingsnummer));
 
             var firstName = clientContact?.Forename
                 ?? clientAccount?.Name
@@ -3347,7 +3347,7 @@ END";
                 PostalCode = clientAccount?.InvoicePostalCode?.Postcode ?? clientAccount?.PostalCode?.Postcode ?? clientContact?.InvoicePostalCode?.Postcode ?? clientContact?.PostalCode?.Postcode ?? company?.Postcode ?? invoice.PostalCode?.Postcode,
                 City = clientAccount?.InvoicePostalCode?.Gemeente ?? clientAccount?.PostalCode?.Gemeente ?? clientContact?.InvoicePostalCode?.Gemeente ?? clientContact?.PostalCode?.Gemeente ?? company?.Gemeente ?? invoice.PostalCode?.Gemeente,
                 Country = countryCode,
-                VatNr = FormatVatNumberForOctopus(invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.Ondernemingsnummer, countryCode),
+                VatNr = FormatVatNumberForOctopus(invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.VatNumber ?? company?.Ondernemingsnummer, countryCode),
                 CurrencyCode = "EUR",
                 DefaultBookingAccountClient = 0,
                 DefaultBookingAccountSupplier = 0,

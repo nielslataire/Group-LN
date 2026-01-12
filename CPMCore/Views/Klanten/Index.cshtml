@@ -1,4 +1,5 @@
 ﻿@model CPMCore.Models.Klanten.ClientIndexViewModel
+@using CPMCore.Helpers
 
 @{
     ViewData["Title"] = "Klanten";
@@ -84,7 +85,7 @@
                                     @client.DisplayName
                                 </a>
                             </td>
-                            <td>@(string.IsNullOrWhiteSpace(client.EnterpriseNumber) ? "-" : client.EnterpriseNumber)</td>
+                            <td>@(EnterpriseNumberFormatter.Format(client.EnterpriseNumber) ?? "-")</td>
                             <td>@(string.IsNullOrWhiteSpace(client.City) ? "-" : client.City)</td>
                             <td>
                                 @if (!string.IsNullOrWhiteSpace(client.Email))

@@ -1,6 +1,8 @@
 ﻿@using System.Globalization
+@using CPMCore.Helpers
 @using BOCore
 @model CPMCore.Models.Projecten.ProjectContractDetailModel
+
 
 @{
     ViewData["Title"] = $"{Model.ProjectName} - Contract detail";
@@ -205,7 +207,7 @@
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <span class="fw-semibold fs-6">Ondernemingsnummer</span>
-                                        <div class="text-muted">@(!string.IsNullOrWhiteSpace(Model.Company?.OndNr) ? Model.Company.OndNr : "-")</div>
+                                        <div class="text-muted">@(EnterpriseNumberFormatter.Format(Model.Company?.OndNr) ?? "-")</div>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <span class="fw-semibold fs-6">Telefoon</span>

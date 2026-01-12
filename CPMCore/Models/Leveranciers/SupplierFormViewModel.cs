@@ -23,6 +23,12 @@ public class SupplierFormViewModel
     [Display(Name = "BTW landcode")]
     public string EnterpriseNumberCountryCode { get; set; } = "BE";
 
+    [Display(Name = "BTW nummer")]
+    public string? VatNumber { get; set; }
+
+    [Display(Name = "BTW status")]
+    public string VatStatus { get; set; } = VatStatusBtwPlichtig;
+
     [Display(Name = "Straat")]
     public string? Street { get; set; }
 
@@ -90,6 +96,10 @@ public class SupplierFormViewModel
     public string Title => Id.HasValue ? "Leverancier bewerken" : "Leverancier toevoegen";
 
     public string Subtitle => Id.HasValue ? "Pas de leverancier aan" : "Voeg een nieuwe leverancier toe";
+
+    public const string VatStatusParticulier = "particulier";
+    public const string VatStatusNietBtwPlichtig = "niet-btw plichtige onderneming";
+    public const string VatStatusBtwPlichtig = "btw plichtige onderneming";
 }
 public class IssuerCompanyOptionViewModel
 {

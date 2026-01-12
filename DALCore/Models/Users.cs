@@ -32,4 +32,6 @@ public partial class Users
     public bool IsActive { get; set; }
 
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
+
+    public virtual ICollection<Project> Project { get; set; } = new List<Project>();
 }

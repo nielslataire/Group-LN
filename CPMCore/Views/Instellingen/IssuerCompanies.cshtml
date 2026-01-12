@@ -1,4 +1,5 @@
 ﻿@model IReadOnlyList<CPMCore.Models.Instellingen.IssuerCompanyVM>
+@using CPMCore.Helpers
 @{
     ViewData["Title"] = "Instellingen - Mijn Bedrijven";
 }
@@ -39,7 +40,7 @@
                             <tr>
                                 <td>@x.Name</td>
                                 <td>@x.VatNumber</td>
-                                <td>@x.EnterpriseNumber</td>
+                                <td>@(EnterpriseNumberFormatter.Format(x.EnterpriseNumber, x.CountryCode) ?? "-")</td>
                                 <td>@x.AddressLine1, @x.PostalCode @x.City</td>
                                 <td>
                                     @if (x.IsActive)

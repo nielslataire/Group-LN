@@ -51,7 +51,5 @@ public partial class AspNetUsers1
 
     public virtual ICollection<AspNetUserLogins> AspNetUserLogins { get; set; } = new List<AspNetUserLogins>();
 
-    public virtual ICollection<Project> Project { get; set; } = new List<Project>();
-
     public virtual ICollection<AspNetRoles1> Role { get; set; } = new List<AspNetRoles1>();
 }

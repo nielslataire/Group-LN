@@ -1,5 +1,6 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceSendVM
 @using System.Globalization
+@using CPMCore.Helpers
 @{
     ViewData["Title"] = "Factuur verzenden";
     var issuerId = ViewBag.CompanyId as int?;
@@ -260,7 +261,7 @@
                 </div>
                 <div class="list-group-item">
                     <div class="text-muted small mb-1">Ondernemingsnummer</div>
-                    <div>@(string.IsNullOrWhiteSpace(Model.ClientEnterpriseNumber) ? "-" : Model.ClientEnterpriseNumber)</div>
+                    <div>@(EnterpriseNumberFormatter.Format(Model.ClientEnterpriseNumber) ?? "-")</div>
                 </div>
             </div>
         </div>

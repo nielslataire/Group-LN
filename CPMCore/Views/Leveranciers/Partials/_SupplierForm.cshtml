@@ -1,5 +1,6 @@
 ﻿@model CPMCore.Models.Leveranciers.SupplierFormViewModel
 @using System.Linq
+@using CPMCore.Models.Leveranciers
 
 @{
     var groupedActivities = Model.Activities
@@ -27,6 +28,12 @@
     var isBelgianAddress = string.Equals(selectedCountryIso, "BE", StringComparison.OrdinalIgnoreCase);
     var belgianPostalClass = isBelgianAddress ? string.Empty : "d-none";
     var nonBelgianPostalClass = isBelgianAddress ? "d-none" : string.Empty;
+    var vatStatusOptions = new[]
+   {
+        SupplierFormViewModel.VatStatusParticulier,
+        SupplierFormViewModel.VatStatusNietBtwPlichtig,
+        SupplierFormViewModel.VatStatusBtwPlichtig
+    };
 }
 
 <div class="row">
@@ -114,13 +121,34 @@
                                         <div class="col-lg-8 col-xl-8">
                                             <div class="input-group">
                                                     @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "Ondernemingsnummer", id = "enterprise-number", autocomplete = "off" })
-                                            <button type="button" class="btn btn-primary" id="btn-validate-vat"><i class="bx bx-check"></i><span class="d-none d-sm-inline ms-1">Controleren</span></button>
                                             </div>
                                         </div>
                                         </div>
                                         <small class="text-muted d-block mt-1">Voer de landcode en het btw nummer in (bv. BE 0123456789).</small>
                                         @Html.ValidationMessageFor(m => m.EnterpriseNumber, "", new { @class = "text-danger" })
                                 </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end">@Html.LabelFor(m => m.VatNumber)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="input-group">
+                                            @Html.TextBoxFor(m => m.VatNumber, new { @class = "form-control form-control-modern", placeholder = "BTW nummer", id = "vat-number", autocomplete = "off" })
+                                            <button type="button" class="btn btn-primary" id="btn-validate-vat"><i class="bx bx-check"></i><span class="d-none d-sm-inline ms-1">Controleren</span></button>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Voor Belgische ondernemingen is dit gelijk aan het ondernemingsnummer.</small>
+                                        @Html.ValidationMessageFor(m => m.VatNumber, "", new { @class = "text-danger" })
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end">@Html.LabelFor(m => m.VatStatus)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <select id="VatStatus" name="VatStatus" class="form-control form-control-modern populate">
+                                            @foreach (var status in vatStatusOptions)
+                                            {
+                                                <option value="@status" selected="@(string.Equals(Model.VatStatus, status, StringComparison.OrdinalIgnoreCase) ? "selected" : null)">@status</option>
+                                            }
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Adres</label>
@@ -244,7 +272,7 @@
                                             <span class="input-group-text">
                                                 <i class="fas fa-globe"></i>
                                             </span>
-                                            @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern", placeholder = "Website", type = "url" })
+                                            @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern url-mask", placeholder = "Website", type = "url" })
                                         </div>
                                     </div>
                                 </div>

@@ -275,8 +275,6 @@ public partial class cpmRunningContext : DbContext
 
             entity.ToTable("AspNetUsers");
 
-            entity.Ignore(e => e.Project);
-
             entity.HasIndex(e => e.UserName, "UserNameIndex").IsUnique();
 
             entity.Property(e => e.Id).HasMaxLength(128);
@@ -862,6 +860,10 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasIndex(e => e.OctopusRelationId, "IX_CompanyInfo_OctopusRelationId");
 
+            entity.HasIndex(e => e.Ondernemingsnummer, "UX_CompanyInfo_Ondernemingsnummer")
+                .IsUnique()
+                .HasFilter("([Ondernemingsnummer] IS NOT NULL AND [Ondernemingsnummer]<>'')");
+
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
             entity.Property(e => e.AttachUblByDefault).HasDefaultValue(true);
             entity.Property(e => e.Bank).HasMaxLength(50);
@@ -887,6 +889,12 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Telefoon2).HasMaxLength(50);
             entity.Property(e => e.Toevoeging).HasMaxLength(50);
             entity.Property(e => e.Type).HasMaxLength(50);
+            entity.Property(e => e.VatNumber)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.VatStatus)
+                .HasMaxLength(50)
+                .IsUnicode(false);
             entity.Property(e => e.Weburl)
                 .HasMaxLength(300)
                 .HasColumnName("WEBURL");
@@ -1807,9 +1815,9 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ArchitectId)
                 .HasConstraintName("FK_Project_CompanyInfo4");
 
-            entity.HasOne(d => d.User).WithMany()
-                .HasForeignKey(d => d.AspNetUserId)
+            entity.HasOne(d => d.AspNetUser).WithMany(p => p.Project)
                 .HasPrincipalKey(p => p.UserId)
+                .HasForeignKey(d => d.AspNetUserId)
                 .HasConstraintName("FK_Project_Users");
 
             entity.HasOne(d => d.Builder).WithMany(p => p.ProjectBuilder)
@@ -2130,8 +2138,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<Users>(entity =>
         {
-            entity.HasAlternateKey(e => e.UserId)
-               .HasName("AK_Users_UserID");
+            entity.HasIndex(e => e.UserId, "UX_Users_UserID").IsUnique();
+
             entity.Property(e => e.Id)
                 .ValueGeneratedNever()
                 .HasColumnName("ID");
@@ -2146,6 +2154,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Password).HasMaxLength(50);
             entity.Property(e => e.Type).HasColumnType("decimal(18, 0)");
             entity.Property(e => e.UserId)
+                .IsRequired()
                 .HasMaxLength(128)
                 .HasColumnName("UserID");
             entity.Property(e => e.Voornaam).HasMaxLength(50);

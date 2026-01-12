@@ -156,13 +156,13 @@ public class LeveranciersController : BaseController
     private static void MapToEntity(SupplierFormViewModel model, CompanyInfo entity)
     {
         entity.BedrijfsNaam = model.Name;
-        entity.Ondernemingsnummer = CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber);
+        entity.Ondernemingsnummer = model.EnterpriseNumber;
         entity.Straat = model.Street;
         entity.Huisnummer = model.HouseNumber;
         entity.Busnummer = model.BusNumber;
         entity.Postcode = model.PostalCode;
         entity.Gemeente = model.City;
-        entity.LandCode = model.CountryCode;
+        entity.LandCode = model.EnterpriseNumberCountryCode;
         entity.Telefoon1 = model.Phone;
         entity.Gsm = model.Mobile;
         entity.Email = model.Email;
@@ -172,6 +172,8 @@ public class LeveranciersController : BaseController
         entity.PostCodeId = model.SelectedPostalCodeId;
         entity.Weburl = model.WebUrl;
         entity.IsCustomer = model.IsCustomer;
+        entity.VatNumber = model.VatNumber;
+        entity.VatStatus = model.VatStatus;
     }
     private async Task AssignIssuerCompaniesAsync(CompanyInfo entity, IEnumerable<int> selectedIssuerCompanyIds, CancellationToken ct)
     {
@@ -378,7 +380,7 @@ public class LeveranciersController : BaseController
 
     private static string? CombineEnterpriseNumber(string? countryCode, string? number)
     {
-        var sanitizedNumber = SanitizeVatPart(number);
+        var sanitizedNumber = SanitizeDigits(number);
         if (string.IsNullOrWhiteSpace(sanitizedNumber))
         {
             return null;
@@ -388,26 +390,7 @@ public class LeveranciersController : BaseController
         return string.IsNullOrEmpty(sanitizedCountry) ? sanitizedNumber : sanitizedCountry + sanitizedNumber;
     }
 
-    private static (string? CountryCode, string? NumberPart) SplitEnterpriseNumber(string? value)
-    {
-        var sanitized = SanitizeVatPart(value);
-
-        if (string.IsNullOrWhiteSpace(sanitized))
-        {
-            return (null, null);
-        }
-
-        if (sanitized.Length >= 2 && char.IsLetter(sanitized[0]) && char.IsLetter(sanitized[1]))
-        {
-            var prefix = sanitized.Substring(0, 2);
-            var remainder = sanitized.Substring(2);
-            return (prefix, string.IsNullOrWhiteSpace(remainder) ? null : remainder);
-        }
-
-        return (null, sanitized);
-    }
-
-    private static string? SanitizeVatPart(string? value)
+    private static string? SanitizeDigits(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
@@ -417,9 +400,9 @@ public class LeveranciersController : BaseController
         var builder = new StringBuilder(value.Length);
         foreach (var ch in value)
         {
-            if (char.IsLetterOrDigit(ch))
+            if (char.IsDigit(ch))
             {
-                builder.Append(char.ToUpperInvariant(ch));
+                builder.Append(ch);
             }
         }
 
@@ -449,7 +432,72 @@ public class LeveranciersController : BaseController
 
         return builder.Length == 0 ? null : builder.ToString();
     }
+    private static void NormalizeVatInputs(SupplierFormViewModel model)
+    {
+        model.EnterpriseNumberCountryCode = SanitizeVatCountry(model.EnterpriseNumberCountryCode) ?? "BE";
+        model.EnterpriseNumber = SanitizeDigits(model.EnterpriseNumber);
+        model.VatNumber = SanitizeDigits(model.VatNumber);
 
+        if (string.IsNullOrWhiteSpace(model.VatStatus))
+        {
+            model.VatStatus = SupplierFormViewModel.VatStatusBtwPlichtig;
+        }
+    }
+
+    private async Task ValidateVatInputsAsync(SupplierFormViewModel model, int? existingCompanyId, CancellationToken ct)
+    {
+        var isBelgian = string.Equals(model.EnterpriseNumberCountryCode, "BE", StringComparison.OrdinalIgnoreCase);
+        var enterpriseNumber = model.EnterpriseNumber ?? string.Empty;
+        var vatNumber = model.VatNumber ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(enterpriseNumber))
+        {
+            if (isBelgian)
+            {
+                ModelState.AddModelError(nameof(SupplierFormViewModel.EnterpriseNumber), "Ondernemingsnummer is verplicht voor Belgische ondernemingen.");
+            }
+        }
+        else
+        {
+            if (isBelgian && enterpriseNumber.Length != 10)
+            {
+                ModelState.AddModelError(nameof(SupplierFormViewModel.EnterpriseNumber), "Een Belgisch ondernemingsnummer moet 10 cijfers bevatten.");
+            }
+
+            if (!isBelgian && enterpriseNumber.Length > 20)
+            {
+                ModelState.AddModelError(nameof(SupplierFormViewModel.EnterpriseNumber), "Een buitenlands ondernemingsnummer mag maximaal 20 cijfers bevatten.");
+            }
+
+            var existing = await _db.CompanyInfo
+                .AsNoTracking()
+                .AnyAsync(c => c.Ondernemingsnummer == enterpriseNumber && (!existingCompanyId.HasValue || c.CompanyId != existingCompanyId.Value), ct);
+
+            if (existing)
+            {
+                ModelState.AddModelError(nameof(SupplierFormViewModel.EnterpriseNumber), "Er bestaat al een leverancier met dit ondernemingsnummer.");
+            }
+        }
+
+        if (isBelgian)
+        {
+            if (!string.IsNullOrWhiteSpace(enterpriseNumber))
+            {
+                if (string.IsNullOrWhiteSpace(vatNumber))
+                {
+                    model.VatNumber = enterpriseNumber;
+                }
+                else if (!string.Equals(vatNumber, enterpriseNumber, StringComparison.OrdinalIgnoreCase))
+                {
+                    ModelState.AddModelError(nameof(SupplierFormViewModel.VatNumber), "Voor Belgische ondernemingen moet het btw-nummer gelijk zijn aan het ondernemingsnummer.");
+                }
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(vatNumber) && vatNumber.Length > 20)
+        {
+            ModelState.AddModelError(nameof(SupplierFormViewModel.VatNumber), "Een buitenlands btw-nummer mag maximaal 20 cijfers bevatten.");
+        }
+    }
 
 
     [HttpGet]
@@ -799,6 +847,9 @@ public class LeveranciersController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(SupplierFormViewModel model, CancellationToken ct)
     {
+        NormalizeVatInputs(model);
+        await ValidateVatInputsAsync(model, null, ct);
+
         if (!ModelState.IsValid)
         {
             await BuildFormAsync(model, ct);
@@ -855,15 +906,16 @@ public class LeveranciersController : BaseController
             .Select(l => (int?)l.Id)
             .FirstOrDefaultAsync(ct);
 
-        var (enterpriseVatCountryCode, enterpriseVatNumber) = SplitEnterpriseNumber(entity.Ondernemingsnummer);
 
         var vm = new SupplierFormViewModel
         {
             Id = entity.CompanyId,
             Name = entity.BedrijfsNaam,
             SelectedLegalFormId = legalFormId,
-            EnterpriseNumber = enterpriseVatNumber,
-            EnterpriseNumberCountryCode = enterpriseVatCountryCode ?? "BE",
+            EnterpriseNumber = entity.Ondernemingsnummer,
+            EnterpriseNumberCountryCode = entity.LandCode ?? "BE",
+            VatNumber = entity.VatNumber,
+            VatStatus = string.IsNullOrWhiteSpace(entity.VatStatus) ? SupplierFormViewModel.VatStatusBtwPlichtig : entity.VatStatus,
             Street = entity.Straat,
             HouseNumber = entity.Huisnummer,
             BusNumber = entity.Busnummer,
@@ -930,10 +982,15 @@ public class LeveranciersController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(int id, SupplierFormViewModel model, CancellationToken ct)
     {
+       
+
         if (id != model.Id)
         {
             return BadRequest();
         }
+
+        NormalizeVatInputs(model);
+        await ValidateVatInputsAsync(model, id, ct);
 
         if (!ModelState.IsValid)
         {
@@ -1062,7 +1119,7 @@ public class LeveranciersController : BaseController
         static bool Different(string? a, string? b)
             => !string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
 
-        var newVat = CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber);
+        var newVat = model.EnterpriseNumber;
 
         return Different(entity.Straat, model.Street)
             || Different(entity.Huisnummer, model.HouseNumber)
@@ -1072,7 +1129,10 @@ public class LeveranciersController : BaseController
             || Different(entity.Postcode, model.PostalCode)
             || Different(entity.Ondernemingsnummer, newVat)
             || Different(entity.Email, model.Email)
-            || Different(entity.InvoiceEmail, model.InvoiceEmail);
+            || Different(entity.InvoiceEmail, model.InvoiceEmail)
+            || Different(entity.LandCode, model.EnterpriseNumberCountryCode)
+            || Different(entity.VatNumber, model.VatNumber)
+            || Different(entity.VatStatus, model.VatStatus);
     }
 
     private async Task TrySyncSupplierRelationAsync(int companyId, CancellationToken ct)
@@ -1126,13 +1186,13 @@ public class LeveranciersController : BaseController
             City = company.Gemeente,
             Country = countryCode ?? "BE",
             Email = company.InvoiceEmail ?? company.Email,
-            VatNr = FormatVatNumberForOctopus(company.Ondernemingsnummer, countryCode),
+            VatNr = FormatVatNumberForOctopus(company.VatNumber ?? company.Ondernemingsnummer, countryCode),
             CurrencyCode = "EUR",
             Contactperson = name,
             DefaultBookingAccountClient = 0,
             DefaultBookingAccountSupplier = 0,
             SupplierPaymentMethod = 0,
-            VatType = DetermineVatType(!string.IsNullOrWhiteSpace(company.Ondernemingsnummer), countryCode)
+            VatType = DetermineVatType(!string.IsNullOrWhiteSpace(company.VatNumber ?? company.Ondernemingsnummer), countryCode)
         };
 
         return request;
