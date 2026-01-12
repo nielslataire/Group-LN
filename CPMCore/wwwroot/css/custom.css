@@ -17,6 +17,51 @@
     padding-bottom: 0.8rem;
 }
 
+.table th.datatable-actions,
+.table td.datatable-actions {
+    text-align: end;
+    white-space: nowrap;
+}
+
+    .table td.datatable-actions a,
+    .table td.datatable-actions button,
+    .table td.datatable-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        box-shadow: none;
+    }
+
+        .table td.datatable-actions a + a,
+        .table td.datatable-actions a + button,
+        .table td.datatable-actions button + a,
+        .table td.datatable-actions button + button {
+            margin-left: 0.5rem;
+        }
+
+    .table td.datatable-actions i {
+        font-size: 1.25rem !important;
+        color: inherit !important;
+        font-weight: 400;
+    }
+
+    .table td.datatable-actions .text-primary,
+    .table td.datatable-actions .text-secondary,
+    .table td.datatable-actions .text-success,
+    .table td.datatable-actions .text-info,
+    .table td.datatable-actions .text-warning,
+    .table td.datatable-actions .text-danger,
+    .table td.datatable-actions .text-dark,
+    .table td.datatable-actions .text-muted,
+    .table td.datatable-actions .text-light {
+        color: inherit !important;
+    }
+
+
 /*kleurenpallet*/
 :root {
     /* Jouw bestaande groen */

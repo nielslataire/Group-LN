@@ -1,0 +1,49 @@
+﻿@model CPMCore.Models.Projecten.ContactEditModel
+@{
+    ViewData["Title"] = "Contact bewerken";
+}
+
+<section class="body">
+    <div class="content-wrapper">
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <h1 class="h4 mb-4">Contact bewerken</h1>
+                        <form method="post" action="@Url.Action("EditContact", "Projecten")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+                            <input type="hidden" name="Email" value="@Model.Email" />
+                            <input type="hidden" name="Fullname" value="@Model.Fullname" />
+                            <input type="hidden" name="Phone" value="@Model.Phone" />
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Voornaam</label>
+                                    <input type="text" class="form-control" name="Firstname" value="@Model.Firstname" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Achternaam</label>
+                                    <input type="text" class="form-control" name="Lastname" value="@Model.Lastname" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">E-mail</label>
+                                    <input type="email" class="form-control" name="NewEmail" value="@Model.NewEmail" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefoon</label>
+                                    <input type="text" class="form-control" name="NewPhone" value="@Model.NewPhone" />
+                                </div>
+                            </div>
+
+                            <div class="mt-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">Opslaan</button>
+                                <a href="@Url.Action("DetailContacts", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default">Annuleren</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

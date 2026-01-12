@@ -1466,6 +1466,107 @@ namespace ServiceCore
             return response;
         }
 
+        public Response UpdateContactRequestGroup(int projectid, string email, string fullname, string phone, ContactRequestBO updatedValues)
+        {
+            var response = new Response();
+
+            if (updatedValues == null)
+            {
+                response.AddError("Contactgegevens ontbreken");
+                return response;
+            }
+
+            var query = _uow.ContactRequests.GetNormal();
+
+            if (projectid > 0)
+                query = query.Where(c => c.ProjectId == projectid);
+
+            var normalizedEmail = NormalizeContactValue(email);
+            var normalizedName = NormalizeContactValue(fullname);
+            var normalizedPhone = NormalizeContactValue(phone);
+
+            var matches = query.ToList()
+                .Where(c => MatchesContactGroup(c, normalizedEmail, normalizedName, normalizedPhone))
+                .ToList();
+
+            if (!matches.Any())
+            {
+                response.AddError("Geen contact gevonden om bij te werken");
+                return response;
+            }
+
+            foreach (var contact in matches)
+            {
+                contact.Firstname = updatedValues.Firstname;
+                contact.Lastname = updatedValues.Lastname;
+                contact.Fullname = !string.IsNullOrWhiteSpace(updatedValues.Fullname)
+                    ? updatedValues.Fullname
+                    : $"{updatedValues.Firstname} {updatedValues.Lastname}".Trim();
+                contact.Email = updatedValues.Email;
+                contact.Phone = updatedValues.Phone;
+            }
+
+            var saved = _uow.SaveChanges();
+            response.AddSaveChangesResult(saved, "Contact bijgewerkt", "Contact niet bijgewerkt");
+            return response;
+        }
+
+        public Response DeleteContactRequestGroup(int projectid, string email, string fullname, string phone)
+        {
+            var response = new Response();
+            var query = _uow.ContactRequests.GetNormal();
+
+            if (projectid > 0)
+                query = query.Where(c => c.ProjectId == projectid);
+
+            var normalizedEmail = NormalizeContactValue(email);
+            var normalizedName = NormalizeContactValue(fullname);
+            var normalizedPhone = NormalizeContactValue(phone);
+
+            var matches = query.ToList()
+                .Where(c => MatchesContactGroup(c, normalizedEmail, normalizedName, normalizedPhone))
+                .ToList();
+
+            if (!matches.Any())
+            {
+                response.AddError("Geen contact gevonden om te verwijderen");
+                return response;
+            }
+
+            foreach (var contact in matches)
+            {
+                _uow.ContactRequests.Remove(contact);
+            }
+
+            var saved = _uow.SaveChanges();
+            response.AddSaveChangesResult(saved, "Contact verwijderd", "Contact niet verwijderd");
+            return response;
+        }
+
+        private static bool MatchesContactGroup(ContactRequests contact, string normalizedEmail, string normalizedName, string normalizedPhone)
+        {
+            var contactEmail = NormalizeContactValue(contact.Email);
+            var contactName = NormalizeContactValue(GetContactName(contact));
+            var contactPhone = NormalizeContactValue(contact.Phone);
+
+            if (!string.IsNullOrWhiteSpace(normalizedEmail))
+            {
+                return contactEmail == normalizedEmail;
+            }
+
+            return contactName == normalizedName && contactPhone == normalizedPhone;
+        }
+
+        private static string GetContactName(ContactRequests contact)
+        {
+            if (!string.IsNullOrWhiteSpace(contact.Fullname))
+                return contact.Fullname;
+
+            return $"{contact.Firstname} {contact.Lastname}".Trim();
+        }
+
+        private static string NormalizeContactValue(string value)
+            => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
 
 
         // ===== PaymentGroups =====

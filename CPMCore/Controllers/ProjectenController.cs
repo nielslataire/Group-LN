@@ -574,6 +574,11 @@ namespace CPMCore.Controllers
             var response = service.GetProjectContactRequests(projectid);
             if (response.Success) model.Contacts = response.Values;
 
+            var contacts = model.Contacts ?? new List<ContactRequestBO>();
+            model.ContactGroups = BuildContactGroups(contacts);
+            model.Stats = BuildContactStats(model.ContactGroups, contacts);
+
+
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
             {
@@ -593,6 +598,360 @@ namespace CPMCore.Controllers
 
             return View(model);
         }
+
+        [HttpGet]
+        [Breadcrumb("Contactdetails", FromAction = "DetailContacts")]
+        public ActionResult ContactDetails(int projectid, string email, string fullname, string phone)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetProjectContactRequests(projectid);
+            var contacts = response.Success ? response.Values : new List<ContactRequestBO>();
+
+            var groupContacts = FilterContactGroup(contacts, email, fullname, phone);
+            var groupModel = BuildContactGroup(groupContacts);
+
+            var model = new ContactDetailsModel
+            {
+                ProjectId = projectid,
+                ProjectName = service.GetProjectNameById(projectid),
+                Contact = groupModel,
+                Requests = groupContacts.OrderByDescending(c => c.CreatedAt).ToList(),
+                NewAction = new ContactActionInputModel
+                {
+                    ProjectId = projectid,
+                    Email = groupModel?.Email,
+                    Fullname = groupModel?.DisplayName,
+                    Phone = groupModel?.Phone,
+                    ActionDate = DateTime.Now
+                },
+                NewStatus = new ContactStatusInputModel
+                {
+                    ProjectId = projectid,
+                    Email = groupModel?.Email,
+                    Fullname = groupModel?.DisplayName,
+                    Phone = groupModel?.Phone,
+                    StatusDate = DateTime.Now
+                }
+            };
+
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContacts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContacts", "Projecten", "Contacten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var contactDetails = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("ContactDetails", "Projecten", "Contactdetails")
+            {
+                Parent = projectContacts,
+                RouteValues = new { projectid = projectid, email, fullname, phone }
+            };
+            ViewData["BreadcrumbNode"] = contactDetails;
+
+            return View(model);
+        }
+
+        [HttpGet]
+        [Breadcrumb("Contact bewerken", FromAction = "DetailContacts")]
+        public ActionResult EditContact(int projectid, string email, string fullname, string phone)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var service = ServiceFactory.GetProjectService();
+            var response = service.GetProjectContactRequests(projectid);
+            var contacts = response.Success ? response.Values : new List<ContactRequestBO>();
+            var groupContacts = FilterContactGroup(contacts, email, fullname, phone);
+            var latestContact = groupContacts.OrderByDescending(c => c.CreatedAt).FirstOrDefault();
+            var fullName = GetContactDisplayName(latestContact);
+
+            var model = new ContactEditModel
+            {
+                ProjectId = projectid,
+                Email = email,
+                Fullname = fullname ?? fullName,
+                Phone = phone ?? latestContact?.Phone,
+                Firstname = latestContact?.Firstname,
+                Lastname = latestContact?.Lastname,
+                NewEmail = latestContact?.Email,
+                NewPhone = latestContact?.Phone
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult EditContact(ContactEditModel model)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            if (model == null)
+                return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
+
+            var service = ServiceFactory.GetProjectService();
+            var updatedValues = new ContactRequestBO
+            {
+                Firstname = model.Firstname,
+                Lastname = model.Lastname,
+                Fullname = $"{model.Firstname} {model.Lastname}".Trim(),
+                Email = model.NewEmail,
+                Phone = model.NewPhone
+            };
+
+            var response = service.UpdateContactRequestGroup(model.ProjectId, model.Email, model.Fullname, model.Phone, updatedValues);
+            AddMessage(response.Success ? "success" : "error", response.Success ? "Contact bijgewerkt" : "Contact niet bijgewerkt", response.Success ? "Geslaagd!" : "Fout!");
+
+            return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult DeleteContact(ContactDeleteModel model)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            if (model == null)
+                return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.DeleteContactRequestGroup(model.ProjectId, model.Email, model.Fullname, model.Phone);
+            AddMessage(response.Success ? "success" : "error", response.Success ? "Contact verwijderd" : "Contact niet verwijderd", response.Success ? "Geslaagd!" : "Fout!");
+
+            return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AddContactAction(ContactActionInputModel model)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            if (model == null)
+                return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
+
+            var request = new ContactRequestBO
+            {
+                ProjectId = model.ProjectId,
+                Email = model.Email,
+                Fullname = model.Fullname,
+                Phone = model.Phone,
+                RequestType = InternalActionRequestType,
+                Subject = model.ActionType,
+                Question = model.Comment,
+                CreatedAt = model.ActionDate,
+                SourceSite = InternalSourceSite,
+                Origin = InternalOrigin
+            };
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertProjectContactRequest(request);
+            AddMessage(response.Success ? "success" : "error", response.Success ? "Actie toegevoegd" : "Actie niet toegevoegd", response.Success ? "Geslaagd!" : "Fout!");
+
+            return RedirectToAction("ContactDetails", new { projectid = model.ProjectId, email = model.Email, fullname = model.Fullname, phone = model.Phone });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AddContactStatus(ContactStatusInputModel model)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            if (model == null)
+                return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
+
+            var request = new ContactRequestBO
+            {
+                ProjectId = model.ProjectId,
+                Email = model.Email,
+                Fullname = model.Fullname,
+                Phone = model.Phone,
+                RequestType = StatusUpdateRequestType,
+                Subject = model.Status,
+                Question = model.Comment,
+                CreatedAt = model.StatusDate,
+                SourceSite = InternalSourceSite,
+                Origin = InternalOrigin
+            };
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertProjectContactRequest(request);
+            AddMessage(response.Success ? "success" : "error", response.Success ? "Status bijgewerkt" : "Status niet bijgewerkt", response.Success ? "Geslaagd!" : "Fout!");
+
+            return RedirectToAction("ContactDetails", new { projectid = model.ProjectId, email = model.Email, fullname = model.Fullname, phone = model.Phone });
+        }
+
+        private const string InternalActionRequestType = "Interne actie";
+        private const string StatusUpdateRequestType = "Status update";
+        private const string InternalSourceSite = "CPMCore";
+        private const string InternalOrigin = "CPMCore";
+
+        private static List<ContactGroupModel> BuildContactGroups(List<ContactRequestBO> contacts)
+        {
+            return contacts
+                .GroupBy(BuildContactKey)
+                .Select(group => BuildContactGroup(group.ToList()))
+                .Where(group => group != null)
+                .OrderByDescending(group => group.LatestContactAt)
+                .ToList();
+        }
+
+        private static ContactStatsModel BuildContactStats(List<ContactGroupModel> groups, List<ContactRequestBO> allContacts)
+        {
+            var stats = new ContactStatsModel();
+            var now = DateTime.Now;
+            var groupedContacts = allContacts.GroupBy(BuildContactKey)
+                .ToDictionary(g => g.Key, g => g.OrderBy(c => c.CreatedAt).ToList());
+
+            stats.TotalContacts = groups.Count;
+            stats.ActiveContacts = groups.Count(g => string.IsNullOrWhiteSpace(g.LatestStatus) || string.Equals(g.LatestStatus, "Actief", StringComparison.OrdinalIgnoreCase));
+            stats.NewContactsWeek = groups.Count(g => GetFirstContactDate(groupedContacts, g.GroupKey) >= now.Date.AddDays(-7));
+            stats.NewContactsMonth = groups.Count(g => GetFirstContactDate(groupedContacts, g.GroupKey) >= now.Date.AddDays(-30));
+
+            stats.ConversionRate = stats.TotalContacts > 0
+                ? Math.Round((decimal)stats.ActiveContacts / stats.TotalContacts * 100, 2)
+                : 0;
+
+            var responseRateData = BuildResponseRate(groups, allContacts);
+            stats.ResponseRate = responseRateData.TotalWithInternalAction > 0
+                ? Math.Round((decimal)responseRateData.TotalWithResponse / responseRateData.TotalWithInternalAction * 100, 2)
+                : 0;
+
+            return stats;
+        }
+
+        private static (int TotalWithInternalAction, int TotalWithResponse) BuildResponseRate(List<ContactGroupModel> groups, List<ContactRequestBO> allContacts)
+        {
+            var groupedContacts = allContacts.GroupBy(BuildContactKey)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedAt).ToList());
+
+            var totalWithInternal = 0;
+            var totalWithResponse = 0;
+
+            foreach (var group in groups)
+            {
+                if (!groupedContacts.TryGetValue(group.GroupKey, out var contactRequests))
+                    continue;
+
+                var internalActions = contactRequests
+                    .Where(c => IsInternalRequestType(c.RequestType) && string.Equals(c.RequestType, InternalActionRequestType, StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(c => c.CreatedAt)
+                    .ToList();
+
+                if (!internalActions.Any())
+                    continue;
+
+                totalWithInternal += 1;
+                var latestActionDate = internalActions.First().CreatedAt;
+
+                var responseAfterAction = contactRequests.Any(c => !IsInternalRequestType(c.RequestType) && c.CreatedAt > latestActionDate);
+                if (responseAfterAction)
+                    totalWithResponse += 1;
+            }
+
+            return (totalWithInternal, totalWithResponse);
+        }
+
+        private static DateTime GetFirstContactDate(Dictionary<string, List<ContactRequestBO>> groupedContacts, string groupKey)
+        {
+            if (groupedContacts == null || string.IsNullOrWhiteSpace(groupKey) || !groupedContacts.TryGetValue(groupKey, out var contacts))
+                return DateTime.MinValue;
+
+            var firstExternal = contacts.FirstOrDefault(c => !IsInternalRequestType(c.RequestType));
+            return firstExternal?.CreatedAt ?? contacts.FirstOrDefault()?.CreatedAt ?? DateTime.MinValue;
+        }
+
+        private static ContactGroupModel BuildContactGroup(List<ContactRequestBO> contacts)
+        {
+            if (contacts == null || contacts.Count == 0)
+                return null;
+
+            var latestExternal = contacts
+                .Where(c => !IsInternalRequestType(c.RequestType))
+                .OrderByDescending(c => c.CreatedAt)
+                .FirstOrDefault();
+
+            var latestOverall = contacts.OrderByDescending(c => c.CreatedAt).First();
+            var referenceContact = latestExternal ?? latestOverall;
+            var displayName = GetContactDisplayName(referenceContact);
+
+            var latestStatus = contacts
+                .Where(c => string.Equals(c.RequestType, StatusUpdateRequestType, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(c => c.CreatedAt)
+                .FirstOrDefault();
+
+            return new ContactGroupModel
+            {
+                GroupKey = BuildContactKey(referenceContact),
+                DisplayName = displayName,
+                Email = referenceContact.Email,
+                Phone = referenceContact.Phone,
+                LatestContactAt = (latestExternal ?? latestOverall).CreatedAt,
+                LatestRequestType = referenceContact.RequestType,
+                LatestSourceSite = referenceContact.SourceSite,
+                LatestOrigin = referenceContact.Origin,
+                TotalRequests = contacts.Count,
+                LatestStatus = latestStatus?.Subject,
+                LatestStatusComment = latestStatus?.Question,
+                LatestStatusAt = latestStatus?.CreatedAt
+            };
+        }
+
+        private static List<ContactRequestBO> FilterContactGroup(List<ContactRequestBO> contacts, string email, string fullname, string phone)
+        {
+            var normalizedEmail = NormalizeContactValue(email);
+            var normalizedName = NormalizeContactValue(fullname);
+            var normalizedPhone = NormalizeContactValue(phone);
+
+            return contacts
+                .Where(c => MatchesContactGroup(c, normalizedEmail, normalizedName, normalizedPhone))
+                .ToList();
+        }
+
+        private static bool MatchesContactGroup(ContactRequestBO contact, string normalizedEmail, string normalizedName, string normalizedPhone)
+        {
+            var contactEmail = NormalizeContactValue(contact.Email);
+            var contactName = NormalizeContactValue(GetContactDisplayName(contact));
+            var contactPhone = NormalizeContactValue(contact.Phone);
+
+            if (!string.IsNullOrWhiteSpace(normalizedEmail))
+                return contactEmail == normalizedEmail;
+
+            return contactName == normalizedName && contactPhone == normalizedPhone;
+        }
+
+        private static string BuildContactKey(ContactRequestBO contact)
+        {
+            var email = NormalizeContactValue(contact?.Email);
+            var name = NormalizeContactValue(GetContactDisplayName(contact));
+            var phone = NormalizeContactValue(contact?.Phone);
+            return $"{email}|{name}|{phone}";
+        }
+
+        private static string GetContactDisplayName(ContactRequestBO contact)
+        {
+            if (contact == null)
+                return "-";
+
+            if (!string.IsNullOrWhiteSpace(contact.Fullname))
+                return contact.Fullname;
+
+            var fallback = $"{contact.Firstname} {contact.Lastname}".Trim();
+            return string.IsNullOrWhiteSpace(fallback) ? "-" : fallback;
+        }
+
+        private static bool IsInternalRequestType(string requestType)
+        {
+            return string.Equals(requestType, InternalActionRequestType, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(requestType, StatusUpdateRequestType, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeContactValue(string value)
+            => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
+
         [HttpGet]
         //[Breadcrumb("Eenheid toevoegen")]
         [Breadcrumb("Eenheid toevoegen", FromAction = "DetailUnits")]

@@ -105,6 +105,8 @@ namespace FacadeCore
         // Contact requests
         Response InsertProjectContactRequest(ContactRequestBO request);
         GetResponse<ContactRequestBO> GetProjectContactRequests(int projectid);
+        Response UpdateContactRequestGroup(int projectid, string email, string fullname, string phone, ContactRequestBO updatedValues);
+        Response DeleteContactRequestGroup(int projectid, string email, string fullname, string phone);
 
         // PaymentGroups
         GetResponse<ProjectPaymentGroupBO> GetProjectPaymentGroups(int projectid);

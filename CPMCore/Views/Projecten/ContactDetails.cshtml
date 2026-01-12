@@ -1,0 +1,174 @@
+﻿@model CPMCore.Models.Projecten.ContactDetailsModel
+@{
+    ViewData["Title"] = Model.ProjectName;
+    var contact = Model.Contact;
+    var requests = Model.Requests ?? new List<BOCore.ContactRequestBO>();
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Contactdetails</h1>
+                        <h5 class="mb-4 mt-0">@(contact?.DisplayName ?? "Onbekend contact")</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        <a href="@Url.Action("DetailContacts", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default btn-md">Terug</a>
+                    </div>
+                </div>
+
+                <div class="card card-modern mb-3">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="text-muted text-uppercase small">Naam</div>
+                                <div class="fw-semibold">@(contact?.DisplayName ?? "-")</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted text-uppercase small">E-mail</div>
+                                <div class="fw-semibold">@(string.IsNullOrWhiteSpace(contact?.Email) ? "-" : contact.Email)</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted text-uppercase small">Telefoon</div>
+                                <div class="fw-semibold">@(string.IsNullOrWhiteSpace(contact?.Phone) ? "-" : contact.Phone)</div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <div class="text-muted text-uppercase small">Laatste status</div>
+                                <div class="fw-semibold">@(string.IsNullOrWhiteSpace(contact?.LatestStatus) ? "Actief" : contact.LatestStatus)</div>
+                                @if (!string.IsNullOrWhiteSpace(contact?.LatestStatusComment))
+                                {
+                                    <div class="text-muted small">@contact.LatestStatusComment</div>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted text-uppercase small">Laatste contact</div>
+                                <div class="fw-semibold">@contact?.LatestContactAt.ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-lg-6">
+                        <div class="card card-modern h-100">
+                            <div class="card-body">
+                                <h4 class="mb-3">Actie toevoegen</h4>
+                                <form method="post" action="@Url.Action("AddContactAction", "Projecten")">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+                                    <input type="hidden" name="Email" value="@contact?.Email" />
+                                    <input type="hidden" name="Fullname" value="@contact?.DisplayName" />
+                                    <input type="hidden" name="Phone" value="@contact?.Phone" />
+                                    <div class="mb-3">
+                                        <label class="form-label">Actietype</label>
+                                        <select class="form-select" name="ActionType" required>
+                                            <option value="">Kies een actie</option>
+                                            <option value="Gebeld">Gebeld</option>
+                                            <option value="Gemaild">Gemaild</option>
+                                            <option value="Andere actie">Andere actie</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Datum</label>
+                                        <input type="datetime-local" class="form-control" name="ActionDate" value="@Model.NewAction.ActionDate.ToString("yyyy-MM-ddTHH:mm")" required />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Commentaar</label>
+                                        <textarea class="form-control" name="Comment" rows="3" placeholder="Commentaar bij deze actie"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Actie opslaan</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="card card-modern h-100">
+                            <div class="card-body">
+                                <h4 class="mb-3">Status aanpassen</h4>
+                                <form method="post" action="@Url.Action("AddContactStatus", "Projecten")">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+                                    <input type="hidden" name="Email" value="@contact?.Email" />
+                                    <input type="hidden" name="Fullname" value="@contact?.DisplayName" />
+                                    <input type="hidden" name="Phone" value="@contact?.Phone" />
+                                    <div class="mb-3">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-select" name="Status" required>
+                                            <option value="">Kies status</option>
+                                            <option value="Actief">Actief</option>
+                                            <option value="Niet meer geïnteresseerd">Niet meer geïnteresseerd</option>
+                                            <option value="Zelf contact opgenomen">Zelf contact opgenomen</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Datum</label>
+                                        <input type="datetime-local" class="form-control" name="StatusDate" value="@Model.NewStatus.StatusDate.ToString("yyyy-MM-ddTHH:mm")" required />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Commentaar</label>
+                                        <textarea class="form-control" name="Comment" rows="3" placeholder="Commentaar bij deze status"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Status opslaan</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <h4 class="mb-3">Acties & aanvragen</h4>
+                        <div class="datatables-header-footer-wrapper mt-2">
+                            <table class="table table-responsive-md table-hover mb-0" id="datatable-contact-details" style="min-width: 650px;" data-toggle="table">
+                                <thead>
+                                    <tr>
+                                        <th>Datum</th>
+                                        <th>Type</th>
+                                        <th>Onderwerp</th>
+                                        <th>Vraag / commentaar</th>
+                                        <th>Bron</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var request in requests)
+                                    {
+                                        <tr>
+                                            <td>@request.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@request.RequestType</td>
+                                            <td>@(string.IsNullOrWhiteSpace(request.Subject) ? "-" : request.Subject)</td>
+                                            <td class="text-break">@(string.IsNullOrWhiteSpace(request.Question) ? "-" : request.Question)</td>
+                                            <td>
+                                                <div>@request.SourceSite</div>
+                                                <small class="text-muted">@request.Origin</small>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.js"></script>
+    <script>
+        const table = new DataTable('#datatable-contact-details', {
+            order: [[0, 'desc']]
+        });
+    </script>
+}

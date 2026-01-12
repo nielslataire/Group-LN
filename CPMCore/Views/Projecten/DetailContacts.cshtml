@@ -1,7 +1,8 @@
 ﻿@model CPMCore.Models.Projecten.DetailContactsModel
 @{
     ViewData["Title"] = Model.ProjectName;
-    var contacts = Model.Contacts ?? new List<BOCore.ContactRequestBO>();
+    var contactGroups = Model.ContactGroups ?? new List<CPMCore.Models.Projecten.ContactGroupModel>();
+    var stats = Model.Stats ?? new CPMCore.Models.Projecten.ContactStatsModel();
 }
 
 @section PageStyle
@@ -31,6 +32,7 @@
                     </div>
                 </div>
                 @Html.HiddenFor(m => m.ProjectId, new { id = "txtProjectId" })
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
                 <div class="card card-modern">
                     <div class="card-body">
                         <div class="input-group">
@@ -41,53 +43,134 @@
                         </div>
                     </div>
                 </div>
+                </div>
+                <div class="row justify-content-center pt-3 pe-0">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card-body">
+                            <div class="widget-summary">
+                                <div class="widget-summary-col widget-summary-col-icon">
+                                    <div class="summary-icon bg-quaternary">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                                <div class="widget-summary-col">
+                                    <div class="summary">
+                                        <h4 class="title">Totaal aantal contacten</h4>
+                                        <div class="info">
+                                            <strong class="amount">@stats.TotalContacts</strong>
+                                            <span class="text-primary">(@stats.ActiveContacts actieve) </span>
+                                        </div>
+                                    </div>
+                                    <div class="summary-footer">
+                                        <a class="text-muted text-uppercase"></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+@*                         <div class="card card-modern h-100">
+                            <div class="card-body">
+                                <div class="text-muted text-uppercase small">Aantal contacten </div>
+                                <div class="fs-3 fw-bold">@stats.TotalContacts</div>
+                                <div class="text-muted">Actief: @stats.ActiveContacts</div>
+                            </div>
+                        </div> *@
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card card-modern h-100">
+                            <div class="card-body">
+                                <div class="text-muted text-uppercase small">Nieuwe contacten</div>
+                                <div class="fs-3 fw-bold">@stats.NewContactsWeek</div>
+                                <div class="text-muted">Deze week</div>
+                                <div class="mt-2 text-muted">Maand: @stats.NewContactsMonth</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card card-modern h-100">
+                            <div class="card-body">
+                                <div class="text-muted text-uppercase small">Conversiepercentage </div>
+                                <div class="fs-3 fw-bold">@stats.ConversionRate%</div>
+                                <div class="text-muted">Actieve contacten</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <div class="card card-modern h-100">
+                            <div class="card-body">
+                                <div class="text-muted text-uppercase small">Reactiepercentage</div>
+                                <div class="fs-3 fw-bold">@stats.ResponseRate%</div>
+                                <div class="text-muted">Na eigen contact</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row justify-content-center pt-3 pe-0">
                 <div class="card card-modern">
                     <div class="card-body">
                         <div class="datatables-header-footer-wrapper mt-2">
                             <table class="table table-responsive-md table-hover mb-0" id="datatable-contact-requests" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
-                                    <thead>
+                                <thead>
+                                    <tr>
+                                        <th>Laatste contact</th>
+                                        <th>Naam</th>
+                                        <th>E-mail</th>
+                                        <th>Telefoon</th>
+                                        <th>Status</th>
+                                        <th>Aantal aanvragen</th>
+                                        <th>Bron</th>
+                                        <th class="noVis datatable-actions">Acties</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var contact in contactGroups)
+                                    {
                                         <tr>
-                                            <th>Datum</th>
-                                            <th>Type</th>
-                                            <th>Naam</th>
-                                            <th>E-mail</th>
-                                            <th>Telefoon</th>
-                                            <th>Document / Eenheid</th>
-                                            <th>Vraag / bericht</th>
-                                            <th>Bron</th>
+                                            <td>@contact.LatestContactAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@contact.DisplayName</td>
+                                            <td>@(string.IsNullOrWhiteSpace(contact.Email) ? "-" : contact.Email)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(contact.Phone) ? "-" : contact.Phone)</td>
+                                            <td>
+                                                <div>@(string.IsNullOrWhiteSpace(contact.LatestStatus) ? "Actief" : contact.LatestStatus)</div>
+                                                @if (!string.IsNullOrWhiteSpace(contact.LatestStatusComment))
+                                                {
+                                                    <small class="text-muted">@contact.LatestStatusComment</small>
+                                                }
+                                            </td>
+                                            <td>@contact.TotalRequests</td>
+                                            <td>
+                                                <div>@contact.LatestSourceSite</div>
+                                                <small class="text-muted">@contact.LatestOrigin</small>
+                                            </td>
+                                               <td class="" actions text-right">
+                                                <a title="Details"
+                                                   href="@Url.Action("ContactDetails", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })">
+                                                    <i class="bx bx-show"></i>
+                                                    <span class="visually-hidden">Details</span>
+                                                </a>
+                                                <a title="Bewerken"
+                                                   href="@Url.Action("EditContact", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })">
+                                                    <i class="bx bx-pencil"></i>
+                                                    <span class="visually-hidden">Bewerken</span>
+                                                </a>
+                                                <form class="d-inline" method="post" action="@Url.Action("DeleteContact", "Projecten")" onsubmit="return confirm('Contact verwijderen?');">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+                                                    <input type="hidden" name="Email" value="@contact.Email" />
+                                                    <input type="hidden" name="Fullname" value="@contact.DisplayName" />
+                                                    <input type="hidden" name="Phone" value="@contact.Phone" />
+                                                    <button type="submit" title="Verwijderen">
+                                                        <i class="bx bx-trash"></i>
+                                                        <span class="visually-hidden">Verwijderen</span>
+                                                    </button>
+                                                </form>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var contact in contacts)
-                                        {
-                                            var fullName = !string.IsNullOrWhiteSpace(contact.Fullname)
-                                            ? contact.Fullname
-                                            : ($"{contact.Firstname} {contact.Lastname}").Trim();
-                                            var documentLabel = !string.IsNullOrWhiteSpace(contact.DocumentName)
-                                            ? contact.DocumentName
-                                            : "-";
-                                            if (!string.IsNullOrWhiteSpace(contact.DocumentType))
-                                            {
-                                                documentLabel = $"{documentLabel} ({contact.DocumentType})".Trim();
-                                            }
-                                            <tr>
-                                                <td>@contact.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                                                <td>@contact.RequestType</td>
-                                                <td>@fullName</td>
-                                                <td>@contact.Email</td>
-                                                <td>@contact.Phone</td>
-                                                <td>@documentLabel</td>
-                                                <td class="text-break">@contact.Question</td>
-                                                <td>
-                                                    <div>@contact.SourceSite</div>
-                                                    <small class="text-muted">@contact.Origin</small>
-                                                </td>
-                                            </tr>
-                                        }
-                                    </tbody>
+                                    }
+                                </tbody>
                                 </table>
                             </div>
                         </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -136,7 +219,7 @@
 
         // ===== Init DataTable =====
         const table = new DataTable('#datatable-contact-requests', {
-          order: [[1, 'asc']],
+          order: [[0, 'desc']],
           language: buildLanguage(entity),
           layout: {
             topStart: {
