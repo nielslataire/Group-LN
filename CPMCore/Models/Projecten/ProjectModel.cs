@@ -3649,6 +3649,7 @@ namespace CPMCore.Models.Projecten
         public DetailContractsModel()
         {
             _contracts = new List<ContractBO>();
+            _supplierRows = new List<ContractSupplierRowModel>();
         }
         private List<ContractBO> _contracts;
         public List<ContractBO> Contracts
@@ -3661,6 +3662,12 @@ namespace CPMCore.Models.Projecten
             {
                 _contracts = value;
             }
+        }
+        private List<ContractSupplierRowModel> _supplierRows;
+        public List<ContractSupplierRowModel> SupplierRows
+        {
+            get { return _supplierRows; }
+            set { _supplierRows = value; }
         }
         private int _projectid;
         public int ProjectId
@@ -3687,6 +3694,13 @@ namespace CPMCore.Models.Projecten
             }
         }
     }
+    public class ContractSupplierRowModel
+    {
+        public ContractBO Contract { get; set; }
+        public IdNameBO Company { get; set; }
+        public decimal TotalInvoiced { get; set; }
+        public bool HasContract => Contract != null;
+    }
 
     public class ProjectContractDetailModel
     {
@@ -3696,6 +3710,8 @@ namespace CPMCore.Models.Projecten
             _company = new CompanyBO();
             _incommingInvoices = new List<IncommingInvoiceBO>();
         }
+
+        public bool HasContract { get; set; }
 
         private int _projectid;
         public int ProjectId

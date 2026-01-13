@@ -30,6 +30,7 @@ namespace FacadeCore
         Response Delete(List<int> ids);
         Response Delete(List<ProjectBO> bos);
         string GenerateSlug(string phrase);
+        GetResponse<CompanyInvoiceSummaryBO> GetProjectIncommingInvoiceCompanySummaries(int projectid);
 
         // Wheaterstations
         //GetResponse<WheaterStationBO> GetWheaterstations();

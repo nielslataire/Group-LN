@@ -1,6 +1,7 @@
 ﻿@using System.Globalization
 @using CPMCore.Helpers
 @using BOCore
+@using System.Linq
 @model CPMCore.Models.Projecten.ProjectContractDetailModel
 
 
@@ -8,8 +9,9 @@
     ViewData["Title"] = $"{Model.ProjectName} - Contract detail";
     var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
     var invoiceCount = Model.IncommingInvoices?.Count ?? 0;
+    var invoiceTotal = Model.IncommingInvoices?.Sum(i => i.InvoicePrice) ?? 0;
     var activityCount = Model.Contract?.Activities?.Count ?? 0;
-    var companyName = Model.Contract?.Company?.Display ?? Model.Company?.Bedrijfsnaam ?? "Contract";
+    var companyName = Model.Contract?.Company?.Display ?? Model.Company?.Bedrijfsnaam ?? "Leverancier";
     var addressLine = string.IsNullOrWhiteSpace(Model.Company?.Straat)
         ? "-"
         : $"{Model.Company.Straat} {Model.Company.Huisnummer}{(string.IsNullOrWhiteSpace(Model.Company.Busnummer) ? string.Empty : $" bus {Model.Company.Busnummer}")}";
@@ -64,98 +66,104 @@
             </div>
 
             <ul class="nav nav-pills supplier-tab-nav mb-4" role="tablist">
+                @if (Model.HasContract)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-section-toggle="contract">Contract</a>
+                    </li>
+                }
                 <li class="nav-item">
-                    <a class="nav-link active" href="#" data-section-toggle="contract">Contract</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-section-toggle="facturen">Facturen (@invoiceCount)</a>
+                    <a class="nav-link @(Model.HasContract ? string.Empty : "active")" href="#" data-section-toggle="facturen">Facturen (@invoiceCount)</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="#" data-section-toggle="leverancier">Leverancier</a>
                 </li>
             </ul>
 
-            <div id="contract-detail-section" class="supplier-section">
-                <section class="card card-modern card-big-info">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-lg-2-5 col-xl-2-5">
-                                <i class="card-big-info-icon bx bx-file"></i>
-                                <h2 class="card-big-info-title">Contract</h2>
-                                <p class="card-big-info-desc">Detail van het contract en de gekoppelde loten.</p>
-                            </div>
-                            <div class="col-lg-3-5 col-xl-3-5">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <span class="fw-semibold fs-6">Leverancier</span>
-                                        <div class="text-muted">@companyName</div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <span class="fw-semibold fs-6">Contract getekend</span>
-                                        <div class="text-muted">@(Model.Contract?.ContractSigned == true ? "Ja" : "Nee")</div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <span class="fw-semibold fs-6">BTW %</span>
-                                        <div class="text-muted">@(Model.Contract?.VatPercentage is null ? "-" : Model.Contract.VatPercentage.Value.ToString("N2"))</div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <span class="fw-semibold fs-6">Betaaltermijn</span>
-                                        <div class="text-muted">@(Model.Contract?.PaymentTerm is null ? "-" : $"{Model.Contract.PaymentTerm} dagen")</div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <span class="fw-semibold fs-6">Korting contant</span>
-                                        <div class="text-muted">
-                                            @(Model.Contract?.CashDiscount == true
-                                                                                        ? $"{Model.Contract.CashDiscountPercentage?.ToString("N2")} binnen de {Model.Contract.CashDiscountPaymentTerm} dagen"
-                                                                                        : "-")
+            @if (Model.HasContract)
+            {
+                <div id="contract-detail-section" class="supplier-section">
+                    <section class="card card-modern card-big-info">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-lg-2-5 col-xl-2-5">
+                                    <i class="card-big-info-icon bx bx-file"></i>
+                                    <h2 class="card-big-info-title">Contract</h2>
+                                    <p class="card-big-info-desc">Detail van het contract en de gekoppelde loten.</p>
+                                </div>
+                                <div class="col-lg-3-5 col-xl-3-5">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <span class="fw-semibold fs-6">Leverancier</span>
+                                            <div class="text-muted">@companyName</div>
                                         </div>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <span class="fw-semibold fs-6">Borg</span>
-                                        <div class="text-muted">
-                                            @(Model.Contract?.GuaranteeType == BOCore.ContractGuaranteeType.FinancialGuarantee
-                                                                                        ? $"{Model.Contract.GuaranteePercentage?.ToString("N2")} {Model.Contract.GuaranteeType.GetDisplayName()}"
-                                                                                        : Model.Contract?.GuaranteeType.GetDisplayName() ?? "-")
+                                        <div class="col-md-6 mb-3">
+                                            <span class="fw-semibold fs-6">Contract getekend</span>
+                                            <div class="text-muted">@(Model.Contract?.ContractSigned == true ? "Ja" : "Nee")</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="fw-semibold fs-6">BTW %</span>
+                                            <div class="text-muted">@(Model.Contract?.VatPercentage is null ? "-" : Model.Contract.VatPercentage.Value.ToString("N2"))</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="fw-semibold fs-6">Betaaltermijn</span>
+                                            <div class="text-muted">@(Model.Contract?.PaymentTerm is null ? "-" : $"{Model.Contract.PaymentTerm} dagen")</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <span class="fw-semibold fs-6">Korting contant</span>
+                                            <div class="text-muted">
+                                                @(Model.Contract?.CashDiscount == true
+                                                                                            ? $"{Model.Contract.CashDiscountPercentage?.ToString("N2")} binnen de {Model.Contract.CashDiscountPaymentTerm} dagen"
+                                                                                            : "-")
+                                                                                              </div>
+                                                                                          </div>
+                                                                                          <div class="col-md-6 mb-3">
+                                                                                              <span class="fw-semibold fs-6">Borg</span>
+                                                                                              <div class="text-muted">
+                                                @(Model.Contract?.GuaranteeType == BOCore.ContractGuaranteeType.FinancialGuarantee
+                                                                                            ? $"{Model.Contract.GuaranteePercentage?.ToString("N2")} {Model.Contract.GuaranteeType.GetDisplayName()}"
+                                                                                            : Model.Contract?.GuaranteeType.GetDisplayName() ?? "-")
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="mt-3">
-                                    <span class="fw-semibold fs-6">Loten (@activityCount)</span>
+                                    <div class="mt-3">
+                                        <span class="fw-semibold fs-6">Loten (@activityCount)</span>
                                     @if (Model.Contract?.Activities?.Any() == true)
-                                    {
-                                        <div class="table-responsive mt-2">
-                                            <table class="table table-hover mb-0">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Lot</th>
-                                                        <th class="text-end">Prijs</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach (var activity in Model.Contract.Activities)
-                                                    {
+                                        {
+                                            <div class="table-responsive mt-2">
+                                                <table class="table table-hover mb-0">
+                                                    <thead>
                                                         <tr>
-                                                            <td>@activity.Activity?.Name</td>
-                                                            <td class="text-end">@(activity.Price.HasValue? activity.Price.Value.ToString("C", currencyCulture) : "-")</td>
+                                                            <th>Lot</th>
+                                                            <th class="text-end">Prijs</th>
                                                         </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <div class="text-muted mt-2">Geen loten gekoppeld.</div>
-                                    }
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var activity in Model.Contract.Activities)
+                                                        {
+                                                            <tr>
+                                                                <td>@activity.Activity?.Name</td>
+                                                                <td class="text-end">@(activity.Price.HasValue? activity.Price.Value.ToString("C", currencyCulture) : "-")</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted mt-2">Geen loten gekoppeld.</div>
+                                        }
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </section>
-            </div>
+                    </section>
+                </div>
+            }
 
-            <div id="contract-invoices-section" class="supplier-section d-none">
+            <div id="contract-invoices-section" class="supplier-section @(Model.HasContract ? "d-none" : string.Empty)">
                 <section class="card card-modern">
                     <div class="card-body">
                         @if (Model.IncommingInvoices?.Any() == true)
@@ -179,6 +187,12 @@
                                             </tr>
                                         }
                                     </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <th colspan="2" class="text-end">Totaal</th>
+                                            <th class="text-end">@invoiceTotal.ToString("C", currencyCulture)</th>
+                                        </tr>
+                                    </tfoot>
                                 </table>
                             </div>
                         }

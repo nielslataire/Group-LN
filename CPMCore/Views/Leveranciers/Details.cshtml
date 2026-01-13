@@ -10,6 +10,7 @@
     var departmentCount = Model.Departments?.Count() ?? 0;
     var contactCount = Model.Contacts?.Count() ?? 0;
     var contractCount = Model.Contracts?.Count() ?? 0;
+    var invoiceCount = Model.Invoices?.Count() ?? 0;
 }
 <style>
     .supplier-tab-nav {
@@ -74,6 +75,9 @@
     </li>
     <li class="nav-item">
         <a class="nav-link" href="#" data-section-toggle="contracten">Contracten (@contractCount)</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="#" data-section-toggle="facturen">Facturen (@invoiceCount)</a>
     </li>
 </ul>
 
@@ -343,6 +347,47 @@
         }
     </div>
 </section>
+<section class="card card-modern supplier-section d-none" id="supplier-invoices-section">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bx bx-file fs-3 me-2 text-primary"></i>
+            <div>
+                <h4 class="mb-0">Facturen</h4>
+                <div class="text-muted small">Overzicht van alle facturen voor deze leverancier.</div>
+            </div>
+        </div>
+        @if (Model.Invoices.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Factuurdatum</th>
+                            <th>Externe referentie</th>
+                            <th>Project</th>
+                            <th class="text-end">Factuurbedrag</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var invoice in Model.Invoices)
+                        {
+                            <tr>
+                                <td>@invoice.InvoiceDate.ToString("dd/MM/yyyy")</td>
+                                <td>@(string.IsNullOrWhiteSpace(invoice.ExternalInvoiceId) ? "-" : invoice.ExternalInvoiceId)</td>
+                                <td>@(string.IsNullOrWhiteSpace(invoice.ProjectName) ? "-" : invoice.ProjectName)</td>
+                                <td class="text-end">@invoice.Amount.ToString("C", currencyCulture)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <p class="mb-0 text-muted">Er zijn nog geen facturen gekoppeld aan deze leverancier.</p>
+        }
+    </div>
+</section>
 
 <div id="modaldeletesupplier" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-supplier-container"></div>
@@ -355,7 +400,8 @@
                 algemeen: document.getElementById('supplier-general-section'),
                 afdelingen: document.getElementById('supplier-departments-section'),
                 contacten: document.getElementById('supplier-contacts-section'),
-                contracten: document.getElementById('supplier-contracts-section')
+                 contracten: document.getElementById('supplier-contracts-section'),
+                facturen: document.getElementById('supplier-invoices-section')
             };
 
             sectionButtons.forEach((button) => {

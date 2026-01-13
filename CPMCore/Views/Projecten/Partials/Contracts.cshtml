@@ -9,7 +9,7 @@
 
 
 }
-@if (Model.Contracts.Any())
+@if (Model.SupplierRows.Any())
 {
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
 <div class="card card-modern">
@@ -27,88 +27,114 @@
 		<div class="datatables-header-footer-wrapper mt-2">
 			<table class="table table-responsive-md table-hover mb-0" id="datatable-contracts-list" style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
 
-				<thead>
-					<tr>
-						<th data-sortable="false">Status</th>
-						<th data-sortable="true">Bedrijf</th>
-						<th data-sortable="true" class="text-right">Contractprijs</th>
-						<th data-sortable="false" class="hidden-xs text-right">BTW %</th>
-						<th data-sortable="false" class="hidden-xs text-right">Betaaltermijn</th>
-						<th data-sortable="false" class="hidden-xs text-right">Korting contant</th>
-						<th data-sortable="false" class="hidden-xs text-right">Borg</th>
-						<th class="hidden-xs noVis" data-sortable="false">Acties</th>
-					</tr>
-				</thead>
-				<tbody>
-					@foreach(var item in Model.Contracts.OrderBy(m => m.Company.Display))
-					{
+					<thead>
 						<tr>
-							<td>
-								@if (item.ContractSigned == true)
-								{
-									<span class="ecommerce-status completed"></span>
-								}
-								else
-								{
-									<span class="ecommerce-status failed"></span>
-								}
-							</td>
-							<td>
-								@item.Company.Display
-							</td>
-							<td>
-								@String.Format("{0:C}", item.Activities.Sum(m => m.Price))
-							</td>
-							<td>
-								@if (item.VatPercentage != null)
-								{
-									@Html.DisplayFor(m => item.VatPercentage)
-								}
-								else
-								{
-                                    @Html.Raw("-")
-                                }
-							</td>
-							<td>
-								@if (item.PaymentTerm != null)
-								{
-									@Html.DisplayFor(m => item.PaymentTerm) @Html.Raw(" dagen")
-								}
-								else
-								{
-									@Html.Raw("-")
-								}
-							</td>
-							<td>
-								@if (item.CashDiscount != false)
-								{
-									@Html.DisplayFor(m => item.CashDiscountPercentage) @Html.Raw(" binnen de ") @Html.DisplayFor(m => item.CashDiscountPaymentTerm) @Html.Raw(" dagen")
-								}
-								else
-								{
-									@Html.Raw("-")
-								}
-							</td>
-							<td>
-								@if (item.GuaranteeType == ContractGuaranteeType.FinancialGuarantee)
-								{
-									@Html.DisplayFor(m => item.GuaranteePercentage) @Html.Raw(" ") @item.GuaranteeType.GetDisplayName()
-								}
-								else
-								{
-									@item.GuaranteeType.GetDisplayName()
-								}
-							</td>					
-							<td class="actions">
-							    <a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = item.Id })"><i class="fa fa-eye fs-5"></i></a>
-									<a class="ms-1 me-1"  data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editContract" href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = item.Id })"><i class="fa fa-edit fs-5"></i></a>
-									<a class="ms-1 me-1" href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteContract" data-id="@item.Id"><i class="fa fa-trash fs-5 text-danger"></i></a>
-												
-							</td>
+							<th data-sortable="false">Status</th>
+							<th data-sortable="true">Bedrijf</th>
+							<th data-sortable="true" class="text-right">Contractprijs</th>
+							<th data-sortable="true" class="text-right">Totaal gefactureerd</th>
+							<th data-sortable="false" class="hidden-xs text-right">BTW %</th>
+							<th data-sortable="false" class="hidden-xs text-right">Betaaltermijn</th>
+							<th data-sortable="false" class="hidden-xs text-right">Korting contant</th>
+							<th data-sortable="false" class="hidden-xs text-right">Borg</th>
+							<th class="hidden-xs noVis" data-sortable="false">Acties</th>
 						</tr>
+					</thead>
+					<tbody>
+						@foreach (var row in Model.SupplierRows)
+						{
+							<tr>
+								<td>
+									@if (row.Contract?.ContractSigned == true)
+									{
+										<span class="ecommerce-status completed"></span>
+									}
+									else
+									{
+										<span class="ecommerce-status failed"></span>
+									}
+								</td>
+								<td>
+									@row.Company?.Display
+								</td>
+								<td>
+									@if (row.HasContract)
+									{
+										@String.Format("{0:C}", row.Contract.Activities.Sum(m => m.Price))
+									}
+									else
+									{
+										@Html.Raw("-")
+									}
+								</td>
+								<td>
+									@String.Format("{0:C}", row.TotalInvoiced)
+								</td>
+								<td>
+									@if (row.Contract?.VatPercentage != null)
+									{
+										@Html.DisplayFor(m => row.Contract.VatPercentage)
+									}
+									else
+									{
+										@Html.Raw("-")
+									}
+								</td>
+								<td>
+									@if (row.Contract?.PaymentTerm != null)
+									{
+										@Html.DisplayFor(m => row.Contract.PaymentTerm) @Html.Raw(" dagen")
+									}
+									else
+									{
+										@Html.Raw("-")
+									}
+								</td>
+								<td>
+									@if (row.Contract?.CashDiscount != false)
+									{
+										@Html.DisplayFor(m => row.Contract.CashDiscountPercentage) @Html.Raw(" binnen de ") @Html.DisplayFor(m => row.Contract.CashDiscountPaymentTerm) @Html.Raw(" dagen")
+									}
+									else
+									{
+										@Html.Raw("-")
+									}
+								</td>
+								<td>
+									@if (row.Contract?.GuaranteeType == ContractGuaranteeType.FinancialGuarantee)
+									{
+										@Html.DisplayFor(m => row.Contract.GuaranteePercentage) @Html.Raw(" ") @row.Contract.GuaranteeType.GetDisplayName()
+									}
+									else if (row.HasContract)
+									{
+										@row.Contract.GuaranteeType.GetDisplayName()
+									}
+									else
+									{
+										@Html.Raw("-")
+									}
+								</td>
+								<td class="actions">
+									@if (row.HasContract)
+									{
+										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })"><i class="fa fa-eye fs-5"></i></a>
+										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editContract" href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })"><i class="fa fa-edit fs-5"></i></a>
+										<a class="ms-1 me-1" href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteContract" data-id="@row.Contract.Id"><i class="fa fa-trash fs-5 text-danger"></i></a>
+									}
+									else if (row.Company != null)
+									{
+										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })"><i class="fa fa-eye fs-5"></i></a>
+									}
+									else
+									{
+										@Html.Raw("-")
+									}
 
-					}
-				</tbody>
+								</td>
+							</tr>
+
+						}
+					</tbody>
 			</table>
 		</div>
 	</div>

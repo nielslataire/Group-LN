@@ -32,7 +32,105 @@
                     </div>
                 </div>
                 @Html.HiddenFor(m => m.ProjectId, new { id = "txtProjectId" })
-                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                <div class="row justify-content-center pt-2 pe-0">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <section class="card mb-4">
+                            <div class="card-body bg-primary">
+                                <div class="widget-summary">
+                                    <div class="widget-summary-col widget-summary-col-icon">
+                                        <div class="summary-icon">
+                                            <i class="bx bx-user"></i>
+                                        </div>
+                                    </div>
+                                    <div class="widget-summary-col">
+                                        <div class="summary">
+                                            <h4 class="title mb-2">Totaal aantal contacten</h4>
+                                            <div class="info">
+                                                <strong class="amount fs-3">@stats.TotalContacts</strong>
+                                            </div>
+                                        </div>
+                                        <div class="summary-footer">
+                                            <a class="text-uppercase">@stats.ActiveContacts actieve contacten</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <section class="card mb-4">
+                            <div class="card-body bg-primary">
+                                <div class="widget-summary">
+                                    <div class="widget-summary-col widget-summary-col-icon">
+                                        <div class="summary-icon">
+                                            <i class="bx bx-user-plus"></i>
+                                        </div>
+                                    </div>
+                                    <div class="widget-summary-col">
+                                        <div class="summary">
+                                            <h4 class="title mb-2">Nieuwe contacten</h4>
+                                            <div class="info">
+                                                <strong class="amount fs-3">@stats.NewContactsWeek</strong> <small>deze week</small>
+                                            </div>
+                                        </div>
+                                        <div class="summary-footer">
+                                            <a class="text-uppercase">Deze maand: @stats.NewContactsMonth</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <section class="card mb-4">
+                            <div class="card-body bg-primary">
+                                <div class="widget-summary">
+                                    <div class="widget-summary-col widget-summary-col-icon">
+                                        <div class="summary-icon">
+                                            <i class="bx bx-trending-up"></i>
+                                        </div>
+                                    </div>
+                                    <div class="widget-summary-col">
+                                        <div class="summary">
+                                            <h4 class="title mb-2">Conversiepercentage</h4>
+                                            <div class="info">
+                                                <strong class="amount fs-3">@stats.ConversionRate %</strong>
+                                            </div>
+                                        </div>
+                                        <div class="summary-footer">
+                                            <a class="text-uppercase">Actieve contacten</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <section class="card mb-4">
+                            <div class="card-body bg-primary">
+                                <div class="widget-summary">
+                                    <div class="widget-summary-col widget-summary-col-icon">
+                                        <div class="summary-icon">
+                                            <i class="bx bx-reply"></i>
+                                        </div>
+                                    </div>
+                                    <div class="widget-summary-col">
+                                        <div class="summary">
+                                            <h4 class="title mb-2">Reactiepercentage</h4>
+                                            <div class="info">
+                                                <strong class="amount fs-3">@stats.ResponseRate %</strong>
+                                            </div>
+                                        </div>
+                                        <div class="summary-footer">
+                                            <a class="text-uppercase">Na eigen contact</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+                <div class="row justify-content-center justify-content-sm-between pt-3 pe-0">
                 <div class="card card-modern">
                     <div class="card-body">
                         <div class="input-group">
@@ -45,66 +143,6 @@
                 </div>
                 </div>
                 <div class="row justify-content-center pt-3 pe-0">
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="card-body">
-                            <div class="widget-summary">
-                                <div class="widget-summary-col widget-summary-col-icon">
-                                    <div class="summary-icon bg-quaternary">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                </div>
-                                <div class="widget-summary-col">
-                                    <div class="summary">
-                                        <h4 class="title">Totaal aantal contacten</h4>
-                                        <div class="info">
-                                            <strong class="amount">@stats.TotalContacts</strong>
-                                            <span class="text-primary">(@stats.ActiveContacts actieve) </span>
-                                        </div>
-                                    </div>
-                                    <div class="summary-footer">
-                                        <a class="text-muted text-uppercase"></a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-@*                         <div class="card card-modern h-100">
-                            <div class="card-body">
-                                <div class="text-muted text-uppercase small">Aantal contacten </div>
-                                <div class="fs-3 fw-bold">@stats.TotalContacts</div>
-                                <div class="text-muted">Actief: @stats.ActiveContacts</div>
-                            </div>
-                        </div> *@
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="card card-modern h-100">
-                            <div class="card-body">
-                                <div class="text-muted text-uppercase small">Nieuwe contacten</div>
-                                <div class="fs-3 fw-bold">@stats.NewContactsWeek</div>
-                                <div class="text-muted">Deze week</div>
-                                <div class="mt-2 text-muted">Maand: @stats.NewContactsMonth</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="card card-modern h-100">
-                            <div class="card-body">
-                                <div class="text-muted text-uppercase small">Conversiepercentage </div>
-                                <div class="fs-3 fw-bold">@stats.ConversionRate%</div>
-                                <div class="text-muted">Actieve contacten</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-6 col-xl-3">
-                        <div class="card card-modern h-100">
-                            <div class="card-body">
-                                <div class="text-muted text-uppercase small">Reactiepercentage</div>
-                                <div class="fs-3 fw-bold">@stats.ResponseRate%</div>
-                                <div class="text-muted">Na eigen contact</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row justify-content-center pt-3 pe-0">
                 <div class="card card-modern">
                     <div class="card-body">
                         <div class="datatables-header-footer-wrapper mt-2">
@@ -113,12 +151,12 @@
                                     <tr>
                                         <th>Laatste contact</th>
                                         <th>Naam</th>
-                                        <th>E-mail</th>
-                                        <th>Telefoon</th>
+                                            <th data-sortable="false" E-mail</th>
+                                            <th data-sortable="false">Telefoon</th>
                                         <th>Status</th>
                                         <th>Aantal aanvragen</th>
                                         <th>Bron</th>
-                                        <th class="noVis datatable-actions">Acties</th>
+                                            <th class="noVis" data-sortable="false">Acties</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -141,14 +179,14 @@
                                                 <div>@contact.LatestSourceSite</div>
                                                 <small class="text-muted">@contact.LatestOrigin</small>
                                             </td>
-                                               <td class="" actions text-right">
+                                               <td class="actions text-right">
                                                 <a title="Details"
-                                                   href="@Url.Action("ContactDetails", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })">
+                                                       href="@Url.Action("ContactDetails", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })" data-toggle="tooltip" data-placement="top" data-original-title="Detail">
                                                     <i class="bx bx-show"></i>
                                                     <span class="visually-hidden">Details</span>
                                                 </a>
                                                 <a title="Bewerken"
-                                                   href="@Url.Action("EditContact", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })">
+                                                       href="@Url.Action("EditContact", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })" data-toggle="tooltip" data-placement="top" data-original-title="Bewerken">
                                                     <i class="bx bx-pencil"></i>
                                                     <span class="visually-hidden">Bewerken</span>
                                                 </a>
@@ -158,7 +196,7 @@
                                                     <input type="hidden" name="Email" value="@contact.Email" />
                                                     <input type="hidden" name="Fullname" value="@contact.DisplayName" />
                                                     <input type="hidden" name="Phone" value="@contact.Phone" />
-                                                    <button type="submit" title="Verwijderen">
+                                                        <button type="submit" title="Verwijderen" data-toggle="tooltip" data-placement="top" data-original-title="Verwijderen">
                                                         <i class="bx bx-trash"></i>
                                                         <span class="visually-hidden">Verwijderen</span>
                                                     </button>

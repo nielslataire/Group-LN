@@ -26,6 +26,7 @@ public class SupplierDetailViewModel
     public IReadOnlyList<SupplierDepartmentDetailViewModel> Departments { get; init; } = new List<SupplierDepartmentDetailViewModel>();
     public IReadOnlyList<SupplierContactDetailViewModel> Contacts { get; init; } = new List<SupplierContactDetailViewModel>();
     public IReadOnlyList<SupplierContractDetailViewModel> Contracts { get; init; } = new List<SupplierContractDetailViewModel>();
+    public IReadOnlyList<SupplierInvoiceDetailViewModel> Invoices { get; init; } = new List<SupplierInvoiceDetailViewModel>();
 }
 
 public class SupplierDepartmentDetailViewModel
@@ -60,4 +61,14 @@ public class SupplierContractDetailViewModel
     public string ProjectName { get; init; } = string.Empty;
     public decimal TotalAmount { get; init; }
     public int ActivityCount { get; init; }
+}
+
+public class SupplierInvoiceDetailViewModel
+{
+    public int Id { get; init; }
+    public DateOnly InvoiceDate { get; init; }
+    public string? ExternalInvoiceId { get; init; }
+    public decimal Amount { get; init; }
+    public int ProjectId { get; init; }
+    public string ProjectName { get; init; } = string.Empty;
 }

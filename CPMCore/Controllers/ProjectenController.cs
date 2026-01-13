@@ -1430,6 +1430,38 @@ namespace CPMCore.Controllers
                 model.Contracts = response.Values;
             }
 
+            var invoiceSummaryResponse = service.GetProjectIncommingInvoiceCompanySummaries(projectid);
+            var invoiceSummaries = invoiceSummaryResponse.Success ? invoiceSummaryResponse.Values : new List<CompanyInvoiceSummaryBO>();
+            var contractCompanyIds = model.Contracts
+                .Where(c => c.Company != null)
+                .Select(c => c.Company.ID)
+                .ToHashSet();
+
+            var rows = new List<ContractSupplierRowModel>();
+            foreach (var contract in model.Contracts)
+            {
+                var summary = invoiceSummaries.FirstOrDefault(s => s.Company?.ID == contract.Company?.ID);
+                rows.Add(new ContractSupplierRowModel
+                {
+                    Contract = contract,
+                    Company = contract.Company,
+                    TotalInvoiced = summary?.TotalInvoiced ?? 0
+                });
+            }
+
+            foreach (var summary in invoiceSummaries.Where(s => s.Company != null && !contractCompanyIds.Contains(s.Company.ID)))
+            {
+                rows.Add(new ContractSupplierRowModel
+                {
+                    Contract = null,
+                    Company = summary.Company,
+                    TotalInvoiced = summary.TotalInvoiced
+                });
+            }
+
+            model.SupplierRows = rows.OrderBy(r => r.Company?.Display).ToList();
+
+
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
 
@@ -1471,6 +1503,10 @@ namespace CPMCore.Controllers
             {
                 model.Contract = contractResponse.Value;
             }
+            else
+            {
+                model.Contract = null;
+            }
 
             var companyId = model.Contract?.Company?.ID ?? 0;
             if (companyId > 0)
@@ -1489,6 +1525,8 @@ namespace CPMCore.Controllers
                         .ToList();
                 }
             }
+
+            model.HasContract = model.Contract != null;
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -1513,6 +1551,60 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = contractDetail;
 
             return View(model);
+        }
+
+        [HttpGet]
+        [Breadcrumb("Leverancier detail", FromAction = "DetailContracts")]
+        public ActionResult DetailSupplier(int projectid, int companyid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var model = new ProjectContractDetailModel();
+            var projectService = ServiceFactory.GetProjectService();
+            var companyService = ServiceFactory.GetCompanyService();
+
+            model.ProjectId = projectid;
+            model.ProjectName = projectService.GetProjectNameById(projectid);
+            model.Contract = null;
+            model.HasContract = false;
+
+            var companyResponse = companyService.GetCompanyByID(companyid);
+            if (companyResponse.Success)
+            {
+                model.Company = companyResponse.Value;
+            }
+
+            var invoiceResponse = projectService.GetProjectIncommingInvoicesByCompany(projectid, companyid);
+            if (invoiceResponse.Success)
+            {
+                model.IncommingInvoices = invoiceResponse.Values
+                    .OrderByDescending(m => m.IncommingInvoiceDate)
+                    .ToList();
+            }
+
+            var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContracts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContracts", "Projecten", "Leveranciers")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var supplierDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailSupplier", "Projecten", model.Company?.Bedrijfsnaam ?? "Leverancier detail")
+            {
+                Parent = projectContracts,
+                RouteValues = new { projectid = projectid, companyid = companyid }
+            };
+            ViewData["BreadcrumbNode"] = supplierDetail;
+
+            return View("DetailContract", model);
         }
 
         [HttpGet]

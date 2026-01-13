@@ -670,6 +670,24 @@ public class LeveranciersController : BaseController
             })
             .ToListAsync(ct);
 
+        var invoices = await _db.IncommingInvoices
+          .AsNoTracking()
+          .Where(i => i.CompanyId == id || (i.Contract != null && i.Contract.CompanyId == id))
+          .Include(i => i.Project)
+          .Include(i => i.Contract)
+          .OrderByDescending(i => i.Date)
+          .Select(i => new SupplierInvoiceDetailViewModel
+          {
+              Id = i.Id,
+              InvoiceDate = i.Date,
+              ExternalInvoiceId = i.ExternalId,
+              Amount = i.Price,
+              ProjectId = i.ProjectId,
+              ProjectName = i.Project != null ? i.Project.ProjectName : string.Empty
+          })
+          .ToListAsync(ct);
+
+
         var detailModel = new SupplierDetailViewModel
         {
             Id = supplier.CompanyId,
@@ -693,7 +711,8 @@ public class LeveranciersController : BaseController
             Activities = activities,
             Departments = departments,
             Contacts = contacts,
-            Contracts = contracts
+            Contracts = contracts,
+            Invoices = invoices
         };
 
         ViewData["Title"] = detailModel.Name;

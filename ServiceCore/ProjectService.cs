@@ -396,6 +396,46 @@ namespace ServiceCore
         public Response Delete(List<ProjectBO> bos)
             => Delete(bos.Select(s => s.Id).ToList());
 
+        public GetResponse<CompanyInvoiceSummaryBO> GetProjectIncommingInvoiceCompanySummaries(int projectid)
+        {
+            var response = new GetResponse<CompanyInvoiceSummaryBO>();
+            var entities = _uow.IncommingInvoices.GetNoTracking()
+                .Where(i => i.ProjectId == projectid)
+                .Include(i => i.Contract).ThenInclude(c => c.Company)
+                .Include(i => i.Company)
+                .ToList();
+
+            var grouped = entities
+                .Select(i =>
+                {
+                    var company = i.Company ?? i.Contract?.Company;
+                    return new
+                    {
+                        Company = company,
+                        Total = i.Price
+                    };
+                })
+                .Where(x => x.Company != null)
+                .GroupBy(x => new { x.Company.CompanyId, x.Company.BedrijfsNaam })
+                .Select(group => new CompanyInvoiceSummaryBO
+                {
+                    Company = new IdNameBO
+                    {
+                        ID = group.Key.CompanyId,
+                        Display = group.Key.BedrijfsNaam
+                    },
+                    TotalInvoiced = group.Sum(x => x.Total)
+                })
+                .ToList();
+
+            foreach (var summary in grouped)
+            {
+                response.AddValue(summary);
+            }
+
+            return response;
+        }
+
         // Wheaterstations
         //public GetResponse<WheaterStationBO> GetWheaterstations()
         //{
