@@ -1,0 +1,50 @@
+﻿@model CPMCore.Models.Projecten.ContactAddModel
+@{
+    ViewData["Title"] = "Contact toevoegen";
+}
+
+<section class="body">
+    <div class="content-wrapper">
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-modern">
+                    <div class="card-body">
+                        <h1 class="h4 mb-4">Contact toevoegen</h1>
+                        <form method="post" action="@Url.Action("AddContact", "Projecten")">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Voornaam</label>
+                                    <input type="text" class="form-control" name="Firstname" value="@Model.Firstname" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Achternaam</label>
+                                    <input type="text" class="form-control" name="Lastname" value="@Model.Lastname" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">E-mail</label>
+                                    <input type="email" class="form-control" name="Email" value="@Model.Email" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Telefoon</label>
+                                    <input type="text" class="form-control" name="Phone" value="@Model.Phone" />
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Commentaar</label>
+                                    <textarea class="form-control" name="Comment" rows="3" placeholder="Optioneel commentaar">@Model.Comment</textarea>
+                                </div>
+                            </div>
+
+                            <div class="mt-4 d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">Opslaan</button>
+                                <a href="@Url.Action("DetailContacts", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default">Annuleren</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,7 +1,18 @@
 ﻿@using BOCore
 @using HtmlHelpers.BeginCollectionItemCore
 @model UnitConstructionValueBO
-
+@{
+    var paymentGroups = ViewBag.PaymentGroups as IEnumerable<SelectListItem>;
+    if (paymentGroups == null && ViewBag.PaymentGroups is IEnumerable<IdNameBO> paymentGroupBos)
+    {
+        paymentGroups = paymentGroupBos.Select(pg => new SelectListItem { Value = pg.ID.ToString(), Text = pg.Display });
+    }
+    if (paymentGroups == null && ViewBag.paymentgroups is IEnumerable<IdNameBO> legacyPaymentGroups)
+    {
+        paymentGroups = legacyPaymentGroups.Select(pg => new SelectListItem { Value = pg.ID.ToString(), Text = pg.Display });
+    }
+    paymentGroups ??= Enumerable.Empty<SelectListItem>();
+}
 <tr>
     @using (Html.BeginCollectionItem("ConstructionValues"))
     {
@@ -21,7 +32,7 @@
         <td style="width:35%">
             @Html.DropDownListFor(
             m => m.PaymentGroupId,
-                (IEnumerable<SelectListItem>)ViewBag.PaymentGroups,   // let op de naam
+                paymentGroups,
                 "Selecteer betalingsgroep ...",
                 new { @class = "form-control form-control-modern" }   // GEEN custom id nodig in een collectie
                 )

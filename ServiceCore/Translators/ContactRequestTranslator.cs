@@ -28,6 +28,8 @@ internal static class ContactRequestTranslator
         bo.Phone = entity.Phone;
         bo.Subject = entity.Subject;
         bo.Question = entity.Question;
+        bo.ExternalMailStatus = entity.ExternalMailStatus;
+        bo.InternalMailStatus = entity.InternalMailStatus;
 
         return ErrorCode.Success;
     }
@@ -53,7 +55,8 @@ internal static class ContactRequestTranslator
         entity.Phone = bo.Phone;
         entity.Subject = bo.Subject;
         entity.Question = bo.Question;
-
+        entity.ExternalMailStatus = bo.ExternalMailStatus;
+        entity.InternalMailStatus = bo.InternalMailStatus;
         return ErrorCode.Success;
     }
 }

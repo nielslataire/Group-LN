@@ -942,8 +942,6 @@ namespace ServiceCore
         public Response InsertUpdateConstructionValue(UnitConstructionValueBO bo)
         {
             var response = new Response();
-            if (bo.Id == 0) response.AddError("Er moet een constructiewaarde geselecteerd zijn");
-            if (!response.Success) return response;
 
             var entity = bo.Id == 0 ? _uow.UnitConstructionValues.GetNew()
                                     : _uow.UnitConstructionValues.GetById(bo.Id);

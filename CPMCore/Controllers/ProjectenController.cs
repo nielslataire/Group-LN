@@ -623,7 +623,8 @@ namespace CPMCore.Controllers
                     Email = groupModel?.Email,
                     Fullname = groupModel?.DisplayName,
                     Phone = groupModel?.Phone,
-                    ActionDate = DateTime.Now
+                    ActionDate = DateTime.Now,
+                    ActionTime = DateTime.Now.TimeOfDay
                 },
                 NewStatus = new ContactStatusInputModel
                 {
@@ -631,7 +632,8 @@ namespace CPMCore.Controllers
                     Email = groupModel?.Email,
                     Fullname = groupModel?.DisplayName,
                     Phone = groupModel?.Phone,
-                    StatusDate = DateTime.Now
+                    StatusDate = DateTime.Now,
+                    StatusTime = DateTime.Now.TimeOfDay
                 }
             };
 
@@ -659,7 +661,74 @@ namespace CPMCore.Controllers
 
             return View(model);
         }
+        [HttpGet]
+        [Breadcrumb("Contact toevoegen", FromAction = "DetailContacts")]
+        public ActionResult AddContact(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var service = ServiceFactory.GetProjectService();
+            var projectName = service.GetProjectNameById(projectid);
 
+            var model = new ContactAddModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectName
+            };
+
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            {
+                Parent = Index,
+            };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", projectName)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid = projectid }
+            };
+            var projectContacts = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailContacts", "Projecten", "Contacten")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid = projectid }
+            };
+            var addContact = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddContact", "Projecten", "Contact toevoegen")
+            {
+                Parent = projectContacts,
+                RouteValues = new { projectid = projectid }
+            };
+            ViewData["BreadcrumbNode"] = addContact;
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AddContact(ContactAddModel model)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            if (model == null)
+                return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
+
+            var request = new ContactRequestBO
+            {
+                ProjectId = model.ProjectId,
+                Firstname = model.Firstname,
+                Lastname = model.Lastname,
+                Fullname = $"{model.Firstname} {model.Lastname}".Trim(),
+                Email = model.Email,
+                Phone = model.Phone,
+                RequestType = "Contact",
+                Question = model.Comment,
+                CreatedAt = DateTime.Now,
+                SourceSite = InternalSourceSite,
+                Origin = User?.Identity?.Name ?? "Onbekende gebruiker"
+            };
+
+            var service = ServiceFactory.GetProjectService();
+            var response = service.InsertProjectContactRequest(request);
+            AddMessage(response.Success ? "success" : "error", response.Success ? "Contact toegevoegd" : "Contact niet toegevoegd", response.Success ? "Geslaagd!" : "Fout!");
+
+            return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+        }
         [HttpGet]
         [Breadcrumb("Contact bewerken", FromAction = "DetailContacts")]
         public ActionResult EditContact(int projectid, string email, string fullname, string phone)
@@ -734,6 +803,9 @@ namespace CPMCore.Controllers
             if (model == null)
                 return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
 
+            var actionTime = model.ActionTime == default ? DateTime.Now.TimeOfDay : model.ActionTime;
+            var actionDateTime = model.ActionDate.Date.Add(actionTime);
+            var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
             var request = new ContactRequestBO
             {
                 ProjectId = model.ProjectId,
@@ -743,9 +815,9 @@ namespace CPMCore.Controllers
                 RequestType = InternalActionRequestType,
                 Subject = model.ActionType,
                 Question = model.Comment,
-                CreatedAt = model.ActionDate,
+                CreatedAt = actionDateTime,
                 SourceSite = InternalSourceSite,
-                Origin = InternalOrigin
+                Origin = userName
             };
 
             var service = ServiceFactory.GetProjectService();
@@ -763,6 +835,9 @@ namespace CPMCore.Controllers
             if (model == null)
                 return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
 
+            var statusTime = model.StatusTime == default ? DateTime.Now.TimeOfDay : model.StatusTime;
+            var statusDateTime = model.StatusDate.Date.Add(statusTime);
+            var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
             var request = new ContactRequestBO
             {
                 ProjectId = model.ProjectId,
@@ -772,9 +847,9 @@ namespace CPMCore.Controllers
                 RequestType = StatusUpdateRequestType,
                 Subject = model.Status,
                 Question = model.Comment,
-                CreatedAt = model.StatusDate,
+                CreatedAt = statusDateTime,
                 SourceSite = InternalSourceSite,
-                Origin = InternalOrigin
+                Origin = userName
             };
 
             var service = ServiceFactory.GetProjectService();
@@ -786,8 +861,8 @@ namespace CPMCore.Controllers
 
         private const string InternalActionRequestType = "Interne actie";
         private const string StatusUpdateRequestType = "Status update";
-        private const string InternalSourceSite = "CPMCore";
-        private const string InternalOrigin = "CPMCore";
+        private const string InternalSourceSite = "CPM";
+        private const string InternalOrigin = "CPM";
 
         private static List<ContactGroupModel> BuildContactGroups(List<ContactRequestBO> contacts)
         {

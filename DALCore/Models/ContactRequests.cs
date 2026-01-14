@@ -43,6 +43,10 @@ public partial class ContactRequests
 
     public string Question { get; set; }
 
+    public string ExternalMailStatus { get; set; }
+
+    public string InternalMailStatus { get; set; }
+
     public virtual ProjectDocs Document { get; set; }
 
     public virtual Project Project { get; set; }

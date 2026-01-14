@@ -44,7 +44,17 @@ namespace ServiceCore
                 InvoiceSequence? sequence;
                 if (ownsTransaction)
                 {
-                    sequence = await _db.InvoiceSequence
+                 sequence = await _db.InvoiceSequence
+                        .FromSqlRaw(
+                            @"SELECT TOP (1) s.* FROM InvoiceSequence s WITH (UPDLOCK, HOLDLOCK)
+                              INNER JOIN OctopusBookyears b ON b.Id = s.BookyearId
+                              WHERE s.SeriesId = {0} AND {1} >= b.StartDate AND {1} <= b.EndDate",
+                            seriesId,
+                            invoiceDate)
+                        .AsTracking()
+                        .FirstOrDefaultAsync(ct);
+
+                    sequence ??= await _db.InvoiceSequence
                         .FromSqlRaw(
                             "SELECT TOP (1) * FROM InvoiceSequence WITH (UPDLOCK, HOLDLOCK) WHERE SeriesId = {0} AND FiscalYear = {1}",
                             seriesId,
@@ -59,13 +69,14 @@ namespace ServiceCore
                 }
 
                 int number;
+                var resolvedFiscalYear = sequence?.FiscalYear ?? fiscalYear;
                 if (sequence == null)
                 {
                     number = 1;
                     sequence = new InvoiceSequence
                     {
                         SeriesId = seriesId,
-                        FiscalYear = fiscalYear,
+                        FiscalYear = resolvedFiscalYear,
                         CurrentNumber = number
                     };
                     _uow.InvoiceSequences.Add(sequence);
@@ -95,7 +106,7 @@ namespace ServiceCore
                 var invoice = await _db.Invoices.FirstAsync(i => i.Id == invoiceId, ct);
                 invoice.PublicId = formatted;
                 invoice.SeriesId = seriesId;
-                invoice.FiscalYear = fiscalYear;
+                invoice.FiscalYear = resolvedFiscalYear;
                 await _uow.SaveChangesAsync(ct);
 
                 return (formatted, number);

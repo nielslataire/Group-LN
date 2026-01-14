@@ -16,5 +16,7 @@
     Public Property Phone As String
     Public Property Subject As String
     Public Property Question As String
+    Public Property ExternalMailStatus As String
+    Public Property InternalMailStatus As String
     Public Property CreatedAt As DateTime
 End Class

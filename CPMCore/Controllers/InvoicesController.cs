@@ -2147,7 +2147,7 @@ namespace CPMCore.Controllers
                         context.Invoice.Id,
                         new OctopusDocumentDeliveryState
                         {
-                            DeliveryState = "EMAIL",
+                            DeliveryState = "EMAILED",
                             Comment = "Verzonden via klassieke e-mail",
                             DeliveryDateTime = DateTime.UtcNow
                         },
@@ -2307,16 +2307,34 @@ namespace CPMCore.Controllers
                 .FirstOrDefaultAsync(ct)
                 ?? throw new InvalidOperationException("Geen actieve nummerreeks voor dit facturatiebedrijf.");
 
-            var fiscalYear = finalDate.Year;
-            var sequence = await _db.InvoiceSequence
-                .Include(s => s.Bookyear)!
-                .ThenInclude(b => b.OctopusBookyearPeriods)
-                .Include(s => s.Journal)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(s => s.SeriesId == seriesId && s.FiscalYear == fiscalYear, ct);
+            var sequencesQuery = _db.InvoiceSequence
+                 .Include(s => s.Bookyear)!
+                 .ThenInclude(b => b.OctopusBookyearPeriods)
+                 .Include(s => s.Journal)
+                 .AsNoTracking()
+                 .Where(s => s.SeriesId == seriesId);
 
-            if (sequence?.Bookyear == null || sequence.Journal == null)
-                throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit jaar.");
+            var sequence = await sequencesQuery
+                .FirstOrDefaultAsync(s =>
+                    s.Bookyear != null
+                    && finalDate >= DateOnly.FromDateTime(s.Bookyear.StartDate)
+                    && finalDate <= DateOnly.FromDateTime(s.Bookyear.EndDate), ct);
+
+            if (sequence == null)
+            {
+                var calendarYear = finalDate.Year;
+                sequence = await sequencesQuery
+                    .FirstOrDefaultAsync(s => s.FiscalYear == calendarYear, ct);
+            }
+
+            if (sequence == null)
+                throw new InvalidOperationException("Geen sequentie gevonden voor deze factuurdatum. Maak een nieuwe sequentie aan voor het juiste boekjaar.");
+
+            if (sequence.Bookyear == null || sequence.Journal == null)
+                throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit boekjaar.");
+
+            var fiscalYear = sequence.FiscalYear;
+
 
             var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
             var documentSequenceNr = invoice.OctopusDocumentSequenceNr ?? nextNumber;

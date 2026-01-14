@@ -4,6 +4,7 @@ public static class DefaultLayouts
 {
     public static string Get(string key) => key?.ToLowerInvariant() switch
     {
+        "layoutHE" => LayoutHE,
         "layoutb" => LayoutB,
         _ => LayoutA
     };
@@ -25,6 +26,139 @@ public static class DefaultLayouts
   },
   ""theme"": {
     ""primary"": ""#01532d"",
+    ""secondary"": ""#111111"",
+    ""fontFamily"": ""Avenir"",
+    ""logoSource"": ""db:IssuerCompany.LogoBytes""
+  },
+  ""sections"": [
+    {
+     ""type"": ""defaultHeader"",
+      ""visible"": true
+    },
+    {
+      ""type"": ""parties"",
+      ""visible"": false,
+      ""columns"": [
+        {
+          ""title"": ""Klant"",
+          ""lines"": [
+            ""{{Client.Name}}"",
+            ""{{Client.AddressLine}}"",
+            ""{{Client.Postal}} {{Client.City}}"",
+            ""BTW: {{Client.VAT}}""
+          ]
+        },
+        {
+          ""title"": ""Project"",
+          ""lines"": [
+            ""{{Project.Name}}"",
+            ""{{Unit.Name}}"",
+            ""{{Unit.Address}}""
+          ]
+        }
+      ]
+    },
+    {
+      ""type"": ""linesTable"",
+      ""visible"": true,
+      ""showVat"": true,
+      ""columns"": [
+        {
+          ""key"": ""Description"",
+          ""label"": ""Omschrijving"",
+          ""width"": ""*""
+        },
+        {
+          ""key"": ""Quantity"",
+          ""label"": ""Aantal"",
+          ""width"": ""60"",
+          ""align"": ""left""
+        },
+        {
+          ""key"": ""UnitPrice"",
+          ""label"": ""Prijs"",
+          ""width"": ""70"",
+          ""align"": ""right"",
+          ""format"": ""eur""
+        },
+        {
+          ""key"": ""Vat"",
+          ""label"": ""BTW"",
+          ""width"": ""50"",
+          ""align"": ""right"",
+          ""format"": ""pct"",
+          ""visible"": true
+        },
+        {
+          ""key"": ""Total"",
+          ""label"": ""Totaal"",
+          ""width"": ""80"",
+          ""align"": ""right"",
+          ""format"": ""eur""
+        }
+      ],
+      ""emptyText"": ""Geen lijnen""
+    },
+    {
+      ""type"": ""totals"",
+      ""visible"": false,
+      ""layout"": ""right"",
+      ""rows"": [
+        {
+          ""label"": ""Subtotaal"",
+          ""value"": ""{{Totals.Excl|eur}}""
+        },
+        {
+          ""label"": ""BTW"",
+          ""value"": ""{{Totals.Vat|eur}}""
+        },
+        {
+          ""label"": ""Totaal"",
+          ""value"": ""{{Totals.Incl|eur}}"",
+          ""bold"": true,
+          ""size"": 12
+        }
+      ]
+    },
+    {
+      ""type"": ""payment"",
+      ""visible"": false,
+      ""showStructuredMessage"": true,
+      ""structuredLabel"": ""Gestructureerde mededeling"",
+      ""structuredValue"": ""{{Payment.Structured}}"",
+      ""showQr"": true,
+      ""qrSize"": 130,
+      ""note"": ""Gelieve te betalen v\u00f3\u00f3r {{Invoice.DueDate:dd/MM/yyyy}}""
+    },
+    {
+      ""type"": ""legal"",
+      ""visible"": false,
+      ""text"": ""{{IssuerCompany.FooterLegalText}}"",
+      ""size"": 8
+    },
+    {
+      ""type"": ""defaultFooter"",
+      ""visible"": true
+    }
+  ]
+}";
+    public const string LayoutHE = @"{
+  ""version"": 1,
+  ""page"": {
+    ""margin"": 36,
+    ""bands"": {
+      ""top"": {
+        ""height"": 24,
+        ""color"": ""#f1971b""
+      },
+      ""bottom"": {
+        ""height"": 24,
+        ""color"": ""#f1971b""
+      }
+    }
+  },
+  ""theme"": {
+    ""primary"": ""#f1971b"",
     ""secondary"": ""#111111"",
     ""fontFamily"": ""Avenir"",
     ""logoSource"": ""db:IssuerCompany.LogoBytes""

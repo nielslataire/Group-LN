@@ -170,6 +170,9 @@ Namespace Controllers
             End If
 
             Try
+                Dim externalMailStatus As String = "Niet verzonden"
+                Dim internalMailStatus As String = "Niet verzonden"
+                Dim externalMailSent As Boolean = False
                 ' ---------------------------------------------------------
                 ' 1. Ophalen unit + project
                 ' ---------------------------------------------------------
@@ -186,6 +189,19 @@ Namespace Controllers
                 If projectResp.Success = False Then Return PartialView("ModalFailPlan")
                 project = projectResp.Value
 
+                Dim planRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .UnitId = unit.Id,
+                    .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
+                    .DocumentFileName = unit.Plan,
+                    .RequestType = "Plan",
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .Origin = ResolveOrigin("ProjectsController.SendPlan"),
+                    .SourceSite = "Group LN"
+                }
 
                 ' ---------------------------------------------------------
                 ' 2. Download plan via TLS 1.2
@@ -203,6 +219,9 @@ Namespace Controllers
                     End Using
                 Catch ex As Exception
                     LogError("PLAN DOWNLOAD FAILED: " & planUrl, ex)
+                    planRequest.ExternalMailStatus = "Mislukt"
+                    planRequest.InternalMailStatus = internalMailStatus
+                    SaveContactRequest(planRequest)
                     Return PartialView("ModalFailPlan")
                 End Try
 
@@ -244,9 +263,14 @@ Namespace Controllers
                     smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
 
                     smtp.Send(msg)
-
+                    externalMailStatus = "Verzonden"
+                    externalMailSent = True
                 Catch ex As Exception
                     LogError("SENDPLAN: MAIL TO CUSTOMER FAILED", ex)
+                    externalMailStatus = "Mislukt"
+                    planRequest.ExternalMailStatus = externalMailStatus
+                    planRequest.InternalMailStatus = internalMailStatus
+                    SaveContactRequest(planRequest)
                     Return PartialView("ModalFailPlan")
                 End Try
 
@@ -280,29 +304,21 @@ Namespace Controllers
                     smtp2.Credentials = New NetworkCredential("niels.lataire@groupln.be", "840683P@s")
 
                     smtp2.Send(msg2)
+                    internalMailStatus = "Verzonden"
 
                 Catch ex As Exception
                     LogError("SENDPLAN: INTERNAL MAIL FAILED", ex)
+                    internalMailStatus = "Mislukt"
                 End Try
 
 
                 ' ---------------------------------------------------------
                 ' 5. Succes
                 ' ---------------------------------------------------------
-                Dim planRequest As New ContactRequestBO With {
-                    .ProjectId = project.Id,
-                    .UnitId = unit.Id,
-                    .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
-                    .DocumentFileName = unit.Plan,
-                    .RequestType = "Plan",
-                    .Firstname = model.Firstname,
-                    .Lastname = model.Name,
-                    .Email = model.Email,
-                    .Phone = model.Phone,
-                    .Origin = ResolveOrigin("ProjectsController.SendPlan"),
-                    .SourceSite = "Group LN"
-                }
+                planRequest.ExternalMailStatus = externalMailStatus
+                planRequest.InternalMailStatus = internalMailStatus
                 SaveContactRequest(planRequest)
+                If Not externalMailSent Then Return PartialView("ModalFailPlan")
                 Return PartialView("ModalSuccesPlan")
 
             Catch ex As Exception
@@ -332,6 +348,9 @@ Namespace Controllers
             End If
 
             Try
+                Dim externalMailStatus As String = "Niet verzonden"
+                Dim internalMailStatus As String = "Niet verzonden"
+                Dim externalMailSent As Boolean = False
                 ' ---------------------------------------------------------
                 ' 1. Ophalen document + project
                 ' ---------------------------------------------------------
@@ -344,6 +363,20 @@ Namespace Controllers
                 Dim resp = service.GetProjectByID(Doc.ProjectId)
                 If resp.Success Then project = resp.Value Else Return PartialView("ModalFailDoc")
 
+                Dim contactRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .DocumentId = Doc.Docid,
+                    .DocumentName = Doc.Name,
+                    .DocumentFileName = Doc.Filename,
+                    .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "Document",
+                    .Origin = ResolveOrigin("ProjectsController.SendDoc"),
+                    .SourceSite = "Group LN"
+                }
 
                 ' ---------------------------------------------------------
                 ' 2. Download bestand (document) via TLS 1.2
@@ -361,6 +394,9 @@ Namespace Controllers
                     End Using
                 Catch ex As Exception
                     LogError("DOC DOWNLOAD FAILED: " & fileUrl, ex)
+                    contactRequest.ExternalMailStatus = "Mislukt"
+                    contactRequest.InternalMailStatus = internalMailStatus
+                    SaveContactRequest(contactRequest)
                     Return PartialView("ModalFailDoc")
                 End Try
 
@@ -402,9 +438,14 @@ Namespace Controllers
                     smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
 
                     smtp.Send(msg)
-
+                    externalMailStatus = "Verzonden"
+                    externalMailSent = True
                 Catch ex As Exception
                     LogError("SENDDOC: MAIL TO CUSTOMER FAILED", ex)
+                    externalMailStatus = "Mislukt"
+                    contactRequest.ExternalMailStatus = externalMailStatus
+                    contactRequest.InternalMailStatus = internalMailStatus
+                    SaveContactRequest(contactRequest)
                     Return PartialView("ModalFailDoc")
                 End Try
 
@@ -438,9 +479,10 @@ Namespace Controllers
                     smtp2.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
 
                     smtp2.Send(msg2)
-
+                    internalMailStatus = "Verzonden"
                 Catch ex As Exception
                     LogError("SENDDOC: INTERNAL MAIL FAILED", ex)
+                    internalMailStatus = "Mislukt"
                     ' interne mail mag falen → maar klantmail is al verstuurd
                 End Try
 
@@ -448,21 +490,10 @@ Namespace Controllers
                 ' ---------------------------------------------------------
                 ' 5. Succes
                 ' ---------------------------------------------------------
-                Dim contactRequest As New ContactRequestBO With {
-                    .ProjectId = project.Id,
-                    .DocumentId = Doc.Docid,
-                    .DocumentName = Doc.Name,
-                    .DocumentFileName = Doc.Filename,
-                    .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
-                    .Firstname = model.Firstname,
-                    .Lastname = model.Name,
-                    .Email = model.Email,
-                    .Phone = model.Phone,
-                    .RequestType = "Document",
-                    .Origin = ResolveOrigin("ProjectsController.SendDoc"),
-                    .SourceSite = "Group LN"
-                }
+                contactRequest.ExternalMailStatus = externalMailStatus
+                contactRequest.InternalMailStatus = internalMailStatus
                 SaveContactRequest(contactRequest)
+                If Not externalMailSent Then Return PartialView("ModalFailDoc")
                 Return PartialView("ModalSuccesDoc")
 
             Catch ex As Exception
@@ -535,6 +566,9 @@ Namespace Controllers
             End If
 
             Try
+                Dim externalMailStatus As String = "Niet verzonden"
+                Dim internalMailStatus As String = "Niet verzonden"
+                Dim externalMailSent As Boolean = False
                 ' ---------------------------------------------------------
                 ' 1. Ophalen brochure + project
                 ' ---------------------------------------------------------
@@ -546,7 +580,20 @@ Namespace Controllers
                 Dim project As ProjectBO = Nothing
                 Dim resp = service.GetProjectByID(Doc.ProjectId)
                 If resp.Success Then project = resp.Value Else Return PartialView("ModalFailDoc")
-
+                Dim contactRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .DocumentId = Doc.Docid,
+                    .DocumentName = Doc.Name,
+                    .DocumentFileName = Doc.Filename,
+                    .DocumentType = "Brochure",
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "Brochure",
+                    .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
+                    .SourceSite = "Group LN"
+                }
 
                 ' ---------------------------------------------------------
                 ' 2. Download brochure via TLS 1.2
@@ -564,6 +611,9 @@ Namespace Controllers
                     End Using
                 Catch ex As Exception
                     LogError("BROCHURE DOWNLOAD FAILED: " & fileUrl, ex)
+                    contactRequest.ExternalMailStatus = "Mislukt"
+                    contactRequest.InternalMailStatus = internalMailStatus
+                    SaveContactRequest(contactRequest)
                     Return PartialView("ModalFailDoc")
                 End Try
 
@@ -604,9 +654,14 @@ Namespace Controllers
                     smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
 
                     smtp.Send(msg)
-
+                    externalMailStatus = "Verzonden"
+                    externalMailSent = True
                 Catch ex As Exception
                     LogError("SENDBROCHURE: MAIL TO CUSTOMER FAILED", ex)
+                    externalMailStatus = "Mislukt"
+                    contactRequest.ExternalMailStatus = externalMailStatus
+                    contactRequest.InternalMailStatus = internalMailStatus
+                    SaveContactRequest(contactRequest)
                     Return PartialView("ModalFailDoc")
                 End Try
 
@@ -640,9 +695,10 @@ Namespace Controllers
                     smtp2.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
 
                     smtp2.Send(msg2)
-
+                    internalMailStatus = "Verzonden"
                 Catch ex As Exception
                     LogError("SENDBROCHURE: INTERNAL MAIL FAILED", ex)
+                    internalMailStatus = "Mislukt"
                     ' interne mail mag falen → maar klantmail is al verstuurd
                 End Try
 
@@ -650,21 +706,10 @@ Namespace Controllers
                 ' ---------------------------------------------------------
                 ' 5. Succes
                 ' ---------------------------------------------------------
-                Dim contactRequest As New ContactRequestBO With {
-                    .ProjectId = project.Id,
-                    .DocumentId = Doc.Docid,
-                    .DocumentName = Doc.Name,
-                    .DocumentFileName = Doc.Filename,
-                    .DocumentType = "Brochure",
-                    .Firstname = model.Firstname,
-                    .Lastname = model.Name,
-                    .Email = model.Email,
-                    .Phone = model.Phone,
-                    .RequestType = "Brochure",
-                    .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
-                    .SourceSite = "Group LN"
-                }
+                contactRequest.ExternalMailStatus = externalMailStatus
+                contactRequest.InternalMailStatus = internalMailStatus
                 SaveContactRequest(contactRequest)
+                If Not externalMailSent Then Return PartialView("ModalFailDoc")
                 Return PartialView("ModalSuccesDoc")
 
             Catch ex As Exception

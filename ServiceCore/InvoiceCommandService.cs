@@ -196,7 +196,7 @@ namespace ServiceCore
                     inv.StatusId = issuedId;
                     inv.PublicId = publicId;
                     inv.SeriesId = seriesId;
-                    inv.FiscalYear = fiscalYear;
+
 
                     var structuredMessage = GenerateStructuredMessage(inv.FiscalYear ?? fiscalYear, issue.currentNumber);
                     inv.StructuredCommOgm = structuredMessage;

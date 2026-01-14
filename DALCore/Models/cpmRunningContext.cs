@@ -1030,8 +1030,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.DocumentName).HasMaxLength(255);
             entity.Property(e => e.DocumentType).HasMaxLength(50);
             entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.ExternalMailStatus).HasMaxLength(50);
             entity.Property(e => e.Firstname).HasMaxLength(150);
             entity.Property(e => e.Fullname).HasMaxLength(300);
+            entity.Property(e => e.InternalMailStatus).HasMaxLength(50);
             entity.Property(e => e.Lastname).HasMaxLength(150);
             entity.Property(e => e.Origin).HasMaxLength(150);
             entity.Property(e => e.Phone).HasMaxLength(75);

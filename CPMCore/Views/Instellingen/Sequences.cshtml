@@ -4,6 +4,7 @@
     ViewData["Title"] = "Sequenties";
     var octopusBookyears = ViewBag.OctopusBookyears as IEnumerable<BOCore.OctopusBookyearBO> ?? Enumerable.Empty<BOCore.OctopusBookyearBO>();
     var octopusJournals = octopusBookyears.SelectMany(by => by.Journals.Select(j => new { Journal = j, Bookyear = by })).ToList();
+    var bookyearLookup = octopusBookyears.ToDictionary(by => by.Id);
 
 }
 @section PageStyle
@@ -107,10 +108,14 @@
                         </div>
                         <div class="col-lg-3-5 col-xl-4-5">
                             <table class="table mt-3">
-                                <thead><tr><th>Boekjaar</th><th>Dagboek</th><th>Jaar</th><th>Huidig nummer</th><th class="text-end">Acties </th></tr></thead>
+                                <thead><tr><th>Boekjaar</th><th>Dagboek</th><th>Periode</th><th>Huidig nummer</th><th class="text-end">Acties </th></tr></thead>
                                 <tbody>
                                     @foreach (var s in Model.Items)
                                     {
+                                        bookyearLookup.TryGetValue(s.BookyearId ?? 0, out var resolvedBookyear);
+                                        var periodLabel = resolvedBookyear == null
+                                        ? s.FiscalYear.ToString()
+                                        : $"{resolvedBookyear.StartDate:yyyy-MM-dd} - {resolvedBookyear.EndDate:yyyy-MM-dd}";
                                         <tr>
                                             <form method="post"
                                                   asp-action="SequenceUpdate"
@@ -137,13 +142,13 @@
                                                     }
                                                 </select>
                                             </td>
-                                            <td>@s.FiscalYear</td>
+                                            <td>@periodLabel</td>
                                             <td>
-     
-                                                    @Html.AntiForgeryToken()
-                                                    <input type="number" name="currentNumber" value="@s.CurrentNumber"
-                                                           class="form-control form-control-sm d-inline-block" style="width:300px" />
-                                                
+
+                                                @Html.AntiForgeryToken()
+                                                <input type="number" name="currentNumber" value="@s.CurrentNumber"
+                                                       class="form-control form-control-sm d-inline-block" style="width:300px" />
+
                                             </td>
                                             <td class="text-end">
                                                 <button class="btn btn-link p-0 d-inline" data-toggle="tooltip" data-placement="top" title="Opslaan">

@@ -30,8 +30,7 @@
 	@Html.HiddenFor(m => m.Unit.ProjectId)
 	@Html.HiddenFor(m => m.Unit.AttachedUnitsId)
 	@Html.HiddenFor(m => m.Unit.LinkedUnitId)
-	@Html.HiddenFor(m => m.Unit.Surface)
-	@Html.HiddenFor(m => m.Unit.GroundSurface)
+	@Html.HiddenFor(m => m.Unit.Plan)
 	@Html.HiddenFor(m => m.Unit.PaymentGroupId)
 	@Html.HiddenFor(m => m.Unit.IsLink)
 	@Html.HiddenFor(m => m.ProjectId, new {id = "projectid"})
@@ -204,7 +203,7 @@
 														<span class="btn btn-default btn-file">
 															<span class="fileupload-exists">Wijzig</span>
 															<span class="fileupload-new">Selecteer bestand</span>
-															<input type="file" accept=".pdf" formnovalidate="formnovalidate" />
+															<input type="file" name="file" accept=".pdf" formnovalidate="formnovalidate" />
 														</span>
 														<a href="#" class="btn btn-default fileupload-exists" data-dismiss="fileupload">Verwijder</a>
 													</div>
@@ -213,7 +212,7 @@
 											else
 											{
 												<div class="fileupload fileupload-exists w-100" data-provides="fileupload" data-name="Unit.Plan">
-													@Html.HiddenFor(m => m.Unit.Plan, new {name = "myimage"})
+													@Html.HiddenFor(m => m.Unit.Plan)
 													<div class="input-append d-flex w-100 gap-2">
 														<div class="uneditable-input d-flex flex-grow-1 align-items-center gap-2">
 															<span class="fileupload-preview flex-grow-1 text-truncate">@Model.Unit.Plan</span>
@@ -221,7 +220,7 @@
 														<span class="btn btn-default btn-file">
 															<span class="fileupload-exists">Wijzig</span>
 															<span class="fileupload-new">Selecteer bestand</span>
-															<input type="file" accept=".pdf" formnovalidate="formnovalidate" />
+															<input type="file" name="file" accept=".pdf" formnovalidate="formnovalidate" />
 														</span>
 														<a href="#" class="btn btn-default fileupload-exists" data-dismiss="fileupload">Verwijder</a>
 													</div>

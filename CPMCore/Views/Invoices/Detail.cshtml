@@ -10,6 +10,10 @@
     var isDraft = Model.Status == InvoiceStatus.Draft;
     var isIssued = Model.Status == InvoiceStatus.Issued;
     var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
+    var hasDeliveryInfo = !string.IsNullOrWhiteSpace(Model.OctopusDeliveryState)
+        || Model.OctopusDeliveryDateTime.HasValue
+        || Model.OctopusDeliveryUpdatedAt.HasValue
+        || !string.IsNullOrWhiteSpace(Model.OctopusDeliveryComment);
     ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName) ? displayId : $"{issuerName} - {displayId}";
     var detailReturnUrl = Url.Action("Detail", "Invoices", new { id = Model.Id, issuerCompanyId = issuerId });
 }
@@ -29,7 +33,7 @@
     };
     string OctopusBadgeClass(string? state) => (state ?? string.Empty).ToUpperInvariant() switch
     {
-        "EMAILED" or "PEPPOL_SEND_OK" => "badge bg-success",
+        "EMAILED" or "PEPPOL_SEND_OK" => "badge bg-primary",
         "PRINTED" or "PRINTED_AND_EMAILED" or "PUBLISHED" or "EXPORTED" => "badge bg-info text-dark",
         "ERROR" or "PEPPOL_SEND_FAILED" => "badge bg-danger",
         "PEPPOL_SENDING_IN_PROGRESS" => "badge bg-warning text-dark",
@@ -39,13 +43,21 @@
     string FormatOctopusState(string? state)
     {
         if (string.IsNullOrWhiteSpace(state))
-        {
             return "Onbekend";
-        }
 
-        var normalized = state.Replace('_', ' ').ToLowerInvariant();
-        var localCulture = CultureInfo.GetCultureInfo("nl-BE");
-        return localCulture.TextInfo.ToTitleCase(normalized);
+        return state.ToUpperInvariant() switch
+        {
+            "EMAILED" => "Verzonden per e-mail",
+            "PRINTED" => "Afgedrukt",
+            "PRINTED_AND_EMAILED" => "Afgedrukt en gemaild",
+            "PUBLISHED" => "Gepubliceerd",
+            "EXPORTED" => "Geëxporteerd",
+            "ERROR" => "Fout opgetreden",
+            "PEPPOL_SEND_OK" => "Verzonden via Peppol",
+            "PEPPOL_SEND_FAILED" => "Peppol verzending mislukt",
+            "PEPPOL_SENDING_IN_PROGRESS" => "Bezig met verzenden via Peppol",
+            _ => "Onbekende status"
+        };
     }
 }
 @section PageStyle
@@ -196,29 +208,33 @@
                 Factuurdatum: @Model.InvoiceDate.ToString("dd/MM/yyyy")<br />
                 Vervaldatum: @Model.ExpirationDate.Value.ToString("dd/MM/yyyy")<br />
                 Status: <span class="@BadgeClass(Model.Status)">@Model.StatusLabel</span>
-                @if (Model.OctopusDocumentSequenceNr.HasValue)
-                {
-                    <div class="mt-3">
+                <div class="mt-3">
+                    @if (Model.OctopusDocumentSequenceNr.HasValue)
+                    {
                         <div>Octopus doc.nr: <strong>@Model.OctopusDocumentSequenceNr</strong></div>
                         @if (!string.IsNullOrWhiteSpace(Model.OctopusJournalKey))
                         {
                             <div>Octopus dagboek: @Model.OctopusJournalKey</div>
                         }
-                        <div class="mt-1">Leverstatus: <span class="@OctopusBadgeClass(Model.OctopusDeliveryState)">@FormatOctopusState(Model.OctopusDeliveryState)</span></div>
-                        @if (Model.OctopusDeliveryDateTime.HasValue)
-                        {
-                            <div>Laatst gemeld: @Model.OctopusDeliveryDateTime.Value.ToString("g")</div>
-                        }
-                        else if (Model.OctopusDeliveryUpdatedAt.HasValue)
-                        {
-                            <div>Laatst gecontroleerd: @Model.OctopusDeliveryUpdatedAt.Value.ToString("g")</div>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(Model.OctopusDeliveryComment))
-                        {
-                            <div class="small text-muted">@Model.OctopusDeliveryComment</div>
-                        }
-                    </div>
-                }
+                    }
+                    else if (hasDeliveryInfo)
+                    {
+                        <div class="small text-muted">Octopus documentnummer ontbreekt; controleer de nummering om de leverstatus te kunnen ophalen.</div>
+                    }
+                    <div class="mt-1">Leverstatus: <span class="@OctopusBadgeClass(Model.OctopusDeliveryState)">@FormatOctopusState(Model.OctopusDeliveryState)</span></div>
+                    @if (Model.OctopusDeliveryDateTime.HasValue)
+                    {
+                        <div>Leveringsmoment: @Model.OctopusDeliveryDateTime.Value.ToString("g")</div>
+                    }
+                    @if (Model.OctopusDeliveryUpdatedAt.HasValue)
+                    {
+                        <div>Laatst gecontroleerd: @Model.OctopusDeliveryUpdatedAt.Value.ToString("g")</div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.OctopusDeliveryComment))
+                    {
+                        <div class="small text-muted">@Model.OctopusDeliveryComment</div>
+                    }
+                </div>
              
             </div>
         </div>

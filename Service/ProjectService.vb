@@ -1256,7 +1256,7 @@ Public Class ProjectService
             If request.CreatedAt = DateTime.MinValue Then request.CreatedAt = DateTime.UtcNow
 
             Using conn As New SqlConnection(providerConn)
-                Const sql As String = "INSERT INTO ContactRequests (CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question) OUTPUT INSERTED.Id VALUES (@CreatedAt, @SourceSite, @Origin, @RequestType, @ProjectId, @UnitId, @DocumentId, @DocumentName, @DocumentFileName, @DocumentType, @Firstname, @Lastname, @Fullname, @Email, @Phone, @Subject, @Question)"
+                Const sql As String = "INSERT INTO ContactRequests (CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question, ExternalMailStatus, InternalMailStatus) OUTPUT INSERTED.Id VALUES (@CreatedAt, @SourceSite, @Origin, @RequestType, @ProjectId, @UnitId, @DocumentId, @DocumentName, @DocumentFileName, @DocumentType, @Firstname, @Lastname, @Fullname, @Email, @Phone, @Subject, @Question, @ExternalMailStatus, @InternalMailStatus)"
                 Using cmd As New SqlCommand(sql, conn)
                     cmd.Parameters.AddWithValue("@CreatedAt", request.CreatedAt)
                     cmd.Parameters.AddWithValue("@SourceSite", If(String.IsNullOrWhiteSpace(request.SourceSite), "Unknown", request.SourceSite))
@@ -1277,7 +1277,8 @@ Public Class ProjectService
                     cmd.Parameters.AddWithValue("@Phone", If(String.IsNullOrWhiteSpace(request.Phone), CType(DBNull.Value, Object), request.Phone))
                     cmd.Parameters.AddWithValue("@Subject", If(String.IsNullOrWhiteSpace(request.Subject), CType(DBNull.Value, Object), request.Subject))
                     cmd.Parameters.AddWithValue("@Question", If(String.IsNullOrWhiteSpace(request.Question), CType(DBNull.Value, Object), request.Question))
-
+                    cmd.Parameters.AddWithValue("@ExternalMailStatus", If(String.IsNullOrWhiteSpace(request.ExternalMailStatus), CType(DBNull.Value, Object), request.ExternalMailStatus))
+                    cmd.Parameters.AddWithValue("@InternalMailStatus", If(String.IsNullOrWhiteSpace(request.InternalMailStatus), CType(DBNull.Value, Object), request.InternalMailStatus))
                     conn.Open()
                     Dim newId = cmd.ExecuteScalar()
                     If newId IsNot Nothing Then response.InsertedId = Convert.ToInt32(newId)
@@ -1301,7 +1302,7 @@ Public Class ProjectService
 
         Try
             Using conn As New SqlConnection(providerConn)
-                Dim sql As String = "SELECT Id, CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question FROM ContactRequests"
+                Dim sql As String = "SELECT Id, CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question, ExternalMailStatus, InternalMailStatus FROM ContactRequests"
                 If projectid > 0 Then
                     sql &= " WHERE ProjectId = @ProjectId"
                 End If
@@ -1331,6 +1332,8 @@ Public Class ProjectService
                             bo.Phone = SafeGetString(reader, 15)
                             bo.Subject = SafeGetString(reader, 16)
                             bo.Question = SafeGetString(reader, 17)
+                            bo.ExternalMailStatus = SafeGetString(reader, 18)
+                            bo.InternalMailStatus = SafeGetString(reader, 19)
                             response.AddValue(bo)
                         End While
                     End Using

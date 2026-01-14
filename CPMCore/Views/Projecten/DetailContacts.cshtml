@@ -163,16 +163,13 @@
                                     @foreach (var contact in contactGroups)
                                     {
                                         <tr>
-                                            <td>@contact.LatestContactAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                             <td data-order="@contact.LatestContactAt.Ticks">@contact.LatestContactAt.ToString("dd/MM/yyyy")</td>
                                             <td>@contact.DisplayName</td>
                                             <td>@(string.IsNullOrWhiteSpace(contact.Email) ? "-" : contact.Email)</td>
                                             <td>@(string.IsNullOrWhiteSpace(contact.Phone) ? "-" : contact.Phone)</td>
                                             <td>
                                                 <div>@(string.IsNullOrWhiteSpace(contact.LatestStatus) ? "Actief" : contact.LatestStatus)</div>
-                                                @if (!string.IsNullOrWhiteSpace(contact.LatestStatusComment))
-                                                {
-                                                    <small class="text-muted">@contact.LatestStatusComment</small>
-                                                }
+                                               
                                             </td>
                                             <td>@contact.TotalRequests</td>
                                             <td>

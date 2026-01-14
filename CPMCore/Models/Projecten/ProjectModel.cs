@@ -989,6 +989,7 @@ namespace CPMCore.Models.Projecten
         public string Phone { get; set; }
         public string ActionType { get; set; }
         public DateTime ActionDate { get; set; }
+        public TimeSpan ActionTime { get; set; }
         public string Comment { get; set; }
     }
 
@@ -1000,6 +1001,7 @@ namespace CPMCore.Models.Projecten
         public string Phone { get; set; }
         public string Status { get; set; }
         public DateTime StatusDate { get; set; }
+        public TimeSpan StatusTime { get; set; }
         public string Comment { get; set; }
     }
 
@@ -1021,6 +1023,16 @@ namespace CPMCore.Models.Projecten
         public string Email { get; set; }
         public string Fullname { get; set; }
         public string Phone { get; set; }
+    }
+    public class ContactAddModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+        public string Firstname { get; set; }
+        public string Lastname { get; set; }
+        public string Email { get; set; }
+        public string Phone { get; set; }
+        public string Comment { get; set; }
     }
     public class DetailDocsModel
     {
