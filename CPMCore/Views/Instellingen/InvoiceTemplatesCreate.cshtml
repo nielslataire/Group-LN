@@ -1,0 +1,22 @@
+﻿@model CPMCore.Models.Instellingen.InvoiceLayoutTemplateVM
+@{
+    ViewData["Title"] = "Nieuw factuurtemplate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="card card-modern">
+    <header class="card-header">
+        <h2 class="card-title">Nieuw factuurtemplate</h2>
+    </header>
+    <div class="card-body">
+        <form asp-action="InvoiceTemplatesCreate" asp-controller="Instellingen" method="post" class="ecommerce-form">
+            @Html.AntiForgeryToken()
+            @await Html.PartialAsync("~/Views/Instellingen/Partials/_InvoiceTemplateForm.cshtml", Model)
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <a class="btn btn-light border" href="@Url.Action("InvoiceTemplates", "Instellingen")">Annuleren</a>
+                <button type="submit" class="btn btn-primary">Opslaan</button>
+            </div>
+        </form>
+    </div>
+</section>

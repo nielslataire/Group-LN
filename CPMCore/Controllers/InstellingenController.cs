@@ -39,6 +39,7 @@ public class InstellingenController : BaseController
     private readonly IIssuerCompanyService _issuers;
     private readonly IIssuerBankAccountService _bank;
     private readonly IIssuerSeriesService _series;
+    private readonly IInvoiceLayoutTemplateService _invoiceTemplates;
     private readonly IOctopusApiClient _octopusClient;
     private readonly IOctopusTokenManager _octopusTokens;
     private readonly IOctopusBookyearService _octopusBookyears;
@@ -58,12 +59,13 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations)
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations)
     { 
         _logger = logger;
         _issuers = issuers;
         _bank = bank;
         _series = series;
+        _invoiceTemplates = invoiceTemplates;
         _octopusClient = octopusClient;
         _octopusTokens = octopusTokens;
         _octopusBookyears = octopusBookyears;
@@ -348,7 +350,7 @@ public class InstellingenController : BaseController
         TempData["Referrer"] = referrer;
         ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
         ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
-
+        var templates = await GetInvoiceTemplateOptionsAsync();
 
 
         //BREADCRUMBS
@@ -368,8 +370,14 @@ public class InstellingenController : BaseController
 
         ViewData["BreadcrumbNode"] = InstellingenNewIssuer;
 
-        PopulateInvoiceLayoutViewData();
-        return View(new IssuerCompanyVM());
+        var vm = new IssuerCompanyVM
+        {
+            InvoiceTemplates = templates
+        };
+        ApplyInvoiceTemplateDefaults(vm, templates);
+
+        await PopulateInvoiceLayoutViewDataAsync();
+        return View(vm);
     }
 
     // POST /Admin/IssuerCompanies/Create
@@ -382,7 +390,10 @@ public class InstellingenController : BaseController
         {
             ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
             ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
-            PopulateInvoiceLayoutViewData();
+            var templates = await GetInvoiceTemplateOptionsAsync();
+            vm.InvoiceTemplates = templates;
+            ApplyInvoiceTemplateDefaults(vm, templates);
+            await PopulateInvoiceLayoutViewDataAsync();
             return View(vm);
         }
         if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
@@ -475,6 +486,7 @@ public class InstellingenController : BaseController
         var customFields = await _issuers.ListOctopusCustomFieldsAsync(id, ct);
         var storedMappings = DeserializeCustomFieldMappings(bo?.OctopusCustomFieldMappingsJson);
         var vatTypes = (ViewBag.OctopusVatCodes as IReadOnlyList<VatTypeBO> ?? Array.Empty<VatTypeBO>()).ToList();
+        var templates = await GetInvoiceTemplateOptionsAsync(ct);
 
         var vm = new IssuerCompanyVM
         {
@@ -544,6 +556,8 @@ public class InstellingenController : BaseController
                 InvoiceMention = v.InvoiceMention
             }).ToList()
         };
+        vm.InvoiceTemplates = templates;
+        ApplyInvoiceTemplateDefaults(vm, templates);
 
         if (TempData["OctopusDossiers"] is string dossiersJson && !string.IsNullOrWhiteSpace(dossiersJson))
         {
@@ -569,7 +583,7 @@ public class InstellingenController : BaseController
 
         ViewData["BreadcrumbNode"] = InstellingenEditIssuer;
 
-        PopulateInvoiceLayoutViewData();
+        await PopulateInvoiceLayoutViewDataAsync(ct);
         return View(vm);
     }
 
@@ -603,7 +617,10 @@ public class InstellingenController : BaseController
                         InvoiceMention = v.InvoiceMention
                     })
                     .ToList();
-            PopulateInvoiceLayoutViewData();
+            var templates = await GetInvoiceTemplateOptionsAsync(ct);
+            vm.InvoiceTemplates = templates;
+            ApplyInvoiceTemplateDefaults(vm, templates);
+            await PopulateInvoiceLayoutViewDataAsync(ct);
             return View(vm);
         }
         if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
@@ -708,6 +725,179 @@ public class InstellingenController : BaseController
 
         AddMessage("success", "Mijn bedrijf " +vm.Name + " opgeslagen.", "Geslaagd!");
         return RedirectToAction(nameof(IssuerCompanies));
+    }
+
+    // GET /Admin/InvoiceTemplates
+    [HttpGet("InvoiceTemplates")]
+    public async Task<IActionResult> InvoiceTemplates(CancellationToken ct)
+    {
+        await _invoiceTemplates.EnsureDefaultsAsync(ct);
+        var templates = await _invoiceTemplates.ListAsync(ct);
+        var vms = templates.Select(t => new InvoiceLayoutTemplateVM
+        {
+            Id = t.Id,
+            Key = t.Key,
+            Name = t.Name,
+            Description = t.Description,
+            TemplateJson = t.TemplateJson,
+            IsSystem = t.IsSystem
+        }).ToList();
+
+        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = index
+        };
+        var templatesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplates", "Instellingen", "Factuurtemplates")
+        {
+            Parent = instellingenIndex
+        };
+        ViewData["BreadcrumbNode"] = templatesNode;
+
+        return View(vms);
+    }
+
+    // GET /Admin/InvoiceTemplates/Create
+    [HttpGet("InvoiceTemplates/Create")]
+    public IActionResult InvoiceTemplatesCreate()
+    {
+        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = index
+        };
+        var templatesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplates", "Instellingen", "Factuurtemplates")
+        {
+            Parent = instellingenIndex
+        };
+        var createNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplatesCreate", "Instellingen", "Nieuw template")
+        {
+            Parent = templatesNode
+        };
+        ViewData["BreadcrumbNode"] = createNode;
+
+        return View(new InvoiceLayoutTemplateVM
+        {
+            TemplateJson = DefaultLayouts.LayoutA
+        });
+    }
+
+    // POST /Admin/InvoiceTemplates/Create
+    [HttpPost("InvoiceTemplates/Create")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> InvoiceTemplatesCreate(InvoiceLayoutTemplateVM vm, CancellationToken ct)
+    {
+        ValidateTemplateJson(vm.TemplateJson, nameof(InvoiceLayoutTemplateVM.TemplateJson));
+        if (!ModelState.IsValid)
+            return View(vm);
+
+        try
+        {
+            await _invoiceTemplates.CreateAsync(new InvoiceLayoutTemplateBO
+            {
+                Key = vm.Key,
+                Name = vm.Name,
+                Description = vm.Description,
+                TemplateJson = vm.TemplateJson,
+                IsSystem = false
+            }, ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            ModelState.AddModelError(nameof(InvoiceLayoutTemplateVM.Key), "Deze sleutel bestaat al.");
+            return View(vm);
+        }
+
+        AddMessage("success", $"Template {vm.Name} toegevoegd.", "Geslaagd!");
+        return RedirectToAction(nameof(InvoiceTemplates));
+    }
+
+    // GET /Admin/InvoiceTemplates/Edit/5
+    [HttpGet("InvoiceTemplates/Edit/{id:int}")]
+    public async Task<IActionResult> InvoiceTemplatesEdit(int id, CancellationToken ct)
+    {
+        var template = await _invoiceTemplates.GetAsync(id, ct);
+        if (template == null)
+            return NotFound();
+
+        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = index
+        };
+        var templatesNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplates", "Instellingen", "Factuurtemplates")
+        {
+            Parent = instellingenIndex
+        };
+        var editNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("InvoiceTemplatesEdit", "Instellingen", "Bewerk template")
+        {
+            Parent = templatesNode
+        };
+        ViewData["BreadcrumbNode"] = editNode;
+
+        return View(new InvoiceLayoutTemplateVM
+        {
+            Id = template.Id,
+            Key = template.Key,
+            Name = template.Name,
+            Description = template.Description,
+            TemplateJson = template.TemplateJson,
+            IsSystem = template.IsSystem
+        });
+    }
+
+    // POST /Admin/InvoiceTemplates/Edit/5
+    [HttpPost("InvoiceTemplates/Edit/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> InvoiceTemplatesEdit(int id, InvoiceLayoutTemplateVM vm, CancellationToken ct)
+    {
+        if (id != vm.Id)
+            return BadRequest();
+
+        ValidateTemplateJson(vm.TemplateJson, nameof(InvoiceLayoutTemplateVM.TemplateJson));
+        if (!ModelState.IsValid)
+            return View(vm);
+
+        try
+        {
+            await _invoiceTemplates.UpdateAsync(new InvoiceLayoutTemplateBO
+            {
+                Id = vm.Id,
+                Key = vm.Key,
+                Name = vm.Name,
+                Description = vm.Description,
+                TemplateJson = vm.TemplateJson,
+                IsSystem = vm.IsSystem
+            }, ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            ModelState.AddModelError(nameof(InvoiceLayoutTemplateVM.Key), "Deze sleutel bestaat al.");
+            return View(vm);
+        }
+
+        AddMessage("success", $"Template {vm.Name} opgeslagen.", "Geslaagd!");
+        return RedirectToAction(nameof(InvoiceTemplates));
+    }
+
+    // POST /Admin/InvoiceTemplates/Delete/5
+    [HttpPost("InvoiceTemplates/Delete/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> InvoiceTemplatesDelete(int id, CancellationToken ct)
+    {
+        var template = await _invoiceTemplates.GetAsync(id, ct);
+        if (template == null)
+            return NotFound();
+
+        if (template.IsSystem)
+        {
+            AddMessage("warning", "Standaard templates kunnen niet verwijderd worden.", "Niet toegelaten");
+            return RedirectToAction(nameof(InvoiceTemplates));
+        }
+
+        await _invoiceTemplates.DeleteAsync(id, ct);
+        AddMessage("success", $"Template {template.Name} verwijderd.", "Geslaagd!");
+        return RedirectToAction(nameof(InvoiceTemplates));
     }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Octopus/authenticate")]
@@ -1244,13 +1434,50 @@ public class InstellingenController : BaseController
         return RedirectToAction("Sequences", new { seriesId, issuerId });
     }
 
-    private void PopulateInvoiceLayoutViewData()
+    private async Task PopulateInvoiceLayoutViewDataAsync(CancellationToken ct = default)
     {
-        ViewBag.InvoiceLayoutDefaultsJson = LayoutDefaultsJson;
+        await _invoiceTemplates.EnsureDefaultsAsync(ct);
+        var templates = await _invoiceTemplates.ListAsync(ct);
+        var defaults = templates.ToDictionary(t => t.Key, t => t.TemplateJson);
+
+        ViewBag.InvoiceLayoutDefaultsJson = SystemTextJsonSerializer.Serialize(defaults, LayoutSerializerOptions);
         ViewBag.InvoiceLayoutSchemaJson = LayoutSchemaJson;
     }
 
+    private async Task<IReadOnlyList<InvoiceLayoutTemplateOptionVM>> GetInvoiceTemplateOptionsAsync(CancellationToken ct = default)
+    {
+        await _invoiceTemplates.EnsureDefaultsAsync(ct);
+        var templates = await _invoiceTemplates.ListAsync(ct);
+        return templates
+            .Select(t => new InvoiceLayoutTemplateOptionVM
+            {
+                Key = t.Key,
+                Name = t.Name,
+                TemplateJson = t.TemplateJson,
+                IsSystem = t.IsSystem
+            })
+            .ToList();
+    }
+
+    private static void ApplyInvoiceTemplateDefaults(IssuerCompanyVM vm, IReadOnlyList<InvoiceLayoutTemplateOptionVM> templates)
+    {
+        if (vm == null || templates == null || templates.Count == 0)
+            return;
+
+        if (string.IsNullOrWhiteSpace(vm.TemplateKey))
+            vm.TemplateKey = templates[0].Key;
+
+        var selected = templates.FirstOrDefault(t => t.Key == vm.TemplateKey) ?? templates[0];
+        if (string.IsNullOrWhiteSpace(vm.TemplateJson))
+            vm.TemplateJson = selected.TemplateJson;
+    }
+
     private void ValidateTemplateJson(string? templateJson)
+    {
+        ValidateTemplateJson(templateJson, nameof(IssuerCompanyVM.TemplateJson));
+    }
+
+    private void ValidateTemplateJson(string? templateJson, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(templateJson))
             return;
@@ -1260,18 +1487,16 @@ public class InstellingenController : BaseController
             var token = JToken.Parse(templateJson);
             var schema = LayoutSchemaProvider.GetSchema();
 
-            IList<ValidationError> errors;   // <-- expliciet type kiezen
+            IList<ValidationError> errors;
             if (!token.IsValid(schema, out errors))
             {
                 var message = string.Join("; ", errors.Select(e => e.Message));
-                ModelState.AddModelError(nameof(IssuerCompanyVM.TemplateJson),
-                    $"Layout JSON ongeldig: {message}");
+                ModelState.AddModelError(fieldName, $"Layout JSON ongeldig: {message}");
             }
-
         }
         catch (JsonReaderException ex)
         {
-            ModelState.AddModelError(nameof(IssuerCompanyVM.TemplateJson), $"Layout JSON is niet geldig: {ex.Message}");
+            ModelState.AddModelError(fieldName, $"Layout JSON is niet geldig: {ex.Message}");
         }
     }
 

@@ -72,6 +72,7 @@ namespace DALCore
         public GenericRepository<PaymentTerms> PaymentTerms { get; }
         public GenericRepository<IssuerCompany> IssuerCompanies { get; }
         public GenericRepository<IssuerBankAccount> IssuerBankAccount { get; }
+        public GenericRepository<InvoiceLayoutTemplate> InvoiceLayoutTemplates { get; }
         public GenericRepository<OctopusBookyears> OctopusBookyears { get; }
         public GenericRepository<OctopusBookyearPeriods> OctopusBookyearPeriods { get; }
         public GenericRepository<OctopusJournals> OctopusJournals { get; }
@@ -147,6 +148,7 @@ namespace DALCore
             PaymentTerms = new GenericRepository<PaymentTerms>(_context);
             IssuerCompanies = new GenericRepository<IssuerCompany>(_context);
             IssuerBankAccount = new GenericRepository<IssuerBankAccount>(_context);
+            InvoiceLayoutTemplates = new GenericRepository<InvoiceLayoutTemplate>(_context);
             OctopusBookyears = new GenericRepository<OctopusBookyears>(_context);
             OctopusBookyearPeriods = new GenericRepository<OctopusBookyearPeriods>(_context);
             OctopusJournals = new GenericRepository<OctopusJournals>(_context);

@@ -638,9 +638,14 @@
                             <div class="col-md-4">
                                 <label asp-for="TemplateKey" class="form-label"></label>
                                 <select asp-for="TemplateKey" class="form-control form-control-modern js-template-key">
-                                    <option value="layoutA">Layout A (Group LN / BCO)</option>
-                                    <option value="layoutHE">Layout B (Home-Estate)</option>
+                                    @foreach (var template in Model.InvoiceTemplates)
+                                    {
+                                        <option value="@template.Key">@template.Name</option>
+                                    }
                                 </select>
+                                <small class="text-muted d-block mt-1">
+                                    Beheer templates in <a href="@Url.Action("InvoiceTemplates", "Instellingen")">de templatemanager</a>.
+                                </small>
                             </div>
                             <div class="col-md-4">
                             <div class="form-group">

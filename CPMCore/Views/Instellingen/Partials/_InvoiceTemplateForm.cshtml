@@ -1,0 +1,27 @@
+﻿@model CPMCore.Models.Instellingen.InvoiceLayoutTemplateVM
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control form-control-modern" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Key" class="form-label"></label>
+        <input asp-for="Key"
+               class="form-control form-control-modern"
+               readonly="@(Model.IsSystem ? "readonly" : null)" />
+        <small class="text-muted d-block">Gebruik deze sleutel om het template te selecteren bij een bedrijf.</small>
+        <span asp-validation-for="Key" class="text-danger"></span>
+    </div>
+    <div class="col-12">
+        <label asp-for="Description" class="form-label"></label>
+        <input asp-for="Description" class="form-control form-control-modern" />
+    </div>
+    <div class="col-12">
+        <label asp-for="TemplateJson" class="form-label"></label>
+        <textarea asp-for="TemplateJson" rows="18" class="form-control form-control-modern font-monospace"></textarea>
+        <small class="text-muted d-block mt-1">De geselecteerde primaire en secundaire kleur per bedrijf worden toegepast op de template.</small>
+        <span asp-validation-for="TemplateJson" class="text-danger"></span>
+    </div>
+</div>

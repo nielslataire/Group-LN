@@ -90,6 +90,24 @@
 
         templateTextarea.addEventListener('input', validateLayout);
 
+          let currentTemplateKey = templateKeySelect.value || 'layoutA';
+
+        templateKeySelect.addEventListener('change', function () {
+            const nextKey = templateKeySelect.value || 'layoutA';
+            const currentDefault = defaults[currentTemplateKey];
+            const nextDefault = defaults[nextKey];
+            const currentValue = templateTextarea.value.trim();
+
+            if (!currentValue && nextDefault) {
+                templateTextarea.value = nextDefault;
+            } else if (currentDefault && currentValue === currentDefault.trim() && nextDefault) {
+                templateTextarea.value = nextDefault;
+            }
+
+            currentTemplateKey = nextKey;
+            templateTextarea.dispatchEvent(new Event('input'));
+        });
+
         if (resetButton) {
             resetButton.addEventListener('click', function () {
                 const key = templateKeySelect.value || 'layoutA';

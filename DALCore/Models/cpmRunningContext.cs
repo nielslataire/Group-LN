@@ -107,6 +107,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<InvoiceEmailLog> InvoiceEmailLog { get; set; }
 
+    public virtual DbSet<InvoiceLayoutTemplate> InvoiceLayoutTemplate { get; set; }
+
     public virtual DbSet<InvoicePdfArchive> InvoicePdfArchive { get; set; }
 
     public virtual DbSet<InvoiceRelations> InvoiceRelations { get; set; }
@@ -1257,6 +1259,21 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.InvoiceId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__InvoiceEm__Invoi__0EE3280B");
+        });
+
+        modelBuilder.Entity<InvoiceLayoutTemplate>(entity =>
+        {
+            entity.HasIndex(e => e.Key, "UX_InvoiceLayoutTemplate_Key").IsUnique();
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.Description).HasMaxLength(240);
+            entity.Property(e => e.Key)
+                .IsRequired()
+                .HasMaxLength(64);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(120);
+            entity.Property(e => e.TemplateJson).IsRequired();
         });
 
         modelBuilder.Entity<InvoicePdfArchive>(entity =>

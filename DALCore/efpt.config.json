@@ -223,6 +223,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[InvoiceLayoutTemplate]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[InvoicePdfArchive]",
          "ObjectType": 0
       },

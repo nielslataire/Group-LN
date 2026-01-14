@@ -146,6 +146,7 @@ namespace CPMCore.Models.Instellingen
         public List<OctopusCustomFieldMappingVM> CustomFieldMappings { get; set; } = new();
 
         public List<VatTypeVM> VatTypes { get; set; } = new();
+        public IReadOnlyList<InvoiceLayoutTemplateOptionVM> InvoiceTemplates { get; set; } = new List<InvoiceLayoutTemplateOptionVM>();
     }
 
     public class OctopusCustomFieldMappingVM

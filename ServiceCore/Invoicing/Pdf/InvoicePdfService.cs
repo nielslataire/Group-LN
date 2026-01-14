@@ -37,6 +37,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
 
         var templateKey = company.TemplateKey ?? "layoutA";
         var layout = LoadLayout(company.TemplateJson, templateKey);
+        ApplyBranding(layout, company);
         var structuredMessage = NormalizeStructuredMessage(invoice.StructuredMessage);
         var context = BuildContext(invoice, company, layout, structuredMessage);
         var vm = Map(invoice, company, structuredMessage);
@@ -69,9 +70,11 @@ public sealed class InvoicePdfService : IInvoicePdfService
     private TemplateContext BuildContext(InvoiceDto invoice, IssuerCompanyBO company, LayoutConfig layout, string? structuredMessage)
     {
         var theme = layout.Theme ?? new ThemeConfig();
-        var primary = !string.IsNullOrWhiteSpace(theme.Primary) ? theme.Primary : company.BrandPrimaryColor;
-        var secondary = !string.IsNullOrWhiteSpace(theme.Secondary) ? theme.Secondary : company.BrandSecondaryColor;
-        const string fontFamily = "Avenir";
+        var primary = !string.IsNullOrWhiteSpace(company.BrandPrimaryColor) ? company.BrandPrimaryColor : theme.Primary;
+        var secondary = !string.IsNullOrWhiteSpace(company.BrandSecondaryColor) ? company.BrandSecondaryColor : theme.Secondary;
+        var fontFamily = !string.IsNullOrWhiteSpace(company.FontFamily)
+            ? company.FontFamily
+            : (!string.IsNullOrWhiteSpace(theme.FontFamily) ? theme.FontFamily : "Avenir");
         var logo = ResolveLogo(theme.LogoSource, company);
         var backgroundImage = ResolveImageAsset(layout.Page?.BackgroundImage, company);
 
@@ -109,6 +112,55 @@ public sealed class InvoicePdfService : IInvoicePdfService
         };
     }
 
+    private static void ApplyBranding(LayoutConfig layout, IssuerCompanyBO company)
+    {
+        if (layout == null)
+            return;
+
+        layout.Theme ??= new ThemeConfig();
+
+        var theme = layout.Theme;
+        var originalPrimary = theme.Primary;
+        var originalSecondary = theme.Secondary;
+
+        if (!string.IsNullOrWhiteSpace(company.BrandPrimaryColor))
+            theme.Primary = company.BrandPrimaryColor;
+        if (!string.IsNullOrWhiteSpace(company.BrandSecondaryColor))
+            theme.Secondary = company.BrandSecondaryColor;
+        if (!string.IsNullOrWhiteSpace(company.FontFamily))
+            theme.FontFamily = company.FontFamily;
+
+        ApplyBandColor(layout.Page?.Bands?.Top, originalPrimary, originalSecondary, theme.Primary, theme.Secondary);
+        ApplyBandColor(layout.Page?.Bands?.Bottom, originalPrimary, originalSecondary, theme.Primary, theme.Secondary);
+    }
+
+    private static void ApplyBandColor(BandConfig? band, string? originalPrimary, string? originalSecondary, string? updatedPrimary, string? updatedSecondary)
+    {
+        if (band == null)
+            return;
+
+        var color = band.Color;
+        if (string.IsNullOrWhiteSpace(color) && !string.IsNullOrWhiteSpace(updatedPrimary))
+        {
+            band.Color = updatedPrimary;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(originalPrimary)
+            && string.Equals(color, originalPrimary, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(updatedPrimary))
+        {
+            band.Color = updatedPrimary;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(originalSecondary)
+            && string.Equals(color, originalSecondary, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(updatedSecondary))
+        {
+            band.Color = updatedSecondary;
+        }
+    }
     private static InvoiceVm Map(InvoiceDto dto, IssuerCompanyBO company, string? structuredMessage)
     {
         var defaultIban = !string.IsNullOrWhiteSpace(company.DefaultBankAccountIban)

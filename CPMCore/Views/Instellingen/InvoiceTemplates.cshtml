@@ -1,0 +1,84 @@
+﻿@model IReadOnlyList<CPMCore.Models.Instellingen.InvoiceLayoutTemplateVM>
+@{
+    ViewData["Title"] = "Factuurtemplates";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="font-weight-bold mb-0">Factuurtemplates</h1>
+                <p class="mb-0 text-muted">Beheer JSON-templates voor factuurlay-outs.</p>
+            </div>
+            <a class="btn btn-primary" href="@Url.Action("InvoiceTemplatesCreate", "Instellingen")">
+                Nieuw template
+            </a>
+        </div>
+
+        @if (TempData["Message"] != null)
+        {
+            var messageType = TempData["MessageType"]?.ToString() ?? "success";
+            <div class="alert alert-@(messageType == "warning" ? "warning" : "success")">@TempData["Message"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
+
+        <section class="card card-modern">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th>Sleutel</th>
+                                <th>Type</th>
+                                <th class="text-end">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var template in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@template.Name</strong>
+                                        @if (!string.IsNullOrWhiteSpace(template.Description))
+                                        {
+                                            <div class="text-muted small">@template.Description</div>
+                                        }
+                                    </td>
+                                    <td>@template.Key</td>
+                                    <td>
+                                        <span class="badge @(template.IsSystem ? "bg-secondary" : "bg-info")">
+                                            @(template.IsSystem ? "Standaard" : "Custom")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="btn btn-link p-0 me-2" href="@Url.Action("InvoiceTemplatesEdit", "Instellingen", new { id = template.Id })" title="Bewerken">
+                                            <i class="bx bx-edit"></i>
+                                        </a>
+                                        @if (!template.IsSystem)
+                                        {
+                                            <form class="d-inline" method="post" action="@Url.Action("InvoiceTemplatesDelete", "Instellingen", new { id = template.Id })">
+                                                @Html.AntiForgeryToken()
+                                                <button type="submit" class="btn btn-link p-0 text-danger" title="Verwijderen" onclick="return confirm('Template verwijderen?');">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Vergrendeld</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

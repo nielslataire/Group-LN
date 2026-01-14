@@ -126,6 +126,7 @@ builder.Services.AddScoped<IInvoiceNumberingService, InvoiceNumberingService>();
 builder.Services.AddScoped<IProjectSupplierLookupService, ProjectSupplierLookupService>();
 builder.Services.AddScoped<IInvoiceCommunicationService, InvoiceCommunicationService>();
 builder.Services.AddScoped<IInvoiceUblBuilder, InvoiceUblBuilder>();
+builder.Services.AddScoped<IInvoiceLayoutTemplateService, InvoiceLayoutTemplateService>();
 builder.Services.AddScoped<IOctopusBookyearService, OctopusBookyearService>();
 builder.Services.AddScoped<IOctopusRelationSyncService, OctopusRelationSyncService>();
 builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(client =>

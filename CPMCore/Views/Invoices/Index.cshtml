@@ -280,7 +280,7 @@
                                                 </a>
                                             }
                                         }
-                                        else if (StatusIn(r.Status, InvoiceStatus.Sent, InvoiceStatus.Paid))
+                                        else if (StatusIn(r.Status, InvoiceStatus.Sent, InvoiceStatus.Paid, InvoiceStatus.Booked))
                                         {
                                             <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
                                                asp-action="Detail"
