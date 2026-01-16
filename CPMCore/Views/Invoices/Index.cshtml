@@ -7,6 +7,11 @@
     var currentPath = Context.Request.Path.ToString();
     var currentQuery = Context.Request.QueryString.ToString();
     var returnUrl = string.Concat(currentPath, currentQuery);
+    var bookYears = Model.Select(r => r.BookyearLabel ?? r.InvoiceDate.Year.ToString())
+        .Distinct()
+        .OrderByDescending(y => y)
+        .ToList();
+    var defaultBookYear = ViewBag.DefaultBookyearLabel as string ?? bookYears.FirstOrDefault();
 }
 @functions {
     (string Icon, string Color) StatusIcon(InvoiceStatus status) => status switch
@@ -41,12 +46,25 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
-    <link rel="stylesheet"
-          href="https://cdn.datatables.net/v/bs5/dt-2.2.2/b-3.2.2/rr-1.5.0/datatables.min.css" />
-
-
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <style>
+        div.dt-buttons .btn.buttons-colvis::after {
+            font-family: "Font Awesome 6 Free";
+            content: "\f078"; /* Unicode voor fa-chevron-down */
+            font-weight: 900; /* Voor solid stijl */
+            font-size: 0.85rem;
+            vertical-align: middle;
+            border: none;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease;
+        }
 
+        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
+            transform: rotate(180deg);
+        }
+    </style>
+    <style>
+     
         /* ---- Kolomlogica: fit vs grow ---- */
 
         /* Fit-kolommen: zo klein mogelijk, nooit wrappen */
@@ -97,9 +115,7 @@
 
     </style>
 }
-
-<div class="row">
-    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+ <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
         <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
             <h1 class="font-weight-bold mb-0 mt-0">Facturen</h1>
             <h5 class="mb-4 mt-0">Beheer de facturen van @ViewBag.CompanyName</h5>
@@ -114,8 +130,7 @@
             <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
         </div>
     </div>
-
-@if (Model.Any())
+@if(Model.Any())
 {
         <div class="card card-modern">
             <div class="card-body">
@@ -130,230 +145,251 @@
     <div class="card card-modern">
         <div class="card-body">
             <div class="datatables-header-footer-wrapper  mt-2">
-                    <div class="table-responsive-md">
-                        <table class="table table-hover mb-0 w-100 dt-invoice" id="datatable-invoice-list">
-                            <thead>
-                                <tr>
-                                    <th class="col-fit">Type</th>
-                                    <th class="col-fit">Factuurnr</th>
-                                    <th class="col-fit">Datum</th>
-                                    <th class="col-grow">Klant</th>
-                                    <th class="col-fit text-end">Totaal</th>
-                                    <th class="col-fit">Status</th>
-                                    <th class="col-fit">Project</th>
-                                    <th class="col-fit">Verzendwijze</th>
-                                    <th class="col-fit text-end">Acties</th>
-                                </tr>
-                            </thead>
+                        @{
+                            var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
+                            var isAdminUser = User.IsInRole("Admin") || User.IsInRole("Administrator");
+                        }
+            <div class="table-responsive-md">
+                <table class="table table-hover mb-0 w-100 dt-invoice" id="datatable-invoice-list">
+                    <thead>
+                        <tr>
+                            <th class="col-fit">Type</th>
+                            <th class="col-fit">Factuurnr</th>
+                            <th class="col-fit">Datum</th>
+                            <th class="col-grow">Klant</th>
+                            <th class="col-fit text-end">Totaal</th>
+                            <th class="col-fit">Status</th>
+                            <th class="col-fit">Project</th>
+                            <th class="col-fit">Verzendwijze</th>
+                            <th class="col-fit text-end">Acties</th>
+                        </tr>
+                    </thead>
 
                     <tbody>
-                            @{
-                                var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
-                                var isAdminUser = User.IsInRole("Admin") || User.IsInRole("Administrator");
-                            }
-                            @foreach (var r in Model)
-                            {
-                                var isDraft = StatusIn(r.Status, InvoiceStatus.Draft);
-                                var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
-                                var shownId = isDraft ? string.Empty : displayId;
-                                var isIssued = StatusIn(r.Status, InvoiceStatus.Issued);
-                             var typeLabel = DocumentType(r.Status, r.IsCreditNote);
-                                var statusDisplay = StatusIcon(r.Status);
+                    @foreach (var r in Model)
+                    {
+                        var isDraft = StatusIn(r.Status, InvoiceStatus.Draft);
+                        var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
+                        var shownId = isDraft ? string.Empty : displayId;
+                        var typeLabel = DocumentType(r.Status, r.IsCreditNote);
+                        var statusDisplay = StatusIcon(r.Status);
 
-                                <tr>
-                                        <td class="col-fit">@typeLabel</td>
-                                        <td class="col-fit" data-order="@r.InvoiceSortValue">@(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))</td>
-                                        <td class="col-fit text-nowrap">@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
-                                        <td class="col-grow td-ellipsis" title="@r.ClientName">@r.ClientName</td>
-                                        <td class="col-fit text-end text-nowrap">@(r.GrossTotal.HasValue? r.GrossTotal.Value.ToString("C", culture) : "-")</td>
-                                        <td class="col-fit status-col" data-order="@r.StatusLabel">
-                                            <span class="status-icon" style="color:@statusDisplay.Color">
-                                                <i class="@statusDisplay.Icon fs-5"></i>
-                                            </span>
-                                            @if (r.DigitallySent)
-                                            {
-                                                <span class="status-icon" style="color:saddlebrown" data-toggle="tooltip" data-placement="top" title="Verzonden via peppol">
-                                                    <i class="bx bx-planet fs-5"></i>
-                                                </span>
-                                            }
-                                        </td>
-                                        <td class="col-fit td-ellipsis" title="@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)">
-                                            @(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)
-                                        </td>
+                        <tr data-bookyear="@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())">
+                            <td class="col-fit">@typeLabel</td>
 
-                                        <td class="col-fit text-nowrap">@r.SendMethod</td>
+                            <td class="col-fit" data-order="@r.InvoiceSortValue">
+                                @(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))
+                            </td>
 
+                            <td class="col-fit text-nowrap">@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
 
-                                        <td class="col-fit text-end actions text-nowrap">
-                                        @if (StatusIn(r.Status, InvoiceStatus.Draft))
-                                        {
-                                            <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
-                                               asp-action="Edit"
-                                               asp-route-id="@r.Id"
-                                               asp-route-returnUrl="@returnUrl"
-                                               class="ms-1 me-1">
-                                                <i class="bx bx-pencil fs-5"></i>
-                                                <span class="visually-hidden">Bewerken</span>
-                                            </a>
-                                                <a data-placement="top" title="Details" data-original-title="Details"
-                                                   asp-action="Detail"
-                                                   asp-route-id="@r.Id"
-                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                   class="ms-1 me-1">
-                                                    <i class="bx bx-show fs-5"></i>
-                                                    <span class="visually-hidden">Details</span>
-                                                </a>
-                                            <a data-placement="top" title="Nummeren" data-original-title="Nummeren"
-                                               asp-action="Issue"
-                                               asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                               class="ms-1 me-1">
-                                                <i class="bx bx-lock fs-5"> </i>
-                                                <span class="visually-hidden">Nummeren</span>
-                                            </a>
-                                            @* <form asp-action="Issue"
-                                                  asp-controller="Invoices"
-                                                  method="post"
-                                                  class="d-inline">
-                                                <input type="hidden" name="id" value="@r.Id" />
-                                                <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
-                                                <button type="submit" class="btn btn-xs btn-success me-1" title="Definitief maken">
-                                                    <i class="bx bx-lock fs-5"></i>
-                                                    <span class="visually-hidden">Definitief</span>
-                                                </button>
-                                            </form> *@
-                                            <a href="#ModalDeleteInvoice"
-                                               class="deleteInvoice ms-1 me-1"
-                                               data-id="@r.Id"
-                                               data-issuer="@ViewBag.CompanyId"
-                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                <i class="bx bx-trash fs-5"></i>
-                                            </a>
-                                        }
-                                        else if (StatusIn(r.Status, InvoiceStatus.Issued))
-                                        {
-                                            @if (isAdminUser)
-                                            {
-                                                <a data-placement="top" title="Beperkt bewerken" data-original-title="Bewerken"
-                                                   asp-action="Edit"
-                                                   asp-route-id="@r.Id"
-                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                   asp-route-returnUrl="@returnUrl"
-                                                   class="ms-1 me-1">
-                                                    <i class="bx bx-pencil fs-5"></i>
-                                                    <span class="visually-hidden">Bewerken</span>
-                                                </a>
-                                            }
-                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                               asp-action="Detail"
-                                               asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                <i class="bx bx-show fs-5"></i>
-                                            </a>
-                                            <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
-                                               asp-action="Pdf"
-                                               asp-route-id="@r.Id"
-                                               target="_blank" class="ms-1 me-1">
-                                                <i class="fa-regular fa-file-pdf  fs-5"></i>
-                                            </a>
-                                            @if (r.ShowPrintButton)
-                                            {
-                                                <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
-                                                   asp-action="Pdf"
-                                                   asp-route-id="@r.Id"
-                                                   target="_blank" class="ms-1 me-1">
-                                                    <i class="bx bx-printer fs-5"></i>
-                                                </a>
-                                            }
-                                            @if (canManageInvoices)
-                                            {
-                                                <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
-                                                   asp-action="Send"
-                                                   asp-route-id="@r.Id"
-                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                    <i class="bx bx-send fs-5"></i>
-                                                </a>
-                                            }
-                                            @if (isAdminUser)
-                                            {
-                                                <a href="#ModalDeleteInvoice"
-                                                   class="deleteInvoice ms-1 me-1"
-                                                   data-id="@r.Id"
-                                                   data-issuer="@ViewBag.CompanyId"
-                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                    <i class="bx bx-trash fs-5"></i>
-                                                </a>
-                                            }
-                                        }
-                                        else if (StatusIn(r.Status, InvoiceStatus.Sent, InvoiceStatus.Paid, InvoiceStatus.Booked))
-                                        {
-                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                               asp-action="Detail"
-                                               asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                <i class="bx bx-show fs-5"></i>
-                                            </a>
-                                            <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
-                                               asp-action="Pdf"
-                                               asp-route-id="@r.Id"
-                                               target="_blank" class="ms-1 me-1">
-                                                <i class="fa-regular fa-file-pdf  fs-5"></i>
-                                            </a>
-                                            @if (r.ShowPrintButton)
-                                            {
-                                                <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
-                                                   asp-action="Pdf"
-                                                   asp-route-id="@r.Id"
-                                                   target="_blank" class="ms-1 me-1">
-                                                    <i class="bx bx-printer fs-5"></i>
-                                                </a>
-                                            }
-                                            @if (isAdminUser)
-                                            {
-                                                <a href="#ModalDeleteInvoice"
-                                                   class="deleteInvoice ms-1 me-1"
-                                                   data-id="@r.Id"
-                                                   data-issuer="@ViewBag.CompanyId"
-                                                   data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                    <i class="bx bx-trash fs-5"></i>
-                                                </a>
-                                            }
-                                        }
-                                        else if (StatusIn(r.Status, InvoiceStatus.Paid))
-                                        {
-                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                               asp-action="Detail"
-                                               asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                <i class="bx bx-show fs-5"> </i>
-                                            </a>
-                                            <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
-                                               asp-action="Pdf"
-                                               asp-route-id="@r.Id"
-                                               target="_blank" class="ms-1 me-1">
-                                                <i class="fa-regular fa-file-pdf  fs-5"></i>
-                                            </a>
-                                        }
-                                        else
-                                        {
-                                            <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                               asp-action="Detail"
-                                               asp-route-id="@r.Id"
-                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                <i class="bx bx-show fs-5"></i>
-                                            </a>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
+                            <td class="col-grow td-ellipsis" title="@r.ClientName">@r.ClientName</td>
 
-                </table>
+                            <td class="col-fit text-end text-nowrap">
+                                @(r.GrossTotal.HasValue ? r.GrossTotal.Value.ToString("C", culture) : "-")
+                            </td>
+
+                            <td class="col-fit status-col" data-order="@r.StatusLabel">
+                                <span class="status-icon" style="color:@statusDisplay.Color">
+                                    <i class="@statusDisplay.Icon fs-5"></i>
+                                </span>
+
+                                @if (r.DigitallySent)
+                                {
+                                    <span class="status-icon"
+                                          style="color:saddlebrown"
+                                          data-bs-toggle="tooltip"
+                                          data-bs-placement="top"
+                                          title="Verzonden via peppol">
+                                        <i class="bx bx-planet fs-5"></i>
+                                    </span>
+                                }
+                            </td>
+
+                            <td class="col-fit td-ellipsis" title="@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)">
+                                @(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)
+                            </td>
+
+                            <td class="col-fit text-nowrap">@r.SendMethod</td>
+
+                            <td class="col-fit text-end actions text-nowrap">
+                                                         <a data-placement="top" title="Dupliceren" data-original-title="Dupliceren"
+                                                           asp-action="Create"
+                                                           asp-route-issuerId="@ViewBag.CompanyId"
+                                                           asp-route-duplicateInvoiceId="@r.Id"
+                                                           class="ms-1 me-1">
+                                                            <i class="bx bx-copy fs-5"></i>
+                                                            <span class="visually-hidden">Dupliceren</span>
+                                                        </a>
+                                                    @if (StatusIn(r.Status, InvoiceStatus.Draft))
+                                                    {
+                                                        <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
+                                                           asp-action="Edit"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-returnUrl="@returnUrl"
+                                                           class="ms-1 me-1">
+                                                            <i class="bx bx-pencil fs-5"></i>
+                                                            <span class="visually-hidden">Bewerken</span>
+                                                        </a>
+                                                            <a data-placement="top" title="Details" data-original-title="Details"
+                                                               asp-action="Detail"
+                                                               asp-route-id="@r.Id"
+                                                               asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                               class="ms-1 me-1">
+                                                                <i class="bx bx-show fs-5"></i>
+                                                                <span class="visually-hidden">Details</span>
+                                                            </a>
+                                                        <a data-placement="top" title="Nummeren" data-original-title="Nummeren"
+                                                           asp-action="Issue"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                           class="ms-1 me-1">
+                                                            <i class="bx bx-lock fs-5"> </i>
+                                                            <span class="visually-hidden">Nummeren</span>
+                                                        </a>
+                                                        @* <form asp-action="Issue"
+                                                              asp-controller="Invoices"
+                                                              method="post"
+                                                              class="d-inline">
+                                                            <input type="hidden" name="id" value="@r.Id" />
+                                                            <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
+                                                            <button type="submit" class="btn btn-xs btn-success me-1" title="Definitief maken">
+                                                                <i class="bx bx-lock fs-5"></i>
+                                                                <span class="visually-hidden">Definitief</span>
+                                                            </button>
+                                                        </form> *@
+                                                        <a href="#ModalDeleteInvoice"
+                                                           class="deleteInvoice ms-1 me-1"
+                                                           data-id="@r.Id"
+                                                           data-issuer="@ViewBag.CompanyId"
+                                                           data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                            <i class="bx bx-trash fs-5"></i>
+                                                        </a>
+                                                    }
+                                                    else if (StatusIn(r.Status, InvoiceStatus.Issued))
+                                                    {
+                                                        @if (isAdminUser)
+                                                        {
+                                                            <a data-placement="top" title="Beperkt bewerken" data-original-title="Bewerken"
+                                                               asp-action="Edit"
+                                                               asp-route-id="@r.Id"
+                                                               asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                               asp-route-returnUrl="@returnUrl"
+                                                               class="ms-1 me-1">
+                                                                <i class="bx bx-pencil fs-5"></i>
+                                                                <span class="visually-hidden">Bewerken</span>
+                                                            </a>
+                                                        }
+                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                                           asp-action="Detail"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                            <i class="bx bx-show fs-5"></i>
+                                                        </a>
+                                                        <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                                           asp-action="Pdf"
+                                                           asp-route-id="@r.Id"
+                                                           target="_blank" class="ms-1 me-1">
+                                                            <i class="fa-regular fa-file-pdf  fs-5"></i>
+                                                        </a>
+                                                        @if (r.ShowPrintButton)
+                                                        {
+                                                            <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                                               asp-action="Pdf"
+                                                               asp-route-id="@r.Id"
+                                                               target="_blank" class="ms-1 me-1">
+                                                                <i class="bx bx-printer fs-5"></i>
+                                                            </a>
+                                                        }
+                                                        @if (canManageInvoices)
+                                                        {
+                                                            <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                                               asp-action="Send"
+                                                               asp-route-id="@r.Id"
+                                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                                <i class="bx bx-send fs-5"></i>
+                                                            </a>
+                                                        }
+                                                        @if (isAdminUser)
+                                                        {
+                                                            <a href="#ModalDeleteInvoice"
+                                                               class="deleteInvoice ms-1 me-1"
+                                                               data-id="@r.Id"
+                                                               data-issuer="@ViewBag.CompanyId"
+                                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                                <i class="bx bx-trash fs-5"></i>
+                                                            </a>
+                                                        }
+                                                    }
+                                                    else if (StatusIn(r.Status, InvoiceStatus.Sent, InvoiceStatus.Paid, InvoiceStatus.Booked))
+                                                    {
+                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                                           asp-action="Detail"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                            <i class="bx bx-show fs-5"></i>
+                                                        </a>
+                                                        <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                                           asp-action="Pdf"
+                                                           asp-route-id="@r.Id"
+                                                           target="_blank" class="ms-1 me-1">
+                                                            <i class="fa-regular fa-file-pdf  fs-5"></i>
+                                                        </a>
+                                                        @if (r.ShowPrintButton)
+                                                        {
+                                                            <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                                               asp-action="Pdf"
+                                                               asp-route-id="@r.Id"
+                                                               target="_blank" class="ms-1 me-1">
+                                                                <i class="bx bx-printer fs-5"></i>
+                                                            </a>
+                                                        }
+                                                        @if (isAdminUser)
+                                                        {
+                                                            <a href="#ModalDeleteInvoice"
+                                                               class="deleteInvoice ms-1 me-1"
+                                                               data-id="@r.Id"
+                                                               data-issuer="@ViewBag.CompanyId"
+                                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                                <i class="bx bx-trash fs-5"></i>
+                                                            </a>
+                                                        }
+                                                    }
+                                                    else if (StatusIn(r.Status, InvoiceStatus.Paid))
+                                                    {
+                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                                           asp-action="Detail"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                            <i class="bx bx-show fs-5"> </i>
+                                                        </a>
+                                                        <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                                           asp-action="Pdf"
+                                                           asp-route-id="@r.Id"
+                                                           target="_blank" class="ms-1 me-1">
+                                                            <i class="fa-regular fa-file-pdf  fs-5"></i>
+                                                        </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                                           asp-action="Detail"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                            <i class="bx bx-show fs-5"></i>
+                                                        </a>
+                                                    }
+                                               </td>
+                                        </tr>
+                                    }
+                        
+                    </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-    </div>
+    </div> 
 }
 else
 {
@@ -369,141 +405,158 @@ else
         </div>
     </div>
 }
-</div>
+
+
 
 <div id="ModalDeleteInvoice" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-invoice-container"></div>
 </div>
 
+        
 @section PageScripts
 {
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
-    <script src="https://cdn.datatables.net/v/bs5/dt-2.2.2/b-3.2.2/rr-1.5.0/datatables.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
     <script>
-        (function(){
-          // delegated events vanuit de container die ALTIJD bestaat
-          const $host = $('#stagesList');
+          (function(){
+            // delegated events vanuit de container die ALTIJD bestaat
+            const $host = $('#stagesList');
 
-          // Toggle alle rows in dezelfde groep
-          $(document).on('change', '#stagesList .js-check-all', function(){
-            const g = $(this).data('group');
-            const checked = this.checked;
-            $host.find(`.js-stage-row[data-group='${g}']`).prop('checked', checked).trigger('change');
-          });
-
-          // Sync master bij individuele toggles (en evt. totals herberekenen)
-          $(document).on('change', '#stagesList .js-stage-row', function(){
-            const g = $(this).data('group');
-            const $rows   = $host.find(`.js-stage-row[data-group='${g}']`);
-            const $master = $host.find(`.js-check-all[data-group='${g}']`);
-            const allChecked = $rows.length > 0 && $rows.filter(':checked').length === $rows.length;
-            $master.prop('checked', allChecked);
-
-            // Als je subtotaal/totals hebt, herbereken hier:
-            // recalcTotals();  // <- alleen als je earlier totals-code gebruikt
-          });
-        })();
-        // ===== Naamgeving voor weergave =====
-        // Pas deze 2 woorden aan en alle taalregels volgen mee
-        const entity = {
-          singular: 'factuur',
-          plural: 'facturen'
-        };
-
-        // Modal verwijderen factuur laden
-
-         $(document).on('click', '.deleteInvoice', function (ev) {
-            ev.preventDefault();
-            const id = $(this).data('id');
-            const issuerId = $(this).data('issuer');
-            const url = '@Url.Action("ModalDelete", "Invoices")';
-            $('#delete-invoice-container').html('<div class="p-3 text-muted">Laden…</div>');
-            $.get(url, { id: id, issuerCompanyId: issuerId })
-                .done(function (html) {
-                    $('#delete-invoice-container').html(html);
-                })
-                .fail(function () {
-                    $('#delete-invoice-container').html('<div class="p-3 text-danger">Kon factuur niet laden.</div>');
-                });
-
-            $.magnificPopup.open({
-                items: {
-                    src: '#ModalDeleteInvoice',
-                    type: 'inline'
-                }
+            // Toggle alle rows in dezelfde groep
+            $(document).on('change', '#stagesList .js-check-all', function(){
+              const g = $(this).data('group');
+              const checked = this.checked;
+              $host.find(`.js-stage-row[data-group='${g}']`).prop('checked', checked).trigger('change');
             });
-        });
 
-        // Bouw de DataTables language-teksten in NL met dynamische naamgeving
-        function buildLanguage(e) {
-          const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
-          const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+            // Sync master bij individuele toggles (en evt. totals herberekenen)
+            $(document).on('change', '#stagesList .js-stage-row', function(){
+              const g = $(this).data('group');
+              const $rows   = $host.find(`.js-stage-row[data-group='${g}']`);
+              const $master = $host.find(`.js-check-all[data-group='${g}']`);
+              const allChecked = $rows.length > 0 && $rows.filter(':checked').length === $rows.length;
+              $master.prop('checked', allChecked);
 
-          return {
-            processing:     "Bezig met verwerken…",
-            search:         "Zoeken:",
-            lengthMenu:     "Toon _MENU_",
-            info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
-            infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
-            infoFiltered:   "(gefilterd uit _MAX_ totaal)",
-            loadingRecords: "Bezig met laden…",
-            zeroRecords:    `Geen ${e.plural} om weer te geven`,
-            emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
-            aria: {
-              sortAscending:  ": activeer om oplopend te sorteren",
-              sortDescending: ": activeer om aflopend te sorteren"
-            }
+              // Als je subtotaal/totals hebt, herbereken hier:
+              // recalcTotals();  // <- alleen als je earlier totals-code gebruikt
+            });
+          })();
+          // ===== Naamgeving voor weergave =====
+          // Pas deze 2 woorden aan en alle taalregels volgen mee
+          const entity = {
+            singular: 'factuur',
+            plural: 'facturen'
           };
-        }
 
-        // ===== Init DataTable =====
-             const table = new DataTable('#datatable-invoice-list', {
-          order: [[1, 'desc']],
-          autoWidth: false,          // <-- belangrijk
-          language: buildLanguage(entity),
+          // Modal verwijderen factuur laden
 
-          layout: {
-            topStart: { buttons: [ /* ... */ ] }
-          },
+           $(document).on('click', '.deleteInvoice', function (ev) {
+              ev.preventDefault();
+              const id = $(this).data('id');
+              const issuerId = $(this).data('issuer');
+              const url = '@Url.Action("ModalDelete", "Invoices")';
+              $('#delete-invoice-container').html('<div class="p-3 text-muted">Laden…</div>');
+              $.get(url, { id: id, issuerCompanyId: issuerId })
+                  .done(function (html) {
+                      $('#delete-invoice-container').html(html);
+                  })
+                  .fail(function () {
+                      $('#delete-invoice-container').html('<div class="p-3 text-danger">Kon factuur niet laden.</div>');
+                  });
 
-          columnDefs: [
-            // acties: niet sorteerbaar/zoekbaar
-            { targets: -1, orderable: false, searchable: false, width: "1%" },
+              $.magnificPopup.open({
+                  items: {
+                      src: '#ModalDeleteInvoice',
+                      type: 'inline'
+                  }
+              });
+          });
 
-            // “fit” kolommen: forceer minimale breedte
-            { targets: [0,1,2,4,5,6,7,8], width: "1%" },
+          // Bouw de DataTables language-teksten in NL met dynamische naamgeving
+          function buildLanguage(e) {
+            const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+            const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
 
-            // klant = grow (rest)
-            { targets: 3, width: "100%" }
-          ]
-        });
+            return {
+              processing:     "Bezig met verwerken…",
+              search:         "Zoeken:",
+              lengthMenu:     "Toon _MENU_",
+              info:           `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+              infoEmpty:      `${capSing} 0 tot 0 van 0 ${capPlur}`,
+              infoFiltered:   "(gefilterd uit _MAX_ totaal)",
+              loadingRecords: "Bezig met laden…",
+              zeroRecords:    `Geen ${e.plural} om weer te geven`,
+              emptyTable:     `Er zijn geen ${e.plural} om weer te geven`,
+              aria: {
+                sortAscending:  ": activeer om oplopend te sorteren",
+                sortDescending: ": activeer om aflopend te sorteren"
+              }
+            };
+          }
 
-        // ===== UI-aanpassingen / custom knoppen =====
-        // Verberg standaard knoppen/search indien je eigen UI gebruikt
-        $(".buttons-excel").hide();
-        $(".buttons-pdf").hide();
-        $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
+          // ===== Init DataTable =====
+               const table = new DataTable('#datatable-invoice-list', {
+            order: [[1, 'desc']],
+            autoWidth: false,          // <-- belangrijk
+            language: buildLanguage(entity),
 
-        // Koppel custom export-knoppen
-        $("#btnExportExcel").on('click', function () {
-          $(".buttons-excel").trigger("click");
-        });
-        $("#btnExportPdf").on('click', function () {
-          $(".buttons-pdf").trigger("click");
-        });
+            layout: {
+              topStart: { buttons: [ /* ... */ ] }
+            },
 
-        // Verplaats knoppen naar een eigen container
-        table.buttons(0, null).containers().appendTo('#colvis-container');
+            columnDefs: [
+              // acties: niet sorteerbaar/zoekbaar
+              { targets: -1, orderable: false, searchable: false, width: "1%" },
 
-        // ===== Custom zoekveld =====
-        $('#search-term').on('keyup', function () {
-          table.search($(this).val()).draw();
-        });
+              // “fit” kolommen: forceer minimale breedte
+              { targets: [0,1,2,4,5,6,7,8], width: "1%" },
 
+              // klant = grow (rest)
+              { targets: 3, width: "100%" }
+            ]
+          });
 
+          // ===== UI-aanpassingen / custom knoppen =====
+          // Verberg standaard knoppen/search indien je eigen UI gebruikt
+          $(".buttons-excel").hide();
+          $(".buttons-pdf").hide();
+          $(".dt-search").hide(); // DataTables v2 (v1: .dataTables_filter)
+
+          // Koppel custom export-knoppen
+          $("#btnExportExcel").on('click', function () {
+            $(".buttons-excel").trigger("click");
+          });
+          $("#btnExportPdf").on('click', function () {
+            $(".buttons-pdf").trigger("click");
+          });
+
+          // Verplaats knoppen naar een eigen container
+          table.buttons(0, null).containers().appendTo('#colvis-container');
+
+          // ===== Custom zoekveld =====
+          $('#search-term').on('keyup', function () {
+            table.search($(this).val()).draw();
+          });
+
+        const bookyearSelect = $('#bookyear-filter-select');
+          let activeBookyear = bookyearSelect.val() || '';
+          $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+            if (settings.nTable.id !== 'datatable-invoice-list') return true;
+            if (!activeBookyear) return true;
+            const node = table.row(dataIndex).node();
+            if (!node) return true;
+            return $(node).data('bookyear')?.toString() === activeBookyear.toString();
+          });
+
+          bookyearSelect.on('change', function () {
+            activeBookyear = $(this).val() || '';
+            table.draw();
+          });
+
+          if (activeBookyear) {
+            table.draw();
+          }
 
     </script>
-
-
 }

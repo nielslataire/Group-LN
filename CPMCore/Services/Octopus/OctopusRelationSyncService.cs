@@ -80,7 +80,7 @@ namespace CPMCore.Services.Octopus
                             continue;
                         }
 
-                        supplier = CreateSupplierEntity(relation, normalizedVat);
+                        supplier = await CreateSupplierEntityAsync(relation, normalizedVat, ct);
                         _db.CompanyInfo.Add(supplier);
                         await _db.SaveChangesAsync(ct);
                         suppliersCreated++;
@@ -108,7 +108,7 @@ namespace CPMCore.Services.Octopus
                             continue;
                         }
 
-                        client = CreateClientEntity(relation, normalizedVat);
+                        client = await CreateClientEntityAsync(relation, normalizedVat, ct);
                         _db.ClientAccount.Add(client);
                         await _db.SaveChangesAsync(ct);
                         clientsCreated++;
@@ -321,17 +321,21 @@ namespace CPMCore.Services.Octopus
                 .ToList();
         }
 
-        private static CompanyInfo CreateSupplierEntity(OctopusRelation relation, string normalizedVat)
+        private async Task<CompanyInfo> CreateSupplierEntityAsync(OctopusRelation relation, string normalizedVat, CancellationToken ct)
         {
+            var postCodeId = await ResolvePostalCodeIdAsync(relation.PostalCode, relation.City, ct);
+            var vatStatus = ResolveSupplierVatStatus(relation.VatType);
+
             return new CompanyInfo
             {
                 BedrijfsNaam = relation.Name ?? relation.Firstname ?? string.Empty,
                 Ondernemingsnummer = normalizedVat,
                 VatNumber = normalizedVat,
-                VatStatus = SupplierFormViewModel.VatStatusBtwPlichtig,
+                VatStatus = vatStatus,
                 Straat = relation.StreetAndNr,
                 Postcode = relation.PostalCode,
                 Gemeente = relation.City,
+                PostCodeId = postCodeId,
                 LandCode = relation.Country,
                 Telefoon1 = relation.Telephone,
                 Gsm = relation.Mobile,
@@ -342,24 +346,69 @@ namespace CPMCore.Services.Octopus
             };
         }
 
-        private static ClientAccount CreateClientEntity(OctopusRelation relation, string normalizedVat)
+        private async Task<ClientAccount> CreateClientEntityAsync(OctopusRelation relation, string normalizedVat, CancellationToken ct)
         {
             var name = relation.Name ?? relation.Firstname ?? "Nieuwe klant";
+            var isIndividual = IsIndividualVatType(relation.VatType) || string.IsNullOrWhiteSpace(normalizedVat);
+            var postCodeId = await ResolvePostalCodeIdAsync(relation.PostalCode, relation.City, ct);
 
             return new ClientAccount
             {
-                Name = name,
-                CompanyName = name,
+                Name = isIndividual ? name : string.Empty,
+                CompanyName = isIndividual ? string.Empty : name,
                 Vatnumber = normalizedVat,
                 Street = relation.StreetAndNr,
                 InvoiceStreet = relation.StreetAndNr,
-                PostalCodeId = null,
-                InvoicePostalCodeId = null,
+                PostalCodeId = postCodeId,
+                InvoicePostalCodeId = postCodeId,
                 InvoiceAddress = false,
                 Email = relation.Email,
                 InvoiceEmail = relation.Email,
                 OctopusRelationId = relation.RelationIdentificationServiceData?.RelationKey?.Id
             };
+        }
+
+        private async Task<int?> ResolvePostalCodeIdAsync(string? postalCode, string? city, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(postalCode))
+            {
+                return null;
+            }
+
+            var normalizedPostal = postalCode.Trim();
+            var matches = await _db.PostalCode
+                .Where(p => p.Postcode == normalizedPostal)
+                .ToListAsync(ct);
+
+            if (matches.Count == 1)
+            {
+                return matches[0].PostcodeId;
+            }
+
+            if (matches.Count > 1 && !string.IsNullOrWhiteSpace(city))
+            {
+                var normalizedCity = NormalizeName(city);
+                var cityMatch = matches.FirstOrDefault(p => NormalizeName(p.Gemeente) == normalizedCity);
+                if (cityMatch != null)
+                {
+                    return cityMatch.PostcodeId;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool IsIndividualVatType(int? vatType)
+            => vatType is 7 or 8 or 9;
+
+        private static string ResolveSupplierVatStatus(int? vatType)
+        {
+            if (vatType == 10)
+            {
+                return SupplierFormViewModel.VatStatusNietBtwPlichtig;
+            }
+
+            return SupplierFormViewModel.VatStatusBtwPlichtig;
         }
 
         private static string NormalizeVat(string? vat)

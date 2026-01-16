@@ -429,11 +429,16 @@ $('#partySelect')
                 return;
             }
         }
-            enforceModeByParty();
-            toggleProjectContract();
-            hardResetUI();
+        enforceModeByParty();
+        toggleProjectContract();
+        if (window.InvoiceIsEditing === true) {
             if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
-        });
+            if (window.updateSaveButtonState) window.updateSaveButtonState();
+            return;
+        }
+        hardResetUI();
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
 
     $('.js-datepicker').datepicker({
         format: 'dd/MM/yyyy',

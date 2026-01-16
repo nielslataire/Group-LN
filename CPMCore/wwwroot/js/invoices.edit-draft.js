@@ -26,6 +26,9 @@
             window.skipPartySelectOnce = true;
             $party.append(option).trigger('change');
             setPartyHiddenFields(initial.party.value);
+            setTimeout(() => {
+                window.skipPartySelectOnce = false;
+            }, 0);
         }
     }
 

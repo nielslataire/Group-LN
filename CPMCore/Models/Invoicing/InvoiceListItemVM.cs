@@ -26,5 +26,6 @@
         public bool ShowPrintButton { get; set; }
         public string? ProjectName { get; set; }
         public string SendMethod { get; set; } = "Niet verzonden";
+        public string? BookyearLabel { get; set; }
     }
 }

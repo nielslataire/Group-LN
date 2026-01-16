@@ -353,7 +353,7 @@
                     </button>
                 </div>
                 <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-                    <a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+                    <a href="@Url.Action("Index", "Invoices", new { issuerCompanyId = Model.IssuerCompanyId })" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
                 </div>
             </div>
         </div>
@@ -365,6 +365,13 @@
 </form>
 
 @section PageScripts {
+    @if (ViewBag.DuplicateInvoiceJson != null)
+    {
+        <script>
+            window.InvoiceIsEditing = true;
+            window.InitialInvoice = @Html.Raw(ViewBag.DuplicateInvoiceJson);
+        </script>
+    }
     <script src="~/lib/select2/js/select2.js"></script>
     <script src="/lib/select2/js/i18n/nl.js"></script>
     <script src="~/lib/bootstrap-datepicker/js/bootstrap-datepicker.js"></script>
@@ -387,6 +394,7 @@
     <script src="~/js/invoices.freelines.js"></script>
     <script src="~/js/invoices.co.js"></script>
     <script src="~/js/invoices.preview.js"></script>
+    <script src="~/js/invoices.edit-draft.js"></script>
     <script src="~/js/invoices.core.js"></script>
 
  

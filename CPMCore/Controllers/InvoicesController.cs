@@ -124,6 +124,17 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> Index(int issuerCompanyId)
         {
             var bos = await _invoices.GetByCompanyAsync(issuerCompanyId);
+            var bookyears = await _db.OctopusBookyears
+                .Where(b => b.IssuerCompanyId == issuerCompanyId)
+                .OrderByDescending(b => b.EndDate)
+                .ToListAsync();
+
+            string? ResolveBookyearLabel(DateOnly invoiceDate)
+            {
+                var invoiceDateTime = invoiceDate.ToDateTime(TimeOnly.MinValue);
+                var match = bookyears.FirstOrDefault(b => invoiceDateTime >= b.StartDate && invoiceDateTime <= b.EndDate);
+                return match != null ? FormatBookyearLabel(match.StartDate, match.EndDate) : invoiceDate.Year.ToString();
+            }
             var vms = bos
             .Select(x =>
             {
@@ -163,7 +174,8 @@ namespace CPMCore.Controllers
                     DigitalSendSkipped = skipDigitalSend,
                     ShowPrintButton = needsPrint,
                     ProjectName = x.ProjectName,
-                    SendMethod = DetermineSendMethod(x.OctopusDeliveryState, x.HasEmailLog, needsPrint)
+                    SendMethod = DetermineSendMethod(x.OctopusDeliveryState, x.HasEmailLog, needsPrint),
+                    BookyearLabel = ResolveBookyearLabel(x.InvoiceDate)
                 };
             })
                 .OrderByDescending(x => x.InvoiceSortValue)
@@ -172,6 +184,9 @@ namespace CPMCore.Controllers
 
             ViewBag.CompanyName = await _companies.GetIssuerNameAsync(issuerCompanyId);
             ViewBag.CompanyId = issuerCompanyId;
+            ViewBag.DefaultBookyearLabel = bookyears.FirstOrDefault() is { } latestBookyear
+              ? FormatBookyearLabel(latestBookyear.StartDate, latestBookyear.EndDate)
+              : vms.Select(v => v.BookyearLabel).FirstOrDefault();
             SetIndexBreadcrumb(issuerCompanyId, ViewBag.CompanyName as string);
             return View(vms);
         }
@@ -717,15 +732,25 @@ namespace CPMCore.Controllers
 
         // CREATE (GET)
         [HttpGet]
-        public async Task<IActionResult> Create(int? issuerId = null, CancellationToken ct = default)
+        public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, CancellationToken ct = default)
         {
             // haal alles via service
             var issuersBo = await _ics.ListActiveIssuersAsync(ct);
             var termsBo = await _ics.ListPaymentTermsAsync(ct);
 
+            InvoiceDetailBO? duplicateDetail = null;
+            if (duplicateInvoiceId.HasValue && duplicateInvoiceId.Value > 0)
+            {
+                duplicateDetail = await _invoices.GetDetailAsync(duplicateInvoiceId.Value, ct);
+                if (duplicateDetail == null)
+                {
+                    AddMessage("error", "Factuur niet gevonden om te dupliceren.", "Factuur");
+                }
+            }
 
             // gekozen issuer (param of eerste actieve)
-            var selectedIssuerId = issuerId
+            var selectedIssuerId = duplicateDetail?.IssuerCompanyId
+                ?? issuerId
                 ?? (await _ics.GetFirstActiveIssuerIdAsync(ct))
                 ?? 0;
 
@@ -752,11 +777,21 @@ namespace CPMCore.Controllers
                 .DefaultVatTypeId;
 
 
+            int? selectedAccountId = defaultAccountId;
+            if (duplicateDetail != null && !string.IsNullOrWhiteSpace(duplicateDetail.BankAccount))
+            {
+                selectedAccountId = accountsBo
+                    .FirstOrDefault(a => string.Equals(a.Iban, duplicateDetail.BankAccount, StringComparison.OrdinalIgnoreCase))
+                    ?.Id ?? selectedAccountId;
+            }
+
             var vm = new InvoiceComposeVM
             {
                 IssuerCompanyId = selectedIssuerId,
-                PaymentTermId = selectedTermId,
-                VatTypeId = selectedVatId,
+                PaymentTermId = duplicateDetail?.PaymentTermId ?? selectedTermId,
+                VatTypeId = duplicateDetail?.Lines?.FirstOrDefault()?.VatTypeId ?? selectedVatId,
+                IssuerBankAccountId = selectedAccountId,
+                InvoiceDate = duplicateDetail?.InvoiceDate ?? DateOnly.FromDateTime(DateTime.Today),
 
                 Issuers = issuersBo
                     .Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId))
@@ -779,7 +814,6 @@ namespace CPMCore.Controllers
                      })
                     .ToList(),
 
-                IssuerBankAccountId = defaultAccountId,
                 IssuerBankAccounts = accountsBo
                     .Select(a => new SelectListItem
                     {
@@ -787,10 +821,46 @@ namespace CPMCore.Controllers
                         Text = string.IsNullOrWhiteSpace(a.DisplayName)
                             ? a.Iban
                             : $"{a.DisplayName} ({a.Iban})",
-                        Selected = defaultAccountId.HasValue && a.Id == defaultAccountId.Value
+                        Selected = selectedAccountId.HasValue && a.Id == selectedAccountId.Value
                     })
                     .ToList()
             };
+
+            if (duplicateDetail != null)
+            {
+                vm.Mode = duplicateDetail.InvoiceMode ?? InvoiceMode.Free;
+                vm.HeaderDescription = NormalizeMultiline(duplicateDetail.HeaderText);
+                vm.DetailDescription = NormalizeMultiline(duplicateDetail.DetailText);
+                vm.FooterDescription = NormalizeMultiline(duplicateDetail.ExtraInfo);
+                vm.ProjectId = duplicateDetail.ProjectId;
+                vm.SupplierContractId = duplicateDetail.SupplierContractId;
+                vm.IsCreditNote = duplicateDetail.IsCreditNote;
+                vm.Lines = MapLinesForCompose(duplicateDetail.Lines);
+
+                if (duplicateDetail.CompanyId.HasValue)
+                {
+                    vm.PartyType = InvoicePartyType.Supplier;
+                    vm.PartyId = duplicateDetail.CompanyId;
+                }
+                else if (duplicateDetail.ClientType.HasValue && duplicateDetail.ClientId.HasValue)
+                {
+                    vm.PartyType = duplicateDetail.ClientType.Value switch
+                    {
+                        1 => InvoicePartyType.ClientAccount,
+                        2 => InvoicePartyType.ClientContact,
+                        _ => vm.PartyType
+                    };
+                    vm.PartyId = duplicateDetail.ClientId;
+                }
+
+                var initialJson = BuildDuplicateInitialJson(duplicateDetail, vm);
+                ViewBag.DuplicateInvoiceJson = initialJson;
+            }
+
+            if (selectedIssuerId > 0)
+                await SetIssuerViewBagsAsync(selectedIssuerId, ct);
+            SetCreateBreadcrumb(selectedIssuerId, ViewBag.CompanyName as string);
+            ViewData["Title"] = "Nieuwe factuur";
 
             return View(vm);
         }
@@ -1688,6 +1758,51 @@ namespace CPMCore.Controllers
             }).ToList();
         }
 
+        private string BuildDuplicateInitialJson(InvoiceDetailBO detail, InvoiceComposeVM vm)
+        {
+            var initialLines = vm.Lines?.Select(line =>
+            {
+                var matchedVatType = vm.VatTypes?.FirstOrDefault(v => v.Id == line.VatTypeId)
+                    ?? vm.VatTypes?.FirstOrDefault(v => string.Equals(v.Code, line.VatCode, StringComparison.OrdinalIgnoreCase))
+                    ?? vm.VatTypes?.FirstOrDefault(v => Math.Abs(v.BasePercentage - line.VatPercentage) < 0.001m);
+
+                return new
+                {
+                    text = line.Text,
+                    price = line.Price,
+                    vatPercentage = line.VatPercentage,
+                    vatTypeId = matchedVatType?.Id ?? line.VatTypeId,
+                    vatCode = line.VatCode ?? matchedVatType?.Code,
+                    discountPercent = line.DiscountPercent,
+                    discountAmount = line.DiscountAmount,
+                    paymentStageId = line.PaymentStageId,
+                    lineType = line.LineType,
+                    groupName = line.GroupName,
+                    utilityCost = line.UtilityCost,
+                    changeOrderDetailId = line.ChangeOrderDetailId,
+                    isSelected = line.IsSelected,
+                    stagePercentage = line.StagePercentage
+                };
+            });
+
+            var partyValue = BuildPartyLookupValue(vm.PartyType, vm.PartyId);
+            var initialData = new
+            {
+                invoiceDate = vm.InvoiceDate.ToString("dd/MM/yyyy"),
+                paymentTermId = vm.PaymentTermId,
+                vatTypeId = vm.VatTypeId,
+                issuerBankAccountId = vm.IssuerBankAccountId,
+                mode = (int)vm.Mode,
+                party = new { value = partyValue, text = detail.ClientName, type = vm.PartyType?.ToString() },
+                lines = initialLines
+            };
+
+            return System.Text.Json.JsonSerializer.Serialize(
+                initialData,
+                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }
+            );
+        }
+
         private static string? BuildPartyLookupValue(InvoicePartyType? type, int? id)
         {
             if (!type.HasValue || !id.HasValue)
@@ -1702,6 +1817,20 @@ namespace CPMCore.Controllers
             };
         }
 
+        private static string BuildInvoiceDetailBreadcrumbTitle(InvoiceDetailBO detail)
+        {
+            var typeLabel = string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase)
+                ? "Draft"
+                : detail.IsCreditNote
+                    ? "Creditnota"
+                    : "Factuur";
+
+            var displayId = string.IsNullOrWhiteSpace(detail.PublicId)
+                ? $"#{detail.Id}"
+                : detail.PublicId.Trim();
+
+            return $"{typeLabel} - {displayId}";
+        }
         private string? ResolveUserName()
         {
             var userName = User?.Identity?.Name;
@@ -1848,7 +1977,7 @@ namespace CPMCore.Controllers
                 ?? detail.IssuerLegalName
                 ?? detail.IssuerName;
 
-            var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
+            var detailTitle = BuildInvoiceDetailBreadcrumbTitle(detail);
             SetEditBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
             ViewData["Title"] = detailTitle;
 
@@ -3685,6 +3814,8 @@ END";
             var baseDigits = $"{yearDigits:0000}{numberDigits:000000}";
             return FormatBelgianStructuredMessage(baseDigits);
         }
+        private static string FormatBookyearLabel(DateTime startDate, DateTime endDate)
+           => $"{startDate:yyyy}-{endDate:yyyy}";
 
         private static string? FormatBelgianStructuredMessage(string baseDigits)
         {
@@ -3788,6 +3919,17 @@ END";
             };
 
             ViewData["BreadcrumbNode"] = edit;
+        }
+        private void SetCreateBreadcrumb(int issuerId, string? companyName)
+        {
+            var index = CreateIndexNode(issuerId, companyName);
+            var create = new MvcBreadcrumbNode(nameof(Create), ControllerName, "Nieuwe factuur")
+            {
+                Parent = index,
+                RouteValues = issuerId > 0 ? new { issuerId } : null
+            };
+
+            ViewData["BreadcrumbNode"] = create;
         }
 
         private object BuildEmailTemplateModel(InvoiceDetailBO detail, IssuerCompanyBO issuer, string? bankAccount, string currency)

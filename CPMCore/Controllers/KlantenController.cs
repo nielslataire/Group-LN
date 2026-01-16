@@ -221,6 +221,7 @@ namespace CPMCore.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(ClientFormViewModel model, CancellationToken ct)
         {
+            RemoveEmptyContacts(model);
             await BuildFormAsync(model, ct);
             ValidateClientType(model);
             ValidateIssuerCompanies(model);
@@ -322,6 +323,7 @@ namespace CPMCore.Controllers
                 return BadRequest();
             }
 
+            RemoveEmptyContacts(model);
             var client = await _db.ClientAccount
                 .Include(c => c.ClientContacts)
                 .Include(c => c.ClientAccountIssuerCompany)
@@ -971,6 +973,47 @@ namespace CPMCore.Controllers
             }
         }
 
+        private void RemoveEmptyContacts(ClientFormViewModel model)
+        {
+            if (model.Contacts == null)
+            {
+                model.Contacts = new List<ContactInputViewModel>();
+                return;
+            }
+
+            var cleaned = new List<ContactInputViewModel>();
+            for (var i = 0; i < model.Contacts.Count; i++)
+            {
+                var contact = model.Contacts[i];
+                if (contact == null)
+                {
+                    continue;
+                }
+
+                var isEmpty = string.IsNullOrWhiteSpace(contact.Name)
+                    && string.IsNullOrWhiteSpace(contact.Forename)
+                    && string.IsNullOrWhiteSpace(contact.Email)
+                    && string.IsNullOrWhiteSpace(contact.Phone)
+                    && string.IsNullOrWhiteSpace(contact.Mobile);
+
+                if (isEmpty)
+                {
+                    var prefix = $"Contacts[{i}].";
+                    var keysToRemove = ModelState.Keys
+                        .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    foreach (var key in keysToRemove)
+                    {
+                        ModelState.Remove(key);
+                    }
+                    continue;
+                }
+
+                cleaned.Add(contact);
+            }
+
+            model.Contacts = cleaned;
+        }
         private static bool HasClientDataChanged(ClientAccount entity, ClientFormViewModel model)
         {
             static bool Different(string? a, string? b)
