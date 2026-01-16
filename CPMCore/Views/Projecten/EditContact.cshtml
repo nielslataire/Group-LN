@@ -1,6 +1,14 @@
 ﻿@model CPMCore.Models.Projecten.ContactEditModel
 @{
     ViewData["Title"] = "Contact bewerken";
+    var contactMethods = new[]
+    {
+    new { Value = "Group LN", Text = "Website Group LN" },
+    new { Value = "BCO", Text = "Website BCO" },
+    new { Value = "Telefoon",   Text = "Telefoon" },
+    new { Value = "Email",   Text = "E-mail" },
+    new { Value = "Makelaar",  Text = "Website makelaar" }
+};
 }
 
 <section class="body">
@@ -33,6 +41,24 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Telefoon</label>
                                     <input type="text" class="form-control" name="NewPhone" value="@Model.NewPhone" />
+                                </div>
+                                   <div class="col-md-6">
+                                    <label class="form-label">Contactdatum</label>
+                                    <input type="date" class="form-control" name="ContactDate" value="@(Model.ContactDate?.ToString("yyyy-MM-dd") ?? string.Empty)" required />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Contact via</label>
+                                    <select class="form-select" name="ContactMethod" required>
+                                        <option value="">Kies een kanaal</option>
+                                        @foreach (var method in contactMethods)
+                                        {
+                                            var isSelected = string.Equals(method.Value, Model.ContactMethod, StringComparison.OrdinalIgnoreCase);
+
+                                            <option value="@method.Value" selected="@(isSelected ? "selected" : null)">
+                                                @method.Text
+                                            </option>
+                                        }
+                                    </select>
                                 </div>
                             </div>
 

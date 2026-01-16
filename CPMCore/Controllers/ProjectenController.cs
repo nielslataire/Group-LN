@@ -672,7 +672,8 @@ namespace CPMCore.Controllers
             var model = new ContactAddModel
             {
                 ProjectId = projectid,
-                ProjectName = projectName
+                ProjectName = projectName,
+                ContactDate = DateTime.Today
             };
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -718,8 +719,8 @@ namespace CPMCore.Controllers
                 Phone = model.Phone,
                 RequestType = "Contact",
                 Question = model.Comment,
-                CreatedAt = DateTime.Now,
-                SourceSite = InternalSourceSite,
+                CreatedAt = model.ContactDate?.Date ?? DateTime.Now,
+                SourceSite = model.ContactMethod,
                 Origin = User?.Identity?.Name ?? "Onbekende gebruiker"
             };
 
@@ -750,7 +751,9 @@ namespace CPMCore.Controllers
                 Firstname = latestContact?.Firstname,
                 Lastname = latestContact?.Lastname,
                 NewEmail = latestContact?.Email,
-                NewPhone = latestContact?.Phone
+                NewPhone = latestContact?.Phone,
+                ContactDate = latestContact?.CreatedAt.Date,
+                ContactMethod = latestContact?.SourceSite
             };
 
             return View(model);
@@ -771,7 +774,9 @@ namespace CPMCore.Controllers
                 Lastname = model.Lastname,
                 Fullname = $"{model.Firstname} {model.Lastname}".Trim(),
                 Email = model.NewEmail,
-                Phone = model.NewPhone
+                Phone = model.NewPhone,
+                CreatedAt = model.ContactDate?.Date ?? default,
+                SourceSite = model.ContactMethod
             };
 
             var response = service.UpdateContactRequestGroup(model.ProjectId, model.Email, model.Fullname, model.Phone, updatedValues);

@@ -119,29 +119,29 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
     private static void ComposePaymentSection(IContainer container, InvoiceVm vm, TemplateContext ctx)
     {
-
-        
-            if (IsCreditNote(vm))
+        if (IsCreditNote(vm))
+        {
+            container.Column(col =>
             {
-                container.Column(col =>
+                if (!string.IsNullOrWhiteSpace(vm.ExtraInfo))
                 {
-                    if (!string.IsNullOrWhiteSpace(vm.ExtraInfo))
+                    col.Item().Text(text =>
                     {
-                        col.Item().Text(text =>
-                        {
-                            var span = text.Span(vm.ExtraInfo);
-                            span.FontSize(7);
-                            span.Italic();
-                            ApplyFont(span);
-                        });
-                    }
+                        var span = text.Span(vm.ExtraInfo);
+                        span.FontSize(7);
+                        span.Italic();
+                        ApplyFont(span);
+                    });
+                }
 
-                    ComposeVatMentions(col, vm);
-                });
+                ComposeVatMentions(col, vm);
+            });
 
-                return;
-            }
-            var dueDateText = FormatDate(vm.Invoice.DueDate);
+            return;
+        }
+
+        var isProforma = IsProformaInvoice(vm);
+        var dueDateText = FormatDate(vm.Invoice.DueDate);
         var paymentDate = string.IsNullOrWhiteSpace(dueDateText) ? "—" : dueDateText;
 
         var account = !string.IsNullOrWhiteSpace(vm.Payment?.Iban)
@@ -181,10 +181,14 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
                         accountSpan.FontColor(primaryColor);
                     ApplyFont(accountSpan);
 
-                    var suffix = text.Span($" met gestructureerde mededeling {structuredText}");
-                    suffix.FontSize(9);
-                    suffix.Bold();
-                    ApplyFont(suffix);
+
+                    if (!isProforma)
+                    {
+                        var suffix = text.Span($" met gestructureerde mededeling {structuredText}");
+                        suffix.FontSize(9);
+                        suffix.Bold();
+                        ApplyFont(suffix);
+                    }
                 });
 
                 if (!string.IsNullOrWhiteSpace(vm.ExtraInfo))
@@ -200,7 +204,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
                 ComposeVatMentions(col, vm);
             });
 
-            if (vm.Payment?.QrEnabled == true && ctx.EpcQrPng is { Length: > 0 })
+            if (!isProforma && vm.Payment?.QrEnabled == true && ctx.EpcQrPng is { Length: > 0 })
             {
                 row.ConstantItem(Mm(32f))
                     .AlignRight()
@@ -231,6 +235,15 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
         var status = vm?.Invoice?.Status;
         return !string.IsNullOrWhiteSpace(status) && status.Contains("credit", StringComparison.OrdinalIgnoreCase);
+    }
+    private static bool IsProformaInvoice(InvoiceVm vm)
+    {
+        var status = vm?.Invoice?.Status;
+        if (string.IsNullOrWhiteSpace(status))
+            return false;
+
+        return status.Trim().Equals("Draft", StringComparison.OrdinalIgnoreCase)
+            || status.Trim().Equals("Concept", StringComparison.OrdinalIgnoreCase);
     }
     private static void ComposeContactSection(IContainer container, InvoiceVm vm)
     {

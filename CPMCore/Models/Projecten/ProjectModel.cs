@@ -1015,6 +1015,9 @@ namespace CPMCore.Models.Projecten
         public string Lastname { get; set; }
         public string NewEmail { get; set; }
         public string NewPhone { get; set; }
+        public DateTime? ContactDate { get; set; }
+        public string ContactMethod { get; set; }
+
     }
 
     public class ContactDeleteModel
@@ -1033,6 +1036,8 @@ namespace CPMCore.Models.Projecten
         public string Email { get; set; }
         public string Phone { get; set; }
         public string Comment { get; set; }
+        public DateTime? ContactDate { get; set; }
+        public string ContactMethod { get; set; }
     }
     public class DetailDocsModel
     {

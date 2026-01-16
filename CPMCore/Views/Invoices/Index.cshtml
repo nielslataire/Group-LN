@@ -11,7 +11,7 @@
 @functions {
     (string Icon, string Color) StatusIcon(InvoiceStatus status) => status switch
     {
-        InvoiceStatus.Draft => ("fa fa-pen", "#6c757d"),
+        InvoiceStatus.Draft => ("bx bx-edit", "#6c757d"),
         InvoiceStatus.Issued => ("bx bx-export", "#0dcaf0"),
         InvoiceStatus.Sent => ("bx bx-paper-plane", "#ffc107"),
         InvoiceStatus.PartiallyPaid => ("bx bx-wallet-note", "#fd7e14"),
@@ -21,7 +21,12 @@
         InvoiceStatus.Booked => ("bx bx-book", "#6f42c1"),
         _ => ("bx bx-help-circle", "#6c757d")
     };
-    string DocumentType(bool isCreditNote) => isCreditNote ? "Creditnota" : "Factuur";
+ string DocumentType(InvoiceStatus status, bool isCreditNote)
+        => status == InvoiceStatus.Draft
+            ? "Proforma factuur"
+            : isCreditNote
+                ? "Creditnota"
+                : "Factuur";
     bool StatusIn(InvoiceStatus status, params InvoiceStatus[] codes)
     {
         
@@ -42,37 +47,39 @@
 
     <style>
 
-        /* Alleen deze tabel compacter maken */
-        #datatable-invoice-list.dataTable > thead > tr > th,
-        #datatable-invoice-list.dataTable > tbody > tr > td {
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-            line-height: 1.2 !important;
-            vertical-align: middle !important;
+        /* ---- Kolomlogica: fit vs grow ---- */
+
+        /* Fit-kolommen: zo klein mogelijk, nooit wrappen */
+        #datatable-invoice-list th.col-fit,
+        #datatable-invoice-list td.col-fit {
+            width: 1%;
+            white-space: nowrap;
         }
 
-        /* Status-dot uit Porto: geen extra hoogte laten forceren */
-        #datatable-invoice-list .ecommerce-status {
-            display: inline-block;
-            margin: 0 !important;
-            line-height: 1 !important;
-            vertical-align: middle !important;
+        /* Grow-kolom: pakt de resterende ruimte */
+        #datatable-invoice-list th.col-grow,
+        #datatable-invoice-list td.col-grow {
+            width: 100%;
         }
 
-        /* Optioneel: iconen-kolom iets strakker */
-        #datatable-invoice-list td.actions i {
-            line-height: 1 !important;
+        /* Ellipsis voor lange tekst in cells (vooral klant) */
+        #datatable-invoice-list .td-ellipsis {
+            max-width: 1px; /* truc zodat ellipsis werkt in tables */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .status-col .status-icon {
+        /* Acties compacter + geen wrap */
+        #datatable-invoice-list td.actions a {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 1.75rem;
-            height: 1.75rem;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.05);
-            font-size: 1.1rem;
+        }
+
+        /* Optioneel: iets meer visuele hiërarchie in de tabel */
+        #datatable-invoice-list thead th {
+            font-weight: 600;
         }
 
         .status-col .badge {
@@ -123,26 +130,21 @@
     <div class="card card-modern">
         <div class="card-body">
             <div class="datatables-header-footer-wrapper  mt-2">
-
-                <table class="table table-responsive-md table-hover mb-0" id="datatable-invoice-list"
-                       style="min-width: 550px;" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
-
-                    <thead>
-                        <tr>
-
-                            <th>Factuurnr</th>
-                                <th>Status</th>
-                             <th>Type</th>
-                            <th>Klant</th>
-                            <th>Project</th>
-                            <th>Datum</th>
-                            
-                            <th>Verzendwijze</th>
-                            <th class="text-end">Totaal</th>
-                            <th class="text-end">Saldo</th>
-                            <th class="text-end">Acties</th>
-                        </tr>
-                    </thead>
+                    <div class="table-responsive-md">
+                        <table class="table table-hover mb-0 w-100 dt-invoice" id="datatable-invoice-list">
+                            <thead>
+                                <tr>
+                                    <th class="col-fit">Type</th>
+                                    <th class="col-fit">Factuurnr</th>
+                                    <th class="col-fit">Datum</th>
+                                    <th class="col-grow">Klant</th>
+                                    <th class="col-fit text-end">Totaal</th>
+                                    <th class="col-fit">Status</th>
+                                    <th class="col-fit">Project</th>
+                                    <th class="col-fit">Verzendwijze</th>
+                                    <th class="col-fit text-end">Acties</th>
+                                </tr>
+                            </thead>
 
                     <tbody>
                             @{
@@ -155,31 +157,34 @@
                                 var displayId = string.IsNullOrWhiteSpace(r.PublicId) ? $"[{r.Id}]" : r.PublicId;
                                 var shownId = isDraft ? string.Empty : displayId;
                                 var isIssued = StatusIn(r.Status, InvoiceStatus.Issued);
-                                var typeLabel = DocumentType(r.IsCreditNote);
+                             var typeLabel = DocumentType(r.Status, r.IsCreditNote);
                                 var statusDisplay = StatusIcon(r.Status);
 
                                 <tr>
-                                    <td data-order="@r.InvoiceSortValue">@(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))</td>
-                                    <td data-order="@r.StatusLabel" class="status-col">
-                                        <span class="status-icon" style="color: @statusDisplay.Color;">
-                                            <i class="@statusDisplay.Icon"></i>
-                                        </span>
-                                        @if (r.DigitallySent)
-                                        {
-                                            <span class="status-icon" style="color:saddlebrown" data-toggle="tooltip" data-placement="top" title="Verzonden via peppol">
-                                                <i class="bx bx-planet" ></i>
+                                        <td class="col-fit">@typeLabel</td>
+                                        <td class="col-fit" data-order="@r.InvoiceSortValue">@(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))</td>
+                                        <td class="col-fit text-nowrap">@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
+                                        <td class="col-grow td-ellipsis" title="@r.ClientName">@r.ClientName</td>
+                                        <td class="col-fit text-end text-nowrap">@(r.GrossTotal.HasValue? r.GrossTotal.Value.ToString("C", culture) : "-")</td>
+                                        <td class="col-fit status-col" data-order="@r.StatusLabel">
+                                            <span class="status-icon" style="color:@statusDisplay.Color">
+                                                <i class="@statusDisplay.Icon fs-5"></i>
                                             </span>
-                                        }
-                                    </td>
+                                            @if (r.DigitallySent)
+                                            {
+                                                <span class="status-icon" style="color:saddlebrown" data-toggle="tooltip" data-placement="top" title="Verzonden via peppol">
+                                                    <i class="bx bx-planet fs-5"></i>
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="col-fit td-ellipsis" title="@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)">
+                                            @(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)
+                                        </td>
 
-                                    <td>@typeLabel</td>
-                                    <td>@r.ClientName</td>
-                                    <td>@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)</td>
-                                    <td>@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
-                                    <td>@r.SendMethod</td>
-                                    <td class="text-end">@(r.GrossTotal.HasValue? r.GrossTotal.Value.ToString("C", culture) : "-")</td>
-                                    <td class="text-end">@(r.Balance.HasValue? r.Balance.Value.ToString("C", culture) : "-")</td>
-                                    <td class="text-end">
+                                        <td class="col-fit text-nowrap">@r.SendMethod</td>
+
+
+                                        <td class="col-fit text-end actions text-nowrap">
                                         @if (StatusIn(r.Status, InvoiceStatus.Draft))
                                         {
                                             <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
@@ -344,7 +349,7 @@
                         </tbody>
 
                 </table>
-
+                </div>
             </div>
         </div>
 
@@ -453,36 +458,24 @@ else
         }
 
         // ===== Init DataTable =====
-        const table = new DataTable('#datatable-invoice-list', {
-          order: [[0, 'desc']],
+             const table = new DataTable('#datatable-invoice-list', {
+          order: [[1, 'desc']],
+          autoWidth: false,          // <-- belangrijk
           language: buildLanguage(entity),
+
           layout: {
-            topStart: {
-              buttons: [
-                {
-                  extend: 'excel',
-                  text: '<i class="fa fa-file-excel"></i>',
-                  className: 'btn btn-default me-2',
-                  titleAttr: 'Exporteer naar Excel',
-                  attr: { "data-bs-toggle": "tooltip" },
-                  exportOptions: { columns: ':visible' }
-                },
-                {
-                  extend: 'pdf',
-                  text: '<i class="fa fa-file-pdf"></i>',
-                  className: 'btn btn-default me-2',
-                  titleAttr: 'Exporteer naar PDF',
-                  attr: { "data-bs-toggle": "tooltip" },
-                  orientation: 'landscape',
-                  pageSize: 'A3',
-                  exportOptions: { columns: ':visible' }
-                }
-               
-              ]
-            }
+            topStart: { buttons: [ /* ... */ ] }
           },
+
           columnDefs: [
-            { targets: -1, orderable: false, searchable: false }
+            // acties: niet sorteerbaar/zoekbaar
+            { targets: -1, orderable: false, searchable: false, width: "1%" },
+
+            // “fit” kolommen: forceer minimale breedte
+            { targets: [0,1,2,4,5,6,7,8], width: "1%" },
+
+            // klant = grow (rest)
+            { targets: 3, width: "100%" }
           ]
         });
 

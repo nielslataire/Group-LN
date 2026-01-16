@@ -1544,6 +1544,10 @@ namespace ServiceCore
                     : $"{updatedValues.Firstname} {updatedValues.Lastname}".Trim();
                 contact.Email = updatedValues.Email;
                 contact.Phone = updatedValues.Phone;
+                if (updatedValues.CreatedAt != default)
+                    contact.CreatedAt = updatedValues.CreatedAt;
+                if (!string.IsNullOrWhiteSpace(updatedValues.SourceSite))
+                    contact.SourceSite = updatedValues.SourceSite;
             }
 
             var saved = _uow.SaveChanges();

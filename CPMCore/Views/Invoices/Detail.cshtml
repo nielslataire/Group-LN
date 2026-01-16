@@ -19,7 +19,12 @@
 }
 @functions {
 
-    string DocumentType(bool isCreditNote) => isCreditNote ? "Creditnota" : "Factuur";
+string DocumentType(InvoiceStatus status, bool isCreditNote)
+        => status == InvoiceStatus.Draft
+            ? "Proforma factuur"
+            : isCreditNote
+                ? "Creditnota"
+                : "Factuur";
     string BadgeClass(InvoiceStatus status) => status switch
     {
         InvoiceStatus.Draft => "badge bg-warning text-dark",
@@ -83,7 +88,7 @@
                 </div>
                 <div class="col">
                     <h1 class="fw-bold mb-0">@Model.PublicId</h1>
-                    <h5 class="mb-4 mt-0">@DocumentType(Model.IsCreditNote) van @Model.Issuer.Name aan @Model.Client.Name </h5>
+                    <h5 class="mb-4 mt-0">@DocumentType(Model.Status, Model.IsCreditNote) van @Model.Issuer.Name aan @Model.Client.Name </h5>
                   
                 </div>
                
@@ -201,7 +206,7 @@
     <div class="col-lg-4 mb-3">
         <div class="card h-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">@DocumentType(Model.IsCreditNote) Details</h5>
+                <h5 class="card-title mb-0">@DocumentType(Model.Status, Model.IsCreditNote) Details</h5>
             </div>
             <div class="card-body">
                 Documentnummer: <strong>@Model.PublicId</strong><br />

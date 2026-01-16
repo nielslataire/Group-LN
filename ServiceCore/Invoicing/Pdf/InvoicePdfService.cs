@@ -39,8 +39,9 @@ public sealed class InvoicePdfService : IInvoicePdfService
         var layout = LoadLayout(company.TemplateJson, templateKey);
         ApplyBranding(layout, company);
         var structuredMessage = NormalizeStructuredMessage(invoice.StructuredMessage);
-        var context = BuildContext(invoice, company, layout, structuredMessage);
-        var vm = Map(invoice, company, structuredMessage);
+        var isProforma = IsProformaStatus(invoice.Status);
+        var context = BuildContext(invoice, company, layout, structuredMessage, isProforma);
+        var vm = Map(invoice, company, structuredMessage, isProforma);
 
         var template = _templates.Resolve(templateKey);
         return Document.Create(container => template.Compose(container, vm, context)).GeneratePdf();
@@ -67,7 +68,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
         return config;
     }
 
-    private TemplateContext BuildContext(InvoiceDto invoice, IssuerCompanyBO company, LayoutConfig layout, string? structuredMessage)
+    private TemplateContext BuildContext(InvoiceDto invoice, IssuerCompanyBO company, LayoutConfig layout, string? structuredMessage, bool isProforma)
     {
         var theme = layout.Theme ?? new ThemeConfig();
         var primary = !string.IsNullOrWhiteSpace(company.BrandPrimaryColor) ? company.BrandPrimaryColor : theme.Primary;
@@ -79,7 +80,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
         var backgroundImage = ResolveImageAsset(layout.Page?.BackgroundImage, company);
 
         byte[]? qr = null;
-        if (company.EpcQrEnabled)
+        if (!isProforma && company.EpcQrEnabled)
         {
             if (!string.IsNullOrWhiteSpace(invoice.QrPayload))
             {
@@ -105,10 +106,10 @@ public sealed class InvoicePdfService : IInvoicePdfService
             FontFamily = fontFamily,
             Logo = logo,
             FooterLegalText = company.FooterLegalText,
-            StructuredMessage = structuredMessage,
             EpcQrPng = qr,
             PageBackgroundImage = backgroundImage,
-            Layout = layout
+            Layout = layout,
+            StructuredMessage = isProforma ? null : structuredMessage
         };
     }
 
@@ -161,7 +162,7 @@ public sealed class InvoicePdfService : IInvoicePdfService
             band.Color = updatedSecondary;
         }
     }
-    private static InvoiceVm Map(InvoiceDto dto, IssuerCompanyBO company, string? structuredMessage)
+    private static InvoiceVm Map(InvoiceDto dto, IssuerCompanyBO company, string? structuredMessage, bool isProforma)
     {
         var defaultIban = !string.IsNullOrWhiteSpace(company.DefaultBankAccountIban)
             ? company.DefaultBankAccountIban
@@ -215,13 +216,13 @@ public sealed class InvoicePdfService : IInvoicePdfService
             Totals = new TotalsVm { Excl = dto.Totals.Excl, Vat = dto.Totals.Vat, Incl = dto.Totals.Incl },
             Payment = new PaymentVm
             {
-                Structured = structuredMessage ?? dto.StructuredMessage,
+                Structured = isProforma ? null : structuredMessage ?? dto.StructuredMessage,
                 BankAccount = dto.BankAccount,
                 Iban = !string.IsNullOrWhiteSpace(dto.BankAccount)
                     ? dto.BankAccount
                     : dto.Issuer.BankAccount ?? company.EpcIban,
                 Bic = dto.Issuer.Bic ?? company.EpcBic,
-                QrEnabled = company.EpcQrEnabled && (!string.IsNullOrWhiteSpace(structuredMessage ?? dto.StructuredMessage) || !string.IsNullOrWhiteSpace(dto.QrPayload)),
+                QrEnabled = !isProforma && company.EpcQrEnabled && (!string.IsNullOrWhiteSpace(structuredMessage ?? dto.StructuredMessage) || !string.IsNullOrWhiteSpace(dto.QrPayload)),
                 Terms = BuildPaymentTerms(dto)
             },
             VatSummary = BuildVatSummary(dto),
@@ -454,5 +455,13 @@ public sealed class InvoicePdfService : IInvoicePdfService
         if (string.IsNullOrWhiteSpace(line2))
             return line1;
         return $"{line1}, {line2}";
+    }
+    private static bool IsProformaStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status))
+            return false;
+
+        return status.Trim().Equals("Draft", StringComparison.OrdinalIgnoreCase)
+            || status.Trim().Equals("Concept", StringComparison.OrdinalIgnoreCase);
     }
 }

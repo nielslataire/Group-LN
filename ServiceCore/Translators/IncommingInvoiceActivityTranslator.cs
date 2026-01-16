@@ -18,14 +18,15 @@ namespace ServiceCore.Translators
                 return ErrorCode.EntityNull;
             if (bo == null)
                 return ErrorCode.BoNull;
+            var invoice = _entity.IncommingInvoice;
             bo.InvoiceId = _entity.IncommingInvoiceId;
             bo.InvoiceDetailId = _entity.Id;
-            bo.Price = (decimal)_entity.Price;
-            bo.ExternalInvoiceId = _entity.IncommingInvoice.ExternalId;
-            bo.Invoicedate = _entity.IncommingInvoice.Date;
+            bo.Price = _entity.Price ?? 0m;
+            bo.ExternalInvoiceId = invoice?.ExternalId;
+            bo.Invoicedate = invoice?.Date ?? default;
             bo.Description = _entity.Description;
             bo.IncommingInvoiceType = (IncommingInvoiceType)_entity.Type;
-            if (_entity.IncommingInvoice.ContractId is int contractId && contractId != 0)
+            if (invoice?.ContractId is int contractId && contractId != 0)
                 bo.ContractId = contractId;
             if (_entity.ContractAct is not null)
             {
@@ -34,10 +35,13 @@ namespace ServiceCore.Translators
                 if (err2 != ErrorCode.Success)
                     return err2;
                 bo.Activity = act;
-                IdNameBO comp = new IdNameBO();
-                comp.ID = _entity.ContractAct.Contract.Company.CompanyId;
-                comp.Display = _entity.ContractAct.Contract.Company.BedrijfsNaam;
-                bo.Company = comp;
+                if (_entity.ContractAct.Contract?.Company != null)
+                {
+                    IdNameBO comp = new IdNameBO();
+                    comp.ID = _entity.ContractAct.Contract.Company.CompanyId;
+                    comp.Display = _entity.ContractAct.Contract.Company.BedrijfsNaam;
+                    bo.Company = comp;
+                }
             }
             if (_entity.Act is not null)
             {
@@ -46,18 +50,21 @@ namespace ServiceCore.Translators
                 if (err2 != ErrorCode.Success)
                     return err2;
                 bo.Activity = act;
-                if(_entity.IncommingInvoice.Company is null)
+                if (invoice?.Company is null)
                 {
                     IdNameBO comp = new IdNameBO();
-                    comp.ID = _entity.IncommingInvoice.Contract.Company.CompanyId;
-                    comp.Display = _entity.IncommingInvoice.Contract.Company.BedrijfsNaam;
+                    if (invoice?.Contract?.Company != null)
+                    {
+                        comp.ID = invoice.Contract.Company.CompanyId;
+                        comp.Display = invoice.Contract.Company.BedrijfsNaam;
+                    }
                     bo.Company = comp;
                 }
                 else
                 {
                     IdNameBO comp = new IdNameBO();
-                    comp.ID = _entity.IncommingInvoice.Company.CompanyId;
-                    comp.Display = _entity.IncommingInvoice.Company.BedrijfsNaam;
+                    comp.ID = invoice.Company.CompanyId;
+                    comp.Display = invoice.Company.BedrijfsNaam;
                     bo.Company = comp;
                 }
 

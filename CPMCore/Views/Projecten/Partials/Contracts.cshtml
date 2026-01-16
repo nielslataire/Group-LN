@@ -45,13 +45,17 @@
 						{
 							<tr>
 								<td>
-									@if (row.Contract?.ContractSigned == true)
+									@if (!row.HasContract)
 									{
-										<span class="ecommerce-status completed"></span>
+										<span class="ecommerce-status canceled" data-toggle="tooltip" data-placement="top" title="Geen contract"></span>
+									}
+									else if (row.Contract?.ContractSigned == true)
+									{
+										<span class="ecommerce-status completed" data-toggle="tooltip" data-placement="top" title="Contract getekend"></span>
 									}
 									else
 									{
-										<span class="ecommerce-status failed"></span>
+										<span class="ecommerce-status failed" data-toggle="tooltip" data-placement="top" title="Contract niet getekend"></span>
 									}
 								</td>
 								<td>
@@ -119,7 +123,7 @@
 									{
 										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })"><i class="fa fa-eye fs-5"></i></a>
 										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editContract" href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })"><i class="fa fa-edit fs-5"></i></a>
-										<a class="ms-1 me-1" href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteContract" data-id="@row.Contract.Id"><i class="fa fa-trash fs-5 text-danger"></i></a>
+										<a class="ms-1 me-1 deleteContract" href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" data-id="@row.Contract.Id"><i class="fa fa-trash fs-5 text-danger"></i></a>
 									}
 									else if (row.Company != null)
 									{

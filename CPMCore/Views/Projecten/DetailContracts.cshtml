@@ -86,6 +86,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
     <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script src="~/lib/select2/js/select2.js"></script>
     <script src="~/lib/jquery-mask/jquery.mask.js"></script>
     <script>
@@ -181,20 +182,18 @@
         $('#search-term').on('keyup', function () {
           table.search($(this).val()).draw();
         });
-        //BIj laden
-            $(document).ready(function () {
-            $('.deleteContract').magnificPopup({
-                type: 'inline',
-                src: 'deleteContract',
-            });
-
-        });
         //Tonen van modal delete contract
-        $('.deleteContract').click(function () {
+        $(document).on('click', '.deleteContract', function (e) {
+            e.preventDefault();
             var url = "/Projecten/ModalDeleteContract"; // the url to the controller
             var id = $(this).attr('data-id'); // the id that's given to each button in the list
             $.get(url + '/' + id, function (data) {
                 $('#delete-contract-container').html(data);
+                $.magnificPopup.open({
+                    items: { src: '#modaldeletecontract' },
+                    type: 'inline',
+                    closeBtnInside: true
+                });
             });
         });
     </script>

@@ -167,6 +167,8 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
 
     private static string ResolveInvoiceType(InvoiceVm vm)
     {
+        if (IsProformaInvoice(vm))
+            return "Proforma factuur";
         if (vm.Totals.Incl < 0)
             return "Creditnota";
 
@@ -179,6 +181,8 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
 
     private static string ResolveInvoiceNumber(InvoiceVm vm)
     {
+        if (IsProformaInvoice(vm))
+            return "-";
         if (!string.IsNullOrWhiteSpace(vm.Invoice.PublicId))
             return vm.Invoice.PublicId;
 
@@ -217,6 +221,14 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
     {
         span.FontFamily("Avenir");
     }
+    private static bool IsProformaInvoice(InvoiceVm vm)
+    {
+        var status = vm?.Invoice?.Status;
+        if (string.IsNullOrWhiteSpace(status))
+            return false;
 
+        return status.Trim().Equals("Draft", StringComparison.OrdinalIgnoreCase)
+            || status.Trim().Equals("Concept", StringComparison.OrdinalIgnoreCase);
+    }
     private static float Mm(float value) => value * PointsPerMillimeter;
 }
