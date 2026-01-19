@@ -674,7 +674,6 @@ public partial class cpmRunningContext : DbContext
 
             entity.HasOne(d => d.ClientAccount).WithMany(p => p.ClientAccountIssuerCompany)
                 .HasForeignKey(d => d.ClientAccountId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ClientAccountIssuerCompany_ClientAccount");
 
             entity.HasOne(d => d.IssuerCompany).WithMany(p => p.ClientAccountIssuerCompany)
@@ -1587,6 +1586,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.DefaultLanguage).HasMaxLength(5);
             entity.Property(e => e.EinvoiceEnabled).HasColumnName("EInvoiceEnabled");
             entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.EmailPaidBodyTemplate).HasMaxLength(4000);
             entity.Property(e => e.EmailSubjectTemplate).HasMaxLength(200);
             entity.Property(e => e.EnterpriseNumber).HasMaxLength(32);
             entity.Property(e => e.EpcBeneficiaryName).HasMaxLength(70);

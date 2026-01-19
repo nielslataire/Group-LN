@@ -178,7 +178,8 @@ public sealed class InvoicePdfService : IInvoicePdfService
                 PublicId = dto.PublicId,
                 IssueDate = dto.IssueDate,
                 DueDate = dto.DueDate,
-                Status = dto.Status
+                Status = dto.Status,
+                IsPrepaid = dto.IsPrepaid
             },
             IssuerCompany = new CompanyVm
             {

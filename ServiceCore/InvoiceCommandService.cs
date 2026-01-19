@@ -83,6 +83,8 @@ namespace ServiceCore
             var draftId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Draft").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)1;
             var issuedId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Issued").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)2;
 
+            var paidId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Paid").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct);
+
             await using var tx = await _uow.BeginTransactionAsync(ct);
             try
             {
@@ -111,7 +113,8 @@ namespace ServiceCore
                     BankAccount = bankAccount,
                     PaymentTermId = bo.PaymentTermId,
                     StructuredCommOgm = null,
-                    QrEpcPayload = null
+                    QrEpcPayload = null,
+                    Prepaid = bo.IsPrepaid
                 };
                 _uow.Invoices.Add(inv);
                 await _uow.SaveChangesAsync(ct); // Id is nu bekend
@@ -196,6 +199,7 @@ namespace ServiceCore
                     inv.StatusId = issuedId;
                     inv.PublicId = publicId;
                     inv.SeriesId = seriesId;
+                    inv.Prepaid = bo.IsPrepaid;
 
 
                     var structuredMessage = GenerateStructuredMessage(inv.FiscalYear ?? fiscalYear, issue.currentNumber);
@@ -245,6 +249,12 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(ct)
                     ?? (byte)1;
 
+                var paidId = await _db.InvoiceStatusLookup
+                   .Where(s => s.Name == "Paid")
+                   .Select(s => (byte?)s.Id)
+                   .FirstOrDefaultAsync(ct);
+
+
                 var issuedId = await _db.InvoiceStatusLookup
                     .Where(s => s.Name == "Numbered")
                     .Select(s => (byte?)s.Id)
@@ -259,7 +269,8 @@ namespace ServiceCore
                         ?? throw new InvalidOperationException("Status 'Issued' niet geconfigureerd.");
                 }
 
-                if (invoice.StatusId != draftId)
+                var isPaid = paidId.HasValue && invoice.StatusId == paidId.Value;
+                if (invoice.StatusId != draftId && !isPaid)
                     throw new InvalidOperationException("Alleen conceptfacturen kunnen definitief gemaakt worden.");
 
                 var finalDate = issueDate ?? invoice.Date;
@@ -298,7 +309,7 @@ namespace ServiceCore
                 var issueDateTime = new DateTime(finalDate.Year, finalDate.Month, finalDate.Day);
                 var (publicId, currentNumber) = await _num.IssueAsync(invoice.Id, chosenSeriesId, issueDateTime, finalDate.Year, ct);
 
-                invoice.StatusId = issuedId.Value;
+                invoice.StatusId = isPaid && paidId.HasValue ? paidId.Value : issuedId.Value;
                 var structuredMessage = GenerateStructuredMessage(invoice.FiscalYear ?? finalDate.Year, currentNumber);
                 invoice.StructuredCommOgm = structuredMessage;
 
@@ -568,6 +579,11 @@ namespace ServiceCore
                 if (!string.Equals(statusName, "Draft", StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("Alleen conceptfacturen kunnen volledig bewerkt worden.");
 
+                var paidId = await _db.InvoiceStatusLookup
+                 .Where(s => s.Name == "Paid")
+                 .Select(s => (byte?)s.Id)
+                 .FirstOrDefaultAsync(ct);
+
                 var issuer = await _db.IssuerCompany
                     .FirstOrDefaultAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct)
                     ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden of niet actief.");
@@ -635,6 +651,8 @@ namespace ServiceCore
                 invoice.QrEpcPayload = null;
                 invoice.SeriesId = null;
                 invoice.FiscalYear = null;
+                invoice.Prepaid = bo.IsPrepaid;
+
 
                 if (invoice.InvoicesDetails.Any())
                     _db.InvoicesDetails.RemoveRange(invoice.InvoicesDetails);

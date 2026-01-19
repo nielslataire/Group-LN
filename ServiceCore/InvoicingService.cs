@@ -388,6 +388,7 @@ namespace ServiceCore
                 ExtraInfo = invoice.ExtraInfo,
                 HeaderText = invoice.HeaderDescription,
                 DetailText = invoice.DetailText,
+                IsPrepaid = invoice.Prepaid,
                 IsCreditNote = invoice.Series?.IsCreditNote ?? false,
                 ClientId = invoice.ClientId,
                 ClientType = invoice.ClientType,

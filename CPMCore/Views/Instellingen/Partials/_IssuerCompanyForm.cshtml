@@ -746,6 +746,26 @@
                                           }'></textarea>
                                 <small class="text-muted">Gebruik opmaak en links om een aantrekkelijk e-mailbericht te maken. Laat leeg om de standaardtekst te gebruiken.</small>
                             </div>
+                            <div class="col-12">
+                                <label asp-for="EmailPaidBodyTemplate" class="form-label"></label>
+                                <textarea asp-for="EmailPaidBodyTemplate"
+                                          rows="5"
+                                          class="form-control form-control-modern"
+                                          placeholder="Beste {ClientName}, ..."
+                                          data-plugin-summernote
+                                          data-plugin-options='{
+                                            "height":220,
+                                            "toolbar":[
+                                              ["font", ["bold","italic","underline","clear"]],
+                                              ["color", ["color"]],
+                                              ["para", ["ul","ol","paragraph"]],
+                                              ["insert", ["link"]],
+                                              ["view", ["codeview"]]
+                                            ],
+                                            "dialogsInBody": true
+                                          }'></textarea>
+                                <small class="text-muted">Gebruik dit sjabloon voor reeds betaalde facturen. Laat leeg om het standaard e-mailsjabloon te gebruiken.</small>
+                            </div>
                             <div class="col-12 pt-5">
                                 <label asp-for="InvoiceFooterHtml" class="form-label"></label>
                                 <textarea asp-for="InvoiceFooterHtml" rows="5" class="form-control form-control-modern" placeholder="<small>…</small>"></textarea>

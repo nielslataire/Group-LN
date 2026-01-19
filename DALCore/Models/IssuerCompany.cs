@@ -115,6 +115,8 @@ public partial class IssuerCompany
 
     public int? OctopusDownloadLinkCustomFieldKeyId { get; set; }
 
+    public string EmailPaidBodyTemplate { get; set; }
+
     public virtual ICollection<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; } = new List<ClientAccountIssuerCompany>();
 
     public virtual ICollection<ClientContactIssuerCompany> ClientContactIssuerCompany { get; set; } = new List<ClientContactIssuerCompany>();

@@ -27,6 +27,7 @@ public sealed class InvoiceInfoVm
     public DateOnly IssueDate { get; init; }
     public DateOnly? DueDate { get; init; }
     public string? Status { get; init; }
+    public bool IsPrepaid { get; init; }
 }
 
 public sealed class CompanyVm

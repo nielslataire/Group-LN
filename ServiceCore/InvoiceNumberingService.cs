@@ -65,6 +65,15 @@ namespace ServiceCore
                 else
                 {
                     sequence = await _db.InvoiceSequence
+                            .Include(s => s.Bookyear)
+                        .FirstOrDefaultAsync(s =>
+                            s.SeriesId == seriesId
+                            && s.Bookyear != null
+                            && invoiceDate >= s.Bookyear.StartDate
+                            && invoiceDate <= s.Bookyear.EndDate,
+                            ct);
+
+                    sequence ??= await _db.InvoiceSequence
                         .FirstOrDefaultAsync(x => x.SeriesId == seriesId && x.FiscalYear == fiscalYear, ct);
                 }
 

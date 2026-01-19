@@ -367,6 +367,7 @@ namespace ServiceCore
                 UblAttachPdf = x.UblAttachPdf,
                 EmailSubjectTemplate = x.EmailSubjectTemplate,
                 EmailBodyTemplate = x.EmailBodyTemplate,
+                EmailPaidBodyTemplate = x.EmailPaidBodyTemplate,
                 InvoiceFooterHtml = x.InvoiceFooterHtml,
                 DefaultLanguage = x.DefaultLanguage,
                 DefaultCurrency = x.DefaultCurrency,
@@ -428,6 +429,7 @@ namespace ServiceCore
             e.UblAttachPdf = bo.UblAttachPdf;
             e.EmailSubjectTemplate = bo.EmailSubjectTemplate;
             e.EmailBodyTemplate = bo.EmailBodyTemplate;
+            e.EmailPaidBodyTemplate = bo.EmailPaidBodyTemplate;
             e.InvoiceFooterHtml = bo.InvoiceFooterHtml;
             e.DefaultLanguage = bo.DefaultLanguage;
             e.DefaultCurrency = bo.DefaultCurrency;

@@ -90,12 +90,17 @@
                     <h2 class="card-title pb-5">Facturatiegegevens</h2>
                     <div class="form-group pb-3">
                         <div class="row align-items-center pb-3">
-                            <div class="col-lg-12">
+                            <div class="col-lg-6">
                                 <label class="control-label text-lg-end pt-2 me-3" asp-for="IsCreditNote">Creditfactuur </label>
                                 <div class="switch switch-sm switch-primary">
                                     @Html.CheckBoxFor(m => m.IsCreditNote, new { data_plugin_ios_switch = "" })
                                 </div>
-
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="control-label text-lg-end pt-2 me-3" asp-for="IsPrepaid">Factuur is al betaald </label>
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.IsPrepaid, new { data_plugin_ios_switch = "" })
+                                </div>
                             </div>
                         </div>
                         <div class="row pb-3">

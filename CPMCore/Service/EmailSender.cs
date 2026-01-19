@@ -16,6 +16,7 @@ namespace CPMCore.Service
             string htmlMessage,
             IEnumerable<EmailAttachment>? attachments = null,
             string? cc = null,
+            string? bcc = null,
             string? fromEmail = null);
     }
 
@@ -42,6 +43,7 @@ namespace CPMCore.Service
             string htmlMessage,
             IEnumerable<EmailAttachment>? attachments = null,
             string? cc = null,
+            string? bcc = null,
             string? fromEmail = null)
         {
             if (string.IsNullOrWhiteSpace(toEmail))
@@ -62,6 +64,13 @@ namespace CPMCore.Service
                 foreach (var address in cc.Split(new[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     message.CC.Add(new MailAddress(address));
+                }
+            }
+            if (!string.IsNullOrWhiteSpace(bcc))
+            {
+                foreach (var address in bcc.Split(new[] { ';', ',', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    message.Bcc.Add(new MailAddress(address));
                 }
             }
 

@@ -16,6 +16,7 @@ public class InvoiceDto
     public DateOnly IssueDate { get; set; }
     public DateOnly? DueDate { get; set; }
     public string? Status { get; set; }
+    public bool IsPrepaid { get; set; }
 
     public PartyDto Issuer { get; set; } = new();
     public PartyDto Client { get; set; } = new();

@@ -282,6 +282,33 @@ namespace CPMCore.Controllers
                     invoice.StatusId = bookedStatusId;
                 }
 
+                var sequenceSeriesId = latestNumberedInvoice.SeriesId
+                      ?? await _db.InvoiceSeries
+                          .Where(s => s.IssuerCompanyId == issuerCompanyId && s.IsActive)
+                          .OrderBy(s => s.Id)
+                          .Select(s => (int?)s.Id)
+                          .FirstOrDefaultAsync(ct);
+
+                if (sequenceSeriesId.HasValue)
+                {
+                    var sequenceToUpdate = await _db.InvoiceSequence
+                        .Include(s => s.Bookyear)
+                        .Include(s => s.Journal)
+                        .FirstOrDefaultAsync(s =>
+                            s.SeriesId == sequenceSeriesId.Value
+                            && s.Bookyear != null
+                            && s.Bookyear.BookyearKeyId == latestNumberedInvoice.OctopusBookyearId
+                            && s.Journal != null
+                            && s.Journal.JournalKey == latestNumberedInvoice.OctopusJournalKey,
+                            ct);
+
+                    if (sequenceToUpdate != null && bookedUntil > sequenceToUpdate.CurrentNumber)
+                    {
+                        sequenceToUpdate.CurrentNumber = bookedUntil;
+                    }
+                }
+
+
                 await _db.SaveChangesAsync(ct);
 
                 AddMessage("success", $"Facturen van nummer {bookedFrom} tot en met nummer {bookedUntil} geboekt.", "Factuur");
@@ -565,6 +592,7 @@ namespace CPMCore.Controllers
                      vm.Body,
                      attachments,
                      vm.Cc,
+                     issuer.InvoiceSendEmail,
                      issuer.InvoiceSendEmail);
                 await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO
                 {
@@ -835,6 +863,7 @@ namespace CPMCore.Controllers
                 vm.ProjectId = duplicateDetail.ProjectId;
                 vm.SupplierContractId = duplicateDetail.SupplierContractId;
                 vm.IsCreditNote = duplicateDetail.IsCreditNote;
+                vm.IsPrepaid = duplicateDetail.IsPrepaid;
                 vm.Lines = MapLinesForCompose(duplicateDetail.Lines);
 
                 if (duplicateDetail.CompanyId.HasValue)
@@ -1202,7 +1231,8 @@ namespace CPMCore.Controllers
             {
                 IssuerCompanyId = vm.IssuerCompanyId,
                 InvoiceDate = vm.InvoiceDate,
-                IsCreditNote = vm.IsCreditNote
+                IsCreditNote = vm.IsCreditNote,
+                IsPrepaid = vm.IsPrepaid
             };
 
             switch (vm.PartyType.Value)
@@ -1256,7 +1286,8 @@ namespace CPMCore.Controllers
                 IssuerBankAccountId = vm.IssuerBankAccountId,
                 PaymentTermId = vm.PaymentTermId,
                 FooterDescription = vm.FooterDescription,
-                SelectedVatTypeId = vm.VatTypeId
+                SelectedVatTypeId = vm.VatTypeId,
+                IsPrepaid = vm.IsPrepaid
             };
 
             bo.IsCreditNote = vm.IsCreditNote;
@@ -1400,6 +1431,7 @@ namespace CPMCore.Controllers
             {
                 var bo = await BuildInvoiceDraftBoAsync(vm, ct);
                 var issueNow = vm.StartAs == StartStatus.Invoice;
+              
 
                 if (!issueNow)
                 {
@@ -1432,6 +1464,7 @@ namespace CPMCore.Controllers
                 }
 
                 var issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
+              
                 if (!string.IsNullOrWhiteSpace(issuedPublicId))
                     AddMessage("success", $"Factuur uitgegeven: {issuedPublicId}", "Factuur");
                 else
@@ -1650,6 +1683,7 @@ namespace CPMCore.Controllers
                 DetailDescription = posted?.DetailDescription ?? NormalizeMultiline(detail.DetailText),
                 FooterDescription = posted?.FooterDescription ?? NormalizeMultiline(detail.ExtraInfo),
                 IsCreditNote = posted?.IsCreditNote ?? DetermineCreditNote(detail.IsCreditNote, detail.StatusName, detail.TotalInclVat),
+                IsPrepaid = posted?.IsPrepaid ?? detail.IsPrepaid,
                 PaymentTermId = posted?.PaymentTermId ?? detail.PaymentTermId,
                 ProjectId = posted?.ProjectId ?? detail.ProjectId,
                 SupplierContractId = posted?.SupplierContractId ?? detail.SupplierContractId,
@@ -2144,6 +2178,10 @@ namespace CPMCore.Controllers
                 }
 
                 var bodyTemplate = issuer.EmailBodyTemplate;
+                if (detail.IsPrepaid && !string.IsNullOrWhiteSpace(issuer.EmailPaidBodyTemplate))
+                {
+                    bodyTemplate = issuer.EmailPaidBodyTemplate;
+                }
                 if (!string.IsNullOrWhiteSpace(bodyTemplate))
                 {
                     var rendered = _templateInterpolator.Interpolate(bodyTemplate, templateModel).Trim();
@@ -2267,8 +2305,17 @@ namespace CPMCore.Controllers
                 if (context.SkipSendStep)
                     return;
 
+                var emailAttachment = attachment;
+                if (sendResponse?.Success == true)
+                {
+                    if (await UpdateInvoicePublicIdFromOctopusAsync(context, ct))
+                    {
+                        emailAttachment = await BuildAttachmentAsync(context, ct);
+                    }
+                }
+
                 // 7. Klassieke mailverzending indien geen Peppol (PDF identiek aan upload)
-                var classicSent = await SendClassicInvoiceEmailIfRequiredAsync(context, attachment, ct);
+                var classicSent = await SendClassicInvoiceEmailIfRequiredAsync(context, emailAttachment, ct);
 
                 if (classicSent && !WasSentViaPeppol(sendResponse))
                 {
@@ -2344,8 +2391,8 @@ namespace CPMCore.Controllers
             public int BookyearId { get; set; }
             public string JournalKey { get; set; }
             public int PeriodNumber { get; }
-            public string StructuredOgm { get; }
-            public string FormattedPublicId { get; }
+            public string StructuredOgm { get; set; }
+            public string FormattedPublicId { get; set; }
             public bool IsIndividual { get; }
 
             public bool SkipSendStep { get; }
@@ -2932,6 +2979,71 @@ namespace CPMCore.Controllers
             return sendResponse;
         }
 
+        private async Task<bool> UpdateInvoicePublicIdFromOctopusAsync(OctopusInvoiceContext context, CancellationToken ct)
+        {
+            if (context.DocumentSequenceNr <= 0)
+                return false;
+
+            var formattedPublicId = FormatInvoiceNumber(
+                context.Issuer.InvoiceNumberPattern,
+                context.DocumentSequenceNr,
+                context.FinalDate);
+            var structuredOgm = GenerateStructuredOgm(context.FiscalYear, context.DocumentSequenceNr);
+
+            var updated = false;
+
+            if (!string.Equals(context.Invoice.PublicId, formattedPublicId, StringComparison.Ordinal))
+            {
+                context.Invoice.PublicId = formattedPublicId;
+                updated = true;
+            }
+
+            if (!string.Equals(context.Detail.PublicId, formattedPublicId, StringComparison.Ordinal))
+            {
+                context.Detail.PublicId = formattedPublicId;
+                updated = true;
+            }
+
+            if (!string.Equals(context.FormattedPublicId, formattedPublicId, StringComparison.Ordinal))
+            {
+                context.FormattedPublicId = formattedPublicId;
+                updated = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(structuredOgm)
+                && !string.Equals(context.Invoice.StructuredCommOgm, structuredOgm, StringComparison.Ordinal))
+            {
+                context.Invoice.StructuredCommOgm = structuredOgm;
+                context.Detail.StructuredMessage = structuredOgm;
+                context.StructuredOgm = structuredOgm;
+                updated = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(structuredOgm))
+            {
+                var updatedQr = BuildEpcQrPayload(
+                    context.Issuer,
+                    context.Detail.BankAccount,
+                    structuredOgm,
+                    context.Detail.TotalInclVat);
+
+                if (!string.IsNullOrWhiteSpace(updatedQr)
+                    && !string.Equals(context.Invoice.QrEpcPayload, updatedQr, StringComparison.Ordinal))
+                {
+                    context.Invoice.QrEpcPayload = updatedQr;
+                    context.Detail.QrPayLoad = updatedQr;
+                    updated = true;
+                }
+            }
+
+            if (updated)
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+
+            return updated;
+        }
+
         private async Task<bool> SendClassicInvoiceEmailIfRequiredAsync(
            OctopusInvoiceContext context,
            OctopusInvoiceAttachment attachment,
@@ -2962,6 +3074,10 @@ namespace CPMCore.Controllers
                     : $"Factuur {context.FormattedPublicId ?? context.Invoice.Id.ToString(CultureInfo.InvariantCulture)}";
 
                 var bodyTemplate = issuerBo.EmailBodyTemplate;
+                if (context.Detail.IsPrepaid && !string.IsNullOrWhiteSpace(issuerBo.EmailPaidBodyTemplate))
+                {
+                    bodyTemplate = issuerBo.EmailPaidBodyTemplate;
+                }
                 var renderedBody = !string.IsNullOrWhiteSpace(bodyTemplate)
                     ? _templateInterpolator.Interpolate(bodyTemplate, templateModel).Trim()
                     : string.Empty;
@@ -2975,6 +3091,7 @@ namespace CPMCore.Controllers
                     mailBody,
                     new List<EmailAttachment> { new(attachment.FileName, attachment.PdfBytes, "application/pdf") },
                     null,
+                    context.Issuer.InvoiceSendEmail,
                     context.Issuer.InvoiceSendEmail);
 
                 await _communication.SaveEmailLogAsync(new InvoiceEmailLogBO

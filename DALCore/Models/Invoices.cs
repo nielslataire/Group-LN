@@ -105,6 +105,8 @@ public partial class Invoices
 
     public string OctopusBookedBy { get; set; }
 
+    public bool Prepaid { get; set; }
+
     public virtual ClientAccount ClientIdClientAccountNavigation { get; set; }
 
     public virtual ClientContacts ClientIdClientContactsNavigation { get; set; }

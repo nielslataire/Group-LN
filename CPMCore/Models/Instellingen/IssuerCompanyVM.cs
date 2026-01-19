@@ -87,6 +87,8 @@ namespace CPMCore.Models.Instellingen
         public string? EmailSubjectTemplate { get; set; }
         [Display(Name = "Email body template")]
         public string? EmailBodyTemplate { get; set; }
+        [Display(Name = "Email body template (betaald)")]
+        public string? EmailPaidBodyTemplate { get; set; }
 
         [Display(Name = "Afzender e-mailadres facturen")]
         [EmailAddress]

@@ -31,6 +31,7 @@
 
     Public Property EmailSubjectTemplate As String
     Public Property EmailBodyTemplate As String
+    Public Property EmailPaidBodyTemplate As String
     Public Property InvoiceFooterHtml As String
     Public Property DefaultLanguage As String
     Public Property DefaultCurrency As String

@@ -30,6 +30,7 @@ namespace CPMCore.Models.Invoicing
 
         public StartStatus StartAs { get; set; } = StartStatus.Draft;
         public bool IsCreditNote { get; set; }
+        public bool IsPrepaid { get; set; }
 
         public InvoiceMode Mode { get; set; } = InvoiceMode.Free;
         public string? HeaderDescription { get; set; }

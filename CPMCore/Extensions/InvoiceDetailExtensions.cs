@@ -23,6 +23,7 @@ public static class InvoiceDetailExtensions
             IssueDate = bo.InvoiceDate,
             DueDate = bo.ExpirationDate,
             Status = InvoiceStatusExtensions.FromCode(bo.StatusName).GetDisplayName(),
+            IsPrepaid = bo.IsPrepaid,
             BankAccount = bo.BankAccount,
             StructuredMessage = bo.StructuredMessage,
             ExtraInfo = bo?.ExtraInfo,

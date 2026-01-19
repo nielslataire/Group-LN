@@ -119,6 +119,20 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
     private static void ComposePaymentSection(IContainer container, InvoiceVm vm, TemplateContext ctx)
     {
+        if (IsPrepaidInvoice(vm))
+        {
+            var invoiceType = IsCreditNote(vm) ? "creditnota" : "factuur";
+            var message = $"Wij bevestigen de ontvangst van uw betaling. Het openstaand saldo van deze {invoiceType} bedraagt {FormatCurrency(0m)}.";
+
+            container.Text(text =>
+            {
+                var span = text.Span(message);
+                span.FontSize(9);
+                span.Bold();
+                ApplyFont(span);
+            });
+            return;
+        }
         if (IsCreditNote(vm))
         {
             container.Column(col =>
@@ -235,6 +249,10 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
         var status = vm?.Invoice?.Status;
         return !string.IsNullOrWhiteSpace(status) && status.Contains("credit", StringComparison.OrdinalIgnoreCase);
+    }
+    private static bool IsPrepaidInvoice(InvoiceVm vm)
+    {
+        return vm?.Invoice?.IsPrepaid == true;
     }
     private static bool IsProformaInvoice(InvoiceVm vm)
     {
