@@ -86,7 +86,7 @@
                 <label class="form-label mb-1" for="issuer-filter">Filter op facturatiebedrijf</label>
                 <div class="input-group input-group-select-append">
                     <span class="input-group-text">
-                        <i class="fas fa-filter"></i>
+                        <i class="bx bx-filter-alt"></i>
                     </span>
                     <select id="issuer-filter" class="form-control form-control-modern">
                         <option value="">Alle bedrijven</option>
@@ -105,7 +105,10 @@
             </div>
             <div class="col-lg-4">
                 <label class="form-label mb-1" for="activity-filter">Filter op activiteit</label>
-
+                 <div class="input-group input-group-select-append">
+                    <span class="input-group-text">
+                        <i class="bx bx-filter-alt"></i>
+                    </span>
                 <select id="activity-filter" multiple data-plugin-selectTwo class="form-control form-control-modern populate">
                             @foreach (var group in groupedActivities)
                             {
@@ -117,6 +120,7 @@
                                 </optgroup>
                             }
                         </select>
+                        </div>
             </div>
         </div>
     </div>

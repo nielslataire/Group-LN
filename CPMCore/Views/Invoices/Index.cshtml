@@ -134,12 +134,30 @@
 {
         <div class="card card-modern">
             <div class="card-body">
+                <div class="row">
+            <div class="col mb-4 mb-sm-0 mt-2 mt-sm-0">
                 <div class="input-group">
                     <span class="input-group-text">
                         <i class="bx bx-search"></i>
                     </span>
-                    <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
-                </div>
+                    <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ...">
+            </div>
+            </div>
+            <div class="col-sm-auto px-0">
+                    <div class="input-group">
+                    <span class="input-group-text">
+                        <i class="bx bx-calendar"></i>
+                    </span>
+                    <select class="form-select me-2" name="bookyear" id="bookyear-filter-select">
+                        <option value="">Alle boekjaren</option>
+                        @foreach (var bookYear in bookYears)
+                        {
+                            <option value="@bookYear" selected="@(bookYear == defaultBookYear ? "selected" : null)">@bookYear</option>
+                        }
+                    </select>
+                    </div>
+                    </div>
+            </div>
             </div>
         </div>
     <div class="card card-modern">
@@ -162,6 +180,7 @@
                             <th class="col-fit">Project</th>
                             <th class="col-fit">Verzendwijze</th>
                             <th class="col-fit text-end">Acties</th>
+                                <th class="d-none">Boekjaar</th>
                         </tr>
                     </thead>
 
@@ -174,7 +193,7 @@
                         var typeLabel = DocumentType(r.Status, r.IsCreditNote);
                         var statusDisplay = StatusIcon(r.Status);
 
-                        <tr data-bookyear="@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())">
+                        <tr>
                             <td class="col-fit">@typeLabel</td>
 
                             <td class="col-fit" data-order="@r.InvoiceSortValue">
@@ -380,6 +399,7 @@
                                                         </a>
                                                     }
                                                </td>
+                                    <td class="d-none">@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())</td>
                                         </tr>
                                     }
                         
@@ -507,7 +527,8 @@ else
 
             columnDefs: [
               // acties: niet sorteerbaar/zoekbaar
-              { targets: -1, orderable: false, searchable: false, width: "1%" },
+              { targets: 8, orderable: false, searchable: false, width: "1%" },
+              { targets: 9, visible: false },
 
               // “fit” kolommen: forceer minimale breedte
               { targets: [0,1,2,4,5,6,7,8], width: "1%" },
@@ -540,23 +561,20 @@ else
           });
 
         const bookyearSelect = $('#bookyear-filter-select');
-          let activeBookyear = bookyearSelect.val() || '';
-          $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-            if (settings.nTable.id !== 'datatable-invoice-list') return true;
-            if (!activeBookyear) return true;
-            const node = table.row(dataIndex).node();
-            if (!node) return true;
-            return $(node).data('bookyear')?.toString() === activeBookyear.toString();
-          });
+              const bookyearColumnIndex = 9;
+              const defaultBookyear = '@defaultBookYear';
 
-          bookyearSelect.on('change', function () {
-            activeBookyear = $(this).val() || '';
-            table.draw();
-          });
+              function applyBookyearFilter(value) {
+                table.column(bookyearColumnIndex).search(value || '').draw();
+              }
 
-          if (activeBookyear) {
-            table.draw();
-          }
+              bookyearSelect.on('change', function () {
+                applyBookyearFilter($(this).val());
+              });
+
+              if (defaultBookyear) {
+                applyBookyearFilter(defaultBookyear);
+              }
 
     </script>
 }
