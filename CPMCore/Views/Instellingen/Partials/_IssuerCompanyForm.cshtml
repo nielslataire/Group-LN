@@ -212,7 +212,9 @@
                                 {
                                     var base64 = System.Convert.ToBase64String(Model.LogoBytes);
                                     <div class="mt-2">
-                                        <img src="data:image/png;base64,@base64" alt="Huidig logo" class="img-fluid" style="max-height: 120px;" />
+                                        <div class="issuer-logo-box">
+                                            <img src="data:image/png;base64,@base64" alt="Huidig logo" class="issuer-logo-preview" />
+                                        </div>
                                     </div>
                                 }
                             </div>

@@ -17011,3 +17011,22 @@ html.dark .thumbnail {
 	background-color: #21262d;
 	border-color: #282d36;
 }
+.issuer-logo-box {
+	width: 45mm;
+	height: 45mm;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid #ced4da;
+	background-color: #fff;
+	box-sizing: border-box;
+}
+
+.issuer-logo-preview {
+	max-width: 100%;
+	max-height: 100%;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+	display: block;
+}

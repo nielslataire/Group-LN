@@ -39,7 +39,7 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
                 {
                     c.AlignLeft()
                      .Element(box => box
-                         .Width(Mm(45))
+                         .Width(Mm(80))
                          .Height(Mm(45))
                          .AlignMiddle()
                          .Image(ctx.Logo)

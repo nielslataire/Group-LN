@@ -44,7 +44,16 @@ public sealed class InvoicePdfService : IInvoicePdfService
         var vm = Map(invoice, company, structuredMessage, isProforma);
 
         var template = _templates.Resolve(templateKey);
-        return Document.Create(container => template.Compose(container, vm, context)).GeneratePdf();
+        var document = Document
+            .Create(container => template.Compose(container, vm, context))
+            .WithSettings(new DocumentSettings
+            {
+                ImageCompressionQuality = ImageCompressionQuality.Best,
+                ImageRasterDpi = 300
+            });
+
+        return document.GeneratePdf();
+
     }
 
     private static LayoutConfig LoadLayout(string? templateJson, string templateKey)

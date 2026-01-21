@@ -735,9 +735,15 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> Issue(int id, int issuerCompanyId, CancellationToken ct = default)
         {
+            // ISSUE FLOW (van draft naar definitief + verzending via Octopus)
+            // Volgorde:
+            // 1) Bouw + verstuur Octopus-payloads (met "definitieve" PDF tijdens issue).
+            // 2) Zet draft om naar definitief (IssueDraftAsync).
+            // Opmerking: we forceren in de PDF geen proforma-label tijdens issue,
+            // zodat de klant nooit een proforma-factuur ontvangt bij "Issue".
             try
             {
-                await SendInvoiceToOctopusAsync(id, ct);
+                await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
                 var publicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
                 if (!string.IsNullOrWhiteSpace(publicId))
                     AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
@@ -1448,7 +1454,7 @@ namespace CPMCore.Controllers
 
                 try
                 {
-                    await SendInvoiceToOctopusAsync(id, ct);
+                    await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -2274,12 +2280,19 @@ namespace CPMCore.Controllers
                 : InvoiceSendFormMode.Standard;
         }
 
-        private async Task SendInvoiceToOctopusAsync(int invoiceId, CancellationToken ct, bool sendOnly = false, bool forceSendStep = false)
+        // Hoofdflow voor Octopus-issue + verzending.
+        // Volgorde wijzigen? Pas de genummerde stappen hieronder aan.
+        private async Task SendInvoiceToOctopusAsync(
+            int invoiceId,
+            CancellationToken ct,
+            bool sendOnly = false,
+            bool forceSendStep = false,
+            bool forceFinalPdf = false)
         {
             try
             {
                 // 1. Algemene gegevens van de factuur voorbereiden (gestructureerde mededeling, QR-code/public id enz.)
-                var context = await BuildOctopusInvoiceContextAsync(invoiceId, ct);
+                var context = await BuildOctopusInvoiceContextAsync(invoiceId, ct, forceFinalPdf);
                 var progress = GetOctopusWorkflowProgress(context.Invoice.OctopusWorkflowState);
 
                 // 2. Dossiertoken ophalen en valideren
@@ -2361,7 +2374,8 @@ namespace CPMCore.Controllers
                 string formattedPublicId,
                 bool isIndividual,
                 bool skipSendStep,
-                string? clientEmail)
+                string? clientEmail,
+                bool forceFinalPdf)
             {
                 Invoice = invoice;
                 Issuer = issuer;
@@ -2379,6 +2393,7 @@ namespace CPMCore.Controllers
 
                 SkipSendStep = skipSendStep;
                 ClientEmail = clientEmail;
+                ForceFinalPdf = forceFinalPdf;
             }
 
             public Invoices Invoice { get; }
@@ -2397,6 +2412,7 @@ namespace CPMCore.Controllers
 
             public bool SkipSendStep { get; }
             public string? ClientEmail { get; }
+            public bool ForceFinalPdf { get; }
             public int? OctopusRelationId { get; set; }
             public List<Vattype> VatTypes { get; } = new();
             public string DossierNumber => Issuer.OctopusDossierNumber ?? string.Empty;
@@ -2423,7 +2439,8 @@ namespace CPMCore.Controllers
             public string InvoiceNumber { get; }
         }
 
-        private async Task<OctopusInvoiceContext> BuildOctopusInvoiceContextAsync(int invoiceId, CancellationToken ct)
+        // Stap 1: laad alle data die nodig is voor Octopus + PDF (incl. status/nummerreeks).
+        private async Task<OctopusInvoiceContext> BuildOctopusInvoiceContextAsync(int invoiceId, CancellationToken ct, bool forceFinalPdf)
         {
             var invoice = await _db.Invoices
                 .Include(i => i.InvoicesDetails)
@@ -2579,9 +2596,10 @@ namespace CPMCore.Controllers
                 formattedPublicId,
                 isIndividual,
                 skipSendStep,
-                clientEmail);
+               clientEmail,
+                forceFinalPdf);
         }
-
+        // Stap 2b: extra guardrails als we enkel het verzenddeel willen herhalen.
         private static void ValidateSendOnlyPreconditions(bool sendOnly, OctopusWorkflowProgress progress)
         {
             if (!sendOnly)
@@ -2594,11 +2612,13 @@ namespace CPMCore.Controllers
                 throw new InvalidOperationException("Factuur moet eerst als bijlage naar Octopus geüpload worden.");
         }
 
+        // Stap 2: dossiertoken ophalen zodat alle Octopus-calls geauthenticeerd zijn.
         private async Task<OctopusDossierTokenResult> EnsureDossierTokenAsync(OctopusInvoiceContext context, CancellationToken ct)
         {
             return await _octopusTokens.RefreshDossierTokenAsync(context.Issuer.Id, context.DossierNumber, ct);
         }
 
+        // Stap 3: zorg dat de Octopus-relatie bestaat en koppel lokale relation IDs.
         private async Task EnsureOctopusRelationAsync(
             OctopusInvoiceContext context,
             OctopusDossierTokenResult dossierToken,
@@ -2664,6 +2684,7 @@ namespace CPMCore.Controllers
             context.VatTypes.AddRange(vatTypes);
         }
 
+        // Stap 3b: sla relationId ook lokaal op, zodat volgende calls sneller zijn.
         private async Task UpdateLocalRelationIdsAsync(OctopusInvoiceContext context, int? relationId, CancellationToken ct)
         {
             if (!relationId.HasValue || relationId.Value <= 0)
@@ -2712,6 +2733,7 @@ namespace CPMCore.Controllers
             }
         }
 
+        // Stap 4: maak factuur aan in Octopus (booking + lijnen).
         private async Task CreateOctopusInvoiceAsync(
             OctopusInvoiceContext context,
             OctopusDossierTokenResult dossierToken,
@@ -2838,6 +2860,7 @@ namespace CPMCore.Controllers
         //    };
         //}
 
+        // Stap 5: genereer PDF en upload naar Octopus (wordt ook gebruikt voor e-mail).
         private async Task<OctopusInvoiceAttachment> UploadInvoiceAttachmentAsync(
             OctopusInvoiceContext context,
             OctopusDossierTokenResult dossierToken,
@@ -2883,6 +2906,7 @@ namespace CPMCore.Controllers
             return attachment;
         }
 
+        // Stap 5b: bouw de PDF-bijlage (status kan "forced final" zijn tijdens issue).
         private async Task<OctopusInvoiceAttachment> BuildAttachmentAsync(OctopusInvoiceContext context, CancellationToken ct)
         {
             var issuerCompany = await _ics.GetAsync(context.Issuer.Id, ct)
@@ -2904,6 +2928,11 @@ namespace CPMCore.Controllers
 
             var invoiceDto = context.Detail.ToInvoiceDto(vatTypes);
             invoiceDto.PublicId ??= context.FormattedPublicId;
+            if (context.ForceFinalPdf)
+            {
+                // Zorg dat de PDF nooit als proforma wordt aangemerkt tijdens issue.
+                invoiceDto.Status = "Issued";
+            }
             if (!string.IsNullOrWhiteSpace(context.StructuredOgm))
             {
                 invoiceDto.StructuredMessage = context.StructuredOgm;
@@ -2919,6 +2948,7 @@ namespace CPMCore.Controllers
             return new OctopusInvoiceAttachment(pdfBytes, fileName, invoiceNumber);
         }
 
+        // Stap 6: vraag Octopus om de factuur te verzenden (externe verzending).
         private async Task<OctopusInvoiceSendResponse?> SendInvoiceViaOctopusAsync(
             OctopusInvoiceContext context,
             OctopusDossierTokenResult dossierToken,
@@ -2979,6 +3009,7 @@ namespace CPMCore.Controllers
             return sendResponse;
         }
 
+        // Stap 6b: publicId aanpassen op basis van Octopus-nummering (indien beschikbaar).
         private async Task<bool> UpdateInvoicePublicIdFromOctopusAsync(OctopusInvoiceContext context, CancellationToken ct)
         {
             if (context.DocumentSequenceNr <= 0)
@@ -3044,6 +3075,7 @@ namespace CPMCore.Controllers
             return updated;
         }
 
+        // Stap 7: klassieke e-mailverzending als er geen (of geen succesvolle) digitale route is.
         private async Task<bool> SendClassicInvoiceEmailIfRequiredAsync(
            OctopusInvoiceContext context,
            OctopusInvoiceAttachment attachment,
@@ -3113,7 +3145,7 @@ namespace CPMCore.Controllers
                 return false;
             }
         }
-
+        // Stap 8: logging + verzendgeschiedenis bijwerken.
         private async Task LogOctopusBookingAsync(OctopusInvoiceContext context, CancellationToken ct)
         {
             var userName = User?.Identity?.Name ?? "Onbekende gebruiker";
@@ -3211,6 +3243,8 @@ namespace CPMCore.Controllers
 
             return currentRank >= targetRank;
         }
+
+        // Helper voor stap 7/8: delivery state opslaan voor statusweergave.
 
         private async Task PersistOctopusWorkflowStateAsync(Invoices invoice, string targetState, CancellationToken ct)
         {

@@ -1204,7 +1204,6 @@ public class LeveranciersController : BaseController
             PostalCode = company.Postcode,
             City = company.Gemeente,
             Country = countryCode ?? "BE",
-            Email = company.InvoiceEmail ?? company.Email,
             VatNr = FormatVatNumberForOctopus(company.VatNumber ?? company.Ondernemingsnummer, countryCode),
             CurrencyCode = "EUR",
             Contactperson = name,

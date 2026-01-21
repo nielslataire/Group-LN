@@ -1092,7 +1092,6 @@ namespace CPMCore.Controllers
                 PostalCode = client.InvoicePostalCode?.Postcode ?? client.PostalCode?.Postcode,
                 City = client.InvoicePostalCode?.Gemeente ?? client.PostalCode?.Gemeente,
                 Country = countryCode ?? "BE",
-                Email = client.InvoiceEmail ?? client.Email,
                 VatNr = FormatVatNumberForOctopus(client.Vatnumber, countryCode),
                 CurrencyCode = "EUR",
                 Contactperson = name,
