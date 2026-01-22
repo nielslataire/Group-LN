@@ -3966,7 +3966,9 @@ END";
             return FormatBelgianStructuredMessage(baseDigits);
         }
         private static string FormatBookyearLabel(DateTime startDate, DateTime endDate)
-           => $"{startDate:yyyy}-{endDate:yyyy}";
+            => startDate.Year == endDate.Year
+                ? $"{startDate:yyyy}"
+                : $"{startDate:yyyy}-{endDate:yyyy}";
 
         private static string? FormatBelgianStructuredMessage(string baseDigits)
         {

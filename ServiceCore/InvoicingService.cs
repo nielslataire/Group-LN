@@ -244,9 +244,32 @@ namespace ServiceCore
                            .Include(i => i.IssuerCompany)
                                .ThenInclude(ic => ic.CompanyLegalForm)
                            .Include(i => i.ClientIdClientContactsNavigation)
+                                   .ThenInclude(cc => cc.PostalCode)
+                                   .ThenInclude(pc => pc.Country)
+                           .Include(i => i.ClientIdClientContactsNavigation)
+                               .ThenInclude(cc => cc.PostalCode)
+                                   .ThenInclude(pc => pc.Provincie)
+                           .Include(i => i.ClientIdClientContactsNavigation)
+                               .ThenInclude(cc => cc.InvoicePostalCode)
+                                   .ThenInclude(pc => pc.Country)
+                           .Include(i => i.ClientIdClientContactsNavigation)
+                               .ThenInclude(cc => cc.InvoicePostalCode)
+                                   .ThenInclude(pc => pc.Provincie)
+                           .Include(i => i.ClientIdClientAccountNavigation)
+                               .ThenInclude(ca => ca.PostalCode)
+                                   .ThenInclude(pc => pc.Country)
+                           .Include(i => i.ClientIdClientAccountNavigation)
+                               .ThenInclude(ca => ca.PostalCode)
+                                   .ThenInclude(pc => pc.Provincie)
+                           .Include(i => i.ClientIdClientAccountNavigation)
+                               .ThenInclude(ca => ca.InvoicePostalCode)
+                                   .ThenInclude(pc => pc.Country)
+                           .Include(i => i.ClientIdClientAccountNavigation)
+                               .ThenInclude(ca => ca.InvoicePostalCode)
+                                   .ThenInclude(pc => pc.Provincie)
                            .Include(i => i.ClientIdClientAccountNavigation)
                                .ThenInclude(ca => ca.ClientContacts)
-                               .Include(i => i.Series)
+                           .Include(i => i.Series)
                            .FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
 
             if (invoice == null)
@@ -300,12 +323,16 @@ namespace ServiceCore
 
         private static InvoiceDetailBO NewDetailBo(Invoices invoice, string statusName, string? defaultIban, string? defaultBic, CompanyInfo? company)
         {
-            var postal = invoice.PostalCode;
+            var contact = invoice.ClientIdClientContactsNavigation;
+            var account = invoice.ClientIdClientAccountNavigation;
+            var postal = invoice.PostalCode
+                ?? contact?.InvoicePostalCode
+                ?? account?.InvoicePostalCode
+                ?? contact?.PostalCode
+                ?? account?.PostalCode;
             var issuer = invoice.IssuerCompany;
             var issuerIban = defaultIban ?? issuer?.IssuerBankAccount?.Iban;
             var issuerBic = defaultBic ?? issuer?.IssuerBankAccount?.Bic;
-            var contact = invoice.ClientIdClientContactsNavigation;
-            var account = invoice.ClientIdClientAccountNavigation;
             var isSupplier = invoice.CompanyId.HasValue;
 
             string? invoiceEmail = contact?.InvoiceEmail;
