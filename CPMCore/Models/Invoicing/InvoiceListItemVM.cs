@@ -1,4 +1,5 @@
-﻿namespace CPMCore.Models.Invoicing
+﻿using BOCore;   
+namespace CPMCore.Models.Invoicing
 {
     public class InvoiceListItemVM
     {

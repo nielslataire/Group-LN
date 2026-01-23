@@ -2,38 +2,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using BOCore;
 
 namespace CPMCore.Models.Invoicing
 {
-    public enum InvoiceStatus
-    {
-        [Display(Name = "Onbekend")]
-        Unknown = 0,
 
-        [Display(Name = "Concept")]
-        Draft,
-
-        [Display(Name = "Genummerd")]
-        Issued,
-
-        [Display(Name = "Verzonden")]
-        Sent,
-
-        [Display(Name = "Deels betaald")]
-        PartiallyPaid,
-
-        [Display(Name = "Betaald")]
-        Paid,
-
-        [Display(Name = "Vervallen")]
-        Overdue,
-
-        [Display(Name = "Geannuleerd")]
-        Cancelled,
-
-        [Display(Name = "Geboekt")]
-        Booked
-    }
 
     public static class InvoiceStatusExtensions
     {
@@ -52,10 +25,29 @@ namespace CPMCore.Models.Invoicing
                 "Overdue" => InvoiceStatus.Overdue,
                 "Cancelled" => InvoiceStatus.Cancelled,
                 "Booked" => InvoiceStatus.Booked,
+                "Generating" => InvoiceStatus.Generating,
                 _ => InvoiceStatus.Unknown
             };
         }
+        public static InvoiceStatus FromId(byte? statusId)
+        {
+            if (!statusId.HasValue)
+                return InvoiceStatus.Unknown;
 
+            var status = (InvoiceStatus)statusId.Value;
+            return Enum.IsDefined(typeof(InvoiceStatus), status) ? status : InvoiceStatus.Unknown;
+        }
+
+        public static InvoiceStatus FromId(int? statusId)
+        {
+            if (!statusId.HasValue)
+                return InvoiceStatus.Unknown;
+
+            if (statusId.Value < 0 || statusId.Value > byte.MaxValue)
+                return InvoiceStatus.Unknown;
+
+            return FromId((byte?)statusId.Value);
+        }
         public static string GetDisplayName(this InvoiceStatus status)
         {
             var member = typeof(InvoiceStatus).GetMember(status.ToString()).FirstOrDefault();

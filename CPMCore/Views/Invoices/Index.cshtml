@@ -1,6 +1,7 @@
 ﻿@model IReadOnlyList<CPMCore.Models.Invoicing.InvoiceListItemVM>
 @using System.Globalization
 @using CPMCore.Models.Invoicing
+@using BOCore
 @{
     var culture = CultureInfo.GetCultureInfo("nl-BE");
     ViewData["Title"] = "Facturen - " + @ViewBag.CompanyName;
@@ -24,6 +25,7 @@
         InvoiceStatus.Overdue => ("bx bx-alert-circle", "#dc3545"),
         InvoiceStatus.Cancelled => ("bx bx-block", "#343a40"),
         InvoiceStatus.Booked => ("bx bx-book", "#6f42c1"),
+        InvoiceStatus.Generating => ("bx bx-loader-alt bx-spin", "#0d6efd"),
         _ => ("bx bx-help-circle", "#6c757d")
     };
  string DocumentType(InvoiceStatus status, bool isCreditNote)
@@ -123,7 +125,7 @@
         <div class="col-sm-auto px-0">
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-            <form asp-action="BookInvoices" method="post" class="d-inline">
+        <form asp-action="BookInvoices" method="post" class="d-inline js-invoice-processing-form" data-processing-message="Facturen worden geboekt...">
                 <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
                 <button type="submit" class="btn btn-primary btn-md px-3 me-1">Boeken facturen</button>
             </form>
@@ -262,7 +264,8 @@
                                                            asp-action="Issue"
                                                            asp-route-id="@r.Id"
                                                            asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                           class="ms-1 me-1">
+                                                           class="ms-1 me-1 js-invoice-processing-link"
+                                                           data-processing-message="Factuur wordt genummerd...">
                                                             <i class="bx bx-lock fs-5"> </i>
                                                             <span class="visually-hidden">Nummeren</span>
                                                         </a>
@@ -283,6 +286,15 @@
                                                            data-issuer="@ViewBag.CompanyId"
                                                            data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
                                                             <i class="bx bx-trash fs-5"></i>
+                                                        </a>
+                                                    }
+                                                    else if (StatusIn(r.Status, InvoiceStatus.Generating))
+                                                    {
+                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
+                                                           asp-action="Detail"
+                                                           asp-route-id="@r.Id"
+                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                            <i class="bx bx-show fs-5"></i>
                                                         </a>
                                                     }
                                                     else if (StatusIn(r.Status, InvoiceStatus.Issued))
@@ -431,7 +443,16 @@ else
 <div id="ModalDeleteInvoice" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-invoice-container"></div>
 </div>
-
+<div class="modal fade" id="invoiceProcessingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                <p class="mb-0 fw-semibold" id="invoiceProcessingMessage">Factuur wordt verwerkt...</p>
+            </div>
+        </div>
+    </div>
+</div>
         
 @section PageScripts
 {
@@ -471,7 +492,7 @@ else
 
           // Modal verwijderen factuur laden
 
-           $(document).on('click', '.deleteInvoice', function (ev) {
+          $(document).on('click', '.deleteInvoice', function (ev) {
               ev.preventDefault();
               const id = $(this).data('id');
               const issuerId = $(this).data('issuer');
@@ -492,7 +513,35 @@ else
                   }
               });
           });
+           const processingModalElement = document.getElementById('invoiceProcessingModal');
+          const processingModal = processingModalElement
+              ? new bootstrap.Modal(processingModalElement, { backdrop: 'static', keyboard: false })
+              : null;
 
+          function showProcessingModal(message) {
+              if (!processingModal) {
+                  return;
+              }
+
+              const text = message || 'Factuur wordt verwerkt...';
+              $('#invoiceProcessingMessage').text(text);
+              processingModal.show();
+          }
+
+          $(document).on('click', '.js-invoice-processing-link', function (ev) {
+              ev.preventDefault();
+              const message = $(this).data('processing-message');
+              const href = $(this).attr('href');
+              showProcessingModal(message);
+              if (href) {
+                  window.location = href;
+              }
+          });
+
+          $(document).on('submit', '.js-invoice-processing-form', function () {
+              const message = $(this).data('processing-message');
+              showProcessingModal(message);
+          });
           // Bouw de DataTables language-teksten in NL met dynamische naamgeving
           function buildLanguage(e) {
             const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);

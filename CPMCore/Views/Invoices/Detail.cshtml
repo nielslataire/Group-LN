@@ -2,6 +2,7 @@
 @using System.Linq
 @using System.Globalization
 @using CPMCore.Models.Invoicing
+@using BOCore
 @{
     var culture = CultureInfo.GetCultureInfo("nl-BE");
     var issuerId = ViewBag.CompanyId as int?;
@@ -9,6 +10,7 @@
     var displayId = string.IsNullOrWhiteSpace(Model.PublicId) ? $"Factuur #{Model.Id}" : Model.PublicId;
     var isDraft = Model.Status == InvoiceStatus.Draft;
     var isIssued = Model.Status == InvoiceStatus.Issued;
+    var isGenerating = Model.Status == InvoiceStatus.Generating;
     var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
     var hasDeliveryInfo = !string.IsNullOrWhiteSpace(Model.OctopusDeliveryState)
         || Model.OctopusDeliveryDateTime.HasValue
@@ -34,6 +36,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
         InvoiceStatus.Paid => "badge bg-success",
         InvoiceStatus.Overdue => "badge bg-danger",
         InvoiceStatus.Cancelled => "badge bg-dark",
+        InvoiceStatus.Generating => "badge bg-info text-dark",
         _ => "badge bg-light text-dark"
     };
     string OctopusBadgeClass(string? state) => (state ?? string.Empty).ToUpperInvariant() switch
@@ -96,7 +99,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
         </div>
         <div class="col-auto align-self-start">
             <div class="btn-group" role="group">
-                @if (canManageInvoices)
+                @if (canManageInvoices && !isGenerating)
                 {
                     <a class="btn btn-default btn-md px-3 me-1"
                        asp-action="Edit"
@@ -107,7 +110,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
                         Bewerken
                     </a>
                 }
-                @if (canManageInvoices && isIssued)
+                @if (canManageInvoices && isIssued && !isGenerating)
                 {
                     <a class="btn btn-primary btn-md px-3 me-1"
                        asp-action="Send"

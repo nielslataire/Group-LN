@@ -156,7 +156,7 @@ namespace CPMCore.Controllers
                     PublicId = x.PublicId,
                     ClientName = x.ClientName,
                     InvoiceDate = x.InvoiceDate,
-                    Status = TranslateStatus(x.StatusName),
+                    Status = TranslateStatus(x.StatusId, x.StatusName),
                     GrossTotal = x.GrossTotal,
                     Balance = x.Balance,
                     InvoiceNumber = parts.Number,
@@ -204,16 +204,7 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
-            var bookedStatusId = await _db.InvoiceStatusLookup
-                .Where(s => s.Name == "Booked")
-                .Select(s => (byte?)s.Id)
-                .FirstOrDefaultAsync(ct);
-
-            if (bookedStatusId is null)
-            {
-                AddMessage("error", "Boekingsstatus 'Booked' kon niet gevonden worden in de database.", "Factuur");
-                return RedirectToAction(nameof(Index), new { issuerCompanyId });
-            }
+            var bookedStatusId = (byte)InvoiceStatus.Booked;
 
             var latestNumberedInvoice = await _db.Invoices
                 .Where(i => i.IssuerCompanyId == issuerCompanyId
@@ -229,6 +220,12 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
+            if (InvoiceStatusExtensions.FromId(latestNumberedInvoice.StatusId) == InvoiceStatus.Generating)
+            {
+                AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
             if (latestNumberedInvoice.OctopusBookyearId is null
                 || latestNumberedInvoice.OctopusDocumentSequenceNr is null
                 || string.IsNullOrWhiteSpace(latestNumberedInvoice.OctopusJournalKey))
@@ -236,6 +233,10 @@ namespace CPMCore.Controllers
                 AddMessage("error", "Geen geldig boekjaar of dagboek gevonden bij de laatste genummerde factuur.", "Factuur");
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
+
+            var previousStatusId = latestNumberedInvoice.StatusId;
+            latestNumberedInvoice.StatusId = (byte)InvoiceStatus.Generating;
+            await _db.SaveChangesAsync(ct);
 
             try
             {
@@ -274,6 +275,16 @@ namespace CPMCore.Controllers
                         && i.OctopusDocumentSequenceNr <= bookedUntil
                         && i.OctopusBookedAt == null)
                     .ToListAsync(ct);
+
+                var generatingId = (byte)InvoiceStatus.Generating;
+                if (invoicesToUpdate.Any(i => i.StatusId == generatingId && i.Id != latestNumberedInvoice.Id))
+                {
+                    AddMessage("error", "Eén of meerdere facturen worden momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
+                    latestNumberedInvoice.StatusId = previousStatusId;
+                    await _db.SaveChangesAsync(ct);
+                    return RedirectToAction(nameof(Index), new { issuerCompanyId });
+                }
+
 
                 foreach (var invoice in invoicesToUpdate)
                 {
@@ -315,6 +326,8 @@ namespace CPMCore.Controllers
             }
             catch (Exception ex)
             {
+                latestNumberedInvoice.StatusId = previousStatusId;
+                await _db.SaveChangesAsync(ct);
                 _logger.LogError(ex, "Octopus booking failed for issuer {IssuerCompanyId}", issuerCompanyId);
                 var message = string.IsNullOrWhiteSpace(ex.Message)
                     ? "Facturen konden niet geboekt worden."
@@ -725,7 +738,7 @@ namespace CPMCore.Controllers
                 DisplayId = string.IsNullOrWhiteSpace(row.PublicId) ? $"[{row.Id}]" : row.PublicId,
                 ClientName = row.ClientName,
                 InvoiceDate = row.InvoiceDate,
-                Status = TranslateStatus(row.StatusName)
+                Status = TranslateStatus(row.StatusId, row.StatusName)
             };
 
             return PartialView("Modals/_ModalDeleteInvoice", vm);
@@ -741,6 +754,23 @@ namespace CPMCore.Controllers
             // 2) Zet draft om naar definitief (IssueDraftAsync).
             // Opmerking: we forceren in de PDF geen proforma-label tijdens issue,
             // zodat de klant nooit een proforma-factuur ontvangt bij "Issue".
+            var invoice = await _db.Invoices
+               .FirstOrDefaultAsync(i => i.Id == id, ct);
+            if (invoice == null)
+            {
+                AddMessage("error", "Factuur niet gevonden.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            if (InvoiceStatusExtensions.FromId(invoice.StatusId) == InvoiceStatus.Generating)
+            {
+                AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            var previousStatusId = invoice.StatusId;
+            invoice.StatusId = (byte)InvoiceStatus.Generating;
+            await _db.SaveChangesAsync(ct);
             try
             {
                 await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
@@ -752,11 +782,15 @@ namespace CPMCore.Controllers
             }
             catch (InvalidOperationException ex)
             {
+                invoice.StatusId = previousStatusId;
+                await _db.SaveChangesAsync(ct);
                 _logger.LogWarning(ex, "Issue invoice {InvoiceId} blocked", id);
                 AddMessage("error", ex.Message, "Factuur");
             }
             catch (Exception ex)
             {
+                invoice.StatusId = previousStatusId;
+                await _db.SaveChangesAsync(ct);
                 _logger.LogError(ex, "Issue invoice {InvoiceId} failed", id);
                 AddMessage("error", "Factuur kon niet definitief gemaakt worden.", "Factuur");
             }
@@ -1489,6 +1523,13 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, string? returnUrl = null, CancellationToken ct = default)
         {
+            if (await IsInvoiceGeneratingAsync(id, ct))
+            {
+                AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
+                return issuerCompanyId.HasValue
+                    ? RedirectToAction(nameof(Index), new { issuerCompanyId })
+                    : RedirectToAction(nameof(Index));
+            }
             var detail = await _invoices.GetDetailAsync(id, ct);
             if (detail == null)
             {
@@ -1521,6 +1562,12 @@ namespace CPMCore.Controllers
         {
             if (vm == null)
                 return RedirectToAction(nameof(Index));
+
+            if (await IsInvoiceGeneratingAsync(vm.InvoiceId, ct))
+            {
+                AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId = vm.IssuerCompanyId });
+            }
 
             var detail = await _invoices.GetDetailAsync(vm.InvoiceId, ct);
             if (detail == null)
@@ -4336,6 +4383,19 @@ END";
             TempData["MessageTitle"] = messagetitle;
         }
         private static InvoiceStatus TranslateStatus(string? status) => InvoiceStatusExtensions.FromCode(status);
+
+        private static InvoiceStatus TranslateStatus(int? statusId, string? statusName)
+            => statusId.HasValue ? InvoiceStatusExtensions.FromId(statusId) : InvoiceStatusExtensions.FromCode(statusName);
+
+        private async Task<bool> IsInvoiceGeneratingAsync(int invoiceId, CancellationToken ct)
+        {
+            var statusId = await _db.Invoices
+                .Where(i => i.Id == invoiceId)
+                .Select(i => i.StatusId)
+                .FirstOrDefaultAsync(ct);
+
+            return InvoiceStatusExtensions.FromId(statusId) == InvoiceStatus.Generating;
+        }
         private static bool WasSentViaPeppol(OctopusInvoiceSendResponse? sendResponse)
         {
             return sendResponse?.SendInvoiceStatusList?.Any(status =>

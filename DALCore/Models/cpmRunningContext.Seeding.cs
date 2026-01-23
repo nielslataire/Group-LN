@@ -19,7 +19,8 @@ namespace DALCore.Models
                 new InvoiceStatusLookup { Id = 5, Name = "Paid" },
                 new InvoiceStatusLookup { Id = 6, Name = "Overdue" },
                 new InvoiceStatusLookup { Id = 7, Name = "Cancelled" },
-                new InvoiceStatusLookup { Id = 8, Name = "Booked" }
+                new InvoiceStatusLookup { Id = 8, Name = "Booked" },
+                new InvoiceStatusLookup { Id = 9, Name = "Generating" }
             );
 
             modelBuilder.Entity<PaymentTerms>().HasData(

@@ -1,4 +1,5 @@
 ﻿using System;
+using BOCore;
 using System.Collections.Generic;
 
 namespace CPMCore.Models.Invoicing

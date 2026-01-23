@@ -79,9 +79,9 @@ namespace ServiceCore
             var invoiceText = headerText ?? detailText;
             var footerText = Clean(bo.FooterDescription);
 
-            // status ids
-            var draftId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Draft").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)1;
-            var issuedId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Issued").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct) ?? (byte)2;
+            // status ids (enum-gedreven)
+            var draftId = (byte)InvoiceStatusId.Draft;
+            var issuedId = (byte)InvoiceStatusId.Issued;
 
             var paidId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Paid").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct);
 
@@ -243,31 +243,12 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
 
-                var draftId = await _db.InvoiceStatusLookup
-                    .Where(s => s.Name == "Draft")
-                    .Select(s => (byte?)s.Id)
-                    .FirstOrDefaultAsync(ct)
-                    ?? (byte)1;
+                if (invoice.StatusId == (byte)InvoiceStatusId.Generating)
+                    throw new InvalidOperationException("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
 
-                var paidId = await _db.InvoiceStatusLookup
-                   .Where(s => s.Name == "Paid")
-                   .Select(s => (byte?)s.Id)
-                   .FirstOrDefaultAsync(ct);
-
-
-                var issuedId = await _db.InvoiceStatusLookup
-                    .Where(s => s.Name == "Numbered")
-                    .Select(s => (byte?)s.Id)
-                    .FirstOrDefaultAsync(ct);
-
-                if (!issuedId.HasValue)
-                {
-                    issuedId = await _db.InvoiceStatusLookup
-                        .Where(s => s.Name == "Issued")
-                        .Select(s => (byte?)s.Id)
-                        .FirstOrDefaultAsync(ct)
-                        ?? throw new InvalidOperationException("Status 'Issued' niet geconfigureerd.");
-                }
+                var draftId = (byte)InvoiceStatusId.Draft;
+                var paidId = (byte?)InvoiceStatusId.Paid;
+                var issuedId = (byte?)InvoiceStatusId.Issued;
 
                 var isPaid = paidId.HasValue && invoice.StatusId == paidId.Value;
                 if (invoice.StatusId != draftId && !isPaid)
@@ -344,6 +325,9 @@ namespace ServiceCore
                     .Include(i => i.IssuerCompany)
                     .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                if (invoice.StatusId == (byte)InvoiceStatusId.Generating)
+                    throw new InvalidOperationException("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
 
                 InvoiceSequence? sequence = null;
                 int? invoiceNumber = null;
@@ -455,30 +439,18 @@ namespace ServiceCore
 
                 invoice.SentAt = sentAtUtc;
 
-                var sentStatusId = await _db.InvoiceStatusLookup
-                    .Where(s => s.Name == "Sent")
-                    .Select(s => (byte?)s.Id)
-                    .FirstOrDefaultAsync(ct);
+                var sentStatusId = (byte)InvoiceStatusId.Sent;
+                var currentStatusId = invoice.StatusId;
+                var generatingId = (byte)InvoiceStatusId.Generating;
 
-                if (sentStatusId.HasValue)
+                if (currentStatusId == generatingId)
+                    throw new InvalidOperationException("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
+
+                if (!currentStatusId.HasValue
+                    || currentStatusId.Value == (byte)InvoiceStatusId.Issued
+                    || currentStatusId.Value == (byte)InvoiceStatusId.Draft)
                 {
-                    string? currentStatusName = null;
-
-                    if (invoice.StatusId.HasValue)
-                    {
-                        currentStatusName = await _db.InvoiceStatusLookup
-                            .Where(s => s.Id == invoice.StatusId)
-                            .Select(s => s.Name)
-                            .FirstOrDefaultAsync(ct);
-                    }
-
-                    if (string.IsNullOrWhiteSpace(currentStatusName)
-                        || string.Equals(currentStatusName, "Issued", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(currentStatusName, "Numbered", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(currentStatusName, "Draft", StringComparison.OrdinalIgnoreCase))
-                    {
-                        invoice.StatusId = sentStatusId.Value;
-                    }
+                    invoice.StatusId = sentStatusId;
                 }
 
                 await _uow.SaveChangesAsync(ct);
@@ -501,6 +473,9 @@ namespace ServiceCore
                 var invoice = await _db.Invoices
                     .FirstOrDefaultAsync(i => i.Id == bo.InvoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+                if (invoice.StatusId == (byte)InvoiceStatusId.Generating)
+                    throw new InvalidOperationException("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
 
                 var header = Clean(bo.HeaderDescription);
                 var detail = Clean(bo.DetailDescription);
@@ -570,19 +545,13 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
 
-                var statusName = await _db.InvoiceStatusLookup
-                    .Where(s => s.Id == invoice.StatusId)
-                    .Select(s => s.Name)
-                    .FirstOrDefaultAsync(ct)
-                    ?? string.Empty;
+                var generatingId = (byte)InvoiceStatusId.Generating;
+                if (invoice.StatusId == generatingId)
+                    throw new InvalidOperationException("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
 
-                if (!string.Equals(statusName, "Draft", StringComparison.OrdinalIgnoreCase))
+                if (invoice.StatusId != (byte)InvoiceStatusId.Draft)
                     throw new InvalidOperationException("Alleen conceptfacturen kunnen volledig bewerkt worden.");
 
-                var paidId = await _db.InvoiceStatusLookup
-                 .Where(s => s.Name == "Paid")
-                 .Select(s => (byte?)s.Id)
-                 .FirstOrDefaultAsync(ct);
 
                 var issuer = await _db.IssuerCompany
                     .FirstOrDefaultAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct)

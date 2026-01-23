@@ -1,4 +1,5 @@
 ﻿using System;
+using BOCore;
 using System.ComponentModel.DataAnnotations;
 
 namespace CPMCore.Models.Invoicing
