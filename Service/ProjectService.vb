@@ -1,10 +1,11 @@
-﻿Imports BO
-Imports Facade
-Imports DAL
-Imports System.Text.RegularExpressions
-Imports System.Data.SqlClient
+﻿Imports System.Configuration
 Imports System.Data.Entity.Core.EntityClient
-Imports System.Configuration
+Imports System.Data.SqlClient
+Imports System.Diagnostics.Eventing
+Imports System.Text.RegularExpressions
+Imports BO
+Imports DAL
+Imports Facade
 
 Public Class ProjectService
     Implements IProjectService
@@ -331,8 +332,8 @@ Public Class ProjectService
             If (_entity.DocFireInspection = True) Then If _entity.ProjectDocs.Where(Function(l) l.Type = ProjectDocType.Fire_inspection).Count = 0 Then If boDocs.Display = "" Then boDocs.Display = "Het project " & _entity.ProjectName & " ontbreekt volgende documenten : Brandkeuring" Else boDocs.Display = boDocs.Display & " , Brandkeuring"
             If (_entity.DocDelivery = True) Then If _entity.ProjectDocs.Where(Function(l) l.Type = ProjectDocType.Delivery).Count = 0 Then If boDocs.Display = "" Then boDocs.Display = "Het project " & _entity.ProjectName & " ontbreekt volgende documenten : Voorlopige oplevering" Else boDocs.Display = boDocs.Display & " , Voorlopige oplevering"
             If (_entity.DocPID = True) Then If _entity.ProjectDocs.Where(Function(l) l.Type = ProjectDocType.PID).Count = 0 Then If boDocs.Display = "" Then boDocs.Display = "Het project " & _entity.ProjectName & " ontbreekt volgende documenten : PID" Else boDocs.Display = boDocs.Display & " , PID"
-            End If
-            Return boDocs
+        End If
+        Return boDocs
     End Function
     Public Function InsertUpdate(project As ProjectBO) As Response Implements IProjectService.InsertUpdate
         Dim response As New Response
@@ -762,7 +763,8 @@ Public Class ProjectService
             response.AddError(uow.SaveChanges())
         End If
 
-      
+
+
 
         Return response
     End Function
@@ -1258,6 +1260,15 @@ Public Class ProjectService
             Using conn As New SqlConnection(providerConn)
                 Const sql As String = "INSERT INTO ContactRequests (CreatedAt, SourceSite, Origin, RequestType, ProjectId, UnitId, DocumentId, DocumentName, DocumentFileName, DocumentType, Firstname, Lastname, Fullname, Email, Phone, Subject, Question, ExternalMailStatus, InternalMailStatus) OUTPUT INSERTED.Id VALUES (@CreatedAt, @SourceSite, @Origin, @RequestType, @ProjectId, @UnitId, @DocumentId, @DocumentName, @DocumentFileName, @DocumentType, @Firstname, @Lastname, @Fullname, @Email, @Phone, @Subject, @Question, @ExternalMailStatus, @InternalMailStatus)"
                 Using cmd As New SqlCommand(sql, conn)
+                    Dim firstname = If(request.Firstname, String.Empty).Trim()
+                    Dim lastname = If(request.Lastname, String.Empty).Trim()
+                    Dim fullname = If(request.Fullname, String.Empty).Trim()
+                    If String.IsNullOrWhiteSpace(fullname) Then fullname = (firstname & " " & lastname).Trim()
+                    Dim email = If(request.Email, String.Empty).Trim()
+                    Dim phone = If(request.Phone, String.Empty).Trim()
+                    Dim subject = If(request.Subject, String.Empty).Trim()
+                    Dim question = If(request.Question, String.Empty).Trim()
+
                     cmd.Parameters.AddWithValue("@CreatedAt", request.CreatedAt)
                     cmd.Parameters.AddWithValue("@SourceSite", If(String.IsNullOrWhiteSpace(request.SourceSite), "Unknown", request.SourceSite))
                     cmd.Parameters.AddWithValue("@Origin", If(String.IsNullOrWhiteSpace(request.Origin), CType(DBNull.Value, Object), request.Origin))
@@ -1268,15 +1279,13 @@ Public Class ProjectService
                     cmd.Parameters.AddWithValue("@DocumentName", If(String.IsNullOrWhiteSpace(request.DocumentName), CType(DBNull.Value, Object), request.DocumentName))
                     cmd.Parameters.AddWithValue("@DocumentFileName", If(String.IsNullOrWhiteSpace(request.DocumentFileName), CType(DBNull.Value, Object), request.DocumentFileName))
                     cmd.Parameters.AddWithValue("@DocumentType", If(String.IsNullOrWhiteSpace(request.DocumentType), CType(DBNull.Value, Object), request.DocumentType))
-                    cmd.Parameters.AddWithValue("@Firstname", If(String.IsNullOrWhiteSpace(request.Firstname), CType(DBNull.Value, Object), request.Firstname))
-                    cmd.Parameters.AddWithValue("@Lastname", If(String.IsNullOrWhiteSpace(request.Lastname), CType(DBNull.Value, Object), request.Lastname))
-                    Dim fullname As String = request.Fullname
-                    If String.IsNullOrWhiteSpace(fullname) Then fullname = (request.Firstname & " " & request.Lastname).Trim()
+                    cmd.Parameters.AddWithValue("@Firstname", If(String.IsNullOrWhiteSpace(firstname), CType(DBNull.Value, Object), firstname))
+                    cmd.Parameters.AddWithValue("@Lastname", If(String.IsNullOrWhiteSpace(lastname), CType(DBNull.Value, Object), lastname))
                     cmd.Parameters.AddWithValue("@Fullname", If(String.IsNullOrWhiteSpace(fullname), CType(DBNull.Value, Object), fullname))
-                    cmd.Parameters.AddWithValue("@Email", If(String.IsNullOrWhiteSpace(request.Email), CType(DBNull.Value, Object), request.Email))
-                    cmd.Parameters.AddWithValue("@Phone", If(String.IsNullOrWhiteSpace(request.Phone), CType(DBNull.Value, Object), request.Phone))
-                    cmd.Parameters.AddWithValue("@Subject", If(String.IsNullOrWhiteSpace(request.Subject), CType(DBNull.Value, Object), request.Subject))
-                    cmd.Parameters.AddWithValue("@Question", If(String.IsNullOrWhiteSpace(request.Question), CType(DBNull.Value, Object), request.Question))
+                    cmd.Parameters.AddWithValue("@Email", If(String.IsNullOrWhiteSpace(email), CType(DBNull.Value, Object), email))
+                    cmd.Parameters.AddWithValue("@Phone", If(String.IsNullOrWhiteSpace(phone), CType(DBNull.Value, Object), phone))
+                    cmd.Parameters.AddWithValue("@Subject", If(String.IsNullOrWhiteSpace(subject), CType(DBNull.Value, Object), subject))
+                    cmd.Parameters.AddWithValue("@Question", If(String.IsNullOrWhiteSpace(question), CType(DBNull.Value, Object), question))
                     cmd.Parameters.AddWithValue("@ExternalMailStatus", If(String.IsNullOrWhiteSpace(request.ExternalMailStatus), CType(DBNull.Value, Object), request.ExternalMailStatus))
                     cmd.Parameters.AddWithValue("@InternalMailStatus", If(String.IsNullOrWhiteSpace(request.InternalMailStatus), CType(DBNull.Value, Object), request.InternalMailStatus))
                     conn.Open()

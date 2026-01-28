@@ -17,6 +17,8 @@ Public Enum ProjectDocType As Integer
     DefDelivery = 4
     <Display(Name:="Elektrische keuring")>
     Electrical_inspection = 6
+    <Display(Name:="Elektrische keuring - zonnepanelen")>
+    Electrical_inspection_solar = 17
     <Display(Name:="EPB-dossier")>
     EPB = 10
     <Display(Name:="EPC-attest")>

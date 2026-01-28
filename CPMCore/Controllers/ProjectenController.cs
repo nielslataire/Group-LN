@@ -32,6 +32,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
@@ -712,9 +713,9 @@ namespace CPMCore.Controllers
             var request = new ContactRequestBO
             {
                 ProjectId = model.ProjectId,
-                Firstname = model.Firstname,
-                Lastname = model.Lastname,
-                Fullname = $"{model.Firstname} {model.Lastname}".Trim(),
+                Firstname = NormalizeContactName(model.Firstname),
+                Lastname = NormalizeContactName(model.Lastname),
+                Fullname = BuildFullname(model.Firstname, model.Lastname),
                 Email = model.Email,
                 Phone = model.Phone,
                 RequestType = "Contact",
@@ -770,9 +771,9 @@ namespace CPMCore.Controllers
             var service = ServiceFactory.GetProjectService();
             var updatedValues = new ContactRequestBO
             {
-                Firstname = model.Firstname,
-                Lastname = model.Lastname,
-                Fullname = $"{model.Firstname} {model.Lastname}".Trim(),
+                Firstname = NormalizeContactName(model.Firstname),
+                Lastname = NormalizeContactName(model.Lastname),
+                Fullname = BuildFullname(model.Firstname, model.Lastname),
                 Email = model.NewEmail,
                 Phone = model.NewPhone,
                 CreatedAt = model.ContactDate?.Date ?? default,
@@ -1006,6 +1007,8 @@ namespace CPMCore.Controllers
         private static string BuildContactKey(ContactRequestBO contact)
         {
             var email = NormalizeContactValue(contact?.Email);
+            if (!string.IsNullOrWhiteSpace(email))
+                return email;
             var name = NormalizeContactValue(GetContactDisplayName(contact));
             var phone = NormalizeContactValue(contact?.Phone);
             return $"{email}|{name}|{phone}";
@@ -1016,8 +1019,12 @@ namespace CPMCore.Controllers
             if (contact == null)
                 return "-";
 
-            if (!string.IsNullOrWhiteSpace(contact.Fullname))
-                return contact.Fullname;
+            var fullname = !string.IsNullOrWhiteSpace(contact.Fullname)
+                  ? contact.Fullname
+                  : $"{contact.Firstname} {contact.Lastname}".Trim();
+            if (!string.IsNullOrWhiteSpace(fullname))
+                return ToTitleCase(fullname);
+
 
             var fallback = $"{contact.Firstname} {contact.Lastname}".Trim();
             return string.IsNullOrWhiteSpace(fallback) ? "-" : fallback;
@@ -1031,7 +1038,24 @@ namespace CPMCore.Controllers
 
         private static string NormalizeContactValue(string value)
             => string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim().ToLowerInvariant();
+        private static string NormalizeContactName(string value)
+          => string.IsNullOrWhiteSpace(value) ? string.Empty : ToTitleCase(value.Trim());
 
+        private static string BuildFullname(string firstname, string lastname)
+        {
+            var normalizedFirstname = NormalizeContactName(firstname);
+            var normalizedLastname = NormalizeContactName(lastname);
+            return $"{normalizedFirstname} {normalizedLastname}".Trim();
+        }
+
+        private static string ToTitleCase(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var culture = CultureInfo.CurrentCulture;
+            return culture.TextInfo.ToTitleCase(value.ToLower(culture));
+        }
         [HttpGet]
         //[Breadcrumb("Eenheid toevoegen")]
         [Breadcrumb("Eenheid toevoegen", FromAction = "DetailUnits")]
