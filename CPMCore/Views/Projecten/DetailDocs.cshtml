@@ -1,5 +1,6 @@
 ﻿@using CPMCore.Controllers
 @using BOCore
+@using CPMCore.Models.Projecten
 @inject IConfiguration Configuration
 @model CPMCore.Models.Projecten.DetailDocsModel
 @*
@@ -93,7 +94,13 @@
                     </div>
                 </div>
                 @await Html.PartialAsync("Docs", Model)
-            @await Html.PartialAsync("_ModalAddDoc", new BOCore.ProjectDocBO { ProjectId = Model.ProjectId, ClientAccountId = Model.ClientAccountId, Type = BOCore.ProjectDocType.Sales })
+                @await Html.PartialAsync("_ModalAddDoc", new ProjectDocModalVM
+                {
+                    Document = new ProjectDocBO { ProjectId = Model.ProjectId, ClientAccountId = Model.ClientAccountId, Type = ProjectDocType.Sales },
+                                Clients = Model.Clients,
+                                Target = Model.ClientAccountId > 0 ? "Client" : "Project",
+                                SelectedClientAccountId = Model.ClientAccountId > 0 ? Model.ClientAccountId : null
+                                })
             </div>
         </div>
     </div>

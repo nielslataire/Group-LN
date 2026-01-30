@@ -3857,6 +3857,8 @@ namespace CPMCore.Controllers
                 ProjectName = service.GetProjectNameById(projectid),
 
             };
+            var clientsResponse = cservice.GetClientAccountsByProjectIdForSelect(projectid);
+            model.Clients = clientsResponse.Success ? clientsResponse.Values : Array.Empty<IdNameBO>();
 
             // Als er een client is: clientdocs, anders projectdocs
             if (clientaccountid.HasValue && clientaccountid.Value > 0)
@@ -3906,16 +3908,33 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult ModalAddDoc(int id, int? clientaccountid)
         {
-            var vm = new ProjectDocBO
+            var clientService = ServiceFactory.GetClientService();
+            var clientsResponse = clientService.GetClientAccountsByProjectIdForSelect(id);
+            var vm = new CPMCore.Models.Projecten.ProjectDocModalVM
             {
-                ProjectId = id,
-                ClientAccountId = clientaccountid ?? 0
+                Document = new ProjectDocBO
+                {
+                    ProjectId = id,
+                    ClientAccountId = clientaccountid ?? 0
+                },
+                Clients = clientsResponse.Success ? clientsResponse.Values : new List<IdNameBO>(),
+                Target = clientaccountid.HasValue && clientaccountid.Value > 0 ? "Client" : "Project",
+                SelectedClientAccountId = clientaccountid
             };
-            return PartialView("_ModalAddDoc", vm);
+            return PartialView("Modals/_ModalAddDoc", vm);
         }
         [HttpPost]
-        public async Task<IActionResult> AddDocument(ProjectDocBO model, IFormFile file)
+        public async Task<IActionResult> AddDocument(CPMCore.Models.Projecten.ProjectDocModalVM vm, IFormFile file)
         {
+            var model = vm.Document ?? new ProjectDocBO();
+            if (!string.Equals(vm.Target, "Client", StringComparison.OrdinalIgnoreCase))
+            {
+                model.ClientAccountId = null;
+            }
+            else
+            {
+                model.ClientAccountId = vm.SelectedClientAccountId;
+            }
 
             if (file == null || file.Length <= 0)
             {

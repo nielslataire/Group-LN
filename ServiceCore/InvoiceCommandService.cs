@@ -82,8 +82,7 @@ namespace ServiceCore
             // status ids (enum-gedreven)
             var draftId = (byte)InvoiceStatusId.Draft;
             var issuedId = (byte)InvoiceStatusId.Issued;
-
-            var paidId = await _db.InvoiceStatusLookup.Where(s => s.Name == "Paid").Select(s => (byte?)s.Id).FirstOrDefaultAsync(ct);
+            var paidId = (byte?)InvoiceStatusId.Paid;
 
             await using var tx = await _uow.BeginTransactionAsync(ct);
             try
@@ -243,15 +242,16 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(i => i.Id == invoiceId, ct)
                     ?? throw new InvalidOperationException("Factuur niet gevonden.");
 
-                if (invoice.StatusId == (byte)InvoiceStatusId.Generating)
-                    throw new InvalidOperationException("Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.");
+
 
                 var draftId = (byte)InvoiceStatusId.Draft;
                 var paidId = (byte?)InvoiceStatusId.Paid;
                 var issuedId = (byte?)InvoiceStatusId.Issued;
+                var generatingId = (byte)InvoiceStatusId.Generating;
 
                 var isPaid = paidId.HasValue && invoice.StatusId == paidId.Value;
-                if (invoice.StatusId != draftId && !isPaid)
+                var isGenerating = invoice.StatusId == generatingId;
+                if (invoice.StatusId != draftId && !isPaid && !isGenerating)
                     throw new InvalidOperationException("Alleen conceptfacturen kunnen definitief gemaakt worden.");
 
                 var finalDate = issueDate ?? invoice.Date;

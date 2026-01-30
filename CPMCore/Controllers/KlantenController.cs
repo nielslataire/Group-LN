@@ -441,6 +441,34 @@ namespace CPMCore.Controllers
                 model.ChangeOrders = changeOrderResponse.Values;
             }
 
+            if (model.ProjectId > 0)
+            {
+                var projectName = projectService.GetProjectNameById(model.ProjectId);
+                var clientName = model.Client?.DisplayName ?? clientService.GetClientAccountNameById(clientId);
+
+                var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Home");
+                var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+                {
+                    Parent = dashboard
+                };
+                var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", projectName)
+                {
+                    Parent = projectenIndex,
+                    RouteValues = new { projectid = model.ProjectId }
+                };
+                var klanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
+                {
+                    Parent = projectDetail,
+                    RouteValues = new { projectid = model.ProjectId }
+                };
+                var klantDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Klanten", clientName)
+                {
+                    Parent = klanten,
+                    RouteValues = new { clientid = clientId, projectid = model.ProjectId }
+                };
+                ViewData["BreadcrumbNode"] = klantDetail;
+            }
+
 
 
             return View(model);

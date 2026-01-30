@@ -28,6 +28,11 @@
             Return Messages.Any(Function(a) a.Type = MessageType.Error) = False
         End Get
     End Property
+    Public ReadOnly Property HasErrors As Boolean
+        Get
+            Return Messages.Any(Function(a) a.Type = MessageType.Error)
+        End Get
+    End Property
 
 
     Public Sub AddError(message As String)

@@ -1,58 +1,98 @@
-﻿@model BOCore.ProjectDocBO
+﻿﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@model CPMCore.Models.Projecten.ProjectDocModalVM
 
 
 <div id="modaladddoc" class="modal-block modal-block-primary mfp-hide">
-@using (Html.BeginForm("AddDocument", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddDoc", enctype = "multipart/form-data" }))
-{
-@Html.HiddenFor(m => m.ProjectId)
-@Html.HiddenFor(m => m.ClientAccountId)
-<section class="card">
-	<header class="card-header">
-		<h2 class="card-title">Document uploaden</h2>
-	</header>
-	<div class="card-body">
+    @using (Html.BeginForm("AddDocument", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddDoc", enctype = "multipart/form-data" }))
+    {
+        @Html.HiddenFor(m => m.Document.ProjectId)
+        <section class="card">
+            <header class="card-header">
+                <h2 class="card-title">Document uploaden</h2>
+            </header>
+            <div class="card-body">
 
-            <div class="form-group">
-                <div class="row align-items-center  pb-3">
-                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Type)</label>
+                <div class="form-group">
+                    <div class="row align-items-center  pb-3">
+                        <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Type)</label>
+                        <div class="col-md-8">
+                            @Html.DropDownListFor(
+                            m => m.Document.Type,
+                                                Html.GetEnumSelectList<BOCore.ProjectDocType>(),
+                                                new { @class = "form-control form-control-modern", id = "Type" }
+                                                )
+                    </div>
+                </div>
+
+                <div class="row align-items-center pb-3">
+                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Name)</label>
+                    <div class="col-md-8">
+                        @Html.TextBoxFor(m => m.Document.Name, new { @placeholder = "Omschrijving", @class = "form-control form-control-modern" })
+                    </div>
+                </div>
+                <div class="row align-items-center pb-3">
+                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.DocDate)</label>
+                    <div class="col-md-8">
+                        @Html.EditorFor(m => m.Document.DocDate)
+                    </div>
+                </div>
+                <div class="row align-items-center pb-3">
+                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Document voor</label>
+                    <div class="col-md-8">
+                        <select id="DocTarget" name="Target" class="form-control form-control-modern">
+                            <option value="Project" selected="@(string.Equals(Model.Target, "Project", StringComparison.OrdinalIgnoreCase))">Project</option>
+                            <option value="Client" selected="@(string.Equals(Model.Target, "Client", StringComparison.OrdinalIgnoreCase))">Klant</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row align-items-center pb-3" id="ClientSelectRow">
+                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Klant</label>
                     <div class="col-md-8">
                         @Html.DropDownListFor(
-                        m => m.Type,
-                                            Html.GetEnumSelectList<BOCore.ProjectDocType>(),
-                                            new { @class = "form-control form-control-modern", id = "Type" }
-                                            )
+                                                m => m.SelectedClientAccountId,
+                                                new SelectList(Model.Clients, "ID", "Display", Model.SelectedClientAccountId),
+                                                "Selecteer klant",
+                                                new { @class = "form-control form-control-modern", id = "ClientAccountIdSelect" })
+                    </div>
+                </div>
+                <div class="row align-items-center pb-3">
+                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">Selecteer het bestand</label>
+                    <div class="col-md-8">
+                        <input type="file" id="file" name="file" accept="image/*,.pdf" class="form-control form-control-modern w-100" />
+                    </div>
                 </div>
             </div>
 
-            <div class="row align-items-center pb-3">
-                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Name)</label>
-                <div class="col-md-8">
-                    @Html.TextBoxFor(m => m.Name, new { @placeholder = "Omschrijving", @class = "form-control form-control-modern" })
-                </div>
-            </div>
-            <div class="row align-items-center pb-3">
-                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.DocDate)</label>
-                <div class="col-md-8">
-                    @Html.EditorFor(m => m.DocDate)
-                </div>
-            </div>
-            <div class="row align-items-center pb-3">
-                <label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">Selecteer het bestand</label>
-                <div class="col-md-8">
-                    <input type="file" id="file" name="file" accept="image/*,.pdf" class="form-control form-control-modern w-100" />
-                </div>
-            </div>
         </div>
-			
-	</div>
-		<footer class="card-footer">
-			<div class="row">
-				<div class="col-md-12 text-end">
-					<button type="submit" class="btn btn-primary">Uploaden </button>
-					<button class="btn btn-default modal-dismiss">Annuleren</button>
-				</div>
-			</div>
-		</footer>
-	</section>
-}
+        <footer class="card-footer">
+            <div class="row">
+                <div class="col-md-12 text-end">
+                    <button type="submit" class="btn btn-primary">Uploaden </button>
+                    <button class="btn btn-default modal-dismiss">Annuleren</button>
+                </div>
+            </div>
+        </footer>
+    </section>
+        }
 </div>
+<script>
+    (function () {
+        const targetSelect = document.getElementById('DocTarget');
+        const clientRow = document.getElementById('ClientSelectRow');
+        const clientSelect = document.getElementById('ClientAccountIdSelect');
+
+        const updateTarget = () => {
+            const isClient = targetSelect.value === 'Client';
+            clientRow.style.display = isClient ? '' : 'none';
+            clientSelect.disabled = !isClient;
+            if (!isClient) {
+                clientSelect.value = '';
+            }
+        };
+
+        if (targetSelect && clientRow && clientSelect) {
+            updateTarget();
+            targetSelect.addEventListener('change', updateTarget);
+        }
+    })();
+</script>

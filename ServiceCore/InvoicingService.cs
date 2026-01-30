@@ -5,8 +5,8 @@ using DALCore.Models;
 using ServiceCore.Translators;
 using DALCore.Query;
 using System.Linq;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using ServiceCore.Helpers;
 
 namespace ServiceCore
 {
@@ -129,9 +129,7 @@ namespace ServiceCore
                              .Where(v => v.Id == i.Id)
                              .DefaultIfEmpty()                   // <-- levert NULL als er geen row is
                                                                  // LEFT JOIN op status lookup
-                join s in _db.Set<InvoiceStatusLookup>().AsNoTracking()
-                    on i.StatusId equals s.Id into sj
-                from st in sj.DefaultIfEmpty()
+               
                 join seriesLookup in _db.InvoiceSeries.AsNoTracking()
                 on i.SeriesId equals seriesLookup.Id into seriesJoin
                 from series in seriesJoin.DefaultIfEmpty()
@@ -143,7 +141,7 @@ namespace ServiceCore
                     ClientName = i.ClientName,
                     InvoiceDate = i.Date,
                     StatusId = i.StatusId,
-                    StatusName = st != null ? st.Name : null,
+                    StatusName = null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     Balance = (decimal?)bal.Balance ?? 0m,
                     IsCreditNote = series != null && series.IsCreditNote,
@@ -166,7 +164,13 @@ namespace ServiceCore
                     OctopusWorkflowState = i.OctopusWorkflowState
                 };
 
-            return await query.ToListAsync(ct);
+            var items = await query.ToListAsync(ct);
+            foreach (var item in items)
+            {
+                item.StatusName = InvoiceStatusExtensions.GetDisplayName(item.StatusId);
+            }
+
+            return items;
         }
         public async Task<IReadOnlyList<InvoiceListItemBO>> GetByCompanyAsync(int issuerCompanyId, CancellationToken ct = default)
         {
@@ -191,8 +195,6 @@ namespace ServiceCore
                 join p in _db.Project.AsNoTracking() on i.ProjectId equals p.ProjectId into pj
                 from project in pj.DefaultIfEmpty()
                 from bal in _db.VwInvoiceBalance.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
-                join s in _db.Set<InvoiceStatusLookup>().AsNoTracking() on i.StatusId equals s.Id into sj
-                from st in sj.DefaultIfEmpty()
                 join seriesLookup in _db.InvoiceSeries.AsNoTracking()
                     on i.SeriesId equals seriesLookup.Id into seriesJoin
                 from series in seriesJoin.DefaultIfEmpty()
@@ -204,7 +206,7 @@ namespace ServiceCore
                     ClientName = i.ClientName,
                     InvoiceDate = i.Date,
                     StatusId = i.StatusId,
-                    StatusName = st != null ? st.Name : null,
+                    StatusName = null,
                     IsCreditNote = series != null && series.IsCreditNote,
                     ProjectName = project != null ? project.ProjectName : null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
@@ -227,7 +229,13 @@ namespace ServiceCore
                     OctopusWorkflowState = i.OctopusWorkflowState
                 };
 
-            return await result.ToListAsync(ct);
+            var items = await result.ToListAsync(ct);
+            foreach (var item in items)
+            {
+                item.StatusName = InvoiceStatusExtensions.GetDisplayName(item.StatusId);
+            }
+
+            return items;
         }
 
         public async Task<InvoiceDetailBO> GetDetailAsync(int invoiceId, CancellationToken ct = default)
@@ -283,11 +291,7 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(c => c.CompanyId == invoice.CompanyId.Value, ct);
             }
 
-            var statusName = await _db.InvoiceStatusLookup
-                .AsNoTracking()
-                .Where(s => s.Id == invoice.StatusId)
-                .Select(s => s.Name)
-                .FirstOrDefaultAsync(ct);
+            var statusName = InvoiceStatusExtensions.GetDisplayName(invoice.StatusId);
 
             string? defaultIban = null;
             string? defaultBic = null;

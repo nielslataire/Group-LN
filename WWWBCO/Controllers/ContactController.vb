@@ -3,6 +3,7 @@ Imports Facade
 Imports cpm
 Imports BO
 Imports System.IO
+Imports System.Linq
 Imports System.Web.Hosting
 Public Class ContactController
     Inherits System.Web.Mvc.Controller
@@ -107,11 +108,21 @@ Public Class ContactController
         Try
             If request Is Nothing Then Return
             If request.CreatedAt = DateTime.MinValue Then request.CreatedAt = DateTime.UtcNow
-            ServiceFactory.GetProjectService.InsertProjectContactRequest(request)
+            request.Origin = TrimValue(request.Origin, 150)
+            Dim response = ServiceFactory.GetProjectService.InsertProjectContactRequest(request)
+            If response IsNot Nothing AndAlso response.HasErrors Then
+                LogError("CONTACTREQUEST SAVE FAILED: " & String.Join(" | ", response.Messages.Select(Function(m) m.Message)))
+            End If
         Catch ex As Exception
             LogError("CONTACTREQUEST SAVE FAILED", ex)
         End Try
     End Sub
+
+    Private Function TrimValue(value As String, maxLength As Integer) As String
+        If String.IsNullOrWhiteSpace(value) Then Return value
+        If value.Length <= maxLength Then Return value
+        Return value.Substring(0, maxLength)
+    End Function
     Private Function ResolveOrigin(fallback As String) As String
         Try
             Dim referrer = Request.UrlReferrer

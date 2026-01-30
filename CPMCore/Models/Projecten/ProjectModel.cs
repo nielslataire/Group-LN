@@ -1044,6 +1044,7 @@ namespace CPMCore.Models.Projecten
         public DetailDocsModel()
         {
             _docs = new List<ProjectDocBO>();
+            Clients = Array.Empty<IdNameBO>();
         }
         private List<ProjectDocBO> _docs;
         public List<ProjectDocBO> Docs
@@ -1117,7 +1118,7 @@ namespace CPMCore.Models.Projecten
                 _uploaddoc = value;
             }
         }
-
+        public IReadOnlyList<IdNameBO> Clients { get; set; }
     }
     public class DetailChangeOrderModel
     {

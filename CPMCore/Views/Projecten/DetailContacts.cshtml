@@ -137,7 +137,32 @@
                             <span class="input-group-text">
                                 <i class="bx bx-search"></i>
                             </span>
-                            <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
+                                <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ...">
+                                <button type="button" class="btn btn-default btn-md me-2" id="btnToggleFilters" title="Filters">
+                                    <i class="bx bx-filter"></i>
+                                </button>
+                                <div id="colvis-container"></div>
+                            </div>
+                            <div class="row g-2 mt-3 d-none" id="contactFilters">
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label mb-1" for="status-filter">Status</label>
+                                    <select id="status-filter" class="form-control form-control-modern">
+                                        <option value="">Alle statussen</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label mb-1" for="source-filter">Bron</label>
+                                    <select id="source-filter" class="form-control form-control-modern">
+                                        <option value="">Alle bronnen</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <label class="form-label mb-1">Datumrange</label>
+                                    <div class="d-flex gap-2">
+                                        <input type="date" id="date-from" class="form-control form-control-modern" />
+                                        <input type="date" id="date-to" class="form-control form-control-modern" />
+                                    </div>
+                                </div>
                         </div>
                     </div>
                 </div>
@@ -252,6 +277,23 @@
           };
         }
 
+        const statusFilter = document.getElementById('status-filter');
+        const sourceFilter = document.getElementById('source-filter');
+        const dateFromInput = document.getElementById('date-from');
+        const dateToInput = document.getElementById('date-to');
+
+        const normalizeText = (value) => {
+          if (!value) return '';
+          return value.replace(/\s+/g, ' ').replace(/\u00a0/g, ' ').trim();
+        };
+
+        const parseDate = (value) => {
+          if (!value) return null;
+          const parts = value.split('/');
+          if (parts.length !== 3) return null;
+          return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        };
+
         // ===== Init DataTable =====
         const table = new DataTable('#datatable-contact-requests', {
           order: [[0, 'desc']],
@@ -314,6 +356,78 @@
         $('#search-term').on('keyup', function () {
           table.search($(this).val()).draw();
         });
+
+        const populateFilters = () => {
+           const statusValues = new Map();
+           const sourceValues = new Map();
+
+           table.rows().every(function () {
+             const row = this.data();
+             const statusText = normalizeText($('<div>').html(row[4]).text());
+             const sourceText = normalizeText($('<div>').html(row[6]).text());
+
+             if (statusText) statusValues.set(statusText, statusText);
+             if (sourceText) sourceValues.set(sourceText, sourceText);
+           });
+
+           [...statusValues.values()].sort().forEach((status) => {
+             const option = document.createElement('option');
+             option.value = status;
+             option.textContent = status;
+             statusFilter.appendChild(option);
+           });
+
+           [...sourceValues.values()].sort().forEach((source) => {
+             const option = document.createElement('option');
+             option.value = source;
+             option.textContent = source;
+             sourceFilter.appendChild(option);
+           });
+         };
+
+         populateFilters();
+
+         $.fn.dataTable.ext.search.push((settings, data) => {
+           if (settings.nTable.id !== 'datatable-contact-requests') return true;
+
+           const statusValue = statusFilter?.value || '';
+           const sourceValue = sourceFilter?.value || '';
+           const fromValue = dateFromInput?.value || '';
+           const toValue = dateToInput?.value || '';
+
+           const rowStatus = normalizeText($('<div>').html(data[4]).text());
+           const rowSource = normalizeText($('<div>').html(data[6]).text());
+           const rowDate = parseDate(data[0]);
+
+           if (statusValue && rowStatus !== statusValue) return false;
+           if (sourceValue && rowSource !== sourceValue) return false;
+
+           if (fromValue && rowDate) {
+             const fromDate = new Date(fromValue);
+             if (rowDate < fromDate) return false;
+           }
+
+           if (toValue && rowDate) {
+             const toDate = new Date(toValue);
+             if (rowDate > toDate) return false;
+           }
+
+           return true;
+         });
+
+         const onFilterChange = () => table.draw();
+         statusFilter?.addEventListener('change', onFilterChange);
+         sourceFilter?.addEventListener('change', onFilterChange);
+         dateFromInput?.addEventListener('change', onFilterChange);
+         dateToInput?.addEventListener('change', onFilterChange);
+
+         const filterToggle = document.getElementById('btnToggleFilters');
+         const filterRow = document.getElementById('contactFilters');
+         if (filterToggle && filterRow) {
+           filterToggle.addEventListener('click', () => {
+             filterRow.classList.toggle('d-none');
+           });
+         }
         // //BIj laden
         //     $(document).ready(function () {
         //     $('.deleteContract').magnificPopup({
