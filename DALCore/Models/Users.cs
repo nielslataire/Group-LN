@@ -31,6 +31,12 @@ public partial class Users
 
     public bool IsActive { get; set; }
 
+    public byte[] Photo { get; set; }
+
+    public string PhotoContentType { get; set; }
+
+    public string PhotoHash { get; set; }
+
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();

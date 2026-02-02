@@ -175,7 +175,11 @@ namespace CPMCore.Controllers
                     ShowPrintButton = needsPrint,
                     ProjectName = x.ProjectName,
                     SendMethod = DetermineSendMethod(x.OctopusDeliveryState, x.HasEmailLog, needsPrint),
-                    BookyearLabel = ResolveBookyearLabel(x.InvoiceDate)
+                    BookyearLabel = ResolveBookyearLabel(x.InvoiceDate),
+                    OctopusBookyearId = x.OctopusBookyearId,
+                    OctopusJournalKey = x.OctopusJournalKey,
+                    OctopusDocumentSequenceNr = x.OctopusDocumentSequenceNr,
+                    OctopusBookedAt = x.OctopusBookedAt
                 };
             })
                 .OrderByDescending(x => x.InvoiceSortValue)
@@ -195,7 +199,7 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> BookInvoices(int issuerCompanyId, CancellationToken ct = default)
+        public async Task<IActionResult> BookInvoices(int issuerCompanyId, int[] invoiceIds, CancellationToken ct = default)
         {
             var issuer = await _ics.GetAsync(issuerCompanyId, ct);
             if (issuer == null || string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
@@ -204,38 +208,66 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
-            var bookedStatusId = (byte)InvoiceStatus.Booked;
-
-            var latestNumberedInvoice = await _db.Invoices
-                .Where(i => i.IssuerCompanyId == issuerCompanyId
-                    && i.OctopusDocumentSequenceNr != null
-                    && i.OctopusBookyearId != null
-                    && !string.IsNullOrWhiteSpace(i.OctopusJournalKey))
-                .OrderByDescending(i => i.OctopusDocumentSequenceNr)
-                .FirstOrDefaultAsync(ct);
-
-            if (latestNumberedInvoice == null)
+            if (invoiceIds == null || invoiceIds.Length == 0)
             {
-                AddMessage("error", "Er is geen genummerde factuur gevonden om te boeken.", "Factuur");
+                AddMessage("error", "Selecteer minstens één factuur om door te boeken.", "Factuur");
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
-            if (InvoiceStatusExtensions.FromId(latestNumberedInvoice.StatusId) == InvoiceStatus.Generating)
+            var bookedStatusId = (byte)InvoiceStatus.Booked;
+
+            var selectedInvoices = await _db.Invoices
+                .Where(i => i.IssuerCompanyId == issuerCompanyId && invoiceIds.Contains(i.Id))
+                .ToListAsync(ct);
+
+            var eligibleInvoices = selectedInvoices
+                .Where(i => i.OctopusDocumentSequenceNr != null
+                    && i.OctopusBookyearId != null
+                    && !string.IsNullOrWhiteSpace(i.OctopusJournalKey))
+                .ToList();
+
+            if (eligibleInvoices.Count == 0)
+            {
+                AddMessage("error", "Er zijn geen geldige facturen geselecteerd om door te boeken.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            var targetInvoice = eligibleInvoices
+                .OrderByDescending(i => i.OctopusDocumentSequenceNr)
+                .First();
+
+            if (InvoiceStatusExtensions.FromId(targetInvoice.StatusId) == InvoiceStatus.Generating)
             {
                 AddMessage("error", "Deze factuur wordt momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
-            if (latestNumberedInvoice.OctopusBookyearId is null
-                || latestNumberedInvoice.OctopusDocumentSequenceNr is null
-                || string.IsNullOrWhiteSpace(latestNumberedInvoice.OctopusJournalKey))
+            if (targetInvoice.OctopusBookyearId is null
+                || targetInvoice.OctopusDocumentSequenceNr is null
+                || string.IsNullOrWhiteSpace(targetInvoice.OctopusJournalKey))
             {
-                AddMessage("error", "Geen geldig boekjaar of dagboek gevonden bij de laatste genummerde factuur.", "Factuur");
+                AddMessage("error", "Geen geldig boekjaar of dagboek gevonden bij de geselecteerde factuur.", "Factuur");
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
-            var previousStatusId = latestNumberedInvoice.StatusId;
-            latestNumberedInvoice.StatusId = (byte)InvoiceStatus.Generating;
+            var unbookedInvoices = await _db.Invoices
+                .Where(i => i.IssuerCompanyId == issuerCompanyId
+                    && i.OctopusBookyearId == targetInvoice.OctopusBookyearId
+                    && i.OctopusJournalKey == targetInvoice.OctopusJournalKey
+                    && i.OctopusDocumentSequenceNr != null
+                    && i.OctopusDocumentSequenceNr <= targetInvoice.OctopusDocumentSequenceNr
+                    && i.OctopusBookedAt == null)
+                .ToListAsync(ct);
+
+            var selectedIds = eligibleInvoices.Select(i => i.Id).ToHashSet();
+            if (unbookedInvoices.Any(i => !selectedIds.Contains(i.Id)))
+            {
+                AddMessage("error", "Selecteer eerst alle voorgaande facturen om door te boeken.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
+            var previousStatusId = targetInvoice.StatusId;
+            targetInvoice.StatusId = (byte)InvoiceStatus.Generating;
             await _db.SaveChangesAsync(ct);
 
             try
@@ -245,9 +277,9 @@ namespace CPMCore.Controllers
                 var response = await _octopusClient.BookInvoiceAsync(
                     dossierToken.Token,
                     issuer.OctopusDossierNumber,
-                    latestNumberedInvoice.OctopusBookyearId.Value,
-                    latestNumberedInvoice.OctopusJournalKey!,
-                    latestNumberedInvoice.OctopusDocumentSequenceNr.Value,
+                   targetInvoice.OctopusBookyearId.Value,
+                    targetInvoice.OctopusJournalKey!,
+                    targetInvoice.OctopusDocumentSequenceNr.Value,
                     ct);
 
                 var bookingStatus = response?.BookingStatusList?.FirstOrDefault();
@@ -260,16 +292,16 @@ namespace CPMCore.Controllers
                 }
 
                 var bookedFrom = bookingStatus.DocumentKey?.DocumentSequenceNr
-                    ?? latestNumberedInvoice.OctopusDocumentSequenceNr
-                    ?? 0;
-                var bookedUntil = latestNumberedInvoice.OctopusDocumentSequenceNr ?? bookedFrom;
+                      ?? targetInvoice.OctopusDocumentSequenceNr
+                      ?? 0;
+                var bookedUntil = targetInvoice.OctopusDocumentSequenceNr ?? bookedFrom;
                 var bookedAt = DateTime.UtcNow;
                 var bookedBy = ResolveUserName() ?? string.Empty;
 
                 var invoicesToUpdate = await _db.Invoices
                     .Where(i => i.IssuerCompanyId == issuerCompanyId
-                        && i.OctopusBookyearId == latestNumberedInvoice.OctopusBookyearId
-                        && i.OctopusJournalKey == latestNumberedInvoice.OctopusJournalKey
+                        && i.OctopusBookyearId == targetInvoice.OctopusBookyearId
+                        && i.OctopusJournalKey == targetInvoice.OctopusJournalKey
                         && i.OctopusDocumentSequenceNr != null
                         && i.OctopusDocumentSequenceNr >= bookedFrom
                         && i.OctopusDocumentSequenceNr <= bookedUntil
@@ -277,10 +309,10 @@ namespace CPMCore.Controllers
                     .ToListAsync(ct);
 
                 var generatingId = (byte)InvoiceStatus.Generating;
-                if (invoicesToUpdate.Any(i => i.StatusId == generatingId && i.Id != latestNumberedInvoice.Id))
+                if (invoicesToUpdate.Any(i => i.StatusId == generatingId && i.Id != targetInvoice.Id))
                 {
                     AddMessage("error", "Eén of meerdere facturen worden momenteel gegenereerd. Probeer later opnieuw.", "Factuur");
-                    latestNumberedInvoice.StatusId = previousStatusId;
+                    targetInvoice.StatusId = previousStatusId;
                     await _db.SaveChangesAsync(ct);
                     return RedirectToAction(nameof(Index), new { issuerCompanyId });
                 }
@@ -293,7 +325,7 @@ namespace CPMCore.Controllers
                     invoice.StatusId = bookedStatusId;
                 }
 
-                var sequenceSeriesId = latestNumberedInvoice.SeriesId
+                var sequenceSeriesId = targetInvoice.SeriesId
                       ?? await _db.InvoiceSeries
                           .Where(s => s.IssuerCompanyId == issuerCompanyId && s.IsActive)
                           .OrderBy(s => s.Id)
@@ -307,10 +339,10 @@ namespace CPMCore.Controllers
                         .Include(s => s.Journal)
                         .FirstOrDefaultAsync(s =>
                             s.SeriesId == sequenceSeriesId.Value
-                            && s.Bookyear != null
-                            && s.Bookyear.BookyearKeyId == latestNumberedInvoice.OctopusBookyearId
+                           && s.Bookyear != null
+                            && s.Bookyear.BookyearKeyId == targetInvoice.OctopusBookyearId
                             && s.Journal != null
-                            && s.Journal.JournalKey == latestNumberedInvoice.OctopusJournalKey,
+                            && s.Journal.JournalKey == targetInvoice.OctopusJournalKey,
                             ct);
 
                     if (sequenceToUpdate != null && bookedUntil > sequenceToUpdate.CurrentNumber)
@@ -326,7 +358,7 @@ namespace CPMCore.Controllers
             }
             catch (Exception ex)
             {
-                latestNumberedInvoice.StatusId = previousStatusId;
+                targetInvoice.StatusId = previousStatusId;
                 await _db.SaveChangesAsync(ct);
                 _logger.LogError(ex, "Octopus booking failed for issuer {IssuerCompanyId}", issuerCompanyId);
                 var message = string.IsNullOrWhiteSpace(ex.Message)
@@ -774,7 +806,7 @@ namespace CPMCore.Controllers
             try
             {
                 await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
-                var publicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
+                var publicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
                 if (!string.IsNullOrWhiteSpace(publicId))
                     AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
                 else
@@ -1507,8 +1539,8 @@ namespace CPMCore.Controllers
                     return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
                 }
 
-                var issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: null, ct: ct);
-              
+                var issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+
                 if (!string.IsNullOrWhiteSpace(issuedPublicId))
                     AddMessage("success", $"Factuur uitgegeven: {issuedPublicId}", "Factuur");
                 else
@@ -2430,6 +2462,7 @@ namespace CPMCore.Controllers
                 bool isIndividual,
                 bool skipSendStep,
                 string? clientEmail,
+                string? clientCc,
                 bool forceFinalPdf)
             {
                 Invoice = invoice;
@@ -2448,6 +2481,7 @@ namespace CPMCore.Controllers
 
                 SkipSendStep = skipSendStep;
                 ClientEmail = clientEmail;
+                ClientCc = clientCc;
                 ForceFinalPdf = forceFinalPdf;
             }
 
@@ -2467,6 +2501,7 @@ namespace CPMCore.Controllers
 
             public bool SkipSendStep { get; }
             public string? ClientEmail { get; }
+            public string? ClientCc { get; }
             public bool ForceFinalPdf { get; }
             public int? OctopusRelationId { get; set; }
             public List<Vattype> VatTypes { get; } = new();
@@ -2503,6 +2538,8 @@ namespace CPMCore.Controllers
                 .Include(i => i.PostalCode)!
                     .ThenInclude(pc => pc.Country)
                 .Include(i => i.ClientIdClientAccountNavigation)!
+                    .ThenInclude(c => c.ClientContacts)
+                .Include(i => i.ClientIdClientAccountNavigation)!
                     .ThenInclude(c => c.PostalCode)!
                         .ThenInclude(pc => pc.Country)
                 .Include(i => i.ClientIdClientAccountNavigation)!
@@ -2536,7 +2573,15 @@ namespace CPMCore.Controllers
             var detail = await _invoices.GetDetailAsync(invoiceId, ct)
                   ?? throw new InvalidOperationException("Factuurdetails niet gevonden.");
 
-            var clientEmail = detail.ClientEmail?.Trim();
+            var recipientEmails = BuildInvoiceRecipients(
+                invoice,
+                invoice.ClientIdClientAccountNavigation,
+                invoice.ClientIdClientContactsNavigation,
+                detail);
+            var clientEmail = recipientEmails.FirstOrDefault();
+            var clientCc = recipientEmails.Count > 1
+                ? string.Join(';', recipientEmails.Skip(1))
+                : null;
             var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
                 || !string.IsNullOrWhiteSpace(invoice.ClientIdClientContactsNavigation?.CompanyName);
             var isIndividual = !invoice.CompanyId.HasValue && !hasCompanyName;
@@ -2651,9 +2696,84 @@ namespace CPMCore.Controllers
                 formattedPublicId,
                 isIndividual,
                 skipSendStep,
-               clientEmail,
+                clientEmail,
+                clientCc,
                 forceFinalPdf);
         }
+
+        private static List<string> BuildInvoiceRecipients(
+            Invoices invoice,
+            ClientAccount? account,
+            ClientContacts? contact,
+            InvoiceDetailBO detail)
+        {
+            var recipients = new List<string>();
+
+            if (invoice.ClientType == (int)InvoicePartyType.ClientContact && contact != null)
+            {
+                if (contact.RequiresDigitalInvoice)
+                {
+                    AddRecipient(recipients, contact.InvoiceEmail, contact.Email);
+                }
+
+                return recipients;
+            }
+
+            if (invoice.ClientType == (int)InvoicePartyType.ClientAccount && account != null)
+            {
+                if (account.RequiresDigitalInvoice)
+                {
+                    AddRecipient(recipients, account.InvoiceEmail, account.Email);
+                }
+
+                if (account.ClientContacts != null)
+                {
+                    foreach (var accountContact in account.ClientContacts.Where(c => !c.IsCoOwner && c.RequiresDigitalInvoice))
+                    {
+                        AddRecipient(recipients, accountContact.InvoiceEmail, accountContact.Email);
+                    }
+                }
+            }
+
+            if (recipients.Count == 0 && invoice.ClientType != (int)InvoicePartyType.ClientAccount)
+            {
+                AddRecipient(recipients, detail.ClientEmail, null);
+            }
+
+            return recipients;
+        }
+
+        private static void AddRecipient(List<string> recipients, string? invoiceEmail, string? email)
+        {
+            var candidate = ResolvePreferredEmail(invoiceEmail, email);
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                return;
+            }
+
+            if (recipients.Any(r => string.Equals(r, candidate, StringComparison.OrdinalIgnoreCase)))
+            {
+                return;
+            }
+
+            recipients.Add(candidate);
+        }
+
+        private static string? ResolvePreferredEmail(string? invoiceEmail, string? email)
+        {
+            if (!string.IsNullOrWhiteSpace(invoiceEmail))
+            {
+                return invoiceEmail.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                return email.Trim();
+            }
+
+            return null;
+        }
+
         // Stap 2b: extra guardrails als we enkel het verzenddeel willen herhalen.
         private static void ValidateSendOnlyPreconditions(bool sendOnly, OctopusWorkflowProgress progress)
         {
@@ -3177,7 +3297,7 @@ namespace CPMCore.Controllers
                     mailSubject,
                     mailBody,
                     new List<EmailAttachment> { new(attachment.FileName, attachment.PdfBytes, "application/pdf") },
-                    null,
+                    context.ClientCc,
                     context.Issuer.InvoiceSendEmail,
                     context.Issuer.InvoiceSendEmail);
 
@@ -3185,7 +3305,7 @@ namespace CPMCore.Controllers
                 {
                     InvoiceId = context.Invoice.Id,
                     ToAddress = context.ClientEmail,
-                    CcAddress = null,
+                    CcAddress = context.ClientCc,
                     Subject = mailSubject,
                     ProviderId = context.DossierNumber,
                     SentAt = DateTime.UtcNow,

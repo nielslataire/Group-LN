@@ -296,6 +296,26 @@ Public Class ClientAccountBO
             m_invoiceextra = value
         End Set
     End Property
+    Private m_email As String
+    <Display(Name:="E-mail")>
+    Public Property Email() As String
+        Get
+            Return m_email
+        End Get
+        Set(ByVal value As String)
+            m_email = value
+        End Set
+    End Property
+    Private m_invoiceemail As String
+    <Display(Name:="Facturatie e-mail")>
+    Public Property InvoiceEmail() As String
+        Get
+            Return m_invoiceemail
+        End Get
+        Set(ByVal value As String)
+            m_invoiceemail = value
+        End Set
+    End Property
     Private m_requiresdigitalinvoice As Boolean
     Public Property RequiresDigitalInvoice() As Boolean
         Get

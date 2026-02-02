@@ -18,5 +18,9 @@
     Public Property OctopusDeliveryState As String
     Public Property ProjectName As String
     Public Property HasEmailLog As Boolean
+    Public Property OctopusBookyearId As Integer?
+    Public Property OctopusJournalKey As String
+    Public Property OctopusDocumentSequenceNr As Integer?
+    Public Property OctopusBookedAt As DateTime?
 
 End Class

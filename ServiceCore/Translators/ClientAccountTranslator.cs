@@ -40,6 +40,8 @@ namespace ServiceCore.Translators
             bo.InvoiceHousenumber = _entity.InvoiceHousenumber;
             bo.InvoiceBusnumber = _entity.InvoiceBusnumber;
             bo.InvoiceExtra = _entity.InvoiceExtra;
+            bo.Email = _entity.Email;
+            bo.InvoiceEmail = _entity.InvoiceEmail;
             bo.RequiresDigitalInvoice = _entity.RequiresDigitalInvoice;
             bo.AttachUblByDefault = _entity.AttachUblByDefault;
 
@@ -162,6 +164,8 @@ namespace ServiceCore.Translators
             entity.InvoiceHousenumber = bo.InvoiceHousenumber;
             entity.InvoiceBusnumber = bo.InvoiceBusnumber;
             entity.InvoiceExtra = bo.InvoiceExtra;
+            entity.Email = bo.Email;
+            entity.InvoiceEmail = bo.InvoiceEmail;
             entity.OctopusRelationId = bo.OctopusRelationId;
             entity.RequiresDigitalInvoice = bo.RequiresDigitalInvoice;
             entity.AttachUblByDefault = bo.AttachUblByDefault;

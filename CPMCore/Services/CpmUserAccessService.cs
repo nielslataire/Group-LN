@@ -1,7 +1,11 @@
-﻿using System.Security.Claims;
+﻿using System.IO;
+using System.Net;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using CPMCore.Helpers;
 using DALCore.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
 
 namespace CPMCore.Services;
 
@@ -17,17 +21,23 @@ public interface ICpmUserAccessService
     Task<CpmUserAccessResult?> ResolveAsync(string? entraObjectId, IEnumerable<string?> emails, CancellationToken ct);
     Task<IReadOnlyList<string>> GetPermissionsAsync(int userId, CancellationToken ct);
     void ApplyClaims(ClaimsIdentity identity, CpmUserAccessResult accessResult);
+    Task SyncUserPhotoAsync(CpmUserAccessResult accessResult, CancellationToken ct);
 }
 
 public class CpmUserAccessService : ICpmUserAccessService
 {
     private readonly cpmRunningContext _db;
     private readonly ILogger<CpmUserAccessService> _logger;
+    private readonly GraphServiceClient? _graphClient;
 
-    public CpmUserAccessService(cpmRunningContext db, ILogger<CpmUserAccessService> logger)
+    public CpmUserAccessService(
+            cpmRunningContext db,
+            ILogger<CpmUserAccessService> logger,
+            GraphServiceClient? graphClient)
     {
         _db = db;
         _logger = logger;
+        _graphClient = graphClient;
     }
 
     public async Task<CpmUserAccessResult?> ResolveAsync(string? entraObjectId, IEnumerable<string?> emails, CancellationToken ct)
@@ -122,6 +132,52 @@ public class CpmUserAccessService : ICpmUserAccessService
         }
     }
 
+    public async Task SyncUserPhotoAsync(CpmUserAccessResult accessResult, CancellationToken ct)
+    {
+        if (_graphClient == null)
+        {
+            _logger.LogDebug("Graph client niet geconfigureerd; gebruikersfoto wordt niet opgehaald.");
+            return;
+        }
+
+        try
+        {
+            using var photoStream = await _graphClient.Me.Photo.Content.Request().GetAsync(ct);
+            if (photoStream == null)
+                return;
+
+            await using var buffer = new MemoryStream();
+            await photoStream.CopyToAsync(buffer, ct);
+            var photoBytes = buffer.ToArray();
+            if (photoBytes.Length == 0)
+                return;
+
+            var hash = ComputeHash(photoBytes);
+            if (string.Equals(accessResult.User.PhotoHash, hash, StringComparison.Ordinal))
+                return;
+
+            accessResult.User.Photo = photoBytes;
+            accessResult.User.PhotoHash = hash;
+            accessResult.User.PhotoContentType = "image/jpeg";
+
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (ServiceException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            _logger.LogDebug("Geen foto gevonden voor gebruiker {UserId}.", accessResult.User.Id);
+        }
+        catch (ServiceException ex)
+        {
+            _logger.LogWarning(ex, "Kon gebruikersfoto niet ophalen voor gebruiker {UserId}.", accessResult.User.Id);
+        }
+    }
+
     private static string? NormalizeEmail(string? email)
         => string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+    private static string ComputeHash(byte[] data)
+    {
+        var hash = SHA256.HashData(data);
+        return Convert.ToHexString(hash);
+    }
 }

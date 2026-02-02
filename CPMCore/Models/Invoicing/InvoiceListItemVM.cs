@@ -28,5 +28,9 @@ namespace CPMCore.Models.Invoicing
         public string? ProjectName { get; set; }
         public string SendMethod { get; set; } = "Niet verzonden";
         public string? BookyearLabel { get; set; }
+        public int? OctopusBookyearId { get; set; }
+        public string? OctopusJournalKey { get; set; }
+        public int? OctopusDocumentSequenceNr { get; set; }
+        public DateTime? OctopusBookedAt { get; set; }
     }
 }

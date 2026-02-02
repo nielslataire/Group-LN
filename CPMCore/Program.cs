@@ -271,6 +271,7 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
             return;
         }
 
+        await accessService.SyncUserPhotoAsync(accessResult, context.HttpContext.RequestAborted);
         accessService.ApplyClaims(identity, accessResult);
     };
 });

@@ -125,10 +125,8 @@
         <div class="col-sm-auto px-0">
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-        <form asp-action="BookInvoices" method="post" class="d-inline js-invoice-processing-form" data-processing-message="Facturen worden geboekt...">
-                <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
-                <button type="submit" class="btn btn-primary btn-md px-3 me-1">Boeken facturen</button>
-            </form>
+            <button type="submit" class="btn btn-primary btn-md px-3 me-1" id="btnBookInvoices" form="invoice-book-form" disabled>Boeken facturen</button>
+
             <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
         </div>
     </div>
@@ -169,10 +167,13 @@
                             var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
                             var isAdminUser = User.IsInRole("Admin") || User.IsInRole("Administrator");
                         }
+                <form asp-action="BookInvoices" method="post" id="invoice-book-form" class="js-invoice-processing-form" data-processing-message="Facturen worden geboekt...">
+                    <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
             <div class="table-responsive-md">
                 <table class="table table-hover mb-0 w-100 dt-invoice" id="datatable-invoice-list">
                     <thead>
                         <tr>
+                            <th class="col-fit text-center">Boeken</th>
                             <th class="col-fit">Type</th>
                             <th class="col-fit">Factuurnr</th>
                             <th class="col-fit">Datum</th>
@@ -194,8 +195,27 @@
                         var shownId = isDraft ? string.Empty : displayId;
                         var typeLabel = DocumentType(r.Status, r.IsCreditNote);
                         var statusDisplay = StatusIcon(r.Status);
+                                    var isBooked = r.OctopusBookedAt.HasValue || r.Status == InvoiceStatus.Booked;
+                                    var isBookable = r.OctopusDocumentSequenceNr.HasValue
+                                    && r.OctopusBookyearId.HasValue
+                                    && !string.IsNullOrWhiteSpace(r.OctopusJournalKey)
+                                    && r.Status != InvoiceStatus.Generating;
 
-                        <tr>
+                                    <tr>
+                                        <td class="col-fit text-center">
+                                            <div class="checkbox-custom checkbox-default">
+                                                <input type="checkbox"
+                                                       class="form-check-input invoice-book-checkbox"
+                                                       name="invoiceIds"
+                                                       value="@r.Id"
+                                                       data-seq="@r.OctopusDocumentSequenceNr"
+                                                       data-booked="@(isBooked.ToString().ToLowerInvariant())"
+                                                       data-bookable="@(isBookable.ToString().ToLowerInvariant())"
+                                                       @(isBooked ? "checked disabled" : isBookable ? null : "disabled") />
+                                                <label for="checkboxExample1"></label>
+                                            </div>
+                                           
+                                        </td>
                             <td class="col-fit">@typeLabel</td>
 
                             <td class="col-fit" data-order="@r.InvoiceSortValue">
@@ -264,7 +284,7 @@
                                                            asp-action="Issue"
                                                            asp-route-id="@r.Id"
                                                            asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                           class="ms-1 me-1 js-invoice-processing-link"
+                                                           class="ms-1 me-1 js-issue-invoice"
                                                            data-processing-message="Factuur wordt genummerd...">
                                                             <i class="bx bx-lock fs-5"> </i>
                                                             <span class="visually-hidden">Nummeren</span>
@@ -418,6 +438,7 @@
                     </tbody>
                     </table>
                 </div>
+                </form>
             </div>
         </div>
 
@@ -443,6 +464,25 @@ else
 <div id="ModalDeleteInvoice" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-invoice-container"></div>
 </div>
+
+<div class="modal fade" id="issueInvoiceConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Factuur nummeren</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">Ben je zeker dat je deze factuur wil nummeren? Nadien kunnen er geen wijzigingen meer aangebracht worden aan de factuur.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="confirmIssueInvoice">Nummeren</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="invoiceProcessingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -513,10 +553,15 @@ else
                   }
               });
           });
-           const processingModalElement = document.getElementById('invoiceProcessingModal');
+          const processingModalElement = document.getElementById('invoiceProcessingModal');
           const processingModal = processingModalElement
               ? new bootstrap.Modal(processingModalElement, { backdrop: 'static', keyboard: false })
               : null;
+          const issueModalElement = document.getElementById('issueInvoiceConfirmModal');
+          const issueModal = issueModalElement
+              ? new bootstrap.Modal(issueModalElement, { backdrop: 'static', keyboard: false })
+              : null;
+          let issueTarget = null;
 
           function showProcessingModal(message) {
               if (!processingModal) {
@@ -527,6 +572,36 @@ else
               $('#invoiceProcessingMessage').text(text);
               processingModal.show();
           }
+           $(document).on('click', '.js-issue-invoice', function (ev) {
+              ev.preventDefault();
+              issueTarget = $(this);
+              if (issueModal) {
+                  issueModal.show();
+              } else if (issueTarget) {
+                  const href = issueTarget.attr('href');
+                  if (href) {
+                      showProcessingModal(issueTarget.data('processing-message'));
+                      window.location = href;
+                  }
+              }
+          });
+
+          $('#confirmIssueInvoice').on('click', function () {
+              if (!issueTarget) {
+                  return;
+              }
+
+              const href = issueTarget.attr('href');
+              const message = issueTarget.data('processing-message');
+              if (issueModal) {
+                  issueModal.hide();
+              }
+              showProcessingModal(message);
+              if (href) {
+                  window.location = href;
+              }
+          });
+
 
           $(document).on('click', '.js-invoice-processing-link', function (ev) {
               ev.preventDefault();
@@ -541,6 +616,63 @@ else
           $(document).on('submit', '.js-invoice-processing-form', function () {
               const message = $(this).data('processing-message');
               showProcessingModal(message);
+          });
+
+
+          function getBookingCheckboxes() {
+            return $('.invoice-book-checkbox[data-bookable="true"]')
+              .toArray()
+              .sort((a, b) => {
+                const seqA = parseInt($(a).data('seq') || 0, 10);
+                const seqB = parseInt($(b).data('seq') || 0, 10);
+                return seqA - seqB;
+              })
+              .map(cb => $(cb));
+          }
+
+          function syncBookButton() {
+            const hasSelection = $('.invoice-book-checkbox[data-bookable="true"]:checked:enabled').length > 0;
+            $('#btnBookInvoices').prop('disabled', !hasSelection);
+          }
+
+          function applyBookingRules() {
+            const checkboxes = getBookingCheckboxes();
+
+            checkboxes.forEach($cb => {
+              if ($cb.data('booked')) {
+                return;
+              }
+              $cb.prop('disabled', false);
+            });
+            syncBookButton();
+          }
+
+          $(document).on('change', '.invoice-book-checkbox', function () {
+            const $current = $(this);
+            if ($current.data('booked') || !$current.data('bookable')) {
+              return;
+            }
+
+            const currentSeq = parseInt($current.data('seq') || 0, 10);
+            const allBookable = getBookingCheckboxes();
+
+            if (this.checked) {
+              allBookable.forEach($cb => {
+                const seq = parseInt($cb.data('seq') || 0, 10);
+                if (seq <= currentSeq && !$cb.data('booked')) {
+                  $cb.prop('checked', true);
+                }
+              });
+            } else {
+              allBookable.forEach($cb => {
+                const seq = parseInt($cb.data('seq') || 0, 10);
+                if (seq > currentSeq) {
+                  $cb.prop('checked', false);
+                }
+              });
+            }
+
+            applyBookingRules();
           });
           // Bouw de DataTables language-teksten in NL met dynamische naamgeving
           function buildLanguage(e) {
@@ -566,7 +698,7 @@ else
 
           // ===== Init DataTable =====
                const table = new DataTable('#datatable-invoice-list', {
-            order: [[1, 'desc']],
+            order: [[2, 'desc']],
             autoWidth: false,          // <-- belangrijk
             language: buildLanguage(entity),
 
@@ -576,17 +708,18 @@ else
 
             columnDefs: [
               // acties: niet sorteerbaar/zoekbaar
-              { targets: 8, orderable: false, searchable: false, width: "1%" },
-              { targets: 9, visible: false },
+              { targets: 9, orderable: false, searchable: false, width: "1%" },
+              { targets: 10, visible: false },
 
               // “fit” kolommen: forceer minimale breedte
-              { targets: [0,1,2,4,5,6,7,8], width: "1%" },
+              { targets: [0,1,2,4,5,6,7,8,9], width: "1%" },
 
               // klant = grow (rest)
-              { targets: 3, width: "100%" }
+              { targets: 4, width: "100%" }
             ]
           });
-
+          table.on('draw', applyBookingRules);
+          applyBookingRules();
           // ===== UI-aanpassingen / custom knoppen =====
           // Verberg standaard knoppen/search indien je eigen UI gebruikt
           $(".buttons-excel").hide();
@@ -610,7 +743,7 @@ else
           });
 
         const bookyearSelect = $('#bookyear-filter-select');
-              const bookyearColumnIndex = 9;
+              const bookyearColumnIndex = 10;
               const defaultBookyear = '@defaultBookYear';
 
               function applyBookyearFilter(value) {

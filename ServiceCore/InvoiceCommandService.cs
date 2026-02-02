@@ -248,9 +248,8 @@ namespace ServiceCore
                 if (invoice.StatusId != draftId && !isPaid && !isGenerating)
                     throw new InvalidOperationException("Alleen conceptfacturen kunnen definitief gemaakt worden.");
 
-                var finalDate = issueDate ?? invoice.Date;
-                if (finalDate == default)
-                    finalDate = DateOnly.FromDateTime(DateTime.Today);
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var finalDate = today;
 
                 if (invoice.Date != finalDate)
                     invoice.Date = finalDate;

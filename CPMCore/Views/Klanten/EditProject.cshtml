@@ -201,6 +201,33 @@
 										</div>
 									</div>
 								</div>
+								<div class="row align-items-center pb-3">
+									<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Client.Email)</label>
+									<div class="col-lg-7 col-xl-8">
+										@Html.TextBoxFor(m => m.Client.Email, new { placeholder = "klant@bedrijf.be", @class = "form-control form-control-modern", type = "email" })
+									</div>
+								</div>
+								<div class="row align-items-center pb-3">
+									<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Client.InvoiceEmail)</label>
+									<div class="col-lg-7 col-xl-8">
+										@Html.TextBoxFor(m => m.Client.InvoiceEmail, new { placeholder = "facturatie@bedrijf.be", @class = "form-control form-control-modern", type = "email" })
+									</div>
+								</div>
+								<div class="row align-items-center pb-3">
+									<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
+									<div class="col-lg-3 col-xl-3">
+										<div class="form-check form-switch">
+											@Html.CheckBoxFor(m => m.Client.RequiresDigitalInvoice, new { @class = "form-check-input" })
+											<label class="form-check-label" for="@Html.IdFor(m => m.Client.RequiresDigitalInvoice)">Digitale factuur</label>
+										</div>
+									</div>
+									<div class="col-lg-3 col-xl-3">
+										<div class="form-check form-switch">
+											@Html.CheckBoxFor(m => m.Client.AttachUblByDefault, new { @class = "form-check-input" })
+											<label class="form-check-label" for="@Html.IdFor(m => m.Client.AttachUblByDefault)">UBL standaard meesturen</label>
+										</div>
+									</div>
+								</div>
 								<div class="form-group">
 									<div class="row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Client.Street)</label>
@@ -269,7 +296,7 @@
 											</div>
 										</div>
 									</div>
-									<div class="InvoiceAddress form-group" hidden="hidden">
+									<div class="InvoiceAddress form-group d-none">
 										<div class=" row align-items-center pb-3">
 											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Facturatiegegevens</label>
 											<div class="col-lg-5 col-xl-6">
@@ -306,21 +333,6 @@
 											<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Extra factuur info</label>
 											<div class="col-lg-7 col-xl-6">
 												@Html.TextAreaFor(m => m.Client.InvoiceExtra, new { placeholder = "Extra facturatie info", @class = "form-control form-control-modern", rows = "2" })
-											</div>
-										</div>
-										<div class="row align-items-center pb-3">
-											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
-											<div class="col-lg-3 col-xl-3">
-												<div class="form-check form-switch">
-													@Html.CheckBoxFor(m => m.Client.RequiresDigitalInvoice, new { @class = "form-check-input" })
-													<label class="form-check-label" for="@Html.IdFor(m => m.Client.RequiresDigitalInvoice)">Digitale factuur</label>
-												</div>
-											</div>
-											<div class="col-lg-3 col-xl-3">
-												<div class="form-check form-switch">
-													@Html.CheckBoxFor(m => m.Client.AttachUblByDefault, new { @class = "form-check-input" })
-													<label class="form-check-label" for="@Html.IdFor(m => m.Client.AttachUblByDefault)">UBL</label>
-												</div>
 											</div>
 										</div>
 									</div>
@@ -742,6 +754,18 @@
 
 			toggleMedeEigenaarsTab();
 			$('#lstOwnerTypes').on('change', toggleMedeEigenaarsTab);
+
+			const $invoiceAddressToggle = $('#checkboxInvoiceAddress');
+			const $invoiceAddressSection = $('.InvoiceAddress');
+
+			function syncInvoiceAddress() {
+				$invoiceAddressSection.toggleClass('d-none', !$invoiceAddressToggle.is(':checked'));
+			}
+
+			if ($invoiceAddressToggle.length) {
+				syncInvoiceAddress();
+				$invoiceAddressToggle.on('change', syncInvoiceAddress);
+			}
 
 			/* ==============================
 			   INIT currency masks (globaal)

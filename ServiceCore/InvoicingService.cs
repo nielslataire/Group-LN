@@ -147,6 +147,10 @@ namespace ServiceCore
                     IsCreditNote = series != null && series.IsCreditNote,
                     ProjectName = project != null ? project.ProjectName : null,
                     OctopusDeliveryState = i.OctopusDeliveryState,
+                    OctopusBookyearId = i.OctopusBookyearId,
+                    OctopusJournalKey = i.OctopusJournalKey,
+                    OctopusDocumentSequenceNr = i.OctopusDocumentSequenceNr,
+                    OctopusBookedAt = i.OctopusBookedAt,
                     HasEmailLog = _db.InvoiceEmailLog.AsNoTracking().Any(l => l.InvoiceId == i.Id),
                     RequiresDigitalInvoice = i.CompanyId.HasValue
                         ? true
@@ -212,6 +216,10 @@ namespace ServiceCore
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
                     Balance = (decimal?)bal.Balance ?? 0m,
                     OctopusDeliveryState = i.OctopusDeliveryState,
+                    OctopusBookyearId = i.OctopusBookyearId,
+                    OctopusJournalKey = i.OctopusJournalKey,
+                    OctopusDocumentSequenceNr = i.OctopusDocumentSequenceNr,
+                    OctopusBookedAt = i.OctopusBookedAt,
                     HasEmailLog = _db.InvoiceEmailLog.AsNoTracking().Any(l => l.InvoiceId == i.Id),
                     RequiresDigitalInvoice = i.CompanyId.HasValue
                         ? true
