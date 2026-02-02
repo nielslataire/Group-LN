@@ -1718,9 +1718,15 @@ public partial class cpmRunningContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__PaymentT__3214EC074A170AFB");
 
             entity.Property(e => e.Description).HasMaxLength(200);
+            entity.Property(e => e.DisplayText).HasMaxLength(500);
+            entity.Property(e => e.IssuerCompanyId).HasColumnName("IssuerCompanyID");
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
+
+            entity.HasOne(d => d.IssuerCompanyNavigation).WithMany(p => p.PaymentTerms)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .HasConstraintName("FK_PaymentTerms_IssuerCompany");
         });
 
         modelBuilder.Entity<Payments>(entity =>

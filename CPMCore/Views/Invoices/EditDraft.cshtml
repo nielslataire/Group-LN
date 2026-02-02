@@ -165,13 +165,13 @@
                                     {
                                         if (Model.PaymentTermId == t.Id)
                                         {
-                                            <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" selected="selected">
+                                            <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" data-type="@((int)t.TermType)" data-display-mode="@((int)t.DisplayMode)" data-display-text="@t.DisplayText" selected="selected">
                                                 @t.Name
                                             </option>
                                         }
                                         else
                                         {
-                                            <option value="@t.Id" data-days="@t.Days" data-name="@t.Name">
+                                            <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" data-type="@((int)t.TermType)" data-display-mode="@((int)t.DisplayMode)" data-display-text="@t.DisplayText">
                                                 @t.Name
                                             </option>
                                         }

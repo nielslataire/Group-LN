@@ -76,6 +76,7 @@ public sealed class PaymentVm
     public string? Bic { get; init; }
     public bool QrEnabled { get; init; }
     public string? Terms { get; init; }
+    public bool UsePaymentTermsText { get; init; }
 }
 
 public sealed class VatRateSummaryVm

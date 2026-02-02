@@ -39,5 +39,22 @@ window.InvoicesUtil = (function () {
         return `${dd2}/${mm2}/${d.getFullYear()}`;
     }
 
-    return { nf, parseLocaleNumber, esc, addDays };
+    function addDaysFromEndOfMonth(dmy, days) {
+        if (!dmy) return '—';
+        const [dd, mm, yyyy] = dmy.split('/');
+        const year = +yyyy;
+        const month = (+mm) - 1;
+        const endOfMonth = new Date(year, month + 1, 0);
+        endOfMonth.setDate(endOfMonth.getDate() + (days || 0));
+        const dd2 = ('0' + endOfMonth.getDate()).slice(-2);
+        const mm2 = ('0' + (endOfMonth.getMonth() + 1)).slice(-2);
+        return `${dd2}/${mm2}/${endOfMonth.getFullYear()}`;
+    }
+
+    function calculateDueDate(dmy, days, termType) {
+        if (termType === 1) return addDaysFromEndOfMonth(dmy, days);
+        return addDays(dmy, days);
+    }
+
+    return { nf, parseLocaleNumber, esc, addDays, addDaysFromEndOfMonth, calculateDueDate };
 })();

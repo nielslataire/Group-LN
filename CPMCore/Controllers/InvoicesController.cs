@@ -802,9 +802,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, CancellationToken ct = default)
         {
-            // haal alles via service
-            var issuersBo = await _ics.ListActiveIssuersAsync(ct);
-            var termsBo = await _ics.ListPaymentTermsAsync(ct);
+
 
             InvoiceDetailBO? duplicateDetail = null;
             if (duplicateInvoiceId.HasValue && duplicateInvoiceId.Value > 0)
@@ -821,6 +819,12 @@ namespace CPMCore.Controllers
                 ?? issuerId
                 ?? (await _ics.GetFirstActiveIssuerIdAsync(ct))
                 ?? 0;
+
+            // haal alles via service
+            var issuersBo = await _ics.ListActiveIssuersAsync(ct);
+            var termsBo = selectedIssuerId > 0
+                ? await _ics.ListPaymentTermsAsync(selectedIssuerId, ct)
+                : Array.Empty<PaymentTermBO>();
 
             var VatsBo = selectedIssuerId > 0
                ? await _ics.ListVatTypeAsync(selectedIssuerId, ct)
@@ -866,7 +870,7 @@ namespace CPMCore.Controllers
                     .ToList(),
 
                 PaymentTerms = termsBo
-                    .Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days))
+                    .Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days, t.TermType, t.DisplayMode, t.DisplayText))
                     .ToList(),
 
                 VatTypes = VatsBo
@@ -1709,7 +1713,7 @@ namespace CPMCore.Controllers
             if (detail == null) throw new ArgumentNullException(nameof(detail));
 
             var issuersBo = await _ics.ListActiveIssuersAsync(ct);
-            var termsBo = await _ics.ListPaymentTermsAsync(ct);
+            var termsBo = await _ics.ListPaymentTermsAsync(detail.IssuerCompanyId, ct);
 
 
             var selectedIssuerId = posted?.IssuerCompanyId > 0 ? posted!.IssuerCompanyId : detail.IssuerCompanyId;
@@ -1764,7 +1768,9 @@ namespace CPMCore.Controllers
                     InvoiceMention = t.InvoiceMention
                 }).ToList(),
                 Issuers = issuersBo.Select(i => new IssuerItemVM(i.Id, i.Name, i.DefaultPaymentTermId, i.DefaultVatTypeId)).ToList(),
-                PaymentTerms = termsBo.Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days)).ToList()
+                PaymentTerms = termsBo
+                    .Select(t => new PaymentTermItemVM(t.Id, t.Name, t.Days, t.TermType, t.DisplayMode, t.DisplayText))
+                    .ToList()
             };
 
             if (vm.PartyId is null || vm.PartyType is null)
@@ -1945,6 +1951,8 @@ namespace CPMCore.Controllers
                 InvoiceDate = bo.InvoiceDate,
                 ExpirationDate = bo.ExpirationDate,
                 Status = TranslateStatus(bo.StatusName),
+                PaymentTermDisplayMode = bo.PaymentTermDisplayMode ?? PaymentTermDisplayMode.DueDate,
+                PaymentTermDisplayText = bo.PaymentTermDisplayText,
                 BankAccount = bo.BankAccount,
                 HeaderText = NormalizeMultiline(bo.HeaderText),
                 DetailText = NormalizeMultiline(bo.DetailText),
@@ -4025,7 +4033,7 @@ END";
                 return null;
 
             var number = long.Parse(baseDigits, CultureInfo.InvariantCulture);
-            var checksum = 97 - (number % 97);
+            var checksum = (int)(number % 97);
             if (checksum == 0)
                 checksum = 97;
 

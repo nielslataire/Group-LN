@@ -476,7 +476,7 @@ public class InstellingenController : BaseController
         var bo = await _issuers.GetAsync(id, ct);
         if (bo == null) return NotFound();
 
-        ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync(ct);
+        ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync(id, ct);
         ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id, ct);
         ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id, ct);
         ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync(ct);
@@ -488,6 +488,7 @@ public class InstellingenController : BaseController
         var customFields = await _issuers.ListOctopusCustomFieldsAsync(id, ct);
         var storedMappings = DeserializeCustomFieldMappings(bo?.OctopusCustomFieldMappingsJson);
         var vatTypes = (ViewBag.OctopusVatCodes as IReadOnlyList<VatTypeBO> ?? Array.Empty<VatTypeBO>()).ToList();
+        var paymentTerms = await _issuers.ListPaymentTermsAsync(id, ct);
         var templates = await GetInvoiceTemplateOptionsAsync(ct);
 
         var vm = new IssuerCompanyVM
@@ -557,7 +558,20 @@ public class InstellingenController : BaseController
                 Type = v.Type,
                 DefaultSellBookingAccountNr = v.DefaultSellBookingAccountNr,
                 InvoiceMention = v.InvoiceMention
-            }).ToList()
+            }).ToList(),
+            PaymentTerms = paymentTerms
+                .Where(t => t.IssuerCompanyId == id)
+                .Select(t => new PaymentTermVM
+                {
+                    Id = t.Id,
+                    Name = t.Name,
+                    Days = t.Days,
+                    Description = t.Description,
+                    TermType = t.TermType,
+                    DisplayMode = t.DisplayMode,
+                    DisplayText = t.DisplayText
+                })
+                .ToList()
         };
         vm.InvoiceTemplates = templates;
         ApplyInvoiceTemplateDefaults(vm, templates);
@@ -599,7 +613,7 @@ public class InstellingenController : BaseController
         ValidateTemplateJson(vm.TemplateJson);
         if (!ModelState.IsValid)
         {
-            ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync();
+            ViewBag.PaymentTerms = await _issuers.GetPaymentTermOptionsAsync(id, ct);
             ViewBag.BankAccounts = await _bank.ListByIssuerAsync(id);
             ViewBag.InvoiceSeries = await _series.ListByIssuerAsync(id);
             ViewBag.CompanyLegalForms = await _issuers.ListLegalFormsAsync();
@@ -620,6 +634,7 @@ public class InstellingenController : BaseController
                         InvoiceMention = v.InvoiceMention
                     })
                     .ToList();
+            vm.PaymentTerms ??= new List<PaymentTermVM>();
             var templates = await GetInvoiceTemplateOptionsAsync(ct);
             vm.InvoiceTemplates = templates;
             ApplyInvoiceTemplateDefaults(vm, templates);
@@ -726,6 +741,22 @@ public class InstellingenController : BaseController
                 }),
                 ct);
         }
+        var paymentTerms = vm.PaymentTerms ?? new List<PaymentTermVM>();
+        await _issuers.SyncPaymentTermsAsync(
+            vm.Id,
+            paymentTerms.Select(t => new PaymentTermBO
+            {
+                Id = t.Id,
+                Name = t.Name ?? string.Empty,
+                Days = t.Days,
+                Description = t.Description,
+                TermType = t.TermType,
+                DisplayMode = t.DisplayMode,
+                DisplayText = t.DisplayText,
+                IsDeleted = t.IsDeleted,
+                IssuerCompanyId = vm.Id
+            }),
+            ct);
 
         AddMessage("success", "Mijn bedrijf " +vm.Name + " opgeslagen.", "Geslaagd!");
         return RedirectToAction(nameof(IssuerCompanies));

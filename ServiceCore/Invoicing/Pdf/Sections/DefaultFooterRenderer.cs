@@ -157,6 +157,7 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
         var isProforma = IsProformaInvoice(vm);
         var dueDateText = FormatDate(vm.Invoice.DueDate);
         var paymentDate = string.IsNullOrWhiteSpace(dueDateText) ? "—" : dueDateText;
+        var customTerms = vm.Payment?.UsePaymentTermsText == true ? vm.Payment.Terms : null;
 
         var account = !string.IsNullOrWhiteSpace(vm.Payment?.Iban)
             ? vm.Payment!.Iban
@@ -181,9 +182,22 @@ public sealed class DefaultFooterRenderer : ISectionRenderer
 
             row.RelativeItem().Column(col =>
             {
+                if (!string.IsNullOrWhiteSpace(customTerms))
+                {
+                    col.Item().Text(text =>
+                    {
+                        var span = text.Span(customTerms);
+                        span.FontSize(9);
+                        span.Bold();
+                        ApplyFont(span);
+                    });
+                }
+
                 col.Item().Text(text =>
                 {
-                    var prefix = text.Span($"Te betalen voor {paymentDate} op rekening ");
+                    var prefix = customTerms == null
+                        ? text.Span($"Te betalen voor {paymentDate} op rekening ")
+                        : text.Span("Gelieve te betalen op rekening ");
                     prefix.FontSize(9);
                     prefix.Bold();
                     ApplyFont(prefix);

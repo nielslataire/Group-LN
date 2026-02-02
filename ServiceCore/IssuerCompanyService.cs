@@ -120,9 +120,15 @@ namespace ServiceCore
             await _uow.SaveChangesAsync(ct);
         }
 
-        public async Task<IReadOnlyList<PaymentTermOptionBO>> GetPaymentTermOptionsAsync(CancellationToken ct = default)
+        public async Task<IReadOnlyList<PaymentTermOptionBO>> GetPaymentTermOptionsAsync(int? issuerId = null, CancellationToken ct = default)
         {
-            return await _uow.PaymentTerms.GetNoTracking()
+            var terms = _uow.PaymentTerms.GetNoTracking();
+            if (issuerId.HasValue)
+                terms = terms.Where(x => x.IssuerCompanyId == null || x.IssuerCompanyId == issuerId);
+            else
+                terms = terms.Where(x => x.IssuerCompanyId == null);
+
+            return await terms
                 .OrderBy(x => x.Name)
                 .Select(x => new PaymentTermOptionBO { Id = x.Id, Label = x.Name })
                 .ToListAsync(ct);
@@ -212,18 +218,78 @@ namespace ServiceCore
                 .FirstOrDefaultAsync(ct);
         }
 
-        public async Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default)
+        public async Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(int issuerId, CancellationToken ct = default)
         {
             return await _db.PaymentTerms
                 .AsNoTracking()
+                .Where(t => t.IssuerCompanyId == null || t.IssuerCompanyId == issuerId)
                 .OrderBy(t => t.Days)
                 .Select(t => new PaymentTermBO
                 {
                     Id = t.Id,
                     Name = t.Name,
-                    Days = t.Days
+                    Days = t.Days,
+                    TermType = (PaymentTermType)t.TermType,
+                    DisplayMode = (PaymentTermDisplayMode)t.DisplayMode,
+                    DisplayText = t.DisplayText,
+                    Description = t.Description,
+                    IssuerCompanyId = t.IssuerCompanyId
                 })
                 .ToListAsync(ct);
+        }
+        public async Task SyncPaymentTermsAsync(int issuerId, IEnumerable<PaymentTermBO> terms, CancellationToken ct = default)
+        {
+            if (issuerId <= 0)
+                throw new ArgumentOutOfRangeException(nameof(issuerId));
+
+            var existing = await _db.PaymentTerms
+                .Where(t => t.IssuerCompanyId == issuerId)
+                .ToListAsync(ct);
+
+            var incoming = (terms ?? Array.Empty<PaymentTermBO>())
+                .Where(t => t != null)
+                .ToList();
+
+            foreach (var term in incoming)
+            {
+                if (term.Id > 0)
+                {
+                    var match = existing.FirstOrDefault(t => t.Id == term.Id);
+                    if (match == null)
+                        continue;
+
+                    if (term.IsDeleted)
+                    {
+                        _db.PaymentTerms.Remove(match);
+                        continue;
+                    }
+
+                    match.Name = term.Name?.Trim();
+                    match.Days = term.Days;
+                    match.Description = term.Description?.Trim();
+                    match.TermType = (int)term.TermType;
+                    match.DisplayMode = (int)term.DisplayMode;
+                    match.DisplayText = term.DisplayText?.Trim();
+                }
+                else
+                {
+                    if (term.IsDeleted)
+                        continue;
+
+                    _db.PaymentTerms.Add(new PaymentTerms
+                    {
+                        IssuerCompanyId = issuerId,
+                        Name = term.Name?.Trim(),
+                        Days = term.Days,
+                        Description = term.Description?.Trim(),
+                        TermType = (int)term.TermType,
+                        DisplayMode = (int)term.DisplayMode,
+                        DisplayText = term.DisplayText?.Trim()
+                    });
+                }
+            }
+
+            await _db.SaveChangesAsync(ct);
         }
         public async Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(int issuerId, CancellationToken ct = default)
         {

@@ -233,7 +233,8 @@ public sealed class InvoicePdfService : IInvoicePdfService
                     : dto.Issuer.BankAccount ?? company.EpcIban,
                 Bic = dto.Issuer.Bic ?? company.EpcBic,
                 QrEnabled = !isProforma && company.EpcQrEnabled && (!string.IsNullOrWhiteSpace(structuredMessage ?? dto.StructuredMessage) || !string.IsNullOrWhiteSpace(dto.QrPayload)),
-                Terms = BuildPaymentTerms(dto)
+                Terms = BuildPaymentTerms(dto),
+                UsePaymentTermsText = dto.PaymentTermDisplayMode == PaymentTermDisplayMode.Text && !string.IsNullOrWhiteSpace(dto.PaymentTermDisplayText)
             },
             VatSummary = BuildVatSummary(dto),
             VatMentions = BuildVatMentions(dto),
@@ -445,7 +446,13 @@ public sealed class InvoicePdfService : IInvoicePdfService
     }
     private static string? BuildPaymentTerms(InvoiceDto dto)
     {
-        if (dto?.DueDate is not { } due)
+        if (dto == null)
+            return null;
+
+        if (dto.PaymentTermDisplayMode == PaymentTermDisplayMode.Text && !string.IsNullOrWhiteSpace(dto.PaymentTermDisplayText))
+            return dto.PaymentTermDisplayText;
+
+        if (dto.DueDate is not { } due)
             return null;
 
         var issue = dto.IssueDate;

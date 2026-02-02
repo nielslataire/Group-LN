@@ -163,7 +163,10 @@ $(function () {
         if ($opt.length === 0) return null;
         const days = parseInt($opt.data('days'), 10) || 0;
         const name = ($opt.data('name') || $opt.text() || '').toString();
-        return { days, name };
+        const termType = parseInt($opt.data('type'), 10) || 0;
+        const displayMode = parseInt($opt.data('display-mode'), 10) || 0;
+        const displayText = ($opt.data('display-text') || '').toString();
+        return { days, name, termType, displayMode, displayText };
     }
 
     function clearPreview() {

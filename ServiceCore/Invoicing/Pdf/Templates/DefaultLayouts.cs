@@ -128,7 +128,7 @@ public static class DefaultLayouts
       ""structuredValue"": ""{{Payment.Structured}}"",
       ""showQr"": true,
       ""qrSize"": 130,
-      ""note"": ""Gelieve te betalen v\u00f3\u00f3r {{Invoice.DueDate:dd/MM/yyyy}}""
+      ""note"": ""{{Payment.Terms}}""
     },
     {
       ""type"": ""legal"",
@@ -261,7 +261,7 @@ public static class DefaultLayouts
       ""structuredValue"": ""{{Payment.Structured}}"",
       ""showQr"": true,
       ""qrSize"": 130,
-      ""note"": ""Gelieve te betalen v\u00f3\u00f3r {{Invoice.DueDate:dd/MM/yyyy}}""
+      ""note"": ""{{Payment.Terms}}""
     },
     {
       ""type"": ""legal"",

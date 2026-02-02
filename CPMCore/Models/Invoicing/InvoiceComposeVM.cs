@@ -7,7 +7,7 @@ namespace CPMCore.Models.Invoicing
 {
     // VM-items voor dropdown rendering
     public record IssuerItemVM(int Id, string Name, int? DefaultPaymentTermId, int? DefaultVatTypeId);
-    public record PaymentTermItemVM(int Id, string Name, int Days);
+    public record PaymentTermItemVM(int Id, string Name, int Days, PaymentTermType TermType, PaymentTermDisplayMode DisplayMode, string? DisplayText);
     public class VatTypeVM
     {
         public int Id { get; set; }

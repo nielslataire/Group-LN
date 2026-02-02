@@ -313,6 +313,26 @@ namespace ServiceCore
 
             var detail = NewDetailBo(invoice, statusName, defaultIban, defaultBic, company);
 
+            if (invoice.PaymentTermId.HasValue)
+            {
+                var term = await _db.PaymentTerms
+                    .AsNoTracking()
+                    .Where(t => t.Id == invoice.PaymentTermId.Value)
+                    .Select(t => new
+                    {
+                        t.DisplayText,
+                        t.DisplayMode
+                    })
+                    .FirstOrDefaultAsync(ct);
+
+                if (term != null)
+                {
+                    detail.PaymentTermDisplayText = term.DisplayText;
+                    detail.PaymentTermDisplayMode = (PaymentTermDisplayMode)term.DisplayMode;
+                }
+            }
+
+
             foreach (var detailRow in invoice.InvoicesDetails)
             {
                 var line = new InvoiceLineBO();
@@ -391,7 +411,7 @@ namespace ServiceCore
                 IssuerCompanyId = issuer?.Id ?? 0,
                 IssuerName = issuer?.Name,
                 IssuerLegalName = issuer?.LegalName,
-                IssuerVatNumber = issuer?.VatNumber,
+                IssuerVatNumber = BuildInvoiceVatNumber(issuer?.VatNumber, issuer?.EnterpriseNumber, issuer?.CountryCode),
                 IssuerAddressLine1 = issuer?.AddressLine1,
                 IssuerAddressLine2 = issuer?.AddressLine2,
                 IssuerPostalCode = issuer?.PostalCode,
@@ -409,7 +429,7 @@ namespace ServiceCore
                 ClientPostalCode = postal?.Postcode,
                 ClientCity = postal?.Gemeente,
                 ClientCountryName = postal?.Country?.LandNaam,
-                ClientVatNumber = invoice.VatNumber,
+                ClientVatNumber = BuildInvoiceVatNumber(invoice.VatNumber, company?.Ondernemingsnummer, postal?.Country?.LandIsocode ?? issuer?.CountryCode),
                 ClientEnterpriseNumber = company?.Ondernemingsnummer,
                 ClientEmail = invoiceEmail,
                 RequiresDigitalInvoice = requiresDigital,
@@ -440,6 +460,46 @@ namespace ServiceCore
                 OctopusBookedAt = invoice.OctopusBookedAt,
                 OctopusBookedBy = invoice.OctopusBookedBy,
             };
+        }
+
+        private static string? BuildInvoiceVatNumber(string? vatNumber, string? enterpriseNumber, string? countryCode)
+        {
+            var candidate = string.IsNullOrWhiteSpace(vatNumber) ? enterpriseNumber : vatNumber;
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                return null;
+            }
+
+            var trimmed = candidate.Trim();
+            var normalizedCountry = NormalizeCountryCode(countryCode);
+            if (string.Equals(normalizedCountry, "BE", StringComparison.OrdinalIgnoreCase))
+            {
+                var digits = new string(trimmed.Where(char.IsDigit).ToArray());
+                if (string.IsNullOrWhiteSpace(digits))
+                {
+                    return null;
+                }
+
+                if (digits.Length == 9)
+                {
+                    digits = "0" + digits;
+                }
+
+                return $"BE{digits}";
+            }
+
+            return trimmed;
+        }
+
+        private static string? NormalizeCountryCode(string? countryCode)
+        {
+            if (string.IsNullOrWhiteSpace(countryCode))
+            {
+                return null;
+            }
+
+            var trimmed = countryCode.Trim();
+            return trimmed.Length > 2 ? trimmed.Substring(0, 2).ToUpperInvariant() : trimmed.ToUpperInvariant();
         }
 
         private async Task PopulateTotalsAsync(InvoiceDetailBO detail, int invoiceId, CancellationToken ct)

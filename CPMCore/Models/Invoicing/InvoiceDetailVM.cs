@@ -10,6 +10,8 @@ namespace CPMCore.Models.Invoicing
         public string? PublicId { get; set; }
         public DateOnly InvoiceDate { get; set; }
         public DateOnly? ExpirationDate { get; set; }
+        public PaymentTermDisplayMode PaymentTermDisplayMode { get; set; } = PaymentTermDisplayMode.DueDate;
+        public string? PaymentTermDisplayText { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
         public InvoicePartyVM Issuer { get; set; } = new();
         public InvoicePartyVM Client { get; set; } = new();

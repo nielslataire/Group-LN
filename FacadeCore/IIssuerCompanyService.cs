@@ -15,10 +15,11 @@ namespace FacadeCore
         Task UpdateAsync(IssuerCompanyBO bo, CancellationToken ct = default);
         Task DisableAsync(int id, CancellationToken ct = default); // soft delete: IsActive = false
 
-        Task<IReadOnlyList<PaymentTermOptionBO>> GetPaymentTermOptionsAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<PaymentTermOptionBO>> GetPaymentTermOptionsAsync(int? issuerId = null, CancellationToken ct = default);
         Task<IReadOnlyList<IssuerListItemBO>> ListActiveIssuersAsync(CancellationToken ct = default);
         Task<int?> GetFirstActiveIssuerIdAsync(CancellationToken ct = default);
-        Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(CancellationToken ct = default);
+        Task<IReadOnlyList<PaymentTermBO>> ListPaymentTermsAsync(int issuerId, CancellationToken ct = default);
+        Task SyncPaymentTermsAsync(int issuerId, IEnumerable<PaymentTermBO> terms, CancellationToken ct = default);
         Task<IReadOnlyList<VatTypeBO>> ListVatTypeAsync(int issuerId, CancellationToken ct = default);
         Task SyncVatTypesAsync(int issuerId, IEnumerable<VatTypeBO> vatTypes, CancellationToken ct = default);
         Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default);
@@ -39,6 +40,12 @@ namespace FacadeCore
         public int Id { get; set; }
         public string Name { get; set; } = "";
         public int Days { get; set; }
+        public PaymentTermType TermType { get; set; } = PaymentTermType.Days;
+        public PaymentTermDisplayMode DisplayMode { get; set; } = PaymentTermDisplayMode.DueDate;
+        public string? DisplayText { get; set; }
+        public string? Description { get; set; }
+        public int? IssuerCompanyId { get; set; }
+        public bool IsDeleted { get; set; }
     }
     public class VatTypeBO
     {

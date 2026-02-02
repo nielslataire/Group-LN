@@ -931,7 +931,7 @@ public class LeveranciersController : BaseController
             Id = entity.CompanyId,
             Name = entity.BedrijfsNaam,
             SelectedLegalFormId = legalFormId,
-            EnterpriseNumber = entity.Ondernemingsnummer,
+            EnterpriseNumber = SanitizeDigits(entity.Ondernemingsnummer),
             EnterpriseNumberCountryCode = entity.LandCode ?? "BE",
             VatNumber = entity.VatNumber,
             VatStatus = string.IsNullOrWhiteSpace(entity.VatStatus) ? SupplierFormViewModel.VatStatusBtwPlichtig : entity.VatStatus,

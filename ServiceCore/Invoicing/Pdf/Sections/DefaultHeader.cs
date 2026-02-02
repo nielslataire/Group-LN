@@ -73,8 +73,15 @@ public sealed class DefaultHeaderRenderer : ISectionRenderer
                 if (!string.IsNullOrWhiteSpace(vm.Client.VAT))
                     AddInfoRow(info, "BTW-nummer", vm.Client.VAT, ctx);
 
-                var dueDateText = FormatDate(vm.Invoice.DueDate);
-                AddInfoRow(info, "Vervaldatum", string.IsNullOrWhiteSpace(dueDateText) ? "-" : dueDateText, ctx);
+                if (vm.Payment?.UsePaymentTermsText == true && !string.IsNullOrWhiteSpace(vm.Payment.Terms))
+                {
+                    AddInfoRow(info, "Betaalvoorwaarden", vm.Payment.Terms, ctx);
+                }
+                else
+                {
+                    var dueDateText = FormatDate(vm.Invoice.DueDate);
+                    AddInfoRow(info, "Vervaldatum", string.IsNullOrWhiteSpace(dueDateText) ? "-" : dueDateText, ctx);
+                }
             });
         });
     }

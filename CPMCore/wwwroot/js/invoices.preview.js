@@ -1,6 +1,6 @@
 ﻿// Voorbeeldfactuur (preview)
 (function () {
-    const { nf, parseLocaleNumber, esc, addDays } = window.InvoicesUtil;
+    const { nf, parseLocaleNumber, esc, calculateDueDate } = window.InvoicesUtil;
 
     const $card = $('#previewCard');
     const $tables = $('#pvTables');
@@ -28,7 +28,10 @@
         if ($opt.length === 0) return null;
         const days = parseInt($opt.data('days'), 10) || 0;
         const name = ($opt.data('name') || $opt.text() || '').toString();
-        return { days, name };
+        const termType = parseInt($opt.data('type'), 10) || 0;
+        const displayMode = parseInt($opt.data('display-mode'), 10) || 0;
+        const displayText = ($opt.data('display-text') || '').toString();
+        return { days, name, termType, displayMode, displayText };
     }
 
     function updateHeader() {
@@ -40,10 +43,12 @@
 
         const dt = readDateStr();
         const term = getSelectedTermOption();
+        const dueDate = term ? calculateDueDate(dt, term.days, term.termType) : '—';
+        const paymentNote = term && term.displayMode === 1 && term.displayText ? term.displayText : null;
 
         $('#pvIssueDate').text(dt || '—');
         $('#pvPayTerm').text(term ? term.name : '—');
-        $('#pvDueDate').text(addDays(dt, term ? term.days : 0));
+        $('#pvDueDate').text(paymentNote || dueDate);
 
         const hdr = ($('#HeaderDescription').val() || '').trim();
         $('#pvHeaderText').text(hdr);

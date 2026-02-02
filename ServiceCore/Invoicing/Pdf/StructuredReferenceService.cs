@@ -16,7 +16,7 @@ public sealed class StructuredReferenceService : IStructuredReferenceService
             throw new ArgumentException("OGM requires exact 10 digits", nameof(base10Digits));
 
         var number = long.Parse(digits, CultureInfo.InvariantCulture);
-        var checksum = 97 - (number % 97);
+        var checksum = (int)(number % 97);
         if (checksum == 0)
             checksum = 97;
 

@@ -61,6 +61,8 @@ Public Class InvoiceDetailBO
     Public Property ProjectId As Integer?
     Public Property SupplierContractId As Integer?
     Public Property PaymentTermId As Integer?
+    Public Property PaymentTermDisplayMode As PaymentTermDisplayMode?
+    Public Property PaymentTermDisplayText As String
 
     Public Property OctopusBookyearId As Integer?
     Public Property OctopusJournalKey As String

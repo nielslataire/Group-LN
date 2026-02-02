@@ -307,14 +307,23 @@ namespace ServiceCore.Invoicing
 
         private static XElement? BuildPaymentTerms(XNamespace cac, XNamespace cbc, InvoiceDetailBO detail)
         {
-            if (!detail.ExpirationDate.HasValue)
-                return null;
+            var noteText = !string.IsNullOrWhiteSpace(detail.PaymentTermDisplayText)
+                ? detail.PaymentTermDisplayText.Trim()
+                : null;
 
-            var due = detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
-            var note = $"Gelieve te betalen vóór {due}.";
+            if (string.IsNullOrWhiteSpace(noteText))
+            {
+                if (!detail.ExpirationDate.HasValue)
+                    return null;
+
+                var due = detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
+                noteText = $"Gelieve te betalen vóór {due}.";
+            }
+
             return new XElement(cac + "PaymentTerms",
-                new XElement(cbc + "Note", note));
+                new XElement(cbc + "Note", noteText));
         }
+
 
         private static XElement BuildTaxTotal(XNamespace cac, XNamespace cbc, string currency, IEnumerable<TaxGroup> groups)
         {

@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace CPMCore.Models.Instellingen
 {
+    using BOCore;
     using CPMCore.Models.Invoicing;
     public class IssuerCompanyVM
     {
@@ -148,8 +149,22 @@ namespace CPMCore.Models.Instellingen
         public List<OctopusCustomFieldMappingVM> CustomFieldMappings { get; set; } = new();
 
         public List<VatTypeVM> VatTypes { get; set; } = new();
+        public List<PaymentTermVM> PaymentTerms { get; set; } = new();
         public IReadOnlyList<InvoiceLayoutTemplateOptionVM> InvoiceTemplates { get; set; } = new List<InvoiceLayoutTemplateOptionVM>();
     }
+
+    public class PaymentTermVM
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+        public int Days { get; set; }
+        public string? Description { get; set; }
+        public PaymentTermType TermType { get; set; } = PaymentTermType.Days;
+        public PaymentTermDisplayMode DisplayMode { get; set; } = PaymentTermDisplayMode.DueDate;
+        public string? DisplayText { get; set; }
+        public bool IsDeleted { get; set; }
+    }
+
 
     public class OctopusCustomFieldMappingVM
     {

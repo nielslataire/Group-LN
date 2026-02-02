@@ -1,4 +1,5 @@
 ﻿using FacadeCore;
+using BOCore;
 using System;
 using System;
 using System.Collections.Generic;
@@ -29,6 +30,8 @@ public class InvoiceDto
     public string? QrPayload { get; set; }
     public string? HeaderDescription { get; set; }
     public string? DetailDescription { get; set; }
+    public PaymentTermDisplayMode PaymentTermDisplayMode { get; set; } = PaymentTermDisplayMode.DueDate;
+    public string? PaymentTermDisplayText { get; set; }
 
     public TotalsDto Totals { get; set; } = new();
     public IReadOnlyList<InvoiceLineDto> Lines { get; set; } = Array.Empty<InvoiceLineDto>();

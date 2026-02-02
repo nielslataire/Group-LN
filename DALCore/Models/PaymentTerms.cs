@@ -15,5 +15,15 @@ public partial class PaymentTerms
 
     public string Description { get; set; }
 
+    public int TermType { get; set; }
+
+    public int DisplayMode { get; set; }
+
+    public string DisplayText { get; set; }
+
+    public int? IssuerCompanyId { get; set; }
+
     public virtual ICollection<IssuerCompany> IssuerCompany { get; set; } = new List<IssuerCompany>();
+
+    public virtual IssuerCompany IssuerCompanyNavigation { get; set; }
 }

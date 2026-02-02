@@ -30,6 +30,8 @@ public static class InvoiceDetailExtensions
             QrPayload = bo.QrPayLoad,
             HeaderDescription = bo.HeaderText,
             DetailDescription = bo.DetailText,
+            PaymentTermDisplayMode = bo.PaymentTermDisplayMode ?? PaymentTermDisplayMode.DueDate,
+            PaymentTermDisplayText = bo.PaymentTermDisplayText,
             Issuer = new PartyDto
             {
                 Name = bo.IssuerName,

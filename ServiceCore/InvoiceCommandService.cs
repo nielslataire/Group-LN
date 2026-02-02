@@ -38,14 +38,8 @@ namespace ServiceCore
 
             // issuer + default term
             var issuer = await _db.IssuerCompany.FirstAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct);
-            int? defaultDays = null;
-            if (issuer.DefaultPaymentTermId.HasValue)
-                defaultDays = await _db.PaymentTerms
-                    .Where(t => t.Id == issuer.DefaultPaymentTermId.Value)
-                    .Select(t => (int?)t.Days)
-                    .FirstOrDefaultAsync(ct);
-
-            var due = bo.ExpirationDate ?? (defaultDays.HasValue ? bo.InvoiceDate.AddDays(defaultDays.Value) : (DateOnly?)null);
+            var paymentTerm = await ResolvePaymentTermAsync(bo.PaymentTermId, issuer.DefaultPaymentTermId, ct);
+            var due = bo.ExpirationDate ?? CalculateDueDate(bo.InvoiceDate, paymentTerm);
 
             string? issuerBankAccountIban = null;
             if (bo.IssuerBankAccountId is int bankAccountId)
@@ -557,14 +551,8 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct)
                     ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden of niet actief.");
 
-                int? defaultDays = null;
-                if (issuer.DefaultPaymentTermId.HasValue)
-                    defaultDays = await _db.PaymentTerms
-                        .Where(t => t.Id == issuer.DefaultPaymentTermId.Value)
-                        .Select(t => (int?)t.Days)
-                        .FirstOrDefaultAsync(ct);
-
-                var due = bo.ExpirationDate ?? (defaultDays.HasValue ? bo.InvoiceDate.AddDays(defaultDays.Value) : (DateOnly?)null);
+                var paymentTerm = await ResolvePaymentTermAsync(bo.PaymentTermId, issuer.DefaultPaymentTermId, ct);
+                var due = bo.ExpirationDate ?? CalculateDueDate(bo.InvoiceDate, paymentTerm);
 
                 string? issuerBankAccountIban = null;
                 if (bo.IssuerBankAccountId is int bankAccountId)
@@ -686,6 +674,33 @@ namespace ServiceCore
             }
         }
 
+        private sealed record PaymentTermSnapshot(int Days, int TermType);
+
+        private async Task<PaymentTermSnapshot?> ResolvePaymentTermAsync(int? selectedTermId, int? defaultTermId, CancellationToken ct)
+        {
+            var termId = selectedTermId ?? defaultTermId;
+            if (!termId.HasValue)
+                return null;
+
+            return await _db.PaymentTerms
+                .AsNoTracking()
+                .Where(t => t.Id == termId.Value)
+                .Select(t => new PaymentTermSnapshot(t.Days, t.TermType))
+                .FirstOrDefaultAsync(ct);
+        }
+
+        private static DateOnly? CalculateDueDate(DateOnly invoiceDate, PaymentTermSnapshot? paymentTerm)
+        {
+            if (paymentTerm == null)
+                return null;
+
+            var termType = (PaymentTermType)paymentTerm.TermType;
+            var baseDate = termType == PaymentTermType.DaysAfterEndOfMonth
+                ? new DateOnly(invoiceDate.Year, invoiceDate.Month, DateTime.DaysInMonth(invoiceDate.Year, invoiceDate.Month))
+                : invoiceDate;
+
+            return baseDate.AddDays(paymentTerm.Days);
+        }
 
         // ---------- alleen voor modus SCHIJVEN ----------
         // Bouwt lijnen voor modus "Schijven" op basis van gekozen PaymentGroup + StageIds.
@@ -884,7 +899,7 @@ namespace ServiceCore
                 return null;
 
             var number = long.Parse(baseDigits, CultureInfo.InvariantCulture);
-            var checksum = 97 - (number % 97);
+            var checksum = (int)(number % 97);
             if (checksum == 0)
                 checksum = 97;
 

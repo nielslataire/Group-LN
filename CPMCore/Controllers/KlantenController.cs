@@ -160,7 +160,7 @@ namespace CPMCore.Controllers
                 CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
                 Name = client.Name,
                 Salutation = isCompany ? null : salutation,
-                EnterpriseNumber = isCompany ? client.Vatnumber : null,
+                EnterpriseNumber = isCompany ? vatNumber : null,
                 EnterpriseNumberCountryCode = isCompany ? vatCountryCode ?? "BE" : "BE",
                 Street = client.Street,
                 HouseNumber = client.Housenumber,
@@ -271,7 +271,7 @@ namespace CPMCore.Controllers
                 CompanyName = isCompany ? client.CompanyName ?? client.Name : null,
                 Name = client.Name,
                 Salutation = isCompany ? null : salutation,
-                EnterpriseNumber = isCompany ? client.Vatnumber : null,
+                EnterpriseNumber = isCompany ? vatNumber : null,
                 EnterpriseNumberCountryCode = isCompany ? vatCountryCode ?? "BE" : "BE",
                 Street = client.Street,
                 HouseNumber = client.Housenumber,
@@ -889,7 +889,7 @@ namespace CPMCore.Controllers
             entity.CompanyName = model.IsCompany ? model.CompanyName : null;
             entity.Salutation = model.IsCompany ? null : model.Salutation?.ToString();
             entity.Vatnumber = model.IsCompany
-               ? CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber)
+                 ? NormalizeEnterpriseNumber(model.EnterpriseNumber)
                : null;
             entity.Street = model.Street;
             entity.Housenumber = model.HouseNumber;
@@ -1048,7 +1048,7 @@ namespace CPMCore.Controllers
                 => !string.Equals(a?.Trim(), b?.Trim(), StringComparison.OrdinalIgnoreCase);
 
             var newVat = model.IsCompany
-                ? CombineEnterpriseNumber(model.EnterpriseNumberCountryCode, model.EnterpriseNumber)
+                ? NormalizeEnterpriseNumber(model.EnterpriseNumber)
                 : null;
 
             return Different(entity.Street, model.Street)
@@ -1699,6 +1699,13 @@ namespace CPMCore.Controllers
             }
 
             return (null, sanitized);
+        }
+
+
+        private static string? NormalizeEnterpriseNumber(string? value)
+        {
+            var (_, numberPart) = SplitEnterpriseNumber(value);
+            return string.IsNullOrWhiteSpace(numberPart) ? null : numberPart;
         }
 
         private static string? SanitizeVatPart(string? value)
