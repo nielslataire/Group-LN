@@ -113,6 +113,12 @@
 							Nacalculatie
 						</a>
 					</li>
+					<li>
+						<a href="@Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailsChangeOrder" && currentController == "Projecten" ? "active" : "")">
+							Wijzigingsopdrachten
+						</a>
+					</li>
 				
 				</ul>
 			</div>

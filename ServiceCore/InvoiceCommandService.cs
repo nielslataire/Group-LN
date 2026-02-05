@@ -763,7 +763,7 @@ namespace ServiceCore
                     Clean(ComposeAddress(supplier.Straat, supplier.Huisnummer, supplier.Toevoeging, supplier.Busnummer)),
                     NormalizePostalCodeId(supplier.PostCodeId),
                     Clean(supplier.Ondernemingsnummer),
-                    Clean(supplier.Opmerkingen)
+                    null
                 );
             }
 

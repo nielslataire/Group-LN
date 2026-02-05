@@ -1186,6 +1186,9 @@ namespace CPMCore.Models.Projecten
                 _clientname = value;
             }
         }
+
+        public IReadOnlyList<IdNameBO> Clients { get; set; } = Array.Empty<IdNameBO>();
+        public IDictionary<int, string> ClientUnits { get; set; } = new Dictionary<int, string>();
     }
 
     // UNITS

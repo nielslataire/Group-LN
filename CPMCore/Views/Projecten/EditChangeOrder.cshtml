@@ -156,11 +156,12 @@
                                 </div>
                             </div>
                             <div class="row align-items-center pb-3 pt-3">
-                                <div class="col-lg-4">Omschrijving</div>
+                                <div class="col-lg-3">Omschrijving</div>
                                 <div class="col-lg-2">Eenheid</div>
                                 <div class="col-lg-1">Aantal</div>
-                                <div class="col-lg-1">Eenheidsprijs</div>
+                                <div class="col-lg-1">Prijs incl.</div>
                                 <div class="col-lg-1">Commissie</div>
+                                <div class="col-lg-1">Eenheidsprijs</div>
                                 <div class="col-lg-1">Totaalprijs</div>
                                 <div class="col-lg-1">BTW</div>
                                 <div class="col-lg-1 text-end">Acties</div>
@@ -254,6 +255,27 @@
           return n.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
         }
 
+        function setNumericValue($el, value) {
+           const an = window.AutoNumeric && AutoNumeric.getAutoNumericElement($el[0]);
+           if (an) an.set(value);
+           else $el.val(value.toFixed(2));
+         }
+
+         function syncPriceIncl($row) {
+           const price = getNum($row.find('.price-field'));
+           const commission = getNum($row.find('.commission-field'));
+           const priceIncl = price * (1 + (commission / 100));
+           setNumericValue($row.find('.price-incl-field'), priceIncl);
+         }
+
+         function syncPriceFromIncl($row) {
+           const priceIncl = getNum($row.find('.price-incl-field'));
+           const commission = getNum($row.find('.commission-field'));
+           const denominator = 1 + (commission / 100);
+           const price = denominator > 0 ? priceIncl / denominator : 0;
+           setNumericValue($row.find('.price-field'), price);
+         }
+
         // -------- Per rij herberekenen (totaal = aantal*prijs*(1+commissie%)) --------
         function recalcRow(elem) {
           const $row = $(elem).closest('.row');
@@ -304,12 +326,27 @@
         // -------- Events --------
         // Herbereken bij typen én bij AutoNumeric wijzigingen
         $(document).on('input autoNumeric:rawValueModified',
-          '.number-field, .price-field, .commission-field, .vat-field',
-          function () {
-            recalcRow(this);
-            recomputeTotals();
-          }
-        );
+           '.number-field, .price-field, .price-incl-field, .commission-field, .vat-field',
+           function () {
+             const $row = $(this).closest('.row');
+             if ($(this).hasClass('price-incl-field')) {
+               $row.data('price-mode', 'incl');
+               syncPriceFromIncl($row);
+             } else if ($(this).hasClass('price-field')) {
+               $row.data('price-mode', 'price');
+               syncPriceIncl($row);
+             } else if ($(this).hasClass('commission-field')) {
+               const mode = $row.data('price-mode') || ($row.find('.price-incl-field').val() ? 'incl' : 'price');
+               if (mode === 'incl') {
+                 syncPriceFromIncl($row);
+               } else {
+                 syncPriceIncl($row);
+               }
+             }
+             recalcRow(this);
+             recomputeTotals();
+           }
+         );
 
         // -------- AutoNumeric init --------
         function initCurrencyInputs(scope) {
@@ -325,6 +362,11 @@
 
         $(function () {
           initCurrencyInputs(document);
+        $('#ChangeOrderRows > .row').each(function () {
+                 $(this).data('price-mode', 'price');
+                 syncPriceIncl($(this));
+                 recalcRow(this);
+               });
           recomputeTotals(); // initiale samenvatting
         });
 
@@ -336,6 +378,14 @@
         }
 
                 $('form').on('submit', function () {
+                     $('#ChangeOrderRows > .row').each(function () {
+            const $row = $(this);
+            const priceIncl = getNum($row.find('.price-incl-field'));
+            const price = getNum($row.find('.price-field'));
+            if (priceIncl > 0 && price <= 0) {
+              syncPriceFromIncl($row);
+            }
+          });
           $(this).find('.currency-input').each(function () {
             const an = AutoNumeric.getAutoNumericElement(this);
             if (an) { this.value = an.getNumber(); } // “2000.00”
@@ -350,6 +400,9 @@
 
             initCurrencyInputs($row);
             initTooltips($row);
+             $row.data('price-mode', 'price');
+            syncPriceIncl($row);
+            recalcRow($row[0]);
 
             if ($.validator && $.validator.unobtrusive) {
               $.validator.unobtrusive.parse($row);

@@ -2860,6 +2860,85 @@ namespace CPMCore.Controllers
         // ========== WIJZIGINGSOPDRACHTEN KLANTEN/PROJECTEN ==========
 
         [HttpGet]
+        public ActionResult DetailsChangeOrder(int? projectid, int? clientid)
+        {
+            if ((projectid ?? 0) <= 0 && (clientid ?? 0) <= 0)
+            {
+                AddMessage("error", "Gelieve een project of klant te selecteren.", "Fout!");
+                return RedirectToAction("Index", "Projecten");
+            }
+
+            var refHeader = Request.Headers["Referer"].ToString();
+            if (Uri.TryCreate(refHeader, UriKind.Absolute, out var refUri) &&
+                string.Equals(refUri.Host, Request.Host.Host, StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Referrer"] = refHeader;
+            }
+
+            var model = new DetailChangeOrderModel();
+            var projectService = ServiceFactory.GetProjectService();
+            var clientService = ServiceFactory.GetClientService();
+
+            if ((projectid ?? 0) > 0)
+            {
+                model.ProjectId = projectid!.Value;
+                model.ProjectName = projectService.GetProjectNameById(model.ProjectId);
+
+                var clientsResponse = clientService.GetClientAccountsByProjectIdForSelect(model.ProjectId);
+                if (clientsResponse.Success)
+                {
+                    model.Clients = clientsResponse.Values;
+                }
+            }
+
+            if ((clientid ?? 0) > 0)
+            {
+                model.ClientAccountId = clientid!.Value;
+                model.ClientName = clientService.GetClientAccountNameById(model.ClientAccountId);
+            }
+
+            if ((projectid ?? 0) > 0)
+            {
+                var response = projectService.GetProjectChangeOrders(model.ProjectId);
+                if (response.Success)
+                {
+                    model.CO = (clientid ?? 0) > 0
+                        ? response.Values.Where(co => co.ClientAccountID == model.ClientAccountId).ToList()
+                        : response.Values;
+                }
+            }
+            else if ((clientid ?? 0) > 0)
+            {
+                var response = projectService.GetClientChangeOrders(0, model.ClientAccountId);
+                if (response.Success)
+                {
+                    model.CO = response.Values;
+                }
+            }
+
+            var unitsLookup = new Dictionary<int, string>();
+            foreach (var changeOrder in model.CO)
+            {
+                if (changeOrder.ClientAccountID <= 0 || unitsLookup.ContainsKey(changeOrder.ClientAccountID))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(changeOrder.ClientName))
+                {
+                    changeOrder.ClientName = clientService.GetClientAccountNameById(changeOrder.ClientAccountID);
+                }
+
+                unitsLookup[changeOrder.ClientAccountID] =
+                    clientService.GetClientAccountUnitsNameById(changeOrder.ClientAccountID);
+            }
+
+            model.ClientUnits = unitsLookup;
+
+            return View(model);
+        }
+
+        [HttpGet]
         [Breadcrumb("Wijzigingsopdracht toevoegen", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
         //[Breadcrumb("Wijzigingsopdracht toevoegen")]
         public ActionResult AddChangeOrder(int projectid, int type, int clientaccountid = 0)
@@ -2956,6 +3035,10 @@ namespace CPMCore.Controllers
                 foreach (var d in Details)
                     model.ChangeOrder.Details.Add(d);
             }
+            if (model.ChangeOrder.ClientAccountID <= 0)
+            {
+                ModelState.AddModelError(nameof(model.ChangeOrder.ClientAccountID), "Gelieve een klant te selecteren.");
+            }
 
             // Early return on invalid model
             if (!ModelState.IsValid)
@@ -2992,6 +3075,56 @@ namespace CPMCore.Controllers
             };
             return PartialView("_ChangeOrderDetailRow", model);
         }
+
+        [HttpGet]
+        public ActionResult DuplicateChangeOrder(int projectid, int coid)
+        {
+            if (projectid <= 0 || coid <= 0)
+            {
+                AddMessage("error", "Ongeldige wijzigingsopdracht.", "Fout!");
+                return RedirectToAction("Detail", "Projecten", new { projectid });
+            }
+
+            var projectService = ServiceFactory.GetProjectService();
+            var clientService = ServiceFactory.GetClientService();
+
+            var model = new ProjectChangeOrderAddUpdateModel
+            {
+                ProjectId = projectid,
+                ProjectName = projectService.GetProjectNameById(projectid)
+            };
+
+            var resp = projectService.GetChangeOrder(coid);
+            if (resp?.Success == true)
+            {
+                var co = resp.Values?.FirstOrDefault();
+                if (co != null)
+                {
+                    co.Id = 0;
+                    co.DateSendToClient = null;
+                    co.DateAgreement = null;
+                    if (co.Details != null)
+                    {
+                        foreach (var detail in co.Details)
+                        {
+                            detail.Id = 0;
+                            detail.ChangeOrderID = 0;
+                        }
+                    }
+                    model.ChangeOrder = co;
+                    model.ClientName = clientService.GetClientAccountNameById(co.ClientAccountID);
+                }
+            }
+            else
+            {
+                AddMessage("error", "Kon de wijzigingsopdracht niet dupliceren.", "Fout!");
+            }
+
+            ChangeOrderFillInSelectList(model);
+            TempData["Referrer"] = Url.Action("DetailsChangeOrder", "Projecten", new { projectid });
+            return View("AddChangeOrder", model);
+        }
+
         [HttpGet]
         //[Breadcrumb("Wijzigingsopdracht bewerken")]
         [Breadcrumb("Wijzigingsopdracht bewerken", FromController = typeof(KlantenController), FromAction = nameof(KlantenController.Detail))]
@@ -3100,6 +3233,11 @@ namespace CPMCore.Controllers
                 foreach (var d in Details)
                     model.ChangeOrder.Details.Add(d);
             }
+            if (model.ChangeOrder.ClientAccountID <= 0)
+            {
+                ModelState.AddModelError(nameof(model.ChangeOrder.ClientAccountID), "Gelieve een klant te selecteren.");
+            }
+
 
             // Early return on invalid model
             if (!ModelState.IsValid)
@@ -5587,7 +5725,9 @@ namespace CPMCore.Controllers
             var clientService = ServiceFactory.GetClientService();
 
             var cresponse = clientService.GetClientAccountsByProjectIdForSelect(model.ProjectId);
-            model.ClientAccounts = cresponse.Success ? cresponse.Values : model.ClientAccounts;
+            model.ClientAccounts = cresponse.Success
+                ? cresponse.Values.OrderBy(c => c.Display).ToList()
+                : model.ClientAccounts;
 
             var aresponse = projectService.GetProjectContractActivitiesForSelect(model.ProjectId);
             model.ProjectContractActivities = aresponse.Success ? aresponse.Values : model.ProjectContractActivities;

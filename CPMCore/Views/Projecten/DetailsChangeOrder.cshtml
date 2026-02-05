@@ -1,0 +1,389 @@
+﻿@using CPMCore.Controllers
+@using BOCore
+@inject IConfiguration Configuration
+@model CPMCore.Models.Projecten.DetailChangeOrderModel
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    ViewData["Title"] = Model.ProjectName;
+}
+@{
+    String urlTotal = "";
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
+    <style>
+        div.dt-buttons .btn.buttons-colvis::after {
+            font-family: "Font Awesome 6 Free";
+            content: "\f078"; /* Unicode voor fa-chevron-down */
+            font-weight: 900; /* Voor solid stijl */
+            font-size: 0.85rem;
+            vertical-align: middle;
+            border: none;
+            margin-left: 0.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
+            transform: rotate(180deg);
+        }
+
+        td.details-control {
+            cursor: pointer;
+            width: 36px;
+            text-align: center;
+        }
+
+            td.details-control i.bx {
+                line-height: 1;
+                transition: transform .15s ease;
+                font-size: 1.1rem; /* optioneel */
+            }
+    </style>
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @if (Model.ProjectId > 0)
+        {
+            @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        }
+        <div class="inner-body">
+            @Html.HiddenFor(m => m.ClientAccountId)
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <div class="row align-items-center g-2">
+                            <div class="col-sm-auto d-flex align-items-center">
+                                <a href="@(TempData.Peek("Referrer") ?? Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId }))"
+                                   class="text-decoration-none text-reset d-flex align-items-center">
+                                    <i class="bx bx-chevron-left fs-1"></i>
+                                </a>
+                            </div>
+                            <div class="col-sm-auto">
+                                <h1 class="font-weight-bold mb-0 mt-0">Wijzigingsopdrachten</h1>
+                                <h5 class="mb-4 mt-0">
+                                    @if (Model.ClientAccountId > 0)
+                                    {
+                                        @:Beheer de wijzigingsopdrachten van de klant @Model.ClientName
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(Model.ProjectName))
+                                    {
+                                        @:Beheer de wijzigingsopdrachten van het project @Model.ProjectName
+                                    }
+                                </h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-auto px-0">
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel">
+                            <i class="fas fa-file-excel"></i>
+                        </button>
+                        <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        <a href="@Url.Action("AddChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientaccountid = Model.ClientAccountId })"
+                           class="btn btn-primary btn-md">+ Wijzigingsopdracht toevoegen</a>
+                    </div>
+                </div>
+
+                @await Html.PartialAsync("~/Views/Klanten/Partials/ChangeOrders.cshtml", Model)
+            </div>
+        </div>
+    </div>
+</section>
+<div id="modaldeletechangeorder" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-changeorder-container"></div>
+</div>
+<div class="modal fade" id="changeOrderProcessingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                <p class="mb-0 fw-semibold">Wijzigingsopdracht wordt gegenereerd...</p>
+            </div>
+        </div>
+    </div>
+</div>
+@section PageScripts
+{
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js" integrity="sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js" integrity="sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n" crossorigin="anonymous"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+
+    <script>
+        // ---------- Helpers ----------
+        function escapeHtml(str) {
+            return String(str ?? "")
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        const coDetailMap = new Map();
+        (function hydrateCoDetailMap() {
+            const container = document.getElementById('co-json-store');
+            if (!container) return;
+            container.querySelectorAll('script[type="application/json"][id^="co-details-"]').forEach(sc => {
+                const coId = sc.id.replace('co-details-', '');
+                try {
+                    const parsed = JSON.parse(sc.textContent || '[]');
+                    coDetailMap.set(coId, Array.isArray(parsed) ? parsed : []);
+                } catch {
+                    coDetailMap.set(coId, []);
+                }
+            });
+        })();
+
+        function formatCoDetails(details) {
+            if (!details || !details.length) {
+                return '<div class="p-3 text-muted">Geen detailregels.</div>';
+            }
+            const rows = details.map(d => `
+                <tr>
+                    <td>${escapeHtml(d.description ?? d.Description ?? "")}</td>
+                    <td class="text-end">${d.MeasurementTypeDisplay ?? d.measurementTypeDisplay ?? ""}</td>
+                    <td class="text-end">${d.MeasurementUnitDisplay ?? d.measurementUnitDisplay ?? ""}</td>
+                    <td class="text-end">${d.NumberFormatted ?? d.numberFormatted ?? ""}</td>
+                    <td class="text-end">${d.PriceFormatted ?? d.priceFormatted ?? ""}</td>
+                    <td class="text-end">${d.CommisionFormatted ?? d.commisionFormatted ?? ""}</td>
+                    <td class="text-end">${d.TotaalFormatted ?? d.totaalFormatted ?? ""}</td>
+                </tr>`).join('');
+
+            return `
+                <div class="p-3 bg-light rounded">
+                    <div class="fw-bold mb-2">Details</div>
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th style="width:40%">Omschrijving</th>
+                                <th class="text-end" style="width:10%">Meetmethode</th>
+                                <th class="text-end" style="width:10%">Meeteenheid</th>
+                                <th class="text-end" style="width:10%">Aantal</th>
+                                <th class="text-end" style="width:10%">Eenheidsprijs</th>
+                                <th class="text-end" style="width:10%">Commissie</th>
+                                <th class="text-end" style="width:10%">Totaal</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>`;
+        }
+        // ----------------------------
+
+        const entity = {
+            singular: 'wijzigingsopdracht',
+            plural: 'wijzigingsopdrachten'
+        };
+
+        function buildLanguage(e) {
+            const capSing = e.singular.charAt(0).toUpperCase() + e.singular.slice(1);
+            const capPlur = e.plural.charAt(0).toUpperCase() + e.plural.slice(1);
+
+            return {
+                processing: "Bezig met verwerken...",
+                search: "Zoeken:",
+                lengthMenu: "Toon _MENU_",
+                info: `${capSing} _START_ tot _END_ van _TOTAL_ ${capPlur}`,
+                infoEmpty: `${capSing} 0 tot 0 van 0 ${capPlur}`,
+                infoFiltered: "(gefilterd uit _MAX_ totaal)",
+                loadingRecords: "Bezig met laden...",
+                zeroRecords: `Geen ${e.plural} om weer te geven`,
+                emptyTable: `Er zijn geen ${e.plural} om weer te geven`,
+                aria: {
+                    sortAscending: ": activeer om oplopend te sorteren",
+                    sortDescending: ": activeer om aflopend te sorteren"
+                }
+            };
+        }
+
+        const normalizeText = (value) => {
+            if (!value) return '';
+            return value.replace(/\s+/g, ' ').replace(/\u00a0/g, ' ').trim();
+        };
+
+        const clientFilter = document.getElementById('client-filter');
+        const statusFilter = document.getElementById('status-filter');
+        const contractFilter = document.getElementById('contract-filter');
+        const invoiceableFilter = document.getElementById('invoiceable-filter');
+
+        // Init DataTables v2
+        var table = new DataTable('#datatable-clients-list', {
+            language: buildLanguage(entity),
+            layout: {
+                topStart: {
+                    buttons: [
+                        {
+                            extend: 'excel',
+                            text: '<i class="fa fa-file-excel"></i>',
+                            className: 'btn btn-default me-2',
+                            titleAttr: 'Exporteer naar Excel',
+                            attr: { "data-bs-toggle": "tooltip" },
+                            exportOptions: { columns: ':visible' }
+                        },
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fa fa-file-pdf"></i>',
+                            className: 'btn btn-default me-2',
+                            titleAttr: 'Exporteer naar PDF',
+                            attr: { "data-bs-toggle": "tooltip" },
+                            orientation: 'landscape',
+                            pageSize: 'A3',
+                            exportOptions: { columns: ':visible' }
+                        },
+                        {
+                            extend: 'colvis',
+                            text: '<i class="bx bx-columns me-2"></i><span>Alle kolommen</span>',
+                            titleAttr: 'Selecteer kolommen',
+                            attr: { "data-bs-toggle": "tooltip" },
+                            columns: ':not(.noVis)',
+                            init: function (api, node) {
+                                $(node).removeClass('btn-secondary').addClass('btn btn-default');
+                            }
+                        }
+                    ]
+                }
+            },
+            columnDefs: [
+                { targets: 0, orderable: false, className: 'details-control', width: 36 }
+            ]
+        });
+
+        $(".buttons-excel").hide();
+        $(".buttons-pdf").hide();
+        $(".dt-search").hide();
+
+        table.buttons(0, null).containers().appendTo('#colvis-container');
+
+        // Buttons bovenaan
+        $('#btnExportExcel').on('click', function () {
+            $(".buttons-excel").trigger("click");
+        });
+
+        $('#btnExportPdf').on('click', function () {
+            $(".buttons-pdf").trigger("click");
+        });
+
+        // Zoekveld
+        $('#search-term').on('input', function () {
+            table.search(this.value).draw();
+        });
+
+        const extractColumnValues = (index) => {
+            const values = new Map();
+            table.column(index).data().each((value) => {
+                const text = normalizeText($('<div>').html(value).text());
+                if (text) values.set(text, text);
+            });
+            return [...values.values()].sort();
+        };
+
+        const populateFilters = () => {
+            extractColumnValues(5).forEach((value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                clientFilter.appendChild(option);
+            });
+
+            extractColumnValues(11).forEach((value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                statusFilter.appendChild(option);
+            });
+
+            extractColumnValues(7).forEach((value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                contractFilter.appendChild(option);
+            });
+
+            extractColumnValues(10).forEach((value) => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                invoiceableFilter.appendChild(option);
+            });
+        };
+
+        populateFilters();
+
+        $.fn.dataTable.ext.search.push((settings, data) => {
+            if (settings.nTable.id !== 'datatable-clients-list') return true;
+
+            const clientValue = clientFilter?.value || '';
+            const statusValue = statusFilter?.value || '';
+            const contractValue = contractFilter?.value || '';
+            const invoiceableValue = invoiceableFilter?.value || '';
+
+            const rowClient = normalizeText($('<div>').html(data[5]).text());
+            const rowContract = normalizeText($('<div>').html(data[7]).text());
+            const rowInvoiceable = normalizeText($('<div>').html(data[10]).text());
+            const rowStatus = normalizeText($('<div>').html(data[11]).text());
+
+            if (clientValue && rowClient !== clientValue) return false;
+            if (contractValue && rowContract !== contractValue) return false;
+            if (invoiceableValue && rowInvoiceable !== invoiceableValue) return false;
+            if (statusValue && rowStatus !== statusValue) return false;
+
+            return true;
+        });
+
+        const onFilterChange = () => table.draw();
+        clientFilter?.addEventListener('change', onFilterChange);
+        statusFilter?.addEventListener('change', onFilterChange);
+        contractFilter?.addEventListener('change', onFilterChange);
+        invoiceableFilter?.addEventListener('change', onFilterChange);
+
+        const filterToggle = document.getElementById('btnToggleFilters');
+        const filterRow = document.getElementById('changeorderFilters');
+        if (filterToggle && filterRow) {
+            filterToggle.addEventListener('click', () => {
+                filterRow.classList.toggle('d-none');
+            });
+        }
+
+        // Expand/collapse details
+        $('#datatable-clients-list tbody').on('click', 'td.details-control', function () {
+            const tr = $(this).closest('tr');
+            const row = table.row(tr);
+            const coId = tr.data('co-id');
+            const icon = $(this).find('i');
+
+            if (row.child.isShown()) {
+                row.child.hide();
+                tr.removeClass('shown');
+                icon.removeClass('bx-chevron-down').addClass('bx-chevron-right');
+            } else {
+                const details = coDetailMap.get(String(coId)) || [];
+                row.child(formatCoDetails(details)).show();
+                tr.addClass('shown');
+                icon.removeClass('bx-chevron-right').addClass('bx-chevron-down');
+            }
+        });
+
+        $(document).on('click', '.js-print-changeorder', function (e) {
+            e.preventDefault();
+            const href = $(this).attr('href');
+            const modalEl = document.getElementById('changeOrderProcessingModal');
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+                setTimeout(() => {
+                    window.open(href, '_blank', 'noopener');
+                    setTimeout(() => modal.hide(), 1200);
+                }, 200);
+            } else {
+                window.open(href, '_blank', 'noopener');
+            }
+        });
+    </script>
+}

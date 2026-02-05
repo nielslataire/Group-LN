@@ -29,6 +29,7 @@ namespace ServiceCore.Translators
             bo.ContractActivityID = _entity.ContractActivity.Id;
             bo.ProjectId = _entity.ContractActivity.Contract.ProjectId;
             bo.ChangeOrderConditions = _entity.ChangeOrderConditions;
+            bo.ContractCompanyName = _entity.ContractActivity.Contract.Company?.BedrijfsNaam;
             if (_entity.ClientAccount.Name != null)
                 bo.ClientName = _entity.ClientAccount.Name;
             else

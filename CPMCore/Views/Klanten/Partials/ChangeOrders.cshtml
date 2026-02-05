@@ -22,14 +22,44 @@
 
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
 <div class="card card-modern">
-	<div class="card-body">
-		<div class="input-group">
-			<span class="input-group-text">
-				<i class="bx bx-search"></i>
-			</span>
-			<input type="text" class="form-control me-2"" name="search-term" id="search-term" placeholder="Zoeken ..."><div id="colvis-container"></div>
-		</div>
-	</div>
+    <div class="card-body">
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="bx bx-search"></i>
+            </span>
+            <input type="text" class="form-control me-2" name="search-term" id="search-term" placeholder="Zoeken ...">
+            <button type="button" class="btn btn-default btn-md me-2" id="btnToggleFilters" title="Filters">
+                <i class="bx bx-filter"></i>
+            </button>
+            <div id="colvis-container"></div>
+        </div>
+        <div class="row g-2 mt-3 d-none" id="changeorderFilters">
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="client-filter">Klantnaam</label>
+                <select id="client-filter" class="form-control form-control-modern">
+                    <option value="">Alle klanten</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="status-filter">Status</label>
+                <select id="status-filter" class="form-control form-control-modern">
+                    <option value="">Alle statussen</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="contract-filter">Leveranciers</label>
+                <select id="contract-filter" class="form-control form-control-modern">
+                    <option value="">Alle leveranciers</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label mb-1" for="invoiceable-filter">Te factureren door</label>
+                <select id="invoiceable-filter" class="form-control form-control-modern">
+                    <option value="">Alles</option>
+                </select>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card card-modern">
@@ -51,6 +81,9 @@
                         <th class="hidden-xs" data-visible="false" data-sortable="true">Datum verzonden</th>
                         <th class="hidden-xs" data-visible="false" data-sortable="true">Vervaldatum</th>
                         <th class="hidden-xs" data-visible="false" data-sortable="true">Datum akkoord</th>
+                        <th data-sortable="true">Klantnaam</th>
+                        <th data-sortable="true">Units</th>
+                        <th data-sortable="true">Leverancier</th>
                         <th data-sortable="true">Omschrijving</th>
                         <th data-sortable="true">Bedrag excl. btw</th>
                         <th data-sortable="true" data-align="center">Factuur door bouwheer</th>
@@ -86,20 +119,28 @@
                             <td class="hidden-xs">@Html.DisplayFor(m => item.DateSendToClient)</td>
                             <td class="hidden-xs">@Html.DisplayFor(m => item.ExpirationDate)</td>
                             <td class="hidden-xs">@Html.DisplayFor(m => item.DateAgreement)</td>
+                            <td>@Html.DisplayFor(m => item.ClientName)</td>
+                            <td>@(Model.ClientUnits.TryGetValue(item.ClientAccountID, out var units) ? units : string.Empty)</td>
+                            <td>@Html.DisplayFor(m => item.ContractCompanyName)</td>
                             <td>@Html.DisplayFor(m => item.Description)</td>
                             <td>@item.Totaal.ToString("C")</td>
-                            <td class="text-center">@Html.DisplayFor(m => item.Invoiceable)</td>
-                            <td><i class="@iconClass" title="@title" aria-label="@title"></i> @title</td>
+                            <td class="text-center">@((item.Invoiceable ? "Bouwheer" : "Aannemer"))</td>
+                            <td><i class="@iconClass" title="@title" aria-label="@title"></i> <span class="status-text">@title</span></td>
                             <td>
+                                <a data-toggle="tooltip" data-placement="top" title="Afdrukken"
+                                   target="_blank"
+                                   href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = item.Id })">
+                                    <i class="fa fa-print"></i>
+                                </a>
                                 <a data-toggle="tooltip" data-placement="top" title="Bewerken"
                                    href="@Url.Action("EditChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientid = item.ClientAccountID, coid = item.Id })">
                                     <i class="fa fa-edit"></i>
                                 </a>
-                        @if (User.IsInRole("Admin"))
-                        {
+                                @if (User.IsInRole("Admin"))
+                                {
                                     <a href="#modaldeletechangeorder" data-toggle="tooltip" data-placement="top" title="Verwijderen"
                                        class="deleteChangeOrder" data-id="@item.Id"><i class="fa fa-trash"></i></a>
-                        }
+                                }
                             </td>
                         </tr>
 

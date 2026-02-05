@@ -1793,23 +1793,7 @@ namespace CPMCore.Controllers
         //WIJZIGNGSOPDRACHTEN
         public ActionResult DetailCO(int projectid, int clientid)
         {
-            var referrer = Request.Headers["Referer"].ToString();
-            TempData["Referrer"] = referrer;
-            var model = new DetailChangeOrderModel();
-            var service = ServiceFactory.GetProjectService();
-            var cservice = ServiceFactory.GetClientService();
-            var response = service.GetClientChangeOrders(0, clientid);
-
-            if (response.Success)
-                model.CO = response.Values;
-
-            model.ProjectId = projectid;
-            model.ProjectName = service.GetProjectNameById(projectid);
-            model.ClientName = cservice.GetClientAccountNameById(clientid);
-            model.ClientAccountId = clientid;
-
-            return View(model);
-
+            return RedirectToAction("DetailsChangeOrder", "Projecten", new { projectid, clientid });
         }
 
     }

@@ -2295,9 +2295,14 @@ namespace ServiceCore
         {
             var response = new GetResponse<ChangeOrderBO>();
             var entities = _uow.ChangeOrders.GetNoTracking()
-                .Where(m => m.ContractActivity.Contract.ProjectId == projectid);
+                .Where(m => m.ContractActivity.Contract.ProjectId == projectid)
+                .Include(m => m.ClientAccount)
+                .Include(m => m.ContractActivity)
+                    .ThenInclude(m => m.Contract)
+                    .ThenInclude(m => m.Company)
+                .Include(m => m.ChangeOrderDetail);
 
-            foreach(var e in entities)
+            foreach (var e in entities)
             {
                 var bo = new ChangeOrderBO();
                 var err = ChangeOrderTranslator.TranslateEntityToBO(e, bo);

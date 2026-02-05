@@ -9,7 +9,7 @@
     @Html.HiddenFor(m => m.ChangeOrderID)
 
     <div class="row align-items-center pb-3">
-        <div class="col-lg-4">
+        <div class="col-lg-3">
             @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern", @placeholder = "Omschrijving" })
         </div>
         <div class="col-lg-1">
@@ -21,19 +21,28 @@
         <div class="col-lg-1">
             @Html.TextBoxFor(m => m.Number, new { @class = "form-control form-control-modern number-field", @type = "number", step = "1" })
         </div>
+        @{
+            var priceIncl = Model.Price * (1 + (Model.Commision / 100m));
+        }
         <div class="col-lg-1">
             <div class="input-group">
-                @Html.TextBoxFor(m => m.Price, new { @class = "form-control form-control-modern currency-input price-field", placeholder = "0,00" })
+                <input type="text"
+                       class="form-control form-control-modern currency-input price-incl-field"
+                       value="@priceIncl.ToString("N2", new CultureInfo("nl-BE"))"
+                       placeholder="0,00" />
                 <span class="input-group-text">€</span>
             </div>
         </div>
-       @*  <div class="col-lg-1">
-            @Html.TextBoxFor(m => m.Price,  new { @class = "form-control form-control-modern price-field"} )
-        </div> *@
         <div class="col-lg-1">
             <div class="input-group">
                 @Html.TextBoxFor(m => m.Commision, new { @class = "form-control form-control-modern commission-field" })
                 <span class="input-group-text">%</span>
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <div class="input-group">
+                @Html.TextBoxFor(m => m.Price, new { @class = "form-control form-control-modern currency-input price-field", placeholder = "0,00" })
+                <span class="input-group-text">€</span>
             </div>
         </div>
 

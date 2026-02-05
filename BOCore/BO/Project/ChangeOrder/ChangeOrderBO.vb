@@ -142,6 +142,16 @@ Public Class ChangeOrderBO
             _contractactivityid = value
         End Set
     End Property
+    Private _contractCompanyName As String
+    <Display(Name:="Leverancier")>
+    Public Property ContractCompanyName() As String
+        Get
+            Return _contractCompanyName
+        End Get
+        Set(ByVal value As String)
+            _contractCompanyName = value
+        End Set
+    End Property
     Private _details As List(Of ChangeOrderDetailBO)
     Public Property Details() As List(Of ChangeOrderDetailBO)
         Get
