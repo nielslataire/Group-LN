@@ -15,17 +15,18 @@ namespace CPMCore.Models.Invoicing
             if (string.IsNullOrWhiteSpace(status))
                 return InvoiceStatus.Unknown;
 
-            return status.Trim() switch
+            var normalized = status.Trim().ToLowerInvariant();
+            return normalized switch
             {
-                "Draft" => InvoiceStatus.Draft,
-                "Issued" or "Numbered" => InvoiceStatus.Issued,
-                "Sent" => InvoiceStatus.Sent,
-                "PartiallyPaid" => InvoiceStatus.PartiallyPaid,
-                "Paid" => InvoiceStatus.Paid,
-                "Overdue" => InvoiceStatus.Overdue,
-                "Cancelled" => InvoiceStatus.Cancelled,
-                "Booked" => InvoiceStatus.Booked,
-                "Generating" => InvoiceStatus.Generating,
+                "draft" or "concept" => InvoiceStatus.Draft,
+                "issued" or "numbered" or "genummerd" => InvoiceStatus.Issued,
+                "sent" or "verzonden" => InvoiceStatus.Sent,
+                "partiallypaid" or "deels betaald" => InvoiceStatus.PartiallyPaid,
+                "paid" or "betaald" => InvoiceStatus.Paid,
+                "overdue" or "vervallen" => InvoiceStatus.Overdue,
+                "cancelled" or "geannuleerd" => InvoiceStatus.Cancelled,
+                "booked" or "geboekt" => InvoiceStatus.Booked,
+                "generating" or "bezig met genereren" => InvoiceStatus.Generating,
                 _ => InvoiceStatus.Unknown
             };
         }

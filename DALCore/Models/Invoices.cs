@@ -107,6 +107,10 @@ public partial class Invoices
 
     public bool Prepaid { get; set; }
 
+    public string PdfAppendixFileName { get; set; }
+
+    public byte[] PdfAppendixContent { get; set; }
+
     public virtual ClientAccount ClientIdClientAccountNavigation { get; set; }
 
     public virtual ClientContacts ClientIdClientContactsNavigation { get; set; }

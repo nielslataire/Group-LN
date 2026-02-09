@@ -41,6 +41,7 @@ Public Class InvoiceDetailBO
     Public Property IsSupplier As Boolean
 
     Public Property BankAccount As String
+    Public Property PdfAppendixFileName As String
     Public Property ExtraInfo As String
     Public Property HeaderText As String
     Public Property DetailText As String

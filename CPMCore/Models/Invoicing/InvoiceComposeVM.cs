@@ -1,4 +1,5 @@
 ﻿using BOCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 using UblSharp.CommonAggregateComponents;
@@ -42,6 +43,7 @@ namespace CPMCore.Models.Invoicing
         public int? PaymentTermId { get; set; }
         public int? VatTypeId { get; set; }
         public int? IssuerBankAccountId { get; set; }
+        public IFormFile? PdfAppendix { get; set; }
         public List<VatTypeVM> VatTypes { get; set; } = new();
 
 

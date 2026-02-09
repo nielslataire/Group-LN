@@ -17,6 +17,8 @@ namespace CPMCore.Models.Invoicing
         public decimal TotalInclVat { get; set; }
         public string? BankAccountIban { get; set; }
         public string? ReturnUrl { get; set; }
+        public string? CurrentPdfAppendixFileName { get; set; }
+        public bool RemovePdfAppendix { get; set; }
 
         public string DisplayId => string.IsNullOrWhiteSpace(PublicId)
             ? $"Factuur #{InvoiceId}"

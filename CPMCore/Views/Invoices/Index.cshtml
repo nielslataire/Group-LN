@@ -316,6 +316,15 @@
                                                            asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
                                                             <i class="bx bx-show fs-5"></i>
                                                         </a>
+                                                @if (canManageInvoices)
+                                                {
+                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                                       asp-action="Send"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                        <i class="bx bx-send fs-5"></i>
+                                                    </a>
+                                                }
                                                     }
                                                     else if (StatusIn(r.Status, InvoiceStatus.Issued))
                                                     {
@@ -395,6 +404,15 @@
                                                                 <i class="bx bx-printer fs-5"></i>
                                                             </a>
                                                         }
+                                                @if (canManageInvoices)
+                                                {
+                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                                       asp-action="Send"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                        <i class="bx bx-send fs-5"></i>
+                                                    </a>
+                                                }
                                                         @if (isAdminUser)
                                                         {
                                                             <a href="#ModalDeleteInvoice"
@@ -420,6 +438,15 @@
                                                            target="_blank" class="ms-1 me-1">
                                                             <i class="fa-regular fa-file-pdf  fs-5"></i>
                                                         </a>
+                                                @if (canManageInvoices)
+                                                {
+                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                                       asp-action="Send"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                        <i class="bx bx-send fs-5"></i>
+                                                    </a>
+                                                }
                                                     }
                                                     else
                                                     {
@@ -429,6 +456,15 @@
                                                            asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
                                                             <i class="bx bx-show fs-5"></i>
                                                         </a>
+                                                @if (canManageInvoices)
+                                                {
+                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
+                                                       asp-action="Send"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                        <i class="bx bx-send fs-5"></i>
+                                                    </a>
+                                                }
                                                     }
                                                </td>
                                     <td class="d-none">@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())</td>

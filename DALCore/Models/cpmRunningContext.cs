@@ -1441,6 +1441,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.OctopusDeliveryState).HasMaxLength(50);
             entity.Property(e => e.OctopusJournalKey).HasMaxLength(50);
             entity.Property(e => e.OctopusWorkflowState).HasMaxLength(50);
+            entity.Property(e => e.PdfAppendixFileName).HasMaxLength(255);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
             entity.Property(e => e.PublicId).HasMaxLength(50);
             entity.Property(e => e.QrEpcPayload).HasMaxLength(512);

@@ -444,6 +444,7 @@ namespace ServiceCore
                 AttachUblByDefault = attachUbl,
                 IsSupplier = isSupplier,
                 BankAccount = invoice.BankAccount,
+                PdfAppendixFileName = invoice.PdfAppendixFileName,
                 ExtraInfo = invoice.ExtraInfo,
                 HeaderText = invoice.HeaderDescription,
                 DetailText = invoice.DetailText,

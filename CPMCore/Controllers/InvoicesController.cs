@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using PdfSharpCore.Pdf;
+using PdfSharpCore.Pdf.IO;
 using QuestPDF.Fluent;
 using ServiceCore;
 using ServiceCore.Invoicing;
@@ -427,10 +429,8 @@ namespace CPMCore.Controllers
 
             var vatTypes = await _ics.ListVatTypeAsync(detail.IssuerCompanyId, ct);
             var dto = detail.ToInvoiceDto(vatTypes);
-            var bytes = _pdf.Render(dto, issuer);
-            var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
-                ? $"Factuur_{dto.Id}.pdf"
-                : $"{dto.PublicId}.pdf";
+            var bytes = await RenderInvoicePdfWithAppendixAsync(detail.Id, dto, issuer, ct);
+            var fileName = BuildInvoicePdfFileName(detail, dto);
 
             return File(bytes, "application/pdf", fileName);
         }
@@ -477,9 +477,7 @@ namespace CPMCore.Controllers
             var dto = detail.ToInvoiceDto(vatTypes);
             dto.PublicId ??= detail.PublicId;
             var bytes = _pdf.Render(dto, issuer);
-            var fileName = string.IsNullOrWhiteSpace(dto.PublicId)
-                ? $"Factuur_{dto.Id}.pdf"
-                : $"{dto.PublicId}.pdf";
+            var fileName = BuildInvoicePdfFileName(detail, dto);
 
             return File(bytes, "application/pdf", fileName);
         }
@@ -614,7 +612,7 @@ namespace CPMCore.Controllers
 
             if (vm.AttachPdf)
             {
-                var pdfBytes = _pdf.Render(dto, issuer);
+                var pdfBytes = await RenderInvoicePdfWithAppendixAsync(detail.Id, dto, issuer, ct);
                 var pdfName = string.IsNullOrWhiteSpace(dto.PublicId)
                     ? $"Factuur_{dto.Id}.pdf"
                     : $"{dto.PublicId}.pdf";
@@ -1006,7 +1004,18 @@ namespace CPMCore.Controllers
         {
             try
             {
-                var rows = await _ps.SearchProjectsAsync(term ?? "", clientId, take, ct);
+                int? resolvedClientId = null;
+                if (clientId.HasValue && clientId.Value > 0)
+                {
+                    var contactAccountId = await _db.ClientContacts
+                        .Where(c => c.Id == clientId.Value)
+                        .Select(c => (int?)c.ClientAccountId)
+                        .FirstOrDefaultAsync(ct);
+
+                    resolvedClientId = contactAccountId ?? clientId.Value;
+                }
+
+                var rows = await _ps.SearchProjectsAsync(term ?? "", resolvedClientId, take, ct);
                 var results = rows.Select(x => new { id = x.Id, text = x.Name });
                 return Json(new { results });
             }
@@ -1511,7 +1520,9 @@ namespace CPMCore.Controllers
 
                 if (!issueNow)
                 {
-                    var (_, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: false, ct);
+                    var (invoiceId, publicId) = await _cmd.CreateWithLinesAsync(bo, issueNow: false, ct);
+                    await SavePdfAppendixAsync(invoiceId, vm.PdfAppendix, ct);
+
                     if (publicId != null)
                         AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
                     else
@@ -1521,7 +1532,7 @@ namespace CPMCore.Controllers
                 }
 
                 var (id, _) = await _cmd.CreateWithLinesAsync(bo, issueNow: false, ct);
-
+                await SavePdfAppendixAsync(id, vm.PdfAppendix, ct);
                 try
                 {
                     await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
@@ -1555,6 +1566,76 @@ namespace CPMCore.Controllers
             }
         }
 
+        private async Task SavePdfAppendixAsync(int invoiceId, IFormFile? pdfAppendix, CancellationToken ct, bool removeExisting = false)
+        {
+            if ((pdfAppendix == null || pdfAppendix.Length == 0) && !removeExisting)
+                return;
+
+            var invoice = await _db.Invoices.FirstOrDefaultAsync(x => x.Id == invoiceId, ct)
+                ?? throw new InvalidOperationException("Factuur niet gevonden.");
+
+            if (removeExisting)
+            {
+                invoice.PdfAppendixFileName = null;
+                invoice.PdfAppendixContent = null;
+            }
+
+            if (pdfAppendix != null && pdfAppendix.Length > 0)
+            {
+                if (!string.Equals(pdfAppendix.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase)
+                    && !pdfAppendix.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("De bijlage moet een PDF-bestand zijn.");
+                }
+
+                await using var ms = new MemoryStream();
+                await pdfAppendix.CopyToAsync(ms, ct);
+                var bytes = ms.ToArray();
+                if (bytes.Length == 0)
+                    throw new InvalidOperationException("De PDF-bijlage is leeg.");
+
+                invoice.PdfAppendixFileName = Path.GetFileName(pdfAppendix.FileName);
+                invoice.PdfAppendixContent = bytes;
+            }
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        private async Task<byte[]> RenderInvoicePdfWithAppendixAsync(int invoiceId, InvoiceDto dto, IssuerCompanyBO issuer, CancellationToken ct)
+        {
+            var basePdf = _pdf.Render(dto, issuer);
+            var appendix = await _db.Invoices
+                .AsNoTracking()
+                .Where(x => x.Id == invoiceId)
+                .Select(x => x.PdfAppendixContent)
+                .FirstOrDefaultAsync(ct);
+
+            if (appendix == null || appendix.Length == 0)
+                return basePdf;
+
+            return MergePdfDocuments(basePdf, appendix);
+        }
+
+        private static byte[] MergePdfDocuments(byte[] invoicePdf, byte[] appendixPdf)
+        {
+            using var output = new PdfDocument();
+            AppendPages(output, invoicePdf);
+            AppendPages(output, appendixPdf);
+
+            using var stream = new MemoryStream();
+            output.Save(stream, false);
+            return stream.ToArray();
+        }
+
+        private static void AppendPages(PdfDocument target, byte[] sourcePdf)
+        {
+            using var sourceStream = new MemoryStream(sourcePdf, writable: false);
+            using var source = PdfReader.Open(sourceStream, PdfDocumentOpenMode.Import);
+            for (var i = 0; i < source.PageCount; i++)
+            {
+                target.AddPage(source.Pages[i]);
+            }
+        }
 
         [HttpGet]
         public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, string? returnUrl = null, CancellationToken ct = default)
@@ -1579,7 +1660,7 @@ namespace CPMCore.Controllers
             if (resolvedReturnUrl == null)
                 resolvedReturnUrl = DetermineReturnUrl(Request.Headers["Referer"].ToString());
 
-            if (string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+            if (IsDraftStatus(detail.StatusName))
             {
                 var draftVm = await BuildDraftEditViewModelAsync(detail, null, resolvedReturnUrl, ct);
                 await ConfigureEditContextAsync(detail, ct);
@@ -1616,7 +1697,7 @@ namespace CPMCore.Controllers
             if (resolvedReturnUrl == null)
                 resolvedReturnUrl = DetermineReturnUrl(Request.Headers["Referer"].ToString());
 
-            if (string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+            if (IsDraftStatus(detail.StatusName))
                 return RedirectToAction(nameof(Edit), new { id = vm.InvoiceId, issuerCompanyId = detail.IssuerCompanyId, returnUrl = resolvedReturnUrl });
 
             if (!ModelState.IsValid)
@@ -1635,7 +1716,7 @@ namespace CPMCore.Controllers
                 FooterDescription = vm.FooterDescription ?? string.Empty,
                 BankAccount = vm.BankAccount ?? string.Empty,
                 ExpirationDate = vm.ExpirationDate,
-                IsDraft = string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase)
+                IsDraft = IsDraftStatus(detail.StatusName)
             };
 
             if (vm.Lines != null && vm.Lines.Count > 0)
@@ -1697,7 +1778,7 @@ namespace CPMCore.Controllers
             if (resolvedReturnUrl == null)
                 resolvedReturnUrl = DetermineReturnUrl(Request.Headers["Referer"].ToString());
 
-            if (!string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase))
+            if (!IsDraftStatus(detail.StatusName))
             {
                 AddMessage("error", "Deze factuur is niet langer een concept en kan niet volledig bewerkt worden.", "Factuur");
                 if (!string.IsNullOrEmpty(resolvedReturnUrl))
@@ -1717,6 +1798,7 @@ namespace CPMCore.Controllers
             {
                 var bo = await BuildInvoiceDraftBoAsync(vm, ct);
                 await _cmd.UpdateDraftAsync(vm.InvoiceId, bo, ct);
+                await SavePdfAppendixAsync(vm.InvoiceId, vm.PdfAppendix, ct, vm.RemovePdfAppendix);
                 AddMessage("success", "Conceptfactuur bijgewerkt.", "Factuur");
                 if (!string.IsNullOrEmpty(resolvedReturnUrl))
                     return LocalRedirect(resolvedReturnUrl);
@@ -1789,6 +1871,8 @@ namespace CPMCore.Controllers
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),
                 BankAccountIban = detail.BankAccount,
+                CurrentPdfAppendixFileName = detail.PdfAppendixFileName,
+                RemovePdfAppendix = posted?.RemovePdfAppendix ?? false,
                 VatTypes = vatBo.Select(t => new VatTypeVM
                 {
                     Id = t.Id,
@@ -1944,8 +2028,8 @@ namespace CPMCore.Controllers
 
         private static string BuildInvoiceDetailBreadcrumbTitle(InvoiceDetailBO detail)
         {
-            var typeLabel = string.Equals(detail.StatusName, "Draft", StringComparison.OrdinalIgnoreCase)
-                ? "Draft"
+            var typeLabel = IsDraftStatus(detail.StatusName)
+                 ? "Draft"
                 : detail.IsCreditNote
                     ? "Creditnota"
                     : "Factuur";
@@ -3113,7 +3197,7 @@ namespace CPMCore.Controllers
                 invoiceDto.StructuredMessage = context.StructuredOgm;
             }
 
-            var pdfBytes = _pdf.Render(invoiceDto, issuerCompany);
+            var pdfBytes = await RenderInvoicePdfWithAppendixAsync(context.Invoice.Id, invoiceDto, issuerCompany, ct);
             var invoiceNumber = context.FormattedPublicId;
             var invalidChars = Path.GetInvalidFileNameChars();
             var safePublicId = string.IsNullOrWhiteSpace(context.FormattedPublicId) ? context.Invoice.Id.ToString(CultureInfo.InvariantCulture) : context.FormattedPublicId;
@@ -4514,6 +4598,68 @@ END";
 
         private static InvoiceStatus TranslateStatus(int? statusId, string? statusName)
             => statusId.HasValue ? InvoiceStatusExtensions.FromId(statusId) : InvoiceStatusExtensions.FromCode(statusName);
+
+        private static string BuildInvoicePdfFileName(InvoiceDetailBO detail, InvoiceDto dto)
+        {
+            var publicId = string.IsNullOrWhiteSpace(dto.PublicId) ? detail.PublicId : dto.PublicId;
+            var recipient = BuildInvoiceRecipientName(detail);
+            var baseName = string.IsNullOrWhiteSpace(publicId)
+                ? $"Factuur_{detail.Id}"
+                : $"{publicId} - {recipient}";
+
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var sanitized = new string(baseName.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray());
+            return $"{sanitized}.pdf";
+        }
+
+        private static string BuildInvoiceRecipientName(InvoiceDetailBO detail)
+        {
+            if (detail == null)
+                return "Onbekend";
+
+            if (detail.IsSupplier || detail.ClientType == (int)InvoicePartyType.Supplier)
+                return string.IsNullOrWhiteSpace(detail.ClientName) ? "Leverancier" : detail.ClientName;
+
+            if (detail.ClientType == (int)InvoicePartyType.ClientContact)
+                return FormatContactName(detail.ClientName);
+
+            return string.IsNullOrWhiteSpace(detail.ClientName) ? "Klant" : detail.ClientName;
+        }
+
+        private static string FormatContactName(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                return "Contact";
+
+            if (name.Contains(" - ", StringComparison.Ordinal))
+                return name;
+
+            if (name.Contains(",", StringComparison.Ordinal))
+            {
+                var parts = name.Split(',', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length == 2)
+                    return $"{parts[0]} - {parts[1]}";
+            }
+
+            var tokens = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (tokens.Length >= 2)
+            {
+                var lastName = tokens[0];
+                var firstName = string.Join(" ", tokens.Skip(1));
+                return $"{lastName} - {firstName}";
+            }
+
+            return name;
+        }
+
+        private static bool IsDraftStatus(string? statusName)
+        {
+            if (string.IsNullOrWhiteSpace(statusName))
+                return false;
+
+            return string.Equals(statusName, "Draft", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(statusName, InvoiceStatus.Draft.GetDisplayName(), StringComparison.OrdinalIgnoreCase);
+        }
 
         private async Task<bool> IsInvoiceGeneratingAsync(int invoiceId, CancellationToken ct)
         {

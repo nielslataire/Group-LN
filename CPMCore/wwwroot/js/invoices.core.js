@@ -1,5 +1,5 @@
 ﻿// Pagina-initialisatie, select2/pickers, mode-toggling, resets
-$(function () {
+$(async function () {
     const rawEditingFlag = window.InvoiceIsEditing;
     const isEditing = (rawEditingFlag === true)
         || (rawEditingFlag === 1)
@@ -219,16 +219,21 @@ $(function () {
         toggleBlocks();
     }
 
-    function toggleProjectContract() {
+    async function toggleProjectContract() {
         if (isSupplier()) {
             $('#projectRow, #contractRow').show();
-        } else if (isCustomer()) {
-            $('#projectRow, #contractRow').hide();
-            $('#projectSelect').val(null).trigger('change'); $('input[name="ProjectId"]').val('');
-            $('#contractSelect').val(null).trigger('change'); $('input[name="SupplierContractId"]').val('');
-        } else {
-            $('#projectRow, #contractRow').hide();
+            return;
         }
+
+        if (isCustomer()) {
+            $('#contractRow').hide();
+            $('#contractSelect').val(null).trigger('change'); $('input[name="SupplierContractId"]').val('');
+            initProjectSelect();
+            await loadProjectsForClient(getPartyId());
+            return;
+        }
+
+        $('#projectRow, #contractRow').hide();
     }
 
     function updateHeaderLock() {
@@ -409,7 +414,7 @@ $('#partySelect')
                 return item.display || item.text || item.name || '';
             }
         })
-    .on('select2:select', function (e) {
+    .on('select2:select', async function (e) {
         if (window.skipPartySelectOnce) {
             window.skipPartySelectOnce = false;
             return;
@@ -426,14 +431,14 @@ $('#partySelect')
             window.skipPartySelectOnce = false;
             if (window.InvoiceIsEditing === true) {
                 enforceModeByParty();
-                toggleProjectContract();
+                await toggleProjectContract();
                 if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
                 if (window.updateSaveButtonState) window.updateSaveButtonState();
                 return;
             }
         }
         enforceModeByParty();
-        toggleProjectContract();
+        await toggleProjectContract();
         if (window.InvoiceIsEditing === true) {
             if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
             if (window.updateSaveButtonState) window.updateSaveButtonState();
@@ -450,41 +455,76 @@ $('#partySelect')
         language: 'nl-BE'
     });
 
-    $('#projectSelect')
-        .select2({
-            ajax: {
-                url: window.InvoicesEndpoints.projectLookup,
-                dataType: 'json',
-                delay: 250,
-                data: params => ({
-                    term: params.term || '',
-                    take: 20,
-                    clientId: isCustomer() ? (getPartyId() || null) : null
-                }),
-                processResults: data => data
-            },
+    function initProjectSelect() {
+        const $select = $('#projectSelect');
+        if ($select.length === 0) return;
+        if ($select.data('select2')) return;
+        $select.select2({
             theme: 'bootstrap',
             language: 'nl',
-            placeholder: 'Zoek project ...',
+            placeholder: 'Selecteer project ...',
             allowClear: true,
-            minimumInputLength: 1,
+            minimumResultsForSearch: Infinity,
             dropdownAutoWidth: true
-        })
-        .on('select2:select', function (e) {
-            $('input[name="ProjectId"]').val(e.params.data.id);
-            $('#contractSelect').val(null).trigger('change'); $('input[name="SupplierContractId"]').val('');
-            const m = $('#Mode').val();
-            if (m === '2' && isCustomer()) loadStageLines();
-            if (m === '3' && isCustomer()) loadChangeOrderLines();
-            if (m === '4' && isCustomer()) loadUtilityLines();
-        })
-        .on('select2:clear', function () {
+        });
+    }
+
+    function setProjectOptions(projects) {
+        const $select = $('#projectSelect');
+        if ($select.length === 0) return;
+        $select.empty();
+        $select.append(new Option('', '', false, false));
+        projects.forEach(p => {
+            $select.append(new Option(p.text || p.name || p.id, p.id, false, false));
+        });
+        const selected = $('input[name="ProjectId"]').val();
+        if (selected) {
+            $select.val(String(selected)).trigger('change.select2');
+        } else {
+            $select.val(null).trigger('change.select2');
+        }
+    }
+
+    async function loadProjectsForClient(clientId) {
+        if (!clientId) {
+            $('#projectRow').hide();
+            $('#projectSelect').val(null).trigger('change.select2');
             $('input[name="ProjectId"]').val('');
+            return;
+        }
+        try {
+            const response = await $.get(window.InvoicesEndpoints.projectLookup, {
+                term: '',
+                take: 200,
+                clientId: clientId
+            });
+            const projects = (response && response.results) ? response.results : [];
+            if (projects.length === 0) {
+                $('#projectRow').hide();
+                $('#projectSelect').val(null).trigger('change.select2');
+                $('input[name="ProjectId"]').val('');
+                return;
+            }
+            $('#projectRow').show();
+            setProjectOptions(projects);
+        } catch {
+            $('#projectRow').hide();
+            $('#projectSelect').val(null).trigger('change.select2');
+            $('input[name="ProjectId"]').val('');
+        }
+    }
+
+    $('#projectSelect')
+        .on('change', function () {
+            const value = $(this).val() || '';
+            $('input[name="ProjectId"]').val(value);
             const m = $('#Mode').val();
             if (m === '2' && isCustomer()) loadStageLines();
             if (m === '3' && isCustomer()) loadChangeOrderLines();
             if (m === '4' && isCustomer()) loadUtilityLines();
         });
+
+
 
     $('#contractSelect')
         .select2({
@@ -596,9 +636,10 @@ $('#partySelect')
         return true;
     });
 
+    initProjectSelect();
     // Init
     enforceModeByParty();
-    toggleProjectContract();
+    await toggleProjectContract();
     if (isEditing) {
         toggleBlocks();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();

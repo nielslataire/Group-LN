@@ -110,7 +110,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
                         Bewerken
                     </a>
                 }
-                @if (canManageInvoices && isIssued && !isGenerating)
+                @if (canManageInvoices && !isDraft && !isGenerating)
                 {
                     <a class="btn btn-primary btn-md px-3 me-1"
                        asp-action="Send"
