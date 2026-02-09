@@ -2861,6 +2861,7 @@ namespace ServiceCore
         public async Task<IReadOnlyList<UnitStageRow>> GetUnitsWithInvocableStagesForClientAsync(
             int clientId,
             bool includeZeroOrNegative = false,           // ← zet op true om ook credit-saldi te tonen
+            int? invoiceId = null,
             CancellationToken ct = default)
         {
             if (clientId <= 0) return Array.Empty<UnitStageRow>();
@@ -2913,6 +2914,7 @@ namespace ServiceCore
                 from d in _db.InvoicesDetails.AsNoTracking()
                 where d.PaymentStageId != null && stageIds.Contains(d.PaymentStageId.Value)
                     && d.UnitId != null && unitIds.Contains(d.UnitId.Value)
+                       && (!invoiceId.HasValue || d.InvoiceId != invoiceId.Value)
                 select new { StageId = d.PaymentStageId!.Value, UnitId = d.UnitId!.Value }
             ).Distinct().ToListAsync(ct);
             var invoicedStageUnitSet = invoicedStageUnits
@@ -2959,6 +2961,7 @@ namespace ServiceCore
                 from d in _db.InvoicesDetails.AsNoTracking()
                 where d.PaymentStageId != null && stageIds.Contains(d.PaymentStageId.Value)
                     && d.ConstructionValueId != null && cvIds.Contains(d.ConstructionValueId.Value)
+                       && (!invoiceId.HasValue || d.InvoiceId != invoiceId.Value)
                 group d by new { StageId = d.PaymentStageId!.Value, CvId = d.ConstructionValueId!.Value } into g
                 select new { g.Key.StageId, g.Key.CvId, Invoiced = g.Sum(x => (decimal)(x.Price ?? 0m)) }
             ).ToListAsync(ct);
@@ -3048,6 +3051,13 @@ namespace ServiceCore
                 .ThenBy(r => r.StageId)
                 .ToList();
         }
+
+        Task<IReadOnlyList<UnitStageRow>> IProjectSupplierLookupService.GetUnitsWithInvocableStagesForClientAsync(
+    int clientId,
+    bool includeZeroOrNegative,
+    int? invoiceId,
+    CancellationToken ct)
+    => GetUnitsWithInvocableStagesForClientAsync(clientId, includeZeroOrNegative, invoiceId, ct);
 
 
         /// <summary>

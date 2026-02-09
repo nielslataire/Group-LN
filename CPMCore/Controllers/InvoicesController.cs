@@ -1099,7 +1099,7 @@ namespace CPMCore.Controllers
             {
                 if (clientId <= 0) return Json(new { results = Array.Empty<object>() });
 
-                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId,false, ct);
+                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId, false, null, ct);
                 var grouped = rows
                     .GroupBy(x => new { x.UnitId, x.UnitName })
                     .Select(g => new {
@@ -1173,14 +1173,14 @@ namespace CPMCore.Controllers
 
         // LIJNEN VOOR SCHIJVEN AANMAKEN 
         [HttpGet]
-        public async Task<IActionResult> ComposeStageLines(int clientId, int? projectId, CancellationToken ct = default)
+        public async Task<IActionResult> ComposeStageLines(int clientId, int? projectId, int? invoiceId, CancellationToken ct = default)
         {
             try
             {
                 if (clientId <= 0)
                     return PartialView("_StageLinesTable", new List<InvoiceLineVM>());
 
-                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId,false, ct);
+                var rows = await _ps.GetUnitsWithInvocableStagesForClientAsync(clientId, false, invoiceId, ct);
                 if (rows is null || rows.Count == 0)
                     return PartialView("_StageLinesTable", new List<InvoiceLineVM>());
 
@@ -1866,7 +1866,13 @@ namespace CPMCore.Controllers
                 PartyDisplayName = posted?.PartyDisplayName ?? detail.ClientName,
                 PartyLookupValue = posted?.PartyLookupValue,
                 Lines = posted?.Lines != null ? posted.Lines.ToList() : MapLinesForCompose(detail.Lines),
-                StageIds = posted?.StageIds != null ? new List<int>(posted.StageIds) : new List<int>(),
+                StageIds = posted?.StageIds != null && posted.StageIds.Count > 0
+                    ? new List<int>(posted.StageIds)
+                    : detail.Lines?
+                        .Where(l => l.PaymentStageId.HasValue)
+                        .Select(l => l.PaymentStageId!.Value)
+                        .Distinct()
+                        .ToList() ?? new List<int>(),
                 TotalExclVat = RoundCurrency(detail.TotalExclVat),
                 TotalVat = RoundCurrency(detail.TotalVat),
                 TotalInclVat = RoundCurrency(detail.TotalInclVat),

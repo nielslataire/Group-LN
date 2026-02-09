@@ -32,6 +32,13 @@
         }
     }
 
+    if (initial.projectId != null) {
+        $('input[name="ProjectId"]').val(String(initial.projectId));
+    }
+    if (initial.supplierContractId != null) {
+        $('input[name="SupplierContractId"]').val(String(initial.supplierContractId));
+    }
+
     if (Array.isArray(initial.lines)) {
         if (window.freeLines && typeof window.freeLines.loadInitial === 'function') {
             window.freeLines.loadInitial(initial.lines);

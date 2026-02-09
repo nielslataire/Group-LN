@@ -258,13 +258,21 @@ $(async function () {
         $('#stagesList').html('<div class="text-muted">Laden…</div>');
         try {
             const projectId = $('input[name="ProjectId"]').val() || '';
+            const invoiceId = isEditing ? ($('input[name="InvoiceId"]').val() || '') : '';
             const url = window.InvoicesEndpoints.composeStageLines
                 + '?clientId=' + encodeURIComponent(clientId)
-                + '&projectId=' + encodeURIComponent(projectId);
+                + '&projectId=' + encodeURIComponent(projectId)
+                + '&invoiceId=' + encodeURIComponent(invoiceId);
             const html = await $.get(url);
             $('#stagesList').html(html);
             if ($('#stagesList').find('.js-stage-row').length === 0) {
                 $('#stagesList').html('<div class="alert alert-default mb-0">Geen factureerbare schijven gevonden voor deze klant/project.</div>');
+            }
+            if (isEditing) {
+                applyInitialStageSelection();
+            }
+            if (window.StageEditLocked) {
+                $('#stagesList .js-stage-row, #stagesList .js-check-all').prop('disabled', true);
             }
             if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
             if (window.updateHeaderLock) window.updateHeaderLock();
@@ -275,6 +283,45 @@ $(async function () {
             updateSaveButtonState();
         }
     }
+
+    function getInitialStageIds() {
+        const initial = window.InitialInvoice;
+        if (!initial) return [];
+        if (Array.isArray(initial.stageIds) && initial.stageIds.length > 0) return initial.stageIds;
+        if (Array.isArray(initial.lines)) {
+            return initial.lines
+                .map(line => line.paymentStageId)
+                .filter(id => id != null);
+        }
+        return [];
+    }
+
+    function applyInitialStageSelection() {
+        if (window.initialStageSelectionApplied) return;
+        const ids = getInitialStageIds().map(id => String(id));
+        if (ids.length === 0) return;
+        const idSet = new Set(ids);
+        $('#stagesList .js-stage-row').each(function () {
+            const $row = $(this).closest('tr');
+            const stageId = $row.find('input[type="hidden"][name$=".PaymentStageId"]').val();
+            if (stageId && idSet.has(String(stageId))) {
+                $(this).prop('checked', true);
+            }
+        });
+        $('#stagesList .js-check-all').each(function () {
+            const group = $(this).data('group');
+            const $rows = $('#stagesList .js-stage-row[data-group="' + group + '"]');
+            const allChecked = $rows.length > 0 && $rows.filter(':checked').length === $rows.length;
+            $(this).prop('checked', allChecked);
+        });
+        if (window.rebuildHeaderFromSelection) window.rebuildHeaderFromSelection();
+        if (window.updateHeaderLock) window.updateHeaderLock();
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        updateSaveButtonState();
+        window.initialStageSelectionApplied = true;
+    }
+
+
 
     async function loadChangeOrderLines() {
         const pt = getPartyType(), clientId = getPartyId();

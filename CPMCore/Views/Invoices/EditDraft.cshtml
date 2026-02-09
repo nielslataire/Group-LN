@@ -1,9 +1,11 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceDraftEditVM
 @using System.Text.Json
 @using System.Linq
+@using BOCore;
 
 @{
     ViewData["Title"] ??= $"Factuur bewerken - {Model.DisplayId}";
+    var lockStages = Model.Mode == InvoiceMode.Stages;
 }
 
 @section PageStyle {
@@ -107,7 +109,7 @@
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Facturatiebedrijf</label>
                                 @* Facturatiebedrijf *@
-                                <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control form-control-modern">
+                                <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control form-control-modern" disabled="@lockStages">
                                     @foreach (var i in Model.Issuers)
                                     {
                                         if (i.Id == Model.IssuerCompanyId)
@@ -124,10 +126,14 @@
                                         }
                                     }
                                 </select>
+                                @if (lockStages)
+                                {
+                                    <input type="hidden" asp-for="IssuerCompanyId" />
+                                }
                             </div>
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Klant / Leverancier</label>
-                                <select id="partySelect" class="form-control form-control-modern" style="width:100%"></select>
+                                <select id="partySelect" class="form-control form-control-modern" style="width:100%" disabled="@lockStages"></select>
                             </div>
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Factuurdatum</label>
@@ -141,21 +147,29 @@
                             </div>
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Start als</label>
-                                <select asp-for="StartAs" class="form-control form-control-modern">
+                                <select asp-for="StartAs" class="form-control form-control-modern" disabled="@lockStages">
                                     <option value="0">Draft (later afwerken)</option>
                                     <option value="1">Factuur (meteen uitgeven)</option>
                                 </select>
+                                @if (lockStages)
+                                {
+                                    <input type="hidden" asp-for="StartAs" />
+                                }
                             </div>
                         </div>
                         <div class="row pb-3">
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Factuurmodus</label>
-                                <select asp-for="Mode" class="form-control form-control-modern">
+                                <select asp-for="Mode" class="form-control form-control-modern" disabled="@lockStages">
                                     <option value="1">Vrije lijnen</option>
                                     <option value="2">Schijven</option>
                                     <option value="3">Wijzigingsopdrachten</option>
                                     <option value="4">Nutsaansluitingen</option>
                                 </select>
+                                @if (lockStages)
+                                {
+                                    <input type="hidden" asp-for="Mode" />
+                                }
                             </div>
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Betaaltermijn</label>
@@ -180,7 +194,7 @@
                             </div>
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">BTW-tarief (standaard)</label>
-                                <select asp-for="VatTypeId" id="VatTypeId" name="VatTypeId" class="form-control form-control-modern">
+                                <select asp-for="VatTypeId" id="VatTypeId" name="VatTypeId" class="form-control form-control-modern" disabled="@lockStages">
                                     @foreach (var v in Model.VatTypes)
                                     {
                                         var isSelected = Model.VatTypeId == v.Id;
@@ -199,6 +213,10 @@
 
                                     }
                                 </select>
+                                @if (lockStages)
+                                {
+                                    <input type="hidden" asp-for="VatTypeId" />
+                                }
                             </div>
                             <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Rekeningnummer</label>
@@ -220,13 +238,13 @@
                         <div class="row align-items-center pb-3">
                             <div id="projectRow" class="col-md-6 mt-3">
                                 <label class="form-label">Project (optioneel indien geen contract)</label>
-                                <select id="projectSelect" class="form-control form-control-modern" style="width:100%"></select>
+                                <select id="projectSelect" class="form-control form-control-modern" style="width:100%" disabled="@lockStages"></select>
                                 <input type="hidden" asp-for="ProjectId" />
                             </div>
 
                             <div id="contractRow" class="col-md-6 mt-3">
                                 <label class="form-label">Leverancierscontract (optioneel)</label>
-                                <select id="contractSelect" class="form-control form-control-modern" style="width:100%"></select>
+                                <select id="contractSelect" class="form-control form-control-modern" style="width:100%" disabled="@lockStages"></select>
                                 <input type="hidden" asp-for="SupplierContractId" />
                             </div>
                         </div>
@@ -272,6 +290,13 @@
                         <!-- hidden voor party -->
                         <input type="hidden" asp-for="PartyId" />
                         <input type="hidden" asp-for="PartyType" />
+                        @if (lockStages && Model.StageIds != null)
+                        {
+                            foreach (var stageId in Model.StageIds)
+                            {
+                                <input type="hidden" name="StageIds" value="@stageId" />
+                            }
+                        }
                     </div>
                 </div>
             </section>
@@ -433,9 +458,12 @@
         paymentTermId = Model.PaymentTermId,
         vatTypeId = Model.VatTypeId,
         issuerBankAccountId = Model.IssuerBankAccountId,
+        projectId = Model.ProjectId,
+        supplierContractId = Model.SupplierContractId,
         mode = (int)Model.Mode,
         party = new { value = Model.PartyLookupValue, text = Model.PartyDisplayName, type = Model.PartyType?.ToString() },
         lines = initialLines,
+        stageIds = Model.StageIds,
         totals = new { excl = Model.TotalExclVat, vat = Model.TotalVat, incl = Model.TotalInclVat }
     };
     var initialJson = JsonSerializer.Serialize(initialData, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
@@ -445,6 +473,7 @@
     <script>
         window.InvoiceIsEditing = true;
         window.InitialInvoice = @Html.Raw(initialJson);
+        window.StageEditLocked = @lockStages.ToString().ToLowerInvariant();
     </script>
 
     <script src="~/lib/select2/js/select2.js"></script>

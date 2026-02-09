@@ -198,7 +198,7 @@ namespace FacadeCore
         Task<bool> AreStagesValidForClientAsync(
             int clientId, IEnumerable<int> stageIds, CancellationToken ct = default);
         Task<IReadOnlyList<UnitStageRow>> GetUnitsWithInvocableStagesForClientAsync(
-    int clientId, bool includeZeroOrNegative, CancellationToken ct = default);
+    int clientId, bool includeZeroOrNegative, int? invoiceId = null, CancellationToken ct = default);
 
         Task<IReadOnlyList<ChangeOrderRow>> GetApprovedChangeOrdersForClientAsync(
         int clientOrCoOwnerId, int? projectId, CancellationToken ct = default);
