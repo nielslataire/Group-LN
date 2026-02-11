@@ -248,11 +248,18 @@ namespace ServiceCore
                 if (invoice.StatusId != draftId && !isPaid && !isGenerating)
                     throw new InvalidOperationException("Alleen conceptfacturen kunnen definitief gemaakt worden.");
 
-                var today = DateOnly.FromDateTime(DateTime.Today);
-                var finalDate = today;
+                var finalDate = issueDate ?? DateOnly.FromDateTime(DateTime.Today);
 
                 if (invoice.Date != finalDate)
                     invoice.Date = finalDate;
+
+                var paymentTerm = await ResolvePaymentTermAsync(invoice.PaymentTermId, null, ct);
+                if (paymentTerm != null)
+                {
+                    var recalculatedDueDate = CalculateDueDate(finalDate, paymentTerm);
+                    if (invoice.ExpirationDate != recalculatedDueDate)
+                        invoice.ExpirationDate = recalculatedDueDate;
+                }
 
                 var issuerId = invoice.IssuerCompanyId
                     ?? throw new InvalidOperationException("Factuur heeft geen gekoppeld facturatiebedrijf.");

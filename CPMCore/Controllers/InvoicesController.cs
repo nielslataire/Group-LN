@@ -780,10 +780,10 @@ namespace CPMCore.Controllers
         {
             // ISSUE FLOW (van draft naar definitief + verzending via Octopus)
             // Volgorde:
-            // 1) Bouw + verstuur Octopus-payloads (met "definitieve" PDF tijdens issue).
-            // 2) Zet draft om naar definitief (IssueDraftAsync).
-            // Opmerking: we forceren in de PDF geen proforma-label tijdens issue,
-            // zodat de klant nooit een proforma-factuur ontvangt bij "Issue".
+            // 1) Verzend eerst via Octopus met de voorziene nummering en payload.
+            // 2) Zet pas daarna definitief in eigen database (IssueDraftAsync).
+            // 3) Verstuur klassieke e-mail op basis van de definitief opgeslagen databasegegevens.
+            // Opmerking: we forceren in de PDF geen proforma-label tijdens issue.
             var invoice = await _db.Invoices
                .FirstOrDefaultAsync(i => i.Id == id, ct);
             if (invoice == null)
@@ -803,8 +803,10 @@ namespace CPMCore.Controllers
             await _db.SaveChangesAsync(ct);
             try
             {
-                await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
+                await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true);
                 var publicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+
+                await TrySendClassicEmailAfterIssueAsync(id, ct);
                 if (!string.IsNullOrWhiteSpace(publicId))
                     AddMessage("success", $"Factuur uitgegeven: {publicId}", "Factuur");
                 else
@@ -1535,7 +1537,7 @@ namespace CPMCore.Controllers
                 await SavePdfAppendixAsync(id, vm.PdfAppendix, ct);
                 try
                 {
-                    await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true);
+                    await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -1551,6 +1553,7 @@ namespace CPMCore.Controllers
                 }
 
                 var issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+                await TrySendClassicEmailAfterIssueAsync(id, ct);
 
                 if (!string.IsNullOrWhiteSpace(issuedPublicId))
                     AddMessage("success", $"Factuur uitgegeven: {issuedPublicId}", "Factuur");
@@ -2457,6 +2460,35 @@ namespace CPMCore.Controllers
                 : InvoiceSendFormMode.Standard;
         }
 
+        private async Task TrySendClassicEmailAfterIssueAsync(int invoiceId, CancellationToken ct)
+        {
+            try
+            {
+                var postIssueContext = await BuildOctopusInvoiceContextAsync(invoiceId, ct, forceFinalPdf: true);
+                var emailAttachment = await BuildAttachmentAsync(postIssueContext, ct);
+                var classicSent = await SendClassicInvoiceEmailIfRequiredAsync(postIssueContext, emailAttachment, ct);
+
+                if (classicSent)
+                {
+                    await PersistOctopusDeliveryStateAsync(
+                        postIssueContext.Invoice.Id,
+                        new OctopusDocumentDeliveryState
+                        {
+                            DeliveryState = "EMAILED",
+                            Comment = "Verzonden via klassieke e-mail",
+                            DeliveryDateTime = DateTime.UtcNow
+                        },
+                        ct);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Post-issue classic email failed for invoice {InvoiceId}", invoiceId);
+                AddMessage("warning", "Factuur werd uitgegeven, maar klassieke e-mailverzending is mislukt.", "Factuur");
+            }
+        }
+
+
         // Hoofdflow voor Octopus-issue + verzending.
         // Volgorde wijzigen? Pas de genummerde stappen hieronder aan.
         private async Task SendInvoiceToOctopusAsync(
@@ -2464,7 +2496,8 @@ namespace CPMCore.Controllers
             CancellationToken ct,
             bool sendOnly = false,
             bool forceSendStep = false,
-            bool forceFinalPdf = false)
+            bool forceFinalPdf = false,
+            bool skipClassicEmail = false)
         {
             try
             {
@@ -2505,7 +2538,11 @@ namespace CPMCore.Controllers
                 }
 
                 // 7. Klassieke mailverzending indien geen Peppol (PDF identiek aan upload)
-                var classicSent = await SendClassicInvoiceEmailIfRequiredAsync(context, emailAttachment, ct);
+                var classicSent = false;
+                if (!skipClassicEmail)
+                {
+                    classicSent = await SendClassicInvoiceEmailIfRequiredAsync(context, emailAttachment, ct);
+                }
 
                 if (classicSent && !WasSentViaPeppol(sendResponse))
                 {
@@ -4349,9 +4386,27 @@ END";
 
             ViewData["BreadcrumbNode"] = create;
         }
+        private static string? GetDueDateDisplayText(InvoiceDetailBO detail, CultureInfo culture)
+        {
+            if (detail.ExpirationDate.HasValue)
+            {
+                return detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy", culture);
+            }
+
+            if (detail.PaymentTermDisplayMode == PaymentTermDisplayMode.Text
+                && !string.IsNullOrWhiteSpace(detail.PaymentTermDisplayText))
+            {
+                return detail.PaymentTermDisplayText.Trim();
+            }
+
+            return null;
+        }
+
 
         private object BuildEmailTemplateModel(InvoiceDetailBO detail, IssuerCompanyBO issuer, string? bankAccount, string currency)
         {
+            var culture = CultureInfo.GetCultureInfo("nl-BE");
+            var dueDateDisplay = GetDueDateDisplayText(detail, culture);
             var formattedBankAccount = FormatBankAccount(bankAccount);
             return new
             {
@@ -4361,6 +4416,7 @@ END";
                     detail.PublicId,
                     IssueDate = detail.InvoiceDate,
                     DueDate = detail.ExpirationDate,
+                    DueDateDisplay = dueDateDisplay,
                     TotalExcl = detail.TotalExclVat,
                     TotalVat = detail.TotalVat,
                     TotalIncl = detail.TotalInclVat,
@@ -4384,7 +4440,8 @@ END";
                 {
                     BankAccount = formattedBankAccount,
                     Currency = currency,
-                    StructuredMessage = detail.StructuredMessage
+                    StructuredMessage = detail.StructuredMessage,
+                    DueDateDisplay = dueDateDisplay
                 }
             };
         }
@@ -4409,11 +4466,12 @@ END";
             builder.Append(amount);
             builder.Append("</strong>.");
 
-            if (detail.ExpirationDate.HasValue)
+            var dueDateDisplay = GetDueDateDisplayText(detail, culture);
+            if (!string.IsNullOrWhiteSpace(dueDateDisplay))
             {
                 var dueDate = detail.ExpirationDate.Value.ToDateTime(TimeOnly.MinValue).ToString("dd/MM/yyyy", culture);
                 builder.Append(" Gelieve dit bedrag te voldoen vóór ");
-                builder.Append(WebUtility.HtmlEncode(dueDate));
+                builder.Append(WebUtility.HtmlEncode(dueDateDisplay));
                 builder.Append('.');
             }
 

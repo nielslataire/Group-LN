@@ -56,6 +56,16 @@
         const creditSuffix = getCreditSign() < 0 ? ' – Credit' : '';
         $('#pvStartAs').text(`${readStartAsText()}${creditSuffix}`);
     }
+    function roundCurrency(value) {
+        const n = Number(value) || 0;
+        const abs = Math.abs(n);
+        const roundedAbs = Math.round((abs + Number.EPSILON) * 100) / 100;
+        return n < 0 ? -roundedAbs : roundedAbs;
+    }
+
+    function addCurrency(a, b) {
+        return roundCurrency((Number(a) || 0) + (Number(b) || 0));
+    }
 
     function sectionTable(title) {
         const $wrap = $(`
@@ -82,8 +92,8 @@
         $tables.append($wrap);
         return {
             pushRow(desc, qty, unit, excl, vatPerc) {
-                const vatAmt = Math.round((excl * (vatPerc / 100.0)) * 100) / 100;
-                const tot = excl + vatAmt;
+                const vatAmt = roundCurrency(excl * (vatPerc / 100.0));
+                const tot = addCurrency(excl, vatAmt);
                 const tr = $(`
           <tr>
             <td>${esc(desc)}</td>
@@ -114,7 +124,7 @@
 
             const signedPrice = price * sign;
             const r = section.pushRow(text, null, null, signedPrice, vatP)
-            sub += r.excl; vat += r.vatAmt; tot += r.tot;
+            sub = addCurrency(sub, r.excl); vat = addCurrency(vat, r.vatAmt); tot = addCurrency(tot, r.tot);
         });
         return { sub, vat, tot, hadRows: true };
     }
@@ -146,7 +156,7 @@
                 const signedPrice = price * sign;
                 const signedUnit = uprice != null ? uprice * sign : null;
                 const r = sec.pushRow(text, qty, signedUnit, signedPrice, vatP);
-                sub += r.excl; vat += r.vatAmt; tot += r.tot; hasRows = true;
+                sub = addCurrency(sub, r.excl); vat = addCurrency(vat, r.vatAmt); tot = addCurrency(tot, r.tot); hasRows = true;
             });
 
             if (!hasRows) $('#pvTables').children().last().remove();
@@ -194,7 +204,7 @@
             if (!text && price === 0) return;
             const signedPrice = price * sign;
             const r = section.pushRow(text, 1, signedPrice, signedPrice, vatP);
-            sub += r.excl; vat += r.vatAmt; tot += r.tot; had = true;
+            sub = addCurrency(sub, r.excl); vat = addCurrency(vat, r.vatAmt); tot = addCurrency(tot, r.tot); had = true;
         });
 
         return { sub, vat, tot, hadRows: had };
@@ -210,22 +220,26 @@
         const secStages = sectionTable('Schijven');
         const st = gatherStages(secStages, sign);
         if (!st.hadRows) $tables.children().last().remove();
-        sub += st.sub; vat += st.vat; tot += st.tot;
+        sub = addCurrency(sub, st.sub); vat = addCurrency(vat, st.vat); tot = addCurrency(tot, st.tot);
         any = any || st.hadRows;
 
         const secFree = sectionTable('Vrije lijnen');
         const fr = gatherFreeLines(secFree, sign);
         if (!fr.hadRows) $tables.children().last().remove();
-        sub += fr.sub; vat += fr.vat; tot += fr.tot;
+        sub = addCurrency(sub, fr.sub); vat = addCurrency(vat, fr.vat); tot = addCurrency(tot, fr.tot);
         any = any || fr.hadRows;
 
         const co = gatherChangeOrders(sign);
-        sub += co.sub; vat += co.vat; tot += co.tot;
+        sub = addCurrency(sub, co.sub); vat = addCurrency(vat, co.vat); tot = addCurrency(tot, co.tot);
         any = any || co.hadRows;
 
-        $sub.text(nf.format(sub));
-        $vat.text(nf.format(vat));
-        $total.text(nf.format(tot));
+        const roundedSub = roundCurrency(sub);
+        const roundedVat = roundCurrency(vat);
+        const roundedTotal = addCurrency(roundedSub, roundedVat);
+
+        $sub.text(nf.format(roundedSub));
+        $vat.text(nf.format(roundedVat));
+        $total.text(nf.format(roundedTotal));
 
         const hdr = ($('#HeaderDescription').val() || '').trim();
         $card.toggle(any || hdr.length > 0);

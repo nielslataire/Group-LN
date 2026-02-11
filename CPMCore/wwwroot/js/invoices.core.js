@@ -290,6 +290,7 @@ $(async function () {
         if (Array.isArray(initial.stageIds) && initial.stageIds.length > 0) return initial.stageIds;
         if (Array.isArray(initial.lines)) {
             return initial.lines
+                .filter(line => line && (line.isSelected === true || line.lineType === 'Stages'))
                 .map(line => line.paymentStageId)
                 .filter(id => id != null);
         }
