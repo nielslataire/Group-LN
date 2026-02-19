@@ -128,7 +128,7 @@
                             <td><i class="@iconClass" title="@title" aria-label="@title"></i> <span class="status-text">@title</span></td>
                             <td>
                                 <a data-toggle="tooltip" data-placement="top" title="Afdrukken"
-                                   target="_blank"
+                                   class="js-print-changeorder"
                                    href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = item.Id })">
                                     <i class="fa fa-print"></i>
                                 </a>

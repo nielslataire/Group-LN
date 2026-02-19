@@ -814,15 +814,13 @@ namespace CPMCore.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                invoice.StatusId = previousStatusId;
-                await _db.SaveChangesAsync(ct);
+                await RestoreDraftStateAsync(id, previousStatusId, ct);
                 _logger.LogWarning(ex, "Issue invoice {InvoiceId} blocked", id);
                 AddMessage("error", ex.Message, "Factuur");
             }
             catch (Exception ex)
             {
-                invoice.StatusId = previousStatusId;
-                await _db.SaveChangesAsync(ct);
+                await RestoreDraftStateAsync(id, previousStatusId, ct);
                 _logger.LogError(ex, "Issue invoice {InvoiceId} failed", id);
                 AddMessage("error", "Factuur kon niet definitief gemaakt worden.", "Factuur");
             }
@@ -1541,18 +1539,29 @@ namespace CPMCore.Controllers
                 }
                 catch (InvalidOperationException ex)
                 {
+                    await RestoreDraftStateAsync(id, (byte)InvoiceStatus.Draft, ct);
                     _logger.LogWarning(ex, "Octopus sync blocked for invoice {InvoiceId}", id);
                     AddMessage("error", ex.Message, "Factuur");
                     return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
                 }
                 catch (Exception ex)
                 {
+                    await RestoreDraftStateAsync(id, (byte)InvoiceStatus.Draft, ct);
                     _logger.LogError(ex, "Octopus sync failed for invoice {InvoiceId}", id);
                     AddMessage("error", "Factuur kon niet naar Octopus verstuurd worden.", "Factuur");
                     return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
                 }
 
-                var issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+                string issuedPublicId;
+                try
+                {
+                    issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+                }
+                catch
+                {
+                    await RestoreDraftStateAsync(id, (byte)InvoiceStatus.Draft, ct);
+                    throw;
+                }
                 await TrySendClassicEmailAfterIssueAsync(id, ct);
 
                 if (!string.IsNullOrWhiteSpace(issuedPublicId))
@@ -2579,6 +2588,7 @@ namespace CPMCore.Controllers
                 InvoiceDetailBO detail,
                 CompanyInfo? company,
                 DateOnly finalDate,
+                DateOnly? effectiveDueDate,
                 int fiscalYear,
                 int documentSequenceNr,
                 int bookyearId,
@@ -2597,6 +2607,7 @@ namespace CPMCore.Controllers
                 Detail = detail;
                 Company = company;
                 FinalDate = finalDate;
+                EffectiveDueDate = effectiveDueDate;
                 FiscalYear = fiscalYear;
                 DocumentSequenceNr = documentSequenceNr;
                 BookyearId = bookyearId;
@@ -2617,6 +2628,7 @@ namespace CPMCore.Controllers
             public InvoiceDetailBO Detail { get; }
             public CompanyInfo? Company { get; }
             public DateOnly FinalDate { get; }
+            public DateOnly? EffectiveDueDate { get; }
             public int FiscalYear { get; }
             public int DocumentSequenceNr { get; set; }
             public int BookyearId { get; set; }
@@ -2720,6 +2732,9 @@ namespace CPMCore.Controllers
                 ? DateOnly.FromDateTime(DateTime.Today)
                 : invoice.Date;
 
+            var effectiveDueDate = await ResolveEffectiveDueDateAsync(invoice, issuer, finalDate, ct);
+            detail.ExpirationDate = effectiveDueDate;
+
             var seriesId = await _db.InvoiceSeries
                 .Where(s => s.IssuerCompanyId == issuer.Id && s.IsActive)
                 .OrderBy(s => s.Id)
@@ -2814,6 +2829,7 @@ namespace CPMCore.Controllers
                 detail,
                 company,
                 finalDate,
+                effectiveDueDate,
                 fiscalYear,
                 documentSequenceNr,
                 bookyearId,
@@ -2826,6 +2842,47 @@ namespace CPMCore.Controllers
                 clientEmail,
                 clientCc,
                 forceFinalPdf);
+        }
+
+        private async Task<DateOnly?> ResolveEffectiveDueDateAsync(Invoices invoice, IssuerCompany issuer, DateOnly invoiceDate, CancellationToken ct)
+        {
+            if (invoice.ExpirationDate.HasValue)
+                return invoice.ExpirationDate.Value;
+
+            var termId = invoice.PaymentTermId ?? issuer.DefaultPaymentTermId;
+            if (!termId.HasValue)
+                return null;
+
+            var term = await _db.PaymentTerms
+                .AsNoTracking()
+                .Where(t => t.Id == termId.Value)
+                .Select(t => new { t.Days, t.TermType })
+                .FirstOrDefaultAsync(ct);
+
+            if (term == null)
+                return null;
+
+            var baseDate = ((PaymentTermType)term.TermType) == PaymentTermType.DaysAfterEndOfMonth
+                ? new DateOnly(invoiceDate.Year, invoiceDate.Month, DateTime.DaysInMonth(invoiceDate.Year, invoiceDate.Month))
+                : invoiceDate;
+
+            return baseDate.AddDays(term.Days);
+        }
+
+        private async Task RestoreDraftStateAsync(int invoiceId, byte? statusId, CancellationToken ct)
+        {
+            var invoice = await _db.Invoices.FirstOrDefaultAsync(i => i.Id == invoiceId, ct);
+            if (invoice == null)
+                return;
+
+            invoice.StatusId = statusId;
+            invoice.PublicId = null;
+            invoice.StructuredCommOgm = null;
+            invoice.QrEpcPayload = null;
+            invoice.ExpirationDate = null;
+            invoice.SeriesId = null;
+            invoice.FiscalYear = null;
+            await _db.SaveChangesAsync(ct);
         }
 
         private static List<string> BuildInvoiceRecipients(
@@ -3064,7 +3121,7 @@ namespace CPMCore.Controllers
                 DocumentSequenceNr = context.DocumentSequenceNr,
                 BookyearPeriodeNr = context.PeriodNumber,
                 DocumentDate = context.FinalDate,
-                ExpiryDate = context.Invoice.ExpirationDate ?? context.FinalDate,
+                ExpiryDate = context.EffectiveDueDate ?? context.FinalDate,
                 CurrencyCode = string.IsNullOrWhiteSpace(context.Invoice.CurrencyCode) ? "EUR" : context.Invoice.CurrencyCode!,
                 ExchangeRate = 1m,
                 RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData

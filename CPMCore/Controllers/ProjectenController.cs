@@ -2935,6 +2935,26 @@ namespace CPMCore.Controllers
 
             model.ClientUnits = unitsLookup;
 
+            // BREADCRUMBS: Home / Projectnaam / Wijzigingsopdrachten
+            if (model.ProjectId > 0)
+            {
+                var homeNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Home");
+                var projectNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+                {
+                    Parent = homeNode,
+                    RouteValues = new { projectid = model.ProjectId }
+                };
+                var changeOrdersNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailsChangeOrder", "Projecten", "Wijzigingsopdrachten")
+                {
+                    Parent = projectNode,
+                    RouteValues = new { projectid = model.ProjectId, clientid = model.ClientAccountId > 0 ? (int?)model.ClientAccountId : null }
+                };
+
+                ViewData["BreadcrumbNode"] = changeOrdersNode;
+            }
+
+
+
             return View(model);
         }
 
@@ -3153,6 +3173,7 @@ namespace CPMCore.Controllers
 
             // 2) Services
             var projectService = ServiceFactory.GetProjectService();
+            var clientService = ServiceFactory.GetClientService();
 
             // 3) Model opbouwen met veilige defaults
             var model = new ProjectChangeOrderAddUpdateModel
@@ -3187,38 +3208,42 @@ namespace CPMCore.Controllers
                     AddMessage("error", "Kon de wijzigingsopdracht niet ophalen.", "Fout!");
                 }
             }
+            if (string.IsNullOrWhiteSpace(model.ClientName))
+            {
+                model.ClientName = clientService.GetClientAccountNameById(model.ChangeOrder.ClientAccountID);
+            }
 
             // 5) Dropdowns / Selects vullen
             ChangeOrderFillInSelectList(model);
 
-            //BREADCRUMBS
-            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
-            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+            // BREADCRUMBS: Home / Projectnaam / Wijzigingsopdrachten / Klantnaam / Omschrijving / Bewerken
+            var homeNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Home");
+            var projectNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
             {
-                Parent = Index,
+                Parent = homeNode,
+                RouteValues = new { projectid }
             };
-            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+            var changeOrdersNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailsChangeOrder", "Projecten", "Wijzigingsopdrachten")
             {
-                Parent = projectenIndex,
-                RouteValues = new { projectid = projectid }
+                Parent = projectNode,
+                RouteValues = new { projectid, clientid = model.ChangeOrder.ClientAccountID }
             };
-            var projectKlanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten")
+            var clientNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditChangeOrder", "Projecten", model.ClientName)
             {
-                Parent = projectDetail,
-                RouteValues = new { projectid = projectid }
+                Parent = changeOrdersNode,
+                RouteValues = new { projectid, clientid = model.ChangeOrder.ClientAccountID, coid = model.ChangeOrder.Id }
             };
-            var projectKlantenDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Klanten", model.ClientName)
+            var descriptionNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditChangeOrder", "Projecten", string.IsNullOrWhiteSpace(model.ChangeOrder.Description) ? "Wijzigingsopdracht" : model.ChangeOrder.Description)
             {
-                Parent = projectKlanten,
-                RouteValues = new { projectId = projectid,
-                    clientId = clientid
-                }
+                Parent = clientNode,
+                RouteValues = new { projectid, clientid = model.ChangeOrder.ClientAccountID, coid = model.ChangeOrder.Id }
             };
-            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddChangeOrder", "Projecten", "Wijzingsopdracht bewerken")
+            var editNode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("EditChangeOrder", "Projecten", "Bewerken")
             {
-                Parent = projectKlantenDetail,
+                Parent = descriptionNode,
+                RouteValues = new { projectid, clientid = model.ChangeOrder.ClientAccountID, coid = model.ChangeOrder.Id }
             };
-            ViewData["BreadcrumbNode"] = lastnode;
+            ViewData["BreadcrumbNode"] = editNode;
 
             return View(model);
         }

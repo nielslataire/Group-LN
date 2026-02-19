@@ -370,19 +370,57 @@
             }
         });
 
-        $(document).on('click', '.js-print-changeorder', function (e) {
+        const changeOrderProcessingModalEl = document.getElementById('changeOrderProcessingModal');
+          const changeOrderProcessingModal = changeOrderProcessingModalEl
+              ? new bootstrap.Modal(changeOrderProcessingModalEl, { backdrop: 'static', keyboard: false })
+              : null;
+
+          function getFileNameFromContentDisposition(headerValue) {
+              if (!headerValue) return null;
+
+              const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+              if (utf8Match?.[1]) {
+                  return decodeURIComponent(utf8Match[1]);
+              }
+
+              const fallbackMatch = headerValue.match(/filename="?([^";]+)"?/i);
+              return fallbackMatch?.[1] ?? null;
+          }
+
+          $(document).on('click', '.js-print-changeorder', async function (e) {
             e.preventDefault();
             const href = $(this).attr('href');
-            const modalEl = document.getElementById('changeOrderProcessingModal');
-            if (modalEl) {
-                const modal = new bootstrap.Modal(modalEl);
-                modal.show();
-                setTimeout(() => {
-                    window.open(href, '_blank', 'noopener');
-                    setTimeout(() => modal.hide(), 1200);
-                }, 200);
-            } else {
-                window.open(href, '_blank', 'noopener');
+          if (!href) return;
+
+            changeOrderProcessingModal?.show();
+
+            try {
+                const response = await fetch(href, {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const disposition = response.headers.get('content-disposition');
+                const fileName = getFileNameFromContentDisposition(disposition) || 'wijzigingsopdracht.pdf';
+
+                const objectUrl = window.URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = objectUrl;
+                anchor.download = fileName;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                window.URL.revokeObjectURL(objectUrl);
+            } catch (error) {
+                console.error('Kon wijzigingsopdracht niet downloaden.', error);
+                window.location.href = href;
+            } finally {
+                changeOrderProcessingModal?.hide();
             }
         });
     </script>

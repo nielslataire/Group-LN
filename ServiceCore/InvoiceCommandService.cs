@@ -39,7 +39,9 @@ namespace ServiceCore
             // issuer + default term
             var issuer = await _db.IssuerCompany.FirstAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct);
             var paymentTerm = await ResolvePaymentTermAsync(bo.PaymentTermId, issuer.DefaultPaymentTermId, ct);
-            var due = bo.ExpirationDate ?? CalculateDueDate(bo.InvoiceDate, paymentTerm);
+            var due = issueNow
+                ? bo.ExpirationDate ?? CalculateDueDate(bo.InvoiceDate, paymentTerm)
+                : null;
 
             string? issuerBankAccountIban = null;
             if (bo.IssuerBankAccountId is int bankAccountId)
@@ -557,8 +559,6 @@ namespace ServiceCore
                     .FirstOrDefaultAsync(x => x.Id == bo.IssuerCompanyId && x.IsActive, ct)
                     ?? throw new InvalidOperationException("Facturatiebedrijf niet gevonden of niet actief.");
 
-                var paymentTerm = await ResolvePaymentTermAsync(bo.PaymentTermId, issuer.DefaultPaymentTermId, ct);
-                var due = bo.ExpirationDate ?? CalculateDueDate(bo.InvoiceDate, paymentTerm);
 
                 string? issuerBankAccountIban = null;
                 if (bo.IssuerBankAccountId is int bankAccountId)
@@ -593,7 +593,7 @@ namespace ServiceCore
 
                 invoice.IssuerCompanyId = bo.IssuerCompanyId;
                 invoice.Date = bo.InvoiceDate;
-                invoice.ExpirationDate = due;
+                invoice.ExpirationDate = null;
                 invoice.ClientType = bo.CompanyId.HasValue ? null : bo.ClientType;
                 invoice.ClientId = bo.CompanyId.HasValue ? null : bo.ClientId;
                 invoice.CompanyId = bo.CompanyId;

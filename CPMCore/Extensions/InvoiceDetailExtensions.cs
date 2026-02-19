@@ -26,7 +26,7 @@ public static class InvoiceDetailExtensions
             IsPrepaid = bo.IsPrepaid,
             BankAccount = bo.BankAccount,
             StructuredMessage = bo.StructuredMessage,
-            ExtraInfo = bo?.ExtraInfo,
+            ExtraInfo = bo.IsSupplier ? null : bo.ExtraInfo,
             QrPayload = bo.QrPayLoad,
             HeaderDescription = bo.HeaderText,
             DetailDescription = bo.DetailText,
