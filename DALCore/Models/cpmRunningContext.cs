@@ -879,6 +879,7 @@ public partial class cpmRunningContext : DbContext
                 .HasColumnName("GSM");
             entity.Property(e => e.Huisnummer).HasMaxLength(50);
             entity.Property(e => e.InvoiceEmail).HasMaxLength(300);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.LandCode).HasMaxLength(3);
             entity.Property(e => e.Ondernemingsnummer).HasMaxLength(50);
             entity.Property(e => e.PostCodeId).HasColumnName("PostCodeID");

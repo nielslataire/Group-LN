@@ -106,13 +106,6 @@ public class LeveranciersController : BaseController
 
         model.SelectedIssuerCompanyIds ??= new List<int>();
 
-        if (!model.SelectedIssuerCompanyIds.Any() && issuerCompanies.Any())
-        {
-            model.SelectedIssuerCompanyIds = issuerCompanies
-                .Take(1)
-                .Select(i => i.Id)
-                .ToList();
-        }
 
         if (!model.SelectedCountryId.HasValue && countries.Any())
         {
@@ -171,10 +164,23 @@ public class LeveranciersController : BaseController
         entity.AttachUblByDefault = model.AttachUblByDefault;
         entity.PostCodeId = model.SelectedPostalCodeId;
         entity.Weburl = model.WebUrl;
+        entity.IsActive = model.IsActive;
         entity.IsCustomer = model.IsCustomer;
         entity.VatNumber = model.VatNumber;
         entity.VatStatus = model.VatStatus;
     }
+
+    private static void NormalizeWebsiteInput(SupplierFormViewModel model)
+    {
+        if (string.IsNullOrWhiteSpace(model.WebUrl))
+        {
+            model.WebUrl = null;
+            return;
+        }
+
+        model.WebUrl = model.WebUrl.Trim();
+    }
+
     private async Task AssignIssuerCompaniesAsync(CompanyInfo entity, IEnumerable<int> selectedIssuerCompanyIds, CancellationToken ct)
     {
         entity.CompanyIssuerCompany.Clear();
@@ -867,6 +873,7 @@ public class LeveranciersController : BaseController
     public async Task<IActionResult> Create(SupplierFormViewModel model, CancellationToken ct)
     {
         NormalizeVatInputs(model);
+        NormalizeWebsiteInput(model);
         await ValidateVatInputsAsync(model, null, ct);
 
         if (!ModelState.IsValid)
@@ -952,6 +959,7 @@ public class LeveranciersController : BaseController
             SelectedActivityIds = entity.Activity.Select(a => a.ActivityId).ToList(),
             SelectedIssuerCompanyIds = entity.CompanyIssuerCompany.Select(ci => ci.IssuerCompanyId).ToList(),
             WebUrl = entity.Weburl,
+            IsActive = entity.IsActive,
             Departments = entity.CompanyDepartments
                 .Select(d => new DepartmentInputViewModel
                 {
@@ -1009,6 +1017,7 @@ public class LeveranciersController : BaseController
         }
 
         NormalizeVatInputs(model);
+        NormalizeWebsiteInput(model);
         await ValidateVatInputsAsync(model, id, ct);
 
         if (!ModelState.IsValid)

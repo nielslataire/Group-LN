@@ -499,6 +499,15 @@
                });
            }
 
+         function initIosSwitches() {
+            const elements = $('[data-plugin-ios-switch]');
+            elements.each(function () {
+                const element = $(this);
+                if (!element.data('plugin-ios7Switch') && typeof element.themePluginIOS7Switch === 'function') {
+                    element.themePluginIOS7Switch();
+                }
+            });
+        }
         function bindEmailValidation(input) {
             const field = $(input);
             if (field.data('emailValidationBound')) {
@@ -547,6 +556,7 @@
          togglePostalMode();
          initInputMasks();
          initEmailValidation();
+         initIosSwitches();
          syncVatNumber();
 
          countrySelect.on('change', function () {

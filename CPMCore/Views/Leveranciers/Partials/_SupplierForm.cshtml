@@ -272,7 +272,15 @@
                                             <span class="input-group-text">
                                                 <i class="fas fa-globe"></i>
                                             </span>
-                                            @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern url-mask", placeholder = "Website", type = "url" })
+                                            @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern", placeholder = "Website" })
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2">@Html.LabelFor(m => m.IsActive)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="checkbox-custom checkbox-default checkbox-inline mt-2">
+                                            @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
                                         </div>
                                     </div>
                                 </div>

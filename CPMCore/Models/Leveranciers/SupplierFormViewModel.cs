@@ -70,6 +70,9 @@ public class SupplierFormViewModel
     [Display(Name = "Website")]
     public string? WebUrl { get; set; }
 
+    [Display(Name = "Actief")]
+    public bool IsActive { get; set; } = true;
+
     [Display(Name = "Digitale factuur nodig")]
     public bool RequiresDigitalInvoice { get; set; }
 

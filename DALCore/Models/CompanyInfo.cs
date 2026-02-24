@@ -67,6 +67,8 @@ public partial class CompanyInfo
 
     public string VatStatus { get; set; }
 
+    public bool IsActive { get; set; }
+
     public virtual ICollection<CompanyContacts> CompanyContacts { get; set; } = new List<CompanyContacts>();
 
     public virtual ICollection<CompanyDepartments> CompanyDepartments { get; set; } = new List<CompanyDepartments>();
