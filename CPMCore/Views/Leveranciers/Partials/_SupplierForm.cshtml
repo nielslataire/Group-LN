@@ -73,6 +73,14 @@
                         <div class="col-lg-3-5 col-xl-4-5">
                             <div class="form-group">
                                 <div class="row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2" asp-for="IsActive">@Html.LabelFor(m => m.IsActive)</label>
+                                    <div class="col-lg-7 col-xl-8">
+                                        <div class="switch switch-sm switch-primary">
+                                            @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row align-items-center pb-3">
                                     <label class="col-lg-5 col-xl-3 control-label text-lg-end">@Html.LabelFor(m => m.SelectedIssuerCompanyIds)</label>
                                     <div class="col-lg-7 col-xl-8">
                                         <select id="SelectedIssuerCompanyIds" name="SelectedIssuerCompanyIds" class="form-control form-control-modern" multiple="multiple" data-plugin-multiselect data-plugin-options='{"maxHeight": 200, "includeSelectAllOption": true, "buttonWidth": "100%"}'>
@@ -273,14 +281,6 @@
                                                 <i class="fas fa-globe"></i>
                                             </span>
                                             @Html.TextBoxFor(m => m.WebUrl, new { @class = "form-control form-control-modern", placeholder = "Website" })
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="row align-items-center pb-3">
-                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2">@Html.LabelFor(m => m.IsActive)</label>
-                                    <div class="col-lg-7 col-xl-8">
-                                        <div class="checkbox-custom checkbox-default checkbox-inline mt-2">
-                                            @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
                                         </div>
                                     </div>
                                 </div>
