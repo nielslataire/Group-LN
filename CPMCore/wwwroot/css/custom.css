@@ -130,3 +130,283 @@
     line-height: 2.3 !important; /* aanpassen zodat tekst netjes gecentreerd is */
     padding: 6px 17px !important;
 }
+
+/* Sidebar visual refresh: icon-first tiles + flyout children */
+#sidebar-left .nano-content {
+    overflow-x: visible !important;
+}
+
+#sidebar-left ul.nav-main > li {
+    position: relative;
+    margin-bottom: 6px;
+}
+
+    #sidebar-left ul.nav-main > li > a.main-nav-tile {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-align: center;
+        border-radius: 14px;
+        padding: 14px 10px;
+        transition: background-color .2s ease, color .2s ease;
+    }
+
+        #sidebar-left ul.nav-main > li > a.main-nav-tile i {
+            font-size: 30px;
+            margin: 0;
+            line-height: 1;
+        }
+
+#sidebar-left .main-nav-label {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: normal;
+}
+
+#sidebar-left ul.nav-main li.nav-parent > a.main-nav-tile:after {
+    display: none !important;
+}
+
+#sidebar-left ul.nav-main > li.nav-parent > .nav-children {
+    display: none;
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 0;
+    min-width: 430px;
+    max-width: 520px;
+    padding: 18px 20px;
+    background: #0f4b40;
+    border-radius: 16px;
+    box-shadow: 0 16px 35px rgba(0, 0, 0, .24);
+    columns: 2;
+    column-gap: 24px;
+    z-index: 1200;
+}
+
+    #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li {
+        break-inside: avoid;
+        margin-bottom: 6px;
+    }
+
+        #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li > a {
+            border-radius: 8px;
+            color: rgba(255, 255, 255, .92);
+            font-weight: 500;
+            font-size: 14px;
+            padding: 8px 10px;
+        }
+
+            #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li > a:hover,
+            #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li > a:focus {
+                color: #ffffff;
+                background: rgba(255, 255, 255, .1);
+                text-decoration: none;
+            }
+
+#sidebar-left ul.nav-main > li.nav-parent:hover > .nav-children,
+#sidebar-left ul.nav-main > li.nav-parent:focus-within > .nav-children,
+#sidebar-left ul.nav-main > li.nav-parent.nav-expanded > .nav-children {
+    display: block;
+}
+
+@media (max-width: 991px) {
+    #sidebar-left ul.nav-main > li.nav-parent > .nav-children {
+        position: static;
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+        margin-top: 8px;
+        columns: 1;
+    }
+}
+
+/* Sidebar color & behavior overrides requested */
+#sidebar-left.sidebar-left,
+#sidebar-left .nano,
+#sidebar-left .nano-content {
+    background: #0a5a3b !important;
+}
+
+#sidebar-left .sidebar-header,
+#sidebar-left .sidebar-title {
+    background: #0a5a3b !important;
+    color: #e7fff1 !important;
+}
+
+#sidebar-left ul.nav-main > li > a.main-nav-tile,
+#sidebar-left ul.nav-main > li > a.main-nav-tile:hover,
+#sidebar-left ul.nav-main > li > a.main-nav-tile:focus {
+    background: transparent !important;
+    color: #e7fff1 !important;
+    text-decoration: none;
+}
+
+    #sidebar-left ul.nav-main > li > a.main-nav-tile i,
+    #sidebar-left ul.nav-main > li > a.main-nav-tile .main-nav-label {
+        color: #e7fff1 !important;
+    }
+
+/* actieve tegel krijgt andere groentint, zonder streep links */
+#sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile,
+#sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile:hover,
+#sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile:focus {
+    background: #0f7a52 !important;
+    color: #f1fff8 !important;
+    box-shadow: none !important;
+}
+
+#sidebar-left ul.nav-main > li.nav-active:before,
+#sidebar-left ul.nav-main > li.nav-active > a:before,
+#sidebar-left ul.nav-main > li.nav-active > a:after {
+    display: none !important;
+    content: none !important;
+}
+
+/* flyout moet zichtbaar boven main content liggen */
+#sidebar-left,
+#sidebar-left .nano,
+#sidebar-left .nano-content,
+#sidebar-left nav,
+#sidebar-left ul.nav-main,
+#sidebar-left ul.nav-main > li.nav-parent {
+    overflow: visible !important;
+}
+
+    #sidebar-left ul.nav-main > li.nav-parent > .nav-children {
+        left: 100% !important;
+        margin-left: 0 !important;
+        z-index: 99999 !important;
+        border: 1px solid rgba(231, 255, 241, 0.08);
+    }
+
+        #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li > a {
+            color: #e7fff1 !important;
+        }
+
+            #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li > a:hover,
+            #sidebar-left ul.nav-main > li.nav-parent > .nav-children > li > a:focus {
+                background: rgba(231, 255, 241, 0.14) !important;
+                color: #ffffff !important;
+            }
+
+    /* Flyout behavior refinements */
+    #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu {
+        display: none;
+        left: calc(100% - 22px) !important;
+        top: 50%;
+        transform: translateY(-50%);
+        min-width: 360px;
+        max-width: 520px;
+        columns: 1;
+    }
+
+        #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu.submenu-two-columns {
+            columns: 2;
+        }
+
+        #sidebar-left ul.nav-main > li.nav-parent:hover > .flyout-menu,
+        #sidebar-left ul.nav-main > li.nav-parent:focus-within > .flyout-menu,
+        #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu:hover {
+            display: block;
+        }
+
+        #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu::before {
+            content: "";
+            position: absolute;
+            left: -26px;
+            top: 50%;
+            width: 26px;
+            height: 2px;
+            transform: translateY(-50%);
+            background: rgba(231, 255, 241, 0.92);
+        }
+
+@media (max-width: 991px) {
+    #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu,
+    #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu.submenu-two-columns {
+        position: static;
+        transform: none;
+        min-width: 0;
+        max-width: none;
+        width: 100%;
+        columns: 1;
+    }
+
+        #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu::before {
+            display: none;
+        }
+}
+
+/* Final sidebar interaction fixes */
+#sidebar-left {
+    width: 300px;
+}
+
+@media only screen and (min-width: 768px) {
+    html.sidebar-left-collapsed #sidebar-left {
+        width: 73px !important;
+    }
+}
+
+#sidebar-left ul.nav-main {
+    margin-right: 0 !important;
+}
+
+    /* hoofdmenu actieve item: geen achtergrond, alleen groene tekst/icon */
+    #sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile,
+    #sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile:hover,
+    #sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile:focus {
+        background: transparent !important;
+        box-shadow: none !important;
+        color: #7bdcae !important;
+    }
+
+        #sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile i,
+        #sidebar-left ul.nav-main > li.nav-active > a.main-nav-tile .main-nav-label {
+            color: #7bdcae !important;
+        }
+
+    /* submenu styling volgens feedback */
+    #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu {
+        box-shadow: none !important;
+        background: #0f4b40 !important;
+    }
+
+        #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu > li > a {
+            font-weight: 400 !important;
+        }
+
+        /* connectorlijn: zelfde kleur als submenu en 20px kort van het icoon */
+        #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu::before {
+            left: -80px;
+            width: 80px;
+            background: #0f4b40;
+        }
+
+/* Nano inline right-offset neutraliseren voor correcte uitlijning */
+#sidebar-left .nano > .nano-content {
+    right: 0 !important;
+}
+
+#sidebar-left .nano-content > nav.nav-main {
+    width: 100%;
+}
+
+/* Sidebar toggle styling aligned with sidebar/menu colors */
+#sidebar-left .sidebar-header .sidebar-toggle {
+    background: #0a5a3b !important;
+    border-left-color: rgba(231, 255, 241, 0.2) !important;
+}
+
+    #sidebar-left .sidebar-header .sidebar-toggle i,
+    #sidebar-left .sidebar-header .sidebar-toggle .fa-bars {
+        color: #e7fff1 !important;
+    }
+
+    #sidebar-left .sidebar-header .sidebar-toggle:hover,
+    #sidebar-left .sidebar-header .sidebar-toggle:focus {
+        background: #0a5a3b !important;
+    }

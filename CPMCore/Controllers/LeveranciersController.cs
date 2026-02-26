@@ -527,6 +527,7 @@ public class LeveranciersController : BaseController
             {
                 Id = c.CompanyId,
                 Name = c.BedrijfsNaam,
+                IsActive = c.IsActive,
                 EnterpriseNumber = c.Ondernemingsnummer,
                 Email = c.Email,
                 CountryCode = c.LandCode,

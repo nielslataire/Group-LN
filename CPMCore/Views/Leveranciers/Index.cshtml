@@ -72,7 +72,7 @@
 <div class="card card-modern mb-4">
     <div class="card-body">
         <div class="row g-3">
-            <div class="col-lg-4">
+            <div class="col-lg-3">
                 <label class="form-label mb-1" for="search-term">Zoek leverancier</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bx bx-search"></i></span>
@@ -82,7 +82,7 @@
                            placeholder="Zoek je leverancier ...">
                 </div>
             </div>
-             <div class="col-lg-4">
+             <div class="col-lg-3">
                 <label class="form-label mb-1" for="issuer-filter">Filter op facturatiebedrijf</label>
                 <div class="input-group input-group-select-append">
                     <span class="input-group-text">
@@ -103,7 +103,20 @@
                 </div>
                
             </div>
-            <div class="col-lg-4">
+            <div class="col-lg-3">
+                <label class="form-label mb-1" for="supplier-status-filter">Filter op status</label>
+                <div class="input-group input-group-select-append">
+                    <span class="input-group-text">
+                        <i class="bx bx-filter-alt"></i>
+                    </span>
+                    <select id="supplier-status-filter" class="form-control form-control-modern">
+                        <option value="all" >Alle leveranciers</option>
+                        <option value="active" selected>Enkel actief</option>
+                        <option value="inactive">Enkel inactief</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-lg-3">
                 <label class="form-label mb-1" for="activity-filter">Filter op activiteit</label>
                  <div class="input-group input-group-select-append">
                     <span class="input-group-text">
@@ -151,7 +164,7 @@
                         var phone = supplier.PrimaryPhone;
                         var activityData = string.Join(",", supplier.ActivityIds);
                         var issuerData = string.Join(",", supplier.IssuerCompanyIds);
-                        <tr data-activities="@activityData" data-issuers="@issuerData">
+                        <tr data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()">
                             <td>
                                 <a href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })" class="text-decoration-none text-reset fw-semibold">
                                     @supplier.Name
@@ -233,6 +246,7 @@
 
             let selectedActivityIds = [];
             let selectedIssuerId = document.getElementById('issuer-filter')?.value || '';
+        let selectedStatus = document.getElementById('supplier-status-filter')?.value || 'active';
 
             const suppliersTableElement = document.getElementById('datatable-suppliers');
 
@@ -260,6 +274,16 @@
                     if (!rowIssuers.includes(selectedIssuerId)) {
                         return false;
                     }
+                }
+
+                const rowIsActive = (rowElement?.dataset.isActive || '').toLowerCase() === 'true';
+
+                if (selectedStatus === 'active' && !rowIsActive) {
+                    return false;
+                }
+
+                if (selectedStatus === 'inactive' && rowIsActive) {
+                    return false;
                 }
 
                 if (!selectedActivityIds.length) {
@@ -331,6 +355,11 @@
 
             $('#issuer-filter').on('change', function () {
                 selectedIssuerId = $(this).val() || '';
+                table.draw();
+            });
+
+              $('#supplier-status-filter').on('change', function () {
+                selectedStatus = $(this).val() || 'active';
                 table.draw();
             });
 

@@ -17,6 +17,7 @@ public class SupplierListItemViewModel
 {
     public int Id { get; init; }
     public string Name { get; init; } = string.Empty;
+    public bool IsActive { get; init; }
     public string? EnterpriseNumber { get; init; }
     public string? Phone { get; init; }
     public string? Mobile { get; init; }

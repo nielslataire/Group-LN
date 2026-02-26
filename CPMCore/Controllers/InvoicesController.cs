@@ -2724,9 +2724,9 @@ namespace CPMCore.Controllers
             var hasCompanyName = !string.IsNullOrWhiteSpace(invoice.ClientIdClientAccountNavigation?.CompanyName)
                 || !string.IsNullOrWhiteSpace(invoice.ClientIdClientContactsNavigation?.CompanyName);
             var isIndividual = !invoice.CompanyId.HasValue && !hasCompanyName;
-            var requiresDigitalInvoice = detail.RequiresDigitalInvoice;
-            var hasClientEmail = !string.IsNullOrWhiteSpace(clientEmail);
-            var skipSendStep = !requiresDigitalInvoice || !hasClientEmail;
+            // Bij nummering van facturen sturen we altijd door naar Octopus.
+            // Octopus beslist vervolgens zelf over het kanaal (bv. Peppol bij een geldig btw-nummer).
+            var skipSendStep = false;
 
             var finalDate = invoice.Date == default
                 ? DateOnly.FromDateTime(DateTime.Today)

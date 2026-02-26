@@ -12,6 +12,13 @@
 	var canSeeBoekhouding = User.IsInRole("Boekhouding");
 	var canSeeProjects = User.IsInRole("Projecten");
 	var canSeeAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator");
+	var suppliersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var customersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var invoicesSubmenuClass = issuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var projectSubmenuClass = 3 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var settingsCount = canSeeAdmin ? 7 : 1;
+	var settingsSubmenuClass = settingsCount > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var linksSubmenuClass = 4 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 }
 
 
@@ -20,7 +27,7 @@
 
 	<div class="sidebar-header">
 		<div class="sidebar-title">
-			Navigatie
+			
 		</div>
 		<div class="sidebar-toggle hidden-xs" data-toggle-class="sidebar-left-collapsed" data-target="html" data-fire-event="sidebar-left-toggle">
 			<i class="fas fa-bars" aria-label="Toggle sidebar"></i>
@@ -30,8 +37,136 @@
 	<div class="nano">
 		<div class="nano-content">
 			<nav id="menu" class="nav-main" role="navigation">
-
 				<ul class="nav nav-main">
+					<li class="@(currentController == "Home" ? "nav-active" : string.Empty)">
+						<a class="main-nav-tile" href="@Url.Action("Index", "Home")">
+							<i class="bx bx-home-alt" aria-hidden="true"></i>
+							<span class="main-nav-label">Dashboard</span>
+						</a>
+					</li>
+					@if (canSeeLeveranciers)
+					{
+						<li class="nav-parent @(currentController == "Leveranciers" ? "nav-active" : string.Empty)">
+							<a class="main-nav-tile" href="#">
+								<i class="bx bx-hard-hat" aria-hidden="true"></i>
+								<span class="main-nav-label">Leveranciers</span>
+							</a>
+							<ul class="@suppliersSubmenuClass">
+								<li>@Html.ActionLink("Alle leveranciers", "Index", "Leveranciers")</li>
+								@foreach (var issuer in issuerCompanies)
+								{
+									<li>@Html.ActionLink(issuer.Name, "Index", "Leveranciers", new { issuerCompanyId = issuer.Id }, null)</li>
+								}
+							</ul>
+						</li>
+					}
+					@if (canSeeKlanten)
+					{
+						<li class="nav-parent @(currentController == "Klanten" ? "nav-active" : string.Empty)">
+							<a class="main-nav-tile" href="#">
+								<i class="bx bx-group" aria-hidden="true"></i>
+								<span class="main-nav-label">Klanten</span>
+							</a>
+							<ul class="@customersSubmenuClass">
+								<li>@Html.ActionLink("Alle klanten", "Index", "Klanten")</li>
+								@foreach (var issuer in issuerCompanies)
+								{
+									<li>@Html.ActionLink(issuer.Name, "Index", "Klanten", new { issuerCompanyId = issuer.Id }, null)</li>
+								}
+							</ul>
+						</li>
+					}
+					@if (canSeeProjects)
+					{
+						<li class="nav-parent">
+							<a class="main-nav-tile" href="#">
+								<i class="bx bx-building-house" aria-hidden="true"></i>
+								<span class="main-nav-label">Projecten</span>
+							</a>
+							<ul class="@projectSubmenuClass">
+								<li>
+									<a href="@(Url.Action("ProjectsByUserId", "Projecten", new { UserId = currentUserCode }))">
+										Mijn Projecten
+									</a>
+								</li>
+								<li>
+									@Html.ActionLink("Alle projecten", "Index", "Projecten")
+								</li>
+								<li>
+									@Html.ActionLink("Weerverlet", "Weather", "Projecten")
+								</li>
+							</ul>
+						</li>
+					}
+					@if (canSeeBoekhouding)
+					{
+						<li class="nav-parent">
+							<a class="main-nav-tile" href="#">
+								<i class="bx bx-receipt" aria-hidden="true"></i>
+								<span class="main-nav-label">Facturatie</span>
+							</a>
+							<ul class="@invoicesSubmenuClass">
+								@foreach (var issuer in issuerCompanies)
+								{
+									<li>@Html.ActionLink(issuer.Name, "Index", "Invoices", new { issuerCompanyId = issuer.Id }, "")</li>
+								}
+							</ul>
+						</li>
+
+					}
+					<li class="nav-parent @(currentController == "Instellingen" ? "nav-active" : string.Empty)">
+						<a class="main-nav-tile" href="#">
+							<i class="bx bx-cog" aria-hidden="true"></i>
+							<span class="main-nav-label">Instellingen</span>
+						</a>
+						<ul class="@settingsSubmenuClass">
+							@if (canSeeAdmin)
+							{
+								<li>@Html.ActionLink("Instellingen", "Index", "Instellingen")</li>
+								<li>@Html.ActionLink("Vakantiedagen", "Vacationdays", "Instellingen")</li>
+								<li>@Html.ActionLink("Mijn bedrijven", "IssuerCompanies", "Instellingen")</li>
+								<li>@Html.ActionLink("Factuurtemplates", "InvoiceTemplates", "Instellingen")</li>
+								<li>@Html.ActionLink("Gebruikers", "Index", "UserAdmin")</li>
+								<li>@Html.ActionLink("Rollen", "Index", "AppRoles")</li>
+							}
+							<li>@Html.ActionLink("Activiteiten", "Activities", "Instellingen")</li>
+						</ul>
+					</li>
+					<li class="nav-parent">
+						<a class="main-nav-tile" href="#">
+							<i class="bx bx-link-alt" aria-hidden="true"></i>
+							<span class="main-nav-label">Links</span>
+						</a>
+						<ul class="@linksSubmenuClass">
+							<li>
+								<a href="http://www.copro-bouwteam.be" target="_blank">
+									www.copro-bouwteam.be
+								</a>
+							</li>
+							<li>
+								<a href="http://www.bouwenconstructie.be" target="_blank">
+									www.bouwenconstructie.be
+								</a>
+							</li>
+							<li>
+								<a href="http://www.verspurten.be" target="_blank">
+
+									www.verspurten.be
+								</a>
+							</li>
+							<li>
+								<a href="http://www.home-estate.be" target="_blank">
+
+									www.home-estate.be
+								</a>
+							</li>
+						</ul>
+					</li>
+
+
+				</ul>
+
+@* 				<ul class="nav nav-main">
 					<li class="@(currentController == "Home" ? "nav-active" : string.Empty)">
 						<a href="@Url.Action("Index", "Home")">
 							<i class="fa fa-house" aria-hidden="true"></i>
@@ -158,22 +293,51 @@
 					</li>
 
 
-				</ul>
+				</ul> *@
 			</nav>
 
 
 		</div>
 
 		<script>
-			// Maintain Scroll Position
-			if (typeof localStorage !== 'undefined') {
-				if (localStorage.getItem('sidebar-left-position') !== null) {
-					var initialPosition = localStorage.getItem('sidebar-left-position'),
-						sidebarLeft = document.querySelector('#sidebar-left .nano-content');
-
-					sidebarLeft.scrollTop = initialPosition;
+			document.addEventListener('DOMContentLoaded', function () {
+				// Maintain Scroll Position
+				if (typeof localStorage !== 'undefined') {
+					var sidebarContent = document.querySelector('#sidebar-left .nano-content');
+					if (sidebarContent && localStorage.getItem('sidebar-left-position') !== null) {
+						sidebarContent.scrollTop = localStorage.getItem('sidebar-left-position');
+					}
 				}
-			}
+
+				var sidebar = document.getElementById('sidebar-left');
+				if (!sidebar) {
+					return;
+				}
+
+				// Klik op hoofdmenu-item doet niets (submenu werkt enkel op hover/focus).
+				sidebar.querySelectorAll('li.nav-parent > a.main-nav-tile').forEach(function (trigger) {
+					trigger.addEventListener('click', function (e) {
+						e.preventDefault();
+					});
+				});
+
+				// Fallback zodat sidebar-toggle altijd werkt, ook als theme binding faalt.
+				var sidebarToggle = sidebar.querySelector('.sidebar-header .sidebar-toggle');
+				if (sidebarToggle) {
+					sidebarToggle.addEventListener('click', function (e) {
+						var root = document.documentElement;
+						var hadCollapsed = root.classList.contains('sidebar-left-collapsed');
+
+						window.setTimeout(function () {
+							var stillSame = root.classList.contains('sidebar-left-collapsed') === hadCollapsed;
+							if (stillSame) {
+								root.classList.toggle('sidebar-left-collapsed');
+								document.dispatchEvent(new CustomEvent('sidebar-left-toggle'));
+							}
+						}, 0);
+					});
+				}
+			});
 		</script>
 
 	</div>
