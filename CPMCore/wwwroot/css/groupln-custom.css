@@ -24,7 +24,7 @@
 /* Header */
 
 .header {
-	background: #00532C;
+	background: #0a5a3b;
 	border-bottom: 1px solid #E9E9E6;
 	border-top: 3px solid #EDEDED;
 	z-index: 1000;
@@ -415,7 +415,7 @@ ul.portfolio-details .list-icons > li .fa {
 }
 
 .thumb-info .thumb-info-type {
-	background-color: #00532C;
+	background-color: #0a5a3b;
 	border-radius: 2px;
 	display: inline-block;
 	float: left;

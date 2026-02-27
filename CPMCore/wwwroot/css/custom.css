@@ -65,7 +65,7 @@
 /*kleurenpallet*/
 :root {
     /* Jouw bestaande groen */
-    --primary: #00532C;
+    --primary: #0a5a3b;
     --secondary: #7A8450; /* mosgroen */
     --info: #8A7967; /* taupe / grijsbruin */
     /* Donker neutraal */
@@ -410,3 +410,65 @@
     #sidebar-left .sidebar-header .sidebar-toggle:focus {
         background: #0a5a3b !important;
     }
+
+/* Primary button hover should match submenu background */
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+    background-color: #0f4b40 !important;
+    border-color: #0f4b40 !important;
+}
+
+/* Layout: sidebar full height and header next to sidebar */
+#sidebar-left {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    min-height: 100vh;
+    z-index: 1020;
+}
+
+.header {
+    margin-left: 300px;
+    width: calc(100% - 300px);
+}
+
+@media only screen and (min-width: 768px) {
+    html.sidebar-left-collapsed .header {
+        margin-left: 73px;
+        width: calc(100% - 73px);
+    }
+}
+
+/* Logo in sidebar footer, centered and 100px from bottom */
+#sidebar-left .nano-content {
+    position: relative;
+    min-height: 100%;
+    padding-bottom: 220px;
+}
+
+#sidebar-left .sidebar-brand-footer {
+    position: absolute;
+    left: 50%;
+    bottom: 100px;
+    transform: translateX(-50%);
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+}
+
+    #sidebar-left .sidebar-brand-footer img {
+        max-width: 120px;
+        height: auto;
+        opacity: 0.95;
+    }
+
+@media only screen and (min-width: 768px) {
+    html.sidebar-left-collapsed #sidebar-left .sidebar-brand-footer img {
+        max-width: 53px;
+    }
+}
