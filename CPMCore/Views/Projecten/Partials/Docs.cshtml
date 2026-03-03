@@ -41,7 +41,6 @@
 						<th>Status</th>
 						<th>Documentdatum</th>
 						<th>Uploaddatum</th>
-							<th>Lokaal pad</th>
 						<th class="hidden-xs noVis" data-sortable="false">Acties</th>
 					</tr>
 				</thead>
@@ -81,15 +80,7 @@
 							<td>
 								<!-- uploaddatum nog toe te voegen -->
 							</td>
-								<td>
-									@{
-										var localPaths = ViewBag.DocLocalPaths as IDictionary<int, string>;
-										var localPath = localPaths != null && localPaths.TryGetValue(item.Docid, out var lp)
-										? lp
-										: "(niet gevonden)";
-									}
-									<code class="small">@localPath</code>
-								</td>
+								
 							<td class="actions">
 									<a href="@Url.Action("ViewDoc", "Projecten", new { id = item.Docid })" target="_blank" data-toggle="tooltip" title="Bekijken"><i class="fa fa-eye "></i></a>
 								@{

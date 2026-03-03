@@ -7,6 +7,8 @@ Imports System.Web.Mvc
 Imports BO
 Imports Facade
 Imports Postal
+Imports System.Web.Configuration
+Imports System.Web.Script.Serialization
 
 
 
@@ -160,19 +162,15 @@ Public Class ProjectsController
             email.EmailTitle = "BCO - Uw planaanvraag"
             email.Firstname = model.Firstname
             email.Name = model.Name
-            Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "Plans/"
-            Dim planUrl = dir & unit.Plan
+
             Dim cd As System.Net.Mime.ContentDisposition
-            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
-            Using webClient As New System.Net.WebClient
-                Dim planBytes = webClient.DownloadData(planUrl)
-                Using planStream As New MemoryStream(planBytes)
-                    Dim att As New System.Net.Mail.Attachment(planStream, "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString)
-                    cd = att.ContentDisposition
-                    cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
-                    email.Attach(att)
-                    email.Send()
-                End Using
+            Dim planBytes = DownloadAssetBytes("Plans", unit.Plan)
+            Using planStream As New MemoryStream(planBytes)
+                Dim att As New System.Net.Mail.Attachment(planStream, "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString)
+                cd = att.ContentDisposition
+                cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
+                email.Attach(att)
+                email.Send()
             End Using
             Dim internalemail As Object = New Email("PlanInternalMail")
             internalemail.[To] = model.Email
@@ -241,20 +239,16 @@ Public Class ProjectsController
             email.EmailTitle = "BCO - Uw documentaanvraag"
             email.Firstname = model.Firstname
             email.Name = model.Name
-            Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "docs/"
-            Dim docUrl = dir & Doc.Filename
             Dim cd As System.Net.Mime.ContentDisposition
-            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
-            Using webClient As New System.Net.WebClient
-                Dim docBytes = webClient.DownloadData(docUrl)
-                Using docStream As New MemoryStream(docBytes)
-                    Dim att As New System.Net.Mail.Attachment(docStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
-                    cd = att.ContentDisposition
-                    cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
-                    email.Attach(att)
-                    email.Send()
-                End Using
+            Dim docBytes = DownloadAssetBytes("docs", Doc.Filename)
+            Using docStream As New MemoryStream(docBytes)
+                Dim att As New System.Net.Mail.Attachment(docStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+                cd = att.ContentDisposition
+                cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+                email.Attach(att)
+                email.Send()
             End Using
+
             Dim internalemail As Object = New Email("PlanInternalMail")
             internalemail.[To] = model.Email
             internalemail.[From] = "niels.lataire@groupln.be"
@@ -310,19 +304,14 @@ Public Class ProjectsController
             email.Firstname = model.Firstname
             email.Name = model.Name
             email.Phone = model.Phone
-            Dim dir = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "docs/"
-            Dim brochureUrl = dir & Doc.Filename
             Dim cd As System.Net.Mime.ContentDisposition
-            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12 Or System.Net.SecurityProtocolType.Tls11 Or System.Net.SecurityProtocolType.Tls
-            Using webClient As New System.Net.WebClient
-                Dim brochureBytes = webClient.DownloadData(brochureUrl)
-                Using brochureStream As New MemoryStream(brochureBytes)
-                    Dim att As New System.Net.Mail.Attachment(brochureStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
-                    cd = att.ContentDisposition
-                    cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
-                    email.Attach(att)
-                    email.Send()
-                End Using
+            Dim brochureBytes = DownloadAssetBytes("docs", Doc.Filename)
+            Using brochureStream As New MemoryStream(brochureBytes)
+                Dim att As New System.Net.Mail.Attachment(brochureStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+                cd = att.ContentDisposition
+                cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+                email.Attach(att)
+                email.Send()
             End Using
 
             Dim internalemail As Object = New Email("PlanInternalMail")
@@ -514,6 +503,104 @@ Public Class ProjectsController
 
         Return fallback
     End Function
+
+    Private Function DownloadAssetBytes(folder As String, fileName As String) As Byte()
+        System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12
+        Dim assetUrl = ResolveAssetDownloadUrl(folder, fileName)
+
+        Try
+            Using webClient As New System.Net.WebClient
+                Return webClient.DownloadData(assetUrl)
+            End Using
+        Catch ex As WebException
+            Dim legacyUrl = BuildLegacyAssetUrl(folder, fileName)
+            If Not String.Equals(assetUrl, legacyUrl, StringComparison.OrdinalIgnoreCase) Then
+                Try
+                    Using webClient As New System.Net.WebClient
+                        Return webClient.DownloadData(legacyUrl)
+                    End Using
+                Catch
+                    Throw
+                End Try
+            End If
+
+            Throw
+        End Try
+    End Function
+
+    Private Function ResolveAssetDownloadUrl(folder As String, fileName As String) As String
+        Dim storageBaseUrl = WebConfigurationManager.AppSettings("StorageApiBaseUrl")
+        If Not String.IsNullOrWhiteSpace(storageBaseUrl) Then
+            Dim normalizedStorageBase = NormalizeStorageApiBaseUrl(storageBaseUrl)
+            Dim signEndpoint = normalizedStorageBase & "/api/assets/" & folder & "/" & Uri.EscapeDataString(fileName) & "/sign"
+
+            Try
+                Using web As New System.Net.WebClient()
+                    web.Headers(HttpRequestHeader.ContentType) = "application/x-www-form-urlencoded"
+                    Dim apiKey = ResolveStorageReadApiKey()
+                    If Not String.IsNullOrWhiteSpace(apiKey) Then
+                        web.Headers("X-Api-Key") = apiKey
+                    End If
+
+                    Dim response = web.UploadString(signEndpoint, "POST", String.Empty)
+                    Dim serializer As New JavaScriptSerializer()
+                    Dim payload = serializer.DeserializeObject(response)
+                    Dim dictionary = TryCast(payload, Dictionary(Of String, Object))
+                    If dictionary IsNot Nothing Then
+                        Dim signedPath = TryCast(dictionary("url"), String)
+                        If String.IsNullOrWhiteSpace(signedPath) Then
+                            signedPath = TryCast(dictionary("downloadUrl"), String)
+                        End If
+
+                        If Not String.IsNullOrWhiteSpace(signedPath) Then
+                            If signedPath.StartsWith("http", StringComparison.OrdinalIgnoreCase) Then
+                                Return signedPath
+                            End If
+
+                            Return normalizedStorageBase & "/" & signedPath.TrimStart("/"c)
+                        End If
+                    End If
+                End Using
+            Catch
+                ' Fallback naar legacy URL
+            End Try
+        End If
+
+        Return BuildLegacyAssetUrl(folder, fileName)
+    End Function
+
+
+    Private Function NormalizeStorageApiBaseUrl(rawBaseUrl As String) As String
+        Dim baseUrl = rawBaseUrl.Trim().TrimEnd("/"c)
+        If baseUrl.EndsWith("/uploads", StringComparison.OrdinalIgnoreCase) Then
+            baseUrl = baseUrl.Substring(0, baseUrl.Length - "/uploads".Length)
+        End If
+
+        Return baseUrl
+    End Function
+
+    Private Function ResolveStorageReadApiKey() As String
+        Dim readKey = WebConfigurationManager.AppSettings("StorageReadApiKey")
+        If Not String.IsNullOrWhiteSpace(readKey) Then Return readKey
+
+        Return WebConfigurationManager.AppSettings("StorageApiKey")
+    End Function
+
+    Private Function BuildLegacyAssetUrl(folder As String, fileName As String) As String
+        Dim imageBaseUrl = WebConfigurationManager.AppSettings("ImageWebURL")
+        If String.IsNullOrWhiteSpace(imageBaseUrl) Then
+            Dim storageBaseUrl = WebConfigurationManager.AppSettings("StorageApiBaseUrl")
+            If String.IsNullOrWhiteSpace(storageBaseUrl) Then
+                Throw New InvalidOperationException("StorageApiBaseUrl of ImageWebURL ontbreekt in appSettings.")
+            End If
+
+            imageBaseUrl = storageBaseUrl
+        End If
+
+        Dim normalizedBase = imageBaseUrl.TrimEnd("/"c)
+        Return normalizedBase & "/" & folder.Trim("/"c) & "/" & Uri.EscapeDataString(fileName)
+    End Function
+
 
     Private Sub LogError(message As String, Optional ex As Exception = Nothing)
         Try

@@ -4054,13 +4054,6 @@ namespace CPMCore.Controllers
 
             }
 
-            var docLinks = new Dictionary<int, string>();
-            foreach (var doc in model.Docs)
-            {
-                var signedUrl = GetSignedAssetUrl(doc.Docid, "docs");
-                docLinks[doc.Docid] = signedUrl ?? string.Empty;
-            }
-            ViewBag.DocLocalPaths = docLinks;
 
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
