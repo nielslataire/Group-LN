@@ -4044,7 +4044,29 @@ namespace CPMCore.Controllers
                     model.Docs = respProj.Values;
                 else
                     model.Docs = new List<ProjectDocBO>();
+
+
             }
+
+            var localPaths = new Dictionary<int, string>();
+            foreach (var doc in model.Docs)
+            {
+                var singleDocResponse = service.GetProjectDoc(doc.Docid);
+                var filenameFromDetail = singleDocResponse.Success && singleDocResponse.Value is not null
+                    ? singleDocResponse.Value.Filename
+                    : doc.Filename;
+
+                var fileName = Path.GetFileName(filenameFromDetail ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(fileName))
+                {
+                    localPaths[doc.Docid] = "(geen bestandsnaam)";
+                    continue;
+                }
+
+                var resolvedPath = ResolveProjectDocPath(fileName);
+                localPaths[doc.Docid] = string.IsNullOrWhiteSpace(resolvedPath) ? "(niet gevonden op disk)" : resolvedPath;
+            }
+            ViewBag.DocLocalPaths = localPaths;
 
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -4121,6 +4143,8 @@ namespace CPMCore.Controllers
                 await file.CopyToAsync(fs);
             }
 
+            AppendDocPathTrace("UPLOAD", filename, fullPath);
+
             // Zet filename in het BO vóór de service call
             model.Filename = filename;
 
@@ -4143,24 +4167,42 @@ namespace CPMCore.Controllers
                 : RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
         }
         [HttpGet]
+        public IActionResult ViewDoc(int id)
+        {
+            var fileResult = GetProjectDocFileResult(id);
+            if (fileResult is null) return NotFound();
+
+            return File(fileResult.Stream, fileResult.ContentType);
+        }
+
+        [HttpGet]
         public IActionResult DownloadDoc(int id, string? asName = null)
+        {
+            var fileResult = GetProjectDocFileResult(id);
+            if (fileResult is null) return NotFound();
+
+            // Gewenste downloadnaam (zorg dat extensie klopt)
+            var desired = string.IsNullOrWhiteSpace(asName) ? fileResult.FileName : asName;
+            if (!desired.EndsWith(fileResult.Extension ?? "", StringComparison.OrdinalIgnoreCase))
+                desired = Path.GetFileNameWithoutExtension(desired) + fileResult.Extension;  // ext van het echte bestand
+
+            return File(fileResult.Stream, fileResult.ContentType, fileDownloadName: desired);
+        }
+
+        private ProjectDocFileResult? GetProjectDocFileResult(int id)
         {
             var svc = ServiceFactory.GetProjectService();
             var resp = svc.GetProjectDoc(id);
-            if (!resp.Success || resp.Value == null) return NotFound();
+            if (!resp.Success || resp.Value == null) return null;
 
             var doc = resp.Value;
+            var fileName = Path.GetFileName(doc.Filename ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(fileName)) return null;
 
-            // Pad naar opslag
-            var uploadDir = Configuration["URL:DocLocalURL"];
-            if (string.IsNullOrWhiteSpace(uploadDir))
-                uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Docs");
+            var path = ResolveProjectDocPath(fileName);
+            if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path)) return null;
 
-            var path = Path.Combine(uploadDir, doc.Filename ?? "");
-            if (!System.IO.File.Exists(path)) return NotFound();
-
-            // ContentType
-            var ext = Path.GetExtension(path)?.ToLowerInvariant();
+            var ext = Path.GetExtension(path)?.ToLowerInvariant() ?? string.Empty;
             var contentType = ext switch
             {
                 ".pdf" => "application/pdf",
@@ -4169,13 +4211,68 @@ namespace CPMCore.Controllers
                 _ => "application/octet-stream"
             };
 
-            // Gewenste downloadnaam (zorg dat extensie klopt)
-            var desired = string.IsNullOrWhiteSpace(asName) ? doc.Filename : asName;
-            if (!desired.EndsWith(ext ?? "", StringComparison.OrdinalIgnoreCase))
-                desired = Path.GetFileNameWithoutExtension(desired) + ext;  // ext van het echte bestand
+            return new ProjectDocFileResult
+            {
+                Stream = System.IO.File.OpenRead(path),
+                ContentType = contentType,
+                Extension = ext,
+                FileName = fileName
+            };
+        }
 
-            var stream = System.IO.File.OpenRead(path);
-            return File(stream, contentType, fileDownloadName: desired);
+        private string? ResolveProjectDocPath(string fileName)
+        {
+            var cwd = Directory.GetCurrentDirectory();
+            var configuredUploadDir = Configuration["URL:DocLocalURL"];
+
+            var candidateDirectories = new List<string>();
+
+            if (!string.IsNullOrWhiteSpace(configuredUploadDir))
+                candidateDirectories.Add(configuredUploadDir);
+
+            // Huidige standaardlocatie.
+            candidateDirectories.Add(Path.Combine(cwd, "wwwroot", "Docs"));
+            // Legacy locatie (oude uploads/docs-structuur) voor achterwaartse compatibiliteit.
+            candidateDirectories.Add(Path.Combine(cwd, "wwwroot", "uploads", "docs"));
+
+            foreach (var dir in candidateDirectories.Where(d => !string.IsNullOrWhiteSpace(d)).Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var normalizedDir = Path.IsPathRooted(dir) ? dir : Path.Combine(cwd, dir);
+                var fullPath = Path.GetFullPath(Path.Combine(normalizedDir, fileName));
+                if (System.IO.File.Exists(fullPath))
+                {
+                    AppendDocPathTrace("RESOLVE", fileName, fullPath);
+                    return fullPath;
+                }
+            }
+
+            var debugCandidates = candidateDirectories
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .Select(d => Path.GetFullPath(Path.IsPathRooted(d) ? d : Path.Combine(cwd, d)));
+            AppendDocPathTrace("MISSING", fileName, string.Join(" | ", debugCandidates));
+            return null;
+        }
+
+        private void AppendDocPathTrace(string source, string fileName, string location)
+        {
+            // Makkelijk uit te zetten via config: URL:DocPathTraceEnabled=false
+            if (!bool.TryParse(Configuration["URL:DocPathTraceEnabled"], out var enabled) || !enabled) return;
+
+            var webRoot = _env.WebRootPath;
+            if (string.IsNullOrWhiteSpace(webRoot)) return;
+
+            var traceFile = Path.Combine(webRoot, "files.txt");
+            var line = $"{DateTime.UtcNow:O}	{source}	{fileName}	{location}{Environment.NewLine}";
+
+            System.IO.File.AppendAllText(traceFile, line);
+        }
+
+        private sealed class ProjectDocFileResult
+        {
+            public required FileStream Stream { get; init; }
+            public required string ContentType { get; init; }
+            public required string Extension { get; init; }
+            public required string FileName { get; init; }
         }
 
         [HttpGet]

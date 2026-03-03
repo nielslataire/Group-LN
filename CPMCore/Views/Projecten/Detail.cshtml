@@ -304,7 +304,7 @@
                         @if (doc.Name is null | doc.Name == "")
                         {
 
-                                            <a href="@Url.Content(Configuration["URL:DocWebURL"] + "Docs/" + doc.Filename)" target="_blank"><span Class="title">@doc.Type.GetDisplayName()</span></a>
+                                        <a href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank"><span Class="title">@doc.Type.GetDisplayName()</span></a>
                             @if (doc.DocDate.HasValue)
                             {
 
@@ -315,7 +315,7 @@
                         else
                         {
 
-                                            <a href="@Url.Content(Configuration["URL:DocWebURL"] + "Docs/" + doc.Filename)" target="_blank"> <span Class="title">@doc.Name</span></a>
+                                        <a href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank"> <span Class="title">@doc.Name</span></a>
                                             <br />
                             @if (doc.DocDate.HasValue)
                             {
