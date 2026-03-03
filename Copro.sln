@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceCore.Tests", "Servic
 		{BCDEDA05-7AF3-4E04-8E45-749E3A6D4535} = {BCDEDA05-7AF3-4E04-8E45-749E3A6D4535}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Storage", "Storage\Storage.csproj", "{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -247,6 +249,18 @@ Global
 		{3ADFA454-C0C3-4372-9FFC-8632A126464F}.Release|ARM.Build.0 = Release|Any CPU
 		{3ADFA454-C0C3-4372-9FFC-8632A126464F}.Release|x86.ActiveCfg = Release|Any CPU
 		{3ADFA454-C0C3-4372-9FFC-8632A126464F}.Release|x86.Build.0 = Release|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Debug|ARM.Build.0 = Debug|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Debug|x86.Build.0 = Debug|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Release|ARM.ActiveCfg = Release|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Release|ARM.Build.0 = Release|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Release|x86.ActiveCfg = Release|Any CPU
+		{D9055D3F-0DB4-4AE5-9A3E-ED4651073D8F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
