@@ -205,6 +205,20 @@ app.MapGet("/api/assets/private/{folder}/{fileName}", (string folder, string fil
     return Results.File(filePath, contentType, enableRangeProcessing: true);
 });
 
+app.MapGet("/debug/pictures-root", () =>
+{
+    var root = Path.Combine(app.Environment.ContentRootPath, "AssetStorage", "pictures");
+    var sample = Path.Combine(root, "447", "20250711104533864.jpg");
+    return Results.Ok(new
+    {
+        contentRoot = app.Environment.ContentRootPath,
+        picturesRoot = root,
+        picturesRootExists = Directory.Exists(root),
+        sampleExists = System.IO.File.Exists(sample),
+        sample = sample
+    });
+});
+
 app.Run();
 
 static bool TryValidateApiKey(HttpRequest request, string expectedApiKey)

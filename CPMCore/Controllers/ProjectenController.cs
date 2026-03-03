@@ -42,6 +42,9 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http.Headers;
+using System.Text.Json;
+
 
 
 
@@ -1277,18 +1280,14 @@ namespace CPMCore.Controllers
             {
                 if ((file != null && file.Length > 0))
                 {
-                    // Local Upload directory
-                    var Uploaddir = Configuration["URL:PlanLocalURL"];
-                    // Uploadname per directory
-                    var imagepath = Path.Combine(Uploaddir, filename);
-                    // Check if directories exists
-                    CheckDir(Uploaddir);
-                    // save image to directories
-                    using (Stream fileStream = new FileStream(imagepath, FileMode.Create))
+                    var uploadedFileName = await UploadAssetToStorageAsync(file, "plans");
+                    if (string.IsNullOrWhiteSpace(uploadedFileName))
                     {
-                        await file.CopyToAsync(fileStream);
+                        ModelState.AddModelError("PdfUpload", "Plan upload naar storage API mislukt.");
+                        return View(Model);
                     }
-                    Model.Unit.Plan = filename;
+
+                    Model.Unit.Plan = uploadedFileName;
                 }
 
 
@@ -3793,40 +3792,42 @@ namespace CPMCore.Controllers
             if (file is not null && file.Length > 0 && IsValidImage(file))
             {
 
-                // bestandsnaam
                 var filename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg";
+                var tempRoot = Path.Combine(Path.GetTempPath(), "cpmcore-news");
+                Directory.CreateDirectory(tempRoot);
 
-                // basis directory uit config (bv. "C:\\images\\")
-                var baseDir = (Configuration["URL:ImageLocalURL"] ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(baseDir))
+                var mainPath = Path.Combine(tempRoot, $"news_{filename}");
+                var originalPath = Path.Combine(tempRoot, $"news_original_{filename}");
+                var smallPath = Path.Combine(tempRoot, $"news_800_{filename}");
+
+                try
                 {
-                    AddMessage("error", "Upload pad ontbreekt (ImageLocalURL).", "Fout!");
-                    return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+                    using (var stream = System.IO.File.Create(mainPath))
+                        file.CopyTo(stream);
+
+                    System.IO.File.Copy(mainPath, originalPath, overwrite: true);
+                    System.IO.File.Copy(mainPath, smallPath, overwrite: true);
+
+                    ScaleAndCropImage(mainPath, 1280, 500);
+                    ScaleImage(smallPath, 800, 800);
+
+                    var uploadMain = UploadAssetFileToStorageAsync(mainPath, "pictures/News", filename, "image/jpeg").GetAwaiter().GetResult();
+                    var uploadOriginal = UploadAssetFileToStorageAsync(originalPath, "pictures/News/Original", filename, "image/jpeg").GetAwaiter().GetResult();
+                    var uploadSmall = UploadAssetFileToStorageAsync(smallPath, "pictures/News/800", filename, "image/jpeg").GetAwaiter().GetResult();
+
+                    if (string.IsNullOrWhiteSpace(uploadMain) || string.IsNullOrWhiteSpace(uploadOriginal) || string.IsNullOrWhiteSpace(uploadSmall))
+                    {
+                        AddMessage("error", "Afbeelding upload naar storage API mislukt.", "Fout!");
+                        return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+                    }
+                }
+                finally
+                {
+                    TryDeleteTempFile(mainPath);
+                    TryDeleteTempFile(originalPath);
+                    TryDeleteTempFile(smallPath);
                 }
 
-                // submappen
-                var newsDir = Path.Combine(baseDir, "News");
-                var newsOrigDir = Path.Combine(newsDir, "Original");
-                var news800Dir = Path.Combine(newsDir, "800");
-
-                EnsureDir(newsDir);
-                EnsureDir(newsOrigDir);
-                EnsureDir(news800Dir);
-
-                var pMain = Path.Combine(newsDir, filename);
-                var pOrig = Path.Combine(newsOrigDir, filename);
-                var p800 = Path.Combine(news800Dir, filename);
-
-                using (var stream = System.IO.File.Create(pMain))
-                    file.CopyTo(stream);
-                System.IO.File.Copy(pMain, pOrig, overwrite: true);
-                System.IO.File.Copy(pMain, p800, overwrite: true);
-
-                // afbeeldingsbewerkingen (gebruik jouw bestaande helpers)
-                ScaleAndCropImage(pMain, 1280, 500);
-                ScaleImage(p800, 800, 800);
-
-                // koppel picture aan nieuwsitem
                 var picture = new ProjectPictureBO
                 {
                     Name = filename,
@@ -3938,28 +3939,34 @@ namespace CPMCore.Controllers
             ProjectPictureBO? newPicture = null;
             if (file is not null && file.Length > 0)
             {
-                var baseDir = (Configuration["URL:ImageLocalURL"] ?? Configuration["ImageLocalURL"] ?? string.Empty).Trim();
-                if (string.IsNullOrWhiteSpace(baseDir))
-                {
-                    AddMessage("error", "Upload pad ontbreekt (URL:ImageLocalURL / ImageLocalURL).", "Fout!");
-                    return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
-                }
-
-                var newsDir = Path.Combine(baseDir, "News");
-                var newsOrigDir = Path.Combine(newsDir, "Original");
-                EnsureDir(newsDir);
-                EnsureDir(newsOrigDir);
-
                 var filename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg";
-                var pMain = Path.Combine(newsDir, filename);
-                var pOrig = Path.Combine(newsOrigDir, filename);
+                var tempRoot = Path.Combine(Path.GetTempPath(), "cpmcore-news");
+                Directory.CreateDirectory(tempRoot);
 
-                using (var stream = System.IO.File.Create(pMain))
-                    file.CopyTo(stream);
-                System.IO.File.Copy(pMain, pOrig, overwrite: true);
+                var mainPath = Path.Combine(tempRoot, $"news_{filename}");
+                var originalPath = Path.Combine(tempRoot, $"news_original_{filename}");
 
-                // Crop naar headerformaat (pas je helper aan indien nodig)
-                ScaleAndCropImage(pMain, 1280, 500);
+                try
+                {
+                    using (var stream = System.IO.File.Create(mainPath))
+                        file.CopyTo(stream);
+                    System.IO.File.Copy(mainPath, originalPath, overwrite: true);
+
+                    ScaleAndCropImage(mainPath, 1280, 500);
+
+                    var uploadMain = UploadAssetFileToStorageAsync(mainPath, "pictures/News", filename, "image/jpeg").GetAwaiter().GetResult();
+                    var uploadOriginal = UploadAssetFileToStorageAsync(originalPath, "pictures/News/Original", filename, "image/jpeg").GetAwaiter().GetResult();
+                    if (string.IsNullOrWhiteSpace(uploadMain) || string.IsNullOrWhiteSpace(uploadOriginal))
+                    {
+                        AddMessage("error", "Afbeelding upload naar storage API mislukt.", "Fout!");
+                        return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
+                    }
+                }
+                finally
+                {
+                    TryDeleteTempFile(mainPath);
+                    TryDeleteTempFile(originalPath);
+                }
 
                 newPicture = new ProjectPictureBO
                 {
@@ -3970,7 +3977,6 @@ namespace CPMCore.Controllers
                     DateTimeUploaded = DateTime.Now
                 };
 
-                // Koppel nieuwe foto aan het nieuwsitem
                 newsItem.Picture = newPicture;
             }
             else if (RemovePicture)
@@ -4048,25 +4054,13 @@ namespace CPMCore.Controllers
 
             }
 
-            var localPaths = new Dictionary<int, string>();
+            var docLinks = new Dictionary<int, string>();
             foreach (var doc in model.Docs)
             {
-                var singleDocResponse = service.GetProjectDoc(doc.Docid);
-                var filenameFromDetail = singleDocResponse.Success && singleDocResponse.Value is not null
-                    ? singleDocResponse.Value.Filename
-                    : doc.Filename;
-
-                var fileName = Path.GetFileName(filenameFromDetail ?? string.Empty);
-                if (string.IsNullOrWhiteSpace(fileName))
-                {
-                    localPaths[doc.Docid] = "(geen bestandsnaam)";
-                    continue;
-                }
-
-                var resolvedPath = ResolveProjectDocPath(fileName);
-                localPaths[doc.Docid] = string.IsNullOrWhiteSpace(resolvedPath) ? "(niet gevonden op disk)" : resolvedPath;
+                var signedUrl = GetSignedAssetUrl(doc.Docid, "docs");
+                docLinks[doc.Docid] = signedUrl ?? string.Empty;
             }
-            ViewBag.DocLocalPaths = localPaths;
+            ViewBag.DocLocalPaths = docLinks;
 
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -4131,22 +4125,16 @@ namespace CPMCore.Controllers
             var ext = Path.GetExtension(file.FileName) ?? string.Empty;
             var filename = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + ext;
 
-            var uploadDir = Configuration["URL:DocLocalURL"];
-            if (string.IsNullOrWhiteSpace(uploadDir))
-                uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Docs");
-
-            Directory.CreateDirectory(uploadDir);
-            var fullPath = Path.Combine(uploadDir, filename);
-
-            using (var fs = new FileStream(fullPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            var uploadedFileName = await UploadAssetToStorageAsync(file, "docs");
+            if (string.IsNullOrWhiteSpace(uploadedFileName))
             {
-                await file.CopyToAsync(fs);
+                AddMessage("error", "Upload naar storage API is mislukt.", "Fout!");
+                return RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
             }
 
-            AppendDocPathTrace("UPLOAD", filename, fullPath);
-
             // Zet filename in het BO vóór de service call
-            model.Filename = filename;
+            model.Filename = uploadedFileName;
+
 
             var service = ServiceFactory.GetProjectService();
             var response = service.InsertUpdateProjectDoc(model);
@@ -4169,111 +4157,19 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult ViewDoc(int id)
         {
-            var fileResult = GetProjectDocFileResult(id);
-            if (fileResult is null) return NotFound();
-
-            return File(fileResult.Stream, fileResult.ContentType);
+            var signedUrl = GetSignedAssetUrl(id, "docs");
+            if (string.IsNullOrWhiteSpace(signedUrl)) return NotFound();
+            return Redirect(signedUrl);
         }
 
         [HttpGet]
         public IActionResult DownloadDoc(int id, string? asName = null)
         {
-            var fileResult = GetProjectDocFileResult(id);
-            if (fileResult is null) return NotFound();
-
-            // Gewenste downloadnaam (zorg dat extensie klopt)
-            var desired = string.IsNullOrWhiteSpace(asName) ? fileResult.FileName : asName;
-            if (!desired.EndsWith(fileResult.Extension ?? "", StringComparison.OrdinalIgnoreCase))
-                desired = Path.GetFileNameWithoutExtension(desired) + fileResult.Extension;  // ext van het echte bestand
-
-            return File(fileResult.Stream, fileResult.ContentType, fileDownloadName: desired);
+            var signedUrl = GetSignedAssetUrl(id, "docs");
+            if (string.IsNullOrWhiteSpace(signedUrl)) return NotFound();
+            return Redirect(signedUrl);
         }
 
-        private ProjectDocFileResult? GetProjectDocFileResult(int id)
-        {
-            var svc = ServiceFactory.GetProjectService();
-            var resp = svc.GetProjectDoc(id);
-            if (!resp.Success || resp.Value == null) return null;
-
-            var doc = resp.Value;
-            var fileName = Path.GetFileName(doc.Filename ?? string.Empty);
-            if (string.IsNullOrWhiteSpace(fileName)) return null;
-
-            var path = ResolveProjectDocPath(fileName);
-            if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path)) return null;
-
-            var ext = Path.GetExtension(path)?.ToLowerInvariant() ?? string.Empty;
-            var contentType = ext switch
-            {
-                ".pdf" => "application/pdf",
-                ".jpg" or ".jpeg" => "image/jpeg",
-                ".png" => "image/png",
-                _ => "application/octet-stream"
-            };
-
-            return new ProjectDocFileResult
-            {
-                Stream = System.IO.File.OpenRead(path),
-                ContentType = contentType,
-                Extension = ext,
-                FileName = fileName
-            };
-        }
-
-        private string? ResolveProjectDocPath(string fileName)
-        {
-            var cwd = Directory.GetCurrentDirectory();
-            var configuredUploadDir = Configuration["URL:DocLocalURL"];
-
-            var candidateDirectories = new List<string>();
-
-            if (!string.IsNullOrWhiteSpace(configuredUploadDir))
-                candidateDirectories.Add(configuredUploadDir);
-
-            // Huidige standaardlocatie.
-            candidateDirectories.Add(Path.Combine(cwd, "wwwroot", "Docs"));
-            // Legacy locatie (oude uploads/docs-structuur) voor achterwaartse compatibiliteit.
-            candidateDirectories.Add(Path.Combine(cwd, "wwwroot", "uploads", "docs"));
-
-            foreach (var dir in candidateDirectories.Where(d => !string.IsNullOrWhiteSpace(d)).Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                var normalizedDir = Path.IsPathRooted(dir) ? dir : Path.Combine(cwd, dir);
-                var fullPath = Path.GetFullPath(Path.Combine(normalizedDir, fileName));
-                if (System.IO.File.Exists(fullPath))
-                {
-                    AppendDocPathTrace("RESOLVE", fileName, fullPath);
-                    return fullPath;
-                }
-            }
-
-            var debugCandidates = candidateDirectories
-                .Where(d => !string.IsNullOrWhiteSpace(d))
-                .Select(d => Path.GetFullPath(Path.IsPathRooted(d) ? d : Path.Combine(cwd, d)));
-            AppendDocPathTrace("MISSING", fileName, string.Join(" | ", debugCandidates));
-            return null;
-        }
-
-        private void AppendDocPathTrace(string source, string fileName, string location)
-        {
-            // Makkelijk uit te zetten via config: URL:DocPathTraceEnabled=false
-            if (!bool.TryParse(Configuration["URL:DocPathTraceEnabled"], out var enabled) || !enabled) return;
-
-            var webRoot = _env.WebRootPath;
-            if (string.IsNullOrWhiteSpace(webRoot)) return;
-
-            var traceFile = Path.Combine(webRoot, "files.txt");
-            var line = $"{DateTime.UtcNow:O}	{source}	{fileName}	{location}{Environment.NewLine}";
-
-            System.IO.File.AppendAllText(traceFile, line);
-        }
-
-        private sealed class ProjectDocFileResult
-        {
-            public required FileStream Stream { get; init; }
-            public required string ContentType { get; init; }
-            public required string Extension { get; init; }
-            public required string FileName { get; init; }
-        }
 
         [HttpGet]
         public IActionResult ModalDeleteDoc(int id)
@@ -6055,41 +5951,42 @@ namespace CPMCore.Controllers
                 return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
             }
 
-            // 1) Upload-map (lokaal) – zelfde stijl als je snippet
-            var uploadDir = (Configuration["URL:ImageLocalURL"] ?? Path.Combine(Path.GetTempPath(), "project-pictures")).Trim();
-            CheckDir(uploadDir);                           // jouw bestaande helper die Directory.CreateDirectory doet
+            var filename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg";
+            var tempRoot = Path.Combine(Path.GetTempPath(), "cpmcore-pictures");
+            Directory.CreateDirectory(tempRoot);
 
-            // submappen voor varianten
-            var dir447 = Path.Combine(uploadDir, "447");
-            var dir800 = Path.Combine(uploadDir, "800");
-            CheckDir(dir447);
-            CheckDir(dir800);
+            var mainPath = Path.Combine(tempRoot, $"main_{filename}");
+            var path447 = Path.Combine(tempRoot, $"447_{filename}");
+            var path800 = Path.Combine(tempRoot, $"800_{filename}");
 
-            // 2) Bestandsnaam (zoals VB): altijd .jpg
-            var filename = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff") + ".jpg";
-
-            // 3) Volledige paden
-            var imagePath = Path.Combine(uploadDir, filename);
-            var imagePath2 = Path.Combine(dir447, filename);
-            var imagePath3 = Path.Combine(dir800, filename);
-
-            // 4) Opslaan zoals in je snippet (één bestand, FileStream)
-            using (var fs = new FileStream(imagePath, FileMode.Create))
+            try
             {
-                await file.CopyToAsync(fs);
+                using (var stream = System.IO.File.Create(mainPath))
+                    await file.CopyToAsync(stream);
+
+                System.IO.File.Copy(mainPath, path447, overwrite: true);
+                System.IO.File.Copy(mainPath, path800, overwrite: true);
+
+                ScaleAndCropImage(path447, 447, 447);
+                ScaleAndCropImage(path800, 800, 800);
+                ScaleImage(mainPath, 1280, 960);
+
+                var uploadMain = await UploadAssetFileToStorageAsync(mainPath, "pictures", filename, "image/jpeg");
+                var upload447 = await UploadAssetFileToStorageAsync(path447, "pictures/447", filename, "image/jpeg");
+                var upload800 = await UploadAssetFileToStorageAsync(path800, "pictures/800", filename, "image/jpeg");
+
+                if (string.IsNullOrWhiteSpace(uploadMain) || string.IsNullOrWhiteSpace(upload447) || string.IsNullOrWhiteSpace(upload800))
+                {
+                    AddMessage("error", "Afbeelding upload naar storage API mislukt.", "Fout!");
+                    return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                }
             }
-
-            // Kopieën maken voor bewerking (zelfde patroon als je VB)
-            System.IO.File.Copy(imagePath, imagePath2, true);
-            System.IO.File.Copy(imagePath, imagePath3, true);
-
-            // 5) Bewerken (je bestaande ImageSharp-helpers die we eerder maakten)
-            // - 447x447 gecropt
-            ScaleAndCropImage(imagePath2, 447, 447);
-            // - 800x800 gecropt
-            ScaleAndCropImage(imagePath3, 800, 800);
-            // - origineel schalen naar max 1280x960
-            ScaleImage(imagePath, 1280, 960);
+            finally
+            {
+                TryDeleteTempFile(mainPath);
+                TryDeleteTempFile(path447);
+                TryDeleteTempFile(path800);
+            }
 
             // 6) DB opslaan (zelfde logica als VB)
             var picture = new ProjectPictureBO
@@ -6117,6 +6014,89 @@ namespace CPMCore.Controllers
 
             return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
         }
+
+        private string? GetSignedAssetUrl(int docId, string folder)
+        {
+            var svc = ServiceFactory.GetProjectService();
+            var resp = svc.GetProjectDoc(docId);
+            if (!resp.Success || resp.Value == null) return null;
+
+            var fileName = Path.GetFileName(resp.Value.Filename ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(fileName)) return null;
+
+            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+            var readKey = Configuration["StorageApi:ReadApiKey"];
+            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(readKey))
+                return null;
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", readKey);
+
+            var signUrl = $"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(fileName)}/sign";
+            var response = httpClient.PostAsync(signUrl, content: null).GetAwaiter().GetResult();
+            if (!response.IsSuccessStatusCode) return null;
+
+            var payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            using var jsonDoc = JsonDocument.Parse(payload);
+            if (!jsonDoc.RootElement.TryGetProperty("url", out var urlElement)) return null;
+
+            var relativeOrAbsolute = urlElement.GetString();
+            if (string.IsNullOrWhiteSpace(relativeOrAbsolute)) return null;
+
+            return relativeOrAbsolute.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                ? relativeOrAbsolute
+                : $"{baseUrl}{relativeOrAbsolute}";
+        }
+
+        private async Task<string?> UploadAssetFileToStorageAsync(string localPath, string folder, string originalFileName, string contentType)
+        {
+            await using var stream = System.IO.File.OpenRead(localPath);
+            return await UploadAssetToStorageAsync(stream, originalFileName, contentType, folder);
+        }
+
+        private async Task<string?> UploadAssetToStorageAsync(IFormFile file, string folder)
+        {
+            await using var fileStream = file.OpenReadStream();
+            return await UploadAssetToStorageAsync(fileStream, file.FileName, file.ContentType, folder);
+        }
+
+        private async Task<string?> UploadAssetToStorageAsync(Stream fileStream, string originalFileName, string? contentType, string folder)
+        {
+            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+            var writeKey = Configuration["StorageApi:WriteApiKey"];
+            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
+                return null;
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", writeKey);
+
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent(folder), "folder");
+
+            var fileContent = new StreamContent(fileStream);
+            if (!string.IsNullOrWhiteSpace(contentType))
+                fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+            content.Add(fileContent, "file", originalFileName);
+
+            var response = await httpClient.PostAsync($"{baseUrl}/api/assets/upload", content);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var payload = await response.Content.ReadAsStringAsync();
+            using var jsonDoc = JsonDocument.Parse(payload);
+            if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
+            return fileNameElement.GetString();
+        }
+
+        private static void TryDeleteTempFile(string path)
+        {
+            try
+            {
+                if (System.IO.File.Exists(path))
+                    System.IO.File.Delete(path);
+            }
+            catch { }
+        }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -6351,37 +6331,7 @@ namespace CPMCore.Controllers
         // ==== LOKALE FOTO'S VERWIJDEREN (ongewijzigd, puur filesystem) ====
         public void DeletePictureFile(int id)
         {
-            var service = ServiceFactory.GetProjectService();
-            var resp = service.GetPictureById(id);
-            var pic = resp.Success ? resp.Value : null;
-            if (pic == null) return;
-
-            var baseDir = Configuration["URL:ImageLocalURL"];
-
-            string[] paths = pic.Type switch
-            {
-                PictureType.Hoofdfoto or PictureType.Nevenfoto or PictureType.Werffoto => new[]
-                {
-            Path.Combine(baseDir, pic.Name),
-            Path.Combine(baseDir, "447", pic.Name),
-            Path.Combine(baseDir, "800", pic.Name)
-        },
-                PictureType.Nieuws => new[]
-                {
-            Path.Combine(baseDir, "news", pic.Name),
-            Path.Combine(baseDir, "news", "original", pic.Name)
-        },
-                _ => Array.Empty<string>()
-            };
-
-            foreach (var p in paths)
-            {
-                if (System.IO.File.Exists(p))
-                {
-                    try { System.IO.File.Delete(p); }
-                    catch (IOException ex) { Console.WriteLine($"Bestand kon niet verwijderd worden: {ex.Message}"); }
-                }
-            }
+            // Bestanden worden beheerd door de Storage API; lokale cleanup is niet meer van toepassing.
         }
 
         // ==== REMOTE FILE DELETE ====
