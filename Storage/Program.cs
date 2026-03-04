@@ -1,8 +1,16 @@
+using Docnet.Core;
+using Docnet.Core.Models;
 using Microsoft.AspNetCore.Diagnostics;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using System.Drawing;
+using System.Security.Cryptography;
+using static System.Net.Mime.MediaTypeNames;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -162,6 +170,43 @@ app.MapPost("/api/assets/{folder}/{fileName}/sign", (HttpRequest request, string
     return Results.Ok(new { url = signedUrl });
 });
 
+app.MapPost("/api/assets/docs/generate-thumbnails", (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+{
+    return GenerateAllDocThumbnails(request, options.Value, env, allowQueryApiKey: false);
+});
+
+app.MapGet("/api/assets/docs/generate-thumbnails", (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+{
+    return GenerateAllDocThumbnails(request, options.Value, env, allowQueryApiKey: true);
+});
+
+app.MapPost("/api/assets/docs/{fileName}/thumbnail", (HttpRequest request, string fileName, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+{
+    var localSettings = options.Value;
+
+    if (!TryValidateApiKey(request, localSettings.WriteApiKey))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!IsSafeFileName(fileName))
+    {
+        return Results.BadRequest(new { error = "Invalid file name." });
+    }
+
+    var docsFolder = Path.Combine(env.ContentRootPath, localSettings.RootPath, AssetFolders.Docs);
+    Directory.CreateDirectory(docsFolder);
+
+    if (!TryGenerateDocThumbnail(docsFolder, fileName, out var thumbName))
+    {
+        return Results.NotFound(new { error = "Source file not found or thumbnail could not be generated." });
+    }
+
+    return Results.Ok(new { thumbFileName = thumbName });
+});
+
+
+
 app.MapGet("/api/assets/private/{folder}/{fileName}", (string folder, string fileName, long exp, string sig, IOptions<AssetStorageSettings> options, IWebHostEnvironment env, AssetSigningHelper signingHelper) =>
 {
     var localSettings = options.Value;
@@ -205,7 +250,61 @@ app.MapGet("/api/assets/private/{folder}/{fileName}", (string folder, string fil
     return Results.File(filePath, contentType, enableRangeProcessing: true);
 });
 
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    try
+    {
+        logger.LogWarning("Startup thumbnail generation trigger fired.");
+        RunStartupDocThumbnailGeneration(app.Environment, settings, logger);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Startup thumbnail generation failed with an exception.");
+    }
+});
+
 app.Run();
+
+static void RunStartupDocThumbnailGeneration(IWebHostEnvironment env, AssetStorageSettings localSettings, ILogger logger)
+{
+    var docsFolder = Path.Combine(env.ContentRootPath, localSettings.RootPath, AssetFolders.Docs);
+    Directory.CreateDirectory(docsFolder);
+
+    logger.LogWarning("Startup thumbnail generation scanning docs folder: {DocsFolder}", docsFolder);
+
+    var sourceFiles = Directory
+        .EnumerateFiles(docsFolder)
+        .Select(Path.GetFileName)
+        .Where(static name => !string.IsNullOrWhiteSpace(name) && !name.StartsWith("thumb_", StringComparison.OrdinalIgnoreCase))
+        .Cast<string>()
+        .ToList();
+
+    var generated = 0;
+    foreach (var sourceFileName in sourceFiles)
+    {
+        if (TryGenerateDocThumbnail(docsFolder, sourceFileName, out _))
+        {
+            generated++;
+        }
+    }
+
+    logger.LogWarning("Startup thumbnail generation finished. Docs folder: {DocsFolder}. Docs processed: {DocsProcessed}. Thumbnails generated: {ThumbnailsGenerated}.", docsFolder, sourceFiles.Count, generated);
+}
+
+static bool TryValidateApiKeyOrQuery(HttpRequest request, string expectedApiKey)
+{
+    if (TryValidateApiKey(request, expectedApiKey))
+    {
+        return true;
+    }
+
+    if (request.Query.TryGetValue("apiKey", out var queryApiKeyValues) && queryApiKeyValues.Count > 0)
+    {
+        return string.Equals(queryApiKeyValues[0], expectedApiKey, StringComparison.Ordinal);
+    }
+
+    return false;
+}
 
 static bool TryValidateApiKey(HttpRequest request, string expectedApiKey)
 {
@@ -242,6 +341,144 @@ static bool IsSafeFileName(string fileName)
     }
 
     return fileName == Path.GetFileName(fileName);
+}
+
+static IResult GenerateAllDocThumbnails(HttpRequest request, AssetStorageSettings localSettings, IWebHostEnvironment env, bool allowQueryApiKey)
+{
+    var hasValidApiKey = allowQueryApiKey
+        ? TryValidateApiKeyOrQuery(request, localSettings.WriteApiKey)
+        : TryValidateApiKey(request, localSettings.WriteApiKey);
+
+    if (!hasValidApiKey)
+    {
+        return Results.Unauthorized();
+    }
+
+    var docsFolder = Path.Combine(env.ContentRootPath, localSettings.RootPath, AssetFolders.Docs);
+    Directory.CreateDirectory(docsFolder);
+
+    var sourceFiles = Directory
+        .EnumerateFiles(docsFolder)
+        .Select(Path.GetFileName)
+        .Where(static name => !string.IsNullOrWhiteSpace(name) && !name.StartsWith("thumb_", StringComparison.OrdinalIgnoreCase))
+        .Cast<string>()
+        .ToList();
+
+    var generated = new List<string>();
+    foreach (var sourceFileName in sourceFiles)
+    {
+        if (TryGenerateDocThumbnail(docsFolder, sourceFileName, out var thumbName))
+        {
+            generated.Add(thumbName);
+        }
+    }
+
+    return Results.Ok(new
+    {
+        docsProcessed = sourceFiles.Count,
+        thumbnailsGenerated = generated.Count,
+        thumbnails = generated
+    });
+}
+static bool TryGenerateDocThumbnail(string docsFolder, string sourceFileName, out string thumbFileName)
+{
+    thumbFileName = BuildThumbFileName(sourceFileName);
+
+    if (sourceFileName.StartsWith("thumb_", StringComparison.OrdinalIgnoreCase))
+    {
+        return false;
+    }
+
+    var sourcePath = Path.Combine(docsFolder, sourceFileName);
+    if (!File.Exists(sourcePath))
+    {
+        return false;
+    }
+
+    var thumbPath = Path.Combine(docsFolder, thumbFileName);
+
+    var extension = Path.GetExtension(sourceFileName);
+    if (string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+    {
+        if (TryGeneratePdfFirstPageThumbnail(sourcePath, thumbPath))
+        {
+            return true;
+        }
+
+        CreateFallbackThumbnail(thumbPath);
+        return true;
+    }
+
+    try
+    {
+        using var image = SixLabors.ImageSharp.Image.Load(sourcePath);
+        if (image.Width > 400)
+        {
+            var targetHeight = (int)Math.Round((double)image.Height * 400 / image.Width);
+            image.Mutate(x => x.Resize(new ResizeOptions
+            {
+                Size = new SixLabors.ImageSharp.Size(400, targetHeight),
+                Mode = ResizeMode.Max
+            }));
+        }
+
+        image.SaveAsJpeg(thumbPath, new JpegEncoder { Quality = 80 });
+        return true;
+    }
+    catch
+    {
+        CreateFallbackThumbnail(thumbPath);
+        return true;
+    }
+}
+
+static bool TryGeneratePdfFirstPageThumbnail(string sourcePath, string thumbPath)
+{
+    try
+    {
+        using var docReader = DocLib.Instance.GetDocReader(sourcePath, new PageDimensions(1200, 1600));
+        using var pageReader = docReader.GetPageReader(0);
+
+        var width = pageReader.GetPageWidth();
+        var height = pageReader.GetPageHeight();
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        var rawBytes = pageReader.GetImage();
+        using var pageImage = SixLabors.ImageSharp.Image.LoadPixelData<Bgra32>(rawBytes, width, height);
+
+        if (pageImage.Width > 400)
+        {
+            var targetHeight = (int)Math.Round((double)pageImage.Height * 400 / pageImage.Width);
+            pageImage.Mutate(x => x.Resize(new ResizeOptions
+            {
+                Size = new SixLabors.ImageSharp.Size(400, targetHeight),
+                Mode = ResizeMode.Max
+            }));
+        }
+
+        pageImage.SaveAsJpeg(thumbPath, new JpegEncoder { Quality = 80 });
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+static void CreateFallbackThumbnail(string thumbPath)
+{
+    using var fallback = new Image<Rgba32>(400, 240, SixLabors.ImageSharp.Color.ParseHex("#f4f5f7"));
+    fallback.Mutate(x => x.BackgroundColor(SixLabors.ImageSharp.Color.ParseHex("#1bb788").WithAlpha(0.20f)));
+    fallback.SaveAsJpeg(thumbPath, new JpegEncoder { Quality = 80 });
+}
+
+static string BuildThumbFileName(string sourceFileName)
+{
+    var baseName = Path.GetFileNameWithoutExtension(sourceFileName);
+    return $"thumb_{baseName}.jpg";
 }
 
 sealed class AssetStorageSettings

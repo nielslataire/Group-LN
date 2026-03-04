@@ -88,6 +88,14 @@
                         <h5 class="mb-4 mt-0">@h5</h5>
                     </div>
                     <div class="col-sm-auto px-0">
+                        <form asp-action="GenerateAllDocThumbnails" asp-controller="Projecten" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="projectid" value="@Model.ProjectId" />
+                            <input type="hidden" name="clientaccountid" value="@Model.ClientAccountId" />
+                            <button type="submit" class="btn btn-success btn-md" onclick="return confirm('Alle document-thumbnails genereren? Dit kan even duren.');">
+                                <i class="fa fa-images"></i> Thumbs genereren
+                            </button>
+                        </form>
                         <a href="#modaladddoc" class="btn btn-primary btn-md modal-with-form" id="btnAddDoc">
                             <i class="fa fa-upload"></i> Document uploaden
                         </a>

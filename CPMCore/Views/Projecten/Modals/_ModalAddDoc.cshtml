@@ -1,4 +1,4 @@
-﻿﻿﻿@using Microsoft.AspNetCore.Mvc.Rendering
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
 @model CPMCore.Models.Projecten.ProjectDocModalVM
 
 @{
@@ -21,68 +21,95 @@
                 <h2 class="card-title">@modalTitle</h2>
             </header>
             <div class="card-body">
-                <div class="form-group">
-                    <div class="row align-items-center pb-3">
-                        <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Type)</label>
-                        <div class="col-md-8">
-                            @Html.DropDownListFor(
-                            m => m.Document.Type,
-                                                Html.GetEnumSelectList<BOCore.ProjectDocType>(),
-                                                new { @class = "form-control form-control-modern", id = isEditMode ? "EditType" : "Type" }
-                                                )
-                    </div>
-                </div>
-
-                <div class="row align-items-center pb-3">
-                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Name)</label>
-                    <div class="col-md-8">
-                        @Html.TextBoxFor(m => m.Document.Name, new { @placeholder = "Omschrijving", @class = "form-control form-control-modern" })
-                    </div>
-                </div>
-                <div class="row align-items-center pb-3">
-                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.DocDate)</label>
-                    <div class="col-md-8">
-                        @Html.EditorFor(m => m.Document.DocDate)
-                    </div>
-                </div>
-                <div class="row align-items-center pb-3">
-                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Document voor</label>
-                    <div class="col-md-8">
-                        <select id="@(isEditMode ? "EditDocTarget" : "DocTarget")" name="Target" class="form-control form-control-modern">
-                            <option value="Project" selected="@(string.Equals(Model.Target, "Project", StringComparison.OrdinalIgnoreCase))">Project</option>
-                            <option value="Client" selected="@(string.Equals(Model.Target, "Client", StringComparison.OrdinalIgnoreCase))">Klant</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="row align-items-center pb-3" id="@(isEditMode ? "EditClientSelectRow" : "ClientSelectRow")">
-                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Klant</label>
-                    <div class="col-md-8">
-                        @Html.DropDownListFor(
-                                                m => m.SelectedClientAccountId,
-                                                new SelectList(Model.Clients, "ID", "Display", Model.SelectedClientAccountId),
-                                                "Selecteer klant",
-                                                new { @class = "form-control form-control-modern", id = isEditMode ? "EditClientAccountIdSelect" : "ClientAccountIdSelect" })
-                    </div>
-                </div>
-
-                @if (!isEditMode)
-                    {
-                        <div class="row align-items-center pb-3">
-                            <label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="file">Selecteer het bestand</label>
-                            <div class="col-md-8">
-                                <input type="file" id="file" name="file" accept="image/*,.pdf" class="form-control form-control-modern w-100" />
+                <div class="row">
+                    <div class="@(isEditMode ? "col-lg-8" : "col-lg-12")">
+                        <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Type)</label>
+                                <div class="col-md-8">
+                                    @Html.DropDownListFor(m => m.Document.Type, Html.GetEnumSelectList<BOCore.ProjectDocType>(), new { @class = "form-control form-control-modern", id = isEditMode ? "EditType" : "Type" })
+                                </div>
                             </div>
+
+                            <div class="row align-items-center pb-3">
+                                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Name)</label>
+                                <div class="col-md-8">
+                                    @Html.TextBoxFor(m => m.Document.Name, new { @placeholder = "Omschrijving", @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+
+                            <div class="row align-items-center pb-3">
+                                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.DocDate)</label>
+                                <div class="col-md-8">
+                                    @Html.EditorFor(m => m.Document.DocDate)
+                                </div>
+                            </div>
+
+                            <div class="row align-items-center pb-3">
+                                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Document voor</label>
+                                <div class="col-md-8">
+                                    <select id="@(isEditMode ? "EditDocTarget" : "DocTarget")" name="Target" class="form-control form-control-modern">
+                                        <option value="Project" selected="@(string.Equals(Model.Target, "Project", StringComparison.OrdinalIgnoreCase))">Project</option>
+                                        <option value="Client" selected="@(string.Equals(Model.Target, "Client", StringComparison.OrdinalIgnoreCase))">Klant</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row align-items-center pb-3" id="@(isEditMode ? "EditClientSelectRow" : "ClientSelectRow")">
+                                <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Klant</label>
+                                <div class="col-md-8">
+                                    @Html.DropDownListFor(m => m.SelectedClientAccountId,
+                                        new SelectList(Model.Clients, "ID", "Display", Model.SelectedClientAccountId),
+                                        "Selecteer klant",
+                                        new { @class = "form-control form-control-modern", id = isEditMode ? "EditClientAccountIdSelect" : "ClientAccountIdSelect" })
+                                </div>
+                            </div>
+
+                            @if (!isEditMode)
+                            {
+                                <div class="row align-items-center pb-3">
+                                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="file">Selecteer het bestand</label>
+                                    <div class="col-md-8">
+                                        <input type="file" id="file" name="file" accept="*/*" class="form-control form-control-modern w-100" />
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="row align-items-start pb-3">
+                                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Bestand</label>
+                                    <div class="col-md-8">
+                                        <p class="form-control-plaintext mb-2">Het bestand zelf kan niet worden aangepast.</p>
+                                        @if (!string.IsNullOrWhiteSpace(Model.DocumentUrl))
+                                        {
+                                            <a href="@Model.DocumentUrl" class="btn btn-default btn-sm" target="_blank" rel="noopener">
+                                                <i class="fa fa-eye"></i> Bestand openen
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            }
                         </div>
-                    }
-                    else
+                    </div>
+
+                    @if (isEditMode)
                     {
-                        <div class="row align-items-start pb-3">
-                            <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Bestand</label>
-                            <div class="col-md-8">
-                                <p class="form-control-plaintext mb-2">Het bestand zelf kan niet worden aangepast.</p>
-                                <a href="@Url.Action("ViewDoc", "Projecten", new { id = Model.Document.Docid })" class="btn btn-default btn-sm" target="_blank">
-                                    <i class="fa fa-eye"></i> Preview openen
-                                </a>
+                        <div class="col-lg-4 border-start">
+                            <div class="doc-thumb-column">
+                                <div class="small text-muted mb-2">Preview</div>
+                                @if (!string.IsNullOrWhiteSpace(Model.ThumbnailUrl) && !string.IsNullOrWhiteSpace(Model.DocumentUrl))
+                                {
+                                    <a class="doc-thumb-link" href="@Model.DocumentUrl" target="_blank" rel="noopener" title="Open document">
+                                        <img src="@Model.ThumbnailUrl" alt="Document thumbnail" class="img-fluid doc-thumb-image" />
+                                        <span class="doc-thumb-overlay">
+                                            <i class="fa fa-search-plus"></i>
+                                        </span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <div class="text-muted">Geen preview beschikbaar.</div>
+                                }
                             </div>
                         </div>
                     }

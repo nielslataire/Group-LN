@@ -11,5 +11,7 @@ namespace CPMCore.Models.Projecten
         public string Target { get; set; } = "Project";
         public int? SelectedClientAccountId { get; set; }
         public bool IsEditMode { get; set; }
+        public string? ThumbnailUrl { get; set; }
+        public string? DocumentUrl { get; set; }
     }
 }

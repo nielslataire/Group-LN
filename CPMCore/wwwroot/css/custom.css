@@ -582,3 +582,43 @@
         text-align: center;
     }
 }
+
+.doc-thumb-column {
+    padding-left: 8px;
+}
+
+.doc-thumb-link {
+    position: relative;
+    display: inline-block;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #dce3e7;
+}
+
+.doc-thumb-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    transition: transform .2s ease;
+}
+
+.doc-thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(27, 183, 136, 0.45);
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+.doc-thumb-link:hover .doc-thumb-image {
+    transform: scale(1.03);
+}
+
+.doc-thumb-link:hover .doc-thumb-overlay {
+    opacity: 1;
+}

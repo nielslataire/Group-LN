@@ -4119,6 +4119,13 @@ namespace CPMCore.Controllers
                 IsEditMode = true
             };
 
+            if (!string.IsNullOrWhiteSpace(doc.Filename))
+            {
+                vm.DocumentUrl = GetSignedAssetUrlByFileName(doc.Filename, "docs");
+                var thumbFileName = BuildDocThumbFileName(doc.Filename);
+                vm.ThumbnailUrl = GetSignedAssetUrlByFileName(thumbFileName, "docs") ?? vm.DocumentUrl;
+            }
+
             return PartialView("Modals/_ModalAddDoc", vm);
         }
 
@@ -4155,6 +4162,8 @@ namespace CPMCore.Controllers
             // Zet filename in het BO vóór de service call
             model.Filename = uploadedFileName;
 
+            await GenerateDocThumbnailViaStorageAsync(uploadedFileName);
+
 
             var service = ServiceFactory.GetProjectService();
             var response = service.InsertUpdateProjectDoc(model);
@@ -4174,6 +4183,92 @@ namespace CPMCore.Controllers
                 ? RedirectToAction("DetailDocs", new { clientaccountid = clientIdVal, projectid = model.ProjectId })
                 : RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> GenerateAllDocThumbnails(int projectid, int? clientaccountid)
+        {
+            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+            var writeKey = Configuration["StorageApi:WriteApiKey"];
+
+            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
+            {
+                AddMessage("error", "Storage API is niet correct geconfigureerd.", "Fout!");
+                return RedirectToAction("DetailDocs", new { projectid, clientaccountid });
+            }
+
+            var endpointCandidates = BuildStorageEndpointCandidates(
+                baseUrl,
+                "/api/assets/docs/generate-thumbnails",
+                "/assets/docs/generate-thumbnails",
+                "/docs/generate-thumbnails");
+
+            try
+            {
+                using var httpClient = CreateStorageHttpClient(writeKey, TimeSpan.FromMinutes(5));
+
+                HttpStatusCode? lastStatusCode = null;
+                string lastResponseBody = string.Empty;
+                string lastEndpoint = endpointCandidates.FirstOrDefault() ?? baseUrl;
+
+                foreach (var endpoint in endpointCandidates)
+                {
+                    var response = await httpClient.PostAsync(endpoint, content: null);
+                    var responseBody = await response.Content.ReadAsStringAsync();
+
+                    if (IsLikelyAuthRedirectOrLoginPage(response, responseBody))
+                    {
+                        _logger.LogError("Bulk doc thumbnail generation hit auth/login page. Endpoint: {Endpoint}. Status: {StatusCode}. BodySnippet: {BodySnippet}",
+                            endpoint, (int)response.StatusCode, responseBody.Length > 220 ? responseBody[..220] : responseBody);
+
+                        AddMessage("error", "Storage API call werd omgeleid naar een loginpagina. Controleer `StorageApi:BaseUrl` (moet de storage service URL zijn, niet CPM) en reverse proxy authenticatie.", "Fout!");
+                        return RedirectToAction("DetailDocs", new { projectid, clientaccountid });
+                    }
+
+                    if (response.IsSuccessStatusCode && IsValidBulkThumbnailResponse(responseBody))
+                    {
+                        AddMessage("success", "Thumbnail generatie voor alle documenten is gestart/uitgevoerd.", "Gelukt!");
+                        return RedirectToAction("DetailDocs", new { projectid, clientaccountid });
+                    }
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        _logger.LogWarning("Bulk doc thumbnail generation got a non-storage success response. Endpoint: {Endpoint}. Body: {Body}", endpoint, responseBody);
+                    }
+
+                    lastStatusCode = response.StatusCode;
+                    lastResponseBody = responseBody;
+                    lastEndpoint = endpoint;
+
+                    _logger.LogWarning("Bulk doc thumbnail generation attempt failed. Status: {StatusCode}. Endpoint: {Endpoint}. Body: {Body}",
+                        (int)response.StatusCode, endpoint, responseBody);
+
+                    if (response.StatusCode != HttpStatusCode.NotFound)
+                    {
+                        break;
+                    }
+                }
+
+                var shortBody = string.IsNullOrWhiteSpace(lastResponseBody)
+                    ? "geen foutdetails ontvangen"
+                    : lastResponseBody.Length > 220
+                        ? $"{lastResponseBody[..220]}..."
+                        : lastResponseBody;
+
+                AddMessage("error",
+                    $"Thumbnail generatie is mislukt (HTTP {(int)(lastStatusCode ?? HttpStatusCode.InternalServerError)} - {lastStatusCode}). Endpoint: {lastEndpoint}. Details: {shortBody}",
+                    "Fout!");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception while calling storage bulk thumbnail endpoints. BaseUrl: {BaseUrl}", baseUrl);
+                AddMessage("error", $"Thumbnail generatie kon niet worden gestart: {ex.Message}", "Fout!");
+            }
+
+            return RedirectToAction("DetailDocs", new { projectid, clientaccountid });
+        }
+
+
 
         [HttpPost]
         public IActionResult EditDocument(CPMCore.Models.Projecten.ProjectDocModalVM vm)
@@ -6112,6 +6207,88 @@ namespace CPMCore.Controllers
                 : $"{baseUrl}{relativeOrAbsolute}";
         }
 
+        private string? GetSignedAssetUrlByFileName(string fileName, string folder)
+        {
+            var safeFileName = Path.GetFileName(fileName ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(safeFileName)) return null;
+
+            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+            var readKey = Configuration["StorageApi:ReadApiKey"];
+            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(readKey))
+                return null;
+
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", readKey);
+
+            var signUrl = $"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(safeFileName)}/sign";
+            var response = httpClient.PostAsync(signUrl, content: null).GetAwaiter().GetResult();
+            if (!response.IsSuccessStatusCode) return null;
+
+            var payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+            using var jsonDoc = JsonDocument.Parse(payload);
+            if (!jsonDoc.RootElement.TryGetProperty("url", out var urlElement)) return null;
+
+            var relativeOrAbsolute = urlElement.GetString();
+            if (string.IsNullOrWhiteSpace(relativeOrAbsolute)) return null;
+
+            return relativeOrAbsolute.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                ? relativeOrAbsolute
+                : $"{baseUrl}{relativeOrAbsolute}";
+        }
+
+        private static string BuildDocThumbFileName(string sourceFileName)
+        {
+            var baseName = Path.GetFileNameWithoutExtension(sourceFileName);
+            return $"thumb_{baseName}.jpg";
+        }
+
+        private async Task GenerateDocThumbnailViaStorageAsync(string sourceFileName)
+        {
+            var safeFileName = Path.GetFileName(sourceFileName ?? string.Empty);
+            if (string.IsNullOrWhiteSpace(safeFileName))
+                return;
+
+            var baseUrl = Configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+            var writeKey = Configuration["StorageApi:WriteApiKey"];
+            if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
+                return;
+
+            using var httpClient = CreateStorageHttpClient(writeKey, TimeSpan.FromMinutes(2));
+
+            var endpointCandidates = BuildStorageEndpointCandidates(
+                baseUrl,
+                $"/api/assets/docs/{Uri.EscapeDataString(safeFileName)}/thumbnail",
+                $"/assets/docs/{Uri.EscapeDataString(safeFileName)}/thumbnail",
+                $"/docs/{Uri.EscapeDataString(safeFileName)}/thumbnail");
+
+            foreach (var endpoint in endpointCandidates)
+            {
+                var response = await httpClient.PostAsync(endpoint, content: null);
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                if (IsLikelyAuthRedirectOrLoginPage(response, responseBody))
+                {
+                    _logger.LogError("Single doc thumbnail generation hit auth/login page. Endpoint: {Endpoint}. Status: {StatusCode}.", endpoint, (int)response.StatusCode);
+                    return;
+                }
+
+                if (response.IsSuccessStatusCode && IsValidSingleThumbnailResponse(responseBody))
+                {
+                    return;
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("Single doc thumbnail generation got a non-storage success response. Endpoint: {Endpoint}. Body: {Body}", endpoint, responseBody);
+                }
+
+                if (response.StatusCode != HttpStatusCode.NotFound)
+                {
+                    return;
+                }
+            }
+        }
+
         private async Task<string?> UploadAssetFileToStorageAsync(string localPath, string folder, string originalFileName, string contentType)
         {
             await using var stream = System.IO.File.OpenRead(localPath);
@@ -6149,6 +6326,116 @@ namespace CPMCore.Controllers
             using var jsonDoc = JsonDocument.Parse(payload);
             if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
             return fileNameElement.GetString();
+        }
+
+        private static HttpClient CreateStorageHttpClient(string apiKey, TimeSpan timeout)
+        {
+            var handler = new HttpClientHandler
+            {
+                AllowAutoRedirect = false
+            };
+
+            var httpClient = new HttpClient(handler)
+            {
+                Timeout = timeout
+            };
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+            return httpClient;
+        }
+
+        private static bool IsLikelyAuthRedirectOrLoginPage(HttpResponseMessage response, string responseBody)
+        {
+            if ((int)response.StatusCode is 301 or 302 or 303 or 307 or 308)
+            {
+                return true;
+            }
+
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+            if (!contentType.Contains("html", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(responseBody))
+            {
+                return true;
+            }
+
+            return responseBody.Contains("Sign in to your account", StringComparison.OrdinalIgnoreCase)
+                || responseBody.Contains("login", StringComparison.OrdinalIgnoreCase)
+                || responseBody.Contains("<html", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsValidBulkThumbnailResponse(string responseBody)
+        {
+            if (string.IsNullOrWhiteSpace(responseBody))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var jsonDoc = JsonDocument.Parse(responseBody);
+                return jsonDoc.RootElement.TryGetProperty("docsProcessed", out _)
+                    && jsonDoc.RootElement.TryGetProperty("thumbnailsGenerated", out _)
+                    && jsonDoc.RootElement.TryGetProperty("thumbnails", out _);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsValidSingleThumbnailResponse(string responseBody)
+        {
+            if (string.IsNullOrWhiteSpace(responseBody))
+            {
+                return false;
+            }
+
+            try
+            {
+                using var jsonDoc = JsonDocument.Parse(responseBody);
+                return jsonDoc.RootElement.TryGetProperty("thumbFileName", out _);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static List<string> BuildStorageEndpointCandidates(string baseUrl, params string[] suffixes)
+        {
+            var candidates = new List<string>();
+            var normalizedBaseUrl = (baseUrl ?? string.Empty).TrimEnd('/');
+
+            foreach (var suffix in suffixes)
+            {
+                var normalizedSuffix = suffix.StartsWith("/", StringComparison.Ordinal) ? suffix : $"/{suffix}";
+                candidates.Add($"{normalizedBaseUrl}{normalizedSuffix}");
+            }
+
+            if (Uri.TryCreate(normalizedBaseUrl, UriKind.Absolute, out var baseUri))
+            {
+                var origin = baseUri.GetLeftPart(UriPartial.Authority).TrimEnd('/');
+                var basePath = baseUri.AbsolutePath.Trim('/');
+
+                foreach (var suffix in suffixes)
+                {
+                    var normalizedSuffix = suffix.StartsWith("/", StringComparison.Ordinal) ? suffix : $"/{suffix}";
+                    candidates.Add($"{origin}{normalizedSuffix}");
+
+                    if (!string.IsNullOrWhiteSpace(basePath))
+                    {
+                        candidates.Add($"{origin}/{basePath}{normalizedSuffix}");
+                    }
+                }
+            }
+
+            return candidates
+                .Where(u => !string.IsNullOrWhiteSpace(u))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
         }
 
         private static void TryDeleteTempFile(string path)
