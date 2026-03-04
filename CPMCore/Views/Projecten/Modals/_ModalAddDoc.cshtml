@@ -1,25 +1,34 @@
-﻿﻿@using Microsoft.AspNetCore.Mvc.Rendering
+﻿﻿﻿@using Microsoft.AspNetCore.Mvc.Rendering
 @model CPMCore.Models.Projecten.ProjectDocModalVM
 
+@{
+    var isEditMode = Model?.IsEditMode ?? false;
+    var modalTitle = isEditMode ? "Document bewerken" : "Document uploaden";
+    var submitLabel = isEditMode ? "Opslaan" : "Uploaden";
+    var formAction = isEditMode ? "EditDocument" : "AddDocument";
+    var wrapperId = isEditMode ? "modaleditdoccontent" : "modaladddoc";
+    var wrapperClass = isEditMode ? "modal-edit-content" : "modal-block modal-block-primary mfp-hide";
+}
 
-<div id="modaladddoc" class="modal-block modal-block-primary mfp-hide">
-    @using (Html.BeginForm("AddDocument", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormAddDoc", enctype = "multipart/form-data" }))
+<div id="@wrapperId" class="@wrapperClass">
+    @using (Html.BeginForm(formAction, "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = isEditMode ? "FormEditDoc" : "FormAddDoc", enctype = "multipart/form-data" }))
     {
+        @Html.HiddenFor(m => m.Document.Docid)
         @Html.HiddenFor(m => m.Document.ProjectId)
+        @Html.HiddenFor(m => m.IsEditMode)
         <section class="card">
             <header class="card-header">
-                <h2 class="card-title">Document uploaden</h2>
+                <h2 class="card-title">@modalTitle</h2>
             </header>
             <div class="card-body">
-
                 <div class="form-group">
-                    <div class="row align-items-center  pb-3">
+                    <div class="row align-items-center pb-3">
                         <label class="col-md-4 control-label text-lg-end mb-0 mt-1">@Html.LabelFor(m => m.Document.Type)</label>
                         <div class="col-md-8">
                             @Html.DropDownListFor(
                             m => m.Document.Type,
                                                 Html.GetEnumSelectList<BOCore.ProjectDocType>(),
-                                                new { @class = "form-control form-control-modern", id = "Type" }
+                                                new { @class = "form-control form-control-modern", id = isEditMode ? "EditType" : "Type" }
                                                 )
                     </div>
                 </div>
@@ -39,47 +48,64 @@
                 <div class="row align-items-center pb-3">
                     <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Document voor</label>
                     <div class="col-md-8">
-                        <select id="DocTarget" name="Target" class="form-control form-control-modern">
+                        <select id="@(isEditMode ? "EditDocTarget" : "DocTarget")" name="Target" class="form-control form-control-modern">
                             <option value="Project" selected="@(string.Equals(Model.Target, "Project", StringComparison.OrdinalIgnoreCase))">Project</option>
                             <option value="Client" selected="@(string.Equals(Model.Target, "Client", StringComparison.OrdinalIgnoreCase))">Klant</option>
                         </select>
                     </div>
                 </div>
-                <div class="row align-items-center pb-3" id="ClientSelectRow">
+                <div class="row align-items-center pb-3" id="@(isEditMode ? "EditClientSelectRow" : "ClientSelectRow")">
                     <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Klant</label>
                     <div class="col-md-8">
                         @Html.DropDownListFor(
                                                 m => m.SelectedClientAccountId,
                                                 new SelectList(Model.Clients, "ID", "Display", Model.SelectedClientAccountId),
                                                 "Selecteer klant",
-                                                new { @class = "form-control form-control-modern", id = "ClientAccountIdSelect" })
+                                                new { @class = "form-control form-control-modern", id = isEditMode ? "EditClientAccountIdSelect" : "ClientAccountIdSelect" })
                     </div>
                 </div>
-                <div class="row align-items-center pb-3">
-                    <label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="txtCaption">Selecteer het bestand</label>
-                    <div class="col-md-8">
-                        <input type="file" id="file" name="file" accept="image/*,.pdf" class="form-control form-control-modern w-100" />
-                    </div>
-                </div>
-            </div>
 
-        </div>
-        <footer class="card-footer">
-            <div class="row">
-                <div class="col-md-12 text-end">
-                    <button type="submit" class="btn btn-primary">Uploaden </button>
-                    <button class="btn btn-default modal-dismiss">Annuleren</button>
+                @if (!isEditMode)
+                    {
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-4 control-label text-lg-end mb-0 mt-1" for="file">Selecteer het bestand</label>
+                            <div class="col-md-8">
+                                <input type="file" id="file" name="file" accept="image/*,.pdf" class="form-control form-control-modern w-100" />
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row align-items-start pb-3">
+                            <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Bestand</label>
+                            <div class="col-md-8">
+                                <p class="form-control-plaintext mb-2">Het bestand zelf kan niet worden aangepast.</p>
+                                <a href="@Url.Action("ViewDoc", "Projecten", new { id = Model.Document.Docid })" class="btn btn-default btn-sm" target="_blank">
+                                    <i class="fa fa-eye"></i> Preview openen
+                                </a>
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
-        </footer>
-    </section>
-        }
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="submit" class="btn btn-primary">@submitLabel</button>
+                        <button class="btn btn-default modal-dismiss">Annuleren</button>
+                    </div>
+                </div>
+            </footer>
+        </section>
+    }
 </div>
+
 <script>
     (function () {
-        const targetSelect = document.getElementById('DocTarget');
-        const clientRow = document.getElementById('ClientSelectRow');
-        const clientSelect = document.getElementById('ClientAccountIdSelect');
+        const isEditMode = @((isEditMode ? "true" : "false"));
+        const targetSelect = document.getElementById(isEditMode ? 'EditDocTarget' : 'DocTarget');
+        const clientRow = document.getElementById(isEditMode ? 'EditClientSelectRow' : 'ClientSelectRow');
+        const clientSelect = document.getElementById(isEditMode ? 'EditClientAccountIdSelect' : 'ClientAccountIdSelect');
 
         const updateTarget = () => {
             const isClient = targetSelect.value === 'Client';

@@ -99,7 +99,8 @@
                     Document = new ProjectDocBO { ProjectId = Model.ProjectId, ClientAccountId = Model.ClientAccountId, Type = ProjectDocType.Sales },
                                 Clients = Model.Clients,
                                 Target = Model.ClientAccountId > 0 ? "Client" : "Project",
-                                SelectedClientAccountId = Model.ClientAccountId > 0 ? Model.ClientAccountId : null
+                                SelectedClientAccountId = Model.ClientAccountId > 0 ? Model.ClientAccountId : null,
+                                IsEditMode = false
                                 })
             </div>
         </div>
@@ -108,8 +109,8 @@
 <div id="modaldeletedoc" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-doc-container"></div>
 </div>
-<div id="modaladddoc" class="modal-block modal-block-primary mfp-hide">
-    <div id="add-doc-container"></div>
+<div id="modaleditdoc" class="modal-block modal-block-primary mfp-hide">
+    <div id="edit-doc-container"></div>
 </div>
 @section PageScripts
 {
@@ -207,6 +208,24 @@
         // ===== Custom zoekveld =====
         $('#search-term').on('keyup', function () {
           table.search($(this).val()).draw();
+        });
+
+         // EDIT
+        $(document).on('click', '.editDoc', function (e) {
+          e.preventDefault();
+          const id = $(this).data('id');
+
+          $('#edit-doc-container').empty();
+
+          $.get('@Url.Action("ModalEditDoc", "Projecten")', { id: id })
+            .done(function (html) {
+              $('#edit-doc-container').html(html);
+              $.magnificPopup.open({
+                items: { src: '#modaleditdoc' },
+                type: 'inline'
+              });
+            })
+            .fail(function () { alert('Kon de bewerkmodal niet laden.'); });
         });
 
         // DELETE

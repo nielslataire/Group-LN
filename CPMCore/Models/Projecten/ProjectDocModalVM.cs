@@ -10,5 +10,6 @@ namespace CPMCore.Models.Projecten
         public IReadOnlyList<IdNameBO> Clients { get; set; } = Array.Empty<IdNameBO>();
         public string Target { get; set; } = "Project";
         public int? SelectedClientAccountId { get; set; }
+        public bool IsEditMode { get; set; }
     }
 }

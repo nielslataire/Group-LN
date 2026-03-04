@@ -103,9 +103,12 @@
 									var asName = safe + ".pdf";                            // ext wordt in controller gefixt
 								}
 
-								<a href="@Url.Action("DownloadDoc", "Projecten", new { id = item.Docid, asName = asName })"class="me-2" data-toggle="tooltip" title="Download">
+								<a href="@Url.Action("DownloadDoc", "Projecten", new { id = item.Docid, asName = asName })" class="me-2" data-toggle="tooltip" title="Download">
 									<i class="fa fa-download"></i>
 								</a>
+								<a href="#modaleditdoc" class="me-2 editDoc" data-toggle="tooltip" title="Bewerken" data-id="@item.Docid">
+                                    <i class="fa fa-pen"></i>
+                                </a>
                                  <a href="#modaldeletedoc" data-toggle="tooltip" id="deleteDoc" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteDoc" data-id="@item.Docid"><i class="fa fa-trash "></i></a>
 							</td>
 						</tr>

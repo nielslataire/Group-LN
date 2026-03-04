@@ -4091,10 +4091,37 @@ namespace CPMCore.Controllers
                 },
                 Clients = clientsResponse.Success ? clientsResponse.Values : new List<IdNameBO>(),
                 Target = clientaccountid.HasValue && clientaccountid.Value > 0 ? "Client" : "Project",
-                SelectedClientAccountId = clientaccountid
+                SelectedClientAccountId = clientaccountid,
+                IsEditMode = false
             };
             return PartialView("Modals/_ModalAddDoc", vm);
         }
+
+        [HttpGet]
+        public IActionResult ModalEditDoc(int id)
+        {
+            var projectService = ServiceFactory.GetProjectService();
+            var response = projectService.GetProjectDoc(id);
+            if (!response.Success || response.Value is null)
+                return NotFound();
+
+            var doc = response.Value;
+            var clientService = ServiceFactory.GetClientService();
+            var clientsResponse = clientService.GetClientAccountsByProjectIdForSelect(doc.ProjectId);
+            var hasClient = doc.ClientAccountId.HasValue && doc.ClientAccountId.Value > 0;
+
+            var vm = new CPMCore.Models.Projecten.ProjectDocModalVM
+            {
+                Document = doc,
+                Clients = clientsResponse.Success ? clientsResponse.Values : new List<IdNameBO>(),
+                Target = hasClient ? "Client" : "Project",
+                SelectedClientAccountId = hasClient ? doc.ClientAccountId : null,
+                IsEditMode = true
+            };
+
+            return PartialView("Modals/_ModalAddDoc", vm);
+        }
+
         [HttpPost]
         public async Task<IActionResult> AddDocument(CPMCore.Models.Projecten.ProjectDocModalVM vm, IFormFile file)
         {
@@ -4147,6 +4174,50 @@ namespace CPMCore.Controllers
                 ? RedirectToAction("DetailDocs", new { clientaccountid = clientIdVal, projectid = model.ProjectId })
                 : RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
         }
+
+        [HttpPost]
+        public IActionResult EditDocument(CPMCore.Models.Projecten.ProjectDocModalVM vm)
+        {
+            var model = vm.Document ?? new ProjectDocBO();
+            if (model.Docid <= 0)
+                return RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
+
+            var service = ServiceFactory.GetProjectService();
+            var existingResp = service.GetProjectDoc(model.Docid);
+            if (!existingResp.Success || existingResp.Value is null)
+            {
+                AddMessage("error", "Het document kon niet worden gevonden.", "Fout!");
+                return RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
+            }
+
+            var existingDoc = existingResp.Value;
+            model.ProjectId = existingDoc.ProjectId;
+            model.Filename = existingDoc.Filename;
+
+            if (!string.Equals(vm.Target, "Client", StringComparison.OrdinalIgnoreCase))
+                model.ClientAccountId = null;
+            else
+                model.ClientAccountId = vm.SelectedClientAccountId;
+
+            if (model.ClientAccountId is int i && i <= 0)
+                model.ClientAccountId = null;
+
+            var response = service.InsertUpdateProjectDoc(model);
+            if (response.Success)
+            {
+                AddMessage("success", "Het document is bijgewerkt.", "Gelukt!");
+            }
+            else
+            {
+                AddMessage("error", "Het document kon niet worden bijgewerkt.", "Fout!");
+            }
+
+            var clientIdVal = (model.ClientAccountId is int v && v > 0) ? v : 0;
+            return clientIdVal > 0
+                ? RedirectToAction("DetailDocs", new { clientaccountid = clientIdVal, projectid = model.ProjectId })
+                : RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
+        }
+
         [HttpGet]
         public IActionResult ViewDoc(int id)
         {
