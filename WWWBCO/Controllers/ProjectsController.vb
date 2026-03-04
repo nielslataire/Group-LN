@@ -14,6 +14,9 @@ Imports System.Web.Script.Serialization
 
 Public Class ProjectsController
     Inherits System.Web.Mvc.Controller
+    Private Function RenderViewToString(viewName As String, model As Object) As String
+        Return ViewRenderHelper.RenderViewToString(Me.ControllerContext, viewName, model)
+    End Function
     ' GET: /Projects
     <Route("Projects/{id?}", Name:="ProjectById")>
     Function Index(Optional id As Integer = 0) As ActionResult
@@ -139,68 +142,230 @@ Public Class ProjectsController
     End Function
     <HttpPost>
     Function SendPlan(model As ProjectSendPlanModel) As PartialViewResult
-        If (Not ModelState.IsValid) Then Return PartialView("ModalFailPlan")
-        If (ModelState.IsValid) Then
-            Dim unit As New UnitBO
-            Dim project As New ProjectBO
-            Dim service = ServiceFactory.GetUnitService
-            Dim response = service.GetUnitById(model.UnitId)
-            If response.Success Then unit = response.Value
-            Dim service2 = ServiceFactory.GetProjectService
-            Dim response2 = service2.GetProjectByID(unit.ProjectId)
-            If response2.Success Then project = response2.Value
 
-            'Mail
-            Dim email As Object = New Email("PlanMail")
-            email.[To] = model.Email
-            email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
-            email.Title = project.CommercialTitleNL
-            email.Text = project.CommercialTextNL
-            email.Image = project.DefaultPicture.Name
-            email.Imagecaption = project.DefaultPicture.Caption
-            email.Slug = project.Slug
-            email.EmailTitle = "BCO - Uw planaanvraag"
-            email.Firstname = model.Firstname
-            email.Name = model.Name
-
-            Dim cd As System.Net.Mime.ContentDisposition
-            Dim planBytes = DownloadAssetBytes("Plans", unit.Plan)
-            Using planStream As New MemoryStream(planBytes)
-                Dim att As New System.Net.Mail.Attachment(planStream, "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString)
-                cd = att.ContentDisposition
-                cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
-                email.Attach(att)
-                email.Send()
-            End Using
-            Dim internalemail As Object = New Email("PlanInternalMail")
-            internalemail.[To] = model.Email
-            internalemail.[From] = "niels.lataire@groupln.be"
-            internalemail.Unit = unit.Type.Name & " " & unit.Name
-            internalemail.Project = project.Name
-            internalemail.Phone = model.Phone
-            internalemail.Name = model.Name
-            internalemail.Firstname = model.Firstname
-            internalemail.RequestType = "planaanvraag"
-            internalemail.RequestTitle = "Nieuwe planaanvraag"
-            internalemail.Send()
-            Dim planRequest As New ContactRequestBO With {
-                .ProjectId = project.Id,
-                .UnitId = unit.Id,
-                .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
-                .DocumentFileName = unit.Plan,
-                .RequestType = "Plan",
-                .Firstname = model.Firstname,
-                .Lastname = model.Name,
-                .Email = model.Email,
-                .Phone = model.Phone,
-                .Origin = ResolveOrigin("ProjectsController.SendPlan"),
-                .SourceSite = "BCO"
-            }
-            SaveContactRequest(planRequest)
-            Return PartialView("ModalSuccesPlan")
-        Else
+        If Not ModelState.IsValid Then
             Return PartialView("ModalFailPlan")
         End If
+
+        Try
+            Dim externalMailStatus As String = "Niet verzonden"
+            Dim internalMailStatus As String = "Niet verzonden"
+            Dim externalMailSent As Boolean = False
+            ' ---------------------------------------------------------
+            ' 1. Ophalen unit + project
+            ' ---------------------------------------------------------
+            Dim unit As UnitBO = Nothing
+            Dim project As ProjectBO = Nothing
+
+            Dim unitService = ServiceFactory.GetUnitService()
+            Dim unitResp = unitService.GetUnitById(model.UnitId)
+            If unitResp.Success = False Then Return PartialView("ModalFailPlan")
+            unit = unitResp.Value
+
+            Dim projectService = ServiceFactory.GetProjectService()
+            Dim projectResp = projectService.GetProjectByID(unit.ProjectId)
+            If projectResp.Success = False Then Return PartialView("ModalFailPlan")
+            project = projectResp.Value
+
+            Dim planRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .UnitId = unit.Id,
+                    .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
+                    .DocumentFileName = unit.Plan,
+                    .RequestType = "Plan",
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .Origin = ResolveOrigin("ProjectsController.SendPlan"),
+                    .SourceSite = "BCO"
+                }
+
+            ' ---------------------------------------------------------
+            ' 2. Download plan via TLS 1.2
+            ' ---------------------------------------------------------
+            System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+
+            Dim fileBytes As Byte()
+
+            Try
+                fileBytes = DownloadAssetBytes("Plans", unit.Plan)
+            Catch ex As Exception
+                LogError("PLAN DOWNLOAD FAILED: " & unit.Plan, ex)
+                planRequest.ExternalMailStatus = "Mislukt"
+                planRequest.InternalMailStatus = internalMailStatus
+                SaveContactRequest(planRequest)
+                Return PartialView("ModalFailPlan")
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 3. MAIL NAAR KLANT – HTML TEMPLATE (PlanMail)
+            ' ---------------------------------------------------------
+            Try
+                Dim msg As New Net.Mail.MailMessage()
+                msg.To.Add(model.Email)
+                msg.From = New Net.Mail.MailAddress("info@bouwenconstructie.be")
+                msg.Subject = "BCO - Uw planaanvraag"
+
+                Dim emailHtml As String = RenderViewToString("~/Views/Emails/PlanMail.vbhtml", New With {
+                .To = model.Email,
+                .Projectname = project.Name & " - " & project.Postalcode.Gemeente,
+                .Title = project.CommercialTitleNL,
+                .Text = project.CommercialTextNL,
+                .Image = project.DefaultPicture.Name,
+                .Imagecaption = project.DefaultPicture.Caption,
+                .Slug = project.Slug,
+                .EmailTitle = "BCO - Uw planaanvraag",
+                .Firstname = model.Firstname,
+                .Name = model.Name
+            })
+
+                msg.Body = emailHtml
+                msg.IsBodyHtml = True
+
+                ' Attachment
+                Dim stream As New MemoryStream(fileBytes)
+                Dim attName As String = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan)
+                Dim att As New Net.Mail.Attachment(stream, attName)
+                msg.Attachments.Add(att)
+
+                ' SMTP
+                Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
+                smtp.EnableSsl = True
+                smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+
+                smtp.Send(msg)
+                externalMailStatus = "Verzonden"
+                externalMailSent = True
+            Catch ex As Exception
+                LogError("SENDPLAN: MAIL TO CUSTOMER FAILED", ex)
+                externalMailStatus = "Mislukt"
+                planRequest.ExternalMailStatus = externalMailStatus
+                planRequest.InternalMailStatus = internalMailStatus
+                SaveContactRequest(planRequest)
+                Return PartialView("ModalFailPlan")
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 4. INTERNE MAIL (PlanInternalMail)
+            ' ---------------------------------------------------------
+            Try
+                Dim msg2 As New Net.Mail.MailMessage()
+                msg2.To.Add("niels.lataire@groupln.be")
+                msg2.From = New Net.Mail.MailAddress("info@bouwenconstructie.be")
+                msg2.Subject = "Nieuwe planaanvraag"
+
+                Dim internalHtml As String = RenderViewToString("~/Views/Emails/PlanInternalMail.vbhtml", New With {
+                .Project = project.Name,
+                .Phone = model.Phone,
+                .Name = model.Name,
+                .Firstname = model.Firstname,
+                .RequestType = "planaanvraag",
+                .RequestTitle = "Website BCO - Nieuwe planaanvraag",
+                .Unit = unit.Type.Name & " " & unit.Name,
+                .Question = "",
+                .To = model.Email
+            })
+
+                msg2.Body = internalHtml
+                msg2.IsBodyHtml = True
+
+                Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
+                smtp2.EnableSsl = True
+                smtp2.Credentials = New NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+
+                smtp2.Send(msg2)
+                internalMailStatus = "Verzonden"
+
+            Catch ex As Exception
+                LogError("SENDPLAN: INTERNAL MAIL FAILED", ex)
+                internalMailStatus = "Mislukt"
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 5. Succes
+            ' ---------------------------------------------------------
+            planRequest.ExternalMailStatus = externalMailStatus
+            planRequest.InternalMailStatus = internalMailStatus
+            SaveContactRequest(planRequest)
+            If Not externalMailSent Then Return PartialView("ModalFailPlan")
+            Return PartialView("ModalSuccesPlan")
+
+        Catch ex As Exception
+            LogError("SENDPLAN: UNEXPECTED ERROR", ex)
+            Return PartialView("ModalFailPlan")
+        End Try
+
+
+
+
+
+
+        'If (Not ModelState.IsValid) Then Return PartialView("ModalFailPlan")
+        'If (ModelState.IsValid) Then
+        '    Dim unit As New UnitBO
+        '    Dim project As New ProjectBO
+        '    Dim service = ServiceFactory.GetUnitService
+        '    Dim response = service.GetUnitById(model.UnitId)
+        '    If response.Success Then unit = response.Value
+        '    Dim service2 = ServiceFactory.GetProjectService
+        '    Dim response2 = service2.GetProjectByID(unit.ProjectId)
+        '    If response2.Success Then project = response2.Value
+
+        '    'Mail
+        '    Dim email As Object = New Email("PlanMail")
+        '    email.[To] = model.Email
+        '    email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+        '    email.Title = project.CommercialTitleNL
+        '    email.Text = project.CommercialTextNL
+        '    email.Image = project.DefaultPicture.Name
+        '    email.Imagecaption = project.DefaultPicture.Caption
+        '    email.Slug = project.Slug
+        '    email.EmailTitle = "BCO - Uw planaanvraag"
+        '    email.Firstname = model.Firstname
+        '    email.Name = model.Name
+
+        '    Dim cd As System.Net.Mime.ContentDisposition
+        '    Dim planBytes = DownloadAssetBytes("Plans", unit.Plan)
+        '    Using planStream As New MemoryStream(planBytes)
+        '        Dim att As New System.Net.Mail.Attachment(planStream, "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString)
+        '        cd = att.ContentDisposition
+        '        cd.FileName = "Plan " & unit.Type.Name & " " & unit.Name & " - " & project.Name & Path.GetExtension(unit.Plan).ToString
+        '        email.Attach(att)
+        '        email.Send()
+        '    End Using
+        '    Dim internalemail As Object = New Email("PlanInternalMail")
+        '    internalemail.[To] = model.Email
+        '    internalemail.[From] = "niels.lataire@groupln.be"
+        '    internalemail.Unit = unit.Type.Name & " " & unit.Name
+        '    internalemail.Project = project.Name
+        '    internalemail.Phone = model.Phone
+        '    internalemail.Name = model.Name
+        '    internalemail.Firstname = model.Firstname
+        '    internalemail.RequestType = "planaanvraag"
+        '    internalemail.RequestTitle = "Nieuwe planaanvraag"
+        '    internalemail.Send()
+        '    Dim planRequest As New ContactRequestBO With {
+        '        .ProjectId = project.Id,
+        '        .UnitId = unit.Id,
+        '        .DocumentName = "Plan " & unit.Type.Name & " " & unit.Name,
+        '        .DocumentFileName = unit.Plan,
+        '        .RequestType = "Plan",
+        '        .Firstname = model.Firstname,
+        '        .Lastname = model.Name,
+        '        .Email = model.Email,
+        '        .Phone = model.Phone,
+        '        .Origin = ResolveOrigin("ProjectsController.SendPlan"),
+        '        .SourceSite = "BCO"
+        '    }
+        '    SaveContactRequest(planRequest)
+        '    Return PartialView("ModalSuccesPlan")
+        'Else
+        '    Return PartialView("ModalFailPlan")
+        'End If
     End Function
     <HttpGet>
     Function SendDoc(id As Integer) As ActionResult
@@ -216,133 +381,449 @@ Public Class ProjectsController
     End Function
     <HttpPost>
     Function SendDoc(model As ProjectSendDocModel) As PartialViewResult
-        If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
-        If (ModelState.IsValid) Then
-            Dim Doc As New ProjectDocBO
-            Dim project As New ProjectBO
-
-            Dim service2 = ServiceFactory.GetProjectService
-            Doc = service2.GetProjectDoc(model.DocId).Value
-            If Doc Is Nothing Then Return PartialView("ModalFailDoc")
-            Dim response2 = service2.GetProjectByID(Doc.ProjectId)
-            If response2.Success Then project = response2.Value
-
-            'Mail
-            Dim email As Object = New Email("PlanMail")
-            email.[To] = model.Email
-            email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
-            email.Title = project.CommercialTitleNL
-            email.Text = project.CommercialTextNL
-            email.Image = project.DefaultPicture.Name
-            email.Imagecaption = project.DefaultPicture.Caption
-            email.Slug = project.Slug
-            email.EmailTitle = "BCO - Uw documentaanvraag"
-            email.Firstname = model.Firstname
-            email.Name = model.Name
-            Dim cd As System.Net.Mime.ContentDisposition
-            Dim docBytes = DownloadAssetBytes("docs", Doc.Filename)
-            Using docStream As New MemoryStream(docBytes)
-                Dim att As New System.Net.Mail.Attachment(docStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
-                cd = att.ContentDisposition
-                cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
-                email.Attach(att)
-                email.Send()
-            End Using
-
-            Dim internalemail As Object = New Email("PlanInternalMail")
-            internalemail.[To] = model.Email
-            internalemail.[From] = "niels.lataire@groupln.be"
-            internalemail.Project = project.Name
-            internalemail.Phone = model.Phone
-            internalemail.Name = model.Name
-            internalemail.Firstname = model.Firstname
-            internalemail.RequestType = "documentaanvraag"
-            internalemail.RequestTitle = "Nieuwe documentaanvraag"
-            internalemail.Send()
-            Dim contactRequest As New ContactRequestBO With {
-                .ProjectId = project.Id,
-                .DocumentId = Doc.Docid,
-                .DocumentName = Doc.Name,
-                .DocumentFileName = Doc.Filename,
-                .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
-                .Firstname = model.Firstname,
-                .Lastname = model.Name,
-                .Email = model.Email,
-                .Phone = model.Phone,
-                .RequestType = "Document",
-                .Origin = ResolveOrigin("ProjectsController.SendDoc"),
-                .SourceSite = "BCO"
-            }
-            SaveContactRequest(contactRequest)
-            Return PartialView("ModalSuccesDoc")
-        Else
+        If Not ModelState.IsValid Then
             Return PartialView("ModalFailDoc")
         End If
+
+        Try
+            Dim externalMailStatus As String = "Niet verzonden"
+            Dim internalMailStatus As String = "Niet verzonden"
+            Dim externalMailSent As Boolean = False
+            ' ---------------------------------------------------------
+            ' 1. Ophalen document + project
+            ' ---------------------------------------------------------
+            Dim service = ServiceFactory.GetProjectService()
+
+            Dim Doc = service.GetProjectDoc(model.DocId).Value
+            If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+
+            Dim project As ProjectBO = Nothing
+            Dim resp = service.GetProjectByID(Doc.ProjectId)
+            If resp.Success Then project = resp.Value Else Return PartialView("ModalFailDoc")
+
+            Dim contactRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .DocumentId = Doc.Docid,
+                    .DocumentName = Doc.Name,
+                    .DocumentFileName = Doc.Filename,
+                    .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "Document",
+                    .Origin = ResolveOrigin("ProjectsController.SendDoc"),
+                    .SourceSite = "BCO"
+                }
+
+            ' ---------------------------------------------------------
+            ' 2. Download bestand (document) via TLS 1.2
+            ' ---------------------------------------------------------
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12
+
+            Dim fileBytes As Byte()
+
+            Try
+                fileBytes = DownloadAssetBytes("docs", Doc.Filename)
+            Catch ex As Exception
+                LogError("DOC DOWNLOAD FAILED: " & Doc.Filename, ex)
+                contactRequest.ExternalMailStatus = "Mislukt"
+                contactRequest.InternalMailStatus = internalMailStatus
+                SaveContactRequest(contactRequest)
+                Return PartialView("ModalFailDoc")
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 3. MAIL NAAR KLANT – HTML TEMPLATE (PlanMail)
+            ' ---------------------------------------------------------
+            Try
+                Dim msg As New Net.Mail.MailMessage()
+                msg.To.Add(model.Email)
+                msg.From = New Net.Mail.MailAddress("info@bouwenconstructie.be")
+                msg.Subject = "BCO - Uw documentaanvraag"
+
+                ' HTML body van jouw template
+                Dim emailHtml As String = RenderViewToString("~/Views/Emails/PlanMail.vbhtml", New With {
+                .To = model.Email,
+                .Projectname = project.Name & " - " & project.Postalcode.Gemeente,
+                .Title = project.CommercialTitleNL,
+                .Text = project.CommercialTextNL,
+                .Image = project.DefaultPicture.Name,
+                .Imagecaption = project.DefaultPicture.Caption,
+                .Slug = project.Slug,
+                .EmailTitle = "BCO - Uw documentaanvraag",
+                .Firstname = model.Firstname,
+                .Name = model.Name
+            })
+
+                msg.Body = emailHtml
+                msg.IsBodyHtml = True
+
+                ' Attachment toevoegen
+                Dim stream As New MemoryStream(fileBytes)
+                Dim att As New Net.Mail.Attachment(stream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename))
+                msg.Attachments.Add(att)
+
+                ' SMTP
+                Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
+                smtp.EnableSsl = True
+                smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+
+                smtp.Send(msg)
+                externalMailStatus = "Verzonden"
+                externalMailSent = True
+            Catch ex As Exception
+                LogError("SENDDOC: MAIL TO CUSTOMER FAILED", ex)
+                externalMailStatus = "Mislukt"
+                contactRequest.ExternalMailStatus = externalMailStatus
+                contactRequest.InternalMailStatus = internalMailStatus
+                SaveContactRequest(contactRequest)
+                Return PartialView("ModalFailDoc")
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 4. INTERNE MAIL (PlanInternalMail)
+            ' ---------------------------------------------------------
+            Try
+                Dim msg2 As New Net.Mail.MailMessage()
+                msg2.To.Add("niels.lataire@groupln.be")
+                msg2.From = New Net.Mail.MailAddress("info@bouwenconstructie.be")
+                msg2.Subject = "Nieuwe documentaanvraag"
+
+                Dim internalHtml As String = RenderViewToString("~/Views/Emails/PlanInternalMail.vbhtml", New With {
+                .Project = project.Name,
+                .Phone = model.Phone,
+                .Name = model.Name,
+                .Firstname = model.Firstname,
+                .RequestType = "documentaanvraag",
+                .RequestTitle = "Website BCO - Nieuwe documentaanvraag",
+                .Unit = "",
+                .Question = "",
+                .To = model.Email
+            })
+
+                msg2.Body = internalHtml
+                msg2.IsBodyHtml = True
+
+                Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
+                smtp2.EnableSsl = True
+                smtp2.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+
+                smtp2.Send(msg2)
+                internalMailStatus = "Verzonden"
+            Catch ex As Exception
+                LogError("SENDDOC: INTERNAL MAIL FAILED", ex)
+                internalMailStatus = "Mislukt"
+                ' interne mail mag falen → maar klantmail is al verstuurd
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 5. Succes
+            ' ---------------------------------------------------------
+            contactRequest.ExternalMailStatus = externalMailStatus
+            contactRequest.InternalMailStatus = internalMailStatus
+            SaveContactRequest(contactRequest)
+            If Not externalMailSent Then Return PartialView("ModalFailDoc")
+            Return PartialView("ModalSuccesDoc")
+
+        Catch ex As Exception
+            LogError("SENDDOC: UNEXPECTED ERROR", ex)
+            Return PartialView("ModalFailDoc")
+        End Try
+
+
+
+
+
+        'If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
+        'If (ModelState.IsValid) Then
+        '    Dim Doc As New ProjectDocBO
+        '    Dim project As New ProjectBO
+
+        '    Dim service2 = ServiceFactory.GetProjectService
+        '    Doc = service2.GetProjectDoc(model.DocId).Value
+        '    If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+        '    Dim response2 = service2.GetProjectByID(Doc.ProjectId)
+        '    If response2.Success Then project = response2.Value
+
+        '    'Mail
+        '    Dim email As Object = New Email("PlanMail")
+        '    email.[To] = model.Email
+        '    email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+        '    email.Title = project.CommercialTitleNL
+        '    email.Text = project.CommercialTextNL
+        '    email.Image = project.DefaultPicture.Name
+        '    email.Imagecaption = project.DefaultPicture.Caption
+        '    email.Slug = project.Slug
+        '    email.EmailTitle = "BCO - Uw documentaanvraag"
+        '    email.Firstname = model.Firstname
+        '    email.Name = model.Name
+        '    Dim cd As System.Net.Mime.ContentDisposition
+        '    Dim docBytes = DownloadAssetBytes("docs", Doc.Filename)
+        '    Using docStream As New MemoryStream(docBytes)
+        '        Dim att As New System.Net.Mail.Attachment(docStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+        '        cd = att.ContentDisposition
+        '        cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+        '        email.Attach(att)
+        '        email.Send()
+        '    End Using
+
+        '    Dim internalemail As Object = New Email("PlanInternalMail")
+        '    internalemail.[To] = model.Email
+        '    internalemail.[From] = "niels.lataire@groupln.be"
+        '    internalemail.Project = project.Name
+        '    internalemail.Phone = model.Phone
+        '    internalemail.Name = model.Name
+        '    internalemail.Firstname = model.Firstname
+        '    internalemail.RequestType = "documentaanvraag"
+        '    internalemail.RequestTitle = "Nieuwe documentaanvraag"
+        '    internalemail.Send()
+        '    Dim contactRequest As New ContactRequestBO With {
+        '        .ProjectId = project.Id,
+        '        .DocumentId = Doc.Docid,
+        '        .DocumentName = Doc.Name,
+        '        .DocumentFileName = Doc.Filename,
+        '        .DocumentType = If(Doc.IsBrochure, "Brochure", Doc.Type.ToString()),
+        '        .Firstname = model.Firstname,
+        '        .Lastname = model.Name,
+        '        .Email = model.Email,
+        '        .Phone = model.Phone,
+        '        .RequestType = "Document",
+        '        .Origin = ResolveOrigin("ProjectsController.SendDoc"),
+        '        .SourceSite = "BCO"
+        '    }
+        '    SaveContactRequest(contactRequest)
+        '    Return PartialView("ModalSuccesDoc")
+        'Else
+        '    Return PartialView("ModalFailDoc")
+        'End If
     End Function
     <HttpPost>
     Function SendBrochure(model As ProjectSendBrochureModel) As PartialViewResult
-        If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
-        If (ModelState.IsValid) Then
-            Dim Doc As New ProjectDocBO
-            Dim project As New ProjectBO
-
-            Dim service2 = ServiceFactory.GetProjectService
-            Doc = service2.GetProjectDoc(model.DocId).Value
-            If Doc Is Nothing Then Return PartialView("ModalFailDoc")
-            Dim response2 = service2.GetProjectByID(Doc.ProjectId)
-            If response2.Success Then project = response2.Value
-
-            Dim email As Object = New Email("PlanMail")
-            email.[To] = model.Email
-            email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
-            email.Title = project.CommercialTitleNL
-            email.Text = project.CommercialTextNL
-            email.Image = project.DefaultPicture.Name
-            email.Imagecaption = project.DefaultPicture.Caption
-            email.Slug = project.Slug
-            email.EmailTitle = "BCO - Uw brochureaanvraag"
-            email.Firstname = model.Firstname
-            email.Name = model.Name
-            email.Phone = model.Phone
-            Dim cd As System.Net.Mime.ContentDisposition
-            Dim brochureBytes = DownloadAssetBytes("docs", Doc.Filename)
-            Using brochureStream As New MemoryStream(brochureBytes)
-                Dim att As New System.Net.Mail.Attachment(brochureStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
-                cd = att.ContentDisposition
-                cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
-                email.Attach(att)
-                email.Send()
-            End Using
-
-            Dim internalemail As Object = New Email("PlanInternalMail")
-            internalemail.[To] = model.Email
-            internalemail.[From] = "niels.lataire@groupln.be"
-            internalemail.Project = project.Name
-            internalemail.Phone = model.Phone
-            internalemail.Name = model.Name
-            internalemail.Firstname = model.Firstname
-            internalemail.RequestType = "brochureaanvraag"
-            internalemail.RequestTitle = "Nieuwe brochureaanvraag"
-            internalemail.Send()
-            Dim brochureRequest As New ContactRequestBO With {
-                .ProjectId = project.Id,
-                .DocumentId = Doc.Docid,
-                .DocumentName = Doc.Name,
-                .DocumentFileName = Doc.Filename,
-                .DocumentType = "Brochure",
-                .Firstname = model.Firstname,
-                .Lastname = model.Name,
-                .Email = model.Email,
-                .Phone = model.Phone,
-                .RequestType = "Brochure",
-                .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
-                .SourceSite = "BCO"
-            }
-            SaveContactRequest(brochureRequest)
-            Return PartialView("ModalSuccesDoc")
-        Else
+        If Not ModelState.IsValid Then
             Return PartialView("ModalFailDoc")
         End If
+
+        Try
+            Dim externalMailStatus As String = "Niet verzonden"
+            Dim internalMailStatus As String = "Niet verzonden"
+            Dim externalMailSent As Boolean = False
+            ' ---------------------------------------------------------
+            ' 1. Ophalen brochure + project
+            ' ---------------------------------------------------------
+            Dim service = ServiceFactory.GetProjectService()
+
+            Dim Doc = service.GetProjectDoc(model.DocId).Value
+            If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+
+            Dim project As ProjectBO = Nothing
+            Dim resp = service.GetProjectByID(Doc.ProjectId)
+            If resp.Success Then project = resp.Value Else Return PartialView("ModalFailDoc")
+            Dim contactRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .DocumentId = Doc.Docid,
+                    .DocumentName = Doc.Name,
+                    .DocumentFileName = Doc.Filename,
+                    .DocumentType = "Brochure",
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "Brochure",
+                    .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
+                    .SourceSite = "BCO"
+                }
+
+            ' ---------------------------------------------------------
+            ' 2. Download brochure via TLS 1.2
+            ' ---------------------------------------------------------
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12
+
+            Dim fileBytes As Byte()
+
+            Try
+                fileBytes = DownloadAssetBytes("docs", Doc.Filename)
+            Catch ex As Exception
+                LogError("BROCHURE DOWNLOAD FAILED: " & Doc.Filename, ex)
+                contactRequest.ExternalMailStatus = "Mislukt"
+                contactRequest.InternalMailStatus = internalMailStatus
+                SaveContactRequest(contactRequest)
+                Return PartialView("ModalFailDoc")
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 3. MAIL NAAR KLANT – HTML TEMPLATE (PlanMail)
+            ' ---------------------------------------------------------
+            Try
+                Dim msg As New Net.Mail.MailMessage()
+                msg.To.Add(model.Email)
+                msg.From = New Net.Mail.MailAddress("info@bouwenconstructie.be")
+                msg.Subject = "BCO - Uw brochureaanvraag"
+
+                Dim emailHtml As String = RenderViewToString("~/Views/Emails/PlanMail.vbhtml", New With {
+                .To = model.Email,
+                .Projectname = project.Name & " - " & project.Postalcode.Gemeente,
+                .Title = project.CommercialTitleNL,
+                .Text = project.CommercialTextNL,
+                .Image = project.DefaultPicture.Name,
+                .Imagecaption = project.DefaultPicture.Caption,
+                .Slug = project.Slug,
+                .EmailTitle = "BCO - Uw brochureaanvraag",
+                .Firstname = model.Firstname,
+                .Name = model.Name
+            })
+
+                msg.Body = emailHtml
+                msg.IsBodyHtml = True
+
+                ' Attachment toevoegen
+                Dim stream As New MemoryStream(fileBytes)
+                Dim att As New Net.Mail.Attachment(stream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename))
+                msg.Attachments.Add(att)
+
+                ' SMTP
+                Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
+                smtp.EnableSsl = True
+                smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+
+                smtp.Send(msg)
+                externalMailStatus = "Verzonden"
+                externalMailSent = True
+            Catch ex As Exception
+                LogError("SENDBROCHURE: MAIL TO CUSTOMER FAILED", ex)
+                externalMailStatus = "Mislukt"
+                contactRequest.ExternalMailStatus = externalMailStatus
+                contactRequest.InternalMailStatus = internalMailStatus
+                SaveContactRequest(contactRequest)
+                Return PartialView("ModalFailDoc")
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 4. INTERNE MAIL (PlanInternalMail)
+            ' ---------------------------------------------------------
+            Try
+                Dim msg2 As New Net.Mail.MailMessage()
+                msg2.To.Add("niels.lataire@groupln.be")
+                msg2.From = New Net.Mail.MailAddress("info@bouwenconstructie.be")
+                msg2.Subject = "Nieuwe brochureaanvraag"
+
+                Dim internalHtml As String = RenderViewToString("~/Views/Emails/PlanInternalMail.vbhtml", New With {
+                .Project = project.Name,
+                .Phone = model.Phone,
+                .Name = model.Name,
+                .Firstname = model.Firstname,
+                .RequestType = "brochureaanvraag",
+                .RequestTitle = "Website BCO - Nieuwe brochureaanvraag",
+                .Unit = "",
+                .Question = "",
+                .To = model.Email
+            })
+
+                msg2.Body = internalHtml
+                msg2.IsBodyHtml = True
+
+                Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
+                smtp2.EnableSsl = True
+                smtp2.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+
+                smtp2.Send(msg2)
+                internalMailStatus = "Verzonden"
+            Catch ex As Exception
+                LogError("SENDBROCHURE: INTERNAL MAIL FAILED", ex)
+                internalMailStatus = "Mislukt"
+                ' interne mail mag falen → maar klantmail is al verstuurd
+            End Try
+
+
+            ' ---------------------------------------------------------
+            ' 5. Succes
+            ' ---------------------------------------------------------
+            contactRequest.ExternalMailStatus = externalMailStatus
+            contactRequest.InternalMailStatus = internalMailStatus
+            SaveContactRequest(contactRequest)
+            If Not externalMailSent Then Return PartialView("ModalFailDoc")
+            Return PartialView("ModalSuccesDoc")
+
+        Catch ex As Exception
+            LogError("SENDBROCHURE: UNEXPECTED ERROR", ex)
+            Return PartialView("ModalFailDoc")
+        End Try
+
+
+        'If (Not ModelState.IsValid) Then Return PartialView("ModalFailDoc")
+
+        'Try
+        '    Dim Doc As New ProjectDocBO
+        '    Dim project As New ProjectBO
+
+        '    Dim service2 = ServiceFactory.GetProjectService
+        '    Doc = service2.GetProjectDoc(model.DocId).Value
+        '    If Doc Is Nothing Then Return PartialView("ModalFailDoc")
+        '    Dim response2 = service2.GetProjectByID(Doc.ProjectId)
+        '    If response2.Success Then
+        '        project = response2.Value
+        '    Else
+        '        Return PartialView("ModalFailDoc")
+        '    End If
+
+
+        '    Dim email As Object = New Email("PlanMail")
+        '    email.[To] = model.Email
+        '    email.Projectname = project.Name & " - " & project.Postalcode.Gemeente
+        '    email.Title = project.CommercialTitleNL
+        '    email.Text = project.CommercialTextNL
+        '    email.Image = project.DefaultPicture.Name
+        '    email.Imagecaption = project.DefaultPicture.Caption
+        '    email.Slug = project.Slug
+        '    email.EmailTitle = "BCO - Uw brochureaanvraag"
+        '    email.Firstname = model.Firstname
+        '    email.Name = model.Name
+        '    email.Phone = model.Phone
+        '    Dim cd As System.Net.Mime.ContentDisposition
+        '    Dim brochureBytes = DownloadAssetBytes("docs", Doc.Filename)
+        '    Using brochureStream As New MemoryStream(brochureBytes)
+        '        Dim att As New System.Net.Mail.Attachment(brochureStream, Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString)
+        '        cd = att.ContentDisposition
+        '        cd.FileName = Doc.Name & " - " & project.Name & Path.GetExtension(Doc.Filename).ToString
+        '        email.Attach(att)
+        '        email.Send()
+        '    End Using
+
+        '    Dim internalemail As Object = New Email("PlanInternalMail")
+        '    internalemail.[To] = model.Email
+        '    internalemail.[From] = "niels.lataire@groupln.be"
+        '    internalemail.Project = project.Name
+        '    internalemail.Phone = model.Phone
+        '    internalemail.Name = model.Name
+        '    internalemail.Firstname = model.Firstname
+        '    internalemail.RequestType = "brochureaanvraag"
+        '    internalemail.RequestTitle = "Nieuwe brochureaanvraag"
+        '    internalemail.Send()
+        '    Dim brochureRequest As New ContactRequestBO With {
+        '        .ProjectId = project.Id,
+        '        .DocumentId = Doc.Docid,
+        '        .DocumentName = Doc.Name,
+        '        .DocumentFileName = Doc.Filename,
+        '        .DocumentType = "Brochure",
+        '        .Firstname = model.Firstname,
+        '        .Lastname = model.Name,
+        '        .Email = model.Email,
+        '        .Phone = model.Phone,
+        '        .RequestType = "Brochure",
+        '        .Origin = ResolveOrigin("ProjectsController.SendBrochure"),
+        '        .SourceSite = "BCO"
+        '    }
+        '    SaveContactRequest(brochureRequest)
+        '    Return PartialView("ModalSuccesDoc")
+        'Catch ex As Exception
+        '    LogError("SENDBROCHURE FAILED", ex)
+        '    Return PartialView("ModalFailDoc")
+        'End Try
     End Function
     <HttpGet>
     Function SendMail(id As Integer) As ActionResult

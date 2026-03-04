@@ -14,7 +14,7 @@
     </div>
     <hr />
     <div class="col-md-12 m-md">
-        <p>Er is iets misgelopen, probeer het opnieuw of neem contact met ons op via <a href="mailto:info@bouwenconstructie.be">mail</a></p>
+        <p>Er is iets misgelopen, probeer het opnieuw of neem contact met ons op via <a href="mailto:info@groupln.be">mail</a></p>
     </div>
 </div>
 

@@ -298,7 +298,7 @@
                         <td>
                             <img class="emailImage"
                                  width="640"
-                                 src="http://www.groupln.be/uploads/pictures/@Model.Image"
+                                 src="http://cpm.groupln.be/assets/pictures/@Model.Image"
                                  alt="@Model.Imagecaption">
                         </td>
                     </tr>
@@ -345,7 +345,7 @@
                     <tr>
                         <td align="center" style="padding:20px 12px; font-size:12px; color:#555;">
                             Uw mail: @Model.To<br>
-                            Copyright 2025 - Group LN
+                            Copyright 2026 - Group LN
                         </td>
                     </tr>
                 </tbody>

@@ -2,3 +2,22 @@
 2026-03-03 17:49:37
 CONTACTREQUEST SAVE FAILED: Invalid object name 'ContactRequests'.
 
+--------------------------------------------------
+2026-03-04 10:14:10
+CONTACTREQUEST SAVE FAILED: Invalid object name 'ContactRequests'.
+
+--------------------------------------------------
+2026-03-04 10:56:22
+CONTACT: MAIL TO CUSTOMER FAILED
+EXCEPTION:
+System.Threading.ThreadAbortException: De thread is afgebroken.
+   bij WWWBCO.ContactController.Send(MailModel model) in E:\TFS\WWWBCO\Controllers\ContactController.vb:regel 65
+
+--------------------------------------------------
+2026-03-04 10:56:22
+CONTACT: INTERNAL MAIL FAILED
+EXCEPTION:
+System.Threading.ThreadAbortException: De thread is afgebroken.
+   bij Postal.Email..ctor(String viewName)
+   bij WWWBCO.ContactController.Send(MailModel model) in E:\TFS\WWWBCO\Controllers\ContactController.vb:regel 74
+

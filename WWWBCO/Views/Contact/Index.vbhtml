@@ -27,12 +27,12 @@ End Code
         <div class="col-md-6">
 
             @*<div class="alert alert-success hidden" id="contactSuccess">
-                <strong>Success!</strong> Your message has been sent to us.
-            </div>
+            <strong>Success!</strong> Your message has been sent to us.
+        </div>
 
-            <div class="alert alert-danger hidden" id="contactError">
-                <strong>Error!</strong> There was an error sending your message.
-            </div>*@
+        <div class="alert alert-danger hidden" id="contactError">
+            <strong>Error!</strong> There was an error sending your message.
+        </div>*@
 
             <h2 class="mb-sm mt-sm"><strong>Contacteer</strong> Ons</h2>
             @Using Html.BeginForm("Send", "Contact", FormMethod.Post, New With {.id = "FormMail", .class = "form-horizontal"})
@@ -47,46 +47,54 @@ End Code
                                 <label>Uw email adres *</label>
                                 @Html.TextBoxFor(Function(m) m.EmailTo, New With {.class = "form-control"})
                             </div>
-                           </div>
+                        </div>
                     </div>
                     <div class="row">
                         <div class="form-group">
                             <div class="col-md-12">
                                 <label>Uw telefoonnummer/GSM</label>
                                 @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "form-control"})
-                                </div>
                             </div>
+                        </div>
                     </div>
-                            <div class="row">
-                                <div class="form-group">
-                                    <div class="col-md-12">
-                                        <label>Onderwerp</label>
-                                        @Html.TextBoxFor(Function(m) m.Title, New With {.class = "form-control"})
-                                        @*<input type="text" value="" data-msg-required="Please enter the subject." maxlength="100" class="form-control" name="subject" id="subject" required>*@
-                                    </div>
-                                </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <label>Onderwerp</label>
+                                @Html.TextBoxFor(Function(m) m.Title, New With {.class = "form-control"})
+                                @*<input type="text" value="" data-msg-required="Please enter the subject." maxlength="100" class="form-control" name="subject" id="subject" required>*@
                             </div>
-                            <div class="row">
-                                <div class="form-group">
-                                    <div class="col-md-12">
-                                        <label>Bericht *</label>
-                                        @Html.TextAreaFor(Function(m) m.Message, New With {.rows = "10", .id = "message", .class = "form-control"})
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="form-group">
+                            <div class="col-md-12">
+                                <label>Bericht *</label>
+                                @Html.TextAreaFor(Function(m) m.Message, New With {.rows = "10", .id = "message", .class = "form-control"})
 
 
-                                        @*<textarea maxlength="5000" data-msg-required="Please enter your message." rows="10" class="form-control" name="message" id="message" required></textarea>*@
-                                    </div>
-                                </div>
+                                @*<textarea maxlength="5000" data-msg-required="Please enter your message." rows="10" class="form-control" name="message" id="message" required></textarea>*@
                             </div>
-                            <div class="form-row">
-                                <div class="form-group col">
-                                    <div class="g-recaptcha" data-sitekey="6LfcFIoUAAAAANVEZIKVDzRsrGbRflktDHkaBPrW"></div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <button class="btn btn-primary btn-lg mb-xlg g-recaptcha" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx" data-callback='onSubmit'>Verstuur bericht</button>
-                                </div>
-                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            @*@Html.Hidden("recaptcha-action", "", New With {.id = "recaptcha-action"})
+                        @Html.Hidden("g-recaptcha-response", "", New With {.id = "g-recaptcha-response"})*@
+                            <button type="submit" class="btn btn-primary btn-lg mb-xlg" id="contact-submit">Verstuur bericht</button>
+                            @*<button type="submit" class="g-recaptcha btn btn-primary btn-lg mb-xlg" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx" data-callback="onSubmit">Verstuur bericht</button>*@
+                        </div>
+                    </div>
+                    @*<div class="form-row">
+                        <div class="form-group col">
+                            <div class="g-recaptcha" data-sitekey="6LfcFIoUAAAAANVEZIKVDzRsrGbRflktDHkaBPrW"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button class="btn btn-primary btn-lg mb-xlg g-recaptcha" data-sitekey="6Lc7Ym0UAAAAAA_D2oTuEqUSZilBdJYgdRVbtISx" data-callback='onSubmit'>Verstuur bericht</button>
+                        </div>
+                    </div>*@
                 </text>
             End Using
 

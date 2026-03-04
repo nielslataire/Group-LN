@@ -269,7 +269,7 @@ color:#445566;
                                                     <tbody>
                                                         <tr>
                                                             <td class="devicewidth2" style="font-family: arial; font-size: 12px; color: rgb(85, 85, 85); line-height: 20px; padding: 20px 12px 15px; text-align: center;">
-                                                                <br>Copyright 2017 - BCO<br><br>
+                                                                <br>Copyright 2026 - BCO<br><br>
 
                                                             </td>
                                                         </tr>

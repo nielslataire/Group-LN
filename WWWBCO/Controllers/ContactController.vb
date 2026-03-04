@@ -52,19 +52,38 @@ Public Class ContactController
         ViewData("LatestNews") = GetLatestNews(4)
         If (Not ModelState.IsValid) Then Return View("index", model)
         If (ModelState.IsValid) Then
-            Dim email As Object = New Email("ContactMail")
-            email.[To] = model.EmailTo
-            email.ContactName = model.ContactName
-            email.Title = model.Title
-            email.Message = model.Message
-            email.Send()
-            Dim internalemail As Object = New Email("InternalMail")
-            internalemail.[To] = model.EmailTo
-            internalemail.ContactName = model.ContactName
-            internalemail.Title = model.Title
-            internalemail.Message = model.Message
-            internalemail.Phone = model.Phone
-            internalemail.Send()
+            Dim externalMailStatus As String = "Niet verzonden"
+            Dim internalMailStatus As String = "Niet verzonden"
+            Dim externalMailSent As Boolean = False
+
+            Try
+                Dim email As Object = New Email("ContactMail")
+                email.[To] = model.EmailTo
+                email.ContactName = model.ContactName
+                email.Title = model.Title
+                email.Message = model.Message
+                email.Send()
+                externalMailStatus = "Verzonden"
+                externalMailSent = True
+            Catch ex As Exception
+                LogError("CONTACT: MAIL TO CUSTOMER FAILED", ex)
+                externalMailStatus = "Mislukt"
+            End Try
+
+            Try
+                Dim internalemail As Object = New Email("InternalMail")
+                internalemail.[To] = model.EmailTo
+                internalemail.ContactName = model.ContactName
+                internalemail.Title = model.Title
+                internalemail.Message = model.Message
+                internalemail.Phone = model.Phone
+                internalemail.Send()
+                internalMailStatus = "Verzonden"
+            Catch ex As Exception
+                LogError("CONTACT: INTERNAL MAIL FAILED", ex)
+                internalMailStatus = "Mislukt"
+            End Try
+
             Dim contactRequest As New ContactRequestBO With {
                 .Fullname = model.ContactName,
                 .Email = model.EmailTo,
@@ -72,15 +91,57 @@ Public Class ContactController
                 .Subject = model.Title,
                 .Question = model.Message,
                 .RequestType = "Contact",
+                .Origin = ResolveOrigin("ContactController.Send"),
                 .SourceSite = "BCO",
-                .Origin = ResolveOrigin("ContactController.Send")
+                .ExternalMailStatus = externalMailStatus,
+                .InternalMailStatus = internalMailStatus
             }
             SaveContactRequest(contactRequest)
+
+            If Not externalMailSent Then
+                AddMessage("error", "Uw bericht kon niet worden verstuurd. Probeer het opnieuw.", "Fout!")
+                Return View("index", model)
+            End If
+
+            model = New MailModel()
             AddMessage("success", "Uw bericht is verstuurd naar BCO, wij nemen zo snel mogelijk contact met u op.", "Geslaagd!")
-            Return RedirectToAction("Succes", "Contact")
+            Return View("index", model)
         Else
             Return View("index", model)
         End If
+
+
+        'If (Not ModelState.IsValid) Then Return View("index", model)
+        'If (ModelState.IsValid) Then
+        '    Dim email As Object = New Email("ContactMail")
+        '    email.[To] = model.EmailTo
+        '    email.ContactName = model.ContactName
+        '    email.Title = model.Title
+        '    email.Message = model.Message
+        '    email.Send()
+        '    Dim internalemail As Object = New Email("InternalMail")
+        '    internalemail.[To] = model.EmailTo
+        '    internalemail.ContactName = model.ContactName
+        '    internalemail.Title = model.Title
+        '    internalemail.Message = model.Message
+        '    internalemail.Phone = model.Phone
+        '    internalemail.Send()
+        '    Dim contactRequest As New ContactRequestBO With {
+        '        .Fullname = model.ContactName,
+        '        .Email = model.EmailTo,
+        '        .Phone = model.Phone,
+        '        .Subject = model.Title,
+        '        .Question = model.Message,
+        '        .RequestType = "Contact",
+        '        .SourceSite = "BCO",
+        '        .Origin = ResolveOrigin("ContactController.Send")
+        '    }
+        '    SaveContactRequest(contactRequest)
+        '    AddMessage("success", "Uw bericht is verstuurd naar BCO, wij nemen zo snel mogelijk contact met u op.", "Geslaagd!")
+        '    Return RedirectToAction("Succes", "Contact")
+        'Else
+        '    Return View("index", model)
+        'End If
     End Function
     Public Function GetLatestNews(number As Integer) As List(Of LatestNews)
         Dim service = ServiceFactory.GetProjectService

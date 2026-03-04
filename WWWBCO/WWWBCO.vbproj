@@ -246,6 +246,7 @@
     </Compile>
     <Compile Include="Helpers\Extensions.vb" />
     <Compile Include="Helpers\LatestNews.vb" />
+    <Compile Include="Helpers\ViewRenderHelper.vb" />
     <Compile Include="Models\Contact\NewsletterModel.vb" />
     <Compile Include="Models\Contact\MailModel.vb" />
     <Compile Include="Models\Projects\ProjectModel.vb" />
