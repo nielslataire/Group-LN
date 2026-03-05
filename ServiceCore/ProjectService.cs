@@ -1878,12 +1878,17 @@ namespace ServiceCore
             var response = new GetResponse<ChangeOrderBO>();
             var entities = _uow.ChangeOrders.GetNoTracking()
                 .Where(m =>
-                    m.ContractActivity.Contract.ProjectId == projectid &&
-                    m.ChangeOrderDetail.Any(i => (bool)i.Invoicable && !(bool)i.Invoiced) &&
+                   m.ContractActivity.Contract.ProjectId == projectid &&
+                    m.Invoiceable &&
+                    m.DateAgreement != null &&
+                    m.ChangeOrderDetail.Any(i => i.Invoicable != false && i.Invoiced != true) &&
                     m.ClientAccountId > 0 &&
-                    m.ClientAccount.DateDeedOfSale != null &&
-                    m.ChangeOrderDetail.Count(i => (bool)i.Invoiced) < m.ChangeOrderDetail.Count());
-
+                    m.ChangeOrderDetail.Count(i => i.Invoiced == true) < m.ChangeOrderDetail.Count())
+                .Include(m => m.ClientAccount )
+                .Include(m => m.ContractActivity)
+                .ThenInclude (m => m.Contract)
+                .ThenInclude(m => m.Company)
+                .Include(m => m.ChangeOrderDetail);
             foreach (var e in entities)
             {
                 var bo = new ChangeOrderBO();

@@ -292,7 +292,7 @@
                 clientFilter.appendChild(option);
             });
 
-            extractColumnValues(11).forEach((value) => {
+         extractColumnValues(13).forEach((value) => {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = value;
@@ -327,7 +327,8 @@
             const rowClient = normalizeText($('<div>').html(data[5]).text());
             const rowContract = normalizeText($('<div>').html(data[7]).text());
             const rowInvoiceable = normalizeText($('<div>').html(data[10]).text());
-            const rowStatus = normalizeText($('<div>').html(data[11]).text());
+          const rowStatus = normalizeText($('<div>').html(data[13]).text());
+
 
             if (clientValue && rowClient !== clientValue) return false;
             if (contractValue && rowContract !== contractValue) return false;

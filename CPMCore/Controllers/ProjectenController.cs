@@ -3009,6 +3009,8 @@ namespace CPMCore.Controllers
                 MeasurementUnit = MeasurementUnit.stuk,
                 Number = 1,
                 Commision = 20,
+                VatPercentage = 21m,
+
             }
         };
             }
@@ -3091,6 +3093,7 @@ namespace CPMCore.Controllers
                 Number = 1,
                 Price = 0m,
                 Commision = 20,
+                VatPercentage = 21m,
             };
             return PartialView("_ChangeOrderDetailRow", model);
         }
@@ -5146,6 +5149,22 @@ namespace CPMCore.Controllers
             {
                 var accountIds = respCo.Values.Select(v => v.ClientAccountID).Distinct().ToList();
                 var respClients = clientService.GetClientAccountByIds(accountIds);
+
+                using var coUow = ServiceFactory.CreateUoW();
+                var db = (cpmRunningContext)coUow.Context;
+                var detailIds = respCo.Values
+                    .SelectMany(co => co.Details ?? new List<ChangeOrderDetailBO>())
+                    .Select(d => d.Id)
+                    .Distinct()
+                    .ToList();
+
+                var invoicedAmounts = db.InvoicesDetails
+                    .AsNoTracking()
+                    .Where(d => d.LineType == "ChangeOrders" && d.ChangeOrderDetailId.HasValue && detailIds.Contains(d.ChangeOrderDetailId.Value))
+                    .GroupBy(d => d.ChangeOrderDetailId!.Value)
+                    .Select(g => new { DetailId = g.Key, Amount = g.Sum(x => x.Price ?? 0m) })
+                    .ToDictionary(x => x.DetailId, x => x.Amount);
+
                 if (respClients.Success)
                 {
                     foreach (var client in respClients.Values)
@@ -5154,6 +5173,40 @@ namespace CPMCore.Controllers
                         foreach (var co in respCo.Values.Where(v => v.ClientAccountID == client.Id))
                             group.ChangeOrders.Add(co);
                         model.ClientChangeOrders.Add(group);
+                        var rows = new List<ChangeOrderInvoicingRowVM>();
+                        foreach (var co in group.ChangeOrders)
+                        {
+                            foreach (var detail in co.Details.Where(d => d.Invoicable != false))
+                            {
+                                var total = detail.Totaal;
+                                invoicedAmounts.TryGetValue(detail.Id, out var invoiced);
+                                var remaining = Math.Round(total - invoiced, 2, MidpointRounding.AwayFromZero);
+                                var maxPct = total == 0m ? 0m : Math.Round((remaining / total) * 100m, 2, MidpointRounding.AwayFromZero);
+                                if (maxPct < 0m) maxPct = 0m;
+                                if (maxPct > 100m) maxPct = 100m;
+                                if (remaining <= 0m) continue;
+
+                                rows.Add(new ChangeOrderInvoicingRowVM
+                                {
+                                    ChangeOrderId = co.Id,
+                                    ChangeOrderDetailId = detail.Id,
+                                    ChangeOrderDescription = co.Description ?? string.Empty,
+                                    DetailDescription = detail.Description ?? string.Empty,
+                                    TotalAmount = total,
+                                    InvoicedAmount = invoiced,
+                                    RemainingAmount = remaining,
+                                    MaxPercentage = maxPct,
+                                    DefaultPercentage = maxPct,
+                                    VatPercentage = detail.VatPercentage ?? 21m
+                                });
+                            }
+                        }
+
+                        model.ChangeOrderInvoicingClients.Add(new ChangeOrderInvoicingClientVM
+                        {
+                            Client = client,
+                            Rows = rows
+                        });
                     }
                 }
             }
@@ -5451,6 +5504,8 @@ namespace CPMCore.Controllers
             var clientResp = clientService.GetClientAccountByIds(clientIds);
             var clientAccounts = clientResp.Success ? clientResp.Values : new List<ClientAccountBO>();
 
+         
+
             foreach (var client in clientAccounts)
             {
                 var iu = new List<UnitWithStagesBO>();
@@ -5586,6 +5641,13 @@ namespace CPMCore.Controllers
             if (request?.Invoices == null || request.Invoices.Count == 0)
                 return Json(new { projectid = 0 });
 
+            request.Invoices = request.Invoices
+                .Where(i => i.ChangeOrderDetailId > 0 && i.Percentage > 0m)
+                .ToList();
+
+            if (request.Invoices.Count == 0)
+                return Json(new { projectid = 0 });
+
             var clientService = ServiceFactory.GetClientService();
             var unitService = ServiceFactory.GetUnitService();
             var projectService = ServiceFactory.GetProjectService();
@@ -5599,6 +5661,14 @@ namespace CPMCore.Controllers
             var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
             var clientResp = clientService.GetClientAccountByIds(clientIds);
             var clientAccounts = clientResp.Success ? clientResp.Values : new List<ClientAccountBO>();
+            var selectedDetailIds = request.Invoices.Select(i => i.ChangeOrderDetailId).Distinct().ToList();
+            var alreadyInvoicedByDetail = uow.Context.Set<InvoicesDetails>()
+                .AsNoTracking()
+                .Where(d => d.LineType == "ChangeOrders" && d.ChangeOrderDetailId.HasValue && selectedDetailIds.Contains(d.ChangeOrderDetailId.Value))
+                .GroupBy(d => d.ChangeOrderDetailId!.Value)
+                .Select(g => new { DetailId = g.Key, Amount = g.Sum(x => x.Price ?? 0m) })
+                .ToDictionary(x => x.DetailId, x => x.Amount);
+
 
             foreach (var client in clientAccounts)
             {
@@ -5623,15 +5693,13 @@ namespace CPMCore.Controllers
                 }
 
                 var project = new ProjectBO();
-                var settings = new ProjectSalesSettingsBO();
                 if (changeOrders.Count > 0)
                 {
                     var pr = projectService.GetProjectByID(changeOrders.First().ProjectId);
                     if (pr.Success)
                     {
                         project = pr.Value;
-                        var sr = projectService.GetSalesSettings(project.Id);
-                        if (sr.Success) settings = sr.Value;
+
                     }
                 }
 
@@ -5647,7 +5715,8 @@ namespace CPMCore.Controllers
                         issuerCompanyId,
                         client.Id,
                         changeOrders,
-                        settings,
+                        request.Invoices.Where(i => i.ClientAccountId == client.Id).ToList(),
+                        alreadyInvoicedByDetail,
                         project);
 
                     if (coDraft != null)
@@ -5853,27 +5922,84 @@ namespace CPMCore.Controllers
             int? issuerCompanyId,
             int clientAccountId,
             IEnumerable<ChangeOrderBO> changeOrders,
-            ProjectSalesSettingsBO? settings,
+ IEnumerable<ClientAccountChangeOrderInvoiceBO> selectedRows,
+            IDictionary<int, decimal> alreadyInvoicedByDetail,
             ProjectBO project)
         {
             if (!issuerCompanyId.HasValue || issuerCompanyId.Value <= 0)
                 return null;
 
-            var vatPct = settings?.VatPercentage ?? 21m;
+            var selectedByDetail = selectedRows
+               .Where(x => x.ChangeOrderDetailId > 0)
+               .GroupBy(x => x.ChangeOrderDetailId)
+               .ToDictionary(g => g.Key, g => g.First());
             var lines = new List<InvoiceLineBO>();
+
 
             foreach (var order in changeOrders)
             {
-                foreach (var detail in order.Details)
+                var detailRows = new List<(int DetailId, string Description, decimal Amount, decimal Vat)>();
+
+                foreach (var detail in order.Details.Where(d => selectedByDetail.ContainsKey(d.Id)))
                 {
+                    var selection = selectedByDetail[detail.Id];
+                    var percentage = Math.Min(100m, Math.Max(0m, selection.Percentage));
+                    var totalAmount = detail.Totaal;
+                    alreadyInvoicedByDetail.TryGetValue(detail.Id, out var alreadyInvoiced);
+                    var remaining = Math.Round(totalAmount - alreadyInvoiced, 2, MidpointRounding.AwayFromZero);
+                    if (remaining <= 0m)
+                        continue;
+
+                    var maxPercentage = totalAmount == 0m
+                        ? 0m
+                        : Math.Round((remaining / totalAmount) * 100m, 4, MidpointRounding.AwayFromZero);
+
+                    if (percentage > maxPercentage)
+                        percentage = maxPercentage;
+
+                    var selectedAmount = Math.Round(totalAmount * (percentage / 100m), 2, MidpointRounding.AwayFromZero);
+                    if (selectedAmount <= 0m)
+                        continue;
+
+                    if (selectedAmount > remaining)
+                        selectedAmount = remaining;
+
+                    detailRows.Add((
+                        DetailId: detail.Id,
+                        Description: string.IsNullOrWhiteSpace(detail.Description) ? order.Description : detail.Description,
+                        Amount: selectedAmount,
+                        Vat: detail.VatPercentage ?? 21m));
+                }
+
+                var groupedByVat = detailRows
+                    .GroupBy(r => r.Vat)
+                    .Select(g => new
+                    {
+                        Vat = g.Key,
+                        Total = g.Sum(x => x.Amount),
+                        Details = g.ToList()
+                    })
+                    .ToList();
+
+                foreach (var vatGroup in groupedByVat)
+                {
+                    var orderDescription = string.IsNullOrWhiteSpace(order.Description)
+                        ? $"Wijzigingsopdracht #{order.Id}"
+                        : order.Description;
+                    var lineText = groupedByVat.Count == 1
+                        ? orderDescription
+                        : $"{orderDescription} ({vatGroup.Vat:0.##}% BTW)";
+
+                    var detailIds = vatGroup.Details.Select(d => d.DetailId).Distinct().ToList();
+
                     lines.Add(new InvoiceLineBO
                     {
-                        Text = detail.Description,
-                        Price = detail.Totaal,
-                        VatPercentage = vatPct,
+                        Text = lineText,
+                        Price = vatGroup.Total,
+                        VatPercentage = vatGroup.Vat,
                         LineType = "ChangeOrders",
                         GroupName = "Wijzigingsopdrachten",
-                        ChangeOrderDetailId = detail.Id
+                        ChangeOrderDetailId = detailIds.Count == 1 ? detailIds[0] : null
                     });
                 }
             }

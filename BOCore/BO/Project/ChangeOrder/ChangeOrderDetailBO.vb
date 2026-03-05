@@ -122,6 +122,16 @@ Public Class ChangeOrderDetailBO
             _invoiced = value
         End Set
     End Property
+    Private _vatPercentage As Decimal?
+    <Display(Name:="BTW %")>
+    Public Property VatPercentage() As Decimal?
+        Get
+            Return _vatPercentage
+        End Get
+        Set(ByVal value As Decimal?)
+            _vatPercentage = value
+        End Set
+    End Property
 
     ' ---------- Weergave/Helpers ----------
     Private Shared ReadOnly NlBe As CultureInfo = CultureInfo.GetCultureInfo("nl-BE")
@@ -175,6 +185,12 @@ Public Class ChangeOrderDetailBO
     Public ReadOnly Property TotaalFormatted As String
         Get
             Return Totaal.ToString("C", NlBe)
+        End Get
+    End Property
+    Public ReadOnly Property VatPercentageFormatted As String
+        Get
+            Dim vat = If(VatPercentage, 21D)
+            Return (vat / CDec(100)).ToString("P0", NlBe)
         End Get
     End Property
 End Class

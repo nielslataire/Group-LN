@@ -1,5 +1,6 @@
 ﻿@using System.Text.Json
 @using System.Text.Encodings.Web
+@using BOCore
 @model CPMCore.Models.Projecten.DetailChangeOrderModel
 
 
@@ -87,6 +88,8 @@
                         <th data-sortable="true">Omschrijving</th>
                         <th data-sortable="true">Bedrag excl. btw</th>
                         <th data-sortable="true" data-align="center">Factuur door bouwheer</th>
+                        <th data-sortable="true" data-align="center">Gefactureerd</th>
+                        <th data-sortable="true">Openstaand bedrag</th>
                         <th data-sortable="true">Status</th>
                         <th class="hidden-xs noVis" data-sortable="false">Acties</th>
                     </tr>
@@ -100,6 +103,20 @@
                 bool hasAgreement = item.DateAgreement is not null;
                 bool hasExpiration = item.ExpirationDate != default(DateOnly);
                 bool sent = item.DateSendToClient is not null;
+                        var detailLines = item.Details ?? new List<ChangeOrderDetailBO>();
+                        var invoicableDetails = detailLines.Where(d => d.Invoicable != false).ToList();
+                        var openAmount = invoicableDetails
+                        .Where(d => d.Invoiced != true)
+                        .Sum(d => d.Totaal);
+                        var hasInvoicableDetails = invoicableDetails.Count > 0;
+                        var allInvoiced = hasInvoicableDetails && invoicableDetails.All(d => d.Invoiced == true);
+                        var anyInvoiced = invoicableDetails.Any(d => d.Invoiced == true);
+                        var invoicedLabel = allInvoiced
+                        ? "Ja"
+                        : anyInvoiced
+                        ? "Gedeeltelijk"
+                        : "Nee";
+
 
                 bool expired = item.ExpirationDate is DateOnly exp
                 && exp < today
@@ -125,6 +142,8 @@
                             <td>@Html.DisplayFor(m => item.Description)</td>
                             <td>@item.Totaal.ToString("C")</td>
                             <td class="text-center">@((item.Invoiceable ? "Bouwheer" : "Aannemer"))</td>
+                            <td class="text-center">@invoicedLabel</td>
+                            <td>@openAmount.ToString("C")</td>
                             <td><i class="@iconClass" title="@title" aria-label="@title"></i> <span class="status-text">@title</span></td>
                             <td>
                                 <a data-toggle="tooltip" data-placement="top" title="Afdrukken"

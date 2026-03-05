@@ -61,7 +61,7 @@
         </div>
         <div class="col-lg-1">
             <div class="input-group">
-            <input disabled="" class="form-control form-control-modern vat-field" value="21" />
+                @Html.TextBoxFor(m => m.VatPercentage, "{0:0}", new { @class = "form-control form-control-modern vat-field", @type = "number", @step = "1", @min = "0", @max = "100" })
                 <span class="input-group-text">%</span>
             </div>
         </div>

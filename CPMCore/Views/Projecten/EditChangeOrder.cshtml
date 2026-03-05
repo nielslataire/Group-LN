@@ -248,6 +248,9 @@
           const an = window.AutoNumeric && AutoNumeric.getAutoNumericElement(el);
           if (an) return Number(an.getNumber()) || 0; // ruwe number, geen €/scheidingst.
           const v = ($el.val() || '').toString().trim();
+           if ((el.type || '').toLowerCase() === 'number') {
+            return parseFloat(v.replace(',', '.')) || 0;
+          }
           return parseFloat(v.replace(/\./g, '').replace(',', '.')) || 0;
         }
 

@@ -193,50 +193,136 @@
                         <h2 class="card-title mb-0">Meerwerken / Minwerken</h2>
                     </div>
                     <div class="card-body pt-2">
-                        <div class="table-responsive">
+                        <div class="table-responsive pt-3">
                             <table class="table align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Wijzigingsopdracht</th>
+                                <thead>
+                                    <tr class="table-secondary">
+                                        <th colspan="2">Wijzigingsopdracht</th>
                                         <th class="text-end" style="white-space:nowrap;">Bedrag</th>
-                                        <th class="text-end" style="white-space:nowrap;">Factuur opmaken</th>
+                                        <th class="text-end" style="white-space:nowrap;">Openstaand bedrag</th>
+                                        <th class="text-end" style="white-space:nowrap;">Percentage</th>
+                                        <th class="text-end" style="white-space:nowrap;">Selectie</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    @foreach (var item in Model.ClientChangeOrders)
-                                    {
-                                        <tr class="table-primary">
-                                            <td colspan="3" class="fw-bold">
-                                                @(item.Client.Name != null
-                                                                                            ? $"{item.Client.Salutation.GetDisplayName()} {item.Client.DisplayName}"
-                                                                                            : item.Client.DisplayName)
-                                        </td>
-                                    </tr>
 
-                                                                        foreach (var co in item.ChangeOrders)
+                                <tbody>
+                                    @foreach (var item in Model.ChangeOrderInvoicingClients)
+                                    {
+                                        var clientLabel = item.Client.Name != null
+                                        ? $"{item.Client.Salutation.GetDisplayName()} {item.Client.DisplayName}"
+                                        : item.Client.DisplayName;
+
+                                        <tr class="bg-secondary align-middle">
+                                            <td colspan="2" class="fw-bold pt-4"> @clientLabel</td>
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                            <td class="text-end">
+                                                @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                {
+                                                    <div class="checkbox-custom checkbox-default d-inline-block">
+                                                        <input type="checkbox" class="chkClientCO" data-clientaccountid="@item.Client.Id" />
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+
+                                        var groupedOrders = item.Rows.GroupBy(r => new { r.ChangeOrderId, r.ChangeOrderDescription });
+                                        foreach (var orderGroup in groupedOrders)
                                         {
-                                            <tr class="table-active">
-                                                <td colspan="3">@co.Description<br /></td>
+                                            var detailIds = orderGroup.Select(r => r.ChangeOrderDetailId).Distinct().ToList();
+                                            var orderTotal = orderGroup.Sum(r => r.TotalAmount);
+                                            var orderRemaining = orderGroup.Sum(r => r.RemainingAmount);
+
+                                            var maxPercentage = orderTotal == 0m
+                                            ? 0m
+                                            : Math.Round((orderRemaining / orderTotal) * 100m, 2, MidpointRounding.AwayFromZero);
+
+                                            if (maxPercentage < 0m) maxPercentage = 0m;
+                                            if (maxPercentage > 100m) maxPercentage = 100m;
+
+                                            var detailIdsCsv = string.Join(",", detailIds);
+
+                                            <tr class="table-light">
+                                                <td class="text-center" style="width:36px;">
+                                                    <button type="button"
+                                                            class="btn btn-link p-0 co-toggle"
+                                                            data-target="co-details-@item.Client.Id-@orderGroup.Key.ChangeOrderId"
+                                                            aria-expanded="false"
+                                                            title="Toon details">
+                                                        <i class="fa fa-plus"></i>
+                                                    </button>
+                                                </td>
+
+                                                <td>@orderGroup.Key.ChangeOrderDescription</td>
+
+                                                <td class="text-end">@orderTotal.ToString("C")</td>
+                                                <td class="text-end">@orderRemaining.ToString("C")</td>
+
+                                                <!-- Percentage (ALTIJD rechts) -->
+                                                <td style="white-space:nowrap;">
+                                                    <div class="d-flex justify-content-end">
+                                                        <div class="input-group input-group-sm w-auto">
+                                                            <input type="number"
+                                                                   class="form-control text-end co-order-percentage"
+                                                                   data-coid="@orderGroup.Key.ChangeOrderId"
+                                                                   data-clientaccountid="@item.Client.Id"
+                                                                   data-max="@maxPercentage.ToString(CultureInfo.InvariantCulture)"
+                                                                   title="Maximum @maxPercentage.ToString("N2")%"
+                                                                   min="0"
+                                                                   max="@maxPercentage.ToString(CultureInfo.InvariantCulture)"
+                                                                   step="0.01"
+                                                                   value="@maxPercentage.ToString(CultureInfo.InvariantCulture)"
+                                                                   style="width:100px;" />
+                                                            <span class="input-group-text">
+                                                                <i class="fa fa-percentage"></i>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td class="text-end">
+                                                    @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                    {
+                                                        <div class="checkbox-custom checkbox-default d-inline-block">
+                                                            <input type="checkbox" class="chkOrderCO"
+                                                                   id="@($"client-{item.Client.Id}-co-{orderGroup.Key.ChangeOrderId}")"
+                                                                   data-clientaccountid="@item.Client.Id"
+                                                                   data-coid="@orderGroup.Key.ChangeOrderId"
+                                                                   data-detailids="@detailIdsCsv"
+                                                                   data-max="@maxPercentage.ToString(CultureInfo.InvariantCulture)" />
+                                                            <label for="@($"client-{item.Client.Id}-co-{orderGroup.Key.ChangeOrderId}")"></label>
+                                                        </div>
+                                                    }
+                                                </td>
                                             </tr>
 
-                                            foreach (var cod in co.Details.Where(i => i.Invoicable == true && i.Invoiced == false))
-                                            {
-                                                <tr>
-                                                    <td class="text-capitalize">
-                                                        <i class="fa fa-level-down-alt me-2"></i>@cod.Description
-                                                    </td>
-                                                    <td class="text-end">@string.Format("{0:C}", cod.Totaal)</td>
-                                                    <td class="text-end">
-                                                        @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
-                                                        {
-                                                            <input type="checkbox" class="form-check-input chkInvoiceCO"
-                                                                   data-id="@cod.Id"
-                                                                   data-coid="@co.Id"
-                                                                   data-clientaccountid="@item.Client.Id" />
-                                                        }
-                                                    </td>
-                                                </tr>
-                                            }
+                                            <tr id="co-details-@item.Client.Id-@orderGroup.Key.ChangeOrderId" class="d-none">
+                                                <td></td>
+                                                <td colspan="5" class="bg-white">
+                                                    <div class="ps-2 pe-2 pb-2">
+                                                        <table class="table table-sm mb-0">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Detaillijn</th>
+                                                                    <th class="text-end">Bedrag</th>
+                                                                    <th class="text-end">Openstaand bedrag</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach (var row in orderGroup)
+                                                                {
+                                                                    <tr>
+                                                                        <td>@row.DetailDescription</td>
+                                                                        <td class="text-end">@row.TotalAmount.ToString("C")</td>
+                                                                        <td class="text-end">@row.RemainingAmount.ToString("C")</td>
+                                                                    </tr>
+                                                                }
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         }
                                     }
                                 </tbody>
@@ -323,7 +409,7 @@
         })();
 
         const stageCheckboxes = document.querySelectorAll('.chkInvoice');
-
+         const changeOrderCheckboxes = document.querySelectorAll('.chkInvoiceCO');
 
         (function () {
             const clientCheckboxes = document.querySelectorAll('.chkClient');
@@ -414,21 +500,94 @@
             });
         })();
 
+          (function () {
+            const clientCheckboxes = document.querySelectorAll('.chkClientCO');
+            const orderCheckboxes = document.querySelectorAll('.chkOrderCO');
+
+            function updateClientCheckbox(clientId) {
+                const clientCb = document.querySelector(`.chkClientCO[data-clientaccountid="${clientId}"]`);
+                const orders = document.querySelectorAll(`.chkOrderCO[data-clientaccountid="${clientId}"]`);
+                if (!clientCb || orders.length === 0) return;
+
+                const allChecked = Array.from(orders).every(cb => cb.checked);
+                const anyChecked = Array.from(orders).some(cb => cb.checked);
+                clientCb.checked = allChecked;
+                clientCb.indeterminate = !allChecked && anyChecked;
+            }
+
+            clientCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const clientId = cb.getAttribute('data-clientaccountid');
+                    const checked = cb.checked;
+                    cb.indeterminate = false;
+
+                    document.querySelectorAll(`.chkOrderCO[data-clientaccountid="${clientId}"]`).forEach(orderCb => {
+                        orderCb.checked = checked;
+                        orderCb.indeterminate = false;
+                    });
+
+                    updateClientCheckbox(clientId);
+                });
+            });
+
+            orderCheckboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const clientId = cb.getAttribute('data-clientaccountid');
+                    cb.indeterminate = false;
+                    updateClientCheckbox(clientId);
+                });
+            });
+
+            document.querySelectorAll('.co-order-percentage').forEach(input => {
+                input.addEventListener('input', () => {
+                    const max = parseFloat(input.getAttribute('data-max') || '0');
+                    let value = parseFloat(input.value || '0');
+                    if (Number.isNaN(value)) value = 0;
+                    if (value < 0) value = 0;
+                    if (value > max) value = max;
+                    input.value = value.toFixed(2);
+                });
+            });
+
+            document.querySelectorAll('.chkClientCO').forEach(cb => {
+                const clientId = cb.getAttribute('data-clientaccountid');
+                updateClientCheckbox(clientId);
+            });
+
+            document.querySelectorAll('.co-toggle').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.getAttribute('data-target');
+                    const row = targetId ? document.getElementById(targetId) : null;
+                    if (!row) return;
+                    const icon = btn.querySelector('i');
+                    const isHidden = row.classList.contains('d-none');
+                    row.classList.toggle('d-none', !isHidden);
+                    btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+                    if (icon) {
+                        icon.classList.toggle('fa-plus', !isHidden);
+                        icon.classList.toggle('fa-minus', isHidden);
+                    }
+                });
+            });
+        })();
+
+
         const issuerCompanyId = @(Model.IssuerCompanyIdBuilder ?? 0);
 
         const invoiceButton = document.getElementById('btnInvoicing');
 
-             const updateInvoiceButtonState = () => {
+              const updateInvoiceButtonState = () => {
                  if (!invoiceButton) return;
-                 const hasStageSelected = document.querySelector('.chkInvoice:checked') !== null;
-                 invoiceButton.disabled = !hasStageSelected;
-             };
+                    const hasSelected = document.querySelector('.chkInvoice:checked, .chkOrderCO:checked') !== null;
+                 invoiceButton.disabled = !hasSelected;
+                 };
 
              updateInvoiceButtonState();
 
              stageCheckboxes.forEach(cb => cb.addEventListener('change', updateInvoiceButtonState));
+             changeOrderCheckboxes.forEach(cb => cb.addEventListener('change', updateInvoiceButtonState));
 
-             document.querySelectorAll('.chkClient, .chkUnit').forEach(cb => cb.addEventListener('change', updateInvoiceButtonState));
+             document.querySelectorAll('.chkClient, .chkUnit, .chkClientCO, .chkOrderCO').forEach(cb => cb.addEventListener('change', updateInvoiceButtonState));
 
              invoiceButton?.addEventListener('click', function (e) {
             e.preventDefault();
@@ -444,12 +603,27 @@
             });
 
             const listCO = [];
-            document.querySelectorAll('.chkInvoiceCO:checked').forEach(chk => {
-                listCO.push({
-                    clientAccountId: parseInt(chk.getAttribute('data-clientaccountid')),
-                    changeOrderId: parseInt(chk.getAttribute('data-coid')),
-                   changeOrderDetailId: parseInt(chk.getAttribute('data-id')),
-                   companyId: issuerCompanyId
+           document.querySelectorAll('.chkOrderCO:checked').forEach(chk => {
+                const clientId = parseInt(chk.getAttribute('data-clientaccountid'));
+                const coId = parseInt(chk.getAttribute('data-coid'));
+                const detailIds = (chk.getAttribute('data-detailids') || '')
+                    .split(',')
+                    .map(x => parseInt(x))
+                    .filter(x => !Number.isNaN(x) && x > 0);
+                const pctInput = document.querySelector(`.co-order-percentage[data-coid="${coId}"][data-clientaccountid="${clientId}"]`);
+                const max = parseFloat(chk.getAttribute('data-max') || '0');
+                let percentage = parseFloat(pctInput?.value || '0');
+                if (Number.isNaN(percentage)) percentage = 0;
+                if (percentage < 0) percentage = 0;
+                if (percentage > max) percentage = max;
+                detailIds.forEach(detailId => {
+                    listCO.push({
+                        clientAccountId: clientId,
+                        changeOrderId: coId,
+                        changeOrderDetailId: detailId,
+                        companyId: issuerCompanyId,
+                        percentage: percentage
+                    });
                 });
             });
 

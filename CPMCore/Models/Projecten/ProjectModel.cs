@@ -2226,10 +2226,31 @@ namespace CPMCore.Models.Projecten
         public int? IssuerCompanyIdLandOwner { get; set; }
 
         public List<ClientAccountWithInvoicableBO> ClientAccounts { get; set; } = new();
-            public List<ClientAccountWithInvoicableChangeOrderBO> ClientChangeOrders { get; set; } = new();
-
-            public List<ClientUtilityCostBO> ClientUtilityCosts { get; set; } = new();
+        public List<ClientAccountWithInvoicableChangeOrderBO> ClientChangeOrders { get; set; } = new();
+        public List<ChangeOrderInvoicingClientVM> ChangeOrderInvoicingClients { get; set; } = new();
+        public List<ClientUtilityCostBO> ClientUtilityCosts { get; set; } = new();
     }
+
+    public class ChangeOrderInvoicingClientVM
+    {
+        public ClientAccountBO Client { get; set; } = new();
+        public List<ChangeOrderInvoicingRowVM> Rows { get; set; } = new();
+    }
+
+    public class ChangeOrderInvoicingRowVM
+    {
+        public int ChangeOrderId { get; set; }
+        public int ChangeOrderDetailId { get; set; }
+        public string ChangeOrderDescription { get; set; } = string.Empty;
+        public string DetailDescription { get; set; } = string.Empty;
+        public decimal TotalAmount { get; set; }
+        public decimal InvoicedAmount { get; set; }
+        public decimal RemainingAmount { get; set; }
+        public decimal MaxPercentage { get; set; }
+        public decimal DefaultPercentage { get; set; }
+        public decimal VatPercentage { get; set; }
+    }
+
 
     public class ProjectPaymentStagesModel
     {

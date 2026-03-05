@@ -85,6 +85,7 @@ namespace ServiceCore.Translators
             bo.Number = _entity.Number;
             bo.Price = _entity.Price;
             bo.Commision = _entity.Commission;
+            bo.VatPercentage = _entity.VatPercentage ?? 21m;
             if (!_entity.Invoicable == null)
                 bo.Invoicable = _entity.Invoicable;
             if (!_entity.Invoiced == null)
@@ -104,6 +105,7 @@ namespace ServiceCore.Translators
             _entity.Number = bo.Number;
             _entity.Price = bo.Price;
             _entity.Commission = bo.Commision;
+            _entity.VatPercentage = bo.VatPercentage ?? 21m;
             _entity.Invoicable = bo.Invoicable;
             _entity.Invoiced = bo.Invoiced;
             return ErrorCode.Success;

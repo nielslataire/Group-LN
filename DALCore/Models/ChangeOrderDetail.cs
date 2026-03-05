@@ -27,5 +27,7 @@ public partial class ChangeOrderDetail
 
     public bool? Invoiced { get; set; }
 
+    public decimal? VatPercentage { get; set; }
+
     public virtual ChangeOrder ChangeOrder { get; set; }
 }

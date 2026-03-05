@@ -39,4 +39,13 @@ Public Class ClientAccountChangeOrderInvoiceBO
             _companyId = value
         End Set
     End Property
+    Private _percentage As Decimal
+    Public Property Percentage() As Decimal
+        Get
+            Return _percentage
+        End Get
+        Set(ByVal value As Decimal)
+            _percentage = value
+        End Set
+    End Property
 End Class

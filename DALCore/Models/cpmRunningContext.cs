@@ -623,6 +623,9 @@ public partial class cpmRunningContext : DbContext
                 .IsRequired()
                 .HasMaxLength(250);
             entity.Property(e => e.Price).HasColumnType("decimal(19, 4)");
+            entity.Property(e => e.VatPercentage)
+                .HasDefaultValue(21.0000m)
+                .HasColumnType("decimal(19, 4)");
 
             entity.HasOne(d => d.ChangeOrder).WithMany(p => p.ChangeOrderDetail)
                 .HasForeignKey(d => d.ChangeOrderId)
