@@ -170,15 +170,15 @@ app.MapPost("/api/assets/{folder}/{fileName}/sign", (HttpRequest request, string
     return Results.Ok(new { url = signedUrl });
 });
 
-app.MapPost("/api/assets/docs/generate-thumbnails", (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
-{
-    return GenerateAllDocThumbnails(request, options.Value, env, allowQueryApiKey: false);
-});
+//app.MapPost("/api/assets/docs/generate-thumbnails", (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+//{
+//    return GenerateAllDocThumbnails(request, options.Value, env, allowQueryApiKey: false);
+//});
 
-app.MapGet("/api/assets/docs/generate-thumbnails", (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
-{
-    return GenerateAllDocThumbnails(request, options.Value, env, allowQueryApiKey: true);
-});
+//app.MapGet("/api/assets/docs/generate-thumbnails", (HttpRequest request, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+//{
+//    return GenerateAllDocThumbnails(request, options.Value, env, allowQueryApiKey: true);
+//});
 
 app.MapPost("/api/assets/docs/{fileName}/thumbnail", (HttpRequest request, string fileName, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
 {
@@ -250,18 +250,18 @@ app.MapGet("/api/assets/private/{folder}/{fileName}", (string folder, string fil
     return Results.File(filePath, contentType, enableRangeProcessing: true);
 });
 
-app.Lifetime.ApplicationStarted.Register(() =>
-{
-    try
-    {
-        logger.LogWarning("Startup thumbnail generation trigger fired.");
-        RunStartupDocThumbnailGeneration(app.Environment, settings, logger);
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Startup thumbnail generation failed with an exception.");
-    }
-});
+//app.Lifetime.ApplicationStarted.Register(() =>
+//{
+//    try
+//    {
+//        logger.LogWarning("Startup thumbnail generation trigger fired.");
+//        RunStartupDocThumbnailGeneration(app.Environment, settings, logger);
+//    }
+//    catch (Exception ex)
+//    {
+//        logger.LogError(ex, "Startup thumbnail generation failed with an exception.");
+//    }
+//});
 
 app.Run();
 
@@ -448,18 +448,20 @@ static bool TryGeneratePdfFirstPageThumbnail(string sourcePath, string thumbPath
 
         var rawBytes = pageReader.GetImage();
         using var pageImage = SixLabors.ImageSharp.Image.LoadPixelData<Bgra32>(rawBytes, width, height);
+        using var flattened = new Image<Rgba32>(pageImage.Width, pageImage.Height, SixLabors.ImageSharp.Color.White);
+        flattened.Mutate(ctx => ctx.DrawImage(pageImage, 1f));
 
-        if (pageImage.Width > 400)
+        if (flattened.Width > 400)
         {
-            var targetHeight = (int)Math.Round((double)pageImage.Height * 400 / pageImage.Width);
-            pageImage.Mutate(x => x.Resize(new ResizeOptions
+            var targetHeight = (int)Math.Round((double)flattened.Height * 400 / flattened.Width);
+            flattened.Mutate(x => x.Resize(new ResizeOptions
             {
                 Size = new SixLabors.ImageSharp.Size(400, targetHeight),
                 Mode = ResizeMode.Max
             }));
         }
 
-        pageImage.SaveAsJpeg(thumbPath, new JpegEncoder { Quality = 80 });
+        flattened.SaveAsJpeg(thumbPath, new JpegEncoder { Quality = 80 });
         return true;
     }
     catch

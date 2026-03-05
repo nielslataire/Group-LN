@@ -2728,11 +2728,23 @@ namespace CPMCore.Controllers
             // Octopus beslist vervolgens zelf over het kanaal (bv. Peppol bij een geldig btw-nummer).
             var skipSendStep = false;
 
-            var finalDate = invoice.Date == default
-                ? DateOnly.FromDateTime(DateTime.Today)
-                : invoice.Date;
+            var finalDate = forceFinalPdf
+              ? DateOnly.FromDateTime(DateTime.Today)
+              : (invoice.Date == default
+                  ? DateOnly.FromDateTime(DateTime.Today)
+                  : invoice.Date);
 
-            var effectiveDueDate = await ResolveEffectiveDueDateAsync(invoice, issuer, finalDate, ct);
+            var effectiveDueDate = await ResolveEffectiveDueDateAsync(invoice, issuer, finalDate, ct, recalculate: forceFinalPdf);
+
+            if (forceFinalPdf && invoice.Date != finalDate)
+            {
+                invoice.Date = finalDate;
+            }
+
+            if (forceFinalPdf && invoice.ExpirationDate != effectiveDueDate)
+            {
+                invoice.ExpirationDate = effectiveDueDate;
+            }
             detail.ExpirationDate = effectiveDueDate;
 
             var seriesId = await _db.InvoiceSeries
@@ -2817,9 +2829,15 @@ namespace CPMCore.Controllers
                 ? detail.StructuredMessage
                 : structuredOgm;
 
-            var formattedPublicId = string.IsNullOrWhiteSpace(invoice.PublicId)
-                ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, documentSequenceNr, finalDate)
-                : invoice.PublicId;
+            var formattedPublicId = forceFinalPdf || string.IsNullOrWhiteSpace(invoice.PublicId)
+                  ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, documentSequenceNr, finalDate)
+                  : invoice.PublicId;
+
+            if (forceFinalPdf && !string.Equals(invoice.PublicId, formattedPublicId, StringComparison.Ordinal))
+            {
+                invoice.PublicId = formattedPublicId;
+            }
+
 
             detail.PublicId ??= formattedPublicId;
 
@@ -2844,9 +2862,9 @@ namespace CPMCore.Controllers
                 forceFinalPdf);
         }
 
-        private async Task<DateOnly?> ResolveEffectiveDueDateAsync(Invoices invoice, IssuerCompany issuer, DateOnly invoiceDate, CancellationToken ct)
+        private async Task<DateOnly?> ResolveEffectiveDueDateAsync(Invoices invoice, IssuerCompany issuer, DateOnly invoiceDate, CancellationToken ct, bool recalculate = false)
         {
-            if (invoice.ExpirationDate.HasValue)
+            if (!recalculate && invoice.ExpirationDate.HasValue)
                 return invoice.ExpirationDate.Value;
 
             var termId = invoice.PaymentTermId ?? issuer.DefaultPaymentTermId;
