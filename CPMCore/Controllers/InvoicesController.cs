@@ -38,7 +38,7 @@ using System.Security.Claims;
 namespace CPMCore.Controllers
 {
     [Authorize(Policy = "Permission:Boekhouding")]
-    public class InvoicesController : Controller
+    public class InvoicesController : BaseController
     {
         private const string ControllerName = "Invoices";
         private readonly IInvoiceQueryService _invoices;
@@ -4727,12 +4727,7 @@ END";
             return Url.Action(nameof(OctopusDownload), ControllerName, new { id = invoice.Id, token }, Request.Scheme)
                 ?? string.Empty;
         }
-        public void AddMessage(string messagetype, string message, string messagetitle)
-        {
-            TempData["Message"] = message;
-            TempData["MessageType"] = messagetype;
-            TempData["MessageTitle"] = messagetitle;
-        }
+       
         private static InvoiceStatus TranslateStatus(string? status) => InvoiceStatusExtensions.FromCode(status);
 
         private static InvoiceStatus TranslateStatus(int? statusId, string? statusName)

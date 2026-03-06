@@ -1,0 +1,149 @@
+﻿@using BOCore
+@using DALCore.Models
+@model CPMCore.Models.Issues.ConstructionIssueIndexVm
+@{
+    var projectId = Model.ProjectId;
+    var filters = Model.Filters;
+    ViewData["Title"] = "Punten";
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", projectId)
+        <div class="inner-body">
+            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                    <h1 class="font-weight-bold mb-0 mt-0">Punten</h1>
+                    <h5 class="mb-4 mt-0">Overzicht van projectissues</h5>
+                </div>
+                <div class="col-sm-auto px-0">
+                    <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })" class="btn btn-default btn-md me-2">Terug naar project</a>
+                    <a href="@Url.Action("Create", new { projectId })" class="btn btn-primary btn-md">+ Punt toevoegen</a>
+                </div>
+            </div>
+
+            <section class="card card-modern mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3 align-items-end">
+                        <div class="col-md-3"><label class="form-label">Zoektekst</label><input class="form-control form-control-modern" name="text" value="@filters.Text" /></div>
+                        <div class="col-md-2"><label class="form-label">Status</label><select class="form-control form-control-modern" name="status"><option value="">Alle</option>@foreach (var s in Enum.GetValues<ConstructionIssueStatus>()){
+                        <option value="@((int)s)" selected="@(filters.Status == (int)s)">@s</option>
+                                                }
+</select></div>
+                        <div class="col-md-2"><label class="form-label">Categorie</label><select class="form-control form-control-modern" name="categoryId"><option value="">Alle</option>@foreach (var c in Model.Categories){
+                        <option value="@c.Id" selected="@(filters.CategoryId == c.Id)">@c.Name</option>
+                                                }
+</select></div>
+                        <div class="col-md-2"><label class="form-label">Unit</label><select class="form-control form-control-modern" name="unitId"><option value="">Alle</option>@foreach (var u in Model.Units){
+                        <option value="@u.Id" selected="@(filters.UnitId == u.Id)">@u.Name</option>
+                                                }
+</select></div>
+                        <div class="col-md-1"><label class="form-label">Overdue</label><select class="form-control form-control-modern" name="overdue"><option value="">Alle</option><option value="true" selected="@(filters.Overdue == true)">Ja</option></select></div>
+                        <div class="col-md-1"><label class="form-label">Verzonden</label><select class="form-control form-control-modern" name="sent"><option value="">Alle</option><option value="true" selected="@(filters.Sent == true)">Ja</option><option value="false" selected="@(filters.Sent == false)">Nee</option></select></div>
+                        <div class="col-md-1 text-end"><button class="btn btn-primary" type="submit">Filter</button></div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="card card-modern mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Bulk acties</h4>
+                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="row g-2 align-items-end">
+                        @Html.AntiForgeryToken()
+                        <div class="col-md-4"><label>Status</label><select name="Status" class="form-control form-control-modern"><option value="">-</option>@foreach (var s in Enum.GetValues<ConstructionIssueStatus>()){
+                        <option value="@((int)s)">@s</option>
+                                                }
+</select></div>
+                        <div class="col-md-3"><label>Vervaldatum</label><input type="date" name="DueDate" class="form-control form-control-modern" /></div>
+                        <div class="col-md-3"><label>Prioriteit</label><select name="Priority" class="form-control form-control-modern"><option value="">-</option>@foreach (var p in Enum.GetValues<ConstructionIssuePriority>()){
+                        <option value="@((int)p)">@p</option>
+                                                }
+</select></div>
+                        <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Bulk bijwerken</button></div>
+                        @foreach (var issue in Model.Issues)
+                        {
+                            <input type="hidden" name="IssueIds" value="@issue.Id" class="js-issue-id d-none" />
+                        }
+                    </form>
+
+                    <form method="post" action="@Url.Action("SendSelected", new { projectId })" class="mt-3 d-inline-block me-2">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="GroupByResponsible" value="true" />
+                        @foreach (var issue in Model.Issues)
+                        {
+                            <input type="hidden" name="IssueIds" value="@issue.Id" class="js-issue-id d-none" />
+                        }
+                        <button class="btn btn-success" type="submit">Verstuur selectie</button>
+                    </form>
+                    <form method="post" action="@Url.Action("DownloadPdf", new { projectId })" class="d-inline-block">
+                        @Html.AntiForgeryToken()
+                        @foreach (var issue in Model.Issues)
+                        {
+                            <input type="hidden" name="issueIds" value="@issue.Id" class="js-issue-id d-none" />
+                        }
+                        <button class="btn btn-default" type="submit">Download PDF selectie</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="card card-modern">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-ecommerce-simple table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th><input type="checkbox" id="checkAll" /></th>
+                                    <th>Titel</th>
+                                    <th>Unit</th>
+                                    <th>Categorie</th>
+                                    <th>Locatie</th>
+                                    <th>Status</th>
+                                    <th>Prioriteit</th>
+                                    <th>Vervaldatum</th>
+                                    <th>Laatst verzonden</th>
+                                    <th class="text-end">Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var i in Model.Issues)
+                                {
+                                    <tr>
+                                        <td><input type="checkbox" class="issue-check" value="@i.Id" checked="checked" /></td>
+                                        <td>@i.Title</td>
+                                        <td>@(i.Unit?.Name ?? "-")</td>
+                                        <td>@(i.Category?.Name ?? "-")</td>
+                                        <td>@i.LocationText</td>
+                                        <td>@((ConstructionIssueStatus)i.Status)</td>
+                                        <td>@((ConstructionIssuePriority)i.Priority)</td>
+                                        <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                        <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                        <td class="text-end"><a class="ms-1 me-1" href="@Url.Action("Details", new { projectId, id = i.Id })"><i class="fa fa-eye fs-5"></i></a><a class="ms-1 me-1" href="@Url.Action("Edit", new { projectId, id = i.Id })"><i class="fa fa-pen fs-5"></i></a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+    <script>
+        (function(){
+            function syncHidden(){
+                const ids = Array.from(document.querySelectorAll('.issue-check:checked')).map(x=>x.value);
+                document.querySelectorAll('input.js-issue-id').forEach(x=>x.remove());
+                document.querySelectorAll('form').forEach(f=>{
+                    if(f.action.includes('BulkUpdate') || f.action.includes('SendSelected') || f.action.includes('DownloadPdf')){
+                        ids.forEach(id=>{ const i=document.createElement('input'); i.type='hidden'; i.name=f.action.includes('DownloadPdf')?'issueIds':'IssueIds'; i.value=id; i.className='js-issue-id'; f.appendChild(i);});
+                    }
+                });
+            }
+            document.getElementById('checkAll')?.addEventListener('change',e=>{ document.querySelectorAll('.issue-check').forEach(x=>x.checked=e.target.checked); syncHidden();});
+            document.querySelectorAll('.issue-check').forEach(x=>x.addEventListener('change',syncHidden));
+            syncHidden();
+        })();
+    </script>
+}

@@ -29,6 +29,8 @@ public partial class Contract
 
     public bool? ContractSigned { get; set; }
 
+    public int? SiteManagerContactId { get; set; }
+
     public virtual CompanyInfo Company { get; set; }
 
     public virtual ICollection<ContractActivity> ContractActivity { get; set; } = new List<ContractActivity>();
@@ -36,4 +38,6 @@ public partial class Contract
     public virtual ICollection<IncommingInvoices> IncommingInvoices { get; set; } = new List<IncommingInvoices>();
 
     public virtual Project Project { get; set; }
+
+    public virtual CompanyContacts SiteManagerContact { get; set; }
 }

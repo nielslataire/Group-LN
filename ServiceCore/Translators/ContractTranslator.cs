@@ -33,6 +33,7 @@ namespace ServiceCore.Translators
             bo.GuaranteeType = (ContractGuaranteeType)_entity.GuaranteeType;
             bo.GuaranteePercentage = _entity.GuaranteePercentage;
             bo.ContractSigned = _entity.ContractSigned ?? false;
+            bo.SiteManagerContactId = _entity.SiteManagerContactId;
             if (_entity.ContractActivity != null)
             {
                 foreach (var item in _entity.ContractActivity)
@@ -63,6 +64,7 @@ namespace ServiceCore.Translators
             _entity.ContractSigned = bo.ContractSigned;
             _entity.GuaranteePercentage = bo.GuaranteePercentage;
             _entity.GuaranteeType = (int)bo.GuaranteeType;
+            _entity.SiteManagerContactId = bo.SiteManagerContactId;
             var Err = HandleActivities(_entity, bo.Activities, uow);
             if ((Err != ErrorCode.Success))
                 return Err;

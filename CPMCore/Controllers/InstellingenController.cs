@@ -1548,13 +1548,6 @@ public class InstellingenController : BaseController
             || msg.Contains("duplicate", System.StringComparison.OrdinalIgnoreCase);
     }
 
-    public void AddMessage(string messagetype, string message, string messagetitle)
-    {
-        TempData["Message"] = message;
-        TempData["MessageType"] = messagetype;
-        TempData["MessageTitle"] = messagetitle;
-    }
-
     private void SetActivityResponseMessage(Response response, string fallbackSuccessMessage)
     {
         if (response.Success)

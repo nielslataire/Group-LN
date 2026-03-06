@@ -1,0 +1,113 @@
+﻿@using BOCore
+@model CPMCore.Models.Issues.ConstructionIssueDetailsVm
+@{
+    var projectId = Model.ProjectId;
+    var issue = Model.Issue;
+    ViewData["Title"] = issue.Title;
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", projectId)
+        <div class="inner-body">
+            <div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
+                <div class="col-sm-auto mb-3 mb-sm-0"><div class="d-flex align-items-center"><a href="@Url.Action("Index", new { projectId })" class="text-decoration-none text-reset d-flex align-items-center me-3"><i class="bx bx-chevron-left fs-1"></i></a><div><h1 class="fw-bold mb-0">@issue.Title</h1><h5 class="mb-0 text-muted">Punt details</h5></div></div></div>
+                <div class="col-sm-auto"><a class="btn btn-primary" href="@Url.Action("Edit", new { projectId, id = issue.Id })">Bewerken</a></div>
+            </div>
+
+            <section class="card card-modern mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-2"><strong>Categorie:</strong> @(issue.Category?.Name ?? "-")</div>
+                        <div class="col-md-6 mb-2"><strong>Unit:</strong> @(issue.Unit?.Name ?? "-")</div>
+                        <div class="col-md-6 mb-2"><strong>Ruimte:</strong> @(string.IsNullOrWhiteSpace(issue.RoomOrZone) ? "-" : issue.RoomOrZone)</div>
+                        <div class="col-md-6 mb-2"><strong>Exacte locatie:</strong> @issue.LocationText</div>
+                        <div class="col-md-6 mb-2"><strong>Status:</strong> @((ConstructionIssueStatus)issue.Status)</div>
+                        <div class="col-md-6 mb-2"><strong>Prioriteit:</strong> @((ConstructionIssuePriority)issue.Priority)</div>
+                        <div class="col-md-6 mb-2"><strong>Vervaldatum:</strong> @(issue.DueDate?.ToString("dd/MM/yyyy") ?? "-")</div>
+                        <div class="col-md-6 mb-2"><strong>Laatst verzonden:</strong> @(issue.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
+                        <div class="col-12"><strong>Beschrijving:</strong><div class="text-muted">@(string.IsNullOrWhiteSpace(issue.Description) ? "-" : issue.Description)</div></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card card-modern mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Bijlagen</h4>
+                    <form method="post" enctype="multipart/form-data" action="@Url.Action("UploadMedia", new { projectId, id = issue.Id })" class="row g-2 align-items-end mb-3">
+                        @Html.AntiForgeryToken()
+                        <div class="col-md-6"><label>Bestanden</label><input class="form-control" type="file" name="files" multiple /></div>
+                        <div class="col-md-3"><label>Type</label><select class="form-control" name="mediaType">@foreach(var t in Enum.GetValues<ConstructionIssueMediaType>()){
+                        <option value="@((int)t)">@t</option>
+                                                }
+</select></div>
+                        <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Uploaden</button></div>
+                    </form>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead><tr><th>Bestand</th><th>Type</th><th>Datum</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var m in issue.ConstructionIssueMedia.OrderByDescending(x => x.CreatedDate))
+                                {
+                                    var url = Model.MediaUrls.ContainsKey(m.Id) ? Model.MediaUrls[m.Id] : null;
+                                    <tr>
+                                        <td>@if(!string.IsNullOrWhiteSpace(url)){
+                                        <a href="@url" target="_blank">@m.FileId</a>
+                                    } else
+                                    {
+
+                                        @m.FileId
+                                    }
+</td>
+                                    <td>@((ConstructionIssueMediaType)m.MediaType)</td>
+                                    <td>@m.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="text-end"><form method="post" action="@Url.Action("DeleteMedia", new { projectId, id = issue.Id, mediaId = m.Id })">@Html.AntiForgeryToken()<button class="btn btn-sm btn-danger" type="submit">Verwijderen</button></form></td>
+                                </tr>
+                                                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card card-modern mb-4">
+                <div class="card-body">
+                    <h4 class="mb-3">Verzendlog</h4>
+                    @if (Model.Notifications.Any())
+                    {
+                        <ul class="list-unstyled mb-0">@foreach(var n in Model.Notifications){
+                        <li class="mb-2 pb-2 border-bottom"><strong>@n.SentDate.ToString("dd/MM/yyyy HH:mm")</strong> - @n.RecipientEmail (@((ConstructionIssueNotificationChannel)n.Channel)) @(n.IsReminder ? "[Herinnering]" : "")</li>
+                    }
+</ul>
+                                        }
+                                        else
+                    {
+
+                        <p class="text-muted mb-0">Nog geen verzendingen.</p>
+                    }
+                </div>
+            </section>
+
+            <section class="card card-modern">
+                <div class="card-body">
+                    <h4 class="mb-3">Historiek</h4>
+                    @if (issue.ConstructionIssueHistory?.Any() == true)
+                    {
+                        <ul class="list-unstyled mb-0">@foreach (var h in issue.ConstructionIssueHistory.OrderByDescending(x => x.Timestamp)){
+                        <li class="mb-2 pb-2 border-bottom"><strong>@h.Timestamp.ToString("dd/MM/yyyy HH:mm")</strong> - @((ConstructionIssueHistoryAction)h.Action) @if(!string.IsNullOrWhiteSpace(h.Comment)){
+                        <span class="text-muted">(@h.Comment)</span>
+                    }
+</li>
+                                        }
+</ul>
+                                        }
+                                        else
+                    {
+
+                        <p class="text-muted mb-0">Nog geen historiek beschikbaar.</p>
+                    }
+                </div>
+            </section>
+        </div>
+    </div>
+</section>

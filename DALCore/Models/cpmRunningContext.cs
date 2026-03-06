@@ -85,6 +85,20 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ConnectionSettlementSource> ConnectionSettlementSource { get; set; }
 
+    public virtual DbSet<ConstructionIssue> ConstructionIssue { get; set; }
+
+    public virtual DbSet<ConstructionIssueCategory> ConstructionIssueCategory { get; set; }
+
+    public virtual DbSet<ConstructionIssueHistory> ConstructionIssueHistory { get; set; }
+
+    public virtual DbSet<ConstructionIssueMedia> ConstructionIssueMedia { get; set; }
+
+    public virtual DbSet<ConstructionIssueNotification> ConstructionIssueNotification { get; set; }
+
+    public virtual DbSet<ConstructionIssueReport> ConstructionIssueReport { get; set; }
+
+    public virtual DbSet<ConstructionIssueReportItem> ConstructionIssueReportItem { get; set; }
+
     public virtual DbSet<ContactRequests> ContactRequests { get; set; }
 
     public virtual DbSet<Contract> Contract { get; set; }
@@ -1022,6 +1036,142 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_CSS_Sett");
         });
 
+        modelBuilder.Entity<ConstructionIssue>(entity =>
+        {
+            entity.HasIndex(e => e.ProjectId, "IX_ConstructionIssue_ProjectId");
+
+            entity.HasIndex(e => new { e.ProjectId, e.DueDate }, "IX_ConstructionIssue_ProjectId_DueDate");
+
+            entity.HasIndex(e => new { e.ProjectId, e.LastSentDate }, "IX_ConstructionIssue_ProjectId_LastSentDate");
+
+            entity.HasIndex(e => new { e.ProjectId, e.ResponsiblePartyType, e.ResponsiblePartyId }, "IX_ConstructionIssue_ProjectId_ResponsiblePartyType_ResponsiblePartyId");
+
+            entity.HasIndex(e => new { e.ProjectId, e.Status }, "IX_ConstructionIssue_ProjectId_Status");
+
+            entity.HasIndex(e => new { e.ProjectId, e.UnitId }, "IX_ConstructionIssue_ProjectId_UnitId");
+
+            entity.Property(e => e.CreatedByUserId).HasMaxLength(128);
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.LastUpdatedByUserId).HasMaxLength(128);
+            entity.Property(e => e.LocationText)
+                .IsRequired()
+                .HasMaxLength(250);
+            entity.Property(e => e.ResponsibleOtherEmail).HasMaxLength(254);
+            entity.Property(e => e.ResponsibleOtherName).HasMaxLength(200);
+            entity.Property(e => e.RoomOrZone).HasMaxLength(100);
+            entity.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasOne(d => d.Category).WithMany(p => p.ConstructionIssue)
+                .HasForeignKey(d => d.CategoryId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssue_ConstructionIssueCategory");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ConstructionIssue)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssue_Project");
+
+            entity.HasOne(d => d.Unit).WithMany(p => p.ConstructionIssue)
+                .HasForeignKey(d => d.UnitId)
+                .HasConstraintName("FK_ConstructionIssue_Units");
+        });
+
+        modelBuilder.Entity<ConstructionIssueCategory>(entity =>
+        {
+            entity.HasIndex(e => e.Name, "UX_ConstructionIssueCategory_Name").IsUnique();
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<ConstructionIssueHistory>(entity =>
+        {
+            entity.Property(e => e.Comment).HasMaxLength(500);
+            entity.Property(e => e.Timestamp).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.UserId).HasMaxLength(128);
+
+            entity.HasOne(d => d.Issue).WithMany(p => p.ConstructionIssueHistory)
+                .HasForeignKey(d => d.IssueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssueHistory_ConstructionIssue");
+        });
+
+        modelBuilder.Entity<ConstructionIssueMedia>(entity =>
+        {
+            entity.Property(e => e.CreatedByUserId).HasMaxLength(128);
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.FileId)
+                .IsRequired()
+                .HasMaxLength(260);
+
+            entity.HasOne(d => d.Issue).WithMany(p => p.ConstructionIssueMedia)
+                .HasForeignKey(d => d.IssueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssueMedia_ConstructionIssue");
+        });
+
+        modelBuilder.Entity<ConstructionIssueNotification>(entity =>
+        {
+            entity.HasIndex(e => new { e.IssueId, e.SentDate }, "IX_ConstructionIssueNotification_IssueId_SentDate");
+
+            entity.HasIndex(e => e.RecipientEmail, "IX_ConstructionIssueNotification_RecipientEmail");
+
+            entity.HasIndex(e => e.ReportId, "IX_ConstructionIssueNotification_ReportId");
+
+            entity.Property(e => e.RecipientEmail).HasMaxLength(254);
+            entity.Property(e => e.SentByUserId).HasMaxLength(128);
+            entity.Property(e => e.SentDate).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.Issue).WithMany(p => p.ConstructionIssueNotification)
+                .HasForeignKey(d => d.IssueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssueNotification_ConstructionIssue");
+
+            entity.HasOne(d => d.Report).WithMany(p => p.ConstructionIssueNotification)
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_ConstructionIssueNotification_ConstructionIssueReport");
+        });
+
+        modelBuilder.Entity<ConstructionIssueReport>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProjectId, e.CreatedDate }, "IX_ConstructionIssueReport_ProjectId_CreatedDate");
+
+            entity.HasIndex(e => new { e.ProjectId, e.ResponsiblePartyType, e.ResponsiblePartyId }, "IX_ConstructionIssueReport_ProjectId_ResponsiblePartyType_ResponsiblePartyId");
+
+            entity.Property(e => e.CreatedByUserId).HasMaxLength(128);
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.FileId).HasMaxLength(260);
+            entity.Property(e => e.ResponsibleOtherEmail).HasMaxLength(254);
+            entity.Property(e => e.ResponsibleOtherName).HasMaxLength(200);
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ConstructionIssueReport)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssueReport_Project");
+        });
+
+        modelBuilder.Entity<ConstructionIssueReportItem>(entity =>
+        {
+            entity.HasKey(e => new { e.ReportId, e.IssueId });
+
+            entity.ToTable("ConstructionIssueReportItem");
+
+            entity.HasIndex(e => e.IssueId, "IX_ConstructionIssueReportItem_IssueId");
+
+            entity.HasOne(d => d.Report)
+                .WithMany(p => p.ConstructionIssueReportItem)
+                .HasForeignKey(d => d.ReportId)
+                .HasConstraintName("FK_ConstructionIssueReportItem_ConstructionIssueReport");
+
+            entity.HasOne(d => d.Issue)
+                .WithMany(p => p.ConstructionIssueReportItem)
+                .HasForeignKey(d => d.IssueId)
+                .HasConstraintName("FK_ConstructionIssueReportItem_ConstructionIssue");
+        });
+
         modelBuilder.Entity<ContactRequests>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__ContactR__3214EC07ECCBFF00");
@@ -1075,6 +1225,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.GuaranteePercentage).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.PaymentTerm).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
+            entity.Property(e => e.SiteManagerContactId).HasColumnName("SiteManagerContactID");
             entity.Property(e => e.VatPercentage).HasColumnType("numeric(18, 0)");
 
             entity.HasOne(d => d.Company).WithMany(p => p.Contract)
@@ -1086,6 +1237,10 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Contract_Project");
+
+            entity.HasOne(d => d.SiteManagerContact).WithMany(p => p.Contract)
+                .HasForeignKey(d => d.SiteManagerContactId)
+                .HasConstraintName("FK_Contract_CompanyContacts_SiteManager");
         });
 
         modelBuilder.Entity<ContractActivity>(entity =>

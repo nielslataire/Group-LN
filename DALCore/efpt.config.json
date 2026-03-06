@@ -175,6 +175,34 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ConstructionIssue]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConstructionIssueCategory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConstructionIssueHistory]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConstructionIssueMedia]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConstructionIssueNotification]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConstructionIssueReport]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ConstructionIssueReportItem]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ContactRequests]",
          "ObjectType": 0
       },

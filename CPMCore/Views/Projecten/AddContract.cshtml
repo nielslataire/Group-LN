@@ -82,6 +82,12 @@
 								</div>
 							</div>
 							<div class="form-group row align-items-center pb-3">
+								<div class="form-group row align-items-center pb-3">
+									<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.SiteManagerContactId)</label>
+									<div class="col-lg-8 col-xl-6">
+										@Html.DropDownListFor(m => m.Contract.SiteManagerContactId, new SelectList(Model.SiteManagers, "ID", "Display", Model.Contract.SiteManagerContactId), "Geen", new { @class = "form-control form-control-modern", id = "ddlSiteManager" })
+									</div>
+								</div>
 								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Contract.VatPercentage)</label>
 								<div class="col-lg-3 col-xl-2">
 									@Html.EditorFor(m => m.Contract.VatPercentage, new { id = "txtVatPercentage", @class = "form-control form-control-modern", placeholder = "0,00", autocomplete = "off" })
@@ -313,6 +319,29 @@
 			});
 		}
 
+		function LoadSiteManagers(companyId, selectSelector) {
+					$.ajax({
+						type: 'POST',
+						url: '@Url.Action("GetCompanyContacts", "Projecten")',
+						data: { companyid: companyId },
+						dataType: 'json',
+						success: function (data) {
+							let $select = $(selectSelector);
+							const selectedValue = $select.val();
+							$select.empty();
+							$select.append(new Option('Geen', '', false, false));
+							$.each(data, function (i, item) {
+								$select.append(new Option(item.text, item.id, false, false));
+							});
+							if (selectedValue) {
+								$select.val(selectedValue);
+							}
+						},
+						error: function (xhr, status, error) {
+							console.error('Fout bij ophalen contactpersonen:', error);
+						}
+					});
+				}
 		// ==============================
 		// ACTIVITEITEN TOEVOEGEN AAN CONTRACT
 		// ==============================
@@ -368,15 +397,18 @@
 				if (selectedData && selectedData.id) {
 					$('#txtCompanyID').val(selectedData.id);
 					LoadActivities(selectedData.id, '#lstActivities', '#btnAddActivities');
+					LoadSiteManagers(selectedData.id, '#ddlSiteManager');
 				}
 			});
 
 			$('#txtCompanyID').on('change', function () {
 				LoadActivities($(this).val(), '#lstActivities', '#btnAddActivities');
+				LoadSiteManagers($(this).val(), '#ddlSiteManager');
 			});
 
 			// 🔑 init bestaande bedragen
 			initEuroInput('.Currencymask');
+			LoadSiteManagers($('#txtCompanyID').val(), '#ddlSiteManager');
 		});
 	</script>
 

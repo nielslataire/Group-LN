@@ -55,12 +55,7 @@
 							Verlofdagen project
 						</a>
 					</li> *@
-					<li>
-						<a href="@Url.Action("DetailContacts", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailContacts" && currentController == "Projecten" ? "active" : "")">
-							Contacten
-						</a>
-					</li>
+					
 					<li>
 						<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
 						   class="menu-item @(currentAction == "DetailPhotos" && currentController == "Projecten" ? "active" : "")">
@@ -79,6 +74,18 @@
 							Eenheden
 						</a>
 					</li>
+
+
+
+				</ul>
+				<h6 class="title">OPVOLGING</h6>
+				<ul class="list-unstyled mt-3 pt-3">
+					<li>
+						<a href="@Url.Action("Index", "ProjectsIssues", new { projectId = projectId })"
+						   class="menu-item @(currentController == "ProjectsIssues" ? "active" : "")">
+							<span>Punten</span>
+						</a>
+					</li>
 					<li>
 						<a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })"
 						   class="menu-item @(currentAction == "DetailDocs" && currentController == "Projecten" ? "active" : "")">
@@ -91,16 +98,10 @@
 							Vezekeringen
 						</a>
 					</li>
-				</ul>
 
+				</ul>
 				<h6 class="title">FINANCIEEL</h6>
 				<ul class="list-unstyled mt-3 pt-3">
-					<li>
-						<a href="@Url.Action("DetailSales", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailSales" && currentController == "Projecten" ? "active" : "")">
-							Verkoop
-						</a>
-					</li>
 					<li>
 						<a href="@Url.Action("Invoicing", "Projecten", new { projectid = projectId })"
 						   class="menu-item @(currentAction == "Invoicing" && currentController == "Projecten" ? "active" : "")">
@@ -120,6 +121,22 @@
 						</a>
 					</li>
 				
+				</ul>
+				<h6 class="title">VERKOOP</h6>
+				<ul class="list-unstyled mt-3 pt-3">
+					<li>
+						<a href="@Url.Action("DetailSales", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailSales" && currentController == "Projecten" ? "active" : "")">
+							Te koop
+						</a>
+					</li>
+					<li>
+						<a href="@Url.Action("DetailContacts", "Projecten", new { projectid = projectId })"
+						   class="menu-item @(currentAction == "DetailContacts" && currentController == "Projecten" ? "active" : "")">
+							Contacten
+						</a>
+					</li>
+
 				</ul>
 			</div>
 		</div>

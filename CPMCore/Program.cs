@@ -1,4 +1,5 @@
-﻿using CPMCore.Helpers;
+﻿using CPMCore.Configuration;
+using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Service;
 using CPMCore.Services;
@@ -28,6 +29,8 @@ using ServiceCore;
 using ServiceCore.Invoicing;
 using ServiceCore.Invoicing.Pdf;
 using ServiceCore.Invoicing.Pdf.Sections;
+using ServiceCore.Issues;
+using ServiceCore.Stubs;
 using SmartBreadcrumbs;
 using SmartBreadcrumbs.Extensions;
 using System.Data.SqlClient;
@@ -137,8 +140,13 @@ builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(cl
 });
 builder.Services.AddHttpClient<IPeppolSender, PeppolSender>();
 builder.Services.Configure<OctopusOptions>(builder.Configuration.GetSection("Octopus"));
+builder.Services.Configure<FeatureFlagsOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.AddHttpClient<IOctopusApiClient, OctopusApiClient>();
 builder.Services.AddScoped<IOctopusTokenManager, OctopusTokenManager>();
+builder.Services.AddScoped<IConstructionIssueService, ConstructionIssueService>();
+builder.Services.AddScoped<IConstructionIssueReportService, ConstructionIssueReportService>();
+builder.Services.AddScoped<IQRCodeService, QRCodeServiceStub>();
+builder.Services.AddScoped<IContractorPortalService, ContractorPortalServiceStub>();
 
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();

@@ -2759,6 +2759,7 @@ namespace CPMCore.Models.Projecten
             _activities = new List<IdNameBO>();
             _contractactivities = new List<ContractActivityBO>();
             _insurance = new InsuranceBO();
+            _siteManagers = new List<IdNameBO>();
         }
         private int _projectid;
         public int ProjectId
@@ -2807,6 +2808,18 @@ namespace CPMCore.Models.Projecten
             set
             {
                 _companies = value;
+            }
+        }
+        private List<IdNameBO>? _siteManagers;
+        public List<IdNameBO>? SiteManagers
+        {
+            get
+            {
+                return _siteManagers;
+            }
+            set
+            {
+                _siteManagers = value;
             }
         }
         private int _selectedCompany;

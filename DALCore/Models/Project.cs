@@ -91,6 +91,10 @@ public partial class Project
 
     public virtual ICollection<ConnectionSettlement> ConnectionSettlement { get; set; } = new List<ConnectionSettlement>();
 
+    public virtual ICollection<ConstructionIssue> ConstructionIssue { get; set; } = new List<ConstructionIssue>();
+
+    public virtual ICollection<ConstructionIssueReport> ConstructionIssueReport { get; set; } = new List<ConstructionIssueReport>();
+
     public virtual ICollection<ContactRequests> ContactRequests { get; set; } = new List<ContactRequests>();
 
     public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();

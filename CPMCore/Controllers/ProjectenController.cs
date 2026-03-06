@@ -1971,6 +1971,7 @@ namespace CPMCore.Controllers
         {
 
             var errors = new Dictionary<string, List<string>>();
+            model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
 
             foreach (var key in ModelState.Keys)
             {
@@ -2060,6 +2061,7 @@ namespace CPMCore.Controllers
             }
             model.Activities = activitiesList;
             model.Insurance.Startdate = DateOnly.FromDateTime(DateTime.Now);
+            model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
             var iservice = ServiceFactory.GetInsuranceService();
             var response = iservice.GetInsuranceCompaniesForSelect();
             if (response.Success)
@@ -2094,6 +2096,7 @@ namespace CPMCore.Controllers
         {
 
             var errors = new Dictionary<string, List<string>>();
+            model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
 
             foreach (var key in ModelState.Keys)
             {
@@ -6116,12 +6119,23 @@ namespace CPMCore.Controllers
                 model.ProjectContracts = aresponse.Values;
             }
         }
-        public void AddMessage(string messagetype, string message, string messagetitle)
+        private List<IdNameBO> GetSiteManagersForCompany(int? companyId)
         {
-            TempData["Message"] = message;
-            TempData["MessageType"] = messagetype;
-            TempData["MessageTitle"] = messagetitle;
+            if (!companyId.HasValue || companyId.Value <= 0)
+                return new List<IdNameBO>();
+
+            return _db.CompanyContacts
+                .Where(c => c.CompanyId == companyId.Value)
+                .OrderBy(c => c.ContactNaam)
+                .ThenBy(c => c.ContactVoornaam)
+                .Select(c => new IdNameBO
+                {
+                    ID = c.ContactId,
+                    Display = (c.ContactNaam ?? string.Empty) + (string.IsNullOrWhiteSpace(c.ContactVoornaam) ? string.Empty : $" {c.ContactVoornaam}")
+                })
+                .ToList();
         }
+
         public string GetCompanyName(int companyid)
         {
             var pservice = ServiceFactory.GetCompanyService();
@@ -6170,6 +6184,14 @@ namespace CPMCore.Controllers
             }
 
             return Json(iList);
+        }
+        [HttpPost]
+        public JsonResult GetCompanyContacts(int companyid)
+        {
+            var contacts = GetSiteManagersForCompany(companyid)
+                .Select(x => new SelectBO { id = x.ID, text = x.Display })
+                .ToList();
+            return Json(contacts);
         }
         [HttpPost]
         public JsonResult GetWheaterstations(string term)

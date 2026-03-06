@@ -1783,12 +1783,6 @@ namespace CPMCore.Controllers
             public string countryCode { get; set; } = string.Empty;
         }
 
-        public void AddMessage(string messagetype, string message, string messagetitle)
-        {
-            TempData["Message"] = message;
-            TempData["MessageType"] = messagetype;
-            TempData["MessageTitle"] = messagetitle;
-        }
 
         //WIJZIGNGSOPDRACHTEN
         public ActionResult DetailCO(int projectid, int clientid)

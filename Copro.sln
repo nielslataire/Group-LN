@@ -31,6 +31,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServiceCore", "ServiceCore\ServiceCore.csproj", "{BCDEDA05-7AF3-4E04-8E45-749E3A6D4535}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacadeCore", "FacadeCore\FacadeCore.csproj", "{91D040B9-AD1E-4833-86A7-4AE700288CDD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{2B770FFD-42EB-4BE8-95D5-B89C3CD340DC} = {2B770FFD-42EB-4BE8-95D5-B89C3CD340DC}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DALCore", "DALCore\DALCore.csproj", "{2B770FFD-42EB-4BE8-95D5-B89C3CD340DC}"
 EndProject

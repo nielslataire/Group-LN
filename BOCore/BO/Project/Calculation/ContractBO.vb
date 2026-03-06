@@ -131,4 +131,15 @@ Public Class ContractBO
             _company = value
         End Set
     End Property
+    Private _siteManagerContactId As Integer?
+    <Display(Name:="Verantwoordelijke werfleider")>
+    Public Property SiteManagerContactId() As Integer?
+        Get
+            Return _siteManagerContactId
+        End Get
+        Set(ByVal value As Integer?)
+            _siteManagerContactId = value
+        End Set
+    End Property
+
 End Class

@@ -31,5 +31,7 @@ public partial class CompanyContacts
 
     public virtual CompanyInfo Company { get; set; }
 
+    public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();
+
     public virtual CompanyDepartments Department { get; set; }
 }
