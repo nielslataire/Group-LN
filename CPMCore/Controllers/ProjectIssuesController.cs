@@ -1,14 +1,15 @@
-﻿using System.Net.Http.Headers;
-using System.Text.Json;
-using BOCore;
+﻿using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models.Issues;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using SmartBreadcrumbs.Attributes;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace CPMCore.Controllers;
 
@@ -102,12 +103,18 @@ public class ProjectsIssuesController : BaseController
 
     [HttpPost("Create")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(int projectId, ConstructionIssueFormVm vm)
+    public async Task<IActionResult> Create(int projectId, ConstructionIssueFormVm vm, List<IFormFile>? mediaFiles)
     {
         vm.Input.ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor;
-        if (!ModelState.IsValid) return View("CreateEdit", await BuildVm(projectId, vm.Input));
-        await _service.Create(projectId, vm.Input, User.FindFirst(CpmClaims.UserId)?.Value);
-        return RedirectToAction(nameof(Index), new { projectId });
+        if (!ModelState.IsValid)
+        {
+            PreserveMediaValidation(ModelState);
+            return View("CreateEdit", await BuildVm(projectId, vm.Input));
+        }
+
+        var created = await _service.Create(projectId, vm.Input, User.FindFirst(CpmClaims.UserId)?.Value);
+        await AddIssueMedia(projectId, created.Id, mediaFiles);
+        return RedirectToAction(nameof(Details), new { projectId, id = created.Id });
     }
 
     [HttpGet("Edit/{id:int}")]
@@ -135,19 +142,38 @@ public class ProjectsIssuesController : BaseController
             DueDate = issue.DueDate
         });
         vm.Id = id;
+        vm.ExistingMedia = await BuildMediaVm(projectId, id);
         return View("CreateEdit", vm);
     }
-
     [HttpPost("Edit/{id:int}")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int projectId, int id, ConstructionIssueFormVm vm)
+    public async Task<IActionResult> Edit(int projectId, int id, ConstructionIssueFormVm vm, List<IFormFile>? mediaFiles, List<int>? deleteMediaIds)
     {
         vm.Input.ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor;
-        if (!ModelState.IsValid) return View("CreateEdit", await BuildVm(projectId, vm.Input));
+        if (!ModelState.IsValid)
+        {
+            PreserveMediaValidation(ModelState);
+            var invalidVm = await BuildVm(projectId, vm.Input);
+            invalidVm.Id = id;
+            invalidVm.ExistingMedia = await BuildMediaVm(projectId, id);
+            return View("CreateEdit", invalidVm);
+        }
+
         var updated = await _service.Update(projectId, id, vm.Input, User.FindFirst(CpmClaims.UserId)?.Value);
         if (updated == null) return NotFound();
+
+        if (deleteMediaIds != null)
+        {
+            foreach (var mediaId in deleteMediaIds.Distinct())
+            {
+                await _service.DeleteMedia(projectId, id, mediaId, User.FindFirst(CpmClaims.UserId)?.Value);
+            }
+        }
+
+        await AddIssueMedia(projectId, id, mediaFiles);
         return RedirectToAction(nameof(Details), new { projectId, id });
     }
+
 
     [HttpGet("Details/{id:int}")]
     public async Task<IActionResult> Details(int projectId, int id)
@@ -204,6 +230,45 @@ public class ProjectsIssuesController : BaseController
     {
         await _service.ChangeStatus(projectId, id, newStatus, comment, User.FindFirst(CpmClaims.UserId)?.Value);
         return RedirectToAction(nameof(Details), new { projectId, id });
+    }
+
+    private async Task<List<ConstructionIssueMediaVm>> BuildMediaVm(int projectId, int issueId)
+    {
+        var media = await _service.GetMedia(projectId, issueId);
+        return media
+            .Select(x => new ConstructionIssueMediaVm
+            {
+                Id = x.Id,
+                FileId = x.FileId,
+                Url = GetSignedAssetUrlByFileName(x.FileId, "issues")
+            })
+            .ToList();
+    }
+
+    private async Task AddIssueMedia(int projectId, int issueId, List<IFormFile>? files)
+    {
+        if (files == null) return;
+
+        foreach (var file in files.Where(x => x?.Length > 0))
+        {
+            var fileId = await UploadAssetToStorageAsync(file, "issues");
+            if (!string.IsNullOrWhiteSpace(fileId))
+            {
+                await _service.AddMedia(projectId, issueId, fileId, (int)ConstructionIssueMediaType.Photo, User.FindFirst(CpmClaims.UserId)?.Value);
+            }
+        }
+    }
+
+    private static void PreserveMediaValidation(ModelStateDictionary modelState)
+    {
+        var keysToRemove = modelState.Keys
+            .Where(k => k.Contains("mediaFiles", StringComparison.OrdinalIgnoreCase) || k.Contains("deleteMediaIds", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        foreach (var key in keysToRemove)
+        {
+            modelState.Remove(key);
+        }
     }
 
     private async Task<ConstructionIssueFormVm> BuildVm(int projectId, ConstructionIssueUpsertBO? dto = null)
