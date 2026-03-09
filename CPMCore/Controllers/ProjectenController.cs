@@ -3747,7 +3747,8 @@ namespace CPMCore.Controllers
                               ? _projectService.GetNewsByProjectId(projectId).Values
                               : new List<ProjectNewsBO>()
             };
-            ViewData["NewsBaseUrl"] = $"{Configuration["URL:ImageWebUrl"]?.TrimEnd('/')}/pictures/News/";
+            ViewData["NewsBaseUrl"] = $"{Configuration["URL:ImageWebUrl"]?.TrimEnd('/')}/issues/";
+
 
 
             //BREADCRUMBS

@@ -2729,12 +2729,24 @@ namespace CPMCore.Controllers
             var skipSendStep = false;
 
             var finalDate = forceFinalPdf
-              ? DateOnly.FromDateTime(DateTime.Today)
-              : (invoice.Date == default
                   ? DateOnly.FromDateTime(DateTime.Today)
-                  : invoice.Date);
+                  : (invoice.Date == default
+                      ? DateOnly.FromDateTime(DateTime.Today)
+                      : invoice.Date);
 
             var effectiveDueDate = await ResolveEffectiveDueDateAsync(invoice, issuer, finalDate, ct, recalculate: forceFinalPdf);
+
+            if (forceFinalPdf && invoice.Date != finalDate)
+            {
+                invoice.Date = finalDate;
+            }
+
+            if (forceFinalPdf && invoice.ExpirationDate != effectiveDueDate)
+            {
+                invoice.ExpirationDate = effectiveDueDate;
+            }
+
+            detail.InvoiceDate = finalDate;
 
             if (forceFinalPdf && invoice.Date != finalDate)
             {
@@ -2830,16 +2842,22 @@ namespace CPMCore.Controllers
                 : structuredOgm;
 
             var formattedPublicId = forceFinalPdf || string.IsNullOrWhiteSpace(invoice.PublicId)
-                  ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, documentSequenceNr, finalDate)
-                  : invoice.PublicId;
+                   ? FormatInvoiceNumber(issuer.InvoiceNumberPattern, documentSequenceNr, finalDate)
+                   : invoice.PublicId;
 
             if (forceFinalPdf && !string.Equals(invoice.PublicId, formattedPublicId, StringComparison.Ordinal))
             {
                 invoice.PublicId = formattedPublicId;
             }
 
-
-            detail.PublicId ??= formattedPublicId;
+            if (forceFinalPdf)
+            {
+                detail.PublicId = formattedPublicId;
+            }
+            else
+            {
+                detail.PublicId ??= formattedPublicId;
+            }
 
             return new OctopusInvoiceContext(
                 invoice,
@@ -3245,7 +3263,7 @@ namespace CPMCore.Controllers
             CancellationToken ct,
             OctopusWorkflowProgress progress)
         {
-            if (progress.UploadCompleted)
+            if (progress.UploadCompleted && !context.ForceFinalPdf)
             {
                 // Upload is reeds gebeurd, maar we hebben nog steeds de PDF-inhoud nodig voor eventuele mailverzending.
                 return await BuildAttachmentAsync(context, ct);
