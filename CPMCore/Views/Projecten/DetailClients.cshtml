@@ -79,9 +79,12 @@
                     <h5 class="mb-4 mt-0">Beheer de klanten van het project</h5>
                 </div>
                 <div class="col-sm-auto px-0">
-                    <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
-                    <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-                    <a href="@Url.Action("AddClientAccount", "Klanten", new {id = Model.ProjectId})" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+                        <div class="btn-group" role="group" aria-label="Project acties">
+                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
+                            <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+                        </div>
+
                 </div>
             </div>
             @await Html.PartialAsync("Clients", Model)

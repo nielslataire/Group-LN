@@ -55,6 +55,7 @@
                         <h5 class="mb-4 mt-0">Overzicht van alle factureerbare onderdelen</h5>
                     </div>
                     <div class="col-sm-auto px-0">
+                        <div class="btn-group" role="group" aria-label="Project acties">
                         <a class="btn btn-default btn-md px-3 me-1" data-bs-toggle="modal" data-bs-target="#modalprintinvoicelist"
                            id="btnPrintInvoiceList" title="Facturatie overzicht" data-id="@Model.ProjectId">
                             <i class="fa fa-bars me-2"></i>Facturatieoverzicht
@@ -70,11 +71,12 @@
                                 <i class="fa fa-euro-sign me-2"></i>Facturen opmaken
                             </button>
                         }
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <ul class="nav nav-pills invoice-tab-nav mb-4" role="tablist">
+            <ul class="nav nav-pills invoice-tab-nav mb-4 bg-light" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link active" href="#" data-invoice-section="schijven">Schijven</a>
                 </li>

@@ -123,11 +123,13 @@
             <h5 class="mb-4 mt-0">Beheer de facturen van @ViewBag.CompanyName</h5>
         </div>
         <div class="col-sm-auto px-0">
+        <div class="btn-group" role="group" aria-label="Project acties">
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
             <button type="submit" class="btn btn-primary btn-md px-3 me-1" id="btnBookInvoices" form="invoice-book-form" disabled>Boeken facturen</button>
 
             <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
+            </div>
         </div>
     </div>
 @if(Model.Any())

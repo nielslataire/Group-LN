@@ -80,6 +80,7 @@
                     </div>
 
                     <div class="col-sm-auto px-0">
+                        <div class="btn-group" role="group" aria-label="Project acties">
                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel">
                             <i class="fas fa-file-excel"></i>
                         </button>
@@ -88,6 +89,7 @@
                         </button>
                         <a href="@Url.Action("AddChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientaccountid = Model.ClientAccountId })"
                            class="btn btn-primary btn-md">+ Wijzigingsopdracht toevoegen</a>
+                           </div>
                     </div>
                 </div>
 
