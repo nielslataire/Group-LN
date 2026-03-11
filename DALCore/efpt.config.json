@@ -387,6 +387,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[UnitExecutionPlan]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[UnitGroupTypes]",
          "ObjectType": 0
       },

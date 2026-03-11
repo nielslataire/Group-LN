@@ -1,11 +1,27 @@
 ﻿@using BOCore
 @using DALCore.Models
+@using System.Text.Json
+
 @model CPMCore.Models.Issues.ConstructionIssueIndexVm
 @{
     var projectId = Model.ProjectId;
     var filters = Model.Filters;
     ViewData["Title"] = "Punten";
 }
+<style>
+    #issueModal .modal-content {
+        max-height: 90vh;
+    }
+
+    #issueModal form {
+        min-height: 0;
+    }
+
+    #issueModal .modal-body {
+        overflow-y: auto;
+        min-height: 0;
+    }
+</style>
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -18,8 +34,8 @@
                 </div>
                 <div class="col-sm-auto px-0">
                     <div class="btn-group" role="group" aria-label="Project acties">
-                    <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })" class="btn btn-default btn-md me-2">Terug naar project</a>
-                    <a href="@Url.Action("Create", new { projectId })" class="btn btn-primary btn-md">+ Punt toevoegen</a>
+                        <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })" class="btn btn-default btn-md me-2">Terug naar project</a>
+                        <button type="button" class="btn btn-primary btn-md" id="openCreateIssueModal">+ Punt toevoegen</button>
                     </div>
                 </div>
             </div>
@@ -62,21 +78,11 @@
                                                 }
 </select></div>
                         <div class="col-md-2"><button class="btn btn-primary w-100" type="submit">Bulk bijwerken</button></div>
-                        @foreach (var issue in Model.Issues)
-                        {
-                            <input type="hidden" name="IssueIds" value="@issue.Id" class="js-issue-id d-none" />
-                        }
                     </form>
 
-                    <form method="post" action="@Url.Action("SendSelected", new { projectId })" class="mt-3 d-inline-block me-2">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="GroupByResponsible" value="true" />
-                        @foreach (var issue in Model.Issues)
-                        {
-                            <input type="hidden" name="IssueIds" value="@issue.Id" class="js-issue-id d-none" />
-                        }
-                        <button class="btn btn-success" type="submit">Verstuur selectie</button>
-                    </form>
+                    <form method="post" action="@Url.Action("SendSelected", new { projectId })" class="mt-3 d-inline-block me-2">@Html.AntiForgeryToken()<input type="hidden" name="GroupByResponsible" value="true" /><button class="btn btn-success" type="submit">Verstuur selectie</button></form>
+                    <form method="post" action="@Url.Action("DownloadPdf", new { projectId })" class="d-inline-block">@Html.AntiForgeryToken()<button class="btn btn-default" type="submit">Download PDF selectie</button></form>
+
                     <form method="post" action="@Url.Action("DownloadPdf", new { projectId })" class="d-inline-block">
                         @Html.AntiForgeryToken()
                         @foreach (var issue in Model.Issues)
@@ -95,6 +101,7 @@
                             <thead>
                                 <tr>
                                     <th><input type="checkbox" id="checkAll" /></th>
+                                    <th>Titel</th>
                                     <th>Titel</th>
                                     <th>Unit</th>
                                     <th>Categorie</th>
@@ -119,7 +126,10 @@
                                         <td>@((ConstructionIssuePriority)i.Priority)</td>
                                         <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                                         <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
-                                        <td class="text-end"><a class="ms-1 me-1" href="@Url.Action("Details", new { projectId, id = i.Id })"><i class="fa fa-eye fs-5"></i></a><a class="ms-1 me-1" href="@Url.Action("Edit", new { projectId, id = i.Id })"><i class="fa fa-pen fs-5"></i></a></td>
+                                        <td class="text-end">
+                                            <a class="ms-1 me-1" href="@Url.Action("Details", new { projectId, id = i.Id })"><i class="fa fa-eye fs-5"></i></a>
+                                            <button type="button" class="btn btn-link ms-1 me-1 p-0 open-edit-issue" data-id="@i.Id"><i class="fa fa-pen fs-5"></i></button>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
@@ -130,10 +140,51 @@
         </div>
     </div>
 </section>
+@await Html.PartialAsync("Modals/_ModalCreateEditIssue", Model)
 
 @section PageScripts {
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script>
         (function(){
+            const projectId = @projectId;
+            const issueModalEl = document.getElementById('issueModal');
+            const issueModal = new bootstrap.Modal(issueModalEl);
+            const issueForm = document.getElementById('issueForm');
+            const titleEl = document.getElementById('issueModalTitle');
+            const submitEl = document.getElementById('saveIssueButton');
+            const mediaInput = document.getElementById('mediaFilesInput');
+            const mediaPreview = document.getElementById('mediaPreview');
+            const addMediaButton = document.getElementById('addMediaButton');
+            const unitField = document.getElementById('issueUnitId');
+            const planSelect = document.getElementById('planDocumentSelect');
+            const planPageSelect = document.getElementById('planPageSelect');
+            const planZoomSelect = document.getElementById('planZoomSelect');
+            const planPickToggle = document.getElementById('planPickToggle');
+            const planContainer = document.getElementById('planContainer');
+            const planEmpty = document.getElementById('planEmpty');
+            const planSurface = document.getElementById('planSurface');
+            const planCanvas = document.getElementById('planCanvas');
+            const planFrame = document.getElementById('planFrame');
+            const planOverlay = document.getElementById('planOverlay');
+            const planMarker = document.getElementById('planMarker');
+            const planDocumentIdInput = document.getElementById('planDocumentId');
+            const planPageNumberInput = document.getElementById('planPageNumber');
+            const planXNormalizedInput = document.getElementById('planXNormalized');
+            const planYNormalizedInput = document.getElementById('planYNormalized');
+            const planCtx = planCanvas.getContext('2d');
+
+            let dt = new DataTransfer();
+            let currentPdfDoc = null;
+            let currentPlans = [];
+            let currentPlanUrl = '';
+            let planRenderRequestId = 0;
+            const pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
+            let isPickMode = false;
+
+            if (pdfJsApi) {
+                pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+            }
+
             function syncHidden(){
                 const ids = Array.from(document.querySelectorAll('.issue-check:checked')).map(x=>x.value);
                 document.querySelectorAll('input.js-issue-id').forEach(x=>x.remove());
@@ -143,6 +194,347 @@
                     }
                 });
             }
+
+            function clearMarker(){
+                planMarker.style.display = 'none';
+                planXNormalizedInput.value = '';
+                planYNormalizedInput.value = '';
+            }
+
+            function hideMarker(){
+                planMarker.style.display = 'none';
+            }
+
+            function setPickMode(enabled){
+                isPickMode = enabled;
+                planOverlay.classList.toggle('is-pick-mode', enabled);
+                planPickToggle.textContent = enabled ? 'Klik op plan...' : 'Punt aanduiden';
+                planPickToggle.classList.toggle('btn-primary', enabled);
+                planPickToggle.classList.toggle('btn-outline-primary', !enabled);
+            }
+
+            function fillPageSelect(totalPages, selectedPage){
+                planPageSelect.innerHTML = '';
+                for(let page = 1; page <= totalPages; page++){
+                    const option = document.createElement('option');
+                    option.value = String(page);
+                    option.textContent = `Pagina ${page}`;
+                    planPageSelect.appendChild(option);
+                }
+                planPageSelect.value = String(selectedPage || 1);
+                planPageSelect.disabled = totalPages <= 1;
+            }
+
+            function drawMarkerFromNormalized(xNorm, yNorm){
+                if(xNorm === '' || yNorm === '' || xNorm == null || yNorm == null) { clearMarker(); return; }
+                const width = planOverlay.clientWidth || planCanvas.clientWidth || 0;
+                const height = planOverlay.clientHeight || planCanvas.clientHeight || 0;
+                if (!width || !height) { return; }
+                const x = Number(xNorm) * width;
+                const y = Number(yNorm) * height;
+                planMarker.style.left = `${x}px`;
+                planMarker.style.top = `${y}px`;
+                planMarker.style.display = 'block';
+            }
+
+            function resetPlanStage(){
+                planSurface.style.display = 'none';
+                planCanvas.style.display = 'none';
+                planFrame.style.display = 'none';
+                planFrame.src = 'about:blank';
+                planOverlay.style.display = 'none';
+                planEmpty.style.display = 'block';
+                planCtx.clearRect(0, 0, planCanvas.width || 1, planCanvas.height || 1);
+                hideMarker();
+                setPickMode(false);
+                planDocumentIdInput.value = '';
+                planPageNumberInput.value = '1';
+                planPageSelect.innerHTML = '<option value="1">Pagina 1</option>';
+                planPageSelect.disabled = true;
+                currentPdfDoc = null;
+                currentPlanUrl = '';
+            }
+
+            function getZoomValueForIframe(){
+                const zoom = planZoomSelect.value;
+                if (zoom === 'fit') return 'page-fit';
+                if (zoom === 'page-width') return 'page-width';
+                return `${zoom}`;
+            }
+
+            function getScaleForCanvas(page){
+                const baseViewport = page.getViewport({ scale: 1 });
+                const maxWidth = Math.max((planContainer.clientWidth || 1000) - 16, 320);
+                const maxHeight = Math.max((planContainer.clientHeight || 640) - 16, 320);
+                const zoom = planZoomSelect.value;
+                if (zoom === 'fit') return Math.min(maxWidth / baseViewport.width, maxHeight / baseViewport.height);
+                if (zoom === 'page-width') return maxWidth / baseViewport.width;
+                const numericZoom = Number(zoom);
+                return Number.isFinite(numericZoom) ? (numericZoom / 100) : 1;
+            }
+
+            async function renderPdfPage(url, requestedPageNumber){
+                const renderRequestId = ++planRenderRequestId;
+                const pageNumber = Number(requestedPageNumber || planPageSelect.value || 1);
+                hideMarker();
+                setPickMode(false);
+                planSurface.style.display = 'none';
+                planCanvas.style.display = 'none';
+                planFrame.style.display = 'none';
+                planOverlay.style.display = 'none';
+                planEmpty.style.display = 'block';
+                planCtx.clearRect(0, 0, planCanvas.width || 1, planCanvas.height || 1);
+                planPageNumberInput.value = String(pageNumber);
+
+                if (!pdfJsApi || typeof pdfJsApi.getDocument !== 'function') {
+                    planPageSelect.disabled = true;
+                    planFrame.src = `${url}#page=${pageNumber}&zoom=${encodeURIComponent(getZoomValueForIframe())}&toolbar=0&navpanes=0&pagemode=none`;
+                    planFrame.style.display = 'block';
+                    planOverlay.style.display = 'none';
+                    planSurface.style.display = 'none';
+                    planEmpty.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    if (!currentPdfDoc || currentPlanUrl !== url) {
+                        const loadingTask = pdfJsApi.getDocument(url);
+                        currentPdfDoc = await loadingTask.promise;
+                        if (renderRequestId !== planRenderRequestId) return;
+                        currentPlanUrl = url;
+                        fillPageSelect(currentPdfDoc.numPages || 1, pageNumber);
+                    }
+
+                    const safePageNumber = Math.min(Math.max(1, pageNumber), currentPdfDoc.numPages || 1);
+                    planPageSelect.value = String(safePageNumber);
+                    planPageNumberInput.value = String(safePageNumber);
+                    const page = await currentPdfDoc.getPage(safePageNumber);
+                    if (renderRequestId !== planRenderRequestId) return;
+
+                    const scale = getScaleForCanvas(page);
+                    const viewport = page.getViewport({ scale });
+
+                    planCanvas.width = Math.floor(viewport.width);
+                    planCanvas.height = Math.floor(viewport.height);
+                    planCanvas.style.width = `${Math.floor(viewport.width)}px`;
+                    planCanvas.style.height = `${Math.floor(viewport.height)}px`;
+                    planSurface.style.width = `${Math.floor(viewport.width)}px`;
+                    planSurface.style.height = `${Math.floor(viewport.height)}px`;
+                    await page.render({ canvasContext: planCtx, viewport }).promise;
+                    if (renderRequestId !== planRenderRequestId) return;
+
+                    planSurface.style.display = 'inline-block';
+                    planCanvas.style.display = 'block';
+                    planOverlay.style.display = 'block';
+                    planEmpty.style.display = 'none';
+                    if (planXNormalizedInput.value && planYNormalizedInput.value) {
+                        drawMarkerFromNormalized(planXNormalizedInput.value, planYNormalizedInput.value);
+                    }
+                } catch (error) {
+                    const isCancelled = String(error?.name || '').includes('RenderingCancelled')
+                        || String(error?.message || '').toLowerCase().includes('rendering cancelled');
+                    if (isCancelled || renderRequestId !== planRenderRequestId) {
+                        return;
+                    }
+
+                    console.warn('PDF.js render failed, fallback to iframe preview.', error);
+                    currentPdfDoc = null;
+                    currentPlanUrl = '';
+                    planPageSelect.disabled = true;
+                    planFrame.src = `${url}#page=${pageNumber}&zoom=${encodeURIComponent(getZoomValueForIframe())}&toolbar=0&navpanes=0&pagemode=none`;
+                    planFrame.style.display = 'block';
+                    planOverlay.style.display = 'none';
+                    planSurface.style.display = 'none';
+                    planEmpty.style.display = 'none';
+                }
+            }
+
+            async function loadPlansForUnit(unitId, selectedPlanId, selectedPageNumber){
+                planSelect.innerHTML = '<option value="">Plan kiezen...</option>';
+                planSelect.disabled = true;
+                resetPlanStage();
+                if(!unitId){
+                    planSelect.innerHTML = '<option value="">Selecteer eerst een eenheid</option>';
+                    return;
+                }
+
+                const response = await fetch(`/Projects/${projectId}/Issues/UnitPlans/${unitId}`);
+                if(!response.ok) return;
+                const plans = await response.json();
+                currentPlans = plans || [];
+                planSelect.innerHTML = '<option value="">Kies plan...</option>';
+
+                currentPlans.forEach(plan => {
+                    const opt = document.createElement('option');
+                    opt.value = String(plan.id);
+                    opt.textContent = plan.name;
+                    opt.dataset.url = plan.url;
+                    planSelect.appendChild(opt);
+                });
+
+                planSelect.disabled = currentPlans.length === 0;
+                if (selectedPlanId != null && currentPlans.some(x => String(x.id) === String(selectedPlanId))) {
+                    planSelect.value = String(selectedPlanId);
+                    if (selectedPageNumber != null) {
+                        planPageSelect.innerHTML = `<option value="${selectedPageNumber}">Pagina ${selectedPageNumber}</option>`;
+                        planPageSelect.value = String(selectedPageNumber);
+                    }
+                    await onPlanChanged(false);
+                    if (planXNormalizedInput.value && planYNormalizedInput.value) {
+                        drawMarkerFromNormalized(planXNormalizedInput.value, planYNormalizedInput.value);
+                    }
+                }
+            }
+
+            async function onPlanChanged(clearPoint = true){
+                if (clearPoint) {
+                    clearMarker();
+                } else {
+                    hideMarker();
+                }
+                setPickMode(false);
+                planEmpty.textContent = 'Selecteer eerst een eenheid en plan';
+                const selectedOption = planSelect.options[planSelect.selectedIndex];
+                if(!selectedOption || !selectedOption.dataset.url){
+                    resetPlanStage();
+                    return;
+                }
+                currentPdfDoc = null;
+                currentPlanUrl = '';
+                planDocumentIdInput.value = planSelect.value;
+                await renderPdfPage(selectedOption.dataset.url, planPageSelect.value || 1);
+            }
+
+            function resetForm(){
+                issueForm.reset();
+                issueForm.action = `/Projects/${projectId}/Issues/Create`;
+                titleEl.textContent = 'Nieuw punt toevoegen';
+                submitEl.textContent = 'Punt aanmaken';
+                mediaPreview.querySelectorAll('.issue-media-item').forEach(x => x.remove());
+                dt = new DataTransfer();
+                mediaInput.files = dt.files;
+                planSelect.innerHTML = '<option value="">Selecteer eerst een eenheid</option>';
+                planSelect.disabled = true;
+                resetPlanStage();
+            }
+
+            function addPreview(url, existingId){
+                const wrapper = document.createElement('div');
+                wrapper.className = 'position-relative issue-media-item';
+                wrapper.style.width = '90px';
+                wrapper.innerHTML = `<img src="${url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;" />`;
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 p-0 issue-media-remove';
+                remove.textContent = '×';
+                remove.addEventListener('click', () => {
+                    if(existingId){
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'deleteMediaIds';
+                        hidden.value = existingId;
+                        issueForm.appendChild(hidden);
+                    } else {
+                        const index = Array.from(dt.files).findIndex(f => f._previewUrl === url);
+                        if(index >= 0){ dt.items.remove(index); mediaInput.files = dt.files; }
+                    }
+                    wrapper.remove();
+                });
+                wrapper.appendChild(remove);
+                mediaPreview.insertBefore(wrapper, addMediaButton);
+            }
+
+            mediaInput.addEventListener('change', (e) => {
+                Array.from(e.target.files || []).forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    file._previewUrl = url;
+                    dt.items.add(file);
+                    addPreview(url, null);
+                });
+                mediaInput.files = dt.files;
+            });
+
+            addMediaButton.addEventListener('click', () => mediaInput.click());
+            unitField.addEventListener('change', async () => await loadPlansForUnit(unitField.value, null, null));
+            planSelect.addEventListener('change', () => onPlanChanged(true));
+            planPageSelect.addEventListener('change', async () => {
+                const selectedOption = planSelect.options[planSelect.selectedIndex];
+                if(!selectedOption || !selectedOption.dataset.url) return;
+                await renderPdfPage(selectedOption.dataset.url, planPageSelect.value || 1);
+            });
+            planZoomSelect.addEventListener('change', async () => {
+                const selectedOption = planSelect.options[planSelect.selectedIndex];
+                if(!selectedOption || !selectedOption.dataset.url) return;
+                await renderPdfPage(selectedOption.dataset.url, planPageSelect.value || 1);
+            });
+            planPickToggle.addEventListener('click', () => {
+                const selectedOption = planSelect.options[planSelect.selectedIndex];
+                if(!selectedOption || !selectedOption.dataset.url) return;
+                if (planOverlay.style.display === 'none') return;
+                setPickMode(!isPickMode);
+            });
+
+            planOverlay.addEventListener('click', (e) => {
+                if (!isPickMode) return;
+                const rect = planOverlay.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                const width = planOverlay.clientWidth || rect.width;
+                const height = planOverlay.clientHeight || rect.height;
+                if (!width || !height) return;
+                const xNorm = clickX / width;
+                const yNorm = clickY / height;
+                planXNormalizedInput.value = xNorm.toFixed(6);
+                planYNormalizedInput.value = yNorm.toFixed(6);
+                drawMarkerFromNormalized(xNorm, yNorm);
+                setPickMode(false);
+            });
+
+            issueModalEl.addEventListener('shown.bs.modal', () => {
+                if (planXNormalizedInput.value && planYNormalizedInput.value && planOverlay.style.display !== 'none') {
+                    drawMarkerFromNormalized(planXNormalizedInput.value, planYNormalizedInput.value);
+                }
+            });
+
+            document.getElementById('openCreateIssueModal').addEventListener('click', () => { resetForm(); issueModal.show(); });
+
+            document.querySelectorAll('.open-edit-issue').forEach(btn => btn.addEventListener('click', async () => {
+                resetForm();
+                const editIssueId = btn.dataset.id;
+                const response = await fetch(`/Projects/${projectId}/Issues/EditData/${editIssueId}`);
+                if(!response.ok) return;
+                const data = await response.json();
+                issueModal.show();
+                issueForm.action = `/Projects/${projectId}/Issues/Edit/${editIssueId}`;
+                titleEl.textContent = 'Punt bewerken';
+                submitEl.textContent = 'Punt opslaan';
+                Object.entries({
+                    'Input.Title': data.title,
+                    'Input.Description': data.description,
+                    'Input.LocationText': data.locationText,
+                    'Input.CategoryId': data.categoryId,
+                    'Input.RoomOrZone': data.roomOrZone,
+                    'Input.UnitId': data.unitId,
+                    'Input.IssueType': data.issueType,
+                    'Input.IssuePhase': data.issuePhase,
+                    'Input.Priority': data.priority,
+                    'Input.Status': data.status,
+                    'Input.ResponsiblePartyId': data.responsiblePartyId,
+                    'Input.ResponsibleOtherName': data.responsibleOtherName,
+                    'Input.ResponsibleOtherEmail': data.responsibleOtherEmail,
+                    'Input.DueDate': data.dueDate,
+                    'Input.PlanDocumentId': data.planDocumentId,
+                    'Input.PlanPageNumber': data.planPageNumber,
+                    'Input.PlanXNormalized': data.planXnormalized,
+                    'Input.PlanYNormalized': data.planYnormalized
+                }).forEach(([name,val]) => {
+                    const el = issueForm.querySelector(`[name="${name}"]`);
+                    if(el) el.value = val ?? '';
+                });
+                await loadPlansForUnit(data.unitId, data.planDocumentId, data.planPageNumber);
+                (data.media || []).forEach(m => addPreview(m.url, m.id));
+            }));
+
             document.getElementById('checkAll')?.addEventListener('change',e=>{ document.querySelectorAll('.issue-check').forEach(x=>x.checked=e.target.checked); syncHidden();});
             document.querySelectorAll('.issue-check').forEach(x=>x.addEventListener('change',syncHidden));
             syncHidden();

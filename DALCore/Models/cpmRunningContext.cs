@@ -191,6 +191,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<UnitConstructionValue> UnitConstructionValue { get; set; }
 
+    public virtual DbSet<UnitExecutionPlan> UnitExecutionPlan { get; set; }
+
     public virtual DbSet<UnitGroupTypes> UnitGroupTypes { get; set; }
 
     public virtual DbSet<UnitRooms> UnitRooms { get; set; }
@@ -1056,6 +1058,12 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LocationText)
                 .IsRequired()
                 .HasMaxLength(250);
+            entity.Property(e => e.PlanXnormalized)
+                .HasColumnType("decimal(9, 6)")
+                .HasColumnName("PlanXNormalized");
+            entity.Property(e => e.PlanYnormalized)
+                .HasColumnType("decimal(9, 6)")
+                .HasColumnName("PlanYNormalized");
             entity.Property(e => e.ResponsibleOtherEmail).HasMaxLength(254);
             entity.Property(e => e.ResponsibleOtherName).HasMaxLength(200);
             entity.Property(e => e.RoomOrZone).HasMaxLength(100);
@@ -1155,21 +1163,22 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ConstructionIssueReportItem>(entity =>
         {
-            entity.HasKey(e => new { e.ReportId, e.IssueId });
-
-            entity.ToTable("ConstructionIssueReportItem");
-
             entity.HasIndex(e => e.IssueId, "IX_ConstructionIssueReportItem_IssueId");
 
-            entity.HasOne(d => d.Report)
-                .WithMany(p => p.ConstructionIssueReportItem)
-                .HasForeignKey(d => d.ReportId)
-                .HasConstraintName("FK_ConstructionIssueReportItem_ConstructionIssueReport");
+            entity.HasIndex(e => new { e.ReportId, e.IssueId }, "UX_ConstructionIssueReportItem_ReportId_IssueId").IsUnique();
 
-            entity.HasOne(d => d.Issue)
-                .WithMany(p => p.ConstructionIssueReportItem)
+            entity.Property(e => e.Id).HasDefaultValueSql("(NEXT VALUE FOR [dbo].[Seq_ConstructionIssueReportItemId])");
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");
+
+            entity.HasOne(d => d.Issue).WithMany(p => p.ConstructionIssueReportItem)
                 .HasForeignKey(d => d.IssueId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ConstructionIssueReportItem_ConstructionIssue");
+
+            entity.HasOne(d => d.Report).WithMany(p => p.ConstructionIssueReportItem)
+                .HasForeignKey(d => d.ReportId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ConstructionIssueReportItem_ConstructionIssueReport");
         });
 
         modelBuilder.Entity<ContactRequests>(entity =>
@@ -2221,6 +2230,26 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_UnitConstructionValue_Units");
         });
 
+        modelBuilder.Entity<UnitExecutionPlan>(entity =>
+        {
+            entity.HasIndex(e => e.UnitId, "IX_UnitExecutionPlan_UnitId");
+
+            entity.Property(e => e.CreatedByUserId).HasMaxLength(128);
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(sysutcdatetime())");
+            entity.Property(e => e.DeletedByUserId).HasMaxLength(128);
+            entity.Property(e => e.FileId)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasOne(d => d.Unit).WithMany(p => p.UnitExecutionPlan)
+                .HasForeignKey(d => d.UnitId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UnitExecutionPlan_Units");
+        });
+
         modelBuilder.Entity<UnitGroupTypes>(entity =>
         {
             entity.Property(e => e.Id).HasColumnName("ID");
@@ -2432,6 +2461,7 @@ public partial class cpmRunningContext : DbContext
                 .IsRequired()
                 .HasMaxLength(50);
         });
+        modelBuilder.HasSequence<int>("Seq_ConstructionIssueReportItemId").StartsAt(2L);
 
         OnModelCreatingPartial(modelBuilder);
     }

@@ -57,6 +57,14 @@ public partial class ConstructionIssue
 
     public DateTime? LastUpdatedDate { get; set; }
 
+    public int? PlanDocumentId { get; set; }
+
+    public int? PlanPageNumber { get; set; }
+
+    public decimal? PlanXnormalized { get; set; }
+
+    public decimal? PlanYnormalized { get; set; }
+
     public virtual ConstructionIssueCategory Category { get; set; }
 
     public virtual ICollection<ConstructionIssueHistory> ConstructionIssueHistory { get; set; } = new List<ConstructionIssueHistory>();
@@ -65,10 +73,9 @@ public partial class ConstructionIssue
 
     public virtual ICollection<ConstructionIssueNotification> ConstructionIssueNotification { get; set; } = new List<ConstructionIssueNotification>();
 
+    public virtual ICollection<ConstructionIssueReportItem> ConstructionIssueReportItem { get; set; } = new List<ConstructionIssueReportItem>();
+
     public virtual Project Project { get; set; }
 
     public virtual Units Unit { get; set; }
-
-
-    public virtual ICollection<ConstructionIssueReportItem> ConstructionIssueReportItem { get; set; } = new List<ConstructionIssueReportItem>();
 }

@@ -10,4 +10,5 @@ public class ConstructionIssueIndexVm
     public List<ConstructionIssue> Issues { get; set; } = new();
     public List<ConstructionIssueCategory> Categories { get; set; } = new();
     public List<Units> Units { get; set; } = new();
+    public ConstructionIssueFormVm Form { get; set; } = new();
 }

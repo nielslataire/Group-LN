@@ -1,0 +1,242 @@
+﻿@using BOCore
+@model CPMCore.Models.Issues.ConstructionIssueIndexVm
+
+<style>
+    .issue-media-add-tile {
+        width: 90px;
+        height: 90px;
+        border: 2px dashed #2f6f57;
+        color: #2f6f57;
+        border-radius: 4px;
+        background: #f8faf9;
+    }
+
+    .issue-media-remove {
+        width: 20px;
+        height: 20px;
+        opacity: 0;
+        transition: opacity .15s ease-in-out;
+    }
+
+    .issue-media-item:hover .issue-media-remove {
+        opacity: 1;
+    }
+
+    .issue-plan-stage {
+        position: relative;
+        width: 100%;
+        min-height: 220px;
+        max-height: 520px;
+        overflow: auto;
+        border: 1px dashed #c8d0d7;
+        border-radius: 6px;
+        background: #fafafa;
+    }
+
+    .issue-plan-surface {
+        position: relative;
+        display: inline-block;
+        line-height: 0;
+    }
+
+    .issue-plan-canvas {
+        display: block;
+        max-width: none;
+        width: auto;
+        height: auto;
+    }
+
+    .issue-plan-frame {
+        display: block;
+        width: 100%;
+        min-height: 520px;
+        border: 0;
+        background: #fff;
+    }
+
+    .issue-plan-overlay {
+        position: absolute;
+        inset: 0;
+        cursor: default;
+        pointer-events: none;
+    }
+
+        .issue-plan-overlay.is-pick-mode {
+            cursor: crosshair;
+            pointer-events: auto;
+        }
+
+    .issue-plan-marker {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: red;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 1px rgba(0,0,0,.15);
+        pointer-events: none;
+        display: none;
+    }
+</style>
+
+<div class="modal fade" id="issueModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <form method="post" id="issueForm" enctype="multipart/form-data" class="h-100 d-flex flex-column">
+                @Html.AntiForgeryToken()
+
+                <div class="modal-header">
+                    <h5 class="modal-title" id="issueModalTitle">Nieuw punt toevoegen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+                </div>
+
+                <div class="modal-body overflow-auto">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Eenheid</label>
+                            <select name="Input.UnitId" id="issueUnitId" class="form-control">
+                                <option value="">Algemeen</option>
+                                @foreach (var u in Model.Form.Units)
+                                {
+                                    <option value="@u.Id">@u.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Kamer / Zone</label>
+                            <input name="Input.RoomOrZone" class="form-control" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Locatie (vrij tekst)</label>
+                            <input name="Input.LocationText" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Titel *</label>
+                        <input name="Input.Title" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Beschrijving</label>
+                        <textarea name="Input.Description" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Categorie</label>
+                            <select name="Input.CategoryId" class="form-control" required>
+                                @foreach (var c in Model.Form.Categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Fase</label>
+                            <select name="Input.IssuePhase" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssuePhase>()"></select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Type</label>
+                            <select name="Input.IssueType" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueType>()"></select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Prioriteit</label>
+                            <select name="Input.Priority" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssuePriority>()"></select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="Input.Status" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueStatus>()"></select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Deadline</label>
+                            <input type="date" name="Input.DueDate" class="form-control" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Verantwoordelijke</label>
+                            <select name="Input.ResponsiblePartyId" class="form-control">
+                                <option value="">Selecteer...</option>
+                                @foreach (var c in Model.Form.ResponsibleContractors)
+                                {
+                                    <option value="@c.ID">@c.Display</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Naam</label>
+                            <input name="Input.ResponsibleOtherName" class="form-control" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">E-mail</label>
+                            <input name="Input.ResponsibleOtherEmail" class="form-control" />
+                        </div>
+                    </div>
+
+                    <hr />
+                    <label class="form-label fw-bold">Locatie op plan</label>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-5">
+                            <select id="planDocumentSelect" class="form-control" disabled>
+                                <option value="">Selecteer eerst een eenheid</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select id="planPageSelect" class="form-control" disabled>
+                                <option value="1">Pagina 1</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2"">
+                            <select id="planZoomSelect" class="form-control">
+                                <option value="fit">Passend</option>
+                                <option value="page-width" selected>Breedte</option>
+                                <option value="100">100%</option>
+                                <option value="150">150%</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-center justify-content-md-end">
+                            <button type="button" class="btn btn-outline-primary" id="planPickToggle">Punt aanduiden</button>
+                        </div>
+                    </div>
+                    <div id="planContainer" class="issue-plan-stage">
+                        <div id="planEmpty" class="text-muted p-3">Selecteer eerst een eenheid en plan</div>
+                        <div id="planSurface" class="issue-plan-surface" style="display:none;">
+                            <canvas id="planCanvas" class="issue-plan-canvas"></canvas>
+                            <div id="planOverlay" class="issue-plan-overlay"></div>
+                            <div id="planMarker" class="issue-plan-marker"></div>
+                        </div>
+                        <iframe id="planFrame" class="issue-plan-frame" style="display:none;" title="Plan PDF preview"></iframe>
+                    </div>
+                    <input type="hidden" name="Input.PlanDocumentId" id="planDocumentId" />
+                    <input type="hidden" name="Input.PlanPageNumber" id="planPageNumber" value="1" />
+                    <input type="hidden" name="Input.PlanXNormalized" id="planXNormalized" />
+                    <input type="hidden" name="Input.PlanYNormalized" id="planYNormalized" />
+
+                    <hr />
+                    <label class="form-label fw-bold">Foto's & Bijlagen</label>
+                    <div id="mediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
+                        <button type="button" id="addMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile">
+                            <i class="bx bx-camera fs-4"></i>
+                            <span style="font-size:12px;line-height:1;">Toevoegen</span>
+                        </button>
+                    </div>
+                    <input id="mediaFilesInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary" id="saveIssueButton">Punt aanmaken</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

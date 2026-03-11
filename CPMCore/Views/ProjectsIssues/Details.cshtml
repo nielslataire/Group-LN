@@ -6,69 +6,116 @@
     ViewData["Title"] = issue.Title;
 }
 
+<style>
+    .issue-media-add-tile {
+        width: 90px;
+        height: 90px;
+        border: 2px dashed #2f6f57;
+        color: #2f6f57;
+        border-radius: 4px;
+        background: #f8faf9;
+    }
+
+    .issue-media-item:hover .issue-media-remove {
+        opacity: 1;
+    }
+
+    .issue-media-remove {
+        width: 20px;
+        height: 20px;
+        opacity: 0;
+        transition: opacity .15s ease-in-out;
+    }
+
+    .issue-plan-stage {
+        position: relative;
+        width: 100%;
+        min-height: 520px;
+        border: 1px dashed #c8d0d7;
+        border-radius: 6px;
+        background: #fafafa;
+        overflow: auto;
+    }
+
+    .issue-plan-canvas, .issue-plan-frame {
+        display: block;
+        width: 100%;
+        background: #fff;
+        border: 0;
+    }
+
+    .issue-plan-marker {
+        position: absolute;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: red;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 1px rgba(0,0,0,.15);
+        pointer-events: none;
+        display: none;
+    }
+</style>
+
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", projectId)
         <div class="inner-body">
             <div class="row justify-content-between align-items-center pt-2 pe-0 mb-3">
                 <div class="col-sm-auto mb-3 mb-sm-0"><div class="d-flex align-items-center"><a href="@Url.Action("Index", new { projectId })" class="text-decoration-none text-reset d-flex align-items-center me-3"><i class="bx bx-chevron-left fs-1"></i></a><div><h1 class="fw-bold mb-0">@issue.Title</h1><h5 class="mb-0 text-muted">Punt details</h5></div></div></div>
-                <div class="col-sm-auto"><a class="btn btn-primary" href="@Url.Action("Edit", new { projectId, id = issue.Id })">Bewerken</a></div>
+                <div class="col-sm-auto"><a class="btn btn-primary" href="@Url.Action("Index", new { projectId })">Terug naar puntenlijst</a></div>
             </div>
 
             <section class="card card-modern mb-4">
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-2"><strong>Categorie:</strong> @(issue.Category?.Name ?? "-")</div>
-                        <div class="col-md-6 mb-2"><strong>Unit:</strong> @(issue.Unit?.Name ?? "-")</div>
-                        <div class="col-md-6 mb-2"><strong>Ruimte:</strong> @(string.IsNullOrWhiteSpace(issue.RoomOrZone) ? "-" : issue.RoomOrZone)</div>
-                        <div class="col-md-6 mb-2"><strong>Exacte locatie:</strong> @issue.LocationText</div>
-                        <div class="col-md-6 mb-2"><strong>Status:</strong> @((ConstructionIssueStatus)issue.Status)</div>
-                        <div class="col-md-6 mb-2"><strong>Prioriteit:</strong> @((ConstructionIssuePriority)issue.Priority)</div>
-                        <div class="col-md-6 mb-2"><strong>Vervaldatum:</strong> @(issue.DueDate?.ToString("dd/MM/yyyy") ?? "-")</div>
-                        <div class="col-md-6 mb-2"><strong>Laatst verzonden:</strong> @(issue.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</div>
-                        <div class="col-12"><strong>Beschrijving:</strong><div class="text-muted">@(string.IsNullOrWhiteSpace(issue.Description) ? "-" : issue.Description)</div></div>
+                    <h4 class="mb-3">Locatie op plan</h4>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-7"><select id="detailPlanSelect" class="form-control" disabled><option value="">Geen plan beschikbaar</option></select></div>
+                        <div class="col-md-2"><select id="detailPlanPageSelect" class="form-control" disabled><option value="1">Pagina 1</option></select></div>
+                        <div class="col-md-3"><select id="detailPlanZoomSelect" class="form-control"><option value="fit">Passend</option><option value="page-width">Breedte</option><option value="100">100%</option><option value="150">150%</option></select></div>
+                    </div>
+                    <div id="detailPlanContainer" class="issue-plan-stage d-flex align-items-center justify-content-center">
+                        <div id="detailPlanEmpty" class="text-muted">Geen plan geselecteerd</div>
+                        <canvas id="detailPlanCanvas" class="issue-plan-canvas" style="display:none;"></canvas>
+                        <iframe id="detailPlanFrame" class="issue-plan-frame" style="display:none;" title="Plan PDF preview"></iframe>
+                        <div id="detailPlanMarker" class="issue-plan-marker"></div>
                     </div>
                 </div>
             </section>
 
             <section class="card card-modern mb-4">
                 <div class="card-body">
-                    <h4 class="mb-3">Bijlagen</h4>
-                    <form method="post" enctype="multipart/form-data" action="@Url.Action("UploadMedia", new { projectId, id = issue.Id })" class="row g-2 align-items-end mb-3">
+                    <h4 class="mb-3">Foto's & Bijlagen</h4>
+                    <form method="post" enctype="multipart/form-data" action="@Url.Action("SyncMedia", new { projectId, id = issue.Id })" id="detailMediaForm">
                         @Html.AntiForgeryToken()
-                        <div class="col-md-6"><label>Bestanden</label><input class="form-control" type="file" name="files" multiple /></div>
-                        <div class="col-md-3"><label>Type</label><select class="form-control" name="mediaType">@foreach(var t in Enum.GetValues<ConstructionIssueMediaType>()){
-                        <option value="@((int)t)">@t</option>
-                                                }
-</select></div>
-                        <div class="col-md-3"><button class="btn btn-primary w-100" type="submit">Uploaden</button></div>
-                    </form>
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead><tr><th>Bestand</th><th>Type</th><th>Datum</th><th></th></tr></thead>
-                            <tbody>
-                                @foreach (var m in issue.ConstructionIssueMedia.OrderByDescending(x => x.CreatedDate))
-                                {
-                                    var url = Model.MediaUrls.ContainsKey(m.Id) ? Model.MediaUrls[m.Id] : null;
-                                    <tr>
-                                        <td>@if(!string.IsNullOrWhiteSpace(url)){
-                                        <a href="@url" target="_blank">@m.FileId</a>
-                                    } else
+                        <div id="detailMediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
+                            @foreach (var m in issue.ConstructionIssueMedia.OrderByDescending(x => x.CreatedDate))
+                            {
+                                var url = Model.MediaUrls.ContainsKey(m.Id) ? Model.MediaUrls[m.Id] : null;
+                                <div class="position-relative issue-media-item" data-existing-media-card="@m.Id" style="width:90px;">
+                                    @if (!string.IsNullOrWhiteSpace(url))
                                     {
-
-                                        @m.FileId
+                                        <img src="@url" style="width:90px;height:90px;object-fit:cover;border-radius:4px;" alt="Issue media" />
                                     }
-</td>
-                                    <td>@((ConstructionIssueMediaType)m.MediaType)</td>
-                                    <td>@m.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td class="text-end"><form method="post" action="@Url.Action("DeleteMedia", new { projectId, id = issue.Id, mediaId = m.Id })">@Html.AntiForgeryToken()<button class="btn btn-sm btn-danger" type="submit">Verwijderen</button></form></td>
-                                </tr>
-                                                                }
-                            </tbody>
-                        </table>
-                    </div>
+                                    else
+                                    {
+                                        <div class="d-flex flex-column align-items-center justify-content-center" style="width:90px;height:90px;border-radius:4px;background:#f3f5f7;border:1px solid #d7dde3;">
+                                            <i class="bx bxs-file text-muted fs-1"></i>
+                                        </div>
+                                    }
+                                    <input type="hidden" name="deleteMediaIds" value="@m.Id" disabled data-delete-media-input="@m.Id" />
+                                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 issue-media-remove" data-remove-existing-media="@m.Id">×</button>
+                                </div>
+                            }
+                            <button type="button" id="detailAddMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile"><i class="bx bx-camera fs-4"></i><span style="font-size:12px;line-height:1;">Toevoegen</span></button>
+                        </div>
+                        <input id="detailMediaFilesInput" name="files" type="file" accept="image/*" multiple class="d-none" />
+                        <button class="btn btn-primary" type="submit">Bijlagen opslaan</button>
+                    </form>
                 </div>
             </section>
+
+
 
             <section class="card card-modern mb-4">
                 <div class="card-body">
@@ -82,7 +129,6 @@
                                         }
                                         else
                     {
-
                         <p class="text-muted mb-0">Nog geen verzendingen.</p>
                     }
                 </div>
@@ -103,7 +149,6 @@
                                         }
                                         else
                     {
-
                         <p class="text-muted mb-0">Nog geen historiek beschikbaar.</p>
                     }
                 </div>
@@ -111,3 +156,179 @@
         </div>
     </div>
 </section>
+
+@section PageScripts {
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script>
+        (() => {
+            const projectId = @projectId;
+            const issueId = @issue.Id;
+            const unitId = @(issue.UnitId?.ToString() ?? "null");
+            const selectedPlanId = @(issue.PlanDocumentId?.ToString() ?? "null");
+            const selectedPage = @((issue.PlanPageNumber ?? 1));
+            const markerX = @(issue.PlanXnormalized?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null");
+            const markerY = @(issue.PlanYnormalized?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "null");
+
+            const planSelect = document.getElementById('detailPlanSelect');
+            const pageSelect = document.getElementById('detailPlanPageSelect');
+            const zoomSelect = document.getElementById('detailPlanZoomSelect');
+            const empty = document.getElementById('detailPlanEmpty');
+            const container = document.getElementById('detailPlanContainer');
+            const canvas = document.getElementById('detailPlanCanvas');
+            const frame = document.getElementById('detailPlanFrame');
+            const marker = document.getElementById('detailPlanMarker');
+            const ctx = canvas.getContext('2d');
+            const pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
+            let pdfDoc = null;
+            let currentUrl = '';
+
+            if (pdfJsApi) pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+            function drawMarker(){
+                if (markerX == null || markerY == null) { marker.style.display = 'none'; return; }
+                const x = Number(markerX) * container.clientWidth;
+                const y = Number(markerY) * container.clientHeight;
+                marker.style.left = `${x}px`;
+                marker.style.top = `${y}px`;
+                marker.style.display = 'block';
+            }
+
+            function fillPageSelect(total, selected){
+                pageSelect.innerHTML = '';
+                for(let i=1;i<=total;i++){
+                    const o=document.createElement('option'); o.value=String(i); o.textContent=`Pagina ${i}`; pageSelect.appendChild(o);
+                }
+                pageSelect.value = String(selected || 1);
+                pageSelect.disabled = total <= 1;
+            }
+
+            function frameZoom(){
+                const zoom = zoomSelect.value;
+                if (zoom === 'fit') return 'page-fit';
+                if (zoom === 'page-width') return 'page-width';
+                return zoom;
+            }
+
+            async function render(url, page){
+                canvas.style.display='none'; frame.style.display='none'; empty.style.display='block'; marker.style.display='none';
+                if (!pdfJsApi || typeof pdfJsApi.getDocument !== 'function') {
+                    frame.src = `${url}#page=${page}&zoom=${encodeURIComponent(frameZoom())}&toolbar=0&navpanes=0&pagemode=none`;
+                    frame.style.display='block'; empty.style.display='none';
+                    setTimeout(drawMarker, 100);
+                    return;
+                }
+
+                try {
+                    if (!pdfDoc || currentUrl !== url) {
+                        pdfDoc = await pdfJsApi.getDocument(url).promise;
+                        currentUrl = url;
+                    }
+                    const safePage = Math.min(Math.max(1, Number(page || 1)), pdfDoc.numPages || 1);
+                    fillPageSelect(pdfDoc.numPages || 1, safePage);
+                    const pdfPage = await pdfDoc.getPage(safePage);
+                    const baseViewport = pdfPage.getViewport({ scale: 1 });
+                    const maxWidth = Math.max((container.clientWidth || 1000) - 16, 320);
+                    const maxHeight = Math.max((container.clientHeight || 640) - 16, 320);
+                    const zoom = zoomSelect.value;
+                    const scale = zoom === 'fit'
+                        ? Math.min(maxWidth / baseViewport.width, maxHeight / baseViewport.height)
+                        : zoom === 'page-width'
+                            ? maxWidth / baseViewport.width
+                            : (Number(zoom) || 100) / 100;
+                    const viewport = pdfPage.getViewport({ scale });
+                    canvas.width = Math.floor(viewport.width);
+                    canvas.height = Math.floor(viewport.height);
+                    await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+                    canvas.style.display='block'; empty.style.display='none';
+                    drawMarker();
+                } catch (error) {
+                    console.warn('PDF.js render failed, fallback to iframe preview.', error);
+                    pdfDoc = null;
+                    currentUrl = '';
+                    frame.src = `${url}#page=${page}&zoom=${encodeURIComponent(frameZoom())}&toolbar=0&navpanes=0&pagemode=none`;
+                    frame.style.display='block';
+                    empty.style.display='none';
+                    setTimeout(drawMarker, 100);
+                }
+            }
+
+            async function loadPlans(){
+                if (unitId == null) return;
+                const response = await fetch(`/Projects/${projectId}/Issues/UnitPlans/${unitId}`);
+                if (!response.ok) return;
+                const plans = await response.json();
+                planSelect.innerHTML = '<option value="">Kies plan...</option>';
+                plans.forEach(plan => {
+                    const o=document.createElement('option'); o.value=String(plan.id); o.textContent=plan.name; o.dataset.url=plan.url; planSelect.appendChild(o);
+                });
+                planSelect.disabled = plans.length === 0;
+                if (selectedPlanId != null && plans.some(x => String(x.id) === String(selectedPlanId))) {
+                    planSelect.value = String(selectedPlanId);
+                    await render(planSelect.options[planSelect.selectedIndex].dataset.url, selectedPage);
+                }
+            }
+
+            planSelect.addEventListener('change', async () => {
+                const o = planSelect.options[planSelect.selectedIndex];
+                if(!o || !o.dataset.url) return;
+                await render(o.dataset.url, pageSelect.value || 1);
+            });
+            pageSelect.addEventListener('change', async () => {
+                const o = planSelect.options[planSelect.selectedIndex];
+                if(!o || !o.dataset.url) return;
+                await render(o.dataset.url, pageSelect.value || 1);
+            });
+            zoomSelect.addEventListener('change', async () => {
+                const o = planSelect.options[planSelect.selectedIndex];
+                if(!o || !o.dataset.url) return;
+                await render(o.dataset.url, pageSelect.value || 1);
+            });
+
+            loadPlans();
+
+            const mediaInput = document.getElementById('detailMediaFilesInput');
+            const mediaPreview = document.getElementById('detailMediaPreview');
+            const addButton = document.getElementById('detailAddMediaButton');
+            const dt = new DataTransfer();
+
+            function addPreview(url){
+                const wrapper = document.createElement('div');
+                wrapper.className = 'position-relative issue-media-item';
+                wrapper.style.width = '90px';
+                wrapper.innerHTML = `<img src="${url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;" alt="Nieuwe foto" />`;
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 p-0 issue-media-remove';
+                remove.textContent = '×';
+                remove.addEventListener('click', () => {
+                    const index = Array.from(dt.files).findIndex(f => f._previewUrl === url);
+                    if(index >= 0){ dt.items.remove(index); mediaInput.files = dt.files; }
+                    wrapper.remove();
+                });
+                wrapper.appendChild(remove);
+                mediaPreview.insertBefore(wrapper, addButton);
+            }
+
+            mediaInput?.addEventListener('change', (event) => {
+                Array.from(event.target.files || []).forEach(file => {
+                    const url = URL.createObjectURL(file);
+                    file._previewUrl = url;
+                    dt.items.add(file);
+                    addPreview(url);
+                });
+                mediaInput.files = dt.files;
+            });
+            addButton?.addEventListener('click', () => mediaInput?.click());
+
+            document.querySelectorAll('[data-remove-existing-media]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const id = button.getAttribute('data-remove-existing-media');
+                    const hiddenInput = document.querySelector(`[data-delete-media-input="${id}"]`);
+                    if (hiddenInput) hiddenInput.disabled = false;
+                    const card = document.querySelector(`[data-existing-media-card="${id}"]`);
+                    if (card) card.remove();
+                });
+            });
+        })();
+    </script>
+}

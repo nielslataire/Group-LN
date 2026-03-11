@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartBreadcrumbs.Attributes;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.IO;
 
 namespace CPMCore.Controllers;
 
@@ -41,12 +42,14 @@ public class ProjectsIssuesController : BaseController
     [Breadcrumb("Punten")]
     public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters)
     {
+        var formVm = await BuildVm(projectId);
         var vm = new ConstructionIssueIndexVm
         {
             ProjectId = projectId,
             Filters = filters,
-            Categories = await _service.GetCategories(),
-            Units = await _service.GetProjectUnits(projectId),
+            Categories = formVm.Categories,
+            Units = formVm.Units,
+            Form = formVm,
             Issues = await _service.Search(projectId, filters)
         };
         return View(vm);
@@ -96,9 +99,9 @@ public class ProjectsIssuesController : BaseController
     }
 
     [HttpGet("Create")]
-    public async Task<IActionResult> Create(int projectId)
+    public IActionResult Create(int projectId)
     {
-        return View("CreateEdit", await BuildVm(projectId));
+        return RedirectToAction(nameof(Index), new { projectId });
     }
 
     [HttpPost("Create")]
@@ -109,41 +112,19 @@ public class ProjectsIssuesController : BaseController
         if (!ModelState.IsValid)
         {
             PreserveMediaValidation(ModelState);
-            return View("CreateEdit", await BuildVm(projectId, vm.Input));
+            AddMessage("error", "Punt kon niet opgeslagen worden. Controleer de ingevulde velden.", "Fout");
+            return RedirectToAction(nameof(Index), new { projectId });
         }
 
         var created = await _service.Create(projectId, vm.Input, User.FindFirst(CpmClaims.UserId)?.Value);
         await AddIssueMedia(projectId, created.Id, mediaFiles);
-        return RedirectToAction(nameof(Details), new { projectId, id = created.Id });
+        return RedirectToAction(nameof(Index), new { projectId });
     }
 
     [HttpGet("Edit/{id:int}")]
-    public async Task<IActionResult> Edit(int projectId, int id)
+    public IActionResult Edit(int projectId, int id)
     {
-        var issue = await _service.GetById(projectId, id);
-        if (issue == null) return NotFound();
-        var vm = await BuildVm(projectId, new ConstructionIssueUpsertBO
-        {
-            Title = issue.Title,
-            Description = issue.Description,
-            LocationText = issue.LocationText,
-            CategoryId = issue.CategoryId,
-            BuildingPart = issue.BuildingPart,
-            RoomOrZone = issue.RoomOrZone,
-            UnitId = issue.UnitId,
-            IssueType = issue.IssueType,
-            IssuePhase = issue.IssuePhase,
-            Priority = issue.Priority,
-            Status = issue.Status,
-            ResponsiblePartyType = issue.ResponsiblePartyType,
-            ResponsiblePartyId = issue.ResponsiblePartyId,
-            ResponsibleOtherName = issue.ResponsibleOtherName,
-            ResponsibleOtherEmail = issue.ResponsibleOtherEmail,
-            DueDate = issue.DueDate
-        });
-        vm.Id = id;
-        vm.ExistingMedia = await BuildMediaVm(projectId, id);
-        return View("CreateEdit", vm);
+        return RedirectToAction(nameof(Index), new { projectId });
     }
     [HttpPost("Edit/{id:int}")]
     [ValidateAntiForgeryToken]
@@ -153,10 +134,8 @@ public class ProjectsIssuesController : BaseController
         if (!ModelState.IsValid)
         {
             PreserveMediaValidation(ModelState);
-            var invalidVm = await BuildVm(projectId, vm.Input);
-            invalidVm.Id = id;
-            invalidVm.ExistingMedia = await BuildMediaVm(projectId, id);
-            return View("CreateEdit", invalidVm);
+            AddMessage("error", "Punt kon niet opgeslagen worden. Controleer de ingevulde velden.", "Fout");
+            return RedirectToAction(nameof(Index), new { projectId });
         }
 
         var updated = await _service.Update(projectId, id, vm.Input, User.FindFirst(CpmClaims.UserId)?.Value);
@@ -171,8 +150,9 @@ public class ProjectsIssuesController : BaseController
         }
 
         await AddIssueMedia(projectId, id, mediaFiles);
-        return RedirectToAction(nameof(Details), new { projectId, id });
+        return RedirectToAction(nameof(Index), new { projectId });
     }
+
 
 
     [HttpGet("Details/{id:int}")]
@@ -224,6 +204,28 @@ public class ProjectsIssuesController : BaseController
         return RedirectToAction(nameof(Details), new { projectId, id });
     }
 
+    [HttpPost("SyncMedia/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SyncMedia(int projectId, int id, List<IFormFile>? files, List<int>? deleteMediaIds)
+    {
+        if (deleteMediaIds != null)
+        {
+            foreach (var mediaId in deleteMediaIds.Distinct())
+            {
+                await _service.DeleteMedia(projectId, id, mediaId, User.FindFirst(CpmClaims.UserId)?.Value);
+            }
+        }
+
+        if (files != null && files.Count > 0)
+        {
+            await AddIssueMedia(projectId, id, files);
+        }
+
+        AddMessage("success", "Bijlagen bijgewerkt.", "Geslaagd");
+        return RedirectToAction(nameof(Details), new { projectId, id });
+    }
+
+
     [HttpPost("ChangeStatus")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ChangeStatus(int projectId, int id, int newStatus, string? comment)
@@ -231,6 +233,111 @@ public class ProjectsIssuesController : BaseController
         await _service.ChangeStatus(projectId, id, newStatus, comment, User.FindFirst(CpmClaims.UserId)?.Value);
         return RedirectToAction(nameof(Details), new { projectId, id });
     }
+    [HttpGet("EditData/{id:int}")]
+    public async Task<IActionResult> EditData(int projectId, int id)
+    {
+        var issue = await _service.GetById(projectId, id);
+        if (issue == null) return NotFound();
+
+        var media = await BuildMediaVm(projectId, id);
+        return Json(new
+        {
+            issue.Id,
+            issue.Title,
+            issue.Description,
+            issue.LocationText,
+            issue.CategoryId,
+            issue.BuildingPart,
+            issue.RoomOrZone,
+            issue.UnitId,
+            issue.IssueType,
+            issue.IssuePhase,
+            issue.Priority,
+            issue.Status,
+            issue.ResponsiblePartyType,
+            issue.ResponsiblePartyId,
+            issue.ResponsibleOtherName,
+            issue.ResponsibleOtherEmail,
+            issue.PlanDocumentId,
+            issue.PlanPageNumber,
+            issue.PlanXnormalized,
+            issue.PlanYnormalized,
+            dueDate = issue.DueDate?.ToString("yyyy-MM-dd"),
+            media = media.Select(m => new { m.Id, m.Url })
+        });
+    }
+
+
+
+    [HttpGet("UnitPlans/{unitId:int}")]
+    public async Task<IActionResult> UnitPlans(int projectId, int unitId)
+    {
+        var unit = await _db.Units.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == unitId);
+        if (unit == null) return Json(Array.Empty<object>());
+
+        var plans = new List<(int id, string name, string url)>();
+
+        if (!string.IsNullOrWhiteSpace(unit.Plan))
+        {
+            var unitPlanUrl = GetSignedAssetUrlByFileName(unit.Plan, "plans");
+            if (!string.IsNullOrWhiteSpace(unitPlanUrl) && unitPlanUrl.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                var proxyUrl = Url.Action(nameof(PlanContent), new { projectId, fileId = unit.Plan });
+                plans.Add((0, $"{unit.Name} - plan", proxyUrl ?? unitPlanUrl));
+            }
+        }
+
+        var unitExecutionPlans = await _db.UnitExecutionPlan
+            .Where(d => d.UnitId == unitId && d.DeletedDate == null)
+            .OrderBy(d => d.Name)
+            .ThenByDescending(d => d.CreatedDate)
+            .ToListAsync();
+
+        foreach (var doc in unitExecutionPlans)
+        {
+            var docUrl = GetSignedAssetUrlByFileName(doc.FileId, "plans");
+            if (!string.IsNullOrWhiteSpace(docUrl))
+            {
+                var proxyUrl = Url.Action(nameof(PlanContent), new { projectId, fileId = doc.FileId });
+                plans.Add((doc.Id, doc.Name, proxyUrl ?? docUrl));
+            }
+        }
+
+        return Json(plans
+            .GroupBy(x => x.url)
+            .Select(x => new { id = x.First().id, name = x.First().name, url = x.Key })
+            .ToList());
+    }
+
+
+    [HttpGet("PlanContent")]
+    public async Task<IActionResult> PlanContent(int projectId, string fileId)
+    {
+        var safeFileId = Path.GetFileName(fileId ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(safeFileId)) return NotFound();
+
+        var projectExists = await _db.Project.AnyAsync(p => p.ProjectId == projectId);
+        if (!projectExists) return NotFound();
+
+        var signedUrl = GetSignedAssetUrlByFileName(safeFileId, "plans");
+        if (string.IsNullOrWhiteSpace(signedUrl)) return NotFound();
+
+        using var httpClient = new HttpClient();
+        using var response = await httpClient.GetAsync(signedUrl);
+        if (!response.IsSuccessStatusCode) return NotFound();
+
+        await using var sourceStream = await response.Content.ReadAsStreamAsync();
+        var memory = new MemoryStream();
+        await sourceStream.CopyToAsync(memory);
+        memory.Position = 0;
+
+        var contentType = response.Content.Headers.ContentType?.MediaType;
+        if (string.IsNullOrWhiteSpace(contentType))
+            contentType = "application/pdf";
+
+        return File(memory, contentType, enableRangeProcessing: true);
+    }
+
 
     private async Task<List<ConstructionIssueMediaVm>> BuildMediaVm(int projectId, int issueId)
     {

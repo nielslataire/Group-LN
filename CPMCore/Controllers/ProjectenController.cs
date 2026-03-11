@@ -1,19 +1,21 @@
 ﻿using BOCore;
 using CPMCore.Documents;
+using CPMCore.Helpers;
 using CPMCore.Models;
+using CPMCore.Models.Invoicing;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
-using CPMCore.Models.Invoicing;
 using DALCore;
 using DALCore.Models;
 using FacadeCore;
 using FluentFTP;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.CodeAnalysis;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using QuestPDF.Drawing;
 using QuestPDF.Fluent;
@@ -33,17 +35,16 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
+using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
-using System.Globalization;
-using Microsoft.Extensions.DependencyInjection;
-using System.Net.Http.Headers;
-using System.Text.Json;
 
 
 
@@ -1169,7 +1170,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         [Breadcrumb("Eenheid bewerken", FromAction = "DetailUnits")]
         //[Breadcrumb("Eenheid bewerken")]
-        public ActionResult EditUnit(int projectid, int unitid)
+        public async Task<ActionResult> EditUnit(int projectid, int unitid)
         {
             var referrer = Request.Headers["Referer"].ToString();
 
@@ -1235,6 +1236,7 @@ namespace CPMCore.Controllers
 
             model.ProjectId = model.Unit.ProjectId;
             model.ProjectName = service2.GetProjectNameById(model.Unit.ProjectId);
+            model.ExecutionPlans = await BuildUnitExecutionPlansVm(model.Unit.Id);
 
 
             //BREADCRUMBS
@@ -1263,7 +1265,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
-        public async Task<ActionResult> EditUnit(EditUnitModel Model, IFormFile? file)
+        public async Task<ActionResult> EditUnit(EditUnitModel Model, IFormFile? file, List<IFormFile>? executionPlanFiles, List<string>? executionPlanNames, List<int>? deleteExecutionPlanIds)
         {
             //Referrer
             var Referrer = TempData["Referrer"];
@@ -1276,6 +1278,17 @@ namespace CPMCore.Controllers
                 if ((!validtypes.Contains(file.ContentType)))
                     ModelState.AddModelError("PdfUpload", "Verkeerd type gekozen, kies een pdf");
             }
+            if (executionPlanFiles != null)
+            {
+                foreach (var planFile in executionPlanFiles.Where(f => f != null && f.Length > 0))
+                {
+                    if (!validtypes.Contains(planFile.ContentType))
+                    {
+                        ModelState.AddModelError("ExecutionPlansUpload", "Alle uitvoeringsplannen moeten PDF bestanden zijn.");
+                        break;
+                    }
+                }
+            }
             if (ModelState.IsValid)
             {
                 if ((file != null && file.Length > 0))
@@ -1284,6 +1297,7 @@ namespace CPMCore.Controllers
                     if (string.IsNullOrWhiteSpace(uploadedFileName))
                     {
                         ModelState.AddModelError("PdfUpload", "Plan upload naar storage API mislukt.");
+                        Model.ExecutionPlans = await BuildUnitExecutionPlansVm(Model.Unit.Id);
                         return View(Model);
                     }
 
@@ -1350,6 +1364,46 @@ namespace CPMCore.Controllers
                     var response4 = service.DeleteConstructionValues(deleteids);
                     if (response4.Success == false)
                         throw new ApplicationException(response4.Messages.SingleOrDefault().Message);
+                    if (deleteExecutionPlanIds != null && deleteExecutionPlanIds.Count > 0)
+                    {
+                        var plansToDelete = await _db.UnitExecutionPlan
+                            .Where(x => x.UnitId == Model.Unit.Id && deleteExecutionPlanIds.Contains(x.Id))
+                            .ToListAsync();
+
+                        if (plansToDelete.Count > 0)
+                        {
+                            _db.UnitExecutionPlan.RemoveRange(plansToDelete);
+                        }
+                    }
+
+                    if (executionPlanFiles != null && executionPlanFiles.Count > 0)
+                    {
+                        var names = executionPlanNames ?? new List<string>();
+                        var index = 0;
+                        foreach (var executionPlanFile in executionPlanFiles.Where(f => f != null && f.Length > 0))
+                        {
+                            var uploadedPlanFileName = await UploadAssetToStorageAsync(executionPlanFile, "plans");
+                            if (string.IsNullOrWhiteSpace(uploadedPlanFileName))
+                                throw new ApplicationException("Uitvoeringsplan upload naar storage API mislukt.");
+
+                            var enteredName = index < names.Count ? names[index] : null;
+                            var planName = string.IsNullOrWhiteSpace(enteredName)
+                                ? Path.GetFileNameWithoutExtension(executionPlanFile.FileName)
+                                : enteredName.Trim();
+
+                            _db.UnitExecutionPlan.Add(new UnitExecutionPlan
+                            {
+                                UnitId = Model.Unit.Id,
+                                Name = planName,
+                                FileId = uploadedPlanFileName,
+                                CreatedDate = DateTime.UtcNow,
+                                CreatedByUserId = User.FindFirst(CpmClaims.UserId)?.Value
+                            });
+                            index++;
+                        }
+                    }
+
+                    await _db.SaveChangesAsync();
                 }
                 catch (Exception ex)
                 {
@@ -1368,7 +1422,24 @@ namespace CPMCore.Controllers
                     return RedirectToAction("Index", "Home");
                 }
             }
+            Model.ExecutionPlans = await BuildUnitExecutionPlansVm(Model.Unit.Id);
             return View(Model);
+        }
+
+        private async Task<List<UnitExecutionPlanVm>> BuildUnitExecutionPlansVm(int unitId)
+        {
+            var plans = await _db.UnitExecutionPlan
+                .Where(x => x.UnitId == unitId && x.DeletedDate == null)
+                .OrderByDescending(x => x.CreatedDate)
+                .ToListAsync();
+
+            return plans.Select(x => new UnitExecutionPlanVm
+            {
+                Id = x.Id,
+                Name = x.Name,
+                FileId = x.FileId,
+                Url = GetSignedAssetUrlByFileName(x.FileId, "plans")
+            }).ToList();
         }
 
         public DetailUnitsModel FillDetailUnitModel(int id)

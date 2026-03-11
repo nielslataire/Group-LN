@@ -28,6 +28,10 @@ internal static class ConstructionIssueTranslator
         entity.ResponsibleOtherName = bo.ResponsibleOtherName;
         entity.ResponsibleOtherEmail = bo.ResponsibleOtherEmail;
         entity.DueDate = bo.DueDate;
+        entity.PlanDocumentId = bo.PlanDocumentId;
+        entity.PlanPageNumber = bo.PlanPageNumber;
+        entity.PlanXnormalized = bo.PlanXNormalized;
+        entity.PlanYnormalized = bo.PlanYNormalized;
 
         return ErrorCode.Success;
     }

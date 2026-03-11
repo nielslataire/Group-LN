@@ -1378,6 +1378,7 @@ namespace CPMCore.Models.Projecten
             _selectedUnits = new List<int>();
             _attachableunits = new List<IdNameBO>();
             _rooms = new List<RoomBO>();
+            _executionPlans = new List<UnitExecutionPlanVm>();
         }
         private UnitBO _unit;
         public UnitBO Unit
@@ -1531,6 +1532,12 @@ namespace CPMCore.Models.Projecten
                 _rooms = value;
             }
         }
+        private List<UnitExecutionPlanVm> _executionPlans;
+        public List<UnitExecutionPlanVm> ExecutionPlans
+        {
+            get { return _executionPlans; }
+            set { _executionPlans = value; }
+        }
         // PaymentGroup
         private int? _selectedpaymentgroup;
 
@@ -1570,6 +1577,15 @@ namespace CPMCore.Models.Projecten
             }
         }
     }
+
+    public class UnitExecutionPlanVm
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string FileId { get; set; } = string.Empty;
+        public string? Url { get; set; }
+    }
+
 
     public class AddUnitLinkModel
     {

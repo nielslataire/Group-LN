@@ -17,9 +17,43 @@
 
 }
 
+<style>
+	.execution-plan-add-tile {
+		width: 90px;
+		height: 90px;
+		border: 2px dashed #2f6f57;
+		color: #2f6f57;
+		border-radius: 4px;
+		background: #f8faf9;
+	}
+
+	.execution-plan-item {
+		width: 90px;
+	}
+
+	.execution-plan-preview {
+		width: 90px;
+		height: 90px;
+		border-radius: 4px;
+		background: #f3f5f7;
+		border: 1px solid #d7dde3;
+	}
+
+	.execution-plan-remove {
+		width: 20px;
+		height: 20px;
+		opacity: 0;
+		transition: opacity .15s ease-in-out;
+	}
+
+	.execution-plan-item:hover .execution-plan-remove {
+		opacity: 1;
+	}
+</style>
+
 
 <h2 class="font-weight-bold text-6">Eenheid bewerken</h2>
-@using (Html.BeginForm("EditUnit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @id = "myForm", @action = "#" }))
+@using (Html.BeginForm("EditUnit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @id = "myForm", @action = "#", enctype = "multipart/form-data" }))
 {
 @* 	@Html.AntiForgeryToken() *@
 	@Html.HiddenFor(m => m.Unit.Id, new {id = "unitid"})
@@ -224,18 +258,38 @@
 													</div>
 												</div>
 											}
-											@* <div class="fileinput fileinput-new input-group" data-provides="fileinput">
-												<div class="form-control" data-trigger="fileinput"><i class="fa fa-file-pdf-o fileinput-exists"></i> <span class="fileinput-filename"></span></div>
-												<span class="input-group-addon btn btn-default btn-file"><span class="fileinput-new">Selecteren</span><span class="fileinput-exists">Wijzigen</span><input type="file" name="file" id="file" accept=".pdf"></span>
-												<a href="#" class="input-group-addon btn btn-default fileinput-exists" data-dismiss="fileinput">Verwijderen</a>
-											</div> *@
+										</div>
+									</div>
+
+									<div class="form-group row pb-4">
+										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2">Uitvoeringsplannen</label>
+										<div class="col-lg-7 col-xl-6">
+											<div id="executionPlanPreview" class="d-flex flex-wrap gap-2 align-items-start">
+												@foreach (var plan in Model.ExecutionPlans)
+												{
+													<div class="position-relative execution-plan-item" data-existing-plan-id="@plan.Id">
+														<div class="execution-plan-preview d-flex flex-column align-items-center justify-content-center text-center p-1">
+															<i class="bx bxs-file-pdf text-danger fs-1"></i>
+															<span class="small text-truncate w-100" title="@plan.Name">@plan.Name</span>
+														</div>
+														<input type="hidden" name="deleteExecutionPlanIds" value="@plan.Id" disabled data-delete-plan-input="@plan.Id" />
+														<button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 execution-plan-remove" data-remove-existing-plan="@plan.Id">×</button>
+													</div>
+												}
+												<button type="button" id="addExecutionPlanButton" class="btn d-inline-flex flex-column align-items-center justify-content-center execution-plan-add-tile">
+													<i class="bx bx-file fs-3"></i>
+													<span style="font-size:12px;line-height:1;">Toevoegen</span>
+												</button>
+											</div>
+											<input id="executionPlanFilesInput" name="executionPlanFiles" type="file" accept="application/pdf,.pdf" class="d-none" />
+											<div id="executionPlanNamesContainer"></div>
+											<small class="text-muted d-block mt-2">Voeg meerdere uitvoeringsplannen toe met naam.</small>
 										</div>
 									</div>
 								</div>
 							</div>
 						</div>
 					</div>
-				</div>
 			</section>
 		</div>
 	</div>
@@ -251,6 +305,25 @@
 		
 	</div>
 }
+
+<div class="modal fade" id="executionPlanNameModal" tabindex="-1" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title">Naam uitvoeringsplan</h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+			</div>
+			<div class="modal-body">
+				<label class="form-label">Naam</label>
+				<input type="text" id="executionPlanNameInput" class="form-control" placeholder="bv. Technisch uitvoeringsplan" />
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+				<button type="button" class="btn btn-primary" id="confirmExecutionPlanName">Toevoegen</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 
 @section PageScripts
@@ -365,6 +438,104 @@
 		$(document).on('click', 'a.deleteConstructionRow', function () {
 			$(this).closest('tr').remove();
 			return false;
+		});
+
+
+		// ==============================
+		// Uitvoeringsplannen (meerdere PDF + naam)
+		// ==============================
+		const executionPlanFilesInput = document.getElementById('executionPlanFilesInput');
+		const executionPlanPreview = document.getElementById('executionPlanPreview');
+		const addExecutionPlanButton = document.getElementById('addExecutionPlanButton');
+		const executionPlanNamesContainer = document.getElementById('executionPlanNamesContainer');
+		const executionPlanNameInput = document.getElementById('executionPlanNameInput');
+		const confirmExecutionPlanName = document.getElementById('confirmExecutionPlanName');
+		const executionPlanNameModalEl = document.getElementById('executionPlanNameModal');
+		const executionPlanNameModal = executionPlanNameModalEl ? new bootstrap.Modal(executionPlanNameModalEl) : null;
+
+		let pendingExecutionPlanFile = null;
+		let executionPlanQueue = [];
+
+		function rebuildExecutionPlanFiles() {
+			if (!executionPlanFilesInput) return;
+			const dt = new DataTransfer();
+			executionPlanQueue.forEach(item => dt.items.add(item.file));
+			executionPlanFilesInput.files = dt.files;
+			executionPlanNamesContainer.innerHTML = '';
+			executionPlanQueue.forEach(item => {
+				const input = document.createElement('input');
+				input.type = 'hidden';
+				input.name = 'executionPlanNames';
+				input.value = item.name;
+				executionPlanNamesContainer.appendChild(input);
+			});
+		}
+
+		function createExecutionPlanCard(name, key, existingId) {
+			const wrapper = document.createElement('div');
+			wrapper.className = 'position-relative execution-plan-item';
+			wrapper.dataset.planKey = key;
+			wrapper.style.width = '90px';
+			wrapper.innerHTML = `<div class="execution-plan-preview d-flex flex-column align-items-center justify-content-center text-center p-1"><i class="bx bxs-file-pdf text-danger fs-1"></i><span class="small text-truncate w-100" title="${name}">${name}</span></div>`;
+
+			const remove = document.createElement('button');
+			remove.type = 'button';
+			remove.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 p-0 execution-plan-remove';
+			remove.textContent = '×';
+			remove.addEventListener('click', () => {
+				if (existingId) {
+					const hiddenInput = document.querySelector(`[data-delete-plan-input="${existingId}"]`);
+					if (hiddenInput) hiddenInput.disabled = false;
+				} else {
+					executionPlanQueue = executionPlanQueue.filter(x => x.key !== key);
+					rebuildExecutionPlanFiles();
+				}
+				wrapper.remove();
+			});
+
+			wrapper.appendChild(remove);
+			executionPlanPreview.insertBefore(wrapper, addExecutionPlanButton);
+		}
+
+		addExecutionPlanButton?.addEventListener('click', () => executionPlanFilesInput?.click());
+
+		executionPlanFilesInput?.addEventListener('change', (e) => {
+			const file = (e.target.files || [])[0];
+			executionPlanFilesInput.value = '';
+			if (!file) return;
+			if ((file.type && file.type !== 'application/pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+				alert('Kies een PDF bestand.');
+				return;
+			}
+			pendingExecutionPlanFile = file;
+			executionPlanNameInput.value = file.name.replace(/\.pdf$/i, '');
+			executionPlanNameModal?.show();
+			setTimeout(() => executionPlanNameInput.focus(), 200);
+		});
+
+		confirmExecutionPlanName?.addEventListener('click', () => {
+			if (!pendingExecutionPlanFile) return;
+			const name = (executionPlanNameInput.value || '').trim() || pendingExecutionPlanFile.name.replace(/\.pdf$/i, '');
+			const key = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+			executionPlanQueue.push({ key, name, file: pendingExecutionPlanFile });
+			rebuildExecutionPlanFiles();
+			createExecutionPlanCard(name, key, null);
+			pendingExecutionPlanFile = null;
+			executionPlanNameModal?.hide();
+		});
+
+		executionPlanNameModalEl?.addEventListener('hidden.bs.modal', () => {
+			pendingExecutionPlanFile = null;
+		});
+
+		document.querySelectorAll('[data-remove-existing-plan]').forEach(button => {
+			button.addEventListener('click', () => {
+				const id = button.getAttribute('data-remove-existing-plan');
+				const hiddenInput = document.querySelector(`[data-delete-plan-input="${id}"]`);
+				if (hiddenInput) hiddenInput.disabled = false;
+				const card = document.querySelector(`[data-existing-plan-id="${id}"]`);
+				if (card) card.remove();
+			});
 		});
 	</script>
 

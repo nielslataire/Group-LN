@@ -29,7 +29,7 @@ public partial class ConstructionIssueReport
 
     public virtual ICollection<ConstructionIssueNotification> ConstructionIssueNotification { get; set; } = new List<ConstructionIssueNotification>();
 
-    public virtual Project Project { get; set; }
-
     public virtual ICollection<ConstructionIssueReportItem> ConstructionIssueReportItem { get; set; } = new List<ConstructionIssueReportItem>();
+
+    public virtual Project Project { get; set; }
 }

@@ -6,7 +6,6 @@ Public Class ConstructionIssueUpsertBO
 
     Public Property Description As String
 
-    <Required, StringLength(250)>
     Public Property LocationText As String = String.Empty
 
     <Required>
@@ -33,4 +32,12 @@ Public Class ConstructionIssueUpsertBO
 
     <DataType(DataType.Date)>
     Public Property DueDate As DateOnly?
+    Public Property PlanDocumentId As Integer?
+    Public Property PlanPageNumber As Integer?
+
+    <Range(0, 1)>
+    Public Property PlanXNormalized As Decimal?
+
+    <Range(0, 1)>
+    Public Property PlanYNormalized As Decimal?
 End Class

@@ -66,6 +66,7 @@
 :root {
     /* Jouw bestaande groen */
     --primary: #0a5a3b;
+    --bs-primary: var(--primary);
     --secondary: #7A8450; /* mosgroen */
     --info: #8A7967; /* taupe / grijsbruin */
     /* Donker neutraal */
@@ -622,3 +623,34 @@
 .doc-thumb-link:hover .doc-thumb-overlay {
     opacity: 1;
 }
+
+/* Button outline */
+
+.btn-outline-primary {
+    color: #0a5a3b;
+    border-color: #0a5a3b;
+}
+
+    .btn-outline-primary:hover {
+        color: #fff;
+        background-color: #0a5a3b;
+        border-color: #0a5a3b;
+    }
+
+    .btn-outline-primary:focus,
+    .btn-outline-primary.focus {
+        box-shadow: 0 0 0 0.2rem rgba(10, 90, 59, 0.25);
+    }
+
+    .btn-outline-primary.disabled,
+    .btn-outline-primary:disabled {
+        color: #0a5a3b;
+        background-color: transparent;
+    }
+
+    .btn-outline-primary:not(:disabled):not(.disabled):active,
+    .btn-outline-primary:not(:disabled):not(.disabled).active {
+        color: #fff;
+        background-color: #0a5a3b;
+        border-color: #0a5a3b;
+    }
