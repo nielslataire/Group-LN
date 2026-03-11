@@ -162,7 +162,7 @@
 
                         <div class="col-md-4">
                             <label class="form-label">Verantwoordelijke</label>
-                            <select name="Input.ResponsiblePartyId" class="form-control">
+                            <select name="Input.ResponsiblePartyId" id="issueResponsiblePartyId" class="form-control">
                                 <option value="">Selecteer...</option>
                                 @foreach (var c in Model.Form.ResponsibleContractors)
                                 {
@@ -173,29 +173,36 @@
 
                         <div class="col-md-4">
                             <label class="form-label">Naam</label>
-                            <input name="Input.ResponsibleOtherName" class="form-control" />
+                            <input name="Input.ResponsibleOtherName" id="issueResponsibleOtherName" class="form-control" />
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">E-mail</label>
-                            <input name="Input.ResponsibleOtherEmail" class="form-control" />
+                            <input name="Input.ResponsibleOtherEmail" id="issueResponsibleOtherEmail" class="form-control" />
                         </div>
                     </div>
 
                     <hr />
                     <label class="form-label fw-bold">Locatie op plan</label>
                     <div class="row g-2 mb-2">
-                        <div class="col-md-5">
+                        <div class="col-md-3">
                             <select id="planDocumentSelect" class="form-control" disabled>
                                 <option value="">Selecteer eerst een eenheid</option>
                             </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <input type="file" id="issuePlanUploadInput" class="d-none" accept="application/pdf" />
+                                <input type="text" id="issuePlanUploadName" class="form-control" placeholder="Naam uitvoeringsplan" maxlength="200" />
+                                <button type="button" class="btn btn-outline-secondary" id="issuePlanUploadButton">Plan uploaden</button>
+                            </div>
                         </div>
                         <div class="col-md-2">
                             <select id="planPageSelect" class="form-control" disabled>
                                 <option value="1">Pagina 1</option>
                             </select>
                         </div>
-                        <div class="col-md-2"">
+                        <div class="col-md-2">
                             <select id="planZoomSelect" class="form-control">
                                 <option value="fit">Passend</option>
                                 <option value="page-width" selected>Breedte</option>
@@ -203,7 +210,7 @@
                                 <option value="150">150%</option>
                             </select>
                         </div>
-                        <div class="col-md-3 d-flex align-items-center justify-content-md-end">
+                        <div class="col-md-2 d-flex align-items-center justify-content-md-end">
                             <button type="button" class="btn btn-outline-primary" id="planPickToggle">Punt aanduiden</button>
                         </div>
                     </div>

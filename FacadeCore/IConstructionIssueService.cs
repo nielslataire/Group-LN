@@ -16,6 +16,7 @@ public interface IConstructionIssueService
     Task<List<ConstructionIssueMedia>> GetMedia(int projectId, int issueId);
     Task<ConstructionIssueMedia?> AddMedia(int projectId, int issueId, string fileId, int mediaType, string? userId);
     Task<bool> DeleteMedia(int projectId, int issueId, int mediaId, string? userId);
+    Task<bool> Delete(int projectId, int issueId, string? userId);
     Task<List<ConstructionIssueNotification>> GetNotifications(int projectId, int issueId);
     Task<List<ConstructionIssueCategory>> GetCategories();
     Task<List<Units>> GetProjectUnits(int projectId);

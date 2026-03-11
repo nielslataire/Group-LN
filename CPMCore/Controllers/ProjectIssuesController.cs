@@ -11,6 +11,9 @@ using SmartBreadcrumbs.Attributes;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.IO;
+using Microsoft.AspNetCore.Http;
+using System.Linq;
+using System.ComponentModel.DataAnnotations;
 
 namespace CPMCore.Controllers;
 
@@ -225,6 +228,29 @@ public class ProjectsIssuesController : BaseController
         return RedirectToAction(nameof(Details), new { projectId, id });
     }
 
+    [HttpGet("ModalDelete/{id:int}")]
+    public async Task<IActionResult> ModalDelete(int projectId, int id)
+    {
+        var issue = await _service.GetById(projectId, id);
+        if (issue == null) return NotFound();
+
+        ViewBag.ProjectId = projectId;
+        return PartialView("Modals/_ModalDeleteIssue", new IdNameBO
+        {
+            ID = id,
+            Display = issue.Title
+        });
+    }
+
+    [HttpPost("Delete/{id:int}")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Delete(int projectId, int id)
+    {
+        var deleted = await _service.Delete(projectId, id, User.FindFirst(CpmClaims.UserId)?.Value);
+        AddMessage(deleted ? "success" : "error", deleted ? "Punt verwijderd." : "Punt niet gevonden.", deleted ? "Geslaagd" : "Fout");
+        return RedirectToAction(nameof(Index), new { projectId });
+    }
+
 
     [HttpPost("ChangeStatus")]
     [ValidateAntiForgeryToken]
@@ -233,6 +259,70 @@ public class ProjectsIssuesController : BaseController
         await _service.ChangeStatus(projectId, id, newStatus, comment, User.FindFirst(CpmClaims.UserId)?.Value);
         return RedirectToAction(nameof(Details), new { projectId, id });
     }
+
+    [HttpGet("DetailData/{id:int}")]
+    public async Task<IActionResult> DetailData(int projectId, int id)
+    {
+        var issue = await _service.GetById(projectId, id);
+        if (issue == null) return NotFound();
+
+        var media = await BuildMediaVm(projectId, id);
+        var notifications = await _service.GetNotifications(projectId, id);
+        var plan = await ResolveIssuePlan(projectId, issue);
+
+        return Json(new
+        {
+            issue.Id,
+            issue.Title,
+            issue.Description,
+            issue.LocationText,
+            issue.BuildingPart,
+            issue.RoomOrZone,
+            unitName = issue.Unit?.Name,
+            categoryName = issue.Category?.Name,
+            issueType = issue.IssueType,
+            issueTypeLabel = GetEnumDisplayName<ConstructionIssueType>(issue.IssueType),
+            issuePhase = issue.IssuePhase,
+            issuePhaseLabel = GetEnumDisplayName<ConstructionIssuePhase>(issue.IssuePhase),
+            priority = issue.Priority,
+            priorityLabel = GetEnumDisplayName<ConstructionIssuePriority>(issue.Priority),
+            status = issue.Status,
+            statusLabel = GetEnumDisplayName<ConstructionIssueStatus>(issue.Status),
+            issue.ResponsiblePartyId,
+            issue.ResponsibleOtherName,
+            issue.ResponsibleOtherEmail,
+            dueDate = issue.DueDate?.ToString("yyyy-MM-dd"),
+            planDocumentId = issue.PlanDocumentId,
+            planPageNumber = issue.PlanPageNumber,
+            planXnormalized = issue.PlanXnormalized,
+            planYnormalized = issue.PlanYnormalized,
+            plan,
+            media = media.Select(m => new { m.Id, m.Url }),
+            history = issue.ConstructionIssueHistory
+                .OrderByDescending(h => h.Timestamp)
+                .Select(h => new
+                {
+                    h.Id,
+                    h.Action,
+                    actionLabel = GetEnumDisplayName<ConstructionIssueHistoryAction>(h.Action),
+                    h.Comment,
+                    timestamp = h.Timestamp.ToString("dd/MM/yyyy HH:mm:ss"),
+                    h.OldValueJson,
+                    h.NewValueJson
+                }),
+            notifications = notifications
+                .OrderByDescending(n => n.SentDate)
+                .Select(n => new
+                {
+                    n.Id,
+                    n.RecipientEmail,
+                    sentDate = n.SentDate.ToString("dd/MM/yyyy HH:mm"),
+                    n.IsReminder
+                })
+        });
+    }
+
+
     [HttpGet("EditData/{id:int}")]
     public async Task<IActionResult> EditData(int projectId, int id)
     {
@@ -267,6 +357,74 @@ public class ProjectsIssuesController : BaseController
         });
     }
 
+    [HttpGet("ResponsibleInfo/{companyId:int}")]
+    public async Task<IActionResult> ResponsibleInfo(int projectId, int companyId)
+    {
+        var contract = await _db.Contract
+            .Include(c => c.SiteManagerContact)
+            .Include(c => c.Company)
+            .FirstOrDefaultAsync(c => c.ProjectId == projectId && c.CompanyId == companyId);
+
+        if (contract == null)
+        {
+            return Json(new { name = string.Empty, email = string.Empty, hasResponsible = false });
+        }
+
+        var responsibleName = string.Join(" ", new[] { contract.SiteManagerContact?.ContactVoornaam, contract.SiteManagerContact?.ContactNaam }.Where(x => !string.IsNullOrWhiteSpace(x))).Trim();
+        var responsibleEmail = contract.SiteManagerContact?.Email;
+        var hasResponsible = !string.IsNullOrWhiteSpace(responsibleName) || !string.IsNullOrWhiteSpace(responsibleEmail);
+
+        if (!hasResponsible)
+        {
+            responsibleName = contract.Company?.BedrijfsNaam ?? string.Empty;
+            responsibleEmail = !string.IsNullOrWhiteSpace(contract.Company?.InvoiceEmail)
+                ? contract.Company.InvoiceEmail
+                : (contract.Company?.Email ?? string.Empty);
+        }
+
+        return Json(new
+        {
+            name = responsibleName ?? string.Empty,
+            email = responsibleEmail ?? string.Empty,
+            hasResponsible
+        });
+    }
+
+    [HttpPost("UploadUnitExecutionPlan")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadUnitExecutionPlan(int projectId, int unitId, string? planName, IFormFile? planFile)
+    {
+        var unit = await _db.Units.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == unitId);
+        if (unit == null)
+            return NotFound();
+
+        if (planFile == null || planFile.Length == 0)
+            return BadRequest(new { success = false, message = "Geen planbestand geselecteerd." });
+
+        var extension = Path.GetExtension(planFile.FileName);
+        if (!string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { success = false, message = "Alleen PDF bestanden zijn toegelaten." });
+
+        var fileId = await UploadAssetToStorageAsync(planFile, "plans");
+        if (string.IsNullOrWhiteSpace(fileId))
+            return StatusCode(500, new { success = false, message = "Uploaden van het plan is mislukt." });
+
+        var resolvedName = string.IsNullOrWhiteSpace(planName)
+            ? Path.GetFileNameWithoutExtension(planFile.FileName)
+            : planName.Trim();
+
+        _db.UnitExecutionPlan.Add(new UnitExecutionPlan
+        {
+            UnitId = unitId,
+            Name = resolvedName,
+            FileId = fileId,
+            CreatedDate = DateTime.UtcNow,
+            CreatedByUserId = User.FindFirst(CpmClaims.UserId)?.Value
+        });
+
+        await _db.SaveChangesAsync();
+        return Ok(new { success = true });
+    }
 
 
     [HttpGet("UnitPlans/{unitId:int}")]
@@ -336,6 +494,40 @@ public class ProjectsIssuesController : BaseController
             contentType = "application/pdf";
 
         return File(memory, contentType, enableRangeProcessing: true);
+    }
+
+    private async Task<object?> ResolveIssuePlan(int projectId, ConstructionIssue issue)
+    {
+        if (!issue.UnitId.HasValue || !issue.PlanDocumentId.HasValue)
+            return null;
+
+        var unit = await _db.Units.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == issue.UnitId.Value);
+        if (unit == null)
+            return null;
+
+        if (issue.PlanDocumentId.Value == 0 && !string.IsNullOrWhiteSpace(unit.Plan))
+        {
+            var planUrl = Url.Action(nameof(PlanContent), new { projectId, fileId = unit.Plan });
+            return new { id = 0, name = $"{unit.Name} - plan", url = planUrl };
+        }
+
+        var executionPlan = await _db.UnitExecutionPlan
+            .Where(x => x.UnitId == issue.UnitId.Value && x.Id == issue.PlanDocumentId.Value && x.DeletedDate == null)
+            .FirstOrDefaultAsync();
+
+        if (executionPlan == null)
+            return null;
+
+        var url = Url.Action(nameof(PlanContent), new { projectId, fileId = executionPlan.FileId });
+        return new { id = executionPlan.Id, name = executionPlan.Name, url };
+    }
+
+    private static string GetEnumDisplayName<TEnum>(int value) where TEnum : Enum
+    {
+        var enumValue = (TEnum)Enum.ToObject(typeof(TEnum), value);
+        var member = typeof(TEnum).GetMember(enumValue.ToString()).FirstOrDefault();
+        var displayAttribute = member?.GetCustomAttributes(typeof(DisplayAttribute), false).OfType<DisplayAttribute>().FirstOrDefault();
+        return displayAttribute?.Name ?? enumValue.ToString();
     }
 
 

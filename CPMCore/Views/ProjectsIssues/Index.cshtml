@@ -22,6 +22,9 @@
         min-height: 0;
     }
 </style>
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+}
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -42,25 +45,61 @@
 
             <section class="card card-modern mb-4">
                 <div class="card-body">
-                    <form method="get" class="row g-3 align-items-end">
-                        <div class="col-md-3"><label class="form-label">Zoektekst</label><input class="form-control form-control-modern" name="text" value="@filters.Text" /></div>
-                        <div class="col-md-2"><label class="form-label">Status</label><select class="form-control form-control-modern" name="status"><option value="">Alle</option>@foreach (var s in Enum.GetValues<ConstructionIssueStatus>()){
-                        <option value="@((int)s)" selected="@(filters.Status == (int)s)">@s</option>
-                                                }
-</select></div>
-                        <div class="col-md-2"><label class="form-label">Categorie</label><select class="form-control form-control-modern" name="categoryId"><option value="">Alle</option>@foreach (var c in Model.Categories){
-                        <option value="@c.Id" selected="@(filters.CategoryId == c.Id)">@c.Name</option>
-                                                }
-</select></div>
-                        <div class="col-md-2"><label class="form-label">Unit</label><select class="form-control form-control-modern" name="unitId"><option value="">Alle</option>@foreach (var u in Model.Units){
-                        <option value="@u.Id" selected="@(filters.UnitId == u.Id)">@u.Name</option>
-                                                }
-</select></div>
-                        <div class="col-md-1"><label class="form-label">Overdue</label><select class="form-control form-control-modern" name="overdue"><option value="">Alle</option><option value="true" selected="@(filters.Overdue == true)">Ja</option></select></div>
-                        <div class="col-md-1"><label class="form-label">Verzonden</label><select class="form-control form-control-modern" name="sent"><option value="">Alle</option><option value="true" selected="@(filters.Sent == true)">Ja</option><option value="false" selected="@(filters.Sent == false)">Nee</option></select></div>
-                        <div class="col-md-1 text-end"><button class="btn btn-primary" type="submit">Filter</button></div>
+                     <form method="get" class="row g-3 align-items-end" id="issuesFilterForm">
+                        <div class="col-md-3">
+                            <label class="form-label">Zoektekst</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bx bx-search"></i></span>
+                                <input class="form-control form-control-modern" name="text" value="@filters.Text" />
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Status</label>
+                            <div class="input-group input-group-select-append">
+                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
+                                <select class="form-control form-control-modern js-auto-filter" name="status"><option value="">Alle</option>@foreach (var s in Html.GetEnumSelectList<ConstructionIssueStatus>()){
+                                <option value="@s.Value" selected="@(filters.Status?.ToString() == s.Value)">@s.Text</option>
+                                                        }
+</select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Verantwoordelijke</label>
+                            <div class="input-group input-group-select-append">
+                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
+                                <select class="form-control form-control-modern js-auto-filter" name="responsiblePartyId"><option value="">Alle</option>@foreach (var c in Model.Form.ResponsibleContractors){
+                                <option value="@c.ID" selected="@(filters.ResponsiblePartyId == c.ID)">@c.Display</option>
+                                                        }
+</select>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Unit</label>
+                            <div class="input-group input-group-select-append">
+                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
+                                <select class="form-control form-control-modern js-auto-filter" name="unitId"><option value="">Alle</option>@foreach (var u in Model.Units){
+                                <option value="@u.Id" selected="@(filters.UnitId == u.Id)">@u.Name</option>
+                                                        }
+</select>
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">Vervallen</label>
+                            <div class="input-group input-group-select-append">
+                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
+                                <select class="form-control form-control-modern js-auto-filter" name="overdue"><option value="">Alle</option><option value="true" selected="@(filters.Overdue == true)">Ja</option></select>
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label">Verzonden</label>
+                            <div class="input-group input-group-select-append">
+                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
+                                <select class="form-control form-control-modern js-auto-filter" name="sent"><option value="">Alle</option><option value="true" selected="@(filters.Sent == true)">Ja</option><option value="false" selected="@(filters.Sent == false)">Nee</option></select>
+                            </div>
+                        </div>
                     </form>
                 </div>
+
             </section>
 
             <section class="card card-modern mb-4">
@@ -97,11 +136,15 @@
             <section class="card card-modern">
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-ecommerce-simple table-striped mb-0">
+                        <table class="table table-responsive-md table-hover mb-3" id="datatable-issues" style="min-width: 1100px;">
                             <thead>
                                 <tr>
-                                    <th><input type="checkbox" id="checkAll" /></th>
-                                    <th>Titel</th>
+                                    <th>
+                                        <div class="checkbox-custom checkbox-default d-inline-block">
+                                            <input type="checkbox"
+                                                   id="checkAll" />
+                                            <label for="checkAll"></label>
+                                        </div>
                                     <th>Titel</th>
                                     <th>Unit</th>
                                     <th>Categorie</th>
@@ -110,14 +153,22 @@
                                     <th>Prioriteit</th>
                                     <th>Vervaldatum</th>
                                     <th>Laatst verzonden</th>
-                                    <th class="text-end">Acties</th>
+                                    <th class="text-end noVis">Acties</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var i in Model.Issues)
                                 {
                                     <tr>
-                                        <td><input type="checkbox" class="issue-check" value="@i.Id" checked="checked" /></td>
+
+                                        <td>
+                                            <div class="checkbox-custom checkbox-default d-inline-block">
+                                                <input type="checkbox" class="issue-check"
+                                                       value="@i.Id"
+                                                       id="@i.Id" />
+                                                <label for="@i.Id"></label>
+                                            </div>
+                                            </td>
                                         <td>@i.Title</td>
                                         <td>@(i.Unit?.Name ?? "-")</td>
                                         <td>@(i.Category?.Name ?? "-")</td>
@@ -126,9 +177,13 @@
                                         <td>@((ConstructionIssuePriority)i.Priority)</td>
                                         <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                                         <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
-                                        <td class="text-end">
-                                            <a class="ms-1 me-1" href="@Url.Action("Details", new { projectId, id = i.Id })"><i class="fa fa-eye fs-5"></i></a>
-                                            <button type="button" class="btn btn-link ms-1 me-1 p-0 open-edit-issue" data-id="@i.Id"><i class="fa fa-pen fs-5"></i></button>
+                                        <td class="actions text-end">
+                                            <button type="button" class="btn ms-1 me-1 open-detail-issue" title="Details" data-id="@i.Id"><i class="bx bx-pencil fs-5"></i></button>
+                                            <button type="button" class="btn ms-1 me-1 open-edit-issue" title="Bewerken" data-id="@i.Id"><i class="bx bx-pencil fs-5"></i></button>
+                                            <a href="#modaldeleteissue" data-toggle="tooltip" data-placement="top" title="Verwijderen" class="deleteIssue ms-1 me-1" data-id="@i.Id">
+                                                <i class="bx bx-trash fs-5 text-danger"></i>
+                                                <span class="visually-hidden">Verwijderen</span>
+                                            </a>
                                         </td>
                                     </tr>
                                 }
@@ -141,9 +196,14 @@
     </div>
 </section>
 @await Html.PartialAsync("Modals/_ModalCreateEditIssue", Model)
+@await Html.PartialAsync("Modals/_ModalIssueDetail")
+<div id="modaldeleteissue" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-issue-container"></div>
+</div>
 
 @section PageScripts {
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function(){
             const projectId = @projectId;
@@ -172,6 +232,35 @@
             const planXNormalizedInput = document.getElementById('planXNormalized');
             const planYNormalizedInput = document.getElementById('planYNormalized');
             const planCtx = planCanvas.getContext('2d');
+                      const responsiblePartyField = document.getElementById('issueResponsiblePartyId');
+                    const responsibleNameField = document.getElementById('issueResponsibleOtherName');
+                    const responsibleEmailField = document.getElementById('issueResponsibleOtherEmail');
+                    const planUploadInput = document.getElementById('issuePlanUploadInput');
+                    const planUploadName = document.getElementById('issuePlanUploadName');
+                    const planUploadButton = document.getElementById('issuePlanUploadButton');
+                    const deleteIssueModalSelector = '#modaldeleteissue';
+                    const deleteIssueContainerSelector = '#delete-issue-container';
+                    const filterForm = document.getElementById('issuesFilterForm');
+        const filterSearchInput = filterForm?.querySelector('input[name="text"]');
+                    const issueDetailModalEl = document.getElementById('issueDetailModal');
+                    const issueDetailModal = issueDetailModalEl ? new bootstrap.Modal(issueDetailModalEl) : null;
+                    const issueDetailTitle = document.getElementById('issueDetailTitle');
+                    const issueDetailBadges = document.getElementById('issueDetailBadges');
+                    const issueDetailDescription = document.getElementById('issueDetailDescription');
+                    const issueDetailLocation = document.getElementById('issueDetailLocation');
+                    const issueDetailBuildingPart = document.getElementById('issueDetailBuildingPart');
+                    const issueDetailUnit = document.getElementById('issueDetailUnit');
+                    const issueDetailType = document.getElementById('issueDetailType');
+                    const issueDetailPhotos = document.getElementById('issueDetailPhotos');
+                    const issueDetailHistory = document.getElementById('issueDetailHistory');
+                    const issueDetailNotifications = document.getElementById('issueDetailNotifications');
+                    const issueDetailPlanBlock = document.getElementById('issueDetailPlanBlock');
+                    const issueDetailPlanName = document.getElementById('issueDetailPlanName');
+                    const issueDetailPlanCanvas = document.getElementById('issueDetailPlanCanvas');
+                    const issueDetailPlanMarker = document.getElementById('issueDetailPlanMarker');
+                    const issuePhotosTabButton = document.getElementById('issuePhotosTabButton');
+                    const issueHistoryTabButton = document.getElementById('issueHistoryTabButton');
+                    const issueNotificationTabButton = document.getElementById('issueNotificationTabButton');
 
             let dt = new DataTransfer();
             let currentPdfDoc = null;
@@ -405,6 +494,167 @@
                 await renderPdfPage(selectedOption.dataset.url, planPageSelect.value || 1);
             }
 
+               async function syncResponsibleFromSelection(){
+                const companyId = responsiblePartyField?.value;
+                if (!responsibleNameField || !responsibleEmailField) return;
+
+                if(!companyId){
+                    responsibleNameField.disabled = false;
+                    responsibleEmailField.disabled = false;
+                    return;
+                }
+
+                responsibleNameField.disabled = true;
+                responsibleEmailField.disabled = true;
+
+                try {
+                    const response = await fetch(`/Projects/${projectId}/Issues/ResponsibleInfo/${companyId}`);
+                    if (!response.ok) throw new Error('Responsible lookup failed');
+                    const data = await response.json();
+                    responsibleNameField.value = data?.name || '';
+                    responsibleEmailField.value = data?.email || '';
+                } catch {
+                    responsibleNameField.value = '';
+                    responsibleEmailField.value = '';
+                }
+            }
+
+            async function uploadUnitExecutionPlan(){
+                const unitId = unitField?.value;
+                const file = planUploadInput?.files?.[0];
+                if(!unitId || !file){
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('unitId', unitId);
+                formData.append('planName', (planUploadName?.value || '').trim());
+                formData.append('planFile', file);
+                formData.append('__RequestVerificationToken', issueForm.querySelector('input[name="__RequestVerificationToken"]').value);
+
+                const response = await fetch(`/Projects/${projectId}/Issues/UploadUnitExecutionPlan`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    alert('Plan uploaden is mislukt. Controleer of het bestand een PDF is.');
+                    return;
+                }
+
+                const currentPlanValue = planSelect.value || null;
+                await loadPlansForUnit(unitId, currentPlanValue, planPageSelect.value || 1);
+                planUploadInput.value = '';
+                if (planUploadName) {
+                    planUploadName.value = '';
+                }
+            }
+
+            async function renderDetailPlan(plan, pageNumber, xNorm, yNorm){
+                if(!plan || !plan.url || !issueDetailPlanCanvas) {
+                    issueDetailPlanBlock.style.display = 'none';
+                    return;
+                }
+
+                issueDetailPlanBlock.style.display = 'block';
+                issueDetailPlanName.textContent = plan.name || '';
+
+                if (!pdfJsApi || typeof pdfJsApi.getDocument !== 'function') {
+                    issueDetailPlanCanvas.style.display = 'none';
+                    issueDetailPlanMarker.style.display = 'none';
+                    return;
+                }
+
+                const ctx = issueDetailPlanCanvas.getContext('2d');
+                const pdfDoc = await pdfJsApi.getDocument(plan.url).promise;
+                const safePage = Math.min(Math.max(1, Number(pageNumber || 1)), pdfDoc.numPages || 1);
+                const pdfPage = await pdfDoc.getPage(safePage);
+                const viewport = pdfPage.getViewport({ scale: 1.1 });
+                issueDetailPlanCanvas.width = Math.floor(viewport.width);
+                issueDetailPlanCanvas.height = Math.floor(viewport.height);
+                await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+                issueDetailPlanCanvas.style.display = 'block';
+
+                if (xNorm != null && yNorm != null && xNorm !== '' && yNorm !== '') {
+                    issueDetailPlanMarker.style.display = 'block';
+                    issueDetailPlanMarker.style.left = `${Number(xNorm) * issueDetailPlanCanvas.width}px`;
+                    issueDetailPlanMarker.style.top = `${Number(yNorm) * issueDetailPlanCanvas.height}px`;
+                } else {
+                    issueDetailPlanMarker.style.display = 'none';
+                }
+            }
+
+            function renderIssueDetailModal(data){
+                issueDetailTitle.textContent = data.title || 'Punt detail';
+                issueDetailDescription.textContent = data.description || '-';
+                issueDetailLocation.textContent = data.locationText || '-';
+                issueDetailBuildingPart.textContent = [data.buildingPart, data.roomOrZone].filter(Boolean).join(' / ') || '-';
+                issueDetailUnit.textContent = data.unitName || '-';
+                issueDetailType.textContent = data.issueTypeLabel || '-';
+
+                issueDetailBadges.innerHTML = '';
+                [data.statusLabel, data.priorityLabel, data.categoryName || 'Geen categorie', data.issuePhaseLabel].forEach((label, idx) => {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge rounded-pill ' + (idx === 0 ? 'bg-light text-danger' : 'bg-light text-dark border');
+                    badge.textContent = label || '-';
+                    issueDetailBadges.appendChild(badge);
+                });
+
+                const media = data.media || [];
+                const history = data.history || [];
+                const notifications = data.notifications || [];
+                issuePhotosTabButton.textContent = `Foto's (${media.length})`;
+                issueHistoryTabButton.textContent = `Historie (${history.length})`;
+                issueNotificationTabButton.textContent = `Verzending (${notifications.length})`;
+
+                issueDetailPhotos.innerHTML = media.length
+                    ? media.map(m => `<img src="${m.url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;"/>`).join('')
+                    : '<div class="text-muted">Geen foto's.</div>';
+
+                issueDetailHistory.innerHTML = history.length
+                    ? history.map(h => `<div class="border rounded p-2 mb-2"><div class="fw-semibold">${h.actionLabel || 'Wijziging'}</div><div class="text-muted small">${h.comment || '-'} · ${h.timestamp}</div></div>`).join('')
+                    : '<div class="text-muted">Geen historiek beschikbaar.</div>';
+
+                issueDetailNotifications.innerHTML = notifications.length
+                    ? notifications.map(n => `<div class="border rounded p-2 mb-2"><div class="fw-semibold">${n.recipientEmail || '-'}</div><div class="text-muted small">${n.sentDate}</div></div>`).join('')
+                    : '<div class="text-muted">Nog niets verzonden.</div>';
+
+                renderDetailPlan(data.plan, data.planPageNumber, data.planXnormalized, data.planYnormalized)
+                    .catch(() => { issueDetailPlanBlock.style.display = 'none'; });
+            }
+
+            function initializeIssueDetailModal(){
+                document.querySelectorAll('.open-detail-issue').forEach(btn => btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    const response = await fetch(`/Projects/${projectId}/Issues/DetailData/${id}`);
+                    if(!response.ok) return;
+                    const data = await response.json();
+                    renderIssueDetailModal(data);
+                    issueDetailModal?.show();
+                }));
+            }
+
+            function initializeIssueDeleteModal(){
+                $(document).on('click', '.deleteIssue', function (e) {
+                    e.preventDefault();
+                    const id = $(this).data('id');
+
+                    $.get(`/Projects/${projectId}/Issues/ModalDelete/${id}`, function (data) {
+                        $(deleteIssueContainerSelector).html(data);
+
+                        $.magnificPopup.open({
+                            items: {
+                                src: deleteIssueModalSelector
+                            },
+                            type: 'inline',
+                            preloader: false,
+                            focus: deleteIssueContainerSelector
+                        });
+                    });
+                });
+            }
+
+
             function resetForm(){
                 issueForm.reset();
                 issueForm.action = `/Projects/${projectId}/Issues/Create`;
@@ -416,6 +666,10 @@
                 planSelect.innerHTML = '<option value="">Selecteer eerst een eenheid</option>';
                 planSelect.disabled = true;
                 resetPlanStage();
+           responsibleNameField.disabled = false;
+                responsibleEmailField.disabled = false;
+                if (planUploadInput) planUploadInput.value = "";
+                if (planUploadName) planUploadName.value = "";
             }
 
             function addPreview(url, existingId){
@@ -456,6 +710,15 @@
 
             addMediaButton.addEventListener('click', () => mediaInput.click());
             unitField.addEventListener('change', async () => await loadPlansForUnit(unitField.value, null, null));
+                     responsiblePartyField?.addEventListener('change', syncResponsibleFromSelection);
+            planUploadButton?.addEventListener('click', () => {
+                if (!unitField?.value) {
+                    alert('Selecteer eerst een eenheid.');
+                    return;
+                }
+                planUploadInput?.click();
+            });
+            planUploadInput?.addEventListener('change', uploadUnitExecutionPlan);
             planSelect.addEventListener('change', () => onPlanChanged(true));
             planPageSelect.addEventListener('change', async () => {
                 const selectedOption = planSelect.options[planSelect.selectedIndex];
@@ -532,12 +795,26 @@
                     if(el) el.value = val ?? '';
                 });
                 await loadPlansForUnit(data.unitId, data.planDocumentId, data.planPageNumber);
+                await syncResponsibleFromSelection();
                 (data.media || []).forEach(m => addPreview(m.url, m.id));
             }));
 
             document.getElementById('checkAll')?.addEventListener('change',e=>{ document.querySelectorAll('.issue-check').forEach(x=>x.checked=e.target.checked); syncHidden();});
             document.querySelectorAll('.issue-check').forEach(x=>x.addEventListener('change',syncHidden));
             syncHidden();
+
+           document.querySelectorAll('.js-auto-filter').forEach((el) => {
+                el.addEventListener('change', () => filterForm?.submit());
+            });
+
+            let filterSearchTimer = null;
+            filterSearchInput?.addEventListener('input', () => {
+                clearTimeout(filterSearchTimer);
+                filterSearchTimer = setTimeout(() => filterForm?.submit(), 250);
+            });
+
+            initializeIssueDetailModal();
+            initializeIssueDeleteModal();
         })();
     </script>
 }

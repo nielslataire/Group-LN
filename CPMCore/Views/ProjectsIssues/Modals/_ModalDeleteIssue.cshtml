@@ -1,0 +1,27 @@
+﻿@model BOCore.IdNameBO
+
+<section class="card">
+    <div class="card-body text-center">
+        <div class="modal-wrapper">
+            <div class="modal-icon center">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <div class="modal-text">
+                <h4>Verwijderen @Model.Display</h4>
+                <p>U staat op het punt om het punt @Model.Display te verwijderen.</p>
+                <p>Bent u zeker dat u dit punt wilt verwijderen?</p>
+            </div>
+        </div>
+    </div>
+    <footer class="card-footer">
+        <div class="row">
+            <div class="col-md-12 text-end">
+                <form method="post" action="@Url.Action("Delete", "ProjectsIssues", new { projectId = ViewBag.ProjectId, id = Model.ID })" class="d-inline-block">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-primary">Verwijderen</button>
+                </form>
+                <button class="btn btn-default modal-dismiss">Annuleren</button>
+            </div>
+        </div>
+    </footer>
+</section>

@@ -31,6 +31,7 @@ public class ConstructionIssueService : IConstructionIssueService
         if (f.UnitId.HasValue) q = q.Where(x => x.UnitId == f.UnitId.Value);
         if (f.CategoryId.HasValue) q = q.Where(x => x.CategoryId == f.CategoryId.Value);
         if (f.ResponsiblePartyType.HasValue) q = q.Where(x => x.ResponsiblePartyType == f.ResponsiblePartyType.Value);
+        if (f.ResponsiblePartyId.HasValue) q = q.Where(x => x.ResponsiblePartyId == f.ResponsiblePartyId.Value);
         if (f.Priority.HasValue) q = q.Where(x => x.Priority == f.Priority.Value);
         if (f.Phase.HasValue) q = q.Where(x => x.IssuePhase == f.Phase.Value);
         if (f.Type.HasValue) q = q.Where(x => x.IssueType == f.Type.Value);
@@ -165,6 +166,24 @@ public class ConstructionIssueService : IConstructionIssueService
         _db.ConstructionIssueMedia.Remove(media);
         await _db.SaveChangesAsync();
         await AddHistory(issueId, (int)ConstructionIssueHistoryAction.AttachmentRemoved, userId, JsonSerializer.Serialize(media), null, "Attachment removed");
+        return true;
+    }
+
+    public async Task<bool> Delete(int projectId, int issueId, string? userId)
+    {
+        var issue = await _db.ConstructionIssue.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == issueId);
+        if (issue == null) return false;
+
+        var notifications = await _db.ConstructionIssueNotification.Where(x => x.IssueId == issueId).ToListAsync();
+        var media = await _db.ConstructionIssueMedia.Where(x => x.IssueId == issueId).ToListAsync();
+        var history = await _db.ConstructionIssueHistory.Where(x => x.IssueId == issueId).ToListAsync();
+
+        if (notifications.Count > 0) _db.ConstructionIssueNotification.RemoveRange(notifications);
+        if (media.Count > 0) _db.ConstructionIssueMedia.RemoveRange(media);
+        if (history.Count > 0) _db.ConstructionIssueHistory.RemoveRange(history);
+
+        _db.ConstructionIssue.Remove(issue);
+        await _db.SaveChangesAsync();
         return true;
     }
 
