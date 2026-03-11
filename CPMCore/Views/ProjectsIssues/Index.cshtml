@@ -24,6 +24,8 @@
 </style>
 @section PageStyle {
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
 }
 
 <section class="content-with-menu">
@@ -46,7 +48,7 @@
             <section class="card card-modern mb-4">
                 <div class="card-body">
                      <form method="get" class="row g-3 align-items-end" id="issuesFilterForm">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Zoektekst</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bx bx-search"></i></span>
@@ -83,14 +85,14 @@
 </select>
                             </div>
                         </div>
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <label class="form-label">Vervallen</label>
                             <div class="input-group input-group-select-append">
                                 <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
                                 <select class="form-control form-control-modern js-auto-filter" name="overdue"><option value="">Alle</option><option value="true" selected="@(filters.Overdue == true)">Ja</option></select>
                             </div>
                         </div>
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <label class="form-label">Verzonden</label>
                             <div class="input-group input-group-select-append">
                                 <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
@@ -145,7 +147,7 @@
                                                    id="checkAll" />
                                             <label for="checkAll"></label>
                                         </div>
-                                    <th>Titel</th>
+                                    <th>Titel </th>
                                     <th>Unit</th>
                                     <th>Categorie</th>
                                     <th>Locatie</th>
@@ -159,7 +161,7 @@
                             <tbody>
                                 @foreach (var i in Model.Issues)
                                 {
-                                    <tr>
+                                    <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
 
                                         <td>
                                             <div class="checkbox-custom checkbox-default d-inline-block">
@@ -178,8 +180,8 @@
                                         <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                                         <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                                         <td class="actions text-end">
-                                            <button type="button" class="btn ms-1 me-1 open-detail-issue" title="Details" data-id="@i.Id"><i class="bx bx-pencil fs-5"></i></button>
-                                            <button type="button" class="btn ms-1 me-1 open-edit-issue" title="Bewerken" data-id="@i.Id"><i class="bx bx-pencil fs-5"></i></button>
+                                            <a href="@Url.Action("DetailData", "ProjectsIssues", new { projectId, id = i.Id })" class="btn ms-1 me-1 open-detail-issue" title="Details" data-id="@i.Id"><i class="bx bx-show fs-5"></i></a>
+                                            <a href="@Url.Action("EditData", "ProjectsIssues", new { projectId, id = i.Id })" class="btn ms-1 me-1 open-edit-issue" title="Bewerken" data-id="@i.Id"><i class="bx bx-pencil fs-5"></i></a>
                                             <a href="#modaldeleteissue" data-toggle="tooltip" data-placement="top" title="Verwijderen" class="deleteIssue ms-1 me-1" data-id="@i.Id">
                                                 <i class="bx bx-trash fs-5 text-danger"></i>
                                                 <span class="visually-hidden">Verwijderen</span>
@@ -203,12 +205,13 @@
 
 @section PageScripts {
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
     <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function(){
             const projectId = @projectId;
             const issueModalEl = document.getElementById('issueModal');
-            const issueModal = new bootstrap.Modal(issueModalEl);
+        const issueModal = issueModalEl && window.bootstrap ? new bootstrap.Modal(issueModalEl) : null;
             const issueForm = document.getElementById('issueForm');
             const titleEl = document.getElementById('issueModalTitle');
             const submitEl = document.getElementById('saveIssueButton');
@@ -243,8 +246,8 @@
                     const filterForm = document.getElementById('issuesFilterForm');
         const filterSearchInput = filterForm?.querySelector('input[name="text"]');
                     const issueDetailModalEl = document.getElementById('issueDetailModal');
-                    const issueDetailModal = issueDetailModalEl ? new bootstrap.Modal(issueDetailModalEl) : null;
-                    const issueDetailTitle = document.getElementById('issueDetailTitle');
+                   const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
+                    const issuesTable = document.getElementById('datatable-issues');
                     const issueDetailBadges = document.getElementById('issueDetailBadges');
                     const issueDetailDescription = document.getElementById('issueDetailDescription');
                     const issueDetailLocation = document.getElementById('issueDetailLocation');
@@ -262,7 +265,8 @@
                     const issueHistoryTabButton = document.getElementById('issueHistoryTabButton');
                     const issueNotificationTabButton = document.getElementById('issueNotificationTabButton');
 
-            let dt = new DataTransfer();
+            let dt = typeof DataTransfer !== 'undefined' ? new DataTransfer() : null;
+            let dataTableInstance = null;
             let currentPdfDoc = null;
             let currentPlans = [];
             let currentPlanUrl = '';
@@ -283,6 +287,123 @@
                     }
                 });
             }
+
+              function openBootstrapModal(modalInstance, modalElement){
+                if(modalInstance){
+                    modalInstance.show();
+                    return;
+                }
+
+                if(window.jQuery && modalElement){
+                    window.jQuery(modalElement).modal('show');
+                }
+            }
+
+           function initializeDataTableFilters(){
+                if(!(window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && issuesTable)) return;
+
+                const getActiveFilters = () => ({
+                    status: filterForm?.querySelector('[name="status"]')?.value || '',
+                    responsiblePartyId: filterForm?.querySelector('[name="responsiblePartyId"]')?.value || '',
+                    unitId: filterForm?.querySelector('[name="unitId"]')?.value || '',
+                    overdue: filterForm?.querySelector('[name="overdue"]')?.value || '',
+                    sent: filterForm?.querySelector('[name="sent"]')?.value || ''
+                });
+
+                const customFilter = (settings, _, dataIndex) => {
+                    if (settings.nTable !== issuesTable) {
+                        return true;
+                    }
+
+                    const filters = getActiveFilters();
+                    const rowNode = settings.aoData?.[dataIndex]?.nTr;
+                    if (!rowNode) {
+                        return true;
+                    }
+
+                    const unitCell = rowNode.cells?.[2]?.textContent?.trim() || '';
+                    const statusCell = rowNode.cells?.[5]?.textContent?.trim() || '';
+                    const dueDateCell = rowNode.cells?.[7]?.textContent?.trim() || '';
+                    const sentCell = rowNode.cells?.[8]?.textContent?.trim() || '';
+                    const responsiblePartyId = rowNode.dataset.responsiblePartyId || '';
+
+                    if (filters.status) {
+                        const selectedStatusText = filterForm?.querySelector(`[name="status"] option[value="${filters.status}"]`)?.textContent?.trim() || '';
+                        if (!selectedStatusText || statusCell !== selectedStatusText) {
+                            return false;
+                        }
+                    }
+
+                    if (filters.unitId) {
+                        const selectedUnitText = filterForm?.querySelector(`[name="unitId"] option[value="${filters.unitId}"]`)?.textContent?.trim() || '';
+                        if (!selectedUnitText || unitCell !== selectedUnitText) {
+                            return false;
+                        }
+                    }
+
+                    if (filters.responsiblePartyId && responsiblePartyId !== filters.responsiblePartyId) {
+                        return false;
+                    }
+
+                    if (filters.overdue === 'true' && (!dueDateCell || dueDateCell === '-')) {
+                        return false;
+                    }
+
+                    if (filters.sent === 'true' && (!sentCell || sentCell === '-')) {
+                        return false;
+                    }
+
+                    if (filters.sent === 'false' && sentCell !== '-') {
+                        return false;
+                    }
+
+                    return true;
+                };
+
+                window.jQuery.fn.dataTable.ext.search.push(customFilter);
+
+                dataTableInstance = window.jQuery(issuesTable).DataTable({
+                    pageLength: 25,
+                    searching: false,
+                    lengthChange: false,
+                    order: [[7, 'asc']],
+                    columnDefs: [
+                        { targets: [0, 9], orderable: false, searchable: false }
+                    ],
+                    language: {
+                        processing: 'Bezig met verwerken…',
+                        search: 'Zoeken:',
+                        lengthMenu: 'Toon _MENU_',
+                        info: 'Punten _START_ tot _END_ van _TOTAL_ punten',
+                        infoEmpty: 'Punten 0 tot 0 van 0 punten',
+                        infoFiltered: '(gefilterd uit _MAX_ totaal)',
+                        loadingRecords: 'Bezig met laden…',
+                        zeroRecords: 'Geen punten om weer te geven',
+                        emptyTable: 'Er zijn geen punten om weer te geven',
+                        paginate: { previous: 'Vorige', next: 'Volgende' }
+                    }
+                });
+
+                const applyDataTableFilters = () => {
+                    if(!dataTableInstance) return;
+                    dataTableInstance.search((filterSearchInput?.value || '').trim());
+                    dataTableInstance.draw();
+                };
+
+                document.querySelectorAll('.js-auto-filter').forEach((el) => {
+                    el.addEventListener('change', applyDataTableFilters);
+                });
+
+                let tableFilterTimer = null;
+                filterSearchInput?.addEventListener('input', () => {
+                    clearTimeout(tableFilterTimer);
+                    tableFilterTimer = setTimeout(applyDataTableFilters, 200);
+                });
+
+                applyDataTableFilters();
+            }
+
+
 
             function clearMarker(){
                 planMarker.style.display = 'none';
@@ -609,7 +730,7 @@
 
                 issueDetailPhotos.innerHTML = media.length
                     ? media.map(m => `<img src="${m.url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;"/>`).join('')
-                    : '<div class="text-muted">Geen foto's.</div>';
+                    : "<div class=\"text-muted\">Geen foto's.</div>";
 
                 issueDetailHistory.innerHTML = history.length
                     ? history.map(h => `<div class="border rounded p-2 mb-2"><div class="fw-semibold">${h.actionLabel || 'Wijziging'}</div><div class="text-muted small">${h.comment || '-'} · ${h.timestamp}</div></div>`).join('')
@@ -624,13 +745,14 @@
             }
 
             function initializeIssueDetailModal(){
-                document.querySelectorAll('.open-detail-issue').forEach(btn => btn.addEventListener('click', async () => {
+             document.querySelectorAll('.open-detail-issue').forEach(btn => btn.addEventListener('click', async (event) => {
+                    event.preventDefault();
                     const id = btn.dataset.id;
                     const response = await fetch(`/Projects/${projectId}/Issues/DetailData/${id}`);
                     if(!response.ok) return;
                     const data = await response.json();
                     renderIssueDetailModal(data);
-                    issueDetailModal?.show();
+                     openBootstrapModal(issueDetailModal, issueDetailModalEl);
                 }));
             }
 
@@ -661,8 +783,12 @@
                 titleEl.textContent = 'Nieuw punt toevoegen';
                 submitEl.textContent = 'Punt aanmaken';
                 mediaPreview.querySelectorAll('.issue-media-item').forEach(x => x.remove());
-                dt = new DataTransfer();
-                mediaInput.files = dt.files;
+               dt = typeof DataTransfer !== 'undefined' ? new DataTransfer() : null;
+                if(dt){
+                    mediaInput.files = dt.files;
+                } else {
+                    mediaInput.value = '';
+                }
                 planSelect.innerHTML = '<option value="">Selecteer eerst een eenheid</option>';
                 planSelect.disabled = true;
                 resetPlanStage();
@@ -688,7 +814,7 @@
                         hidden.name = 'deleteMediaIds';
                         hidden.value = existingId;
                         issueForm.appendChild(hidden);
-                    } else {
+                   } else if(dt) {
                         const index = Array.from(dt.files).findIndex(f => f._previewUrl === url);
                         if(index >= 0){ dt.items.remove(index); mediaInput.files = dt.files; }
                     }
@@ -702,11 +828,16 @@
                 Array.from(e.target.files || []).forEach(file => {
                     const url = URL.createObjectURL(file);
                     file._previewUrl = url;
-                    dt.items.add(file);
+                    if(dt){
+                        dt.items.add(file);
+                    }
                     addPreview(url, null);
                 });
-                mediaInput.files = dt.files;
+                if(dt){
+                    mediaInput.files = dt.files;
+                }
             });
+
 
             addMediaButton.addEventListener('click', () => mediaInput.click());
             unitField.addEventListener('change', async () => await loadPlansForUnit(unitField.value, null, null));
@@ -759,15 +890,16 @@
                 }
             });
 
-            document.getElementById('openCreateIssueModal').addEventListener('click', () => { resetForm(); issueModal.show(); });
+          document.getElementById('openCreateIssueModal').addEventListener('click', () => { resetForm(); openBootstrapModal(issueModal, issueModalEl); });
 
-            document.querySelectorAll('.open-edit-issue').forEach(btn => btn.addEventListener('click', async () => {
+            document.querySelectorAll('.open-edit-issue').forEach(btn => btn.addEventListener('click', async (event) => {
+                event.preventDefault();
                 resetForm();
                 const editIssueId = btn.dataset.id;
                 const response = await fetch(`/Projects/${projectId}/Issues/EditData/${editIssueId}`);
                 if(!response.ok) return;
                 const data = await response.json();
-                issueModal.show();
+                openBootstrapModal(issueModal, issueModalEl);
                 issueForm.action = `/Projects/${projectId}/Issues/Edit/${editIssueId}`;
                 titleEl.textContent = 'Punt bewerken';
                 submitEl.textContent = 'Punt opslaan';
@@ -803,15 +935,19 @@
             document.querySelectorAll('.issue-check').forEach(x=>x.addEventListener('change',syncHidden));
             syncHidden();
 
-           document.querySelectorAll('.js-auto-filter').forEach((el) => {
-                el.addEventListener('change', () => filterForm?.submit());
-            });
+          if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
+                document.querySelectorAll('.js-auto-filter').forEach((el) => {
+                    el.addEventListener('change', () => filterForm?.submit());
+                });
 
-            let filterSearchTimer = null;
-            filterSearchInput?.addEventListener('input', () => {
-                clearTimeout(filterSearchTimer);
-                filterSearchTimer = setTimeout(() => filterForm?.submit(), 250);
-            });
+                let filterSearchTimer = null;
+                filterSearchInput?.addEventListener('input', () => {
+                    clearTimeout(filterSearchTimer);
+                    filterSearchTimer = setTimeout(() => filterForm?.submit(), 250);
+                });
+            }
+
+            initializeDataTableFilters();
 
             initializeIssueDetailModal();
             initializeIssueDeleteModal();
