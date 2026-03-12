@@ -174,7 +174,7 @@ public class ProjectsIssuesController : BaseController
             ProjectId = projectId,
             Issue = issue,
             Notifications = await _service.GetNotifications(projectId, id),
-            MediaUrls = media.ToDictionary(x => x.Id, x => GetSignedAssetUrlByFileName(x.FileId, "issues"))
+            MediaUrls = media.ToDictionary(x => x.Id, x => GetSignedAssetUrlByFileName(x.FileId, "pictures"))
         };
         return View(vm);
     }
@@ -191,7 +191,7 @@ public class ProjectsIssuesController : BaseController
 
         foreach (var file in files.Where(x => x?.Length > 0))
         {
-            var fileId = await UploadAssetToStorageAsync(file, "issues");
+            var fileId = await UploadAssetToStorageAsync(file, "pictures");
             if (!string.IsNullOrWhiteSpace(fileId))
             {
                 await _service.AddMedia(projectId, id, fileId, mediaType, User.FindFirst(CpmClaims.UserId)?.Value);
@@ -543,7 +543,7 @@ public class ProjectsIssuesController : BaseController
             {
                 Id = x.Id,
                 FileId = x.FileId,
-                Url = GetSignedAssetUrlByFileName(x.FileId, "issues")
+                Url = GetSignedAssetUrlByFileName(x.FileId, "pictures")
             })
             .ToList();
     }
@@ -578,7 +578,7 @@ public class ProjectsIssuesController : BaseController
 
     private async Task<string?> UploadIssueMediaToStorageAsync(IFormFile file)
     {
-        var uploaded = await UploadAssetToStorageAsync(file, "issues");
+        var uploaded = await UploadAssetToStorageAsync(file, "pictures");
         if (!string.IsNullOrWhiteSpace(uploaded))
             return uploaded;
 
@@ -597,7 +597,7 @@ public class ProjectsIssuesController : BaseController
             if (string.IsNullOrWhiteSpace(baseName))
                 baseName = $"issue_{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
-            return await UploadAssetToStorageAsync(output, $"{baseName}.jpg", "image/jpeg", "issues");
+            return await UploadAssetToStorageAsync(output, $"{baseName}.jpg", "image/jpeg", "pictures");
         }
         catch
         {
@@ -641,8 +641,14 @@ public class ProjectsIssuesController : BaseController
         if (string.IsNullOrWhiteSpace(safeFileName)) return null;
 
         var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return null;
+
+        if (string.Equals(folder, "pictures", StringComparison.OrdinalIgnoreCase))
+            return $"{baseUrl}/pictures/{Uri.EscapeDataString(safeFileName)}";
+
         var readKey = _configuration["StorageApi:ReadApiKey"];
-        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(readKey))
+        if (string.IsNullOrWhiteSpace(readKey))
             return null;
 
         using var httpClient = new HttpClient();

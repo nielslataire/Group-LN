@@ -52,7 +52,7 @@ public class ConstructionIssueService : IConstructionIssueService
         entity.LastUpdatedDate = DateTime.UtcNow;
         _db.ConstructionIssue.Add(entity);
         await _db.SaveChangesAsync();
-        await AddHistory(entity.Id, (int)ConstructionIssueHistoryAction.Created, userId, null, JsonSerializer.Serialize(entity), "Issue created");
+        await AddHistory(entity.Id, (int)ConstructionIssueHistoryAction.Created, userId, null, JsonSerializer.Serialize(BuildIssueHistorySnapshot(entity)), "Punt aangemaakt");
         return entity;
     }
 
@@ -60,14 +60,14 @@ public class ConstructionIssueService : IConstructionIssueService
     {
         var entity = await _db.ConstructionIssue.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == id);
         if (entity == null) return null;
-        var old = JsonSerializer.Serialize(entity);
+        var old = JsonSerializer.Serialize(BuildIssueHistorySnapshot(entity));
         var createTranslate = ConstructionIssueTranslator.TranslateBOToEntity(entity, dto);
         if (createTranslate != ErrorCode.Success)
             throw new InvalidOperationException($"ConstructionIssue translation failed: {createTranslate}");
         entity.LastUpdatedByUserId = userId;
         entity.LastUpdatedDate = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-        await AddHistory(id, (int)ConstructionIssueHistoryAction.Updated, userId, old, JsonSerializer.Serialize(entity), "Issue updated");
+        await AddHistory(id, (int)ConstructionIssueHistoryAction.Updated, userId, old, JsonSerializer.Serialize(BuildIssueHistorySnapshot(entity)), "Punt geupdate");
         return entity;
     }
 
@@ -97,7 +97,7 @@ public class ConstructionIssueService : IConstructionIssueService
         entity.LastUpdatedByUserId = userId;
         entity.LastUpdatedDate = DateTime.UtcNow;
         await _db.SaveChangesAsync();
-        await AddHistory(id, (int)ConstructionIssueHistoryAction.Assigned, userId, null, JsonSerializer.Serialize(new { type, responsiblePartyId, otherName, otherEmail }), "Responsible updated");
+        await AddHistory(id, (int)ConstructionIssueHistoryAction.Assigned, userId, null, JsonSerializer.Serialize(new { type, responsiblePartyId, otherName, otherEmail }), "Verantwoordelijke geupdate");
         return true;
     }
 
@@ -109,7 +109,7 @@ public class ConstructionIssueService : IConstructionIssueService
         var issues = await _db.ConstructionIssue.Where(x => x.ProjectId == projectId && ids.Contains(x.Id)).ToListAsync();
         foreach (var issue in issues)
         {
-            var old = JsonSerializer.Serialize(issue);
+            var old = JsonSerializer.Serialize(BuildIssueHistorySnapshot(issue));
             if (dto.ResponsiblePartyType.HasValue) issue.ResponsiblePartyType = dto.ResponsiblePartyType.Value;
             if (dto.ResponsiblePartyType.HasValue || dto.ResponsiblePartyId.HasValue || dto.ResponsibleOtherName != null || dto.ResponsibleOtherEmail != null)
             {
@@ -125,7 +125,7 @@ public class ConstructionIssueService : IConstructionIssueService
             if (dto.CategoryId.HasValue) issue.CategoryId = dto.CategoryId.Value;
             issue.LastUpdatedByUserId = userId;
             issue.LastUpdatedDate = DateTime.UtcNow;
-            await AddHistory(issue.Id, (int)ConstructionIssueHistoryAction.Updated, userId, old, JsonSerializer.Serialize(issue), "Bulk update");
+            await AddHistory(issue.Id, (int)ConstructionIssueHistoryAction.Updated, userId, old, JsonSerializer.Serialize(BuildIssueHistorySnapshot(issue)), "Bulk update");
         }
 
         await _db.SaveChangesAsync();
@@ -155,7 +155,7 @@ public class ConstructionIssueService : IConstructionIssueService
         };
         _db.ConstructionIssueMedia.Add(entity);
         await _db.SaveChangesAsync();
-        await AddHistory(issueId, (int)ConstructionIssueHistoryAction.AttachmentAdded, userId, null, JsonSerializer.Serialize(entity), "Attachment added");
+        await AddHistory(issueId, (int)ConstructionIssueHistoryAction.AttachmentAdded, userId, null, JsonSerializer.Serialize(BuildMediaHistorySnapshot(entity)), "Bijlage toegevoegd");
         return entity;
     }
 
@@ -165,7 +165,7 @@ public class ConstructionIssueService : IConstructionIssueService
         if (media == null) return false;
         _db.ConstructionIssueMedia.Remove(media);
         await _db.SaveChangesAsync();
-        await AddHistory(issueId, (int)ConstructionIssueHistoryAction.AttachmentRemoved, userId, JsonSerializer.Serialize(media), null, "Attachment removed");
+        await AddHistory(issueId, (int)ConstructionIssueHistoryAction.AttachmentRemoved, userId, JsonSerializer.Serialize(BuildMediaHistorySnapshot(media)), null, "Bijlage verwijderd");
         return true;
     }
 
@@ -193,6 +193,51 @@ public class ConstructionIssueService : IConstructionIssueService
             .Where(x => x.IssueId == issueId && x.Issue.ProjectId == projectId)
             .OrderByDescending(x => x.SentDate)
             .ToListAsync();
+    }
+
+    private static object BuildIssueHistorySnapshot(ConstructionIssue issue)
+    {
+        return new
+        {
+            issue.Id,
+            issue.ProjectId,
+            issue.Title,
+            issue.Description,
+            issue.LocationText,
+            issue.CategoryId,
+            issue.BuildingPart,
+            issue.RoomOrZone,
+            issue.UnitId,
+            issue.IssueType,
+            issue.IssuePhase,
+            issue.Priority,
+            issue.Status,
+            issue.ResponsiblePartyType,
+            issue.ResponsiblePartyId,
+            issue.ResponsibleOtherName,
+            issue.ResponsibleOtherEmail,
+            issue.DueDate,
+            issue.ResolvedDate,
+            issue.ClosedDate,
+            issue.PlanDocumentId,
+            issue.PlanPageNumber,
+            issue.PlanXnormalized,
+            issue.PlanYnormalized,
+            issue.LastSentDate
+        };
+    }
+
+    private static object BuildMediaHistorySnapshot(ConstructionIssueMedia media)
+    {
+        return new
+        {
+            media.Id,
+            media.IssueId,
+            media.FileId,
+            media.MediaType,
+            media.CreatedByUserId,
+            media.CreatedDate
+        };
     }
 
     public async Task AddHistory(int issueId, int action, string? userId, string? oldValueJson, string? newValueJson, string? comment)

@@ -38,6 +38,7 @@ using System.Globalization;
 using System.IO;
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,7 +83,12 @@ builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
 })
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    })
 .AddSessionStateTempDataProvider();
+
 
 
 builder.Services.AddSession(options =>

@@ -66,17 +66,7 @@
             pointer-events: auto;
         }
 
-    .issue-plan-marker {
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: red;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 0 1px rgba(0,0,0,.15);
-        pointer-events: none;
-        display: none;
-    }
+  
 </style>
 
 <div class="modal fade" id="issueModal" tabindex="-1" aria-hidden="true">
@@ -181,6 +171,16 @@
                             <input name="Input.ResponsibleOtherEmail" id="issueResponsibleOtherEmail" class="form-control" />
                         </div>
                     </div>
+                    <hr />
+                    <label class="form-label fw-bold">Foto's & Bijlagen</label>
+                    <div id="mediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
+                        <button type="button" id="addMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile">
+                            <i class="bx bx-camera fs-4"></i>
+                            <span style="font-size:12px;line-height:1;">Toevoegen</span>
+                        </button>
+                    </div>
+                    <input id="mediaFilesInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
+
 
                     <hr />
                     <label class="form-label fw-bold">Locatie op plan</label>
@@ -219,7 +219,7 @@
                         <div id="planSurface" class="issue-plan-surface" style="display:none;">
                             <canvas id="planCanvas" class="issue-plan-canvas"></canvas>
                             <div id="planOverlay" class="issue-plan-overlay"></div>
-                            <div id="planMarker" class="issue-plan-marker"></div>
+                            <div id="planMarker" class="issue-plan-marker"> <i class="fa fa-location-dot"></i></div>
                         </div>
                         <iframe id="planFrame" class="issue-plan-frame" style="display:none;" title="Plan PDF preview"></iframe>
                     </div>
@@ -228,15 +228,7 @@
                     <input type="hidden" name="Input.PlanXNormalized" id="planXNormalized" />
                     <input type="hidden" name="Input.PlanYNormalized" id="planYNormalized" />
 
-                    <hr />
-                    <label class="form-label fw-bold">Foto's & Bijlagen</label>
-                    <div id="mediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
-                        <button type="button" id="addMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile">
-                            <i class="bx bx-camera fs-4"></i>
-                            <span style="font-size:12px;line-height:1;">Toevoegen</span>
-                        </button>
-                    </div>
-                    <input id="mediaFilesInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
+                  
                 </div>
 
                 <div class="modal-footer">

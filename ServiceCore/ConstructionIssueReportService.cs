@@ -88,7 +88,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                 {
                     var openCount = issues.Count(x => x.Status != (int)ConstructionIssueStatus.Closed);
                     var overdueCount = issues.Count(x => x.DueDate.HasValue && x.DueDate < DateOnly.FromDateTime(DateTime.Today) && x.Status != (int)ConstructionIssueStatus.Closed);
-                    col.Item().PaddingBottom(8).Text($"Open: {openCount} | Overdue: {overdueCount}");
+                    col.Item().PaddingBottom(8).Text($"Open: {openCount} | Vervallen: {overdueCount}");
 
                     col.Item().Table(table =>
                     {
@@ -136,7 +136,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                         col.Item().PaddingTop(10).Border(1).Padding(8).Text("QR placeholder (feature flag EnableQRCode=true)");
                     }
                 });
-                page.Footer().AlignRight().Text(x => x.Span("CPMCore Puntenlijst"));
+                page.Footer().AlignRight().Text(x => x.Span("Group LN Puntenlijst"));
             });
         }).GeneratePdf();
     }

@@ -17,25 +17,30 @@
 
                 <div class="tab-content no-borders shadow-none">
                     <div class="tab-pane fade show active no-borders shadow-none" id="issueDetailTab">
-                        <div class="mb-3">
-                            <div class="fw-semibold">Beschrijving</div>
-                            <div id="issueDetailDescription">-</div>
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-3"><div class="fw-semibold">Locatie</div><div id="issueDetailLocation">-</div></div>
-                            <div class="col-md-3"><div class="fw-semibold">Gebouwdeel / Kamer</div><div id="issueDetailBuildingPart">-</div></div>
-                            <div class="col-md-3"><div class="fw-semibold">Eenheid</div><div id="issueDetailUnit">-</div></div>
-                            <div class="col-md-3"><div class="fw-semibold">Type</div><div id="issueDetailType">-</div></div>
-                        </div>
-
-                        <div id="issueDetailPlanBlock mb-3" style="display:none;">
-                            <div class="fw-semibold mb-2"><i class="bx bx-location"></i> Locatie op plan: <span id="issueDetailPlanName"></span></div>
-                            <div class="issue-plan-stage">
-                                <canvas id="issueDetailPlanCanvas" class="issue-plan-canvas"></canvas>
-                                <div id="issueDetailPlanMarker" class="issue-plan-marker"></div>
+                       
+                        <div class="row g-3 mb-3 align-items-start">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="fw-semibold">Beschrijving</div>
+                                    <div id="issueDetailDescription">-</div>
+                                </div>
+                                <div class="mb-3"><div class="fw-semibold">Eenheid</div><div id="issueDetailUnit">-</div></div>
+                                <div class="mb-3"><div class="fw-semibold">Kamer</div><div id="issueDetailBuildingPart">-</div></div>
+                                <div class="mb-3"><div class="fw-semibold">Locatie</div><div id="issueDetailLocation">-</div></div>
+                                <div class="mb-3"><div class="fw-semibold">Fase</div><div id="issueDetailPhase">-</div></div>
+                                <div><div class="fw-semibold">Type</div><div id="issueDetailType">-</div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="issueDetailPlanBlock" style="display:none;">
+                                    <div class="fw-semibold mb-2"><i class="bx bx-location"></i> Locatie op plan: <span id="issueDetailPlanName"></span></div>
+                                    <div class="issue-plan-stage">
+                                        <canvas id="issueDetailPlanCanvas" class="issue-plan-canvas"></canvas>
+                                        <div id="issueDetailPlanMarker" class="issue-plan-marker"> <i class="fa fa-location-dot"></i></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
+                        <hr />
                         <div class="issue-detail-inline-edit mb-3">
                             <div class="row g-3 mb-3">
                                 <div class="col-md-6">

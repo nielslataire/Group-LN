@@ -76,17 +76,37 @@
     }
 
     #issueDetailTab .issue-plan-stage {
-        max-height: 400px;
-        overflow: hidden;
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+        line-height: 0;
     }
 
     #issueDetailTab .issue-plan-canvas {
         display: block;
-        width: 100%;
+        width: auto;
         height: auto;
-        max-height: 400px;
-        object-fit: contain;
+        max-width: 100%;
     }
+
+    .issue-plan-marker,
+    #planMarker,
+    #issueDetailPlanMarker {
+        position: absolute;
+        display: none;
+        z-index: 10;
+        pointer-events: none;
+        line-height: 1;
+        transform: translate(-50%, -100%);
+    }
+
+        .issue-plan-marker i,
+        #planMarker i,
+        #issueDetailPlanMarker i {
+            font-size: 28px;
+            color: red; /* rood */
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 2px rgba(255, 255, 255, 0.75);
+        }
 
     .issue-detail-inline-edit .form-control {
         min-height: 38px;
@@ -517,7 +537,8 @@
                     const issueDetailLocation = document.getElementById('issueDetailLocation');
                     const issueDetailBuildingPart = document.getElementById('issueDetailBuildingPart');
                     const issueDetailUnit = document.getElementById('issueDetailUnit');
-                    const issueDetailPhase = document.getElementById('issueDetailPhase');
+                     const issueDetailType = document.getElementById('issueDetailType');
+                                          const issueDetailPhase = document.getElementById('issueDetailPhase');
                     const issueDetailPhotos = document.getElementById('issueDetailPhotos');
                     const issueDetailHistory = document.getElementById('issueDetailHistory');
                     const issueDetailNotifications = document.getElementById('issueDetailNotifications');
@@ -802,6 +823,24 @@
                 planMarker.style.top = `${y}px`;
                 planMarker.style.display = 'block';
             }
+                    function drawDetailMarkerFromNormalized(xNorm, yNorm) {
+            if (!issueDetailPlanCanvas || !issueDetailPlanMarker) return;
+
+            const rect = issueDetailPlanCanvas.getBoundingClientRect();
+            const parentRect = issueDetailPlanCanvas.parentElement.getBoundingClientRect();
+
+            if (!rect.width || !rect.height) {
+                issueDetailPlanMarker.style.display = 'none';
+                return;
+            }
+
+            const x = Number(xNorm) * rect.width;
+            const y = Number(yNorm) * rect.height;
+
+            issueDetailPlanMarker.style.left = `${(rect.left - parentRect.left) + x}px`;
+            issueDetailPlanMarker.style.top = `${(rect.top - parentRect.top) + y}px`;
+            issueDetailPlanMarker.style.display = 'block';
+        }
 
             function resetPlanStage(){
                 planSurface.style.display = 'none';
@@ -1057,24 +1096,31 @@
                 const maxHeight = 400;
                 const scale = Math.min(containerWidth / baseViewport.width, maxHeight / baseViewport.height, 1);
                 const viewport = pdfPage.getViewport({ scale });
-                issueDetailPlanCanvas.width = Math.floor(viewport.width);
-                issueDetailPlanCanvas.height = Math.floor(viewport.height);
-                await pdfPage.render({ canvasContext: ctx, viewport }).promise;
-                issueDetailPlanCanvas.style.display = 'block';
+                        issueDetailPlanCanvas.width = Math.floor(viewport.width);
+        issueDetailPlanCanvas.height = Math.floor(viewport.height);
+        issueDetailPlanCanvas.style.width = `${Math.floor(viewport.width)}px`;
+        issueDetailPlanCanvas.style.height = `${Math.floor(viewport.height)}px`;
 
-                if (xNorm != null && yNorm != null && xNorm !== '' && yNorm !== '') {
-                    const stageRect = issueDetailPlanCanvas.parentElement?.getBoundingClientRect();
-                    const canvasRect = issueDetailPlanCanvas.getBoundingClientRect();
-                    const canvasOffsetLeft = stageRect ? (canvasRect.left - stageRect.left) : 0;
-                    const canvasOffsetTop = stageRect ? (canvasRect.top - stageRect.top) : 0;
-                    const markerLeftPx = canvasOffsetLeft + (Number(xNorm) * issueDetailPlanCanvas.clientWidth);
-                    const markerTopPx = canvasOffsetTop + (Number(yNorm) * issueDetailPlanCanvas.clientHeight);
-                    issueDetailPlanMarker.style.display = 'block';
-                    issueDetailPlanMarker.style.left = `${markerLeftPx}px`;
-                    issueDetailPlanMarker.style.top = `${markerTopPx}px`;
-                } else {
-                    issueDetailPlanMarker.style.display = 'none';
-                }
+        await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+        issueDetailPlanCanvas.style.display = 'block';
+
+        if (xNorm != null && yNorm != null && xNorm !== '' && yNorm !== '') {
+            const x = Number(xNorm);
+            const y = Number(yNorm);
+
+            const rect = issueDetailPlanCanvas.getBoundingClientRect();
+            const parentRect = issueDetailPlanCanvas.parentElement.getBoundingClientRect();
+
+            if (Number.isFinite(x) && Number.isFinite(y) && rect.width > 0 && rect.height > 0) {
+                issueDetailPlanMarker.style.display = 'block';
+                issueDetailPlanMarker.style.left = `${(rect.left - parentRect.left) + (x * rect.width)}px`;
+                issueDetailPlanMarker.style.top = `${(rect.top - parentRect.top) + (y * rect.height)}px`;
+            } else {
+                issueDetailPlanMarker.style.display = 'none';
+            }
+        } else {
+            issueDetailPlanMarker.style.display = 'none';
+        }
             }
 
             function getRequestVerificationToken(){
@@ -1143,7 +1189,7 @@
             }
 
             function renderIssueDetailModal(data){
-                if (!issueDetailTitle || !issueDetailDescription || !issueDetailLocation || !issueDetailBuildingPart || !issueDetailUnit || !issueDetailPhase || !issueDetailBadges) {
+               if (!issueDetailTitle || !issueDetailDescription || !issueDetailLocation || !issueDetailBuildingPart || !issueDetailUnit || !issueDetailType || !issueDetailBadges) {
                     return;
                 }
 
@@ -1154,7 +1200,8 @@
                 issueDetailLocation.textContent = data.locationText || '-';
                 issueDetailBuildingPart.textContent = [data.buildingPart, data.roomOrZone].filter(Boolean).join(' / ') || '-';
                 issueDetailUnit.textContent = data.unitName || '-';
-                issueDetailPhase.textContent = data.issuePhaseLabel || '-';
+               issueDetailType.textContent = data.issueTypeLabel || '-';
+               issueDetailPhase.textContent = data.issuePhaseLabel || '-';
 
                 if (issueDetailStatusSelect) issueDetailStatusSelect.value = data.status != null ? String(data.status) : '';
                 if (issueDetailPrioritySelect) issueDetailPrioritySelect.value = data.priority != null ? String(data.priority) : '';
@@ -1177,9 +1224,9 @@
                 if (issueHistoryTabButton) issueHistoryTabButton.textContent = `Historie (${history.length})`;
                 if (issueNotificationTabButton) issueNotificationTabButton.textContent = `Verzending (${notifications.length})`;
 
-                if (issueDetailPhotos) {
+               if (issueDetailPhotos) {
                     issueDetailPhotos.innerHTML = media.length
-                    ? media.map(m => `<img src="${m.url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;"/>`).join('')
+                    ? media.map(m => `<img src="${m.url}" style="width:auto;height:225px;object-fit:cover;border-radius:4px;"/>`).join('')
                     : "<div class=\"text-muted\">Geen foto's.</div>";
                 }
 
