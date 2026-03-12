@@ -44,67 +44,7 @@
                     </div>
                 </div>
             </div>
-
-            <section class="card card-modern mb-4">
-                <div class="card-body">
-                     <form method="get" class="row g-3 align-items-end" id="issuesFilterForm">
-                        <div class="col-md-2">
-                            <label class="form-label">Zoektekst</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bx bx-search"></i></span>
-                                <input class="form-control form-control-modern" name="text" value="@filters.Text" />
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Status</label>
-                            <div class="input-group input-group-select-append">
-                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
-                                <select class="form-control form-control-modern js-auto-filter" name="status"><option value="">Alle</option>@foreach (var s in Html.GetEnumSelectList<ConstructionIssueStatus>()){
-                                <option value="@s.Value" selected="@(filters.Status?.ToString() == s.Value)">@s.Text</option>
-                                                        }
-</select>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Verantwoordelijke</label>
-                            <div class="input-group input-group-select-append">
-                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
-                                <select class="form-control form-control-modern js-auto-filter" name="responsiblePartyId"><option value="">Alle</option>@foreach (var c in Model.Form.ResponsibleContractors){
-                                <option value="@c.ID" selected="@(filters.ResponsiblePartyId == c.ID)">@c.Display</option>
-                                                        }
-</select>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Unit</label>
-                            <div class="input-group input-group-select-append">
-                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
-                                <select class="form-control form-control-modern js-auto-filter" name="unitId"><option value="">Alle</option>@foreach (var u in Model.Units){
-                                <option value="@u.Id" selected="@(filters.UnitId == u.Id)">@u.Name</option>
-                                                        }
-</select>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Vervallen</label>
-                            <div class="input-group input-group-select-append">
-                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
-                                <select class="form-control form-control-modern js-auto-filter" name="overdue"><option value="">Alle</option><option value="true" selected="@(filters.Overdue == true)">Ja</option></select>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">Verzonden</label>
-                            <div class="input-group input-group-select-append">
-                                <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
-                                <select class="form-control form-control-modern js-auto-filter" name="sent"><option value="">Alle</option><option value="true" selected="@(filters.Sent == true)">Ja</option><option value="false" selected="@(filters.Sent == false)">Nee</option></select>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-            </section>
-
-            <section class="card card-modern mb-4">
+@*             <section class="card card-modern mb-4">
                 <div class="card-body">
                     <h4 class="mb-3">Bulk acties</h4>
                     <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="row g-2 align-items-end">
@@ -133,64 +73,147 @@
                         <button class="btn btn-default" type="submit">Download PDF selectie</button>
                     </form>
                 </div>
-            </section>
+            </section> *@
 
-            <section class="card card-modern">
+            <section class="card card-modern issue-card">
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-responsive-md table-hover mb-3" id="datatable-issues" style="min-width: 1100px;">
-                            <thead>
-                                <tr>
-                                    <th>
-                                        <div class="checkbox-custom checkbox-default d-inline-block">
-                                            <input type="checkbox"
-                                                   id="checkAll" />
-                                            <label for="checkAll"></label>
-                                        </div>
-                                    <th>Titel </th>
-                                    <th>Unit</th>
-                                    <th>Categorie</th>
-                                    <th>Locatie</th>
-                                    <th>Status</th>
-                                    <th>Prioriteit</th>
-                                    <th>Vervaldatum</th>
-                                    <th>Laatst verzonden</th>
-                                    <th class="text-end noVis">Acties</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var i in Model.Issues)
-                                {
-                                    <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
 
-                                        <td>
+                    <form method="get" class="issues-filter-form mb-4" id="issuesFilterForm">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-12 col-xl-4">
+                                <label class="form-label">Zoeken</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bx bx-search"></i></span>
+                                    <input class="form-control form-control-modern"
+                                           name="text"
+                                           value="@filters.Text"
+                                           placeholder="Zoek op naam of locatie..." />
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl">
+                                <label class="form-label">Status</label>
+                                <select class="form-control form-control-modern js-auto-filter" name="status">
+                                    <option value="">Alle statussen</option>
+                                    @foreach (var s in Html.GetEnumSelectList<ConstructionIssueStatus>())
+                                    {
+                                        <option value="@s.Value" selected="@(filters.Status?.ToString() == s.Value)">@s.Text</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl">
+                                <label class="form-label">Verantwoordelijke</label>
+                                <select class="form-control form-control-modern js-auto-filter" name="responsiblePartyId">
+                                    <option value="">Alle verantwoordelijken</option>
+                                    @foreach (var c in Model.Form.ResponsibleContractors)
+                                    {
+                                        <option value="@c.ID" selected="@(filters.ResponsiblePartyId == c.ID)">@c.Display</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl">
+                                <label class="form-label">Eenheid</label>
+                                <select class="form-control form-control-modern js-auto-filter" name="unitId">
+                                    <option value="">Alle eenheden</option>
+                                    @foreach (var u in Model.Units)
+                                    {
+                                        <option value="@u.Id" selected="@(filters.UnitId == u.Id)">@u.Name</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl">
+                                <label class="form-label">Deadline</label>
+                                <select class="form-control form-control-modern js-auto-filter" name="overdue">
+                                    <option value="">Alle deadlines</option>
+                                    <option value="true" selected="@(filters.Overdue == true)">Deadline vervallen</option>
+                                    <option value="false" selected="@(filters.Overdue == false)">Niet vervallen</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-md-6 col-xl">
+                                <label class="form-label">Verzending</label>
+                                <select class="form-control form-control-modern js-auto-filter" name="sent">
+                                    <option value="">Geen verzendstatus</option>
+                                    <option value="true" selected="@(filters.Sent == true)">Verzonden</option>
+                                    <option value="false" selected="@(filters.Sent == false)">Niet verzonden</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="issue-table-block">
+                        <div class="table-responsive issue-table-wrapper">
+                            <table class="table issue-table mb-0" id="datatable-issues" style="min-width: 1100px;">
+                                <thead>
+                                    <tr>
+                                        <th class="col-check">
                                             <div class="checkbox-custom checkbox-default d-inline-block">
-                                                <input type="checkbox" class="issue-check"
-                                                       value="@i.Id"
-                                                       id="@i.Id" />
-                                                <label for="@i.Id"></label>
+                                                <input type="checkbox" id="checkAll" />
+                                                <label for="checkAll"></label>
                                             </div>
-                                            </td>
-                                        <td>@i.Title</td>
-                                        <td>@(i.Unit?.Name ?? "-")</td>
-                                        <td>@(i.Category?.Name ?? "-")</td>
-                                        <td>@i.LocationText</td>
-                                        <td>@((ConstructionIssueStatus)i.Status)</td>
-                                        <td>@((ConstructionIssuePriority)i.Priority)</td>
-                                        <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
-                                        <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
-                                        <td class="actions text-end">
-                                            <a href="@Url.Action("DetailData", "ProjectsIssues", new { projectId, id = i.Id })" class="btn ms-1 me-1 open-detail-issue" title="Details" data-id="@i.Id"><i class="bx bx-show fs-5"></i></a>
-                                            <a href="@Url.Action("EditData", "ProjectsIssues", new { projectId, id = i.Id })" class="btn ms-1 me-1 open-edit-issue" title="Bewerken" data-id="@i.Id"><i class="bx bx-pencil fs-5"></i></a>
-                                            <a href="#modaldeleteissue" data-toggle="tooltip" data-placement="top" title="Verwijderen" class="deleteIssue ms-1 me-1" data-id="@i.Id">
-                                                <i class="bx bx-trash fs-5 text-danger"></i>
-                                                <span class="visually-hidden">Verwijderen</span>
-                                            </a>
-                                        </td>
+                                        </th>
+                                        <th>Titel</th>
+                                        <th>Unit</th>
+                                        <th>Categorie</th>
+                                        <th>Locatie</th>
+                                        <th>Status</th>
+                                        <th>Prioriteit</th>
+                                        <th>Vervaldatum</th>
+                                        <th>Laatst verzonden</th>
+                                        <th class="text-end noVis">Acties</th>
                                     </tr>
-                                }
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    @foreach (var i in Model.Issues)
+                                    {
+                                        <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
+                                            <td class="col-check">
+                                                <div class="checkbox-custom checkbox-default d-inline-block">
+                                                    <input type="checkbox" class="issue-check" value="@i.Id" id="issue_@i.Id" />
+                                                    <label for="issue_@i.Id"></label>
+                                                </div>
+                                            </td>
+                                            <td>@i.Title</td>
+                                            <td>@(i.Unit?.Name ?? "-")</td>
+                                            <td>@(i.Category?.Name ?? "-")</td>
+                                            <td>@i.LocationText</td>
+                                            <td>@((ConstructionIssueStatus)i.Status)</td>
+                                            <td>@((ConstructionIssuePriority)i.Priority)</td>
+                                            <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                            <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                            <td class="actions text-end">
+                                                <a href="@Url.Action("DetailData", "ProjectsIssues", new { projectId, id = i.Id })"
+                                                   class="btn ms-1 me-1 open-detail-issue"
+                                                   title="Details"
+                                                   data-id="@i.Id">
+                                                    <i class="bx bx-show fs-5"></i>
+                                                </a>
+                                                <a href="@Url.Action("EditData", "ProjectsIssues", new { projectId, id = i.Id })"
+                                                   class="btn ms-1 me-1 open-edit-issue"
+                                                   title="Bewerken"
+                                                   data-id="@i.Id">
+                                                    <i class="bx bx-pencil fs-5"></i>
+                                                </a>
+                                                <a href="#modaldeleteissue"
+                                                   title="Verwijderen"
+                                                   class="deleteIssue ms-1 me-1"
+                                                   data-id="@i.Id">
+                                                    <i class="bx bx-trash fs-5 text-danger"></i>
+                                                    <span class="visually-hidden">Verwijderen</span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="issue-table-footer">
+                            <div id="datatable-issues-external-footer"></div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -209,6 +232,7 @@
     <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function(){
+
             const projectId = @projectId;
             const issueModalEl = document.getElementById('issueModal');
         const issueModal = issueModalEl && window.bootstrap ? new bootstrap.Modal(issueModalEl) : null;
@@ -366,6 +390,7 @@
                     pageLength: 25,
                     searching: false,
                     lengthChange: false,
+                    dom: 't<"dt-hidden-footer"ip>',
                     order: [[7, 'asc']],
                     columnDefs: [
                         { targets: [0, 9], orderable: false, searchable: false }
@@ -383,6 +408,28 @@
                         paginate: { previous: 'Vorige', next: 'Volgende' }
                     }
                 });
+
+                     function moveIssueTableFooter() {
+                        var $wrapper = $('#datatable-issues_wrapper');
+                        var $footerHost = $('#datatable-issues-external-footer');
+
+                        var $info = $wrapper.find('.dataTables_info');
+                        var $paginate = $wrapper.find('.dataTables_paginate');
+
+                        if ($info.length || $paginate.length) {
+                            $footerHost.html('');
+                            $footerHost.append(
+                                $('<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"></div>')
+                                    .append($info)
+                                    .append($paginate)
+                            );
+                        }
+                    }
+
+                    moveIssueTableFooter();
+
+                    table.on('draw', function () {
+                        moveIssueTableFooter();
 
                 const applyDataTableFilters = () => {
                     if(!dataTableInstance) return;

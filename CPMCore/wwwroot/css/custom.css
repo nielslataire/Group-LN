@@ -654,3 +654,143 @@
         background-color: #0a5a3b;
         border-color: #0a5a3b;
     }
+
+
+    /*Issuetable*/
+
+.issue-card .card-body {
+    padding: 1.5rem;
+}
+
+.issues-filter-form {
+    margin-bottom: 1.5rem;
+}
+
+    .issues-filter-form .form-label {
+        margin-bottom: 0.45rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #5f6b7a;
+    }
+
+    .issues-filter-form .input-group-text {
+        background: #fff;
+        border-color: #d7dee7;
+        color: #6b7280;
+        min-height: 45px;
+    }
+
+    .issues-filter-form .form-control,
+    .issues-filter-form .select2-selection--single {
+        min-height: 45px;
+    }
+
+.issue-table-block {
+    display: block;
+}
+
+.issue-table-wrapper {
+    border: 1px solid #d9e2ea;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.issue-table {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .issue-table thead th {
+        background: #f8f9fb;
+        color: #5f6b7a;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 14px 18px;
+        border-top: 0 !important;
+        border-bottom: 1px solid #d9e2ea;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .issue-table tbody td {
+        padding: 16px 18px;
+        border-top: 1px solid #eef2f5;
+        vertical-align: middle;
+        background: #fff;
+    }
+
+    .issue-table tbody tr:first-child td {
+        border-top: 0;
+    }
+
+    .issue-table tbody tr:hover td {
+        background: #fcfcfd;
+    }
+
+    .issue-table .col-check {
+        width: 46px;
+        min-width: 46px;
+        text-align: center;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .issue-table .actions {
+        white-space: nowrap;
+    }
+
+        .issue-table .actions a {
+            color: #5f6b7a;
+            text-decoration: none;
+        }
+
+            .issue-table .actions a:hover {
+                color: #0a5a3b;
+            }
+
+.issue-table-footer {
+    padding-top: 0.9rem;
+}
+
+    .issue-table-footer .dataTables_info {
+        margin: 0;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .issue-table-footer .dataTables_paginate {
+        margin: 0;
+    }
+
+    .issue-table-footer .pagination {
+        margin-bottom: 0;
+        gap: 0.25rem;
+    }
+
+    .issue-table-footer .page-item .page-link {
+        border-radius: 6px;
+        border-color: #d9e2ea;
+        color: #4b5563;
+        min-width: 36px;
+        text-align: center;
+    }
+
+    .issue-table-footer .page-item.active .page-link {
+        background-color: #0a5a3b;
+        border-color: #0a5a3b;
+        color: #fff;
+    }
+
+    .issue-table-footer .page-item.disabled .page-link {
+        color: #adb5bd;
+    }
+
+#datatable-issues_wrapper > .row:first-child {
+    margin-bottom: 0;
+}
+
+#datatable-issues_wrapper > .row:last-child {
+    display: none;
+}
