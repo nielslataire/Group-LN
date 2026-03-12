@@ -67,7 +67,7 @@ public class AccountController : BaseController
         var userId = User.GetCpmUserId();
         if (userId == null)
         {
-            return NotFound();
+            return Redirect(Url.Content("~/img/!logged-user.jpg"));
         }
 
         var user = await _db.Users
@@ -82,6 +82,6 @@ public class AccountController : BaseController
             return File(photo, contentType);
         }
 
-        return NotFound();
+        return Redirect(Url.Content("~/img/!logged-user.jpg"));
     }
 }

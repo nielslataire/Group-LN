@@ -44,6 +44,74 @@
                     </div>
                 </div>
             </div>
+            <div class="row g-3 ">
+                <div class="col">
+                    <section class="card mb-4">
+                        <div class="card-body">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <div class="info">
+                                            <strong class="amount">4</strong>
+                                        </div>
+                                        <h4 class="title">Open</h4>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card card-featured card-featured-primary mb-4">
+                        <div class="card-body">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <h4 class="title">Open</h4>
+                                        <div class="info">
+                                            <strong class="amount">4</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card card-featured card-featured-primary mb-4">
+                        <div class="card-body">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <h4 class="title">Open</h4>
+                                        <div class="info">
+                                            <strong class="amount">4</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card card-featured card-featured-primary mb-4">
+                        <div class="card-body">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <h4 class="title">Open</h4>
+                                        <div class="info">
+                                            <strong class="amount">4</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+    
 @*             <section class="card card-modern mb-4">
                 <div class="card-body">
                     <h4 class="mb-3">Bulk acties</h4>
@@ -143,7 +211,9 @@
                             </div>
                         </div>
                     </form>
-
+                    <div id="issuesFilterSelectionRow" class="alert alert-info py-2 px-3 mb-3 d-none" role="status">
+                        Placeholder tekst voor geselecteerde filters.
+                    </div>
                     <div class="issue-table-block">
                         <div class="table-responsive issue-table-wrapper">
                             <table class="table issue-table mb-0" id="datatable-issues" style="min-width: 1100px;">
@@ -268,7 +338,10 @@
                     const deleteIssueModalSelector = '#modaldeleteissue';
                     const deleteIssueContainerSelector = '#delete-issue-container';
                     const filterForm = document.getElementById('issuesFilterForm');
-        const filterSearchInput = filterForm?.querySelector('input[name="text"]');
+         const filterSearchInput = filterForm?.querySelector('input[name="text"]');
+                    const filterSelects = Array.from(filterForm?.querySelectorAll('.js-auto-filter') || []);
+                    const filterSelectionRow = document.getElementById('issuesFilterSelectionRow');
+                    const checkAllInput = document.getElementById('checkAll');
                     const issueDetailModalEl = document.getElementById('issueDetailModal');
                    const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
                     const issuesTable = document.getElementById('datatable-issues');
@@ -322,6 +395,12 @@
                     window.jQuery(modalElement).modal('show');
                 }
             }
+           function updateFilterSelectionRow(){
+                if(!filterSelectionRow) return;
+                const hasSelection = document.querySelectorAll('.issue-check:checked').length > 0;
+                filterSelectionRow.classList.toggle('d-none', !hasSelection);
+            }
+
 
            function initializeDataTableFilters(){
                 if(!(window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && issuesTable)) return;
@@ -350,6 +429,32 @@
                     const dueDateCell = rowNode.cells?.[7]?.textContent?.trim() || '';
                     const sentCell = rowNode.cells?.[8]?.textContent?.trim() || '';
                     const responsiblePartyId = rowNode.dataset.responsiblePartyId || '';
+                    const parseDueDateCell = (value) => {
+                        if (!value || value === '-') {
+                            return null;
+                        }
+
+                        const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+                        if (!match) {
+                            return null;
+                        }
+
+                        const day = Number(match[1]);
+                        const monthIndex = Number(match[2]) - 1;
+                        const year = Number(match[3]);
+                        const date = new Date(year, monthIndex, day);
+
+                        if (Number.isNaN(date.getTime())) {
+                            return null;
+                        }
+
+                        date.setHours(0, 0, 0, 0);
+                        return date;
+                    };
+
+                    const dueDate = parseDueDateCell(dueDateCell);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
 
                     if (filters.status) {
                         const selectedStatusText = filterForm?.querySelector(`[name="status"] option[value="${filters.status}"]`)?.textContent?.trim() || '';
@@ -388,7 +493,7 @@
 
                 dataTableInstance = window.jQuery(issuesTable).DataTable({
                     pageLength: 25,
-                    searching: false,
+                    searching: true,
                     lengthChange: false,
                     dom: 't<"dt-hidden-footer"ip>',
                     order: [[7, 'asc']],
@@ -404,8 +509,7 @@
                         infoFiltered: '(gefilterd uit _MAX_ totaal)',
                         loadingRecords: 'Bezig met laden…',
                         zeroRecords: 'Geen punten om weer te geven',
-                        emptyTable: 'Er zijn geen punten om weer te geven',
-                        paginate: { previous: 'Vorige', next: 'Volgende' }
+                        emptyTable: 'Er zijn geen punten om weer te geven'
                     }
                 });
 
@@ -413,8 +517,8 @@
                         var $wrapper = $('#datatable-issues_wrapper');
                         var $footerHost = $('#datatable-issues-external-footer');
 
-                        var $info = $wrapper.find('.dataTables_info');
-                        var $paginate = $wrapper.find('.dataTables_paginate');
+                        var $info = $wrapper.find('.dataTables_info, .dt-info');
+                        var $paginate = $wrapper.find('.dataTables_paginate, .dt-paging');
 
                         if ($info.length || $paginate.length) {
                             $footerHost.html('');
@@ -426,18 +530,16 @@
                         }
                     }
 
-                    moveIssueTableFooter();
-
-                    table.on('draw', function () {
-                        moveIssueTableFooter();
 
                 const applyDataTableFilters = () => {
                     if(!dataTableInstance) return;
-                    dataTableInstance.search((filterSearchInput?.value || '').trim());
-                    dataTableInstance.draw();
+                    dataTableInstance.search((filterSearchInput?.value || '').trim()).draw();
+                    updateFilterSelectionRow();
                 };
 
-                document.querySelectorAll('.js-auto-filter').forEach((el) => {
+               dataTableInstance.on('draw', moveIssueTableFooter);
+
+                filterSelects.forEach((el) => {
                     el.addEventListener('change', applyDataTableFilters);
                 });
 
@@ -978,13 +1080,36 @@
                 (data.media || []).forEach(m => addPreview(m.url, m.id));
             }));
 
-            document.getElementById('checkAll')?.addEventListener('change',e=>{ document.querySelectorAll('.issue-check').forEach(x=>x.checked=e.target.checked); syncHidden();});
-            document.querySelectorAll('.issue-check').forEach(x=>x.addEventListener('change',syncHidden));
+        checkAllInput?.addEventListener('change', (e) => {
+                document.querySelectorAll('.issue-check').forEach((checkbox) => {
+                    checkbox.checked = e.target.checked;
+                });
+                checkAllInput.indeterminate = false;
+                syncHidden();
+                updateFilterSelectionRow();
+            });
+
+            document.querySelectorAll('.issue-check').forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    const allChecks = Array.from(document.querySelectorAll('.issue-check'));
+                    const checkedChecks = allChecks.filter((item) => item.checked).length;
+                    if (checkAllInput) {
+                        checkAllInput.checked = allChecks.length > 0 && checkedChecks === allChecks.length;
+                        checkAllInput.indeterminate = checkedChecks > 0 && checkedChecks < allChecks.length;
+                    }
+                    syncHidden();
+                    updateFilterSelectionRow();
+                });
+            });
             syncHidden();
+            updateFilterSelectionRow();
 
           if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
-                document.querySelectorAll('.js-auto-filter').forEach((el) => {
-                    el.addEventListener('change', () => filterForm?.submit());
+                filterSelects.forEach((el) => {
+                    el.addEventListener('change', () => {
+                        updateFilterSelectionRow();
+                        filterForm?.submit();
+                    });
                 });
 
                 let filterSearchTimer = null;
