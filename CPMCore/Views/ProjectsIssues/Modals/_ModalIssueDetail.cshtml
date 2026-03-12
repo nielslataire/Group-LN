@@ -1,39 +1,86 @@
-﻿<div class="modal fade" id="issueDetailModal" tabindex="-1" aria-hidden="true">
+﻿﻿@using BOCore
+<div class="modal fade" id="issueDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <div>
-                    <h3 class="mb-2" id="issueDetailTitle">Punt detail</h3>
-                    <div class="d-flex gap-2 flex-wrap" id="issueDetailBadges"></div>
-                </div>
+            <div class="modal-header">
+                <h3 class="modal-title" id="issueDetailTitle">Punt detail</h3>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
             </div>
-            <div class="modal-body pt-2">
-                <ul class="nav nav-tabs mb-3" id="issueDetailTabs" role="tablist">
+            <div class="modal-body">
+                <div class="d-flex gap-2 flex-wrap" id="issueDetailBadges"></div>
+                <ul class="nav nav-pills issues-tab-nav issues-tab-nav-light mt-3 mb-3" id="issueDetailTabs" role="tablist">
                     <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#issueDetailTab" type="button">Details</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#issuePhotosTab" type="button" id="issuePhotosTabButton">Foto's (0)</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#issueHistoryTab" type="button" id="issueHistoryTabButton">Historie (0)</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#issueNotificationTab" type="button" id="issueNotificationTabButton">Verzending (0)</button></li>
                 </ul>
 
-                <div class="tab-content">
-                    <div class="tab-pane fade show active" id="issueDetailTab">
+                <div class="tab-content no-borders shadow-none">
+                    <div class="tab-pane fade show active no-borders shadow-none" id="issueDetailTab">
                         <div class="mb-3">
-                            <div class="text-muted fw-semibold">Beschrijving</div>
+                            <div class="fw-semibold">Beschrijving</div>
                             <div id="issueDetailDescription">-</div>
                         </div>
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6"><div class="text-muted fw-semibold">Locatie</div><div id="issueDetailLocation">-</div></div>
-                            <div class="col-md-6"><div class="text-muted fw-semibold">Gebouwdeel / Kamer</div><div id="issueDetailBuildingPart">-</div></div>
-                            <div class="col-md-6"><div class="text-muted fw-semibold">Eenheid</div><div id="issueDetailUnit">-</div></div>
-                            <div class="col-md-6"><div class="text-muted fw-semibold">Type</div><div id="issueDetailType">-</div></div>
+                            <div class="col-md-3"><div class="fw-semibold">Locatie</div><div id="issueDetailLocation">-</div></div>
+                            <div class="col-md-3"><div class="fw-semibold">Gebouwdeel / Kamer</div><div id="issueDetailBuildingPart">-</div></div>
+                            <div class="col-md-3"><div class="fw-semibold">Eenheid</div><div id="issueDetailUnit">-</div></div>
+                            <div class="col-md-3"><div class="fw-semibold">Type</div><div id="issueDetailType">-</div></div>
                         </div>
 
-                        <div id="issueDetailPlanBlock" style="display:none;">
-                            <div class="text-muted fw-semibold mb-2"><i class="bx bx-map-pin"></i> Locatie op plan: <span id="issueDetailPlanName"></span></div>
+                        <div id="issueDetailPlanBlock mb-3" style="display:none;">
+                            <div class="fw-semibold mb-2"><i class="bx bx-location"></i> Locatie op plan: <span id="issueDetailPlanName"></span></div>
                             <div class="issue-plan-stage">
                                 <canvas id="issueDetailPlanCanvas" class="issue-plan-canvas"></canvas>
                                 <div id="issueDetailPlanMarker" class="issue-plan-marker"></div>
+                            </div>
+                        </div>
+
+                        <div class="issue-detail-inline-edit mb-3">
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Status wijzigen</label>
+                                    <select id="issueDetailStatusSelect" class="form-control form-control-modern">
+                                        @foreach (var status in Enum.GetValues<ConstructionIssueStatus>())
+                                        {
+                                            <option value="@((int)status)">@status.GetDisplayName()</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Prioriteit wijzigen</label>
+                                    <select id="issueDetailPrioritySelect" class="form-control form-control-modern">
+                                        @foreach (var priority in Enum.GetValues<ConstructionIssuePriority>())
+                                        {
+                                            <option value="@((int)priority)">@priority.GetDisplayName()</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Verantwoordelijke</label>
+                                    <select id="issueDetailResponsiblePartySelect" class="form-control form-control-modern">
+                                        <option value="">Selecteer verantwoordelijke</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">Naam</label>
+                                    <input id="issueDetailResponsibleNameInput" type="text" class="form-control form-control-modern" placeholder="Naam" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold">E-mail</label>
+                                    <input id="issueDetailResponsibleEmailInput" type="email" class="form-control form-control-modern" placeholder="E-mail" />
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-primary" id="issueDetailSendButton">
+                                        <i class="bx bx-send me-1"></i>Verzend punt naar verantwoordelijke
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

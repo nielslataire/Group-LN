@@ -14,6 +14,8 @@ using System.IO;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
 using System.ComponentModel.DataAnnotations;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace CPMCore.Controllers;
 
@@ -112,6 +114,7 @@ public class ProjectsIssuesController : BaseController
     public async Task<IActionResult> Create(int projectId, ConstructionIssueFormVm vm, List<IFormFile>? mediaFiles)
     {
         vm.Input.ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor;
+        mediaFiles = ResolveMediaFiles(mediaFiles);
         if (!ModelState.IsValid)
         {
             PreserveMediaValidation(ModelState);
@@ -134,6 +137,7 @@ public class ProjectsIssuesController : BaseController
     public async Task<IActionResult> Edit(int projectId, int id, ConstructionIssueFormVm vm, List<IFormFile>? mediaFiles, List<int>? deleteMediaIds)
     {
         vm.Input.ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor;
+        mediaFiles = ResolveMediaFiles(mediaFiles);
         if (!ModelState.IsValid)
         {
             PreserveMediaValidation(ModelState);
@@ -544,17 +548,60 @@ public class ProjectsIssuesController : BaseController
             .ToList();
     }
 
+    private List<IFormFile>? ResolveMediaFiles(List<IFormFile>? mediaFiles)
+    {
+        if (mediaFiles is { Count: > 0 })
+            return mediaFiles;
+
+        if (Request?.Form?.Files is not { Count: > 0 })
+            return mediaFiles;
+
+        return Request.Form.Files
+            .Where(file => file?.Length > 0)
+            .ToList();
+    }
+
+
     private async Task AddIssueMedia(int projectId, int issueId, List<IFormFile>? files)
     {
         if (files == null) return;
 
         foreach (var file in files.Where(x => x?.Length > 0))
         {
-            var fileId = await UploadAssetToStorageAsync(file, "issues");
+            var fileId = await UploadIssueMediaToStorageAsync(file);
             if (!string.IsNullOrWhiteSpace(fileId))
             {
                 await _service.AddMedia(projectId, issueId, fileId, (int)ConstructionIssueMediaType.Photo, User.FindFirst(CpmClaims.UserId)?.Value);
             }
+        }
+    }
+
+    private async Task<string?> UploadIssueMediaToStorageAsync(IFormFile file)
+    {
+        var uploaded = await UploadAssetToStorageAsync(file, "issues");
+        if (!string.IsNullOrWhiteSpace(uploaded))
+            return uploaded;
+
+        if (file.Length <= 0 || string.IsNullOrWhiteSpace(file.ContentType) || !file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        try
+        {
+            await using var source = file.OpenReadStream();
+            using var image = await Image.LoadAsync(source);
+            await using var output = new MemoryStream();
+            await image.SaveAsJpegAsync(output, new JpegEncoder { Quality = 90 });
+            output.Position = 0;
+
+            var baseName = Path.GetFileNameWithoutExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(baseName))
+                baseName = $"issue_{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+
+            return await UploadAssetToStorageAsync(output, $"{baseName}.jpg", "image/jpeg", "issues");
+        }
+        catch
+        {
+            return null;
         }
     }
 

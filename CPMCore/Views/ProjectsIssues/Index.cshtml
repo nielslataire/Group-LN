@@ -56,9 +56,40 @@
 
     .issues-selection-toolbar {
         overflow-x: auto;
+        border: 1px solid #e3e6ea;
         border-radius: 6px;
         padding: 6px;
         gap: 4px;
+        box-shadow: none;
+    }
+
+        .issues-selection-toolbar .form-control {
+            min-height: 38px;
+        }
+
+        .issues-selection-toolbar .btn {
+            min-height: 38px;
+        }
+
+    .issues-tab-nav-light {
+        background-color: var(--bs-light, #f8f9fa);
+    }
+
+    #issueDetailTab .issue-plan-stage {
+        max-height: 400px;
+        overflow: hidden;
+    }
+
+    #issueDetailTab .issue-plan-canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        max-height: 400px;
+        object-fit: contain;
+    }
+
+    .issue-detail-inline-edit .form-control {
+        min-height: 38px;
     }
 
         .issues-selection-toolbar .bulk-separator {
@@ -113,7 +144,7 @@
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Open</h4>
+                                        <h4 class="title">Open </h4>
                                         <h2 class="mt-0 color-primary">@openCount</h2>
                                     </div>
                                 </div>
@@ -196,7 +227,7 @@
                 </div>
             </section> *@
 
-            <ul class="nav nav-pills issues-tab-nav mb-2" role="tablist">
+            <ul class="nav nav-pills issues-tab-nav issues-tab-nav-light mb-2" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" type="button" data-bs-toggle="tab" data-bs-target="#issues-list-tab" aria-selected="true">
                         <i class="bx bx-list-ul me-1"></i>Lijst
@@ -269,18 +300,20 @@
                                 </select>
                             </div>
 
-                            <div class="col-12 col-md-6 col-xl">
-                                <label class="form-label">Verzending</label>
-                                <select class="form-control form-control-modern js-auto-filter" name="sent">
-                                    <option value="">Geen verzendstatus</option>
-                                    <option value="true" selected="@(filters.Sent == true)">Verzonden</option>
-                                    <option value="false" selected="@(filters.Sent == false)">Niet verzonden</option>
-                                </select>
-                            </div>
+                                    <div class="col-12 col-md-6 col-xl">
+                                        <label class="form-label">Fase</label>
+                                        <select class="form-control form-control-modern js-auto-filter" name="phase">
+                                            <option value="">Alle fases</option>
+                                            @foreach (var phase in Html.GetEnumSelectList<ConstructionIssuePhase>())
+                                            {
+                                                <option value="@phase.Value" selected="@(filters.Phase?.ToString() == phase.Value)">@phase.Text</option>
+                                            }
+                                        </select>
+                                    </div>
                         </div>
                     </form>
-                            <div id="issuesFilterSelectionRow" class="py-2 px-3 mb-3 d-none issues-selection-toolbar" role="status">
-                                <div class="d-flex align-items-center gap-2 flex-nowrap">
+                            <div id="issuesFilterSelectionRow" class="py-2 px-3 mb-3 d-none issues-selection-toolbar bg-light" role="status">
+                                <div class="d-flex align-items-center flex-nowrap">
                                     <span id="issuesSelectionCountLabel" class="fw-semibold text-nowrap">0 geselecteerd</span>
 
                                     <span class="bulk-separatorms-2 me-2"></span>
@@ -342,7 +375,7 @@
                                         </th>
                                         <th>Titel</th>
                                         <th>Unit</th>
-                                        <th>Categorie</th>
+                                                <th>Fase</th>
                                         <th>Locatie</th>
                                         <th>Status</th>
                                         <th>Prioriteit</th>
@@ -363,10 +396,10 @@
                                             </td>
                                             <td>@i.Title</td>
                                             <td>@(i.Unit?.Name ?? "-")</td>
-                                            <td>@(i.Category?.Name ?? "-")</td>
+                                                    <td>@(((ConstructionIssuePhase)i.IssuePhase).GetDisplayName())</td>
                                             <td>@i.LocationText</td>
-                                            <td>@((ConstructionIssueStatus)i.Status)</td>
-                                            <td>@((ConstructionIssuePriority)i.Priority)</td>
+                                                    <td>@(((ConstructionIssueStatus)i.Status).GetDisplayName())</td>
+                                                    <td>@(((ConstructionIssuePriority)i.Priority).GetDisplayName())</td>
                                             <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                                             <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
                                             <td class="actions text-end">
@@ -477,13 +510,14 @@
                     const checkAllInput = document.getElementById('checkAll');
                     const issueDetailModalEl = document.getElementById('issueDetailModal');
                    const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
-                    const issuesTable = document.getElementById('datatable-issues');
+                                      const issuesTable = document.getElementById('datatable-issues');
+                    const issueDetailTitle = document.getElementById('issueDetailTitle');
                     const issueDetailBadges = document.getElementById('issueDetailBadges');
                     const issueDetailDescription = document.getElementById('issueDetailDescription');
                     const issueDetailLocation = document.getElementById('issueDetailLocation');
                     const issueDetailBuildingPart = document.getElementById('issueDetailBuildingPart');
                     const issueDetailUnit = document.getElementById('issueDetailUnit');
-                    const issueDetailType = document.getElementById('issueDetailType');
+                    const issueDetailPhase = document.getElementById('issueDetailPhase');
                     const issueDetailPhotos = document.getElementById('issueDetailPhotos');
                     const issueDetailHistory = document.getElementById('issueDetailHistory');
                     const issueDetailNotifications = document.getElementById('issueDetailNotifications');
@@ -491,11 +525,28 @@
                     const issueDetailPlanName = document.getElementById('issueDetailPlanName');
                     const issueDetailPlanCanvas = document.getElementById('issueDetailPlanCanvas');
                     const issueDetailPlanMarker = document.getElementById('issueDetailPlanMarker');
+                    const issueDetailStatusSelect = document.getElementById('issueDetailStatusSelect');
+                    const issueDetailPrioritySelect = document.getElementById('issueDetailPrioritySelect');
+                    const issueDetailResponsiblePartySelect = document.getElementById('issueDetailResponsiblePartySelect');
+                    const issueDetailResponsibleNameInput = document.getElementById('issueDetailResponsibleNameInput');
+                    const issueDetailResponsibleEmailInput = document.getElementById('issueDetailResponsibleEmailInput');
+                    const issueDetailSendButton = document.getElementById('issueDetailSendButton');
                     const issuePhotosTabButton = document.getElementById('issuePhotosTabButton');
                     const issueHistoryTabButton = document.getElementById('issueHistoryTabButton');
                     const issueNotificationTabButton = document.getElementById('issueNotificationTabButton');
 
             let dt = typeof DataTransfer !== 'undefined' ? new DataTransfer() : null;
+
+            function syncMediaInputFromDataTransfer(){
+                if(!dt || !mediaInput) return false;
+                try {
+                    mediaInput.files = dt.files;
+                    return (mediaInput.files?.length ?? 0) === dt.files.length;
+                } catch {
+                    return false;
+                }
+            }
+
             let dataTableInstance = null;
             let currentPdfDoc = null;
             let currentPlans = [];
@@ -503,6 +554,12 @@
             let planRenderRequestId = 0;
             const pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
             let isPickMode = false;
+             const contractorResponsiblePartyType = @((int)ConstructionIssueResponsiblePartyType.Contractor);
+            let currentDetailIssueId = null;
+            const detailInlineState = {
+                isFieldSyncing: false
+            };
+
 
             if (pdfJsApi) {
                 pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
@@ -562,7 +619,7 @@
                     responsiblePartyId: filterForm?.querySelector('[name="responsiblePartyId"]')?.value || '',
                     unitId: filterForm?.querySelector('[name="unitId"]')?.value || '',
                     overdue: filterForm?.querySelector('[name="overdue"]')?.value || '',
-                    sent: filterForm?.querySelector('[name="sent"]')?.value || ''
+                    phase: filterForm?.querySelector('[name="phase"]')?.value || ''
                 });
 
                 const customFilter = (settings, _, dataIndex) => {
@@ -579,7 +636,7 @@
                     const unitCell = rowNode.cells?.[2]?.textContent?.trim() || '';
                     const statusCell = rowNode.cells?.[5]?.textContent?.trim() || '';
                     const dueDateCell = rowNode.cells?.[7]?.textContent?.trim() || '';
-                    const sentCell = rowNode.cells?.[8]?.textContent?.trim() || '';
+                    const phaseCell = rowNode.cells?.[3]?.textContent?.trim() || '';
                     const responsiblePartyId = rowNode.dataset.responsiblePartyId || '';
                     const parseDueDateCell = (value) => {
                         if (!value || value === '-') {
@@ -629,14 +686,12 @@
                     if (filters.overdue === 'true' && (!dueDateCell || dueDateCell === '-')) {
                         return false;
                     }
-
-                    if (filters.sent === 'true' && (!sentCell || sentCell === '-')) {
-                        return false;
-                    }
-
-                    if (filters.sent === 'false' && sentCell !== '-') {
-                        return false;
-                    }
+                    if (filters.phase) {
+                              const selectedPhaseText = filterForm?.querySelector(`[name="phase"] option[value="${filters.phase}"]`)?.textContent?.trim() || '';
+                              if (!selectedPhaseText || phaseCell !== selectedPhaseText) {
+                                  return false;
+                              }
+                          }
 
                     return true;
                 };
@@ -972,14 +1027,20 @@
                 }
             }
 
-            async function renderDetailPlan(plan, pageNumber, xNorm, yNorm){
-                if(!plan || !plan.url || !issueDetailPlanCanvas) {
+        async function renderDetailPlan(plan, pageNumber, xNorm, yNorm){
+                if(!issueDetailPlanBlock || !issueDetailPlanCanvas || !issueDetailPlanMarker) {
+                    return;
+                }
+
+                if(!plan || !plan.url) {
                     issueDetailPlanBlock.style.display = 'none';
                     return;
                 }
 
                 issueDetailPlanBlock.style.display = 'block';
-                issueDetailPlanName.textContent = plan.name || '';
+                if (issueDetailPlanName) {
+                    issueDetailPlanName.textContent = plan.name || '';
+                }
 
                 if (!pdfJsApi || typeof pdfJsApi.getDocument !== 'function') {
                     issueDetailPlanCanvas.style.display = 'none';
@@ -991,28 +1052,115 @@
                 const pdfDoc = await pdfJsApi.getDocument(plan.url).promise;
                 const safePage = Math.min(Math.max(1, Number(pageNumber || 1)), pdfDoc.numPages || 1);
                 const pdfPage = await pdfDoc.getPage(safePage);
-                const viewport = pdfPage.getViewport({ scale: 1.1 });
+                const baseViewport = pdfPage.getViewport({ scale: 1 });
+                const containerWidth = issueDetailPlanBlock.clientWidth || issueDetailPlanCanvas.parentElement?.clientWidth || baseViewport.width;
+                const maxHeight = 400;
+                const scale = Math.min(containerWidth / baseViewport.width, maxHeight / baseViewport.height, 1);
+                const viewport = pdfPage.getViewport({ scale });
                 issueDetailPlanCanvas.width = Math.floor(viewport.width);
                 issueDetailPlanCanvas.height = Math.floor(viewport.height);
                 await pdfPage.render({ canvasContext: ctx, viewport }).promise;
                 issueDetailPlanCanvas.style.display = 'block';
 
                 if (xNorm != null && yNorm != null && xNorm !== '' && yNorm !== '') {
+                    const stageRect = issueDetailPlanCanvas.parentElement?.getBoundingClientRect();
+                    const canvasRect = issueDetailPlanCanvas.getBoundingClientRect();
+                    const canvasOffsetLeft = stageRect ? (canvasRect.left - stageRect.left) : 0;
+                    const canvasOffsetTop = stageRect ? (canvasRect.top - stageRect.top) : 0;
+                    const markerLeftPx = canvasOffsetLeft + (Number(xNorm) * issueDetailPlanCanvas.clientWidth);
+                    const markerTopPx = canvasOffsetTop + (Number(yNorm) * issueDetailPlanCanvas.clientHeight);
                     issueDetailPlanMarker.style.display = 'block';
-                    issueDetailPlanMarker.style.left = `${Number(xNorm) * issueDetailPlanCanvas.width}px`;
-                    issueDetailPlanMarker.style.top = `${Number(yNorm) * issueDetailPlanCanvas.height}px`;
+                    issueDetailPlanMarker.style.left = `${markerLeftPx}px`;
+                    issueDetailPlanMarker.style.top = `${markerTopPx}px`;
                 } else {
                     issueDetailPlanMarker.style.display = 'none';
                 }
             }
 
+            function getRequestVerificationToken(){
+                return issueForm?.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
+            }
+
+            function fillDetailResponsibleOptions(){
+                if (!issueDetailResponsiblePartySelect || issueDetailResponsiblePartySelect.options.length > 1) {
+                    return;
+                }
+
+                const sourceOptions = bulkResponsiblePartySelect?.querySelectorAll('option') || [];
+                sourceOptions.forEach((option) => {
+                    if (!option.value) return;
+                    const newOption = document.createElement('option');
+                    newOption.value = option.value;
+                    newOption.textContent = option.textContent;
+                    issueDetailResponsiblePartySelect.appendChild(newOption);
+                });
+            }
+
+            async function postIssueDetailUpdate(fields){
+                if (!currentDetailIssueId) return false;
+
+                const token = getRequestVerificationToken();
+                if (!token) return false;
+
+                const body = new URLSearchParams();
+                body.append('__RequestVerificationToken', token);
+                body.append('IssueIds', String(currentDetailIssueId));
+                Object.entries(fields).forEach(([key, value]) => {
+                    if (value === null || value === undefined) return;
+                    body.append(key, String(value));
+                });
+
+                const response = await fetch(`/Projects/${projectId}/Issues/BulkUpdate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: body.toString()
+                });
+
+                return response.ok;
+            }
+
+            async function refreshIssueDetailData(issueId){
+                const response = await fetch(`/Projects/${projectId}/Issues/DetailData/${issueId}`);
+                if (!response.ok) return null;
+                return await response.json();
+            }
+
+            async function updateIssueDetailFields(fields){
+                detailInlineState.isFieldSyncing = true;
+                try {
+                    const updated = await postIssueDetailUpdate(fields);
+                    if (!updated || !currentDetailIssueId) return;
+
+                    const refreshedData = await refreshIssueDetailData(currentDetailIssueId);
+                    if (refreshedData) {
+                        renderIssueDetailModal(refreshedData);
+                    }
+                } finally {
+                    detailInlineState.isFieldSyncing = false;
+                }
+            }
+
             function renderIssueDetailModal(data){
+                if (!issueDetailTitle || !issueDetailDescription || !issueDetailLocation || !issueDetailBuildingPart || !issueDetailUnit || !issueDetailPhase || !issueDetailBadges) {
+                    return;
+                }
+
+                fillDetailResponsibleOptions();
+                currentDetailIssueId = data.id || null;
                 issueDetailTitle.textContent = data.title || 'Punt detail';
                 issueDetailDescription.textContent = data.description || '-';
                 issueDetailLocation.textContent = data.locationText || '-';
                 issueDetailBuildingPart.textContent = [data.buildingPart, data.roomOrZone].filter(Boolean).join(' / ') || '-';
                 issueDetailUnit.textContent = data.unitName || '-';
-                issueDetailType.textContent = data.issueTypeLabel || '-';
+                issueDetailPhase.textContent = data.issuePhaseLabel || '-';
+
+                if (issueDetailStatusSelect) issueDetailStatusSelect.value = data.status != null ? String(data.status) : '';
+                if (issueDetailPrioritySelect) issueDetailPrioritySelect.value = data.priority != null ? String(data.priority) : '';
+                if (issueDetailResponsiblePartySelect) issueDetailResponsiblePartySelect.value = data.responsiblePartyId != null ? String(data.responsiblePartyId) : '';
+                if (issueDetailResponsibleNameInput) issueDetailResponsibleNameInput.value = data.responsibleOtherName || '';
+                if (issueDetailResponsibleEmailInput) issueDetailResponsibleEmailInput.value = data.responsibleOtherEmail || '';
 
                 issueDetailBadges.innerHTML = '';
                 [data.statusLabel, data.priorityLabel, data.categoryName || 'Geen categorie', data.issuePhaseLabel].forEach((label, idx) => {
@@ -1025,33 +1173,142 @@
                 const media = data.media || [];
                 const history = data.history || [];
                 const notifications = data.notifications || [];
-                issuePhotosTabButton.textContent = `Foto's (${media.length})`;
-                issueHistoryTabButton.textContent = `Historie (${history.length})`;
-                issueNotificationTabButton.textContent = `Verzending (${notifications.length})`;
+               if (issuePhotosTabButton) issuePhotosTabButton.textContent = `Foto's (${media.length})`;
+                if (issueHistoryTabButton) issueHistoryTabButton.textContent = `Historie (${history.length})`;
+                if (issueNotificationTabButton) issueNotificationTabButton.textContent = `Verzending (${notifications.length})`;
 
-                issueDetailPhotos.innerHTML = media.length
+                if (issueDetailPhotos) {
+                    issueDetailPhotos.innerHTML = media.length
                     ? media.map(m => `<img src="${m.url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;"/>`).join('')
                     : "<div class=\"text-muted\">Geen foto's.</div>";
+                }
 
-                issueDetailHistory.innerHTML = history.length
+                if (issueDetailHistory) {
+                    issueDetailHistory.innerHTML = history.length
                     ? history.map(h => `<div class="border rounded p-2 mb-2"><div class="fw-semibold">${h.actionLabel || 'Wijziging'}</div><div class="text-muted small">${h.comment || '-'} · ${h.timestamp}</div></div>`).join('')
                     : '<div class="text-muted">Geen historiek beschikbaar.</div>';
+                }
 
-                issueDetailNotifications.innerHTML = notifications.length
+                if (issueDetailNotifications) {
+                    issueDetailNotifications.innerHTML = notifications.length
                     ? notifications.map(n => `<div class="border rounded p-2 mb-2"><div class="fw-semibold">${n.recipientEmail || '-'}</div><div class="text-muted small">${n.sentDate}</div></div>`).join('')
                     : '<div class="text-muted">Nog niets verzonden.</div>';
+                }
 
-                renderDetailPlan(data.plan, data.planPageNumber, data.planXnormalized, data.planYnormalized)
-                    .catch(() => { issueDetailPlanBlock.style.display = 'none'; });
+                 renderDetailPlan(data.plan, data.planPageNumber, data.planXnormalized, data.planYnormalized)
+                    .catch(() => {
+                        if (issueDetailPlanBlock) {
+                            issueDetailPlanBlock.style.display = 'none';
+                        }
+                    });
+            }
+
+
+            async function syncDetailResponsibleFromSelection(){
+                if (!issueDetailResponsiblePartySelect || !issueDetailResponsibleNameInput || !issueDetailResponsibleEmailInput) {
+                    return;
+                }
+
+                const companyId = issueDetailResponsiblePartySelect.value;
+                if(!companyId){
+                    issueDetailResponsibleNameInput.disabled = false;
+                    issueDetailResponsibleEmailInput.disabled = false;
+                    return;
+                }
+
+                issueDetailResponsibleNameInput.disabled = true;
+                issueDetailResponsibleEmailInput.disabled = true;
+
+                try {
+                    const response = await fetch(`/Projects/${projectId}/Issues/ResponsibleInfo/${companyId}`);
+                    if (!response.ok) throw new Error('Responsible lookup failed');
+                    const info = await response.json();
+                    issueDetailResponsibleNameInput.value = info?.name || '';
+                    issueDetailResponsibleEmailInput.value = info?.email || '';
+                } catch {
+                    issueDetailResponsibleNameInput.value = '';
+                    issueDetailResponsibleEmailInput.value = '';
+                }
+            }
+
+            async function sendCurrentIssueToResponsible(){
+                if (!currentDetailIssueId) return;
+                const token = getRequestVerificationToken();
+                if (!token) return;
+
+                const body = new URLSearchParams();
+                body.append('__RequestVerificationToken', token);
+                body.append('IssueIds', String(currentDetailIssueId));
+                body.append('GroupByResponsible', 'true');
+
+                const response = await fetch(`/Projects/${projectId}/Issues/SendSelected`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: body.toString()
+                });
+
+                if (!response.ok) {
+                    alert('Verzenden van het punt is mislukt.');
+                    return;
+                }
+
+                const refreshedData = await refreshIssueDetailData(currentDetailIssueId);
+                if (refreshedData) {
+                    renderIssueDetailModal(refreshedData);
+                }
             }
 
             function initializeIssueDetailModal(){
+                issueDetailStatusSelect?.addEventListener('change', () => {
+                    if (detailInlineState.isFieldSyncing) return;
+                    updateIssueDetailFields({ Status: issueDetailStatusSelect.value });
+                });
+
+                issueDetailPrioritySelect?.addEventListener('change', () => {
+                    if (detailInlineState.isFieldSyncing) return;
+                    updateIssueDetailFields({ Priority: issueDetailPrioritySelect.value });
+                });
+
+                issueDetailResponsiblePartySelect?.addEventListener('change', async () => {
+                    if (detailInlineState.isFieldSyncing) return;
+                    await syncDetailResponsibleFromSelection();
+                    updateIssueDetailFields({
+                        ResponsiblePartyType: contractorResponsiblePartyType,
+                        ResponsiblePartyId: issueDetailResponsiblePartySelect.value,
+                        ResponsibleOtherName: issueDetailResponsibleNameInput?.value || '',
+                        ResponsibleOtherEmail: issueDetailResponsibleEmailInput?.value || ''
+                    });
+                });
+
+                issueDetailResponsibleNameInput?.addEventListener('blur', () => {
+                    if (detailInlineState.isFieldSyncing) return;
+                    updateIssueDetailFields({
+                        ResponsiblePartyType: contractorResponsiblePartyType,
+                        ResponsiblePartyId: issueDetailResponsiblePartySelect?.value || '',
+                        ResponsibleOtherName: issueDetailResponsibleNameInput.value,
+                        ResponsibleOtherEmail: issueDetailResponsibleEmailInput?.value || ''
+                    });
+                });
+
+                issueDetailResponsibleEmailInput?.addEventListener('blur', () => {
+                    if (detailInlineState.isFieldSyncing) return;
+                    updateIssueDetailFields({
+                        ResponsiblePartyType: contractorResponsiblePartyType,
+                        ResponsiblePartyId: issueDetailResponsiblePartySelect?.value || '',
+                        ResponsibleOtherName: issueDetailResponsibleNameInput?.value || '',
+                        ResponsibleOtherEmail: issueDetailResponsibleEmailInput.value
+                    });
+                });
+
+                issueDetailSendButton?.addEventListener('click', sendCurrentIssueToResponsible);
+
              document.querySelectorAll('.open-detail-issue').forEach(btn => btn.addEventListener('click', async (event) => {
                     event.preventDefault();
                     const id = btn.dataset.id;
-                    const response = await fetch(`/Projects/${projectId}/Issues/DetailData/${id}`);
-                    if(!response.ok) return;
-                    const data = await response.json();
+                    const data = await refreshIssueDetailData(id);
+                    if(!data) return;
                     renderIssueDetailModal(data);
                      openBootstrapModal(issueDetailModal, issueDetailModalEl);
                 }));
@@ -1078,7 +1335,7 @@
             }
 
 
-            function resetForm(){
+                    function resetForm(){
                 issueForm.reset();
                 issueForm.action = `/Projects/${projectId}/Issues/Create`;
                 titleEl.textContent = 'Nieuw punt toevoegen';
@@ -1086,7 +1343,11 @@
                 mediaPreview.querySelectorAll('.issue-media-item').forEach(x => x.remove());
                dt = typeof DataTransfer !== 'undefined' ? new DataTransfer() : null;
                 if(dt){
-                    mediaInput.files = dt.files;
+                    const synced = syncMediaInputFromDataTransfer();
+                    if(!synced){
+                        dt = null;
+                        mediaInput.value = '';
+                    }
                 } else {
                     mediaInput.value = '';
                 }
@@ -1102,6 +1363,7 @@
             function addPreview(url, existingId){
                 const wrapper = document.createElement('div');
                 wrapper.className = 'position-relative issue-media-item';
+                 wrapper.dataset.newMedia = existingId ? 'false' : 'true';
                 wrapper.style.width = '90px';
                 wrapper.innerHTML = `<img src="${url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;" />`;
                 const remove = document.createElement('button');
@@ -1115,9 +1377,14 @@
                         hidden.name = 'deleteMediaIds';
                         hidden.value = existingId;
                         issueForm.appendChild(hidden);
-                   } else if(dt) {
+                  } else if(dt) {
                         const index = Array.from(dt.files).findIndex(f => f._previewUrl === url);
-                        if(index >= 0){ dt.items.remove(index); mediaInput.files = dt.files; }
+                        if(index >= 0){
+                            dt.items.remove(index);
+                            if(!syncMediaInputFromDataTransfer()){
+                                dt = null;
+                            }
+                        }
                     }
                     wrapper.remove();
                 });
@@ -1125,7 +1392,11 @@
                 mediaPreview.insertBefore(wrapper, addMediaButton);
             }
 
-            mediaInput.addEventListener('change', (e) => {
+           mediaInput.addEventListener('change', (e) => {
+                if(!dt){
+                    mediaPreview.querySelectorAll('.issue-media-item[data-new-media="true"]').forEach(x => x.remove());
+                }
+
                 Array.from(e.target.files || []).forEach(file => {
                     const url = URL.createObjectURL(file);
                     file._previewUrl = url;
@@ -1135,9 +1406,12 @@
                     addPreview(url, null);
                 });
                 if(dt){
-                    mediaInput.files = dt.files;
+                    if(!syncMediaInputFromDataTransfer()){
+                        dt = null;
+                    }
                 }
             });
+
 
 
             addMediaButton.addEventListener('click', () => mediaInput.click());
