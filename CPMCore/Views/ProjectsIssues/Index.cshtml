@@ -7,6 +7,11 @@
     var projectId = Model.ProjectId;
     var filters = Model.Filters;
     ViewData["Title"] = "Punten";
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var openCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.Open);
+    var waitingInspectionCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.WaitingInspection);
+    var resolvedCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.Resolved);
+    var criticalCount = Model.Issues.Count(i => i.DueDate.HasValue && i.DueDate.Value < today);
 }
 <style>
     #issueModal .modal-content {
@@ -21,6 +26,50 @@
         overflow-y: auto;
         min-height: 0;
     }
+
+    .issues-tab-nav {
+        background-color: #f3f5f7;
+        border-radius: 6px;
+        padding: 6px;
+        gap: 4px;
+    }
+
+        .issues-tab-nav .nav-link {
+            color: #6c757d;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            padding: 10px 16px;
+        }
+
+            .issues-tab-nav .nav-link.active {
+                background-color: #ffffff;
+                color: #1f2d3d;
+                border-color: #e3e6ea;
+                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+            }
+
+    .issue-status-widget {
+        border: 1px solid var(--primary, #0088cc);
+        border-radius: 6px;
+    }
+
+        .issue-status-widget .card-body {
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .issue-status-widget .summary {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
 </style>
 @section PageStyle {
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
@@ -44,18 +93,29 @@
                     </div>
                 </div>
             </div>
-            <div class="row g-3 ">
+            <div class="row g-3 mb-4">
                 <div class="col">
-                    <section class="card mb-4">
-                        <div class="card-body">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <div class="info">
-                                            <strong class="amount">4</strong>
-                                        </div>
                                         <h4 class="title">Open</h4>
-                                        
+                                        <h2 class="mt-0 color-primary">@openCount</h2>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+</div>
+                <div class="col">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <h4 class="title">Wachten op controle</h4>
+                                        <h2 class="mt-0 color-primary">@waitingInspectionCount</h2>
                                     </div>
                                 </div>
                             </div>
@@ -63,15 +123,13 @@
                     </section>
                 </div>
                 <div class="col">
-                    <section class="card card-featured card-featured-primary mb-4">
-                        <div class="card-body">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Open</h4>
-                                        <div class="info">
-                                            <strong class="amount">4</strong>
-                                        </div>
+                                        <h4 class="title">Opgelost</h4>
+                                        <h2 class="mt-0 color-primary">@resolvedCount</h2>
                                     </div>
                                 </div>
                             </div>
@@ -79,31 +137,13 @@
                     </section>
                 </div>
                 <div class="col">
-                    <section class="card card-featured card-featured-primary mb-4">
-                        <div class="card-body">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Open</h4>
-                                        <div class="info">
-                                            <strong class="amount">4</strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-                <div class="col">
-                    <section class="card card-featured card-featured-primary mb-4">
-                        <div class="card-body">
-                            <div class="widget-summary widget-summary-sm">
-                                <div class="widget-summary-col">
-                                    <div class="summary align-content-center">
-                                        <h4 class="title">Open</h4>
-                                        <div class="info">
-                                            <strong class="amount">4</strong>
-                                        </div>
+                                        <h4 class="title">Kritiek</h4>
+                                        <h2 class="mt-0 color-primary">@criticalCount</h2>
                                     </div>
                                 </div>
                             </div>
@@ -143,8 +183,23 @@
                 </div>
             </section> *@
 
-            <section class="card card-modern issue-card">
-                <div class="card-body">
+            <ul class="nav nav-pills issues-tab-nav mb-4" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" type="button" data-bs-toggle="tab" data-bs-target="#issues-list-tab" aria-selected="true">
+                        <i class="bx bx-list-ul me-1"></i>Lijst
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#issues-plan-tab" aria-selected="false">
+                        <i class="bx bx-map-pin me-1"></i>Planoverzicht
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="issues-list-tab" role="tabpanel">
+                    <section class="card card-modern issue-card">
+                        <div class="card-body">
 
                     <form method="get" class="issues-filter-form mb-4" id="issuesFilterForm">
                         <div class="row g-3 align-items-end">
@@ -214,7 +269,7 @@
                     <div id="issuesFilterSelectionRow" class="alert alert-info py-2 px-3 mb-3 d-none" role="status">
                         Placeholder tekst voor geselecteerde filters.
                     </div>
-                    <div class="issue-table-block">
+                            <div class="issue-table-block">
                         <div class="table-responsive issue-table-wrapper">
                             <table class="table issue-table mb-0" id="datatable-issues" style="min-width: 1100px;">
                                 <thead>
@@ -281,12 +336,21 @@
                             </table>
                         </div>
 
-                        <div class="issue-table-footer">
-                            <div id="datatable-issues-external-footer"></div>
+                                <div class="issue-table-footer">
+                                    <div id="datatable-issues-external-footer"></div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </section>
                 </div>
-            </section>
+                <div class="tab-pane fade" id="issues-plan-tab" role="tabpanel">
+                    <section class="card card-modern mb-4">
+                        <div class="card-body">
+                            Dit is later op te vullen.
+                        </div>
+                    </section>
+                </div>
+            </div>
         </div>
     </div>
 </section>
