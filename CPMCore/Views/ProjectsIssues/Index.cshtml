@@ -54,6 +54,19 @@
         border-radius: 6px;
     }
 
+    .issues-selection-toolbar {
+        overflow-x: auto;
+        border-radius: 6px;
+        padding: 6px;
+        gap: 4px;
+    }
+
+        .issues-selection-toolbar .bulk-separator {
+            width: 1px;
+            align-self: stretch;
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
         .issue-status-widget .card-body {
             min-height: 80px;
             display: flex;
@@ -183,7 +196,7 @@
                 </div>
             </section> *@
 
-            <ul class="nav nav-pills issues-tab-nav mb-4" role="tablist">
+            <ul class="nav nav-pills issues-tab-nav mb-2" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" type="button" data-bs-toggle="tab" data-bs-target="#issues-list-tab" aria-selected="true">
                         <i class="bx bx-list-ul me-1"></i>Lijst
@@ -266,9 +279,56 @@
                             </div>
                         </div>
                     </form>
-                    <div id="issuesFilterSelectionRow" class="alert alert-info py-2 px-3 mb-3 d-none" role="status">
-                        Placeholder tekst voor geselecteerde filters.
-                    </div>
+                            <div id="issuesFilterSelectionRow" class="py-2 px-3 mb-3 d-none issues-selection-toolbar" role="status">
+                                <div class="d-flex align-items-center gap-2 flex-nowrap">
+                                    <span id="issuesSelectionCountLabel" class="fw-semibold text-nowrap">0 geselecteerd</span>
+
+                                    <span class="bulk-separatorms-2 me-2"></span>
+
+                                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
+                                        @Html.AntiForgeryToken()
+                                        <select class="form-control form-control-modern" name="Status" id="bulkStatusSelect" style="min-width: 170px;">
+                                            <option value="">Kies status</option>
+                                            @foreach (var s in Html.GetEnumSelectList<ConstructionIssueStatus>())
+                                            {
+                                                <option value="@s.Value">@s.Text</option>
+                                            }
+                                        </select>
+                                        <button type="submit" id="bulkStatusButton" class="btn btn-primary text-nowrap" disabled>
+                                            <i class="bx bx-refresh me-1"></i>Status
+                                        </button>
+                                    </form>
+
+                                    <span class="bulk-separator ms-2 me-2"></span>
+
+                                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="date" class="form-control form-control-modern" name="DueDate" id="bulkDueDateInput" style="min-width: 120px;" />
+                                        <button type="submit" id="bulkDueDateButton" class="btn btn-primary text-nowrap" disabled>
+                                            <i class="bx bx-calendar me-1"></i>Deadline
+                                        </button>
+                                    </form>
+
+                                    <span class="bulk-separator ms-2 me-2"></span>
+
+                                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ResponsiblePartyType" value="@((int)ConstructionIssueResponsiblePartyType.Contractor)" />
+                                        <select class="form-control form-control-modern" name="ResponsiblePartyId" id="bulkResponsiblePartySelect" style="min-width: 220px;">
+                                            <option value="">Verantwoordelijke</option>
+                                            @foreach (var c in Model.Form.ResponsibleContractors)
+                                            {
+                                                <option value="@c.ID">@c.Display</option>
+                                            }
+                                        </select>
+                                        <input type="text" class="form-control form-control-modern" name="ResponsibleOtherName" id="bulkResponsibleNameInput" placeholder="Naam" style="min-width: 120px;" />
+                                        <input type="email" class="form-control form-control-modern" name="ResponsibleOtherEmail" id="bulkResponsibleEmailInput" placeholder="E-mail" style="min-width: 220px;" />
+                                        <button type="submit" id="bulkAssignButton" class="btn btn-primary text-nowrap" disabled>
+                                            <i class="bx bx-user-plus me-1"></i>Toewijzen
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                             <div class="issue-table-block">
                         <div class="table-responsive issue-table-wrapper">
                             <table class="table issue-table mb-0" id="datatable-issues" style="min-width: 1100px;">
@@ -405,6 +465,15 @@
          const filterSearchInput = filterForm?.querySelector('input[name="text"]');
                     const filterSelects = Array.from(filterForm?.querySelectorAll('.js-auto-filter') || []);
                     const filterSelectionRow = document.getElementById('issuesFilterSelectionRow');
+                     const issuesSelectionCountLabel = document.getElementById('issuesSelectionCountLabel');
+                    const bulkStatusSelect = document.getElementById('bulkStatusSelect');
+                    const bulkStatusButton = document.getElementById('bulkStatusButton');
+                    const bulkDueDateInput = document.getElementById('bulkDueDateInput');
+                    const bulkDueDateButton = document.getElementById('bulkDueDateButton');
+                    const bulkResponsiblePartySelect = document.getElementById('bulkResponsiblePartySelect');
+                    const bulkResponsibleNameInput = document.getElementById('bulkResponsibleNameInput');
+                    const bulkResponsibleEmailInput = document.getElementById('bulkResponsibleEmailInput');
+                    const bulkAssignButton = document.getElementById('bulkAssignButton');
                     const checkAllInput = document.getElementById('checkAll');
                     const issueDetailModalEl = document.getElementById('issueDetailModal');
                    const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
@@ -447,6 +516,7 @@
                         ids.forEach(id=>{ const i=document.createElement('input'); i.type='hidden'; i.name=f.action.includes('DownloadPdf')?'issueIds':'IssueIds'; i.value=id; i.className='js-issue-id'; f.appendChild(i);});
                     }
                 });
+                 return ids.length;
             }
 
               function openBootstrapModal(modalInstance, modalElement){
@@ -461,8 +531,26 @@
             }
            function updateFilterSelectionRow(){
                 if(!filterSelectionRow) return;
-                const hasSelection = document.querySelectorAll('.issue-check:checked').length > 0;
+                const selectedCount = document.querySelectorAll('.issue-check:checked').length;
+                const hasSelection = selectedCount > 0;
                 filterSelectionRow.classList.toggle('d-none', !hasSelection);
+
+                if (issuesSelectionCountLabel) {
+                    issuesSelectionCountLabel.textContent = `${selectedCount} geselecteerd`;
+                }
+
+                if (bulkStatusButton) {
+                    bulkStatusButton.disabled = !hasSelection || !bulkStatusSelect?.value;
+                }
+
+                if (bulkDueDateButton) {
+                    bulkDueDateButton.disabled = !hasSelection || !bulkDueDateInput?.value;
+                }
+
+                if (bulkAssignButton) {
+                    const hasAssignee = !!bulkResponsiblePartySelect?.value || !!bulkResponsibleNameInput?.value?.trim() || !!bulkResponsibleEmailInput?.value?.trim();
+                    bulkAssignButton.disabled = !hasSelection || !hasAssignee;
+                }
             }
 
 
@@ -1165,6 +1253,11 @@
                     updateFilterSelectionRow();
                 });
             });
+            [bulkStatusSelect, bulkDueDateInput, bulkResponsiblePartySelect, bulkResponsibleNameInput, bulkResponsibleEmailInput].forEach((input) => {
+                input?.addEventListener('input', updateFilterSelectionRow);
+                input?.addEventListener('change', updateFilterSelectionRow);
+            });
+
             syncHidden();
             updateFilterSelectionRow();
 
