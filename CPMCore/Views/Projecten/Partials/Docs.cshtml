@@ -104,10 +104,10 @@
 								}
 
 								<a href="@Url.Action("DownloadDoc", "Projecten", new { id = item.Docid, asName = asName })" class="me-2" data-toggle="tooltip" title="Download">
-									<i class="fa fa-download"></i>
+									<i class="bx bx-arrow-out-down-square-half"></i>
 								</a>
 								<a href="#modaleditdoc" class="me-2 editDoc" data-toggle="tooltip" title="Bewerken" data-id="@item.Docid">
-                                    <i class="fa fa-pen"></i>
+                                    <i class="bx bx-edit"></i>
                                 </a>
                                  <a href="#modaldeletedoc" data-toggle="tooltip" id="deleteDoc" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteDoc" data-id="@item.Docid"><i class="fa fa-trash "></i></a>
 							</td>
@@ -133,7 +133,7 @@ else
 				<h4>Nog geen documenten toegevoegd</h4>
 			</div>
 			<div class="col-12 text-muted">
-				<a href="#modaladddoc" class="btn btn-default btn-md modal-with-form text-muted" type="button" id="btnAddDoc2"><i class="fa fa-upload"></i> Een eerste document uploaden</a>
+				<a href="#modaladddoc" class="btn btn-default btn-md modal-with-form text-muted" type="button" id="btnAddDoc2"><i class="bx bx-arrow-out-up-square-half"></i> Een eerste document uploaden</a>
 
 			</div>
 		</div>

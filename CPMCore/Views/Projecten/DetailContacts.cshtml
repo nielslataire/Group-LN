@@ -206,12 +206,12 @@
                                                <td class="actions text-right">
                                                 <a title="Details"
                                                        href="@Url.Action("ContactDetails", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })" data-toggle="tooltip" data-placement="top" data-original-title="Acties">
-                                                        <i class="bx bx-dots-vertical-rounded"></i>
+                                                        <i class="bx bx-eye"></i>
                                                     <span class="visually-hidden">Details</span>
                                                 </a>
                                                 <a title="Bewerken"
                                                        href="@Url.Action("EditContact", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })" data-toggle="tooltip" data-placement="top" data-original-title="Bewerken">
-                                                    <i class="bx bx-pencil"></i>
+                                                    <i class="bx bx-edit"></i>
                                                     <span class="visually-hidden">Bewerken</span>
                                                 </a>
                                                 <form class="d-inline" method="post" action="@Url.Action("DeleteContact", "Projecten")" onsubmit="return confirm('Contact verwijderen?');">

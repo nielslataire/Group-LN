@@ -1,0 +1,44 @@
+﻿<div class="modal fade" id="issuePrintModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bx bx-printer me-2"></i>Punten afdrukken</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="printIssuesScope">Welke punten?</label>
+                    <select class="form-control" id="printIssuesScope">
+                        <option value="all">Alle punten</option>
+                        <option value="unit">Per eenheid</option>
+                    </select>
+                </div>
+                <div class="mb-3 d-none" id="printUnitGroup">
+                    <label class="form-label" for="printUnitId">Eenheid</label>
+                    <select class="form-control" id="printUnitId">
+                        <option value="">Kies eenheid...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="printResponsibleScope">Verantwoordelijken</label>
+                    <select class="form-control" id="printResponsibleScope">
+                        <option value="">Alle verantwoordelijken</option>
+                    </select>
+                </div>
+                <hr />
+                <h6 class="mb-2">Overzicht afdruk</h6>
+                <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto;" id="printSummaryList"></div>
+                <div class="mt-2 text-success" id="printSummaryTotal"><i class="bx bx-check-circle me-1"></i>0 punt(en) naar 0 verantwoordelijke(n)</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-default" id="exportPdfButton">
+                    <i class="bx bx-download me-1"></i>Export PDF
+                </button>
+                <button type="button" class="btn btn-primary" id="directPrintButton">
+                    <i class="bx bx-printer me-1"></i><span id="directPrintText">Direct afdrukken</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

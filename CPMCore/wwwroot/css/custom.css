@@ -794,3 +794,8 @@
 #datatable-issues_wrapper > .row:last-child {
     display: none;
 }
+
+/* Boxicons compatibility aliases */
+.bx-arrow-out-up-square-half:before {
+    content: "\eb3e"; /* alias naar bx-link-external in lokale boxicons versie */
+}

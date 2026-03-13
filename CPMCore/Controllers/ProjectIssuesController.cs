@@ -71,9 +71,9 @@ public class ProjectsIssuesController : BaseController
 
     [HttpPost("SendSelected")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SendSelected(int projectId, ConstructionIssueSendRequestBO request)
+    public async Task<IActionResult> SendSelected(int projectId, ConstructionIssueSendRequestBO request, string? comment)
     {
-        var sent = await _reportService.SendSelectedIssues(projectId, request, User.FindFirst(CpmClaims.UserId)?.Value);
+        var sent = await _reportService.SendSelectedIssues(projectId, request, User.FindFirst(CpmClaims.UserId)?.Value, comment);
         AddMessage(sent > 0 ? "success" : "error", sent > 0 ? $"{sent} punt(en) verzonden." : "Geen punten verzonden (geen geldige e-mail).", sent > 0 ? "Geslaagd" : "Fout");
         return RedirectToAction(nameof(Index), new { projectId });
     }
@@ -358,6 +358,136 @@ public class ProjectsIssuesController : BaseController
             issue.PlanYnormalized,
             dueDate = issue.DueDate?.ToString("yyyy-MM-dd"),
             media = media.Select(m => new { m.Id, m.Url })
+        });
+    }
+
+    [HttpPost("SendPreview")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendPreview(int projectId, [FromForm] IssueSendPreviewRequest request)
+    {
+        var query = _db.ConstructionIssue
+            .AsNoTracking()
+            .Where(x => x.ProjectId == projectId);
+
+        var selectedIds = (request.IssueIds ?? new List<int>()).Distinct().ToList();
+        var scope = (request.Scope ?? "all").Trim().ToLowerInvariant();
+
+        if (scope == "selected")
+        {
+            if (!selectedIds.Any())
+            {
+                return Json(new { units = Array.Empty<object>(), responsibles = Array.Empty<object>(), totalIssueCount = 0, totalResponsibleCount = 0 });
+            }
+
+            query = query.Where(x => selectedIds.Contains(x.Id));
+        }
+
+        if (scope == "unit" && request.UnitId.HasValue)
+        {
+            query = query.Where(x => x.UnitId == request.UnitId.Value);
+        }
+
+        var issues = await query
+            .Select(x => new
+            {
+                x.Id,
+                x.UnitId,
+                UnitName = x.Unit != null ? x.Unit.Name : null,
+                x.ResponsiblePartyType,
+                x.ResponsiblePartyId,
+                x.ResponsibleOtherName,
+                x.ResponsibleOtherEmail
+            })
+            .ToListAsync();
+
+        var companyIds = issues
+            .Where(x => x.ResponsiblePartyId.HasValue)
+            .Select(x => x.ResponsiblePartyId!.Value)
+            .Distinct()
+            .ToList();
+
+        var companyInfo = await _db.CompanyInfo
+            .AsNoTracking()
+            .Where(x => companyIds.Contains(x.CompanyId))
+            .Select(x => new { x.CompanyId, x.BedrijfsNaam, x.Email, x.InvoiceEmail })
+            .ToListAsync();
+
+        var companyLookup = companyInfo.ToDictionary(
+            x => x.CompanyId,
+            x => new
+            {
+                Name = string.IsNullOrWhiteSpace(x.BedrijfsNaam) ? $"Bedrijf #{x.CompanyId}" : x.BedrijfsNaam,
+                Email = !string.IsNullOrWhiteSpace(x.InvoiceEmail) ? x.InvoiceEmail : x.Email
+            });
+
+        string BuildResponsibleKey(int type, int? partyId, string? otherName, string? otherEmail)
+            => $"{type}|{partyId?.ToString() ?? ""}|{otherName ?? ""}|{otherEmail ?? ""}";
+
+        var units = issues
+            .Where(x => x.UnitId.HasValue)
+            .GroupBy(x => new { UnitId = x.UnitId!.Value, UnitName = x.UnitName ?? $"Eenheid {x.UnitId!.Value}" })
+            .Select(g => new { id = g.Key.UnitId, name = g.Key.UnitName, issueCount = g.Select(i => i.Id).Distinct().Count() })
+            .OrderBy(x => x.name)
+            .ToList();
+
+        if (scope == "unit" && !request.UnitId.HasValue)
+        {
+            return Json(new { units, responsibles = Array.Empty<object>(), totalIssueCount = 0, totalResponsibleCount = 0 });
+        }
+
+        var responsibles = issues
+                   .Select(x =>
+                   {
+                       var company = x.ResponsiblePartyId.HasValue && companyLookup.TryGetValue(x.ResponsiblePartyId.Value, out var found)
+                           ? found
+                           : null;
+
+                       var email = !string.IsNullOrWhiteSpace(x.ResponsibleOtherEmail)
+                           ? x.ResponsibleOtherEmail
+                           : company?.Email;
+
+                       var name = !string.IsNullOrWhiteSpace(x.ResponsibleOtherName)
+                           ? x.ResponsibleOtherName
+                           : company?.Name ?? "Onbekend";
+
+                       var aggregateKey = x.ResponsiblePartyId.HasValue
+                           ? $"party:{x.ResponsiblePartyId.Value}"
+                           : $"email:{(email ?? string.Empty).Trim().ToLowerInvariant()}";
+
+                       return new
+                       {
+                           aggregateKey,
+                           originalKey = BuildResponsibleKey(x.ResponsiblePartyType, x.ResponsiblePartyId, x.ResponsibleOtherName, x.ResponsibleOtherEmail),
+                           name,
+                           email,
+                           issueId = x.Id
+                       };
+                   })
+                   .Where(x => !string.IsNullOrWhiteSpace(x.email))
+                   .GroupBy(x => x.aggregateKey)
+                   .Select(g =>
+                   {
+                       var issueIds = g.Select(x => x.issueId).Distinct().ToList();
+                       var first = g.First();
+                       return new
+                       {
+                           key = first.originalKey,
+                           name = first.name,
+                           email = first.email,
+                           issueCount = issueIds.Count,
+                           issueIds
+                       };
+                   })
+                   .OrderBy(x => x.name)
+                   .ToList();
+
+        var totalIssueCount = issues.Select(x => x.Id).Distinct().Count();
+        return Json(new
+        {
+            units,
+            responsibles,
+            totalIssueCount,
+            totalResponsibleCount = responsibles.Count
         });
     }
 
@@ -702,4 +832,12 @@ public class ProjectsIssuesController : BaseController
         if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
         return fileNameElement.GetString();
     }
+
+    public sealed class IssueSendPreviewRequest
+    {
+        public string? Scope { get; set; }
+        public int? UnitId { get; set; }
+        public List<int>? IssueIds { get; set; }
+    }
 }
+

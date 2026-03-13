@@ -5,10 +5,10 @@
 
 jQuery(function ($) {
     const iconMap = {
-        'fa-eye': 'bx-show',
+        'fa-eye': 'bx-eye',
         'fa-eye-slash': 'bx-hide',
         'fa-search': 'bx-show',
-        'fa-edit': 'bx-pencil',
+        'fa-edit': 'bx-edit',
         'fa-pencil': 'bx-pencil',
         'fa-pen': 'bx-pencil',
         'fa-trash': 'bx-trash',

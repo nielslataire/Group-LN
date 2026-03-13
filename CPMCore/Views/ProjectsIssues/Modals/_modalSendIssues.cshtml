@@ -1,0 +1,45 @@
+﻿<div class="modal fade" id="issueSendModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bx bx-send me-2"></i>Punten verzenden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="sendIssuesScope">Welke punten?</label>
+                    <select class="form-control" id="sendIssuesScope">
+                        <option value="all">Alle punten</option>
+                        <option value="unit">Per eenheid</option>
+                    </select>
+                </div>
+                <div class="mb-3 d-none" id="sendUnitGroup">
+                    <label class="form-label" for="sendUnitId">Eenheid</label>
+                    <select class="form-control" id="sendUnitId">
+                        <option value="">Kies eenheid...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="sendResponsibleScope">Naar wie?</label>
+                    <select class="form-control" id="sendResponsibleScope">
+                        <option value="">Alle verantwoordelijken</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="sendOptionalComment">Opmerking (optioneel)</label>
+                    <textarea class="form-control" id="sendOptionalComment" rows="3" placeholder="Voeg een bericht toe bij de verzending..."></textarea>
+                </div>
+                <hr />
+                <h6 class="mb-2">Overzicht verzending</h6>
+                <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto;" id="sendSummaryList"></div>
+                <div class="mt-2" id="sendSummaryTotal"><i class="bx bx-check-circle me-1 text-success"></i>0 punt(en) naar 0 verantwoordelijke(n)</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="confirmSendIssuesButton">
+                    <i class="bx bx-send me-1"></i><span id="confirmSendIssuesText">Verzenden</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

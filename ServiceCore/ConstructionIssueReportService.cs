@@ -141,7 +141,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         }).GeneratePdf();
     }
 
-    public async Task<int> SendSelectedIssues(int projectId, ConstructionIssueSendRequestBO request, string? userId)
+    public async Task<int> SendSelectedIssues(int projectId, ConstructionIssueSendRequestBO request, string? userId, string? comment = null)
     {
         var ids = request.IssueIds?.Distinct().ToList() ?? new List<int>();
         if (!ids.Any()) return 0;
@@ -164,7 +164,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
 
             var report = await CreateReportEntity(projectId, request.ReportType, g.Key.ResponsiblePartyType, g.Key.ResponsiblePartyId, g.Key.ResponsibleOtherName, g.Key.ResponsibleOtherEmail, issueIds, userId);
             var pdf = await GenerateReportPdf(projectId, report.Id);
-            await SendReportEmail(projectId, report.Id, email, pdf);
+            await SendReportEmail(projectId, report.Id, email, pdf, comment);
 
             var sentDate = DateTime.UtcNow;
             foreach (var issue in g)
@@ -206,7 +206,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
 
             var report = await CreateReportEntity(projectId, request.ReportType, issue.ResponsiblePartyType, issue.ResponsiblePartyId, issue.ResponsibleOtherName, issue.ResponsibleOtherEmail, new List<int> { issue.Id }, userId);
             var pdf = await GenerateReportPdf(projectId, report.Id);
-            await SendReportEmail(projectId, report.Id, email, pdf);
+            await SendReportEmail(projectId, report.Id, email, pdf, null);
 
             issue.LastSentDate = sentDate;
             _db.ConstructionIssueNotification.Add(new ConstructionIssueNotification
@@ -229,11 +229,12 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return count;
     }
 
-    private async Task SendReportEmail(int projectId, int reportId, string toEmail, byte[] pdfBytes)
+    private async Task SendReportEmail(int projectId, int reportId, string toEmail, byte[] pdfBytes, string? comment = null)
     {
         var projectName = await _db.Project.Where(x => x.ProjectId == projectId).Select(x => x.ProjectName).FirstOrDefaultAsync() ?? $"Project {projectId}";
         var subject = $"[{projectName}] Puntenlijst – {DateTime.Now:yyyy-MM-dd}";
-        var body = $"<p>Beste,</p><p>In bijlage vindt u de puntenlijst.</p><p>Bekijk details in CPMCore: /Projects/{projectId}/Issues</p>";
+        var commentBlock = string.IsNullOrWhiteSpace(comment) ? string.Empty : $"<p><strong>Opmerking:</strong><br/>{System.Net.WebUtility.HtmlEncode(comment)}</p>";
+        var body = $"<p>Beste,</p><p>In bijlage vindt u de puntenlijst.</p>{commentBlock}<p>Bekijk details in CPMCore: /Projects/{projectId}/Issues</p>";
 
         var smtpUser = _configuration["EmailSettings:SmtpUser"] ?? throw new InvalidOperationException("EmailSettings:SmtpUser missing");
         var smtpPass = _configuration["EmailSettings:SmtpPass"] ?? throw new InvalidOperationException("EmailSettings:SmtpPass missing");

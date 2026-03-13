@@ -429,17 +429,23 @@
                                                    class="btn ms-1 me-1 open-detail-issue"
                                                    title="Details"
                                                    data-id="@i.Id">
-                                                    <i class="bx bx-show fs-5"></i>
+                                                    <i class="bx bx-eye fs-5"></i>
                                                 </a>
                                                 <a href="@Url.Action("EditData", "ProjectsIssues", new { projectId, id = i.Id })"
                                                    class="btn ms-1 me-1 open-edit-issue"
                                                    title="Bewerken"
                                                    data-id="@i.Id">
-                                                    <i class="bx bx-pencil fs-5"></i>
+                                                    <i class="bx bx-edit fs-5"></i>
                                                 </a>
+                                                        <a href="@Url.Action("EditData", "ProjectsIssues", new { projectId, id = i.Id })"
+                                                           class="btn ms-1 me-1 open-duplicate-issue"
+                                                           title="Dupliceren"
+                                                           data-id="@i.Id">
+                                                            <i class="bx bx-copy fs-5"></i>
+                                                        </a>
                                                 <a href="#modaldeleteissue"
                                                    title="Verwijderen"
-                                                   class="deleteIssue ms-1 me-1"
+                                                   class="btn deleteIssue ms-1 me-1"
                                                    data-id="@i.Id">
                                                     <i class="bx bx-trash fs-5 text-danger"></i>
                                                     <span class="visually-hidden">Verwijderen</span>
@@ -469,6 +475,8 @@
         </div>
     </div>
 </section>
+@await Html.PartialAsync("Modals/_ModalSendIssues")
+@await Html.PartialAsync("Modals/_ModalPrintIssues")
 @await Html.PartialAsync("Modals/_ModalCreateEditIssue", Model)
 @await Html.PartialAsync("Modals/_ModalIssueDetail")
 <div id="modaldeleteissue" class="modal-block modal-block-warning mfp-hide">
@@ -484,7 +492,11 @@
 
             const projectId = @projectId;
             const issueModalEl = document.getElementById('issueModal');
-        const issueModal = issueModalEl && window.bootstrap ? new bootstrap.Modal(issueModalEl) : null;
+            const issueModal = issueModalEl && window.bootstrap ? new bootstrap.Modal(issueModalEl) : null;
+            const issueSendModalEl = document.getElementById('issueSendModal');
+            const issueSendModal = issueSendModalEl && window.bootstrap ? new bootstrap.Modal(issueSendModalEl) : null;
+            const issuePrintModalEl = document.getElementById('issuePrintModal');
+            const issuePrintModal = issuePrintModalEl && window.bootstrap ? new bootstrap.Modal(issuePrintModalEl) : null;
             const issueForm = document.getElementById('issueForm');
             const titleEl = document.getElementById('issueModalTitle');
             const submitEl = document.getElementById('saveIssueButton');
@@ -508,55 +520,75 @@
             const planXNormalizedInput = document.getElementById('planXNormalized');
             const planYNormalizedInput = document.getElementById('planYNormalized');
             const planCtx = planCanvas.getContext('2d');
-                      const responsiblePartyField = document.getElementById('issueResponsiblePartyId');
-                    const responsibleNameField = document.getElementById('issueResponsibleOtherName');
-                    const responsibleEmailField = document.getElementById('issueResponsibleOtherEmail');
-                    const planUploadInput = document.getElementById('issuePlanUploadInput');
-                    const planUploadName = document.getElementById('issuePlanUploadName');
-                    const planUploadButton = document.getElementById('issuePlanUploadButton');
-                    const deleteIssueModalSelector = '#modaldeleteissue';
-                    const deleteIssueContainerSelector = '#delete-issue-container';
-                    const filterForm = document.getElementById('issuesFilterForm');
-         const filterSearchInput = filterForm?.querySelector('input[name="text"]');
-                    const filterSelects = Array.from(filterForm?.querySelectorAll('.js-auto-filter') || []);
-                    const filterSelectionRow = document.getElementById('issuesFilterSelectionRow');
-                     const issuesSelectionCountLabel = document.getElementById('issuesSelectionCountLabel');
-                    const bulkStatusSelect = document.getElementById('bulkStatusSelect');
-                    const bulkStatusButton = document.getElementById('bulkStatusButton');
-                    const bulkDueDateInput = document.getElementById('bulkDueDateInput');
-                    const bulkDueDateButton = document.getElementById('bulkDueDateButton');
-                    const bulkResponsiblePartySelect = document.getElementById('bulkResponsiblePartySelect');
-                    const bulkResponsibleNameInput = document.getElementById('bulkResponsibleNameInput');
-                    const bulkResponsibleEmailInput = document.getElementById('bulkResponsibleEmailInput');
-                    const bulkAssignButton = document.getElementById('bulkAssignButton');
-                    const checkAllInput = document.getElementById('checkAll');
-                    const issueDetailModalEl = document.getElementById('issueDetailModal');
-                   const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
-                                      const issuesTable = document.getElementById('datatable-issues');
-                    const issueDetailTitle = document.getElementById('issueDetailTitle');
-                    const issueDetailBadges = document.getElementById('issueDetailBadges');
-                    const issueDetailDescription = document.getElementById('issueDetailDescription');
-                    const issueDetailLocation = document.getElementById('issueDetailLocation');
-                    const issueDetailBuildingPart = document.getElementById('issueDetailBuildingPart');
-                    const issueDetailUnit = document.getElementById('issueDetailUnit');
-                     const issueDetailType = document.getElementById('issueDetailType');
-                                          const issueDetailPhase = document.getElementById('issueDetailPhase');
-                    const issueDetailPhotos = document.getElementById('issueDetailPhotos');
-                    const issueDetailHistory = document.getElementById('issueDetailHistory');
-                    const issueDetailNotifications = document.getElementById('issueDetailNotifications');
-                    const issueDetailPlanBlock = document.getElementById('issueDetailPlanBlock');
-                    const issueDetailPlanName = document.getElementById('issueDetailPlanName');
-                    const issueDetailPlanCanvas = document.getElementById('issueDetailPlanCanvas');
-                    const issueDetailPlanMarker = document.getElementById('issueDetailPlanMarker');
-                    const issueDetailStatusSelect = document.getElementById('issueDetailStatusSelect');
-                    const issueDetailPrioritySelect = document.getElementById('issueDetailPrioritySelect');
-                    const issueDetailResponsiblePartySelect = document.getElementById('issueDetailResponsiblePartySelect');
-                    const issueDetailResponsibleNameInput = document.getElementById('issueDetailResponsibleNameInput');
-                    const issueDetailResponsibleEmailInput = document.getElementById('issueDetailResponsibleEmailInput');
-                    const issueDetailSendButton = document.getElementById('issueDetailSendButton');
-                    const issuePhotosTabButton = document.getElementById('issuePhotosTabButton');
-                    const issueHistoryTabButton = document.getElementById('issueHistoryTabButton');
-                    const issueNotificationTabButton = document.getElementById('issueNotificationTabButton');
+            const responsiblePartyField = document.getElementById('issueResponsiblePartyId');
+            const responsibleNameField = document.getElementById('issueResponsibleOtherName');
+            const responsibleEmailField = document.getElementById('issueResponsibleOtherEmail');
+            const planUploadInput = document.getElementById('issuePlanUploadInput');
+            const planUploadName = document.getElementById('issuePlanUploadName');
+            const planUploadButton = document.getElementById('issuePlanUploadButton');
+            const deleteIssueModalSelector = '#modaldeleteissue';
+            const deleteIssueContainerSelector = '#delete-issue-container';
+            const filterForm = document.getElementById('issuesFilterForm');
+            const filterSearchInput = filterForm?.querySelector('input[name="text"]');
+            const filterSelects = Array.from(filterForm?.querySelectorAll('.js-auto-filter') || []);
+            const filterSelectionRow = document.getElementById('issuesFilterSelectionRow');
+            const issuesSelectionCountLabel = document.getElementById('issuesSelectionCountLabel');
+            const bulkStatusSelect = document.getElementById('bulkStatusSelect');
+            const bulkStatusButton = document.getElementById('bulkStatusButton');
+            const bulkDueDateInput = document.getElementById('bulkDueDateInput');
+            const bulkDueDateButton = document.getElementById('bulkDueDateButton');
+            const bulkResponsiblePartySelect = document.getElementById('bulkResponsiblePartySelect');
+            const bulkResponsibleNameInput = document.getElementById('bulkResponsibleNameInput');
+            const bulkResponsibleEmailInput = document.getElementById('bulkResponsibleEmailInput');
+            const bulkAssignButton = document.getElementById('bulkAssignButton');
+            const checkAllInput = document.getElementById('checkAll');
+            const issueDetailModalEl = document.getElementById('issueDetailModal');
+            const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
+            const issuesTable = document.getElementById('datatable-issues');
+            const issueDetailTitle = document.getElementById('issueDetailTitle');
+            const issueDetailBadges = document.getElementById('issueDetailBadges');
+            const issueDetailDescription = document.getElementById('issueDetailDescription');
+            const issueDetailLocation = document.getElementById('issueDetailLocation');
+            const issueDetailBuildingPart = document.getElementById('issueDetailBuildingPart');
+            const issueDetailUnit = document.getElementById('issueDetailUnit');
+            const issueDetailType = document.getElementById('issueDetailType');
+            const issueDetailPhase = document.getElementById('issueDetailPhase');
+            const issueDetailPhotos = document.getElementById('issueDetailPhotos');
+            const issueDetailHistory = document.getElementById('issueDetailHistory');
+            const issueDetailNotifications = document.getElementById('issueDetailNotifications');
+            const issueDetailPlanBlock = document.getElementById('issueDetailPlanBlock');
+            const issueDetailPlanName = document.getElementById('issueDetailPlanName');
+            const issueDetailPlanCanvas = document.getElementById('issueDetailPlanCanvas');
+            const issueDetailPlanMarker = document.getElementById('issueDetailPlanMarker');
+            const issueDetailStatusSelect = document.getElementById('issueDetailStatusSelect');
+            const issueDetailPrioritySelect = document.getElementById('issueDetailPrioritySelect');
+            const issueDetailResponsiblePartySelect = document.getElementById('issueDetailResponsiblePartySelect');
+            const issueDetailResponsibleNameInput = document.getElementById('issueDetailResponsibleNameInput');
+            const issueDetailResponsibleEmailInput = document.getElementById('issueDetailResponsibleEmailInput');
+            const issueDetailSendButton = document.getElementById('issueDetailSendButton');
+            const issuePhotosTabButton = document.getElementById('issuePhotosTabButton');
+            const issueHistoryTabButton = document.getElementById('issueHistoryTabButton');
+            const issueNotificationTabButton = document.getElementById('issueNotificationTabButton');
+            const openSendModalButton = document.getElementById('openSendModal');
+            const sendIssuesScope = document.getElementById('sendIssuesScope');
+            const sendUnitGroup = document.getElementById('sendUnitGroup');
+            const sendUnitId = document.getElementById('sendUnitId');
+            const sendResponsibleScope = document.getElementById('sendResponsibleScope');
+            const sendOptionalComment = document.getElementById('sendOptionalComment');
+            const sendSummaryList = document.getElementById('sendSummaryList');
+            const sendSummaryTotal = document.getElementById('sendSummaryTotal');
+            const confirmSendIssuesButton = document.getElementById('confirmSendIssuesButton');
+            const confirmSendIssuesText = document.getElementById('confirmSendIssuesText');
+            const openPrintModalButton = document.getElementById('openPrintModal');
+            const printIssuesScope = document.getElementById('printIssuesScope');
+            const printUnitGroup = document.getElementById('printUnitGroup');
+            const printUnitId = document.getElementById('printUnitId');
+            const printResponsibleScope = document.getElementById('printResponsibleScope');
+            const printSummaryList = document.getElementById('printSummaryList');
+            const printSummaryTotal = document.getElementById('printSummaryTotal');
+            const exportPdfButton = document.getElementById('exportPdfButton');
+            const directPrintButton = document.getElementById('directPrintButton');
+            const directPrintText = document.getElementById('directPrintText');
 
             let dt = typeof DataTransfer !== 'undefined' ? new DataTransfer() : null;
 
@@ -577,7 +609,7 @@
             let planRenderRequestId = 0;
             const pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
             let isPickMode = false;
-             const contractorResponsiblePartyType = @((int)ConstructionIssueResponsiblePartyType.Contractor);
+            const contractorResponsiblePartyType = @((int)ConstructionIssueResponsiblePartyType.Contractor);
             let currentDetailIssueId = null;
             const detailInlineState = {
                 isFieldSyncing: false
@@ -1513,22 +1545,450 @@
                     drawMarkerFromNormalized(planXNormalizedInput.value, planYNormalizedInput.value);
                 }
             });
+        const sendState = {
+                      preview: null,
+                      selectedIssueIds: []
+                  };
 
-          document.getElementById('openCreateIssueModal').addEventListener('click', () => { resetForm(); openBootstrapModal(issueModal, issueModalEl); });
+                  function getSelectedIssueIds(){
+                      return Array.from(document.querySelectorAll('.issue-check:checked')).map(x => Number(x.value)).filter(Number.isFinite);
+                  }
 
-            document.querySelectorAll('.open-edit-issue').forEach(btn => btn.addEventListener('click', async (event) => {
-                event.preventDefault();
+                  function ensureSendScopeOptions(selectedCount){
+                      if (!sendIssuesScope) return;
+                      const selectedOption = sendIssuesScope.querySelector('option[value="selected"]');
+                      if (selectedCount > 0) {
+                          if (!selectedOption) {
+                              const opt = document.createElement('option');
+                              opt.value = 'selected';
+                              sendIssuesScope.appendChild(opt);
+                          }
+                          const current = sendIssuesScope.querySelector('option[value="selected"]');
+                          current.textContent = `Geselecteerde punten (${selectedCount})`;
+                      } else if (selectedOption) {
+                          selectedOption.remove();
+                          if (sendIssuesScope.value === 'selected') {
+                              sendIssuesScope.value = 'all';
+                          }
+                      }
+                  }
+
+                  function renderSendPreview(data){
+                      sendState.preview = data || { units: [], responsibles: [], totalIssueCount: 0, totalResponsibleCount: 0 };
+
+                      if (sendUnitId) {
+                          const currentUnit = sendUnitId.value;
+                          sendUnitId.innerHTML = '<option value="">Kies eenheid...</option>';
+                          (sendState.preview.units || []).forEach(unit => {
+                              const opt = document.createElement('option');
+                              opt.value = String(unit.id);
+                              opt.textContent = `${unit.name} (${unit.issueCount})`;
+                              sendUnitId.appendChild(opt);
+                          });
+                          if (currentUnit && Array.from(sendUnitId.options).some(x => x.value === currentUnit)) {
+                              sendUnitId.value = currentUnit;
+                          }
+                      }
+
+                      if (sendResponsibleScope) {
+                          const currentResponsible = sendResponsibleScope.value;
+                          sendResponsibleScope.innerHTML = '<option value="">Alle verantwoordelijken</option>';
+                          (sendState.preview.responsibles || []).forEach(item => {
+                              const opt = document.createElement('option');
+                              opt.value = item.key;
+                              opt.textContent = `${item.name} (${item.issueCount})`;
+                              sendResponsibleScope.appendChild(opt);
+                          });
+                          if (currentResponsible && Array.from(sendResponsibleScope.options).some(x => x.value === currentResponsible)) {
+                              sendResponsibleScope.value = currentResponsible;
+                          }
+                      }
+
+                      const selectedResponsibleKey = sendResponsibleScope?.value || '';
+                      const summaryRows = selectedResponsibleKey
+                          ? (sendState.preview.responsibles || []).filter(x => x.key === selectedResponsibleKey)
+                          : (sendState.preview.responsibles || []);
+
+                      if (sendSummaryList) {
+                          if (!summaryRows.length) {
+                              sendSummaryList.innerHTML = '<div class="text-muted">Geen verantwoordelijken met geldig e-mailadres voor deze selectie.</div>';
+                          } else {
+                              sendSummaryList.innerHTML = summaryRows.map(item => `
+                                  <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                                      <div>
+                                          <div class="fw-semibold">${item.name || '-'}</div>
+                                          <div class="text-muted small">${item.email || '-'}</div>
+                                      </div>
+                                      <span class="badge badge-default text-dark">${item.issueCount} punt(en)</span>
+                                  </div>`).join('');
+                          }
+                      }
+
+                      const totalIssues = summaryRows.reduce((acc, row) => acc + Number(row.issueCount || 0), 0);
+                      if (sendSummaryTotal) {
+                          sendSummaryTotal.innerHTML = `<i class="bx bx-check-circle me-1 text-success"></i><b>${totalIssues}</b> punt(en) naar <b>${summaryRows.length}</b> verantwoordelijke(n)`;
+                      }
+                      if (confirmSendIssuesText) {
+                          confirmSendIssuesText.textContent = `Verzenden (${totalIssues})`;
+                      }
+                      if (confirmSendIssuesButton) {
+                          confirmSendIssuesButton.disabled = totalIssues <= 0;
+                      }
+                  }
+
+                  async function refreshSendPreview(){
+                      const token = getRequestVerificationToken();
+                      if (!token) return;
+
+                      const scope = sendIssuesScope?.value || 'all';
+                      if (sendUnitGroup) {
+                          sendUnitGroup.classList.toggle('d-none', scope !== 'unit');
+                      }
+
+                      const body = new URLSearchParams();
+                      body.append('__RequestVerificationToken', token);
+                      body.append('Scope', scope);
+                      if (scope === 'unit' && sendUnitId?.value) {
+                          body.append('UnitId', sendUnitId.value);
+                      }
+                      sendState.selectedIssueIds.forEach(id => body.append('IssueIds', String(id)));
+
+                      const response = await fetch(`/Projects/${projectId}/Issues/SendPreview`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                          },
+                          body: body.toString()
+                      });
+
+                      if (!response.ok) {
+                          return;
+                      }
+
+                      const data = await response.json();
+                      renderSendPreview(data);
+                  }
+
+                  function getIssueIdsToSend(){
+                      const selectedResponsibleKey = sendResponsibleScope?.value || '';
+                      const rows = selectedResponsibleKey
+                          ? (sendState.preview?.responsibles || []).filter(x => x.key === selectedResponsibleKey)
+                          : (sendState.preview?.responsibles || []);
+                      return Array.from(new Set(rows.flatMap(x => x.issueIds || []).map(Number).filter(Number.isFinite)));
+                  }
+
+                  async function sendIssuesFromModal(){
+                      const issueIds = getIssueIdsToSend();
+                      if (!issueIds.length) {
+                          alert('Geen geldige punten om te verzenden.');
+                          return;
+                      }
+
+                      const token = getRequestVerificationToken();
+                      if (!token) return;
+
+                      confirmSendIssuesButton.disabled = true;
+                      const body = new URLSearchParams();
+                      body.append('__RequestVerificationToken', token);
+                      body.append('GroupByResponsible', 'true');
+                      body.append('comment', sendOptionalComment?.value || '');
+                      issueIds.forEach(id => body.append('IssueIds', String(id)));
+
+                      try {
+                          const response = await fetch(`/Projects/${projectId}/Issues/SendSelected`, {
+                              method: 'POST',
+                              headers: {
+                                  'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                              },
+                              body: body.toString()
+                          });
+
+                          if (!response.ok) {
+                              alert('Verzenden van punten is mislukt.');
+                              return;
+                          }
+
+                          window.location.reload();
+                      } finally {
+                          confirmSendIssuesButton.disabled = false;
+                      }
+                  }
+
+           document.getElementById('openCreateIssueModal').addEventListener('click', () => { resetForm(); openBootstrapModal(issueModal, issueModalEl); });
+
+            openSendModalButton?.addEventListener('click', async () => {
+                sendState.selectedIssueIds = getSelectedIssueIds();
+                ensureSendScopeOptions(sendState.selectedIssueIds.length);
+                if (sendIssuesScope) {
+                    sendIssuesScope.value = sendState.selectedIssueIds.length > 0 ? 'selected' : 'all';
+                }
+                if (sendUnitGroup) {
+                    sendUnitGroup.classList.toggle('d-none', sendIssuesScope?.value !== 'unit');
+                }
+                await refreshSendPreview();
+                openBootstrapModal(issueSendModal, issueSendModalEl);
+            });
+
+            sendIssuesScope?.addEventListener('change', async () => {
+                if (sendIssuesScope.value === 'selected' && !sendState.selectedIssueIds.length) {
+                    sendIssuesScope.value = 'all';
+                }
+                await refreshSendPreview();
+            });
+            sendUnitId?.addEventListener('change', refreshSendPreview);
+            sendResponsibleScope?.addEventListener('change', () => renderSendPreview(sendState.preview));
+            confirmSendIssuesButton?.addEventListener('click', sendIssuesFromModal);
+
+            const printState = {
+                preview: null,
+                selectedIssueIds: []
+            };
+
+            function ensurePrintScopeOptions(selectedCount){
+                if (!printIssuesScope) return;
+                const selectedOption = printIssuesScope.querySelector('option[value="selected"]');
+                if (selectedCount > 0) {
+                    if (!selectedOption) {
+                        const opt = document.createElement('option');
+                        opt.value = 'selected';
+                        printIssuesScope.appendChild(opt);
+                    }
+                    const current = printIssuesScope.querySelector('option[value="selected"]');
+                    current.textContent = `Geselecteerde punten (${selectedCount})`;
+                } else if (selectedOption) {
+                    selectedOption.remove();
+                    if (printIssuesScope.value === 'selected') {
+                        printIssuesScope.value = 'all';
+                    }
+                }
+            }
+
+            function renderPrintPreview(data){
+                printState.preview = data || { units: [], responsibles: [], totalIssueCount: 0, totalResponsibleCount: 0 };
+
+                if (printUnitId) {
+                    const currentUnit = printUnitId.value;
+                    printUnitId.innerHTML = '<option value="">Kies eenheid...</option>';
+                    (printState.preview.units || []).forEach(unit => {
+                        const opt = document.createElement('option');
+                        opt.value = String(unit.id);
+                        opt.textContent = `${unit.name} (${unit.issueCount})`;
+                        printUnitId.appendChild(opt);
+                    });
+                    if (currentUnit && Array.from(printUnitId.options).some(x => x.value === currentUnit)) {
+                        printUnitId.value = currentUnit;
+                    }
+                }
+
+                if (printResponsibleScope) {
+                    const currentResponsible = printResponsibleScope.value;
+                    printResponsibleScope.innerHTML = '<option value="">Alle verantwoordelijken</option>';
+                    (printState.preview.responsibles || []).forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.key;
+                        opt.textContent = `${item.name} (${item.issueCount})`;
+                        printResponsibleScope.appendChild(opt);
+                    });
+                    if (currentResponsible && Array.from(printResponsibleScope.options).some(x => x.value === currentResponsible)) {
+                        printResponsibleScope.value = currentResponsible;
+                    }
+                }
+
+                const selectedResponsibleKey = printResponsibleScope?.value || '';
+                const summaryRows = selectedResponsibleKey
+                    ? (printState.preview.responsibles || []).filter(x => x.key === selectedResponsibleKey)
+                    : (printState.preview.responsibles || []);
+
+                if (printSummaryList) {
+                    if (!summaryRows.length) {
+                        printSummaryList.innerHTML = '<div class="text-muted">Geen verantwoordelijken voor deze selectie.</div>';
+                    } else {
+                        printSummaryList.innerHTML = summaryRows.map(item => `
+                            <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                                <div>
+                                    <div class="fw-semibold">${item.name || '-'}</div>
+                                    <div class="text-muted small">${item.email || '-'}</div>
+                                </div>
+                                <span class="badge rounded-pill bg-light text-dark">${item.issueCount} punt(en)</span>
+                            </div>`).join('');
+                    }
+                }
+
+                const totalIssues = summaryRows.reduce((acc, row) => acc + Number(row.issueCount || 0), 0);
+                if (printSummaryTotal) {
+                    printSummaryTotal.innerHTML = `<i class="bx bx-check-circle me-1"></i>${totalIssues} punt(en) naar ${summaryRows.length} verantwoordelijke(n)`;
+                }
+                if (directPrintText) {
+                    directPrintText.textContent = `Direct afdrukken (${totalIssues})`;
+                }
+                if (directPrintButton) {
+                    directPrintButton.disabled = totalIssues <= 0;
+                }
+                if (exportPdfButton) {
+                    exportPdfButton.disabled = totalIssues <= 0;
+                }
+            }
+
+            async function refreshPrintPreview(){
+                const token = getRequestVerificationToken();
+                if (!token) return;
+
+                const scope = printIssuesScope?.value || 'all';
+                if (printUnitGroup) {
+                    printUnitGroup.classList.toggle('d-none', scope !== 'unit');
+                }
+
+                const body = new URLSearchParams();
+                body.append('__RequestVerificationToken', token);
+                body.append('Scope', scope);
+                if (scope === 'unit' && printUnitId?.value) {
+                    body.append('UnitId', printUnitId.value);
+                }
+                printState.selectedIssueIds.forEach(id => body.append('IssueIds', String(id)));
+
+                const response = await fetch(`/Projects/${projectId}/Issues/SendPreview`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: body.toString()
+                });
+
+                if (!response.ok) {
+                    return;
+                }
+
+                renderPrintPreview(await response.json());
+            }
+
+            function getIssueIdsForPrint(){
+                const selectedResponsibleKey = printResponsibleScope?.value || '';
+                const rows = selectedResponsibleKey
+                    ? (printState.preview?.responsibles || []).filter(x => x.key === selectedResponsibleKey)
+                    : (printState.preview?.responsibles || []);
+                return Array.from(new Set(rows.flatMap(x => x.issueIds || []).map(Number).filter(Number.isFinite)));
+            }
+
+            async function requestPdfBlob(issueIds){
+                const token = getRequestVerificationToken();
+                if (!token) return null;
+
+                const body = new URLSearchParams();
+                body.append('__RequestVerificationToken', token);
+                issueIds.forEach(id => body.append('issueIds', String(id)));
+
+                const response = await fetch(`/Projects/${projectId}/Issues/DownloadPdf`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: body.toString()
+                });
+
+                if (!response.ok) {
+                    return null;
+                }
+
+                return await response.blob();
+            }
+
+            async function exportIssuesPdf(){
+                const issueIds = getIssueIdsForPrint();
+                if (!issueIds.length) {
+                    alert('Geen punten geselecteerd om af te drukken.');
+                    return;
+                }
+
+                exportPdfButton.disabled = true;
+                try {
+                    const blob = await requestPdfBlob(issueIds);
+                    if (!blob) {
+                        alert('Exporteren van PDF is mislukt.');
+                        return;
+                    }
+
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `puntenlijst_${projectId}_${new Date().toISOString().slice(0,10)}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                } finally {
+                    exportPdfButton.disabled = false;
+                }
+            }
+
+            async function directPrintIssuesPdf(){
+                const issueIds = getIssueIdsForPrint();
+                if (!issueIds.length) {
+                    alert('Geen punten geselecteerd om af te drukken.');
+                    return;
+                }
+
+                directPrintButton.disabled = true;
+                try {
+                    const blob = await requestPdfBlob(issueIds);
+                    if (!blob) {
+                        alert('Afdrukken is mislukt.');
+                        return;
+                    }
+
+                    const url = URL.createObjectURL(blob);
+                    const printWindow = window.open(url, '_blank');
+                    if (!printWindow) {
+                        alert('Kon geen nieuw venster openen voor afdrukken.');
+                        URL.revokeObjectURL(url);
+                        return;
+                    }
+
+                    const revoke = () => setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    printWindow.addEventListener('load', () => {
+                        printWindow.focus();
+                        printWindow.print();
+                        revoke();
+                    }, { once: true });
+                } finally {
+                    directPrintButton.disabled = false;
+                }
+            }
+
+            openPrintModalButton?.addEventListener('click', async () => {
+                printState.selectedIssueIds = getSelectedIssueIds();
+                ensurePrintScopeOptions(printState.selectedIssueIds.length);
+                if (printIssuesScope) {
+                    printIssuesScope.value = printState.selectedIssueIds.length > 0 ? 'selected' : 'all';
+                }
+                if (printUnitGroup) {
+                    printUnitGroup.classList.toggle('d-none', printIssuesScope?.value !== 'unit');
+                }
+                await refreshPrintPreview();
+                openBootstrapModal(issuePrintModal, issuePrintModalEl);
+            });
+
+            printIssuesScope?.addEventListener('change', async () => {
+                if (printIssuesScope.value === 'selected' && !printState.selectedIssueIds.length) {
+                    printIssuesScope.value = 'all';
+                }
+                await refreshPrintPreview();
+            });
+            printUnitId?.addEventListener('change', refreshPrintPreview);
+            printResponsibleScope?.addEventListener('change', () => renderPrintPreview(printState.preview));
+            exportPdfButton?.addEventListener('click', exportIssuesPdf);
+            directPrintButton?.addEventListener('click', directPrintIssuesPdf);
+
+            async function openIssueModalFromExistingIssue(issueId, duplicateMode = false){
                 resetForm();
-                const editIssueId = btn.dataset.id;
-                const response = await fetch(`/Projects/${projectId}/Issues/EditData/${editIssueId}`);
+                const response = await fetch(`/Projects/${projectId}/Issues/EditData/${issueId}`);
                 if(!response.ok) return;
+
                 const data = await response.json();
-                openBootstrapModal(issueModal, issueModalEl);
-                issueForm.action = `/Projects/${projectId}/Issues/Edit/${editIssueId}`;
-                titleEl.textContent = 'Punt bewerken';
-                submitEl.textContent = 'Punt opslaan';
+                const duplicateTitle = (data.title || '').trim();
+                const duplicateTitleSuffix = duplicateTitle ? `${duplicateTitle} (kopie)` : '(kopie)';
+
                 Object.entries({
-                    'Input.Title': data.title,
+                    'Input.Title': duplicateMode ? duplicateTitleSuffix : data.title,
                     'Input.Description': data.description,
                     'Input.LocationText': data.locationText,
                     'Input.CategoryId': data.categoryId,
@@ -1542,18 +2002,42 @@
                     'Input.ResponsibleOtherName': data.responsibleOtherName,
                     'Input.ResponsibleOtherEmail': data.responsibleOtherEmail,
                     'Input.DueDate': data.dueDate,
-                    'Input.PlanDocumentId': data.planDocumentId,
-                    'Input.PlanPageNumber': data.planPageNumber,
-                    'Input.PlanXNormalized': data.planXnormalized,
-                    'Input.PlanYNormalized': data.planYnormalized
+                    'Input.PlanDocumentId': duplicateMode ? '' : data.planDocumentId,
+                    'Input.PlanPageNumber': duplicateMode ? '' : data.planPageNumber,
+                    'Input.PlanXNormalized': duplicateMode ? '' : data.planXnormalized,
+                    'Input.PlanYNormalized': duplicateMode ? '' : data.planYnormalized
                 }).forEach(([name,val]) => {
                     const el = issueForm.querySelector(`[name="${name}"]`);
                     if(el) el.value = val ?? '';
                 });
-                await loadPlansForUnit(data.unitId, data.planDocumentId, data.planPageNumber);
+
+                await loadPlansForUnit(data.unitId, duplicateMode ? null : data.planDocumentId, duplicateMode ? null : data.planPageNumber);
                 await syncResponsibleFromSelection();
-                (data.media || []).forEach(m => addPreview(m.url, m.id));
+
+                if (duplicateMode) {
+                    issueForm.action = `/Projects/${projectId}/Issues/Create`;
+                    titleEl.textContent = 'Punt dupliceren';
+                    submitEl.textContent = 'Punt aanmaken';
+                } else {
+                    issueForm.action = `/Projects/${projectId}/Issues/Edit/${issueId}`;
+                    titleEl.textContent = 'Punt bewerken';
+                    submitEl.textContent = 'Punt opslaan';
+                    (data.media || []).forEach(m => addPreview(m.url, m.id));
+                }
+
+                openBootstrapModal(issueModal, issueModalEl);
+            }
+
+            document.querySelectorAll('.open-edit-issue').forEach(btn => btn.addEventListener('click', async (event) => {
+                event.preventDefault();
+                await openIssueModalFromExistingIssue(btn.dataset.id, false);
             }));
+
+            document.querySelectorAll('.open-duplicate-issue').forEach(btn => btn.addEventListener('click', async (event) => {
+                event.preventDefault();
+                await openIssueModalFromExistingIssue(btn.dataset.id, true);
+            }));
+
 
         checkAllInput?.addEventListener('change', (e) => {
                 document.querySelectorAll('.issue-check').forEach((checkbox) => {
