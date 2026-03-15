@@ -39,6 +39,7 @@ public class ProjectsIssuesController : BaseController
     [HttpGet("~/Projects/Issues")]
     public IActionResult MenuRedirect()
     {
+
         AddMessage("info", "Selecteer eerst een project om punten te beheren.", "Info");
         return RedirectToAction("Index", "Projecten");
     }
@@ -47,6 +48,7 @@ public class ProjectsIssuesController : BaseController
     [Breadcrumb("Punten")]
     public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters)
     {
+        ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
         var formVm = await BuildVm(projectId);
         var vm = new ConstructionIssueIndexVm
         {
@@ -376,7 +378,7 @@ public class ProjectsIssuesController : BaseController
         {
             if (!selectedIds.Any())
             {
-                return Json(new { units = Array.Empty<object>(), responsibles = Array.Empty<object>(), totalIssueCount = 0, totalResponsibleCount = 0 });
+                return Json(new { units = Array.Empty<object>(), responsibles = Array.Empty<object>(), issueIds = Array.Empty<int>(), totalIssueCount = 0, totalResponsibleCount = 0 });
             }
 
             query = query.Where(x => selectedIds.Contains(x.Id));
@@ -432,7 +434,7 @@ public class ProjectsIssuesController : BaseController
 
         if (scope == "unit" && !request.UnitId.HasValue)
         {
-            return Json(new { units, responsibles = Array.Empty<object>(), totalIssueCount = 0, totalResponsibleCount = 0 });
+            return Json(new { units, responsibles = Array.Empty<object>(), issueIds = Array.Empty<int>(), totalIssueCount = 0, totalResponsibleCount = 0 });
         }
 
         var responsibles = issues
@@ -482,10 +484,12 @@ public class ProjectsIssuesController : BaseController
                    .ToList();
 
         var totalIssueCount = issues.Select(x => x.Id).Distinct().Count();
+        var issueIds = issues.Select(x => x.Id).Distinct().ToList();
         return Json(new
         {
             units,
             responsibles,
+            issueIds,
             totalIssueCount,
             totalResponsibleCount = responsibles.Count
         });

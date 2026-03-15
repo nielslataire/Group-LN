@@ -174,10 +174,12 @@ public class ConstructionIssueService : IConstructionIssueService
         var issue = await _db.ConstructionIssue.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == issueId);
         if (issue == null) return false;
 
+        var reportItems = await _db.ConstructionIssueReportItem.Where(x => x.IssueId == issueId).ToListAsync();
         var notifications = await _db.ConstructionIssueNotification.Where(x => x.IssueId == issueId).ToListAsync();
         var media = await _db.ConstructionIssueMedia.Where(x => x.IssueId == issueId).ToListAsync();
         var history = await _db.ConstructionIssueHistory.Where(x => x.IssueId == issueId).ToListAsync();
 
+        if (reportItems.Count > 0) _db.ConstructionIssueReportItem.RemoveRange(reportItems);
         if (notifications.Count > 0) _db.ConstructionIssueNotification.RemoveRange(notifications);
         if (media.Count > 0) _db.ConstructionIssueMedia.RemoveRange(media);
         if (history.Count > 0) _db.ConstructionIssueHistory.RemoveRange(history);

@@ -135,7 +135,6 @@
             gap: 8px;
         }
 
-
     .issues-mobile-header,
     .issues-mobile-checkall,
     .issues-mobile-cards,
@@ -147,18 +146,52 @@
     }
 
     @@media (min-width: 768px) {
+        .project-issues-mobile-tab-actions,
+        .issues-mobile-header,
+        .issues-mobile-checkall,
+        .issues-mobile-cards,
+        .issue-detail-mobile-actions {
+            display: none !important;
+        }
+
+        .issue-table-block {
+            display: block !important;
+        }
+
+        .issue-table td.actions {
+            white-space: nowrap;
+        }
+
+        .issue-table .actions .open-detail-issue,
+        .issue-table .actions .open-edit-issue,
         .issue-table .actions .open-duplicate-issue,
         .issue-table .actions .deleteIssue {
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
+            visibility: visible !important;
+            opacity: 1 !important;
         }
     }
 
     @@media (max-width: 767.98px) {
+        .project-issues-heading-row {
+            padding-top: .25rem !important;
+        }
+
+        .project-issues-heading-col {
+            margin-top: .25rem !important;
+            margin-bottom: .5rem !important;
+        }
+
+        .project-issues-subtitle {
+            margin-bottom: .5rem !important;
+        }
+
         .project-issues-header-actions {
             display: none;
         }
+
 
         .project-issues-title-row {
             display: flex;
@@ -364,15 +397,15 @@
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", projectId)
         <div class="inner-body">
-            <div class="row justify-content-center justify-content-sm-between pt-1 pe-0">
-                <div class="col-sm-auto mb-2 mb-sm-0 mt-1 mt-sm-0">
+            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0 project-issues-heading-row">
+                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0 project-issues-heading-col">
                     <div class="project-issues-title-row">
                         <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })" class="project-issues-back-link" aria-label="Terug naar project">
                             <i class="bx bx-chevron-left"></i>
                         </a>
                         <h1 class="font-weight-bold mb-0 mt-0">Punten</h1>
                     </div>
-                    <h5 class="mb-2 mt-0">Overzicht van projectissues</h5>
+                    <h5 class="mb-4 mt-0 project-issues-subtitle">Overzicht van projectissues</h5>
                 </div>
                 <div class="col-sm-auto px-0 project-issues-header-actions">
                     <div class="btn-group" role="group" aria-label="Project acties">
@@ -725,13 +758,16 @@
                                 {
                                     var responsibleDisplay = Model.Form.ResponsibleContractors.FirstOrDefault(c => c.ID == i.ResponsiblePartyId)?.Display;
                                     var mobileStatusDisplay = ((ConstructionIssueStatus)i.Status).GetDisplayName();
+                                    var mobileRoomDisplay = string.IsNullOrWhiteSpace(i.RoomOrZone) ? null : i.RoomOrZone;
+                                    var mobileLocationDisplay = string.IsNullOrWhiteSpace(i.LocationText) ? null : i.LocationText;
+                                    var mobileDeadlineDisplay = i.DueDate?.ToString("dd/MM/yyyy");
                                     if (i.Status == (int)ConstructionIssueStatus.WaitingInspection)
                                     {
                                         mobileStatusDisplay = "Controle";
                                     }
                                     if (string.IsNullOrWhiteSpace(responsibleDisplay))
                                     {
-                                        responsibleDisplay = string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? "-" : i.ResponsibleOtherName;
+                                        responsibleDisplay = string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? null : i.ResponsibleOtherName;
                                     }
 
                                     <article class="issue-item-card" data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
@@ -746,10 +782,26 @@
                                                     <div class="issue-item-description">@(string.IsNullOrWhiteSpace(i.Description) ? "-" : i.Description)</div>
                                                 </a>
                                                 <div class="issue-item-meta">
-                                                    <span class="badge rounded-pill">@(string.IsNullOrWhiteSpace(i.LocationText) ? "-" : i.LocationText)</span>
-                                                    <span class="badge rounded-pill">@mobileStatusDisplay</span>
-                                                    <span class="badge rounded-pill">@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</span>
-                                                    <span class="badge rounded-pill">@responsibleDisplay</span>
+                                                    @if (!string.IsNullOrWhiteSpace(mobileRoomDisplay))
+                                                    {
+                                                        <span class="badge rounded-pill">@mobileRoomDisplay</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(mobileLocationDisplay))
+                                                    {
+                                                        <span class="badge rounded-pill">@mobileLocationDisplay</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(mobileStatusDisplay))
+                                                    {
+                                                        <span class="badge rounded-pill">@mobileStatusDisplay</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(mobileDeadlineDisplay))
+                                                    {
+                                                        <span class="badge rounded-pill">@mobileDeadlineDisplay</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(responsibleDisplay))
+                                                    {
+                                                        <span class="badge rounded-pill">@responsibleDisplay</span>
+                                                    }
                                                 </div>
                                             </div>
                                         </div>
@@ -932,6 +984,29 @@
                         .map(x => Number(x.value))
                         .filter(Number.isFinite)
                 ));
+            }
+
+            function isElementVisible(el){
+                if (!el) return false;
+                if (el.closest('.d-none')) return false;
+                const style = window.getComputedStyle(el);
+                return style.display !== 'none' && style.visibility !== 'hidden';
+            }
+
+            function getSelectableIssueCheckboxes(){
+                return Array.from(document.querySelectorAll('.issue-check')).filter((checkbox) => {
+                    const row = checkbox.closest('tr');
+                    if (row) {
+                        return isElementVisible(row);
+                    }
+
+                    const card = checkbox.closest('.issue-item-card');
+                    if (card) {
+                        return isElementVisible(card);
+                    }
+
+                    return isElementVisible(checkbox);
+                });
             }
 
             function syncHidden(){
@@ -2047,167 +2122,171 @@
                   }
 
         function openCreateIssueModal(){
-                 resetForm();
-                 openBootstrapModal(issueModal, issueModalEl);
-             }
+                  resetForm();
+                  openBootstrapModal(issueModal, issueModalEl);
+              }
 
-             document.getElementById('openCreateIssueModal')?.addEventListener('click', openCreateIssueModal);
-             mobileCreateIssueButton?.addEventListener('click', openCreateIssueModal);
-             mobileExportPdfAction?.addEventListener('click', () => openPrintModalButton?.click());
-             mobileSendIssuesAction?.addEventListener('click', () => openSendModalButton?.click());
+              document.getElementById('openCreateIssueModal')?.addEventListener('click', openCreateIssueModal);
+              mobileCreateIssueButton?.addEventListener('click', openCreateIssueModal);
+              mobileExportPdfAction?.addEventListener('click', () => openPrintModalButton?.click());
+              mobileSendIssuesAction?.addEventListener('click', () => openSendModalButton?.click());
 
-            openSendModalButton?.addEventListener('click', async () => {
-                sendState.selectedIssueIds = getSelectedIssueIds();
-                ensureSendScopeOptions(sendState.selectedIssueIds.length);
-                if (sendIssuesScope) {
-                    sendIssuesScope.value = sendState.selectedIssueIds.length > 0 ? 'selected' : 'all';
-                }
-                if (sendUnitGroup) {
-                    sendUnitGroup.classList.toggle('d-none', sendIssuesScope?.value !== 'unit');
-                }
-                await refreshSendPreview();
-                openBootstrapModal(issueSendModal, issueSendModalEl);
-            });
+              openSendModalButton?.addEventListener('click', async () => {
+                  sendState.selectedIssueIds = getSelectedIssueIds();
+                  ensureSendScopeOptions(sendState.selectedIssueIds.length);
+                  if (sendIssuesScope) {
+                      sendIssuesScope.value = sendState.selectedIssueIds.length > 0 ? 'selected' : 'all';
+                  }
+                  if (sendUnitGroup) {
+                      sendUnitGroup.classList.toggle('d-none', sendIssuesScope?.value !== 'unit');
+                  }
+                  await refreshSendPreview();
+                  openBootstrapModal(issueSendModal, issueSendModalEl);
+              });
 
-            sendIssuesScope?.addEventListener('change', async () => {
-                if (sendIssuesScope.value === 'selected' && !sendState.selectedIssueIds.length) {
-                    sendIssuesScope.value = 'all';
-                }
-                await refreshSendPreview();
-            });
-            sendUnitId?.addEventListener('change', refreshSendPreview);
-            sendResponsibleScope?.addEventListener('change', () => renderSendPreview(sendState.preview));
-            confirmSendIssuesButton?.addEventListener('click', sendIssuesFromModal);
+              sendIssuesScope?.addEventListener('change', async () => {
+                  if (sendIssuesScope.value === 'selected' && !sendState.selectedIssueIds.length) {
+                      sendIssuesScope.value = 'all';
+                  }
+                  await refreshSendPreview();
+              });
+              sendUnitId?.addEventListener('change', refreshSendPreview);
+              sendResponsibleScope?.addEventListener('change', () => renderSendPreview(sendState.preview));
+              confirmSendIssuesButton?.addEventListener('click', sendIssuesFromModal);
 
-            const printState = {
-                preview: null,
-                selectedIssueIds: []
-            };
+              const printState = {
+                  preview: null,
+                  selectedIssueIds: []
+              };
 
-            function ensurePrintScopeOptions(selectedCount){
-                if (!printIssuesScope) return;
-                const selectedOption = printIssuesScope.querySelector('option[value="selected"]');
-                if (selectedCount > 0) {
-                    if (!selectedOption) {
-                        const opt = document.createElement('option');
-                        opt.value = 'selected';
-                        printIssuesScope.appendChild(opt);
-                    }
-                    const current = printIssuesScope.querySelector('option[value="selected"]');
-                    current.textContent = `Geselecteerde punten (${selectedCount})`;
-                } else if (selectedOption) {
-                    selectedOption.remove();
-                    if (printIssuesScope.value === 'selected') {
-                        printIssuesScope.value = 'all';
-                    }
-                }
-            }
+              function ensurePrintScopeOptions(selectedCount){
+                  if (!printIssuesScope) return;
+                  const selectedOption = printIssuesScope.querySelector('option[value="selected"]');
+                  if (selectedCount > 0) {
+                      if (!selectedOption) {
+                          const opt = document.createElement('option');
+                          opt.value = 'selected';
+                          printIssuesScope.appendChild(opt);
+                      }
+                      const current = printIssuesScope.querySelector('option[value="selected"]');
+                      current.textContent = `Geselecteerde punten (${selectedCount})`;
+                  } else if (selectedOption) {
+                      selectedOption.remove();
+                      if (printIssuesScope.value === 'selected') {
+                          printIssuesScope.value = 'all';
+                      }
+                  }
+              }
 
-            function renderPrintPreview(data){
-                printState.preview = data || { units: [], responsibles: [], totalIssueCount: 0, totalResponsibleCount: 0 };
+              function renderPrintPreview(data){
+                  printState.preview = data || { units: [], responsibles: [], issueIds: [], totalIssueCount: 0, totalResponsibleCount: 0 };
 
-                if (printUnitId) {
-                    const currentUnit = printUnitId.value;
-                    printUnitId.innerHTML = '<option value="">Kies eenheid...</option>';
-                    (printState.preview.units || []).forEach(unit => {
-                        const opt = document.createElement('option');
-                        opt.value = String(unit.id);
-                        opt.textContent = `${unit.name} (${unit.issueCount})`;
-                        printUnitId.appendChild(opt);
-                    });
-                    if (currentUnit && Array.from(printUnitId.options).some(x => x.value === currentUnit)) {
-                        printUnitId.value = currentUnit;
-                    }
-                }
+                  if (printUnitId) {
+                      const currentUnit = printUnitId.value;
+                      printUnitId.innerHTML = '<option value="">Kies eenheid...</option>';
+                      (printState.preview.units || []).forEach(unit => {
+                          const opt = document.createElement('option');
+                          opt.value = String(unit.id);
+                          opt.textContent = `${unit.name} (${unit.issueCount})`;
+                          printUnitId.appendChild(opt);
+                      });
+                      if (currentUnit && Array.from(printUnitId.options).some(x => x.value === currentUnit)) {
+                          printUnitId.value = currentUnit;
+                      }
+                  }
 
-                if (printResponsibleScope) {
-                    const currentResponsible = printResponsibleScope.value;
-                    printResponsibleScope.innerHTML = '<option value="">Alle verantwoordelijken</option>';
-                    (printState.preview.responsibles || []).forEach(item => {
-                        const opt = document.createElement('option');
-                        opt.value = item.key;
-                        opt.textContent = `${item.name} (${item.issueCount})`;
-                        printResponsibleScope.appendChild(opt);
-                    });
-                    if (currentResponsible && Array.from(printResponsibleScope.options).some(x => x.value === currentResponsible)) {
-                        printResponsibleScope.value = currentResponsible;
-                    }
-                }
+                  if (printResponsibleScope) {
+                      const currentResponsible = printResponsibleScope.value;
+                      printResponsibleScope.innerHTML = '<option value="">Alle verantwoordelijken</option>';
+                      (printState.preview.responsibles || []).forEach(item => {
+                          const opt = document.createElement('option');
+                          opt.value = item.key;
+                          opt.textContent = `${item.name} (${item.issueCount})`;
+                          printResponsibleScope.appendChild(opt);
+                      });
+                      if (currentResponsible && Array.from(printResponsibleScope.options).some(x => x.value === currentResponsible)) {
+                          printResponsibleScope.value = currentResponsible;
+                      }
+                  }
 
-                const selectedResponsibleKey = printResponsibleScope?.value || '';
-                const summaryRows = selectedResponsibleKey
-                    ? (printState.preview.responsibles || []).filter(x => x.key === selectedResponsibleKey)
-                    : (printState.preview.responsibles || []);
+                  const issueIdsForPrint = getIssueIdsForPrint();
+                  const selectedResponsibleKey = printResponsibleScope?.value || '';
+                  const summaryRows = selectedResponsibleKey
+                      ? (printState.preview.responsibles || []).filter(x => x.key === selectedResponsibleKey)
+                      : (printState.preview.responsibles || []);
 
-                if (printSummaryList) {
-                    if (!summaryRows.length) {
-                        printSummaryList.innerHTML = '<div class="text-muted">Geen verantwoordelijken voor deze selectie.</div>';
-                    } else {
-                        printSummaryList.innerHTML = summaryRows.map(item => `
-                            <div class="d-flex justify-content-between align-items-start border-bottom py-2">
-                                <div>
-                                    <div class="fw-semibold">${item.name || '-'}</div>
-                                    <div class="text-muted small">${item.email || '-'}</div>
-                                </div>
-                                <span class="badge rounded-pill bg-light text-dark">${item.issueCount} punt(en)</span>
-                            </div>`).join('');
-                    }
-                }
+                  if (printSummaryList) {
+                      if (!summaryRows.length) {
+                          printSummaryList.innerHTML = '<div class="text-muted">Geen verantwoordelijken voor deze selectie.</div>';
+                      } else {
+                          printSummaryList.innerHTML = summaryRows.map(item => `
+                              <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                                  <div>
+                                      <div class="fw-semibold">${item.name || '-'}</div>
+                                      <div class="text-muted small">${item.email || '-'}</div>
+                                  </div>
+                                  <span class="badge rounded-pill bg-light text-dark">${item.issueCount} punt(en)</span>
+                              </div>`).join('');
+                      }
+                  }
 
-                const totalIssues = summaryRows.reduce((acc, row) => acc + Number(row.issueCount || 0), 0);
-                if (printSummaryTotal) {
-                    printSummaryTotal.innerHTML = `<i class="bx bx-check-circle me-1"></i>${totalIssues} punt(en) naar ${summaryRows.length} verantwoordelijke(n)`;
-                }
-                if (directPrintText) {
-                    directPrintText.textContent = `Direct afdrukken (${totalIssues})`;
-                }
-                if (directPrintButton) {
-                    directPrintButton.disabled = totalIssues <= 0;
-                }
-                if (exportPdfButton) {
-                    exportPdfButton.disabled = totalIssues <= 0;
-                }
-            }
+                  const totalIssues = issueIdsForPrint.length;
+                  if (printSummaryTotal) {
+                      printSummaryTotal.innerHTML = `<i class="bx bx-check-circle me-1"></i>${totalIssues} punt(en) naar ${summaryRows.length} verantwoordelijke(n)`;
+                  }
+                  if (directPrintText) {
+                      directPrintText.textContent = `Direct afdrukken (${totalIssues})`;
+                  }
+                  if (directPrintButton) {
+                      directPrintButton.disabled = totalIssues <= 0;
+                  }
+                  if (exportPdfButton) {
+                      exportPdfButton.disabled = totalIssues <= 0;
+                  }
+              }
 
-            async function refreshPrintPreview(){
-                const token = getRequestVerificationToken();
-                if (!token) return;
+              async function refreshPrintPreview(){
+                  const token = getRequestVerificationToken();
+                  if (!token) return;
 
-                const scope = printIssuesScope?.value || 'all';
-                if (printUnitGroup) {
-                    printUnitGroup.classList.toggle('d-none', scope !== 'unit');
-                }
+                  const scope = printIssuesScope?.value || 'all';
+                  if (printUnitGroup) {
+                      printUnitGroup.classList.toggle('d-none', scope !== 'unit');
+                  }
 
-                const body = new URLSearchParams();
-                body.append('__RequestVerificationToken', token);
-                body.append('Scope', scope);
-                if (scope === 'unit' && printUnitId?.value) {
-                    body.append('UnitId', printUnitId.value);
-                }
-                printState.selectedIssueIds.forEach(id => body.append('IssueIds', String(id)));
+                  const body = new URLSearchParams();
+                  body.append('__RequestVerificationToken', token);
+                  body.append('Scope', scope);
+                  if (scope === 'unit' && printUnitId?.value) {
+                      body.append('UnitId', printUnitId.value);
+                  }
+                  printState.selectedIssueIds.forEach(id => body.append('IssueIds', String(id)));
 
-                const response = await fetch(`/Projects/${projectId}/Issues/SendPreview`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                    },
-                    body: body.toString()
-                });
+                  const response = await fetch(`/Projects/${projectId}/Issues/SendPreview`, {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
+                      },
+                      body: body.toString()
+                  });
 
-                if (!response.ok) {
-                    return;
-                }
+                  if (!response.ok) {
+                      return;
+                  }
 
-                renderPrintPreview(await response.json());
-            }
+                  renderPrintPreview(await response.json());
+              }
 
-            function getIssueIdsForPrint(){
-                const selectedResponsibleKey = printResponsibleScope?.value || '';
-                const rows = selectedResponsibleKey
-                    ? (printState.preview?.responsibles || []).filter(x => x.key === selectedResponsibleKey)
-                    : (printState.preview?.responsibles || []);
-                return Array.from(new Set(rows.flatMap(x => x.issueIds || []).map(Number).filter(Number.isFinite)));
-            }
+              function getIssueIdsForPrint(){
+                  const selectedResponsibleKey = printResponsibleScope?.value || '';
+                  if (selectedResponsibleKey) {
+                      const rows = (printState.preview?.responsibles || []).filter(x => x.key === selectedResponsibleKey);
+                      return Array.from(new Set(rows.flatMap(x => x.issueIds || []).map(Number).filter(Number.isFinite)));
+                  }
+
+                  return Array.from(new Set((printState.preview?.issueIds || []).map(Number).filter(Number.isFinite)));
+              }
+
 
             async function requestPdfBlob(issueIds){
                 const token = getRequestVerificationToken();
@@ -2379,91 +2458,98 @@
             }));
 
 
-         function setAllIssueChecks(checked){
-                document.querySelectorAll('.issue-check').forEach((checkbox) => {
-                    checkbox.checked = checked;
-                });
-                if (checkAllInput) {
-                    checkAllInput.checked = checked;
-                    checkAllInput.indeterminate = false;
-                }
-                if (checkAllCardsInput) {
-                    checkAllCardsInput.checked = checked;
-                    checkAllCardsInput.indeterminate = false;
-                }
-                syncHidden();
-                updateFilterSelectionRow();
-            }
+        function setAllIssueChecks(checked){
+                  const selectableChecks = getSelectableIssueCheckboxes();
 
-            checkAllInput?.addEventListener('change', (e) => setAllIssueChecks(e.target.checked));
-            checkAllCardsInput?.addEventListener('change', (e) => setAllIssueChecks(e.target.checked));
-
-            document.querySelectorAll('.issue-check').forEach((checkbox) => {
-                checkbox.addEventListener('change', () => {
-                    document.querySelectorAll(`.issue-check[value="${checkbox.value}"]`).forEach((peer) => {
-                        if (peer !== checkbox) {
-                            peer.checked = checkbox.checked;
-                        }
-                    });
-                    const allChecks = Array.from(document.querySelectorAll('.issue-check'));
-                    const checkedChecks = allChecks.filter((item) => item.checked).length;
-                    const allChecked = allChecks.length > 0 && checkedChecks === allChecks.length;
-                    const isIndeterminate = checkedChecks > 0 && checkedChecks < allChecks.length;
-                    if (checkAllInput) {
-                        checkAllInput.checked = allChecked;
-                        checkAllInput.indeterminate = isIndeterminate;
-                    }
-                    if (checkAllCardsInput) {
-                        checkAllCardsInput.checked = allChecked;
-                        checkAllCardsInput.indeterminate = isIndeterminate;
-                    }
-                    syncHidden();
-                    updateFilterSelectionRow();
-                });
-            });
-            [bulkStatusSelect, bulkDueDateInput, bulkResponsiblePartySelect, bulkResponsibleNameInput, bulkResponsibleEmailInput].forEach((input) => {
-                input?.addEventListener('input', updateFilterSelectionRow);
-                input?.addEventListener('change', updateFilterSelectionRow);
-            });
-
-            syncHidden();
-            updateFilterSelectionRow();
-        function updateFiltersChevron(){
-                      if (!toggleFiltersChevron || !issuesFiltersPanel) return;
-                      const isCollapsed = issuesFiltersPanel.classList.contains('is-collapsed');
-                      toggleFiltersChevron.classList.toggle('bx-chevron-down', isCollapsed);
-                      toggleFiltersChevron.classList.toggle('bx-chevron-up', !isCollapsed);
-                  }
-
-                  toggleFiltersButton?.addEventListener('click', () => {
-                      issuesFiltersPanel?.classList.toggle('is-collapsed');
-                      updateFiltersChevron();
+                  document.querySelectorAll('.issue-check').forEach((checkbox) => {
+                      checkbox.checked = false;
                   });
 
-                  if (!isMobileView) {
-                      issuesFiltersPanel?.classList.remove('is-collapsed');
+                  selectableChecks.forEach((checkbox) => {
+                      checkbox.checked = checked;
+                  });
+                  if (checkAllInput) {
+                      checkAllInput.checked = checked;
+                      checkAllInput.indeterminate = false;
                   }
+                  if (checkAllCardsInput) {
+                      checkAllCardsInput.checked = checked;
+                      checkAllCardsInput.indeterminate = false;
+                  }
+                  syncHidden();
+                  updateFilterSelectionRow();
+              }
+
+              checkAllInput?.addEventListener('change', (e) => setAllIssueChecks(e.target.checked));
+              checkAllCardsInput?.addEventListener('change', (e) => setAllIssueChecks(e.target.checked));
+
+              document.querySelectorAll('.issue-check').forEach((checkbox) => {
+                  checkbox.addEventListener('change', () => {
+                      document.querySelectorAll(`.issue-check[value="${checkbox.value}"]`).forEach((peer) => {
+                          if (peer !== checkbox) {
+                              peer.checked = checkbox.checked;
+                          }
+                      });
+                      const allChecks = getSelectableIssueCheckboxes();
+                      const checkedChecks = allChecks.filter((item) => item.checked).length;
+                      const allChecked = allChecks.length > 0 && checkedChecks === allChecks.length;
+                      const isIndeterminate = checkedChecks > 0 && checkedChecks < allChecks.length;
+                      if (checkAllInput) {
+                          checkAllInput.checked = allChecked;
+                          checkAllInput.indeterminate = isIndeterminate;
+                      }
+                      if (checkAllCardsInput) {
+                          checkAllCardsInput.checked = allChecked;
+                          checkAllCardsInput.indeterminate = isIndeterminate;
+                      }
+                      syncHidden();
+                      updateFilterSelectionRow();
+                  });
+              });
+              [bulkStatusSelect, bulkDueDateInput, bulkResponsiblePartySelect, bulkResponsibleNameInput, bulkResponsibleEmailInput].forEach((input) => {
+                  input?.addEventListener('input', updateFilterSelectionRow);
+                  input?.addEventListener('change', updateFilterSelectionRow);
+              });
+
+              syncHidden();
+              updateFilterSelectionRow();
+
+              function updateFiltersChevron(){
+                  if (!toggleFiltersChevron || !issuesFiltersPanel) return;
+                  const isCollapsed = issuesFiltersPanel.classList.contains('is-collapsed');
+                  toggleFiltersChevron.classList.toggle('bx-chevron-down', isCollapsed);
+                  toggleFiltersChevron.classList.toggle('bx-chevron-up', !isCollapsed);
+              }
+
+              toggleFiltersButton?.addEventListener('click', () => {
+                  issuesFiltersPanel?.classList.toggle('is-collapsed');
                   updateFiltersChevron();
+              });
 
-                if (isMobileView || !window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
-                filterSelects.forEach((el) => {
-                    el.addEventListener('change', () => {
-                        updateFilterSelectionRow();
-                        filterForm?.submit();
-                    });
-                });
+              if (!isMobileView) {
+                  issuesFiltersPanel?.classList.remove('is-collapsed');
+              }
+              updateFiltersChevron();
 
-                let filterSearchTimer = null;
-                filterSearchInput?.addEventListener('input', () => {
-                    clearTimeout(filterSearchTimer);
-                    filterSearchTimer = setTimeout(() => filterForm?.submit(), 250);
-                });
-            }
+            if (isMobileView || !window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
+                  filterSelects.forEach((el) => {
+                      el.addEventListener('change', () => {
+                          updateFilterSelectionRow();
+                          filterForm?.submit();
+                      });
+                  });
 
-            initializeDataTableFilters();
+                  let filterSearchTimer = null;
+                  filterSearchInput?.addEventListener('input', () => {
+                      clearTimeout(filterSearchTimer);
+                      filterSearchTimer = setTimeout(() => filterForm?.submit(), 250);
+                  });
+              }
 
-            initializeIssueDetailModal();
-            initializeIssueDeleteModal();
-        })();
+              initializeDataTableFilters();
+
+              initializeIssueDetailModal();
+              initializeIssueDeleteModal();
+          })();
     </script>
 }
