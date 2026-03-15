@@ -134,6 +134,225 @@
             justify-content: center;
             gap: 8px;
         }
+
+
+    .issues-mobile-header,
+    .issues-mobile-checkall,
+    .issues-mobile-cards,
+    .issue-status-label-mobile,
+    .project-issues-mobile-tab-actions,
+    .issue-detail-mobile-actions,
+    .project-issues-back-link {
+        display: none;
+    }
+
+    @@media (min-width: 768px) {
+        .issue-table .actions .open-duplicate-issue,
+        .issue-table .actions .deleteIssue {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+
+    @@media (max-width: 767.98px) {
+        .project-issues-header-actions {
+            display: none;
+        }
+
+        .project-issues-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .project-issues-back-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            border: 1px solid #d8dee4;
+            border-radius: 8px;
+            color: #1f2d3d;
+            text-decoration: none;
+        }
+
+        .project-issues-mobile-tab-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 0;
+        }
+
+        .issues-mobile-nav-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .project-issues-mobile-add {
+            width: 38px;
+            height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .issue-status-label-desktop {
+            display: none;
+        }
+
+        .issue-status-label-mobile {
+            display: inline;
+        }
+
+        .issue-status-widget .card-body {
+            min-height: 70px;
+            padding: 12px;
+        }
+
+        .issue-status-widget .summary {
+            gap: 4px;
+        }
+
+            .issue-status-widget .summary h4 {
+                margin: 0;
+                font-size: 0.9rem;
+            }
+
+            .issue-status-widget .summary h2 {
+                margin: 0;
+                font-size: 1.5rem;
+            }
+
+        .issues-mobile-header,
+        .issues-mobile-checkall,
+        .issues-mobile-cards {
+            display: block;
+        }
+
+        .issues-mobile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        #toggleFiltersButton {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #issuesFiltersPanel.is-collapsed {
+            display: none;
+        }
+
+        #issuesFilterSelectionRow .d-flex {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 10px;
+        }
+
+        #issuesFilterSelectionRow form {
+            width: 100%;
+            flex-wrap: wrap !important;
+        }
+
+        .issue-table-block {
+            display: none;
+        }
+
+        .issues-mobile-cards {
+            display: grid;
+            gap: 12px;
+        }
+
+        .issue-item-card {
+            border: 1px solid #d8dee4;
+            border-radius: 8px;
+            padding: 14px;
+            background: #fff;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .issue-item-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .issue-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .issue-item-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .issue-item-description {
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .issue-card-detail-trigger {
+            color: inherit;
+            text-decoration: none;
+            display: block;
+        }
+
+        .issue-item-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+            .issue-item-meta .badge {
+                font-size: .72rem;
+                font-weight: 400;
+                background: #eef2f6;
+                color: #3c4a59;
+                border: 1px solid #dde3ea;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+        #issueDetailModal {
+            z-index: 200000 !important;
+        }
+
+        .issue-detail-mobile-actions {
+            display: flex !important;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e3e6ea;
+        }
+
+            .issue-detail-mobile-actions .btn {
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+        #issueDetailSendButton {
+            display: none;
+        }
+    }
 </style>
 @section PageStyle {
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
@@ -145,12 +364,17 @@
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", projectId)
         <div class="inner-body">
-            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                    <h1 class="font-weight-bold mb-0 mt-0">Punten</h1>
-                    <h5 class="mb-4 mt-0">Overzicht van projectissues</h5>
+            <div class="row justify-content-center justify-content-sm-between pt-1 pe-0">
+                <div class="col-sm-auto mb-2 mb-sm-0 mt-1 mt-sm-0">
+                    <div class="project-issues-title-row">
+                        <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })" class="project-issues-back-link" aria-label="Terug naar project">
+                            <i class="bx bx-chevron-left"></i>
+                        </a>
+                        <h1 class="font-weight-bold mb-0 mt-0">Punten</h1>
+                    </div>
+                    <h5 class="mb-2 mt-0">Overzicht van projectissues</h5>
                 </div>
-                <div class="col-sm-auto px-0">
+                <div class="col-sm-auto px-0 project-issues-header-actions">
                     <div class="btn-group" role="group" aria-label="Project acties">
                         <a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })" class="btn btn-default btn-md me-2">Terug naar project</a>
                         <button type="button" class="btn btn-primary btn-md me-2" id="openPrintModal"><i class="bx bx-printer me-2"></i>Afdrukken</button>
@@ -180,7 +404,7 @@
                             <div class="widget-summary widget-summary-sm">
                                 <div class="widget-summary-col">
                                     <div class="summary align-content-center">
-                                        <h4 class="title">Wachten op controle</h4>
+                                        <h4 class="title"><span class="issue-status-label-desktop">Wachten op controle</span><span class="issue-status-label-mobile">Controle</span></h4>
                                         <h2 class="mt-0 color-primary">@waitingInspectionCount</h2>
                                     </div>
                                 </div>
@@ -249,23 +473,50 @@
                 </div>
             </section> *@
 
-            <ul class="nav nav-pills issues-tab-nav issues-tab-nav-light mb-2" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" type="button" data-bs-toggle="tab" data-bs-target="#issues-list-tab" aria-selected="true">
-                        <i class="bx bx-list-ul me-1"></i>Lijst
+            <div class="issues-mobile-nav-row mb-2">
+                <ul class="nav nav-pills issues-tab-nav issues-tab-nav-light mb-0" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" type="button" data-bs-toggle="tab" data-bs-target="#issues-list-tab" aria-selected="true">
+                            <i class="bx bx-list-ul me-1"></i>Lijst
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#issues-plan-tab" aria-selected="false">
+                            <i class="bx bx-map-pin me-1"></i>Planoverzicht
+                        </button>
+                    </li>
+                </ul>
+                <div class="project-issues-mobile-tab-actions">
+                    <div class="dropdown">
+                        <button class="btn btn-default btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bx bx-file me-1"></i>Meer
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><button class="dropdown-item" type="button" id="mobileExportPdfAction"><i class="bx bx-printer me-2"></i>Punten exporteren naar PDF</button></li>
+                            <li><button class="dropdown-item" type="button" id="mobileSendIssuesAction"><i class="bx bx-send me-2"></i>Verzenden</button></li>
+                        </ul>
+                    </div>
+                    <button type="button" class="btn btn-primary project-issues-mobile-add" id="mobileCreateIssueButton" aria-label="Punt toevoegen">
+                        <i class="bx bx-plus"></i>
                     </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" type="button" data-bs-toggle="tab" data-bs-target="#issues-plan-tab" aria-selected="false">
-                        <i class="bx bx-map-pin me-1"></i>Planoverzicht
-                    </button>
-                </li>
-            </ul>
+                </div>
+            </div>
 
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="issues-list-tab" role="tabpanel">
                     <section class="card card-modern issue-card">
                         <div class="card-body">
+
+                            <div class="issues-mobile-header">
+                                <h4 class="mb-0">Puntenlijst (@Model.Issues.Count)</h4>
+                                <button type="button" class="btn btn-default btn-sm" id="toggleFiltersButton">
+                                    <i class="bx bx-filter-alt"></i>
+                                    <span>Filters</span>
+                                    <i class="bx bx-chevron-up" id="toggleFiltersChevron"></i>
+                                </button>
+                            </div>
+
+                            <div id="issuesFiltersPanel">
 
                     <form method="get" class="issues-filter-form mb-4" id="issuesFilterForm">
                         <div class="row g-3 align-items-end">
@@ -334,6 +585,7 @@
                                     </div>
                         </div>
                     </form>
+                    </div>
                             <div id="issuesFilterSelectionRow" class="py-2 px-3 mb-3 d-none issues-selection-toolbar bg-light" role="status">
                                 <div class="d-flex align-items-center flex-nowrap">
                                     <span id="issuesSelectionCountLabel" class="fw-semibold text-nowrap">0 geselecteerd</span>
@@ -382,6 +634,12 @@
                                             <i class="bx bx-user-plus me-1"></i>Toewijzen
                                         </button>
                                     </form>
+                                </div>
+                            </div>
+                            <div class="issues-mobile-checkall mb-3">
+                                <div class="checkbox-custom checkbox-default d-inline-block">
+                                    <input type="checkbox" id="checkAllCards" />
+                                    <label for="checkAllCards">Alles selecteren</label>
                                 </div>
                             </div>
                             <div class="issue-table-block">
@@ -461,6 +719,43 @@
                                     <div id="datatable-issues-external-footer"></div>
                                 </div>
                             </div>
+
+                            <div class="issues-mobile-cards">
+                                @foreach (var i in Model.Issues)
+                                {
+                                    var responsibleDisplay = Model.Form.ResponsibleContractors.FirstOrDefault(c => c.ID == i.ResponsiblePartyId)?.Display;
+                                    var mobileStatusDisplay = ((ConstructionIssueStatus)i.Status).GetDisplayName();
+                                    if (i.Status == (int)ConstructionIssueStatus.WaitingInspection)
+                                    {
+                                        mobileStatusDisplay = "Controle";
+                                    }
+                                    if (string.IsNullOrWhiteSpace(responsibleDisplay))
+                                    {
+                                        responsibleDisplay = string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? "-" : i.ResponsibleOtherName;
+                                    }
+
+                                    <article class="issue-item-card" data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
+                                        <div class="issue-item-top">
+                                            <div class="checkbox-custom checkbox-default d-inline-block mt-1">
+                                                <input type="checkbox" class="issue-check" value="@i.Id" id="issue_mobile_@i.Id" />
+                                                <label for="issue_mobile_@i.Id"></label>
+                                            </div>
+                                            <div class="issue-item-content">
+                                                <a href="@Url.Action("DetailData", "ProjectsIssues", new { projectId, id = i.Id })" class="issue-card-detail-trigger open-detail-issue" data-id="@i.Id">
+                                                    <div class="issue-item-title">@i.Title</div>
+                                                    <div class="issue-item-description">@(string.IsNullOrWhiteSpace(i.Description) ? "-" : i.Description)</div>
+                                                </a>
+                                                <div class="issue-item-meta">
+                                                    <span class="badge rounded-pill">@(string.IsNullOrWhiteSpace(i.LocationText) ? "-" : i.LocationText)</span>
+                                                    <span class="badge rounded-pill">@mobileStatusDisplay</span>
+                                                    <span class="badge rounded-pill">@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</span>
+                                                    <span class="badge rounded-pill">@responsibleDisplay</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -529,6 +824,12 @@
             const deleteIssueModalSelector = '#modaldeleteissue';
             const deleteIssueContainerSelector = '#delete-issue-container';
             const filterForm = document.getElementById('issuesFilterForm');
+             const issuesFiltersPanel = document.getElementById('issuesFiltersPanel');
+            const toggleFiltersButton = document.getElementById('toggleFiltersButton');
+            const toggleFiltersChevron = document.getElementById('toggleFiltersChevron');
+            const mobileCreateIssueButton = document.getElementById('mobileCreateIssueButton');
+            const mobileExportPdfAction = document.getElementById('mobileExportPdfAction');
+            const mobileSendIssuesAction = document.getElementById('mobileSendIssuesAction');
             const filterSearchInput = filterForm?.querySelector('input[name="text"]');
             const filterSelects = Array.from(filterForm?.querySelectorAll('.js-auto-filter') || []);
             const filterSelectionRow = document.getElementById('issuesFilterSelectionRow');
@@ -542,6 +843,7 @@
             const bulkResponsibleEmailInput = document.getElementById('bulkResponsibleEmailInput');
             const bulkAssignButton = document.getElementById('bulkAssignButton');
             const checkAllInput = document.getElementById('checkAll');
+            const checkAllCardsInput = document.getElementById('checkAllCards');
             const issueDetailModalEl = document.getElementById('issueDetailModal');
             const issueDetailModal = issueDetailModalEl && window.bootstrap ? new bootstrap.Modal(issueDetailModalEl) : null;
             const issuesTable = document.getElementById('datatable-issues');
@@ -566,6 +868,9 @@
             const issueDetailResponsibleNameInput = document.getElementById('issueDetailResponsibleNameInput');
             const issueDetailResponsibleEmailInput = document.getElementById('issueDetailResponsibleEmailInput');
             const issueDetailSendButton = document.getElementById('issueDetailSendButton');
+             const issueDetailIconSendButton = document.getElementById('issueDetailIconSendButton');
+            const issueDetailIconEditButton = document.getElementById('issueDetailIconEditButton');
+            const issueDetailIconDeleteButton = document.getElementById('issueDetailIconDeleteButton');
             const issuePhotosTabButton = document.getElementById('issuePhotosTabButton');
             const issueHistoryTabButton = document.getElementById('issueHistoryTabButton');
             const issueNotificationTabButton = document.getElementById('issueNotificationTabButton');
@@ -611,6 +916,7 @@
             let isPickMode = false;
             const contractorResponsiblePartyType = @((int)ConstructionIssueResponsiblePartyType.Contractor);
             let currentDetailIssueId = null;
+              const isMobileView = window.matchMedia('(max-width: 767.98px)').matches;
             const detailInlineState = {
                 isFieldSyncing: false
             };
@@ -620,8 +926,16 @@
                 pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
             }
 
+            function getSelectedIssueIds(){
+                return Array.from(new Set(
+                    Array.from(document.querySelectorAll('.issue-check:checked'))
+                        .map(x => Number(x.value))
+                        .filter(Number.isFinite)
+                ));
+            }
+
             function syncHidden(){
-                const ids = Array.from(document.querySelectorAll('.issue-check:checked')).map(x=>x.value);
+                const ids = getSelectedIssueIds();
                 document.querySelectorAll('input.js-issue-id').forEach(x=>x.remove());
                 document.querySelectorAll('form').forEach(f=>{
                     if(f.action.includes('BulkUpdate') || f.action.includes('SendSelected') || f.action.includes('DownloadPdf')){
@@ -643,7 +957,7 @@
             }
            function updateFilterSelectionRow(){
                 if(!filterSelectionRow) return;
-                const selectedCount = document.querySelectorAll('.issue-check:checked').length;
+                const selectedCount = getSelectedIssueIds().length;
                 const hasSelection = selectedCount > 0;
                 filterSelectionRow.classList.toggle('d-none', !hasSelection);
 
@@ -667,7 +981,7 @@
 
 
            function initializeDataTableFilters(){
-                if(!(window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && issuesTable)) return;
+               if(isMobileView || !(window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && issuesTable)) return;
 
                 const getActiveFilters = () => ({
                     status: filterForm?.querySelector('[name="status"]')?.value || '',
@@ -1385,6 +1699,26 @@
 
                 issueDetailSendButton?.addEventListener('click', sendCurrentIssueToResponsible);
 
+                  issueDetailIconSendButton?.addEventListener('click', sendCurrentIssueToResponsible);
+                issueDetailIconEditButton?.addEventListener('click', async () => {
+                    if (!currentDetailIssueId) return;
+                    issueDetailModal?.hide();
+                    await openIssueModalFromExistingIssue(currentDetailIssueId, false);
+                });
+                issueDetailIconDeleteButton?.addEventListener('click', () => {
+                    if (!currentDetailIssueId || !window.jQuery) return;
+                    issueDetailModal?.hide();
+                    window.jQuery.get(`/Projects/${projectId}/Issues/ModalDelete/${currentDetailIssueId}`, function (data) {
+                        window.jQuery(deleteIssueContainerSelector).html(data);
+                        window.jQuery.magnificPopup.open({
+                            items: { src: deleteIssueModalSelector },
+                            type: 'inline',
+                            preloader: false,
+                            focus: deleteIssueContainerSelector
+                        });
+                    });
+                });
+
              document.querySelectorAll('.open-detail-issue').forEach(btn => btn.addEventListener('click', async (event) => {
                     event.preventDefault();
                     const id = btn.dataset.id;
@@ -1550,9 +1884,7 @@
                       selectedIssueIds: []
                   };
 
-                  function getSelectedIssueIds(){
-                      return Array.from(document.querySelectorAll('.issue-check:checked')).map(x => Number(x.value)).filter(Number.isFinite);
-                  }
+                
 
                   function ensureSendScopeOptions(selectedCount){
                       if (!sendIssuesScope) return;
@@ -1714,7 +2046,15 @@
                       }
                   }
 
-           document.getElementById('openCreateIssueModal').addEventListener('click', () => { resetForm(); openBootstrapModal(issueModal, issueModalEl); });
+        function openCreateIssueModal(){
+                 resetForm();
+                 openBootstrapModal(issueModal, issueModalEl);
+             }
+
+             document.getElementById('openCreateIssueModal')?.addEventListener('click', openCreateIssueModal);
+             mobileCreateIssueButton?.addEventListener('click', openCreateIssueModal);
+             mobileExportPdfAction?.addEventListener('click', () => openPrintModalButton?.click());
+             mobileSendIssuesAction?.addEventListener('click', () => openSendModalButton?.click());
 
             openSendModalButton?.addEventListener('click', async () => {
                 sendState.selectedIssueIds = getSelectedIssueIds();
@@ -2039,22 +2379,43 @@
             }));
 
 
-        checkAllInput?.addEventListener('change', (e) => {
+         function setAllIssueChecks(checked){
                 document.querySelectorAll('.issue-check').forEach((checkbox) => {
-                    checkbox.checked = e.target.checked;
+                    checkbox.checked = checked;
                 });
-                checkAllInput.indeterminate = false;
+                if (checkAllInput) {
+                    checkAllInput.checked = checked;
+                    checkAllInput.indeterminate = false;
+                }
+                if (checkAllCardsInput) {
+                    checkAllCardsInput.checked = checked;
+                    checkAllCardsInput.indeterminate = false;
+                }
                 syncHidden();
                 updateFilterSelectionRow();
-            });
+            }
+
+            checkAllInput?.addEventListener('change', (e) => setAllIssueChecks(e.target.checked));
+            checkAllCardsInput?.addEventListener('change', (e) => setAllIssueChecks(e.target.checked));
 
             document.querySelectorAll('.issue-check').forEach((checkbox) => {
                 checkbox.addEventListener('change', () => {
+                    document.querySelectorAll(`.issue-check[value="${checkbox.value}"]`).forEach((peer) => {
+                        if (peer !== checkbox) {
+                            peer.checked = checkbox.checked;
+                        }
+                    });
                     const allChecks = Array.from(document.querySelectorAll('.issue-check'));
                     const checkedChecks = allChecks.filter((item) => item.checked).length;
+                    const allChecked = allChecks.length > 0 && checkedChecks === allChecks.length;
+                    const isIndeterminate = checkedChecks > 0 && checkedChecks < allChecks.length;
                     if (checkAllInput) {
-                        checkAllInput.checked = allChecks.length > 0 && checkedChecks === allChecks.length;
-                        checkAllInput.indeterminate = checkedChecks > 0 && checkedChecks < allChecks.length;
+                        checkAllInput.checked = allChecked;
+                        checkAllInput.indeterminate = isIndeterminate;
+                    }
+                    if (checkAllCardsInput) {
+                        checkAllCardsInput.checked = allChecked;
+                        checkAllCardsInput.indeterminate = isIndeterminate;
                     }
                     syncHidden();
                     updateFilterSelectionRow();
@@ -2067,8 +2428,24 @@
 
             syncHidden();
             updateFilterSelectionRow();
+        function updateFiltersChevron(){
+                      if (!toggleFiltersChevron || !issuesFiltersPanel) return;
+                      const isCollapsed = issuesFiltersPanel.classList.contains('is-collapsed');
+                      toggleFiltersChevron.classList.toggle('bx-chevron-down', isCollapsed);
+                      toggleFiltersChevron.classList.toggle('bx-chevron-up', !isCollapsed);
+                  }
 
-          if (!window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
+                  toggleFiltersButton?.addEventListener('click', () => {
+                      issuesFiltersPanel?.classList.toggle('is-collapsed');
+                      updateFiltersChevron();
+                  });
+
+                  if (!isMobileView) {
+                      issuesFiltersPanel?.classList.remove('is-collapsed');
+                  }
+                  updateFiltersChevron();
+
+                if (isMobileView || !window.jQuery || !window.jQuery.fn || !window.jQuery.fn.DataTable) {
                 filterSelects.forEach((el) => {
                     el.addEventListener('change', () => {
                         updateFilterSelectionRow();

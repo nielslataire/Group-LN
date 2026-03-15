@@ -54,7 +54,6 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
 
     public async Task<byte[]> GenerateReportPdf(int projectId, int reportId)
     {
-        var report = await _db.ConstructionIssueReport.FirstAsync(x => x.Id == reportId && x.ProjectId == projectId);
         var items = await _db.ConstructionIssueReportItem
             .Where(x => x.ReportId == reportId)
             .Select(x => x.IssueId)
@@ -67,79 +66,132 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             .OrderBy(x => x.Status)
             .ThenBy(x => x.DueDate)
             .ToListAsync();
-        var projectName = await _db.Project.Where(x => x.ProjectId == projectId).Select(x => x.ProjectName).FirstOrDefaultAsync() ?? $"Project {projectId}";
+        var project = await _db.Project
+            .Include(x => x.PostalCode)
+            .Include(x => x.Status)
+            .Include(x => x.AspNetUser)
+            .Include(x => x.IssuerCompanyIdBuilderNavigation)
+            .FirstOrDefaultAsync(x => x.ProjectId == projectId);
+
+        var projectName = project?.ProjectName ?? $"Project {projectId}";
+        var projectAddress = string.Join(" ", new[]
+        {
+            project?.Street,
+            project?.Number,
+            project?.PostalCode?.Postcode,
+            project?.PostalCode?.Gemeente
+        }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        var projectStatus = project?.Status?.StatusName ?? "-";
+        var siteManager = string.Join(" ", new[] { project?.AspNetUser?.Voornaam, project?.AspNetUser?.Familienaam }
+            .Where(x => !string.IsNullOrWhiteSpace(x)));
+        if (string.IsNullOrWhiteSpace(siteManager))
+            siteManager = "-";
+
+        var primaryColor = !string.IsNullOrWhiteSpace(project?.IssuerCompanyIdBuilderNavigation?.BrandPrimaryColor)
+            ? project.IssuerCompanyIdBuilderNavigation.BrandPrimaryColor
+            : "#01532d";
+
+        var responsibleIds = issues
+            .Where(x => x.ResponsiblePartyId.HasValue)
+            .Select(x => x.ResponsiblePartyId!.Value)
+            .Distinct()
+            .ToList();
+        var responsibleNames = await _db.CompanyInfo
+            .Where(x => responsibleIds.Contains(x.CompanyId))
+            .Select(x => new { x.CompanyId, x.BedrijfsNaam })
+            .ToDictionaryAsync(x => x.CompanyId, x => x.BedrijfsNaam);
 
         var enableQr = _configuration.GetValue<bool>("Features:EnableQRCode");
         var now = DateTime.Now;
+        var groupedByUnit = issues
+            .GroupBy(x => string.IsNullOrWhiteSpace(x.Unit?.Name) ? "Zonder eenheid" : x.Unit!.Name)
+            .OrderBy(x => x.Key)
+            .ToList();
 
         return Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Margin(20);
-                page.DefaultTextStyle(x => x.FontSize(10));
-                page.Header().Column(col =>
+                page.Margin(0);
+                page.DefaultTextStyle(x => x.FontSize(10).FontColor("#1f2937"));
+
+                page.Header().Background(primaryColor).PaddingHorizontal(30).PaddingTop(22).PaddingBottom(20).Column(col =>
                 {
-                    col.Item().Text($"Puntenlijst - {projectName}").FontSize(18).SemiBold();
-                    col.Item().Text($"Verantwoordelijke: {GetResponsibleDisplay(report)}");
-                    col.Item().Text($"Datum: {now:dd/MM/yyyy HH:mm} | Type: {(ConstructionIssueReportType)report.ReportType}");
+                    col.Item().Text("PUNTENLIJST").FontSize(22).SemiBold().FontColor(Colors.White);
+                    col.Item().PaddingTop(2).Text($"Gegenereerd: {now:dd/MM/yyyy} — {issues.Count} punt(en)").FontColor("#e6f4ee");
                 });
-                page.Content().Column(col =>
+
+                page.Content().PaddingTop(20).PaddingBottom(24).Column(col =>
                 {
                     var openCount = issues.Count(x => x.Status != (int)ConstructionIssueStatus.Closed);
                     var overdueCount = issues.Count(x => x.DueDate.HasValue && x.DueDate < DateOnly.FromDateTime(DateTime.Today) && x.Status != (int)ConstructionIssueStatus.Closed);
-                    col.Item().PaddingBottom(8).Text($"Open: {openCount} | Vervallen: {overdueCount}");
 
-                    col.Item().Table(table =>
+                    col.Item().ShowOnce().PaddingHorizontal(30).Column(firstPage =>
                     {
-                        table.ColumnsDefinition(def =>
+                        firstPage.Item().Background("#e4efec").CornerRadius(8).Padding(14).Column(info =>
                         {
-                            def.ConstantColumn(25);
-                            def.RelativeColumn(1.2f);
-                            def.RelativeColumn(1.2f);
-                            def.RelativeColumn(1.5f);
-                            def.RelativeColumn(2.5f);
-                            def.RelativeColumn(1);
-                            def.RelativeColumn(1);
-                            def.RelativeColumn(1.1f);
-                        });
-                        table.Header(h =>
-                        {
-                            h.Cell().Text("Nr").SemiBold();
-                            h.Cell().Text("Unit").SemiBold();
-                            h.Cell().Text("Categorie").SemiBold();
-                            h.Cell().Text("Locatie").SemiBold();
-                            h.Cell().Text("Beschrijving").SemiBold();
-                            h.Cell().Text("Prioriteit").SemiBold();
-                            h.Cell().Text("Vervaldatum").SemiBold();
-                            h.Cell().Text("Status").SemiBold();
+                            info.Item().Text(projectName).FontSize(13).SemiBold().FontColor("#15322b");
+                            info.Item().PaddingTop(4).Text($"Adres: {(string.IsNullOrWhiteSpace(projectAddress) ? "-" : projectAddress)}  •  Werfleider: {siteManager}  •  Status: {projectStatus}")
+                                .FontSize(9)
+                                .FontColor("#24473d");
                         });
 
-                        var nr = 1;
-                        foreach (var issue in issues)
+                        if (enableQr)
                         {
-                            table.Cell().Text((nr++).ToString());
-                            table.Cell().Text(issue.Unit?.Name ?? "-");
-                            table.Cell().Text(issue.Category?.Name ?? "-");
-                            table.Cell().Text(issue.LocationText ?? "-");
-                            table.Cell().Text(issue.Description ?? "-");
-                            table.Cell().Text(((ConstructionIssuePriority)issue.Priority).ToString());
-                            table.Cell().Text(issue.DueDate?.ToString("dd/MM/yyyy") ?? "-");
-                            table.Cell().Text(((ConstructionIssueStatus)issue.Status).ToString());
+                            firstPage.Item().PaddingTop(8).Border(1).BorderColor("#d1d5db").CornerRadius(6).Padding(8)
+                                .Text("QR placeholder (feature flag EnableQRCode=true)").FontSize(8).FontColor("#6b7280");
                         }
                     });
 
-                    col.Item().PaddingTop(8).Text($"Bijlagen: {issues.Sum(x => x.ConstructionIssueMedia?.Count ?? 0)} totaal");
+                    col.Item().ShowOnce().Height(24);
 
-                    if (enableQr)
+                    var issueNumber = 1;
+                    foreach (var unitGroup in groupedByUnit)
                     {
-                        col.Item().PaddingTop(10).Border(1).Padding(8).Text("QR placeholder (feature flag EnableQRCode=true)");
+                        var unitIssues = unitGroup.ToList();
+                        if (!unitIssues.Any())
+                            continue;
+
+                        var firstIssue = unitIssues[0];
+
+                        col.Item().PaddingHorizontal(30).PaddingTop(10).PaddingBottom(10).Column(unitCol =>
+                        {
+                            unitCol.Item().PreventPageBreak().Column(firstBlock =>
+                            {
+                                firstBlock.Item().Background(primaryColor).CornerRadius(6).PaddingVertical(7).PaddingHorizontal(10).Row(row =>
+                                {
+                                    row.RelativeItem().Text($"Eenheid: {unitGroup.Key}").FontColor(Colors.White).SemiBold();
+                                    row.ConstantItem(80).AlignRight().Text($"{unitIssues.Count} punt(en)").FontColor(Colors.White).SemiBold();
+                                });
+
+                                firstBlock.Item().PaddingTop(10).Element(cardContainer => RenderIssueCard(cardContainer, firstIssue, issueNumber++, primaryColor, responsibleNames));
+                            });
+
+                            foreach (var issue in unitIssues.Skip(1))
+                            {
+                                unitCol.Item().PaddingTop(10).Element(cardContainer => RenderIssueCard(cardContainer, issue, issueNumber++, primaryColor, responsibleNames));
+                            }
+                        });
+
                     }
                 });
-                page.Footer().AlignRight().Text(x => x.Span("Group LN Puntenlijst"));
+
+                page.Footer().PaddingHorizontal(30).PaddingBottom(8).PaddingTop(8).Column(footer =>
+                {
+                    footer.Item().LineHorizontal(1).LineColor(primaryColor);
+                    footer.Item().PaddingTop(6).AlignRight().Text(text =>
+                    {
+                        text.Span("Pagina ").FontSize(8).FontColor("#6b7280");
+                        text.CurrentPageNumber().FontSize(8).FontColor("#6b7280");
+                        text.Span("/").FontSize(8).FontColor("#6b7280");
+                        text.TotalPages().FontSize(8).FontColor("#6b7280");
+                    });
+                });
             });
         }).GeneratePdf();
     }
+
+
 
     public async Task<int> SendSelectedIssues(int projectId, ConstructionIssueSendRequestBO request, string? userId, string? comment = null)
     {
@@ -273,14 +325,90 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return string.IsNullOrWhiteSpace(responsibleOtherEmail) ? null : responsibleOtherEmail;
     }
 
-    private static string GetResponsibleDisplay(ConstructionIssueReport report)
+    private static void RenderIssueCard(IContainer container, ConstructionIssue issue, int badgeNumber, string primaryColor, IReadOnlyDictionary<int, string> responsibleNames)
     {
-        if (!string.IsNullOrWhiteSpace(report.ResponsibleOtherName))
-            return report.ResponsibleOtherName;
-        if (!string.IsNullOrWhiteSpace(report.ResponsibleOtherEmail))
-            return report.ResponsibleOtherEmail;
-        if (report.ResponsiblePartyId.HasValue)
-            return $"Partij #{report.ResponsiblePartyId}";
-        return "Onbekend";
+        var priority = GetPriorityPresentation(issue.Priority);
+        var status = GetStatusPresentation(issue.Status);
+        var responsible = GetResponsibleDisplay(issue, responsibleNames);
+        var location = GetLocationDisplay(issue);
+
+        container.Border(1).BorderColor("#d9dde2").CornerRadius(8).Padding(12).Column(card =>
+        {
+            card.Item().Row(row =>
+            {
+                row.RelativeItem().Row(head =>
+                {
+                    head.ConstantItem(42).Background(primaryColor).CornerRadius(4).PaddingVertical(4).AlignCenter()
+                        .Text($"#{badgeNumber}").FontSize(9).SemiBold().FontColor(Colors.White);
+                    head.RelativeItem().PaddingLeft(8).AlignMiddle().Text(issue.Title ?? "(zonder titel)").SemiBold().FontSize(11);
+                });
+
+                row.ConstantItem(74).Background(status.Color).CornerRadius(4).PaddingVertical(4).AlignCenter()
+                    .Text(status.Label).FontSize(8).SemiBold().FontColor(Colors.White);
+                row.ConstantItem(8).Text(string.Empty);
+                row.ConstantItem(74).Background(priority.Color).CornerRadius(4).PaddingVertical(4).AlignCenter()
+                    .Text(priority.Label).FontSize(8).SemiBold().FontColor(Colors.White);
+            });
+
+            var metaParts = new List<string>();
+            if (!string.IsNullOrWhiteSpace(location))
+                metaParts.Add($"Kamer/Plaats: {location}");
+            if (!string.IsNullOrWhiteSpace(responsible))
+                metaParts.Add($"Verantw.: {responsible}");
+            if (issue.DueDate.HasValue)
+                metaParts.Add($"Deadline: {issue.DueDate.Value:dd/MM/yyyy}");
+
+            if (metaParts.Any())
+            {
+                card.Item().PaddingTop(8).Text(string.Join("   •   ", metaParts))
+                    .FontSize(8)
+                    .FontColor("#6b7280");
+            }
+
+            card.Item().PaddingTop(6).PaddingBottom(10).Text(issue.Description ?? "-").FontSize(9);
+        });
+    }
+
+    private static string GetLocationDisplay(ConstructionIssue issue)
+    {
+        var locationParts = new[] { issue.RoomOrZone, issue.LocationText }
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToList();
+
+        return locationParts.Any() ? string.Join(" - ", locationParts) : string.Empty;
+    }
+
+    private static string GetResponsibleDisplay(ConstructionIssue issue, IReadOnlyDictionary<int, string> responsibleNames)
+    {
+        if (issue.ResponsiblePartyId.HasValue && responsibleNames.TryGetValue(issue.ResponsiblePartyId.Value, out var companyName) && !string.IsNullOrWhiteSpace(companyName))
+            return companyName;
+        if (!string.IsNullOrWhiteSpace(issue.ResponsibleOtherName))
+            return issue.ResponsibleOtherName;
+        if (!string.IsNullOrWhiteSpace(issue.ResponsibleOtherEmail))
+            return issue.ResponsibleOtherEmail;
+        return string.Empty;
+    }
+
+    private static (string Label, string Color) GetPriorityPresentation(int priority)
+    {
+        return (ConstructionIssuePriority)priority switch
+        {
+            ConstructionIssuePriority.High => ("Hoog", "#f59e0b"),
+            ConstructionIssuePriority.Normal => ("Normaal", "#3b82f6"),
+            ConstructionIssuePriority.Low => ("Laag", "#10b981"),
+            _ => ("Onbekend", "#9ca3af")
+        };
+    }
+
+    private static (string Label, string Color) GetStatusPresentation(int status)
+    {
+        return (ConstructionIssueStatus)status switch
+        {
+            ConstructionIssueStatus.Open => ("Open", "#ef4444"),
+            ConstructionIssueStatus.Assigned => ("Toegewezen", "#f59e0b"),
+            ConstructionIssueStatus.InProgress => ("In uitvoering", "#f97316"),
+            ConstructionIssueStatus.Closed => ("Afgerond", "#10b981"),
+            _ => ("Onbekend", "#9ca3af")
+        };
     }
 }
