@@ -803,8 +803,9 @@ namespace CPMCore.Controllers
             await _db.SaveChangesAsync(ct);
             try
             {
-                await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true);
-                var publicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+                var issueDate = DateOnly.FromDateTime(DateTime.Today);
+                await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true, forcedIssueDate: issueDate);
+                var publicId = await _cmd.IssueDraftAsync(id, issueDate: issueDate, ct: ct);
 
                 await TrySendClassicEmailAfterIssueAsync(id, ct);
                 if (!string.IsNullOrWhiteSpace(publicId))
@@ -1535,7 +1536,7 @@ namespace CPMCore.Controllers
                 await SavePdfAppendixAsync(id, vm.PdfAppendix, ct);
                 try
                 {
-                    await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true);
+                    await SendInvoiceToOctopusAsync(id, ct, forceFinalPdf: true, skipClassicEmail: true, forcedIssueDate: vm.InvoiceDate);
                 }
                 catch (InvalidOperationException ex)
                 {
@@ -1555,7 +1556,7 @@ namespace CPMCore.Controllers
                 string issuedPublicId;
                 try
                 {
-                    issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: DateOnly.FromDateTime(DateTime.Today), ct: ct);
+                    issuedPublicId = await _cmd.IssueDraftAsync(id, issueDate: vm.InvoiceDate, ct: ct);
                 }
                 catch
                 {
@@ -2506,12 +2507,13 @@ namespace CPMCore.Controllers
             bool sendOnly = false,
             bool forceSendStep = false,
             bool forceFinalPdf = false,
-            bool skipClassicEmail = false)
+            bool skipClassicEmail = false,
+            DateOnly? forcedIssueDate = null)
         {
             try
             {
                 // 1. Algemene gegevens van de factuur voorbereiden (gestructureerde mededeling, QR-code/public id enz.)
-                var context = await BuildOctopusInvoiceContextAsync(invoiceId, ct, forceFinalPdf);
+                var context = await BuildOctopusInvoiceContextAsync(invoiceId, ct, forceFinalPdf, forcedIssueDate);
                 var progress = GetOctopusWorkflowProgress(context.Invoice.OctopusWorkflowState);
 
                 // 2. Dossiertoken ophalen en valideren
@@ -2669,7 +2671,7 @@ namespace CPMCore.Controllers
         }
 
         // Stap 1: laad alle data die nodig is voor Octopus + PDF (incl. status/nummerreeks).
-        private async Task<OctopusInvoiceContext> BuildOctopusInvoiceContextAsync(int invoiceId, CancellationToken ct, bool forceFinalPdf)
+        private async Task<OctopusInvoiceContext> BuildOctopusInvoiceContextAsync(int invoiceId, CancellationToken ct, bool forceFinalPdf, DateOnly? forcedIssueDate = null)
         {
             var invoice = await _db.Invoices
                 .Include(i => i.InvoicesDetails)
@@ -2729,7 +2731,7 @@ namespace CPMCore.Controllers
             var skipSendStep = false;
 
             var finalDate = forceFinalPdf
-                  ? DateOnly.FromDateTime(DateTime.Today)
+                  ? forcedIssueDate ?? (invoice.Date == default ? DateOnly.FromDateTime(DateTime.Today) : invoice.Date)
                   : (invoice.Date == default
                       ? DateOnly.FromDateTime(DateTime.Today)
                       : invoice.Date);

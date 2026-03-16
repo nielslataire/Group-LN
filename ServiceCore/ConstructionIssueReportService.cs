@@ -343,11 +343,14 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                     head.RelativeItem().PaddingLeft(8).AlignMiddle().Text(issue.Title ?? "(zonder titel)").SemiBold().FontSize(11);
                 });
 
-                row.ConstantItem(74).Background(status.Color).CornerRadius(4).PaddingVertical(4).AlignCenter()
-                    .Text(status.Label).FontSize(8).SemiBold().FontColor(Colors.White);
-                row.ConstantItem(8).Text(string.Empty);
-                row.ConstantItem(74).Background(priority.Color).CornerRadius(4).PaddingVertical(4).AlignCenter()
-                    .Text(priority.Label).FontSize(8).SemiBold().FontColor(Colors.White);
+                row.ConstantItem(74).Background(status.BackgroundColor).CornerRadius(4).PaddingVertical(4).AlignCenter()
+                    .Text(status.Label).FontSize(8).SemiBold().FontColor(status.TextColor);
+                if (priority.Show)
+                {
+                    row.ConstantItem(8).Text(string.Empty);
+                    row.ConstantItem(74).Background(priority.Color).CornerRadius(4).PaddingVertical(4).AlignCenter()
+                        .Text(priority.Label).FontSize(8).SemiBold().FontColor(Colors.White);
+                }
             });
 
             var metaParts = new List<string>();
@@ -389,26 +392,24 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return string.Empty;
     }
 
-    private static (string Label, string Color) GetPriorityPresentation(int priority)
+    private static (string Label, string Color, bool Show) GetPriorityPresentation(int priority)
     {
         return (ConstructionIssuePriority)priority switch
         {
-            ConstructionIssuePriority.High => ("Hoog", "#f59e0b"),
-            ConstructionIssuePriority.Normal => ("Normaal", "#3b82f6"),
-            ConstructionIssuePriority.Low => ("Laag", "#10b981"),
-            _ => ("Onbekend", "#9ca3af")
+            ConstructionIssuePriority.High => ("Hoog", "#dc3545", true),
+            _ => (string.Empty, string.Empty, false)
         };
     }
 
-    private static (string Label, string Color) GetStatusPresentation(int status)
+    private static (string Label, string BackgroundColor, string TextColor) GetStatusPresentation(int status)
     {
         return (ConstructionIssueStatus)status switch
         {
-            ConstructionIssueStatus.Open => ("Open", "#ef4444"),
-            ConstructionIssueStatus.Assigned => ("Toegewezen", "#f59e0b"),
-            ConstructionIssueStatus.InProgress => ("In uitvoering", "#f97316"),
-            ConstructionIssueStatus.Closed => ("Afgerond", "#10b981"),
-            _ => ("Onbekend", "#9ca3af")
+            ConstructionIssueStatus.Open => ("Open", "#e4efec", "#15322b"),
+            ConstructionIssueStatus.Assigned => ("Toegewezen", "#cfe3d8", "#15322b"),
+            ConstructionIssueStatus.InProgress => ("In uitvoering", "#8fbea5", "#ffffff"),
+            ConstructionIssueStatus.Closed => ("Afgerond", "#01532d", "#ffffff"),
+            _ => ("Onbekend", "#e5e7eb", "#374151")
         };
     }
 }

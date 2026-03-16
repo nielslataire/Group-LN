@@ -135,9 +135,16 @@
                             <select name="Input.IssueType" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueType>()"></select>
                         </div>
 
+
                         <div class="col-md-4">
-                            <label class="form-label">Prioriteit</label>
-                            <select name="Input.Priority" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssuePriority>()"></select>
+                            <label class="form-label d-flex justify-content-between" for="issuePriorityHighSwitch">
+                                <span>Prioriteit</span>
+                                <span id="issuePriorityLabel">Normaal</span>
+                            </label>
+                            <div class="switch switch-sm switch-primary">
+                                <input type="checkbox" id="issuePriorityHighSwitch" data-plugin-ios-switch />
+                            </div>
+                            <input type="hidden" name="Input.Priority" id="issuePriorityValue" value="@((int)ConstructionIssuePriority.Normal)" />
                         </div>
 
                         <div class="col-md-4">

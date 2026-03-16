@@ -48,6 +48,11 @@ public class ProjectsIssuesController : BaseController
     [Breadcrumb("Punten")]
     public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters)
     {
+        filters ??= new ConstructionIssueFilterBO();
+        if (!filters.Status.HasValue)
+        {
+            filters.Status = (int)ConstructionIssueStatus.Open;
+        }
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
         var formVm = await BuildVm(projectId);
         var vm = new ConstructionIssueIndexVm
