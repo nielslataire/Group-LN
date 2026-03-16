@@ -16,6 +16,7 @@ using System.Linq;
 using System.ComponentModel.DataAnnotations;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using CPMCore.Services.Security;
 
 namespace CPMCore.Controllers;
 
@@ -27,13 +28,15 @@ public class ProjectsIssuesController : BaseController
     private readonly IConstructionIssueReportService _reportService;
     private readonly cpmRunningContext _db;
     private readonly IConfiguration _configuration;
+    private readonly ISecurityService _securityService;
 
-    public ProjectsIssuesController(IConstructionIssueService service, IConstructionIssueReportService reportService, cpmRunningContext db, IConfiguration configuration)
+    public ProjectsIssuesController(IConstructionIssueService service, IConstructionIssueReportService reportService, cpmRunningContext db, IConfiguration configuration, ISecurityService securityService)
     {
         _service = service;
         _reportService = reportService;
         _db = db;
         _configuration = configuration;
+        _securityService = securityService;
     }
 
     [HttpGet("~/Projects/Issues")]
@@ -48,6 +51,8 @@ public class ProjectsIssuesController : BaseController
     [Breadcrumb("Punten")]
     public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters)
     {
+        if (!await EnsureProjectAccess(projectId))
+            return Forbid();
         filters ??= new ConstructionIssueFilterBO();
         if (!filters.Status.HasValue)
         {
@@ -172,6 +177,8 @@ public class ProjectsIssuesController : BaseController
     [HttpGet("Details/{id:int}")]
     public async Task<IActionResult> Details(int projectId, int id)
     {
+        if (!await EnsureIssueAccess(id))
+            return Forbid();
         var issue = await _service.GetById(projectId, id);
         if (issue == null) return NotFound();
 
@@ -840,6 +847,18 @@ public class ProjectsIssuesController : BaseController
         using var jsonDoc = JsonDocument.Parse(payload);
         if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
         return fileNameElement.GetString();
+    }
+
+    private async Task<bool> EnsureProjectAccess(int projectId)
+    {
+        var userId = User.FindFirst(CpmClaims.UserId)?.Value;
+        return !string.IsNullOrWhiteSpace(userId) && await _securityService.UserHasProjectAccess(userId, projectId);
+    }
+
+    private async Task<bool> EnsureIssueAccess(int issueId)
+    {
+        var userId = User.FindFirst(CpmClaims.UserId)?.Value;
+        return !string.IsNullOrWhiteSpace(userId) && await _securityService.CanAccessIssue(userId, issueId);
     }
 
     public sealed class IssueSendPreviewRequest

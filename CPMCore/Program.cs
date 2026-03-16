@@ -6,6 +6,7 @@ using CPMCore.Services;
 using CPMCore.Services.Authorization;
 using CPMCore.Services.Octopus;
 using CPMCore.Services.Peppol;
+using CPMCore.Services.Security;
 using DALCore;
 using DALCore.Models;
 using DinkToPdf;
@@ -218,6 +219,7 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
 //});
 
 builder.Services.AddScoped<ICpmUserAccessService, CpmUserAccessService>();
+builder.Services.AddScoped<ISecurityService, SecurityService>();
 
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))

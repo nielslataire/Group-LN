@@ -384,6 +384,126 @@ public class LeveranciersController : BaseController
         await _db.SaveChangesAsync(ct);
     }
 
+    private async Task<Dictionary<string, CompanyDepartments>> UpsertDepartmentsAsync(
+        int companyId,
+        IReadOnlyCollection<CompanyDepartments> existingDepartments,
+        IEnumerable<DepartmentInputViewModel> departments,
+        CancellationToken ct)
+    {
+        var tracked = new Dictionary<string, CompanyDepartments>();
+        var existingById = existingDepartments.ToDictionary(d => d.DepartmentId);
+
+        foreach (var department in departments.Where(HasDepartmentData))
+        {
+            CompanyDepartments entity;
+            if (department.Id.HasValue && existingById.TryGetValue(department.Id.Value, out var existing))
+            {
+                entity = existing;
+                entity.Naam = department.Name;
+                entity.Straat = department.Street;
+                entity.Huisnummer = department.HouseNumber;
+                entity.Bus = department.Bus;
+                entity.PostcodeId = department.PostalCodeId;
+                entity.Telefoon = department.Phone;
+                entity.Gsm = department.Mobile;
+                entity.Email = department.Email;
+            }
+            else
+            {
+                entity = new CompanyDepartments
+                {
+                    CompanyId = companyId,
+                    Naam = department.Name,
+                    Straat = department.Street,
+                    Huisnummer = department.HouseNumber,
+                    Bus = department.Bus,
+                    PostcodeId = department.PostalCodeId,
+                    Telefoon = department.Phone,
+                    Gsm = department.Mobile,
+                    Email = department.Email
+                };
+
+                _db.CompanyDepartments.Add(entity);
+            }
+
+            tracked[department.Key] = entity;
+        }
+
+        await _db.SaveChangesAsync(ct);
+        return tracked;
+    }
+
+    private async Task SyncContactsAsync(
+        int companyId,
+        IReadOnlyCollection<CompanyContacts> existingContacts,
+        IEnumerable<ContactInputViewModel> contacts,
+        IReadOnlyDictionary<string, CompanyDepartments> departments,
+        CancellationToken ct)
+    {
+        var existingById = existingContacts.ToDictionary(c => c.ContactId);
+        var postedContacts = contacts.Where(HasContactData).ToList();
+        var postedIds = postedContacts
+            .Where(c => c.Id.HasValue)
+            .Select(c => c.Id!.Value)
+            .ToHashSet();
+
+        var contactsToRemove = existingContacts
+            .Where(c => !postedIds.Contains(c.ContactId))
+            .ToList();
+
+        if (contactsToRemove.Count > 0)
+        {
+            var contactIdsToRemove = contactsToRemove.Select(c => c.ContactId).ToList();
+            var contractsUsingContacts = await _db.Contract
+                .Where(c => c.SiteManagerContactId.HasValue && contactIdsToRemove.Contains(c.SiteManagerContactId.Value))
+                .ToListAsync(ct);
+
+            foreach (var contract in contractsUsingContacts)
+            {
+                contract.SiteManagerContactId = null;
+            }
+
+            _db.CompanyContacts.RemoveRange(contactsToRemove);
+        }
+
+        foreach (var contact in postedContacts)
+        {
+            int? departmentId = null;
+            if (!string.IsNullOrWhiteSpace(contact.DepartmentKey) && departments.TryGetValue(contact.DepartmentKey, out var dep))
+            {
+                departmentId = dep.DepartmentId;
+            }
+
+            if (contact.Id.HasValue && existingById.TryGetValue(contact.Id.Value, out var existing))
+            {
+                existing.DepartmentId = departmentId;
+                existing.ContactNaam = contact.LastName;
+                existing.ContactVoornaam = contact.FirstName;
+                existing.Functie = contact.Function;
+                existing.Telefoon = contact.Phone;
+                existing.Gsm = contact.Mobile;
+                existing.Email = contact.Email;
+            }
+            else
+            {
+                _db.CompanyContacts.Add(new CompanyContacts
+                {
+                    CompanyId = companyId,
+                    DepartmentId = departmentId,
+                    ContactNaam = contact.LastName,
+                    ContactVoornaam = contact.FirstName,
+                    Functie = contact.Function,
+                    Telefoon = contact.Phone,
+                    Gsm = contact.Mobile,
+                    Email = contact.Email
+                });
+            }
+        }
+
+        await _db.SaveChangesAsync(ct);
+    }
+
+
     private static string? CombineEnterpriseNumber(string? countryCode, string? number)
     {
         var sanitizedNumber = SanitizeDigits(number);
@@ -1067,20 +1187,18 @@ public class LeveranciersController : BaseController
         
         await AssignIssuerCompaniesAsync(entity, model.SelectedIssuerCompanyIds, ct);
 
-        if (entity.CompanyContacts.Any())
-        {
-            _db.CompanyContacts.RemoveRange(entity.CompanyContacts);
-        }
+        var departments = await UpsertDepartmentsAsync(
+               entity.CompanyId,
+               entity.CompanyDepartments.ToList(),
+               model.Departments ?? Enumerable.Empty<DepartmentInputViewModel>(),
+               ct);
 
-        if (entity.CompanyDepartments.Any())
-        {
-            _db.CompanyDepartments.RemoveRange(entity.CompanyDepartments);
-        }
-
-        await _db.SaveChangesAsync(ct);
-
-        var departments = await PersistDepartmentsAsync(entity.CompanyId, model.Departments ?? Enumerable.Empty<DepartmentInputViewModel>(), ct);
-        await PersistContactsAsync(entity.CompanyId, model.Contacts ?? Enumerable.Empty<ContactInputViewModel>(), departments, ct);
+        await SyncContactsAsync(
+            entity.CompanyId,
+            entity.CompanyContacts.ToList(),
+            model.Contacts ?? Enumerable.Empty<ContactInputViewModel>(),
+            departments,
+            ct);
 
         await _db.SaveChangesAsync(ct);
 

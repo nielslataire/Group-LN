@@ -1,0 +1,118 @@
+﻿@model CPMCore.Models.Instellingen.Security.AccessControlSettingsViewModel
+@{
+    ViewData["Title"] = "Toegangsbeheer";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="card card-modern">
+    <header class="card-header">
+        <h2 class="card-title">Toegangsbeheer per project en bedrijf</h2>
+        <p class="card-subtitle mb-0">Beheer scope-gebaseerde toegang voor interne medewerkers, aannemers en leveranciers.</p>
+    </header>
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <section class="card card-modern">
+                    <header class="card-header"><h3 class="card-title">Projecttoegang toevoegen</h3></header>
+                    <div class="card-body">
+                        <form asp-action="CreateProjectAccess" method="post">
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label class="form-label">Gebruiker</label>
+                                <select class="form-select" asp-for="NewProjectAccess.UserId" asp-items="@(new SelectList(Model.Users, "Id", "Name"))"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Project</label>
+                                <select class="form-select" asp-for="NewProjectAccess.ProjectId" asp-items="@(new SelectList(Model.Projects, "Id", "Name"))"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Rol</label>
+                                <select class="form-select" asp-for="NewProjectAccess.Role" asp-items="Html.GetEnumSelectList<DALCore.Models.AccessScopeRole>()"></select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Opslaan</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+            <div class="col-lg-6">
+                <section class="card card-modern">
+                    <header class="card-header"><h3 class="card-title">Bedrijfstoegang toevoegen</h3></header>
+                    <div class="card-body">
+                        <form asp-action="CreateCompanyAccess" method="post">
+                            @Html.AntiForgeryToken()
+                            <div class="mb-3">
+                                <label class="form-label">Gebruiker</label>
+                                <select class="form-select" asp-for="NewCompanyAccess.UserId" asp-items="@(new SelectList(Model.Users, "Id", "Name"))"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Bedrijf</label>
+                                <select class="form-select" asp-for="NewCompanyAccess.CompanyId" asp-items="@(new SelectList(Model.Companies, "Id", "Name"))"></select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Rol</label>
+                                <select class="form-select" asp-for="NewCompanyAccess.Role" asp-items="Html.GetEnumSelectList<DALCore.Models.AccessScopeRole>()"></select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Opslaan</button>
+                        </form>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-12">
+                <section class="card card-modern">
+                    <header class="card-header"><h3 class="card-title">ProjectUserAccess</h3></header>
+                    <div class="card-body table-responsive">
+                        <table class="table table-hover table-striped align-middle mb-0">
+                            <thead><tr><th>Gebruiker</th><th>Project</th><th>Rol</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var row in Model.ProjectAccessRows)
+                                {
+                                    <tr>
+                                        <td>@row.UserName</td>
+                                        <td>@row.ProjectName</td>
+                                        <td><span class="badge bg-info">@row.Role</span></td>
+                                        <td class="text-end">
+                                            <form asp-action="DeleteProjectAccess" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@row.Id" />
+                                                <button class="btn btn-sm btn-outline-danger" type="submit">Verwijder</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-12">
+                <section class="card card-modern">
+                    <header class="card-header"><h3 class="card-title">UserCompanyAccess</h3></header>
+                    <div class="card-body table-responsive">
+                        <table class="table table-hover table-striped align-middle mb-0">
+                            <thead><tr><th>Gebruiker</th><th>Bedrijf</th><th>Rol</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var row in Model.CompanyAccessRows)
+                                {
+                                    <tr>
+                                        <td>@row.UserName</td>
+                                        <td>@row.CompanyName</td>
+                                        <td><span class="badge bg-secondary">@row.Role</span></td>
+                                        <td class="text-end">
+                                            <form asp-action="DeleteCompanyAccess" method="post" class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@row.Id" />
+                                                <button class="btn btn-sm btn-outline-danger" type="submit">Verwijder</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</section>

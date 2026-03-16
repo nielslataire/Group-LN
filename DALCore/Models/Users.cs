@@ -40,4 +40,8 @@ public partial class Users
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
+
+    public virtual ICollection<ProjectUserAccess> ProjectUserAccess { get; set; } = new List<ProjectUserAccess>();
+
+    public virtual ICollection<UserCompanyAccess> UserCompanyAccess { get; set; } = new List<UserCompanyAccess>();
 }
