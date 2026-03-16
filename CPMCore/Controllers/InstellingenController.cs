@@ -3,6 +3,7 @@ using CPMCore.Attributes;
 using CPMCore.Models;
 using CPMCore.Models.Home;
 using CPMCore.Models.Instellingen;
+using CPMCore.Models.Instellingen.Security;
 using CPMCore.Models.Invoicing;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
@@ -110,14 +111,14 @@ public class InstellingenController : BaseController
             return RedirectToAction(nameof(AccessControl));
         }
 
-        var exists = await _db.ProjectUserAccess.AnyAsync(x => x.UserId == vm.NewProjectAccess.UserId && x.ProjectId == vm.NewProjectAccess.ProjectId);
+        var exists = await _db.Set<ProjectUserAccess>().AnyAsync(x => x.UserId == vm.NewProjectAccess.UserId && x.ProjectId == vm.NewProjectAccess.ProjectId);
         if (!exists)
         {
-            _db.ProjectUserAccess.Add(new ProjectUserAccess
+            _db.Set<ProjectUserAccess>().Add(new ProjectUserAccess
             {
                 UserId = vm.NewProjectAccess.UserId,
                 ProjectId = vm.NewProjectAccess.ProjectId,
-                Role = vm.NewProjectAccess.Role
+                Role = (int)vm.NewProjectAccess.Role
             });
             await _db.SaveChangesAsync();
             TempData["Success"] = "Projecttoegang toegevoegd.";
@@ -137,14 +138,14 @@ public class InstellingenController : BaseController
             return RedirectToAction(nameof(AccessControl));
         }
 
-        var exists = await _db.UserCompanyAccess.AnyAsync(x => x.UserId == vm.NewCompanyAccess.UserId && x.CompanyId == vm.NewCompanyAccess.CompanyId);
+        var exists = await _db.Set<UserCompanyAccess>().AnyAsync(x => x.UserId == vm.NewCompanyAccess.UserId && x.CompanyId == vm.NewCompanyAccess.CompanyId);
         if (!exists)
         {
-            _db.UserCompanyAccess.Add(new UserCompanyAccess
+            _db.Set<UserCompanyAccess>().Add(new UserCompanyAccess
             {
                 UserId = vm.NewCompanyAccess.UserId,
                 CompanyId = vm.NewCompanyAccess.CompanyId,
-                Role = vm.NewCompanyAccess.Role
+                Role = (int)vm.NewCompanyAccess.Role
             });
             await _db.SaveChangesAsync();
             TempData["Success"] = "Bedrijfstoegang toegevoegd.";
@@ -158,10 +159,10 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteProjectAccess(int id)
     {
-        var row = await _db.ProjectUserAccess.FindAsync(id);
+        var row = await _db.Set<ProjectUserAccess>().FindAsync(id);
         if (row != null)
         {
-            _db.ProjectUserAccess.Remove(row);
+            _db.Set<ProjectUserAccess>().Remove(row);
             await _db.SaveChangesAsync();
         }
 
@@ -173,10 +174,10 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> DeleteCompanyAccess(int id)
     {
-        var row = await _db.UserCompanyAccess.FindAsync(id);
+        var row = await _db.Set<UserCompanyAccess>().FindAsync(id);
         if (row != null)
         {
-            _db.UserCompanyAccess.Remove(row);
+            _db.Set<UserCompanyAccess>().Remove(row);
             await _db.SaveChangesAsync();
         }
 
@@ -193,22 +194,23 @@ public class InstellingenController : BaseController
                 .Select(x => new ProjectOption(x.ProjectId, x.ProjectName ?? $"Project {x.ProjectId}")).ToListAsync(),
             Companies = await _db.CompanyInfo.AsNoTracking().OrderBy(x => x.BedrijfsNaam)
                 .Select(x => new CompanyOption(x.CompanyId, x.BedrijfsNaam ?? $"Bedrijf {x.CompanyId}")).ToListAsync(),
-            ProjectAccessRows = await _db.ProjectUserAccess.AsNoTracking()
+            ProjectAccessRows = await _db.Set<ProjectUserAccess>().AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Project)
                 .OrderBy(x => x.Project.ProjectName)
                 .ThenBy(x => x.User.Voornaam)
-                .Select(x => new ProjectUserAccessRow(x.Id, x.UserId, (x.User.Voornaam ?? string.Empty) + " " + (x.User.Familienaam ?? string.Empty), x.ProjectId, x.Project.ProjectName ?? $"Project {x.ProjectId}", x.Role))
+                .Select(x => new ProjectUserAccessRow(x.Id, x.UserId, (x.User.Voornaam ?? string.Empty) + " " + (x.User.Familienaam ?? string.Empty), x.ProjectId, x.Project.ProjectName ?? $"Project {x.ProjectId}", (AccessScopeRole)x.Role))
                 .ToListAsync(),
-            CompanyAccessRows = await _db.UserCompanyAccess.AsNoTracking()
+            CompanyAccessRows = await _db.Set<UserCompanyAccess>().AsNoTracking()
                 .Include(x => x.User)
                 .Include(x => x.Company)
                 .OrderBy(x => x.Company.BedrijfsNaam)
                 .ThenBy(x => x.User.Voornaam)
-                .Select(x => new UserCompanyAccessRow(x.Id, x.UserId, (x.User.Voornaam ?? string.Empty) + " " + (x.User.Familienaam ?? string.Empty), x.CompanyId, x.Company.BedrijfsNaam ?? $"Bedrijf {x.CompanyId}", x.Role))
+                .Select(x => new UserCompanyAccessRow(x.Id, x.UserId, (x.User.Voornaam ?? string.Empty) + " " + (x.User.Familienaam ?? string.Empty), x.CompanyId, x.Company.BedrijfsNaam ?? $"Bedrijf {x.CompanyId}", (AccessScopeRole)x.Role))
                 .ToListAsync()
         };
     }
+
 
 
     [HttpGet]

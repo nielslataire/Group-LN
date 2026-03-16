@@ -21,7 +21,7 @@ public class SecurityService : ISecurityService
         if (!internalUserId.HasValue)
             return false;
 
-        return await _db.ProjectUserAccess
+        return await _db.Set<ProjectUserAccess>()
             .AsNoTracking()
             .AnyAsync(x => x.UserId == internalUserId.Value && x.ProjectId == projectId);
     }
@@ -40,7 +40,7 @@ public class SecurityService : ISecurityService
         if (!internalUserId.HasValue)
             return new List<int>();
 
-        return await _db.ProjectUserAccess
+        return await _db.Set<ProjectUserAccess>()
             .AsNoTracking()
             .Where(x => x.UserId == internalUserId.Value)
             .Select(x => x.ProjectId)
@@ -54,7 +54,7 @@ public class SecurityService : ISecurityService
         if (!internalUserId.HasValue)
             return new List<int>();
 
-        return await _db.UserCompanyAccess
+        return await _db.Set<UserCompanyAccess>()
             .AsNoTracking()
             .Where(x => x.UserId == internalUserId.Value)
             .Select(x => x.CompanyId)
