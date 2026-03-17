@@ -1,6 +1,4 @@
-﻿using System.Net;
-using System.Net.Mail;
-using BOCore;
+﻿using BOCore;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +6,17 @@ using Microsoft.Extensions.Configuration;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using SixLabors.Fonts;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using System.Net;
+using System.Net.Mail;
+using System.Text;
+using System.Text.Json;
 
 namespace ServiceCore.Issues;
 
@@ -16,6 +25,27 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
     private readonly cpmRunningContext _db;
     private readonly IConstructionIssueService _issueService;
     private readonly IConfiguration _configuration;
+    private static SixLabors.Fonts.Font? _markerFont;
+
+    private static void EnsureFontLoaded()
+    {
+        if (_markerFont != null)
+            return;
+
+        var fontPath = System.IO.Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "wwwroot",
+            "fonts",
+            "Avenir-Heavy.ttf");
+
+        if (!File.Exists(fontPath))
+            return;
+
+        var collection = new SixLabors.Fonts.FontCollection();
+        var family = collection.Add(fontPath);
+
+        _markerFont = family.CreateFont(32, SixLabors.Fonts.FontStyle.Regular);
+    }
 
     public ConstructionIssueReportService(cpmRunningContext db, IConstructionIssueService issueService, IConfiguration configuration)
     {
@@ -104,9 +134,17 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         var enableQr = _configuration.GetValue<bool>("Features:EnableQRCode");
         var now = DateTime.Now;
         var groupedByUnit = issues
-            .GroupBy(x => string.IsNullOrWhiteSpace(x.Unit?.Name) ? "Zonder eenheid" : x.Unit!.Name)
-            .OrderBy(x => x.Key)
-            .ToList();
+              .GroupBy(x => new
+              {
+                  x.UnitId,
+                  UnitName = string.IsNullOrWhiteSpace(x.Unit?.Name) ? "Zonder eenheid" : x.Unit!.Name
+              })
+              .OrderBy(x => x.Key.UnitName)
+              .ToList();
+        var issueIndexById = issues
+            .Select((issue, index) => new { issue.Id, Number = index + 1 })
+            .ToDictionary(x => x.Id, x => x.Number);
+        var planSections = await BuildPlanSections(projectId, issues, issueIndexById);
 
         return Document.Create(container =>
         {
@@ -146,6 +184,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                     col.Item().ShowOnce().Height(24);
 
                     var issueNumber = 1;
+
                     foreach (var unitGroup in groupedByUnit)
                     {
                         var unitIssues = unitGroup.ToList();
@@ -153,6 +192,11 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                             continue;
 
                         var firstIssue = unitIssues[0];
+                        var unitPlanSections = planSections
+                            .Where(x => x.UnitId == unitGroup.Key.UnitId)
+                            .OrderBy(x => x.PlanName)
+                            .ThenBy(x => x.PageNumber)
+                            .ToList();
 
                         col.Item().PaddingHorizontal(30).PaddingTop(10).PaddingBottom(10).Column(unitCol =>
                         {
@@ -160,19 +204,26 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                             {
                                 firstBlock.Item().Background(primaryColor).CornerRadius(6).PaddingVertical(7).PaddingHorizontal(10).Row(row =>
                                 {
-                                    row.RelativeItem().Text($"Eenheid: {unitGroup.Key}").FontColor(Colors.White).SemiBold();
+                                    row.RelativeItem().Text($"Eenheid: {unitGroup.Key.UnitName}").FontColor(Colors.White).SemiBold();
                                     row.ConstantItem(80).AlignRight().Text($"{unitIssues.Count} punt(en)").FontColor(Colors.White).SemiBold();
                                 });
 
-                                firstBlock.Item().PaddingTop(10).Element(cardContainer => RenderIssueCard(cardContainer, firstIssue, issueNumber++, primaryColor, responsibleNames));
+                                firstBlock.Item().PaddingTop(10).Element(cardContainer =>
+                                    RenderIssueCard(cardContainer, firstIssue, issueNumber++, primaryColor, responsibleNames, this));
                             });
 
                             foreach (var issue in unitIssues.Skip(1))
                             {
-                                unitCol.Item().PaddingTop(10).Element(cardContainer => RenderIssueCard(cardContainer, issue, issueNumber++, primaryColor, responsibleNames));
+                                unitCol.Item().PaddingTop(10).Element(cardContainer =>
+                                    RenderIssueCard(cardContainer, issue, issueNumber++, primaryColor, responsibleNames, this));
+                            }
+
+                            foreach (var section in unitPlanSections)
+                            {
+                                unitCol.Item().PaddingTop(12).Element(planContainer =>
+                                    RenderPlanBlock(planContainer, section, this));
                             }
                         });
-
                     }
                 });
 
@@ -325,7 +376,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return string.IsNullOrWhiteSpace(responsibleOtherEmail) ? null : responsibleOtherEmail;
     }
 
-    private static void RenderIssueCard(IContainer container, ConstructionIssue issue, int badgeNumber, string primaryColor, IReadOnlyDictionary<int, string> responsibleNames)
+    private static void RenderIssueCard(IContainer container, ConstructionIssue issue, int badgeNumber, string primaryColor, IReadOnlyDictionary<int, string> responsibleNames, ConstructionIssueReportService service)
     {
         var priority = GetPriorityPresentation(issue.Priority);
         var status = GetStatusPresentation(issue.Status);
@@ -369,8 +420,406 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             }
 
             card.Item().PaddingTop(6).PaddingBottom(10).Text(issue.Description ?? "-").FontSize(9);
+
+            var photoIds = issue.ConstructionIssueMedia
+                .Where(m => (m.MediaType == (int)ConstructionIssueMediaType.Photo || m.MediaType == (int)ConstructionIssueMediaType.DetailPhoto) && !string.IsNullOrWhiteSpace(m.FileId))
+                .Select(m => m.FileId)
+                .Distinct()
+                .Take(4)
+                .ToList();
+
+            if (photoIds.Any())
+            {
+                card.Item().PaddingTop(4).Column(photos =>
+                {
+                    photos.Item().Text("Foto's").FontSize(8).SemiBold().FontColor("#374151");
+
+                    foreach (var rowGroup in photoIds.Chunk(2))
+                    {
+                        photos.Item().PaddingTop(4).Row(row =>
+                        {
+                            row.Spacing(8);
+                            foreach (var fileId in rowGroup)
+                            {
+                                var bytes = service.LoadAssetBytes(fileId, "pictures");
+                                row.ConstantItem(184).Height(160).Element(photo =>
+                                {
+                                    if (bytes != null && IsLikelyImage(bytes))
+                                    {
+                                        photo.Image(bytes).FitArea();
+                                    }
+                                    else
+                                    {
+                                        photo.AlignCenter().AlignMiddle().Text("Foto niet beschikbaar").FontSize(7).FontColor("#9ca3af");
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
         });
     }
+
+    private async Task<List<IssuePlanSection>> BuildPlanSections(int projectId, List<ConstructionIssue> issues, IReadOnlyDictionary<int, int> issueIndexById)
+    {
+        var issuesWithPlan = issues
+             .Where(i =>
+                 i.UnitId.HasValue &&
+                 i.PlanXnormalized.HasValue &&
+                 i.PlanYnormalized.HasValue &&
+                 i.PlanPageNumber.HasValue)
+             .ToList();
+
+        if (!issuesWithPlan.Any())
+            return new List<IssuePlanSection>();
+
+        var unitIds = issuesWithPlan.Select(i => i.UnitId!.Value).Distinct().ToList();
+        var units = await _db.Units
+            .Where(u => unitIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id);
+
+        var executionPlanIds = issuesWithPlan
+            .Where(i => i.PlanDocumentId > 0)
+            .Select(i => i.PlanDocumentId!.Value)
+            .Distinct()
+            .ToList();
+
+        var executionPlans = await _db.UnitExecutionPlan
+            .Where(p => executionPlanIds.Contains(p.Id) && p.DeletedDate == null)
+            .ToDictionaryAsync(p => p.Id);
+
+        return issuesWithPlan
+            .GroupBy(i => new { i.UnitId, i.PlanDocumentId, Page = i.PlanPageNumber ?? 1 })
+            .Select(g =>
+            {
+                var first = g.First();
+                var unitName = first.Unit?.Name ?? (first.UnitId.HasValue && units.TryGetValue(first.UnitId.Value, out var unit) ? unit.Name : "Zonder eenheid");
+                var planName = "Plan";
+                string? fileId = null;
+
+                if ((!first.PlanDocumentId.HasValue || first.PlanDocumentId == 0) && first.UnitId.HasValue && units.TryGetValue(first.UnitId.Value, out var fallbackUnit))
+                {
+                    fileId = fallbackUnit.Plan;
+                    planName = string.IsNullOrWhiteSpace(fallbackUnit.Name) ? "Plan" : fallbackUnit.Name;
+                }
+                else if (first.PlanDocumentId.HasValue && executionPlans.TryGetValue(first.PlanDocumentId.Value, out var executionPlan))
+                {
+                    fileId = executionPlan.FileId;
+                    planName = string.IsNullOrWhiteSpace(executionPlan.Name) ? "Plan" : executionPlan.Name;
+                }
+
+                var markers = g
+                    .Where(i => i.PlanXnormalized.HasValue && i.PlanYnormalized.HasValue && issueIndexById.ContainsKey(i.Id))
+                    .Select(i => new IssuePlanMarker(
+                        issueIndexById[i.Id],
+                        ClampNormalized(i.PlanXnormalized!.Value),
+                        ClampNormalized(i.PlanYnormalized!.Value)))
+                    .OrderBy(m => m.Number)
+                    .ToList();
+
+                return new IssuePlanSection(first.UnitId, unitName, planName, first.PlanPageNumber ?? 1, fileId, markers);
+            })
+            .Where(s => s.Markers.Any())
+            .OrderBy(s => s.UnitName)
+            .ThenBy(s => s.PlanName)
+            .ThenBy(s => s.PageNumber)
+            .ToList();
+    }
+
+    private static void RenderPlanBlock(IContainer container, IssuePlanSection section, ConstructionIssueReportService service)
+    {
+        container.ShowEntire().Column(col =>
+        {
+            col.Item().Background("#dfe8e6").CornerRadius(4).PaddingVertical(6).PaddingHorizontal(10).Row(r =>
+            {
+                r.RelativeItem().Text($"Plan: {section.PlanName}").FontSize(9).SemiBold().FontColor("#15322b");
+                r.ConstantItem(140).AlignRight().Text($"{section.Markers.Count} punt(en) aangeduid").FontSize(9).SemiBold().FontColor("#15322b");
+            });
+
+            var planImageBytes = string.IsNullOrWhiteSpace(section.FileId)
+                ? null
+                : service.ResolvePlanPageImageBytes(section.FileId, section.PageNumber);
+
+            col.Item().PaddingTop(4).Border(1).BorderColor("#d9dde2").CornerRadius(6).Padding(8).Height(320).Element(x =>
+            {
+                if (planImageBytes != null && IsLikelyImage(planImageBytes))
+                {
+                    var composedBytes = BuildPlanImageWithMarkers(planImageBytes, section.Markers);
+                    x.Image(composedBytes).FitArea();
+                }
+                else
+                {
+                    x.AlignCenter().AlignMiddle().Text("Plan niet beschikbaar").FontSize(8).FontColor("#9ca3af");
+                }
+            });
+        });
+    }
+
+    private static byte[] BuildPlanImageWithMarkers(byte[] imageBytes, IReadOnlyCollection<IssuePlanMarker> markers)
+    {
+        using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageBytes);
+
+        foreach (var marker in markers)
+        {
+            var x = marker.X * image.Width;
+            var y = marker.Y * image.Height;
+
+            DrawPinMarker(image, x, y, marker.Number);
+        }
+
+        using var output = new MemoryStream();
+        image.SaveAsJpeg(output, new JpegEncoder { Quality = 92 });
+        return output.ToArray();
+    }
+
+    private static void DrawPinMarker(
+     SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32> image,
+     float x,
+     float y,
+     int number)
+    {
+        var orange = SixLabors.ImageSharp.Color.ParseHex("#f59e0b");
+        var white = SixLabors.ImageSharp.Color.White;
+
+        var radius = 32f;
+
+        image.Mutate(ctx =>
+        {
+            ctx.Fill(
+                orange,
+                new SixLabors.ImageSharp.Drawing.EllipsePolygon(x, y, radius));
+        });
+
+        TryDrawMarkerNumber(image, number.ToString(), x, y, white);
+    }
+
+    private static void TryDrawMarkerNumber(
+      SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32> image,
+      string text,
+      float centerX,
+      float centerY,
+      SixLabors.ImageSharp.Color color)
+    {
+        try
+        {
+            EnsureFontLoaded();
+            if (_markerFont == null)
+                return;
+
+            var options = new SixLabors.ImageSharp.Drawing.Processing.RichTextOptions(_markerFont)
+            {
+                HorizontalAlignment = SixLabors.Fonts.HorizontalAlignment.Center,
+                VerticalAlignment = SixLabors.Fonts.VerticalAlignment.Center,
+                Origin = new SixLabors.ImageSharp.PointF(centerX, centerY)
+            };
+
+            image.Mutate(ctx => ctx.DrawText(options, text, color));
+        }
+        catch
+        {
+            // fallback zonder nummer
+        }
+    }
+
+    private static float ClampNormalized(decimal value)
+    {
+        var floatValue = (float)value;
+        if (floatValue < 0f) return 0f;
+        if (floatValue > 1f) return 1f;
+        return floatValue;
+    }
+
+    private static string BuildMarkerOverlaySvg(IReadOnlyCollection<IssuePlanMarker> markers)
+    {
+        var svg = new StringBuilder();
+        svg.Append("<svg xmlns='http://www.w3.org/2000/svg' width='1000' height='700' viewBox='0 0 1000 700'>");
+
+        foreach (var marker in markers)
+        {
+            var x = marker.X * 1000f;
+            var y = marker.Y * 700f;
+
+            svg.Append(BuildPinSvg(x, y, marker.Number));
+        }
+
+        svg.Append("</svg>");
+        return svg.ToString();
+    }
+
+    private static string BuildPinSvg(float x, float y, int number)
+    {
+        var pinTopY = y - 30f;
+        var textY = pinTopY + 16f;
+
+        return $@"
+        <g transform='translate({x:0.##},{y:0.##})'>
+            <path d='M 0 -28
+                     C 10 -28 18 -20 18 -10
+                     C 18 2 8 10 0 24
+                     C -8 10 -18 2 -18 -10
+                     C -18 -20 -10 -28 0 -28 Z'
+                  fill='#dc2626'
+                  stroke='#ffffff'
+                  stroke-width='2' />
+            <circle cx='0' cy='-10' r='9' fill='#ffffff' />
+            <text x='0' y='-6'
+                  text-anchor='middle'
+                  font-size='11'
+                  font-family='Arial'
+                  font-weight='700'
+                  fill='#dc2626'>{number}</text>
+        </g>";
+    }
+
+
+    private static bool IsLikelyImage(byte[] bytes)
+    {
+        return bytes.Length > 4
+               && ((bytes[0] == 0xFF && bytes[1] == 0xD8)
+                   || (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+                   || (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46));
+    }
+
+    private static string DetectImageMime(byte[] bytes)
+    {
+        if (bytes.Length > 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+            return "image/png";
+        if (bytes.Length > 3 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46)
+            return "image/gif";
+        return "image/jpeg";
+    }
+
+    private static bool IsLikelyPdf(byte[] bytes)
+    {
+        return bytes.Length > 4
+               && bytes[0] == 0x25
+               && bytes[1] == 0x50
+               && bytes[2] == 0x44
+               && bytes[3] == 0x46;
+    }
+
+    private byte[]? ResolvePlanPageImageBytes(string fileId, int pageNumber)
+    {
+        var directBytes = LoadAssetBytes(fileId, "plans");
+        if (directBytes == null || directBytes.Length == 0)
+            return null;
+
+        if (IsLikelyImage(directBytes))
+            return directBytes;
+
+        if (!IsLikelyPdf(directBytes))
+            return null;
+
+        return LoadPlanPageImageFromStorage(fileId, pageNumber);
+    }
+
+    private byte[]? LoadPlanPageImageFromStorage(string fileId, int pageNumber)
+    {
+        var safeFileName = System.IO.Path.GetFileName(fileId ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+            return null;
+
+        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return null;
+
+        var readKey = _configuration["StorageApi:ReadApiKey"];
+        var writeKey = _configuration["StorageApi:WriteApiKey"];
+        var key = !string.IsNullOrWhiteSpace(readKey) ? readKey : writeKey;
+
+        if (string.IsNullOrWhiteSpace(key))
+            return null;
+
+        var safePageNumber = pageNumber < 1 ? 1 : pageNumber;
+        var endpoint = $"{baseUrl}/api/assets/plans/{Uri.EscapeDataString(safeFileName)}/page-image?page={safePageNumber}";
+
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", key);
+
+            var response = httpClient.GetAsync(endpoint).GetAwaiter().GetResult();
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            var bytes = response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
+            return bytes.Length > 0 && IsLikelyImage(bytes) ? bytes : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private byte[]? LoadAssetBytes(string fileId, string folder)
+    {
+        var url = GetSignedAssetUrlByFileName(fileId, folder);
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                var bytes = httpClient.GetByteArrayAsync(url).GetAwaiter().GetResult();
+                if (bytes.Length > 0)
+                    return bytes;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Thumbnail download failed: {url} - {ex.Message}");
+            }
+        }
+
+        return null;
+    }
+
+    private string? GetSignedAssetUrlByFileName(string fileName, string folder)
+    {
+        var safeFileName = System.IO.Path.GetFileName(fileName ?? string.Empty);
+        if (string.IsNullOrWhiteSpace(safeFileName))
+            return null;
+
+        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        if (string.IsNullOrWhiteSpace(baseUrl))
+            return null;
+
+        var readKey = _configuration["StorageApi:ReadApiKey"];
+        if (!string.IsNullOrWhiteSpace(readKey))
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Add("X-Api-Key", readKey);
+
+                var signUrl = $"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(safeFileName)}/sign";
+                var response = httpClient.PostAsync(signUrl, content: null).GetAwaiter().GetResult();
+                if (response.IsSuccessStatusCode)
+                {
+                    var payload = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    using var jsonDoc = JsonDocument.Parse(payload);
+                    if (jsonDoc.RootElement.TryGetProperty("url", out var urlElement))
+                    {
+                        var relativeOrAbsolute = urlElement.GetString();
+                        if (!string.IsNullOrWhiteSpace(relativeOrAbsolute))
+                        {
+                            return relativeOrAbsolute.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                                ? relativeOrAbsolute
+                                : $"{baseUrl}{relativeOrAbsolute}";
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Thumbnail download failed: {ex.Message}");
+            }
+        }
+
+        return $"{baseUrl}/{folder}/{Uri.EscapeDataString(safeFileName)}";
+    }
+
+    private sealed record IssuePlanSection(int? UnitId, string UnitName, string PlanName, int PageNumber, string? FileId, IReadOnlyList<IssuePlanMarker> Markers);
+    private sealed record IssuePlanMarker(int Number, float X, float Y);
 
     private static string GetLocationDisplay(ConstructionIssue issue)
     {

@@ -250,6 +250,63 @@ app.MapGet("/api/assets/private/{folder}/{fileName}", (string folder, string fil
     return Results.File(filePath, contentType, enableRangeProcessing: true);
 });
 
+app.MapGet("/api/assets/plans/{fileName}/page-image", (HttpRequest request, string fileName, int? page, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+{
+    var localSettings = options.Value;
+
+    if (!TryValidateReadOrWriteApiKey(request, localSettings))
+    {
+        return Results.Unauthorized();
+    }
+
+    if (!IsSafeFileName(fileName))
+    {
+        return Results.BadRequest(new { error = "Invalid file name." });
+    }
+
+    var pageNumber = page.GetValueOrDefault(1);
+    if (pageNumber < 1)
+    {
+        pageNumber = 1;
+    }
+
+    var plansFolder = Path.Combine(env.ContentRootPath, localSettings.RootPath, AssetFolders.Plans);
+    Directory.CreateDirectory(plansFolder);
+
+    var sourcePath = Path.Combine(plansFolder, fileName);
+    if (!File.Exists(sourcePath))
+    {
+        return Results.NotFound(new { error = "Source file not found." });
+    }
+
+    var extension = Path.GetExtension(fileName);
+
+    try
+    {
+        if (string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!TryRenderPdfPageToJpeg(sourcePath, pageNumber, out var jpegBytes))
+            {
+                return Results.BadRequest(new { error = "Could not render requested PDF page." });
+            }
+
+            return Results.File(jpegBytes, "image/jpeg");
+        }
+
+        if (IsImageExtension(extension))
+        {
+            var bytes = File.ReadAllBytes(sourcePath);
+            return Results.File(bytes, GetContentTypeForImageExtension(extension));
+        }
+
+        return Results.BadRequest(new { error = "File is not a PDF or supported image." });
+    }
+    catch
+    {
+        return Results.StatusCode(StatusCodes.Status500InternalServerError);
+    }
+});
+
 //app.Lifetime.ApplicationStarted.Register(() =>
 //{
 //    try
@@ -469,6 +526,71 @@ static bool TryGeneratePdfFirstPageThumbnail(string sourcePath, string thumbPath
         return false;
     }
 }
+
+static bool TryRenderPdfPageToJpeg(string sourcePath, int pageNumber, out byte[] jpegBytes)
+{
+    jpegBytes = Array.Empty<byte>();
+
+    try
+    {
+        using var docReader = DocLib.Instance.GetDocReader(sourcePath, new PageDimensions(1600, 2200));
+
+        var pageCount = docReader.GetPageCount();
+        if (pageCount <= 0)
+        {
+            return false;
+        }
+
+        var pageIndex = Math.Min(Math.Max(pageNumber - 1, 0), pageCount - 1);
+
+        using var pageReader = docReader.GetPageReader(pageIndex);
+
+        var width = pageReader.GetPageWidth();
+        var height = pageReader.GetPageHeight();
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        var rawBytes = pageReader.GetImage();
+        using var pageImage = SixLabors.ImageSharp.Image.LoadPixelData<Bgra32>(rawBytes, width, height);
+        using var flattened = new Image<Rgba32>(pageImage.Width, pageImage.Height, SixLabors.ImageSharp.Color.White);
+
+        flattened.Mutate(ctx => ctx.DrawImage(pageImage, 1f));
+
+        using var output = new MemoryStream();
+        flattened.SaveAsJpeg(output, new JpegEncoder { Quality = 90 });
+        jpegBytes = output.ToArray();
+
+        return jpegBytes.Length > 0;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
+static bool IsImageExtension(string? extension)
+{
+    return string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(extension, ".gif", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(extension, ".webp", StringComparison.OrdinalIgnoreCase);
+}
+
+static string GetContentTypeForImageExtension(string? extension)
+{
+    if (string.Equals(extension, ".png", StringComparison.OrdinalIgnoreCase))
+        return "image/png";
+    if (string.Equals(extension, ".gif", StringComparison.OrdinalIgnoreCase))
+        return "image/gif";
+    if (string.Equals(extension, ".webp", StringComparison.OrdinalIgnoreCase))
+        return "image/webp";
+
+    return "image/jpeg";
+}
+
 
 static void CreateFallbackThumbnail(string thumbPath)
 {
