@@ -637,6 +637,29 @@ public class UserAdminController : BaseController
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> RenameRole(int roleId, string roleName)
+    {
+        var name = roleName?.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            return BadRequest("Rolnaam is verplicht.");
+
+        var role = await _db.SecurityRole.FirstOrDefaultAsync(x => x.RoleId == roleId && x.IsActive);
+        if (role == null)
+            return NotFound();
+
+        var exists = await _db.SecurityRole.AnyAsync(x => x.RoleId != roleId && x.IsActive && x.Name == name);
+        if (exists)
+            return BadRequest("Rolnaam bestaat al.");
+
+        role.Name = name;
+        await _db.SaveChangesAsync();
+
+        return Json(new { roleId = role.RoleId, roleName = role.Name });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> CreateRole(string roleName, int? copyFromRoleId)
     {
         var name = roleName?.Trim();
