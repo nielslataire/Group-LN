@@ -4,23 +4,26 @@ using CPMCore.Models.Issues;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
-using SmartBreadcrumbs.Attributes;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.IO;
-using Microsoft.AspNetCore.Http;
-using System.Linq;
-using System.ComponentModel.DataAnnotations;
+using Microsoft.Graph;
+using Microsoft.Graph.ExternalConnectors;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
-using CPMCore.Services.Security;
+using SmartBreadcrumbs.Attributes;
+using SmartBreadcrumbs.Nodes;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
+using System.Linq;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace CPMCore.Controllers;
 
-[Authorize(Policy = "Permission:Projecten")]
+[Authorize]
+[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.ProjectsIssues)]
 [Route("Projects/{projectId:int}/Issues")]
 public class ProjectsIssuesController : BaseController
 {
@@ -28,15 +31,13 @@ public class ProjectsIssuesController : BaseController
     private readonly IConstructionIssueReportService _reportService;
     private readonly cpmRunningContext _db;
     private readonly IConfiguration _configuration;
-    private readonly ISecurityService _securityService;
 
-    public ProjectsIssuesController(IConstructionIssueService service, IConstructionIssueReportService reportService, cpmRunningContext db, IConfiguration configuration, ISecurityService securityService)
+    public ProjectsIssuesController(IConstructionIssueService service, IConstructionIssueReportService reportService, cpmRunningContext db, IConfiguration configuration)
     {
         _service = service;
         _reportService = reportService;
         _db = db;
         _configuration = configuration;
-        _securityService = securityService;
     }
 
     [HttpGet("~/Projects/Issues")]
@@ -48,11 +49,30 @@ public class ProjectsIssuesController : BaseController
     }
 
     [HttpGet("")]
-    [Breadcrumb("Punten")]
     public async Task<IActionResult> Index(int projectId, [FromQuery] ConstructionIssueFilterBO filters)
     {
-        if (!await EnsureProjectAccess(projectId))
-            return Forbid();
+        var projectName = await _db.Project
+           .Where(x => x.ProjectId == projectId)
+           .Select(x => x.ProjectName)
+           .FirstOrDefaultAsync() ?? $"Project {projectId}";
+
+
+        var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var ProjectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
+        {
+            Parent = Index,
+        };
+        var ProjectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", projectName)
+        {
+            Parent = ProjectenIndex,
+        };
+        ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Index), "ProjectsIssues", "Punten")
+        {
+            Parent = ProjectDetail,
+            RouteValues = new { projectId }
+        };
+
+
         filters ??= new ConstructionIssueFilterBO();
         if (!filters.Status.HasValue)
         {
@@ -177,8 +197,6 @@ public class ProjectsIssuesController : BaseController
     [HttpGet("Details/{id:int}")]
     public async Task<IActionResult> Details(int projectId, int id)
     {
-        if (!await EnsureIssueAccess(id))
-            return Forbid();
         var issue = await _service.GetById(projectId, id);
         if (issue == null) return NotFound();
 
@@ -734,7 +752,7 @@ public class ProjectsIssuesController : BaseController
         try
         {
             await using var source = file.OpenReadStream();
-            using var image = await Image.LoadAsync(source);
+            using var image = await SixLabors.ImageSharp.Image.LoadAsync(source);
             await using var output = new MemoryStream();
             await image.SaveAsJpegAsync(output, new JpegEncoder { Quality = 90 });
             output.Position = 0;
@@ -847,18 +865,6 @@ public class ProjectsIssuesController : BaseController
         using var jsonDoc = JsonDocument.Parse(payload);
         if (!jsonDoc.RootElement.TryGetProperty("fileName", out var fileNameElement)) return null;
         return fileNameElement.GetString();
-    }
-
-    private async Task<bool> EnsureProjectAccess(int projectId)
-    {
-        var userId = User.FindFirst(CpmClaims.UserId)?.Value;
-        return !string.IsNullOrWhiteSpace(userId) && await _securityService.UserHasProjectAccess(userId, projectId);
-    }
-
-    private async Task<bool> EnsureIssueAccess(int issueId)
-    {
-        var userId = User.FindFirst(CpmClaims.UserId)?.Value;
-        return !string.IsNullOrWhiteSpace(userId) && await _securityService.CanAccessIssue(userId, issueId);
     }
 
     public sealed class IssueSendPreviewRequest

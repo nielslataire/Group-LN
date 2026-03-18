@@ -11,7 +11,6 @@ namespace DALCore.Models
     {
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder)
         {
-            ConfigureAccessControl(modelBuilder);
             modelBuilder.Entity<InvoiceStatusLookup>().HasData(
                 new InvoiceStatusLookup { Id = 1, Name = "Draft" },
                 new InvoiceStatusLookup { Id = 2, Name = "Issued" },

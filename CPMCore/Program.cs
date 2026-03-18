@@ -6,7 +6,7 @@ using CPMCore.Services;
 using CPMCore.Services.Authorization;
 using CPMCore.Services.Octopus;
 using CPMCore.Services.Peppol;
-using CPMCore.Services.Security;
+using CPMCore.Filters;
 using DALCore;
 using DALCore.Models;
 using DinkToPdf;
@@ -83,6 +83,7 @@ var connection = conStrBuilder.ConnectionString;
 builder.Services.AddControllersWithViews(options =>
 {
     options.ModelBinderProviders.Insert(0, new FlexibleDecimalModelBinderProvider());
+    options.Filters.Add<PermissionConventionFilter>();
 })
     .AddJsonOptions(options =>
     {
@@ -180,46 +181,12 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
 );
 
 
-//builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
-//{
-//    options.SignIn.RequireConfirmedAccount = false;
-
-//    options.Password.RequireDigit = true;
-//    options.Password.RequireLowercase = true;
-//    options.Password.RequireNonAlphanumeric = true;
-//    options.Password.RequireUppercase = true;
-//    options.Password.RequiredLength = 6;
-//    options.Password.RequiredUniqueChars = 1;
-
-//})
-//.AddRoles<IdentityRole>()
-//.AddEntityFrameworkStores<ApplicationDbContext>()
-//.AddDefaultUI()
-//.AddDefaultTokenProviders()
-//.AddRoleManager<RoleManager<IdentityRole>>();
-
-////////////////builder.Services.AddDefaultIdentity<IdentityUser>(options =>
-////////////////    options.SignIn.RequireConfirmedAccount = true)
-////////////////    .AddEntityFrameworkStores<ApplicationDbContext>()
-////////////////    .AddDefaultUI()
-////////////////    .AddDefaultTokenProviders();
-
-//builder.Services.AddAuthorization();
-////builder.Services.AddRazorPages();
-
-//builder.Services.ConfigureApplicationCookie(options =>
-//{
-//    // Cookie settings
-//    options.Cookie.HttpOnly = true;
-//    options.ExpireTimeSpan = TimeSpan.FromDays(14);
-
-//    options.LoginPath = "/Account/Login";
-//    options.AccessDeniedPath = "/Account/AccessDenied";
-//    options.SlidingExpiration = true;
-//});
-
 builder.Services.AddScoped<ICpmUserAccessService, CpmUserAccessService>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.AddScoped<PermissionConventionFilter>();
 
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
@@ -359,6 +326,7 @@ app.UseRouting();
 //    app.MapControllers();
 
 app.UseAuthentication();
+app.UseMiddleware<PermissionContextMiddleware>();
 app.UseAuthorization();
 
 app.MapControllerRoute(

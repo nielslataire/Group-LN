@@ -375,10 +375,6 @@
          "ObjectType": 0
       },
       {
-         "Name": "[dbo].[ProjectUserAccess]",
-         "ObjectType": 0
-      },
-      {
          "Name": "[dbo].[Provincie]",
          "ObjectType": 0
       },
@@ -412,10 +408,6 @@
       },
       {
          "Name": "[dbo].[UserCompany]",
-         "ObjectType": 0
-      },
-      {
-         "Name": "[dbo].[UserCompanyAccess]",
          "ObjectType": 0
       },
       {

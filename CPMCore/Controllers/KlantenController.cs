@@ -12,11 +12,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages.Manage;
 using NuGet.Configuration;
 using ServiceCore;
 using SmartBreadcrumbs.Attributes;
+using SmartBreadcrumbs.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -33,7 +35,8 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace CPMCore.Controllers
 {
-    [Authorize(Policy = "Permission:Klanten")]
+    [Authorize]
+    [CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.CustomersAll)]
     public class KlantenController : BaseController
     {
         private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
@@ -58,8 +61,16 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        [Breadcrumb("Klanten")]
         public async Task<IActionResult> Index(int? issuerCompanyId, CancellationToken ct)
         {
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var KlantenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Klanten", "Klanten")
+            {
+                Parent = Index,
+            };
+
+            ViewData["BreadcrumbNode"] = KlantenIndex;
             var issuerCompanies = await _db.IssuerCompany
                 .AsNoTracking()
                 .Where(i => i.IsActive)
@@ -146,6 +157,21 @@ namespace CPMCore.Controllers
             {
                 return NotFound();
             }
+
+            var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var KlantenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Klanten", "Klanten")
+            {
+                Parent = Index,
+            };
+
+            ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Details), "Klanten", clientDisplayName)
+            {
+                Parent = KlantenIndex,
+                RouteValues = new { id }
+            };
+
+
 
             var isCompany = !string.IsNullOrWhiteSpace(client.CompanyName) || !string.IsNullOrWhiteSpace(client.Vatnumber);
             Salutation? salutation = Enum.TryParse(client.Salutation, out Salutation parsed)
@@ -258,6 +284,24 @@ namespace CPMCore.Controllers
             {
                 return NotFound();
             }
+
+
+            var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
+            var klantenNode = new MvcBreadcrumbNode(nameof(Index), "Klanten", "Klanten")
+            {
+                Parent = new MvcBreadcrumbNode("Index", "Home", "Home")
+            };
+            var detailsNode = new MvcBreadcrumbNode(nameof(Details), "Klanten", clientDisplayName)
+            {
+                Parent = klantenNode,
+                RouteValues = new { id = client.Id }
+            };
+            ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Edit), "Klanten", "Bewerken")
+            {
+                Parent = detailsNode,
+                RouteValues = new { id = client.Id }
+            };
+
             var isCompany = !string.IsNullOrWhiteSpace(client.CompanyName) || !string.IsNullOrWhiteSpace(client.Vatnumber);
             Salutation? salutation = Enum.TryParse(client.Salutation, out Salutation parsed)
                 ? parsed

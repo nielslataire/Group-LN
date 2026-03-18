@@ -51,7 +51,8 @@ using System.Web;
 
 namespace CPMCore.Controllers
 {
-    [Authorize(Policy = "Permission:Projecten")]
+    [Authorize]
+    [CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.ProjectsDetail)]
     public class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;

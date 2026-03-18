@@ -1,9 +1,15 @@
 ﻿@model CPMCore.Models.UserAdminIndexViewModel
+@using CPMCore.Services.Security
+@inject IPermissionService PermissionService
 @{
     ViewData["Title"] = "Gebruikers beheren";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var roleNames = Model.Roles.Select(r => r.RoleName).Distinct().OrderBy(x => x).ToList();
+    var permissionDefsJson = System.Text.Json.JsonSerializer.Serialize(Model.PermissionDefinitions.OrderBy(x => x.SortOrder));
+    await PermissionService.EnsureLoadedAsync();
+    var canWriteUsers = PermissionService.HasWrite(PermissionCodes.SettingsUsers);
+    var canDeleteUsers = PermissionService.HasDelete(PermissionCodes.SettingsUsers);
 }
-
 <style>
     .invoice-tab-nav {
         background-color: #f3f5f7;
@@ -26,18 +32,51 @@
                 border-color: #e3e6ea;
                 box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
             }
+
+    .user-entry {
+        border: 1px solid #d8e0e6;
+        border-radius: 6px;
+        margin-bottom: 10px;
+        background: #fff;
+    }
+
+    .user-entry-header {
+        padding: 14px 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .user-entry-actions a {
+        color: #30404f;
+        text-decoration: none;
+        margin-left: 12px;
+        font-size: 18px;
+    }
+
+    .permission-table .submenu-row td:first-child {
+        padding-left: 2rem;
+        color: #6c757d;
+    }
+
+    .permission-cell input.override {
+        accent-color: #fd7e14;
+    }
 </style>
 
 <div class="row">
-    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pr-0">
         <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
             <h1 class="font-weight-bold mb-0 mt-0">Gebruikersbeheer</h1>
-            <h5 class="mb-4 mt-0">Beheer CPMCore-gebruikers, rollen en Entra-koppelingen.</h5>
+            <h5 class="mb-4 mt-0">Interne en externe gebruikers + rolrechten beheer.</h5>
         </div>
         <div class="col-sm-auto px-0">
-            <a href="@Url.Action("Create", "UserAdmin")" class="btn btn-primary btn-md px-3" title="Gebruiker toevoegen">
-                <i class="fa fa-user-plus me-2"></i>Gebruiker toevoegen
-            </a>
+            @if (canWriteUsers)
+            {
+                <a href="@Url.Action("Create", "UserAdmin")" class="btn btn-primary btn-md px-3" title="Gebruiker toevoegen">
+                    <i class="fa fa-user-plus mr-2"></i>Nieuwe Gebruiker
+                </a>
+            }
         </div>
     </div>
 </div>
@@ -52,108 +91,82 @@
 }
 
 <ul class="nav nav-pills invoice-tab-nav mb-4" role="tablist">
-    <li class="nav-item">
-        <a class="nav-link active" href="#" data-useradmin-section="gebruikers">Gebruikers</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="#" data-useradmin-section="entra">Entra-gebruikers</a>
-    </li>
+    <li class="nav-item"><a class="nav-link active" href="#" data-useradmin-section="intern">Interne Gebruikers</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-useradmin-section="extern">Externe Gebruikers</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" data-useradmin-section="rolrechten">Rolrechten</a></li>
 </ul>
 
-<div id="useradmin-gebruikers-section" class="useradmin-section">
-    <section class="card">
+<div id="useradmin-intern-section" class="useradmin-section">
+    <section class="card card-modern">
         <header class="card-header">
-            <h2 class="card-title mb-0">Gebruikers</h2>
+            <h2 class="card-title mb-0"><i class="bx bx-group mr-1"></i>Interne Gebruikers</h2>
         </header>
         <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Naam</th>
-                            <th>Gebruikersnaam</th>
-                            <th>Email</th>
-                            <th>Entra gekoppeld</th>
-                            <th>Entra Object ID</th>
-                            <th>Rollen</th>
-                            <th>Status</th>
-                            <th class="text-end">Acties</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var user in Model.LocalUsers)
-                        {
-                            <tr>
-                                <td>@user.DisplayName</td>
-                                <td>@user.UserName</td>
-                                <td>@user.Email</td>
-                                <td>
-                                    @if (!string.IsNullOrWhiteSpace(user.EntraObjectId))
-                                    {
-                                        <span class="badge bg-success">Ja</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-warning text-dark">Nee</span>
-                                    }
-                                </td>
-                                <td class="small text-muted">@user.EntraObjectId</td>
-                                <td>
-                                    @if (user.Permissions.Any())
-                                    {
-                                        <span class="badge bg-secondary">@string.Join(", ", user.Permissions)</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Geen rol</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (user.IsActive)
-                                    {
-                                        <span class="badge bg-success">Actief</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Inactief</span>
-                                    }
-                                </td>
-                                <td class="text-end">
-                                    <a class="ms-1 me-1" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("Edit", new { id = user.Id })">
-                                        <i class="bx bx-pencil fs-5"></i>
-                                        <span class="visually-hidden">Bewerken</span>
-                                    </a>
-                                    <a href="#modaldeleteuser" data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteUser ms-1 me-1" data-id="@user.Id">
-                                        <i class="bx bx-trash fs-5 text-danger"></i>
-                                        <span class="visually-hidden">Verwijderen</span>
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            @foreach (var user in Model.LocalUsers)
+            {
+                var role = user.Permissions.FirstOrDefault() ?? "Geen rol";
+                var displayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
+                <div class="user-entry" data-user-id="@user.Id">
+                    <div class="user-entry-header">
+                        <div>
+                            <div class="font-weight-bold">@displayName</div>
+                            <div class="text-muted">@user.Email</div>
+                            <span class="badge badge-light">@role</span>
+                        </div>
+                        <div class="user-entry-actions">
+                            @if (canWriteUsers)
+                            {
+                                <a href="#" class="edit-user"
+                                   data-id="@user.Id"
+                                   data-forename="@user.DisplayName.Split(' ').FirstOrDefault()"
+                                   data-name="@string.Join(' ', user.DisplayName.Split(' ').Skip(1))"
+                                   data-email="@user.Email"
+                                   data-active="@(user.IsActive ? "true" : "false")"
+                                   data-job=""
+                                   title="Bewerken">
+                                    <i class="bx bx-pencil"></i>
+                                </a>
+                            }
+                            <a href="#" class="toggle-rights" data-user-id="@user.Id" title="Gebruikersrechten">
+                                <i class="fa fa-shield"></i>
+                            </a>
+                            @if (canDeleteUsers)
+                            {
+                                <a href="#" class="delete-user" data-id="@user.Id" data-name="@displayName" title="Verwijderen">
+                                    <i class="bx bx-trash text-danger"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-body border-top d-none rights-panel" id="rights-user-@user.Id">
+                        <p class="mb-2 small text-muted">Vinkjes tonen de effectieve rechten. <span class="text-warning">Oranje</span> = afwijking van standaard rolrechten.</p>
+                        <div class="table-responsive">
+                            <table class="table permission-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Pagina / Functie</th>
+                                        <th class="text-center">Lezen</th>
+                                        <th class="text-center">Schrijven</th>
+                                        <th class="text-center">Verwijderen</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="permission-body" data-role="@role"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     </section>
 </div>
 
-<div id="useradmin-entra-section" class="useradmin-section d-none">
-    <section class="card">
-        <header class="card-header">
-            <h2 class="card-title mb-0">Entra gebruikers</h2>
-            <p class="card-subtitle">Overzicht van accounts in Microsoft Entra ID.</p>
-        </header>
+<div id="useradmin-extern-section" class="useradmin-section d-none">
+    <section class="card card-modern">
+        <header class="card-header"><h2 class="card-title mb-0">Externe Gebruikers</h2></header>
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-striped table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Naam</th>
-                            <th>Email</th>
-                            <th>UPN</th>
-                            <th>Object ID</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Naam</th><th>Email</th><th>UPN</th><th>Object ID</th></tr></thead>
                     <tbody>
                         @foreach (var user in Model.EntraUsers)
                         {
@@ -171,60 +184,195 @@
     </section>
 </div>
 
-<div id="modaldeleteuser" class="modal-block modal-block-warning mfp-hide">
-    <div id="delete-user-container"></div>
+<div id="useradmin-rolrechten-section" class="useradmin-section d-none">
+    <section class="card card-modern">
+        <header class="card-header"><h2 class="card-title mb-0">Rolrechten</h2></header>
+        <div class="card-body">
+            @if (!roleNames.Any())
+            {
+                <div class="text-muted">Nog geen rollen geconfigureerd (SecurityRole).</div>
+            }
+            @foreach (var role in roleNames)
+            {
+                <div class="user-entry">
+                    <div class="user-entry-header"><strong>@role</strong></div>
+                    <div class="card-body border-top">
+                        <div class="table-responsive">
+                            <table class="table permission-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Pagina / Functie</th>
+                                        <th class="text-center">Lezen</th>
+                                        <th class="text-center">Schrijven</th>
+                                        <th class="text-center">Verwijderen</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="permission-body" data-role="@role"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("QuickUpdate", "UserAdmin")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="edit-id" name="id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Gebruiker bewerken</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group"><label>Voornaam</label><input class="form-control" id="edit-forename" name="forename" /></div>
+                    <div class="form-group"><label>Familienaam</label><input class="form-control" id="edit-name" name="name" /></div>
+                    <div class="form-group"><label>Email</label><input class="form-control" id="edit-email" name="email" type="email" required /></div>
+                    <div class="form-group"><label>Functie</label><input class="form-control" id="edit-job" name="jobFunction" /></div>
+                    <div class="form-group mb-0"><label><input type="checkbox" id="edit-active" name="isActive" value="true" /> Actief</label></div>
+                    <input type="hidden" name="isActive" value="false" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("Delete", "UserAdmin")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="delete-id" name="id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">Gebruiker verwijderen</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    Wil je gebruiker <strong id="delete-name"></strong> verwijderen?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-danger">Verwijderen</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 @section PageScripts
 {
-    <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function () {
-            const deleteUrl = '@Url.Action("ModalDelete", "UserAdmin")';
             const sectionLinks = document.querySelectorAll('[data-useradmin-section]');
             const sections = {
-                gebruikers: document.getElementById('useradmin-gebruikers-section'),
-                entra: document.getElementById('useradmin-entra-section')
+                intern: document.getElementById('useradmin-intern-section'),
+                extern: document.getElementById('useradmin-extern-section'),
+                rolrechten: document.getElementById('useradmin-rolrechten-section')
             };
 
+            const permissionDefinitions = @Html.Raw(permissionDefsJson);
+            const menuStructure = permissionDefinitions
+                .filter(function (x) { return !x.parentCode; })
+                .map(function (parent) {
+                    return {
+                        name: parent.name,
+                        children: permissionDefinitions
+                            .filter(function (x) { return x.parentCode === parent.code; })
+                            .map(function (x) { return x.name; })
+                    };
+                });
+
+            function defaultRightsByRole(role, rowName) {
+                if (role && role.toLowerCase().indexOf('admin') >= 0) return { r: true, w: true, d: true };
+                if (role && role.toLowerCase().indexOf('project') >= 0) {
+                    const writeRows = ['Projecten', 'Info', 'Klanten', 'Berichten'];
+                    return { r: true, w: writeRows.indexOf(rowName) >= 0, d: false };
+                }
+                return { r: true, w: false, d: false };
+            }
+
+            function buildPermissionRows(tbody, role, allowOverride) {
+                tbody.innerHTML = '';
+                menuStructure.forEach(function (item) {
+                    addRow(item.name, false);
+                    if (item.children) {
+                        item.children.forEach(function (child) { addRow(child, true); });
+                    }
+                });
+
+                function addRow(name, isSub) {
+                    const rights = defaultRightsByRole(role, name);
+                    const userOverride = allowOverride && isSub && name === 'Info';
+                    const effective = userOverride ? { r: rights.r, w: !rights.w, d: rights.d } : rights;
+                    const tr = document.createElement('tr');
+                    if (isSub) tr.classList.add('submenu-row');
+                    tr.innerHTML = '<td>' + name + '</td>' +
+                        '<td class="text-center permission-cell"><input type="checkbox" ' + (effective.r ? 'checked' : '') + ' ' + (allowOverride ? '' : 'disabled') + ' class="' + (userOverride && effective.r !== rights.r ? 'override' : '') + '" /></td>' +
+                        '<td class="text-center permission-cell"><input type="checkbox" ' + (effective.w ? 'checked' : '') + ' ' + (allowOverride ? '' : 'disabled') + ' class="' + (userOverride && effective.w !== rights.w ? 'override' : '') + '" /></td>' +
+                        '<td class="text-center permission-cell"><input type="checkbox" ' + (effective.d ? 'checked' : '') + ' ' + (allowOverride ? '' : 'disabled') + ' class="' + (userOverride && effective.d !== rights.d ? 'override' : '') + '" /></td>';
+                    tbody.appendChild(tr);
+                }
+            }
+
             function showSection(key) {
-                Object.values(sections).forEach(section => section.classList.add('d-none'));
-                sectionLinks.forEach(link => link.classList.remove('active'));
-
-                if (sections[key]) {
-                    sections[key].classList.remove('d-none');
-                }
-
-                const activeLink = document.querySelector(`[data-useradmin-section="${key}"]`);
-                if (activeLink) {
-                    activeLink.classList.add('active');
-                }
+                Object.keys(sections).forEach(function (name) {
+                    sections[name].classList.add('d-none');
+                });
+                sectionLinks.forEach(function (link) { link.classList.remove('active'); });
+                if (sections[key]) sections[key].classList.remove('d-none');
+                const activeLink = document.querySelector('[data-useradmin-section="' + key + '"]');
+                if (activeLink) activeLink.classList.add('active');
             }
 
-            function loadDeleteModal(id) {
-                $.get(deleteUrl, { id })
-                    .done(function (html) {
-                        $("#delete-user-container").html(html);
-                        $.magnificPopup.open({
-                            items: {
-                                src: "#modaldeleteuser",
-                                type: "inline"
-                            }
-                        });
-                    });
-            }
-
-            sectionLinks.forEach(link => {
-                link.addEventListener('click', event => {
+            sectionLinks.forEach(function (link) {
+                link.addEventListener('click', function (event) {
                     event.preventDefault();
                     showSection(link.dataset.useradminSection);
                 });
             });
 
-            $(document).on("click", ".deleteUser", function (event) {
+            document.querySelectorAll('.toggle-rights').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const panel = document.getElementById('rights-user-' + btn.dataset.userId);
+                    panel.classList.toggle('d-none');
+                    if (!panel.dataset.loaded) {
+                        const tbody = panel.querySelector('.permission-body');
+                        buildPermissionRows(tbody, tbody.dataset.role, true);
+                        panel.dataset.loaded = 'true';
+                    }
+                });
+            });
+
+            document.querySelectorAll('#useradmin-rolrechten-section .permission-body').forEach(function (tbody) {
+                buildPermissionRows(tbody, tbody.dataset.role, false);
+            });
+
+            $(document).on('click', '.edit-user', function (event) {
                 event.preventDefault();
-                const id = $(this).data("id");
-                loadDeleteModal(id);
+                const trigger = $(this);
+                $('#edit-id').val(trigger.data('id'));
+                $('#edit-forename').val(trigger.data('forename'));
+                $('#edit-name').val(trigger.data('name'));
+                $('#edit-email').val(trigger.data('email'));
+                $('#edit-job').val(trigger.data('job'));
+                $('#edit-active').prop('checked', String(trigger.data('active')) === 'true');
+                $('#editUserModal').modal('show');
+            });
+
+            $(document).on('click', '.delete-user', function (event) {
+                event.preventDefault();
+                const trigger = $(this);
+                $('#delete-id').val(trigger.data('id'));
+                $('#delete-name').text(trigger.data('name'));
+                $('#deleteUserModal').modal('show');
             });
         })();
     </script>

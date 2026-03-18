@@ -876,6 +876,16 @@
 @await Html.PartialAsync("Modals/_ModalPrintIssues")
 @await Html.PartialAsync("Modals/_ModalCreateEditIssue", Model)
 @await Html.PartialAsync("Modals/_ModalIssueDetail")
+<div class="modal fade" id="issueProcessingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true"></div>
+                <p class="mb-0 fw-semibold" id="issueProcessingMessage">Actie wordt uitgevoerd...</p>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="modaldeleteissue" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-issue-container"></div>
 </div>
@@ -895,6 +905,8 @@
             const issueSendModal = issueSendModalEl && window.bootstrap ? new bootstrap.Modal(issueSendModalEl) : null;
             const issuePrintModalEl = document.getElementById('issuePrintModal');
             const issuePrintModal = issuePrintModalEl && window.bootstrap ? new bootstrap.Modal(issuePrintModalEl) : null;
+             const issueProcessingModalEl = document.getElementById('issueProcessingModal');
+            const issueProcessingModal = issueProcessingModalEl && window.bootstrap ? new bootstrap.Modal(issueProcessingModalEl, { backdrop: 'static', keyboard: false }) : null;
             const issueForm = document.getElementById('issueForm');
             const titleEl = document.getElementById('issueModalTitle');
             const submitEl = document.getElementById('saveIssueButton');
@@ -1087,6 +1099,30 @@
                     window.jQuery(modalElement).modal('show');
                 }
             }
+
+            function closeBootstrapModal(modalInstance, modalElement){
+                if(modalInstance){
+                    modalInstance.hide();
+                    return;
+                }
+
+                if(window.jQuery && modalElement){
+                    window.jQuery(modalElement).modal('hide');
+                }
+            }
+
+            function showIssueProcessingModal(message){
+                const processingMessage = document.getElementById('issueProcessingMessage');
+                if (processingMessage) {
+                    processingMessage.textContent = message || 'Actie wordt uitgevoerd...';
+                }
+                openBootstrapModal(issueProcessingModal, issueProcessingModalEl);
+            }
+
+            function hideIssueProcessingModal(){
+                closeBootstrapModal(issueProcessingModal, issueProcessingModalEl);
+            }
+
         function resetFiltersToDefaults(){
                    if (!filterForm) return;
 
@@ -2202,6 +2238,7 @@
                       if (!token) return;
 
                       confirmSendIssuesButton.disabled = true;
+                        showIssueProcessingModal('Punten worden verzonden...');
                       const body = new URLSearchParams();
                       body.append('__RequestVerificationToken', token);
                       body.append('GroupByResponsible', 'true');
@@ -2221,10 +2258,11 @@
                               alert('Verzenden van punten is mislukt.');
                               return;
                           }
-
+                           closeBootstrapModal(issueSendModal, issueSendModalEl);
                           window.location.reload();
                       } finally {
                           confirmSendIssuesButton.disabled = false;
+                          hideIssueProcessingModal();
                       }
                   }
 
@@ -2434,6 +2472,7 @@
                 }
 
                 exportPdfButton.disabled = true;
+                 showIssueProcessingModal('PDF wordt geëxporteerd...');
                 try {
                     const blob = await requestPdfBlob(issueIds);
                     if (!blob) {
@@ -2449,8 +2488,10 @@
                     a.click();
                     a.remove();
                     URL.revokeObjectURL(url);
+                     closeBootstrapModal(issuePrintModal, issuePrintModalEl);
                 } finally {
                     exportPdfButton.disabled = false;
+hideIssueProcessingModal();
                 }
             }
 
@@ -2462,6 +2503,7 @@
                 }
 
                 directPrintButton.disabled = true;
+                 showIssueProcessingModal('PDF wordt klaargezet voor afdrukken...');
                 try {
                     const blob = await requestPdfBlob(issueIds);
                     if (!blob) {
@@ -2483,8 +2525,10 @@
                         printWindow.print();
                         revoke();
                     }, { once: true });
+                     closeBootstrapModal(issuePrintModal, issuePrintModalEl);
                 } finally {
                     directPrintButton.disabled = false;
+                      hideIssueProcessingModal();
                 }
             }
 

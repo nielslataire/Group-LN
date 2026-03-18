@@ -141,8 +141,9 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
               })
               .OrderBy(x => x.Key.UnitName)
               .ToList();
-        var issueIndexById = issues
-            .Select((issue, index) => new { issue.Id, Number = index + 1 })
+        var issueIndexById = groupedByUnit
+              .SelectMany(unitGroup => unitGroup)
+              .Select((issue, index) => new { issue.Id, Number = index + 1 })
             .ToDictionary(x => x.Id, x => x.Number);
         var planSections = await BuildPlanSections(projectId, issues, issueIndexById);
 
@@ -227,7 +228,7 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
                     }
                 });
 
-                page.Footer().PaddingHorizontal(30).PaddingBottom(8).PaddingTop(8).Column(footer =>
+                page.Footer().PaddingHorizontal(30).PaddingBottom(18).PaddingTop(8).Column(footer =>
                 {
                     footer.Item().LineHorizontal(1).LineColor(primaryColor);
                     footer.Item().PaddingTop(6).AlignRight().Text(text =>

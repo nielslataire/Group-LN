@@ -1,9 +1,12 @@
 ﻿using CPMCore.Models.Leveranciers;
+using CPMCore.Services.Octopus;
 using DALCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Graph;
 using SmartBreadcrumbs.Attributes;
+using SmartBreadcrumbs.Nodes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +17,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using CPMCore.Services.Octopus;
 
 namespace CPMCore.Controllers;
 
-[Authorize(Policy = "Permission:Leveranciers")]
+[Authorize]
+[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.SuppliersAll)]
 public class LeveranciersController : BaseController
 {
     private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
@@ -717,6 +720,19 @@ public class LeveranciersController : BaseController
             return NotFound();
         }
 
+        var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var LeveranciersIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Leveranciers", "Leveranciers")
+        {
+            Parent = Index,
+        };
+
+        ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Details), "Leveranciers", supplier.BedrijfsNaam)
+        {
+            Parent = LeveranciersIndex,
+            RouteValues = new { id = supplier.CompanyId }
+        };
+        
+
         string? legalFormName = null;
 
         if (!string.IsNullOrWhiteSpace(supplier.Type))
@@ -1047,6 +1063,26 @@ public class LeveranciersController : BaseController
         {
             return NotFound();
         }
+
+
+        var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var LeveranciersIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Leveranciers", "Leveranciers")
+        {
+            Parent = Index,
+        };
+
+        var LeveranciersDetail = new MvcBreadcrumbNode(nameof(Details), "Leveranciers", entity.BedrijfsNaam)
+        {
+            Parent = LeveranciersIndex,
+            RouteValues = new { id = entity.CompanyId }
+        };
+        ViewData["BreadcrumbNode"] = new MvcBreadcrumbNode(nameof(Edit), "Leveranciers", "Bewerken")
+        {
+            Parent = LeveranciersDetail,
+            RouteValues = new { id = entity.CompanyId }
+        };
+
+
 
         var legalFormId = await _db.CompanyLegalForm
             .Where(l => l.Abbreviation == entity.Type || l.Name == entity.Type)

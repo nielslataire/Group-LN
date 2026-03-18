@@ -93,8 +93,6 @@ public partial class CompanyInfo
 
     public virtual ICollection<Project> ProjectSecurityCoordinator { get; set; } = new List<Project>();
 
-    public virtual ICollection<UserCompanyAccess> UserCompanyAccess { get; set; } = new List<UserCompanyAccess>();
-
     public virtual ICollection<Activity> Activity { get; set; } = new List<Activity>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();

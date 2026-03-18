@@ -6,10 +6,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Graph;
 using Microsoft.Identity.Web;
 using Azure.Identity;
+using CPMCore.Services.Security;
 
 namespace CPMCore.Controllers;
 
 [Authorize(Policy = "CpmAdmin")]
+[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
 public class UserAdminController : BaseController
 {
     private readonly cpmRunningContext _db;
@@ -40,6 +42,22 @@ public class UserAdminController : BaseController
                     .OrderBy(p => p)
                     .ToList());
 
+
+        var roleNamesByUser = new Dictionary<int, List<string>>();
+        try
+        {
+            roleNamesByUser = await (from ur in _db.SecurityUserRole.AsNoTracking()
+                                     join r in _db.SecurityRole.AsNoTracking() on ur.RoleId equals r.RoleId
+                                     where r.IsActive
+                                     select new { ur.UserId, r.Name })
+                .GroupBy(x => x.UserId)
+                .ToDictionaryAsync(g => g.Key, g => g.Select(x => x.Name).Distinct().OrderBy(x => x).ToList());
+        }
+        catch
+        {
+            // tables may not exist yet
+        }
+
         var users = await _db.Users
             .AsNoTracking()
             .OrderBy(u => u.Familienaam)
@@ -48,9 +66,9 @@ public class UserAdminController : BaseController
 
         var localUsers = users.Select(user =>
         {
-            var permissions = permissionsByUser.TryGetValue(user.Id, out var list)
-                ? list
-                : new List<string>();
+            var permissions = roleNamesByUser.TryGetValue(user.Id, out var roles)
+                 ? roles
+                 : (permissionsByUser.TryGetValue(user.Id, out var list) ? list : new List<string>());
 
             return new UserListItemViewModel
             {
@@ -65,11 +83,25 @@ public class UserAdminController : BaseController
             };
         }).ToList();
         var entraUsers = await LoadEntraUsersAsync();
+        var roleRows = new List<RolePermissionAssignmentViewModel>();
+        try
+        {
+            roleRows = await _db.SecurityRole.AsNoTracking()
+                .Where(x => x.IsActive)
+                .OrderBy(x => x.Name)
+                .Select(x => new RolePermissionAssignmentViewModel { RoleId = x.RoleId, RoleName = x.Name })
+                .ToListAsync();
+        }
+        catch { }
 
         return View(new UserAdminIndexViewModel
         {
             LocalUsers = localUsers,
-            EntraUsers = entraUsers
+            EntraUsers = entraUsers,
+            Roles = roleRows,
+            PermissionDefinitions = PermissionCatalog.All
+                .Select(x => new PermissionMatrixItemViewModel { Code = x.Code, Name = x.Name, ParentCode = x.ParentCode, SortOrder = x.SortOrder })
+                .ToList()
         });
     }
 
@@ -151,6 +183,7 @@ public class UserAdminController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> Create(CreateUserViewModel model)
     {
         model.AvailablePermissions = await _db.Permission
@@ -273,6 +306,7 @@ public class UserAdminController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> Edit(EditUserViewModel model)
     {
         model.AvailablePermissions = await _db.Permission
@@ -346,6 +380,7 @@ public class UserAdminController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> LinkEntra(int id, string? linkEntraObjectId)
     {
         if (string.IsNullOrWhiteSpace(linkEntraObjectId))
@@ -375,6 +410,42 @@ public class UserAdminController : BaseController
         return RedirectToAction(nameof(Edit), new { id });
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> QuickUpdate(int id, string? forename, string? name, string? email, string? jobFunction, bool isActive)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+            return NotFound();
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            TempData["Error"] = "E-mailadres is verplicht.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        var normalizedEmail = email.Trim();
+        var emailExists = await _db.Users.AnyAsync(u => u.Id != id && u.Email == normalizedEmail);
+        if (emailExists)
+        {
+            TempData["Error"] = "Dit e-mailadres is al in gebruik.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        user.Voornaam = forename?.Trim() ?? string.Empty;
+        user.Familienaam = name?.Trim() ?? string.Empty;
+        user.Email = normalizedEmail;
+        user.Functie = jobFunction?.Trim() ?? string.Empty;
+        user.IsActive = isActive;
+
+        await _db.SaveChangesAsync();
+        TempData["Message"] = "Gebruiker bijgewerkt.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+
     [HttpGet]
     public async Task<IActionResult> ModalDelete(int id)
     {
@@ -399,6 +470,7 @@ public class UserAdminController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionDelete(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> Delete(int id)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -425,4 +497,68 @@ public class UserAdminController : BaseController
         TempData["Message"] = "Gebruiker verwijderd.";
         return RedirectToAction(nameof(Index));
     }
+    [HttpGet]
+    [CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> PermissionMatrix(int userId)
+    {
+        var roleIds = await _db.SecurityUserRole.AsNoTracking().Where(x => x.UserId == userId).Select(x => x.RoleId).ToListAsync();
+        var roleRights = await _db.SecurityRolePermission.AsNoTracking().Where(x => roleIds.Contains(x.RoleId)).ToListAsync();
+        var userOverrides = await _db.SecurityUserPermissionOverride.AsNoTracking().Where(x => x.UserId == userId).ToListAsync();
+
+        var effective = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+        foreach (var code in PermissionCatalog.All.Select(x => x.Code))
+        {
+            var rr = roleRights.Where(x => string.Equals(x.PermissionCode, code, StringComparison.OrdinalIgnoreCase));
+            var baseRead = rr.Any(x => x.CanRead);
+            var baseWrite = rr.Any(x => x.CanWrite);
+            var baseDelete = rr.Any(x => x.CanDelete);
+            var ov = userOverrides.FirstOrDefault(x => string.Equals(x.PermissionCode, code, StringComparison.OrdinalIgnoreCase));
+            var read = ov?.CanRead ?? baseRead;
+            var write = ov?.CanWrite ?? baseWrite;
+            var del = ov?.CanDelete ?? baseDelete;
+            effective[code] = new { read, write, delete = del, overridden = ov != null };
+        }
+
+        return Json(effective);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> SaveRolePermission(int roleId, string permissionCode, bool canRead, bool canWrite, bool canDelete)
+    {
+        var row = await _db.SecurityRolePermission.FirstOrDefaultAsync(x => x.RoleId == roleId && x.PermissionCode == permissionCode);
+        if (row == null)
+        {
+            row = new SecurityRolePermission { RoleId = roleId, PermissionCode = permissionCode };
+            _db.SecurityRolePermission.Add(row);
+        }
+
+        row.CanRead = canRead;
+        row.CanWrite = canWrite;
+        row.CanDelete = canDelete;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> SaveUserPermissionOverride(int userId, string permissionCode, bool? canRead, bool? canWrite, bool? canDelete)
+    {
+        var row = await _db.SecurityUserPermissionOverride.FirstOrDefaultAsync(x => x.UserId == userId && x.PermissionCode == permissionCode);
+        if (row == null)
+        {
+            row = new SecurityUserPermissionOverride { UserId = userId, PermissionCode = permissionCode };
+            _db.SecurityUserPermissionOverride.Add(row);
+        }
+
+        row.CanRead = canRead;
+        row.CanWrite = canWrite;
+        row.CanDelete = canDelete;
+
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
 }

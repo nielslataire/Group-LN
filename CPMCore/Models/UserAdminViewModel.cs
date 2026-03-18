@@ -22,10 +22,26 @@ namespace CPMCore.Models
         public string? UserPrincipalName { get; set; }
     }
 
+    public class PermissionMatrixItemViewModel
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? ParentCode { get; set; }
+        public int SortOrder { get; set; }
+    }
+
+    public class RolePermissionAssignmentViewModel
+    {
+        public int RoleId { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+    }
+
     public class UserAdminIndexViewModel
     {
         public List<UserListItemViewModel> LocalUsers { get; set; } = new();
         public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
+        public List<RolePermissionAssignmentViewModel> Roles { get; set; } = new();
+        public List<PermissionMatrixItemViewModel> PermissionDefinitions { get; set; } = new();
     }
 
     public class CreateUserViewModel
@@ -58,6 +74,8 @@ namespace CPMCore.Models
         public string? SelectedEntraObjectId { get; set; }
 
         public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
+        public List<RolePermissionAssignmentViewModel> Roles { get; set; } = new();
+        public List<PermissionMatrixItemViewModel> PermissionDefinitions { get; set; } = new();
 
         public List<string> AvailablePermissions { get; set; } = new();
 
@@ -101,6 +119,9 @@ namespace CPMCore.Models
         [Display(Name = "Nieuwe Entra Object ID")]
         public string? LinkEntraObjectId { get; set; }
         public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
+        public List<RolePermissionAssignmentViewModel> Roles { get; set; } = new();
+        public List<PermissionMatrixItemViewModel> PermissionDefinitions { get; set; } = new();
+
 
         public List<string> AvailablePermissions { get; set; } = new();
 

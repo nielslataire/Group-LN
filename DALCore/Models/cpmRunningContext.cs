@@ -185,8 +185,6 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ProjectStatus> ProjectStatus { get; set; }
 
-    public virtual DbSet<ProjectUserAccess> ProjectUserAccess { get; set; }
-
     public virtual DbSet<Provincie> Provincie { get; set; }
 
     public virtual DbSet<Setting> Setting { get; set; }
@@ -204,8 +202,6 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<Units> Units { get; set; }
 
     public virtual DbSet<UserCompany> UserCompany { get; set; }
-
-    public virtual DbSet<UserCompanyAccess> UserCompanyAccess { get; set; }
 
     public virtual DbSet<Users> Users { get; set; }
 
@@ -2197,21 +2193,6 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(50);
         });
 
-        modelBuilder.Entity<ProjectUserAccess>(entity =>
-        {
-            entity.HasIndex(e => e.UserId, "IX_ProjectUserAccess_UserId");
-
-            entity.HasIndex(e => new { e.ProjectId, e.UserId }, "UX_ProjectUserAccess_Project_User").IsUnique();
-
-            entity.HasOne(d => d.Project).WithMany(p => p.ProjectUserAccess)
-                .HasForeignKey(d => d.ProjectId)
-                .HasConstraintName("FK_ProjectUserAccess_Project");
-
-            entity.HasOne(d => d.User).WithMany(p => p.ProjectUserAccess)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_ProjectUserAccess_Users");
-        });
-
         modelBuilder.Entity<Provincie>(entity =>
         {
             entity.Property(e => e.ProvincieId).HasColumnName("ProvincieID");
@@ -2367,21 +2348,6 @@ public partial class cpmRunningContext : DbContext
                 .HasColumnType("numeric(18, 0)")
                 .HasColumnName("UserCompanyID");
             entity.Property(e => e.UserCompanyName).HasMaxLength(100);
-        });
-
-        modelBuilder.Entity<UserCompanyAccess>(entity =>
-        {
-            entity.HasIndex(e => e.CompanyId, "IX_UserCompanyAccess_CompanyId");
-
-            entity.HasIndex(e => new { e.UserId, e.CompanyId }, "UX_UserCompanyAccess_User_Company").IsUnique();
-
-            entity.HasOne(d => d.Company).WithMany(p => p.UserCompanyAccess)
-                .HasForeignKey(d => d.CompanyId)
-                .HasConstraintName("FK_UserCompanyAccess_CompanyInfo");
-
-            entity.HasOne(d => d.User).WithMany(p => p.UserCompanyAccess)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_UserCompanyAccess_Users");
         });
 
         modelBuilder.Entity<Users>(entity =>

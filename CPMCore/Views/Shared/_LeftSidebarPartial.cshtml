@@ -1,17 +1,20 @@
 ﻿@using CPMCore.Helpers
 @using FacadeCore
+@using CPMCore.Services.Security
 @inject IIssuerCompanyService IssuerCompanyService
+@inject IPermissionService PermissionService
 @{
 	var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 	var issuerCompanies = (await IssuerCompanyService.GetAllAsync())
 		.OrderBy(i => i.Name)
 		.ToList();
 	var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
-	var canSeeKlanten = User.IsInRole("Klanten");
-	var canSeeLeveranciers = User.IsInRole("Leveranciers");
-	var canSeeBoekhouding = User.IsInRole("Boekhouding");
-	var canSeeProjects = User.IsInRole("Projecten");
-	var canSeeAdmin = User.IsInRole("Admin") || User.IsInRole("Administrator");
+	await PermissionService.EnsureLoadedAsync();
+	var canSeeKlanten = PermissionService.HasRead(PermissionCodes.CustomersAll);
+	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.SuppliersAll);
+	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.InvoicingByBillingCompany);
+	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
+	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
 	var suppliersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var customersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var invoicesSubmenuClass = issuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
