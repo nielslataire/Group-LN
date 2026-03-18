@@ -305,11 +305,12 @@
                     <div class="col-lg-6">
                         <div class="border rounded p-3 h-100">
                             <h4 class="mb-3">Nieuwe rol</h4>
-                            <div class="form-group mb-2">
+                            <div class="row">
+                            <div class="col-md-6 mb-2">
                                 <label for="new-role-name" class="font-weight-bold">Naam</label>
                                 <input class="form-control" id="new-role-name" placeholder="bv. Werfleider" />
                             </div>
-                            <div class="form-group mb-3">
+                            <div class="col-md-6  mb-3">
                                 <label for="new-role-copy-source" class="font-weight-bold">Rechten overnemen van</label>
                                 <select class="form-control" id="new-role-copy-source">
                                     <option value="">Geen kopie</option>
@@ -319,13 +320,21 @@
                                     }
                                 </select>
                             </div>
+                               </div>
                             @if (canManageRoleRights)
                             {
                                 <button type="button" class="btn btn-primary" id="create-role-btn">
                                     <i class="bx bx-plus me-1"></i>Rol toevoegen
                                 </button>
                             }
+                            else
+                            {
+                                <button type="button" class="btn btn-primary" id="create-role-btn" disabled>
+                                    <i class="bx bx-plus me-1"></i>Rol toevoegen
+                                </button>
+                            }
                         </div>
+
                     </div>
                     <div class="col-lg-6">
                         <div class="border rounded p-3 h-100">
@@ -394,136 +403,7 @@
     </section>
 </div>
 
-<div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <form method="post" action="@Url.Action("QuickUpdate", "UserAdmin")">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="edit-id" name="id" />
-                <div class="modal-header">
-                    <h5 class="modal-title">Gebruiker bewerken</h5>
-                    <button type="button" class="close js-close-edit-modal" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group"><label>Voornaam</label><input class="form-control" id="edit-forename" name="forename" /></div>
-                    <div class="form-group"><label>Familienaam</label><input class="form-control" id="edit-name" name="name" /></div>
-                    <div class="form-group"><label>Email</label><input class="form-control" id="edit-email" name="email" type="email" required /></div>
-                    <div class="form-group"><label>Functie</label><input class="form-control" id="edit-job" name="jobFunction" /></div>
-                    <div class="form-group"><label>GSM</label><input class="form-control" id="edit-cellphone" name="cellphone" /></div>
-                    <div class="form-group">
-                        <label>Rol</label>
-                        <select class="form-control" id="edit-role-id" name="selectedRoleId">
-                            <option value="">Geen rol</option>
-                            @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
-                            {
-                                <option value="@role.RoleId">@role.RoleName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="form-group mb-0"><label><input type="checkbox" id="edit-active" name="isActive" value="true" /> Actief</label></div>
-                    <input type="hidden" name="isActive" value="false" />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light js-close-edit-modal" data-dismiss="modal">Annuleren</button>
-                    <button type="submit" class="btn btn-primary">Opslaan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteRoleModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <form>
-                <div class="modal-header">
-                    <h5 class="modal-title">Rol verwijderen</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    Wil je rol <strong id="delete-role-name"></strong> volledig verwijderen?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Annuleren</button>
-                    <button type="button" class="btn btn-danger" id="confirm-delete-role-btn">Verwijderen</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="createUserModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" role="document">
-        <div class="modal-content">
-            <form method="post" action="@Url.Action("CreateModal", "UserAdmin")">
-                @Html.AntiForgeryToken()
-                <div class="modal-header">
-                    <h5 class="modal-title">Nieuwe interne gebruiker</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    <div class="form-group"><label>Gebruikersnaam</label><input class="form-control" name="userName" required /></div>
-                    <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email" required /></div>
-                    <div class="form-group"><label>Voornaam</label><input class="form-control" name="forename" /></div>
-                    <div class="form-group"><label>Familienaam</label><input class="form-control" name="name" /></div>
-                    <div class="form-group"><label>Functie</label><input class="form-control" name="jobFunction" /></div>
-                    <div class="form-group"><label>GSM</label><input class="form-control" name="cellphone" /></div>
-                    <div class="form-group">
-                        <label>Rol</label>
-                        <select class="form-control" name="selectedRoleId">
-                            <option value="">Geen rol</option>
-                            @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
-                            {
-                                <option value="@role.RoleId">@role.RoleName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Entra gebruiker</label>
-                        <select class="form-control" name="selectedEntraObjectId">
-                            <option value="">Niet koppelen</option>
-                            @foreach (var entraUser in Model.EntraUsers.OrderBy(x => x.DisplayName))
-                            {
-                                var userLabel = string.IsNullOrWhiteSpace(entraUser.Email)
-                                ? $"{entraUser.DisplayName} ({entraUser.UserPrincipalName})"
-                                : $"{entraUser.DisplayName} ({entraUser.Email})";
-                                <option value="@entraUser.Id">@userLabel</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="form-group mb-0"><label><input type="checkbox" name="isActive" value="true" checked /> Actief</label></div>
-                    <input type="hidden" name="isActive" value="false" />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Annuleren</button>
-                    <button type="submit" class="btn btn-primary">Opslaan</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteUserModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <form method="post" action="@Url.Action("Delete", "UserAdmin")">
-                @Html.AntiForgeryToken()
-                <input type="hidden" id="delete-id" name="id" />
-                <div class="modal-header">
-                    <h5 class="modal-title">Gebruiker verwijderen</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
-                </div>
-                <div class="modal-body">
-                    Wil je gebruiker <strong id="delete-name"></strong> verwijderen?
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-dismiss="modal">Annuleren</button>
-                    <button type="submit" class="btn btn-danger">Verwijderen</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<partial name="_UserAdminModals" model="Model" />
 
 @section PageScripts
 {
@@ -662,7 +542,7 @@
                 btn.addEventListener('click', async function (e) {
                     e.preventDefault();
                     const panel = document.getElementById('rights-user-' + btn.dataset.userId);
-                const isOpening = panel.classList.contains('d-none');
+                 const isOpening = panel.classList.contains('d-none');
 
                     document.querySelectorAll('.rights-panel').forEach(function (otherPanel) {
                         if (otherPanel !== panel) {
@@ -725,188 +605,201 @@
                 });
             });
 
-        const roleSelect = document.getElementById('role-rights-role-select');
-               const roleRightsBody = document.getElementById('role-rights-body');
-               const deleteRoleBtn = document.getElementById('delete-role-btn');
-               const createRoleBtn = document.getElementById('create-role-btn');
-               const saveRoleNameBtn = document.getElementById('save-role-name-btn');
-               const selectedRoleNameInput = document.getElementById('selected-role-name');
-               const newRoleNameInput = document.getElementById('new-role-name');
-               const newRoleCopySourceSelect = document.getElementById('new-role-copy-source');
-               const confirmDeleteRoleBtn = document.getElementById('confirm-delete-role-btn');
-               const deleteRoleNameEl = document.getElementById('delete-role-name');
-               const openCreateUserModalBtn = document.getElementById('open-create-user-modal');
+            const roleSelect = document.getElementById('role-rights-role-select');
+            const roleRightsBody = document.getElementById('role-rights-body');
+            const deleteRoleBtn = document.getElementById('delete-role-btn');
+            const createRoleBtn = document.getElementById('create-role-btn');
+            const saveRoleNameBtn = document.getElementById('save-role-name-btn');
+            const selectedRoleNameInput = document.getElementById('selected-role-name');
+            const newRoleNameInput = document.getElementById('new-role-name');
+            const newRoleCopySourceSelect = document.getElementById('new-role-copy-source');
+            const confirmDeleteRoleBtn = document.getElementById('confirm-delete-role-btn');
+            const deleteRoleNameEl = document.getElementById('delete-role-name');
+            const openCreateUserModalBtn = document.getElementById('open-create-user-modal');
 
-               async function loadRoleRights() {
-                   if (!roleSelect || !roleRightsBody) return;
-                   const roleId = roleSelect.value;
-                   if (!roleId) return;
-                   const roleName = roleSelect.options[roleSelect.selectedIndex].text;
-                   if (selectedRoleNameInput) selectedRoleNameInput.value = roleName;
+            async function loadRoleRights() {
+                if (!roleSelect || !roleRightsBody) return;
+                const roleId = roleSelect.value;
+                if (!roleId) return;
+                const roleName = roleSelect.options[roleSelect.selectedIndex].text;
+                if (selectedRoleNameInput) selectedRoleNameInput.value = roleName;
 
-                   const response = await fetch('@Url.Action("RolePermissionMatrix", "UserAdmin")?roleId=' + encodeURIComponent(roleId));
-                   const matrix = response.ok ? await response.json() : {};
+                const response = await fetch('@Url.Action("RolePermissionMatrix", "UserAdmin")?roleId=' + encodeURIComponent(roleId));
+                const matrix = response.ok ? await response.json() : {};
 
-                   const rightsMap = {};
-                   menuStructure.forEach(function (item) {
-                       rightsMap[item.code] = matrix[item.code] || { read: false, write: false, delete: false };
-                       (item.children || []).forEach(function (child) {
-                           rightsMap[child.code] = matrix[child.code] || { read: false, write: false, delete: false };
-                       });
-                   });
+                const rightsMap = {};
+                menuStructure.forEach(function (item) {
+                    rightsMap[item.code] = matrix[item.code] || { read: false, write: false, delete: false };
+                    (item.children || []).forEach(function (child) {
+                        rightsMap[child.code] = matrix[child.code] || { read: false, write: false, delete: false };
+                    });
+                });
 
-                   createPermissionRows(roleRightsBody, rightsMap, { editable: canManageRoleRights, markOverride: false });
+                createPermissionRows(roleRightsBody, rightsMap, { editable: canManageRoleRights, markOverride: false });
 
-                   if (canManageRoleRights) {
-                       roleRightsBody.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
-                           checkbox.addEventListener('change', async function () {
-                               const row = checkbox.closest('tr');
-                               const code = row.dataset.code;
-                               const read = row.querySelector('input[data-access="read"]').checked;
-                               const write = row.querySelector('input[data-access="write"]').checked;
-                               const del = row.querySelector('input[data-access="delete"]').checked;
+                if (canManageRoleRights) {
+                    roleRightsBody.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+                        checkbox.addEventListener('change', async function () {
+                            const row = checkbox.closest('tr');
+                            const code = row.dataset.code;
+                            const read = row.querySelector('input[data-access="read"]').checked;
+                            const write = row.querySelector('input[data-access="write"]').checked;
+                            const del = row.querySelector('input[data-access="delete"]').checked;
 
-                               await postJson('@Url.Action("SaveRolePermission", "UserAdmin")', {
-                                   roleId: roleId,
-                                   permissionCode: code,
-                                   canRead: read,
-                                   canWrite: write,
-                                   canDelete: del,
-                                   __RequestVerificationToken: antiForgeryToken
-                               });
-                           });
-                       });
-                   }
-               }
+                            await postJson('@Url.Action("SaveRolePermission", "UserAdmin")', {
+                                roleId: roleId,
+                                permissionCode: code,
+                                canRead: read,
+                                canWrite: write,
+                                canDelete: del,
+                                __RequestVerificationToken: antiForgeryToken
+                            });
+                        });
+                    });
+                }
+            }
 
             if (roleSelect) {
                 roleSelect.addEventListener('change', loadRoleRights);
                 loadRoleRights();
             }
 
-        if (deleteRoleBtn) {
-                 deleteRoleBtn.addEventListener('click', function () {
-                     if (!roleSelect || !roleSelect.value) return;
-                     if (deleteRoleNameEl) deleteRoleNameEl.textContent = roleSelect.options[roleSelect.selectedIndex].text;
-                     $('#deleteRoleModal').modal('show');
-                 });
-             }
+            if (deleteRoleBtn) {
+                deleteRoleBtn.addEventListener('click', function () {
+                    if (!roleSelect || !roleSelect.value) return;
+                    if (deleteRoleNameEl) deleteRoleNameEl.textContent = roleSelect.options[roleSelect.selectedIndex].text;
+                    if (window.jQuery && $.magnificPopup) {
+                        $.magnificPopup.open({
+                            items: {
+                                src: '#deleteRoleModal'
+                            },
+                            type: 'inline',
+                            preloader: false
+                        });
+                    }
+                });
+            }
 
-             if (confirmDeleteRoleBtn) {
-                 confirmDeleteRoleBtn.addEventListener('click', async function () {
-                     if (!roleSelect || !roleSelect.value) return;
-                     const deletedRoleId = roleSelect.value;
-                     const response = await postJson('@Url.Action("DeleteRole", "UserAdmin")', {
-                         roleId: deletedRoleId,
-                         __RequestVerificationToken: antiForgeryToken
-                     });
+            if (confirmDeleteRoleBtn) {
+                confirmDeleteRoleBtn.addEventListener('click', async function () {
+                    if (!roleSelect || !roleSelect.value) return;
+                    const deletedRoleId = roleSelect.value;
+                    const response = await postJson('@Url.Action("DeleteRole", "UserAdmin")', {
+                        roleId: deletedRoleId,
+                        __RequestVerificationToken: antiForgeryToken
+                    });
 
-                     if (!response.ok) return;
+                    if (!response.ok) return;
 
-                     const deletedRoleOption = roleSelect.querySelector('option[value="' + deletedRoleId + '"]');
-                     if (deletedRoleOption) deletedRoleOption.remove();
+                    const deletedRoleOption = roleSelect.querySelector('option[value="' + deletedRoleId + '"]');
+                    if (deletedRoleOption) deletedRoleOption.remove();
 
-                     if (newRoleCopySourceSelect) {
-                         const deletedCopyOption = newRoleCopySourceSelect.querySelector('option[value="' + deletedRoleId + '"]');
-                         if (deletedCopyOption) deletedCopyOption.remove();
-                     }
+                    if (newRoleCopySourceSelect) {
+                        const deletedCopyOption = newRoleCopySourceSelect.querySelector('option[value="' + deletedRoleId + '"]');
+                        if (deletedCopyOption) deletedCopyOption.remove();
+                    }
 
-                     if (roleSelect.options.length > 0) {
-                         roleSelect.selectedIndex = 0;
-                         await loadRoleRights();
-                     } else {
-                         if (selectedRoleNameInput) selectedRoleNameInput.value = '';
-                         if (roleRightsBody) roleRightsBody.innerHTML = '';
-                     }
+                    if (roleSelect.options.length > 0) {
+                        roleSelect.selectedIndex = 0;
+                        await loadRoleRights();
+                    } else {
+                        if (selectedRoleNameInput) selectedRoleNameInput.value = '';
+                        if (roleRightsBody) roleRightsBody.innerHTML = '';
+                    }
 
-                     $('#deleteRoleModal').modal('hide');
-                 });
-             }
+                    if (window.jQuery && $.magnificPopup) {
+                        $.magnificPopup.close();
+                    }
+                });
+            }
 
-             if (openCreateUserModalBtn) {
-                 openCreateUserModalBtn.addEventListener('click', function () {
-                     $('#createUserModal').modal('show');
-                 });
-             }
+            if (openCreateUserModalBtn) {
+                openCreateUserModalBtn.addEventListener('click', function () {
+                    if (window.jQuery && $.magnificPopup) {
+                        $.magnificPopup.open({
+                            items: {
+                                src: '#createUserModal'
+                            },
+                            type: 'inline',
+                            preloader: false
+                        });
+                    }
+                });
+            }
 
-             if (createRoleBtn) {
-                 createRoleBtn.addEventListener('click', async function () {
-                     const roleName = (newRoleNameInput ? newRoleNameInput.value : '').trim();
-                     if (!roleName) {
-                         alert('Rolnaam is verplicht.');
-                         return;
-                     }
+            if (createRoleBtn) {
+                createRoleBtn.addEventListener('click', async function () {
+                    const roleName = (newRoleNameInput ? newRoleNameInput.value : '').trim();
+                    if (!roleName) {
+                        alert('Rolnaam is verplicht.');
+                        return;
+                    }
 
-                     const response = await postJson('@Url.Action("CreateRole", "UserAdmin")', {
-                         roleName: roleName,
-                         copyFromRoleId: newRoleCopySourceSelect ? (newRoleCopySourceSelect.value || null) : null,
-                         __RequestVerificationToken: antiForgeryToken
-                     });
+                    const response = await postJson('@Url.Action("CreateRole", "UserAdmin")', {
+                        roleName: roleName,
+                        copyFromRoleId: newRoleCopySourceSelect ? (newRoleCopySourceSelect.value || null) : null,
+                        __RequestVerificationToken: antiForgeryToken
+                    });
 
-                     if (!response.ok) {
-                         const message = await response.text();
-                         alert(message || 'Kon rol niet aanmaken.');
-                         return;
-                     }
+                    if (!response.ok) {
+                        const message = await response.text();
+                        alert(message || 'Kon rol niet aanmaken.');
+                        return;
+                    }
 
-                     const result = await response.json();
-                     if (roleSelect) {
-                         const option = document.createElement('option');
-                         option.value = result.roleId;
-                         option.textContent = result.roleName;
-                         roleSelect.appendChild(option);
-                         roleSelect.value = result.roleId;
-                     }
+                    const result = await response.json();
+                    if (roleSelect) {
+                        const option = document.createElement('option');
+                        option.value = result.roleId;
+                        option.textContent = result.roleName;
+                        roleSelect.appendChild(option);
+                        roleSelect.value = result.roleId;
+                    }
 
-                     if (newRoleCopySourceSelect) {
-                         const optionCopy = document.createElement('option');
-                         optionCopy.value = result.roleId;
-                         optionCopy.textContent = result.roleName;
-                         newRoleCopySourceSelect.appendChild(optionCopy);
-                     }
+                    if (newRoleCopySourceSelect) {
+                        const optionCopy = document.createElement('option');
+                        optionCopy.value = result.roleId;
+                        optionCopy.textContent = result.roleName;
+                        newRoleCopySourceSelect.appendChild(optionCopy);
+                    }
 
-                     if (newRoleNameInput) newRoleNameInput.value = '';
-                     if (newRoleCopySourceSelect) newRoleCopySourceSelect.value = '';
-                     await loadRoleRights();
-                 });
-             }
+                    if (newRoleNameInput) newRoleNameInput.value = '';
+                    if (newRoleCopySourceSelect) newRoleCopySourceSelect.value = '';
+                    await loadRoleRights();
+                });
+            }
 
-             if (saveRoleNameBtn) {
-                 saveRoleNameBtn.addEventListener('click', async function () {
-                     if (!roleSelect || !roleSelect.value || !selectedRoleNameInput) return;
-                     const newName = (selectedRoleNameInput.value || '').trim();
-                     if (!newName) {
-                         alert('Rolnaam is verplicht.');
-                         return;
-                     }
+            if (saveRoleNameBtn) {
+                saveRoleNameBtn.addEventListener('click', async function () {
+                    if (!roleSelect || !roleSelect.value || !selectedRoleNameInput) return;
+                    const newName = (selectedRoleNameInput.value || '').trim();
+                    if (!newName) {
+                        alert('Rolnaam is verplicht.');
+                        return;
+                    }
 
-                     const response = await postJson('@Url.Action("RenameRole", "UserAdmin")', {
-                         roleId: roleSelect.value,
-                         roleName: newName,
-                         __RequestVerificationToken: antiForgeryToken
-                     });
+                    const response = await postJson('@Url.Action("RenameRole", "UserAdmin")', {
+                        roleId: roleSelect.value,
+                        roleName: newName,
+                        __RequestVerificationToken: antiForgeryToken
+                    });
 
-                     if (!response.ok) {
-                         const message = await response.text();
-                         alert(message || 'Kon rolnaam niet aanpassen.');
-                         return;
-                     }
+                    if (!response.ok) {
+                        const message = await response.text();
+                        alert(message || 'Kon rolnaam niet aanpassen.');
+                        return;
+                    }
 
-                     const result = await response.json();
-                     const selectedOption = roleSelect.options[roleSelect.selectedIndex];
-                     if (selectedOption) selectedOption.text = result.roleName;
+                    const result = await response.json();
+                    const selectedOption = roleSelect.options[roleSelect.selectedIndex];
+                    if (selectedOption) selectedOption.text = result.roleName;
 
-                     const copyOption = newRoleCopySourceSelect
-                         ? newRoleCopySourceSelect.querySelector('option[value="' + result.roleId + '"]')
-                         : null;
-                     if (copyOption) copyOption.text = result.roleName;
-                 });
-             }
-
-
-            $('.js-close-edit-modal').on('click', function () {
-                $('#editUserModal').modal('hide');
-            });
+                    const copyOption = newRoleCopySourceSelect
+                        ? newRoleCopySourceSelect.querySelector('option[value="' + result.roleId + '"]')
+                        : null;
+                    if (copyOption) copyOption.text = result.roleName;
+                });
+            }
 
             $('.js-user-active-switch').on('change', async function () {
                 const checkbox = this;
@@ -932,7 +825,15 @@
                 $('#edit-cellphone').val(trigger.data('cellphone'));
                 $('#edit-role-id').val(trigger.data('role-id'));
                 $('#edit-active').prop('checked', String(trigger.data('active')) === 'true');
-                $('#editUserModal').modal('show');
+                if ($.magnificPopup) {
+                    $.magnificPopup.open({
+                        items: {
+                            src: '#editUserModal'
+                        },
+                        type: 'inline',
+                        preloader: false
+                    });
+                }
             });
 
             $(document).on('click', '.delete-user', function (event) {
@@ -940,7 +841,15 @@
                 const trigger = $(this);
                 $('#delete-id').val(trigger.data('id'));
                 $('#delete-name').text(trigger.data('name'));
-                $('#deleteUserModal').modal('show');
+                if ($.magnificPopup) {
+                    $.magnificPopup.open({
+                        items: {
+                            src: '#deleteUserModal'
+                        },
+                        type: 'inline',
+                        preloader: false
+                    });
+                }
             });
         })();
     </script>

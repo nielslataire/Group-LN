@@ -1,0 +1,154 @@
+﻿@model CPMCore.Models.UserAdminIndexViewModel
+
+<div id="editUserModal" class="modal-block modal-block-primary mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("QuickUpdate", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="edit-id" name="id" />
+            <header class="card-header">
+                <h2 class="card-title">Gebruiker bewerken</h2>
+            </header>
+            <div class="card-body">
+                <div class="form-group"><label>Voornaam</label><input class="form-control" id="edit-forename" name="forename" /></div>
+                <div class="form-group"><label>Familienaam</label><input class="form-control" id="edit-name" name="name" /></div>
+                <div class="form-group"><label>Email</label><input class="form-control" id="edit-email" name="email" type="email" required /></div>
+                <div class="form-group"><label>Functie</label><input class="form-control" id="edit-job" name="jobFunction" /></div>
+                <div class="form-group"><label>GSM</label><input class="form-control" id="edit-cellphone" name="cellphone" /></div>
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select class="form-control" id="edit-role-id" name="selectedRoleId">
+                        <option value="">Geen rol</option>
+                        @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group mb-0"><label><input type="checkbox" id="edit-active" name="isActive" value="true" /> Actief</label></div>
+                <input type="hidden" name="isActive" value="false" />
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-primary">Opslaan</button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>
+
+<div id="deleteRoleModal" class="modal-block modal-block-danger mfp-hide">
+    <section class="card">
+        <header class="card-header">
+            <h2 class="card-title">Rol verwijderen</h2>
+        </header>
+        <div class="card-body">
+            <div class="card-body">
+                <div class="modal-wrapper">
+                    <div class="modal-icon">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <div class="modal-text">
+                        Wil je rol <strong id="delete-role-name"></strong> volledig verwijderen?
+                    </div>
+                </div>
+            </div>
+        </div>
+        <footer class="card-footer">
+            <div class="row">
+                <div class="col-md-12 text-end">
+                    <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-role-btn">Verwijderen</button>
+                </div>
+            </div>
+        </footer>
+    </section>
+</div>
+
+<div id="createUserModal" class="modal-block modal-block-primary mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("CreateModal", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <header class="card-header">
+                <h2 class="card-title">Nieuwe interne gebruiker</h2>
+            </header>
+            <div class="card-body">
+
+                    <div class="switch switch-sm switch-primary d-inline-block me-5" title="Actief / niet actief">
+                        <input type="checkbox" data-plugin-ios-switch class="js-user-active-switch" name="isActive" value="true" checked />
+                    </div>
+               
+                <div class="form-group mt-2"><label>Gebruikersnaam</label><input class="form-control" name="userName" required /></div>
+                <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email" required /></div>
+                <div class="form-group"><label>Voornaam</label><input class="form-control" name="forename" /></div>
+                <div class="form-group"><label>Familienaam</label><input class="form-control" name="name" /></div>
+                <div class="form-group"><label>Functie</label><input class="form-control" name="jobFunction" /></div>
+                <div class="form-group"><label>GSM</label><input class="form-control" name="cellphone" /></div>
+                <div class="form-group">
+                    <label>Rol</label>
+                    <select class="form-control" name="selectedRoleId">
+                        <option value="">Geen rol</option>
+                        @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label>Entra gebruiker</label>
+                    <select class="form-control" name="selectedEntraObjectId">
+                        <option value="">Niet koppelen</option>
+                        @foreach (var entraUser in Model.EntraUsers.OrderBy(x => x.DisplayName))
+                        {
+                            var userLabel = string.IsNullOrWhiteSpace(entraUser.Email)
+                            ? $"{entraUser.DisplayName} ({entraUser.UserPrincipalName})"
+                            : $"{entraUser.DisplayName} ({entraUser.Email})";
+                            <option value="@entraUser.Id">@userLabel</option>
+                        }
+                    </select>
+                </div>
+                <input type="hidden" name="isActive" value="false" />
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-primary">Opslaan</button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>
+
+<div id="deleteUserModal" class="modal-block modal-block-danger mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("Delete", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="delete-id" name="id" />
+            <header class="card-header">
+                <h2 class="card-title">Gebruiker verwijderen</h2>
+            </header>
+            <div class="card-body">
+                <div class="modal-wrapper">
+                <div class="modal-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="modal-text">
+                Wil je gebruiker <strong id="delete-name"></strong> verwijderen?
+                </div>
+                </div>
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-danger">Verwijderen</button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>
