@@ -1,4 +1,5 @@
-﻿using CPMCore.Extensions;
+﻿using BOCore;
+using CPMCore.Extensions;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ namespace CPMCore.Controllers
 {
 
     [Authorize(Policy = "CpmAdmin")]
-    [CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.SettingsInvoiceTemplates)]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsInvoiceTemplates)]
     public class InvoiceLayoutController : BaseController
     {
         private readonly IInvoicePdfService _pdfService;

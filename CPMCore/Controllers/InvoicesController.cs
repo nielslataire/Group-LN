@@ -38,7 +38,7 @@ using System.Security.Claims;
 namespace CPMCore.Controllers
 {
     [Authorize]
-    [CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.InvoicingByBillingCompany)]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.InvoicingByBillingCompany)]
     public class InvoicesController : BaseController
     {
         private const string ControllerName = "Invoices";

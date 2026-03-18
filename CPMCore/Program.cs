@@ -6,6 +6,7 @@ using CPMCore.Services;
 using CPMCore.Services.Authorization;
 using CPMCore.Services.Octopus;
 using CPMCore.Services.Peppol;
+using CPMCore.Services.Security;
 using CPMCore.Filters;
 using DALCore;
 using DALCore.Models;

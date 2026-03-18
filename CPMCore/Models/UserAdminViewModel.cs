@@ -9,8 +9,11 @@ namespace CPMCore.Models
         public string DisplayName { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+        public string? Cellphone { get; set; }
         public string? EntraObjectId { get; set; }
         public bool IsActive { get; set; }
+        public int? CurrentRoleId { get; set; }
+        public string? CurrentRoleName { get; set; }
         public List<string> Permissions { get; set; } = new();
     }
 
@@ -21,6 +24,7 @@ namespace CPMCore.Models
         public string? Email { get; set; }
         public string? UserPrincipalName { get; set; }
     }
+
 
     public class PermissionMatrixItemViewModel
     {
@@ -43,6 +47,7 @@ namespace CPMCore.Models
         public List<RolePermissionAssignmentViewModel> Roles { get; set; } = new();
         public List<PermissionMatrixItemViewModel> PermissionDefinitions { get; set; } = new();
     }
+
 
     public class CreateUserViewModel
     {

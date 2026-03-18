@@ -11,7 +11,7 @@ using System.Globalization;
 namespace CPMCore.Controllers;
 
 [Authorize]
-[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.Dashboard)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.Dashboard)]
 public class HomeController : BaseController
 {
     private readonly ILogger<HomeController> _logger;

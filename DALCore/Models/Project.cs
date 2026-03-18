@@ -131,6 +131,8 @@ public partial class Project
 
     public virtual ICollection<ProjectSalesSettings> ProjectSalesSettings { get; set; } = new List<ProjectSalesSettings>();
 
+    public virtual ICollection<ProjectUserAccess> ProjectUserAccess { get; set; } = new List<ProjectUserAccess>();
+
     public virtual CompanyInfo SecurityCoordinator { get; set; }
 
     public virtual ProjectStatus Status { get; set; }

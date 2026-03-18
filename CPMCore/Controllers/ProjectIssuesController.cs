@@ -23,7 +23,7 @@ using System.Text.Json;
 namespace CPMCore.Controllers;
 
 [Authorize]
-[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.ProjectsIssues)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.ProjectsIssues)]
 [Route("Projects/{projectId:int}/Issues")]
 public class ProjectsIssuesController : BaseController
 {

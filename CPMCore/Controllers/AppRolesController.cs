@@ -1,5 +1,6 @@
 ﻿using CPMCore.Models;
 using DALCore.Models;
+using BOCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace CPMCore.Controllers;
 
 [Authorize(Policy = "CpmAdmin")]
-[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.SettingsUsers)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.SettingsUsers)]
 public class AppRolesController : BaseController
 {
     private readonly cpmRunningContext _db;

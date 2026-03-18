@@ -375,7 +375,31 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ProjectUserAccess]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[Provincie]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SecurityPermission]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SecurityRole]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SecurityRolePermission]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SecurityUserPermissionOverride]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[SecurityUserRole]",
          "ObjectType": 0
       },
       {
@@ -408,6 +432,10 @@
       },
       {
          "Name": "[dbo].[UserCompany]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UserCompanyAccess]",
          "ObjectType": 0
       },
       {

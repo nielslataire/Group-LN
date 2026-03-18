@@ -35,7 +35,7 @@ namespace CPMCore.Controllers;
 
 
 [Authorize]
-[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.Settings)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.Settings)]
 public class InstellingenController : BaseController
 {
     private readonly ILogger<HomeController> _logger;

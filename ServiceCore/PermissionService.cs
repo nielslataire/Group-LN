@@ -1,19 +1,10 @@
-﻿using CPMCore.Helpers;
-using DALCore.Models;
+﻿using DALCore.Models;
+using FacadeCore;
+using BOCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace CPMCore.Services.Security;
-
-public record PermissionGrant(bool Read, bool Write, bool Delete);
-
-public interface IPermissionService
-{
-    Task EnsureLoadedAsync(CancellationToken ct = default);
-    bool HasRead(string code);
-    bool HasWrite(string code);
-    bool HasDelete(string code);
-    IReadOnlyDictionary<string, PermissionGrant> EffectivePermissions { get; }
-}
+namespace ServiceCore;
 
 public class PermissionService : IPermissionService
 {
@@ -35,8 +26,9 @@ public class PermissionService : IPermissionService
         if (_loaded) return;
 
         var user = _httpContextAccessor.HttpContext?.User;
-        var userId = user?.GetCpmUserId();
-        if (userId == null)
+        var userIdClaim = user?.FindFirst("cpm:user-id")?.Value;
+        var userId = int.TryParse(userIdClaim, out var parsedUserId) ? parsedUserId : (int?)null;
+        if (!userId.HasValue)
         {
             _loaded = true;
             return;
@@ -49,46 +41,26 @@ public class PermissionService : IPermissionService
             return;
         }
 
-        var hasSecurityTables = await _db.Database.CanConnectAsync(ct);
-
-        if (hasSecurityTables)
+        try
         {
-            try
+            var roleIds = await _db.SecurityUserRole.AsNoTracking().Where(x => x.UserId == userId.Value).Select(x => x.RoleId).ToListAsync(ct);
+            var roleGrants = await _db.SecurityRolePermission.AsNoTracking().Where(x => roleIds.Contains(x.RoleId)).ToListAsync(ct);
+            foreach (var group in roleGrants.GroupBy(x => x.PermissionCode, StringComparer.OrdinalIgnoreCase))
             {
-                var roleIds = await _db.SecurityUserRole.AsNoTracking()
-                    .Where(x => x.UserId == userId.Value)
-                    .Select(x => x.RoleId)
-                    .ToListAsync(ct);
-
-                var roleGrants = await _db.SecurityRolePermission.AsNoTracking()
-                    .Where(x => roleIds.Contains(x.RoleId))
-                    .ToListAsync(ct);
-
-                foreach (var group in roleGrants.GroupBy(x => x.PermissionCode, StringComparer.OrdinalIgnoreCase))
-                {
-                    _effective[group.Key] = new PermissionGrant(group.Any(x => x.CanRead), group.Any(x => x.CanWrite), group.Any(x => x.CanDelete));
-                }
-
-                var overrides = await _db.SecurityUserPermissionOverride.AsNoTracking()
-                    .Where(x => x.UserId == userId.Value)
-                    .ToListAsync(ct);
-
-                foreach (var ov in overrides)
-                {
-                    _effective.TryGetValue(ov.PermissionCode, out var baseGrant);
-                    _effective[ov.PermissionCode] = new PermissionGrant(
-                        ov.CanRead ?? baseGrant?.Read ?? false,
-                        ov.CanWrite ?? baseGrant?.Write ?? false,
-                        ov.CanDelete ?? baseGrant?.Delete ?? false);
-                }
+                _effective[group.Key] = new PermissionGrant(group.Any(x => x.CanRead), group.Any(x => x.CanWrite), group.Any(x => x.CanDelete));
             }
-            catch
+
+            var overrides = await _db.SecurityUserPermissionOverride.AsNoTracking().Where(x => x.UserId == userId.Value).ToListAsync(ct);
+            foreach (var ov in overrides)
             {
-                // fallback to legacy role names below
+                _effective.TryGetValue(ov.PermissionCode, out var baseGrant);
+                _effective[ov.PermissionCode] = new PermissionGrant(
+                    ov.CanRead ?? baseGrant?.Read ?? false,
+                    ov.CanWrite ?? baseGrant?.Write ?? false,
+                    ov.CanDelete ?? baseGrant?.Delete ?? false);
             }
         }
-
-        if (_effective.Count == 0)
+        catch
         {
             var legacy = await _db.PermissionPerUser.AsNoTracking().Include(x => x.PermissionNavigation)
                 .Where(x => x.UserId == userId.Value)
@@ -137,8 +109,5 @@ public class PermissionService : IPermissionService
         return false;
     }
 
-    private void GrantAll(string code)
-    {
-        _effective[code] = new PermissionGrant(true, true, true);
-    }
+    private void GrantAll(string code) => _effective[code] = new PermissionGrant(true, true, true);
 }

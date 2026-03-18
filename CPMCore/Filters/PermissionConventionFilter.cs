@@ -1,7 +1,9 @@
-﻿using CPMCore.Services.Security;
+﻿using BOCore;
+using CPMCore.Services.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
+using FacadeCore;
 
 namespace CPMCore.Filters;
 

@@ -1,4 +1,5 @@
 ﻿namespace CPMCore.Services.Security;
+using BOCore;
 
 public interface IPermissionResolver
 {

@@ -36,7 +36,7 @@ using static System.Net.Mime.MediaTypeNames;
 namespace CPMCore.Controllers
 {
     [Authorize]
-    [CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.CustomersAll)]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.CustomersAll)]
     public class KlantenController : BaseController
     {
         private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()

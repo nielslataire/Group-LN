@@ -185,7 +185,19 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ProjectStatus> ProjectStatus { get; set; }
 
+    public virtual DbSet<ProjectUserAccess> ProjectUserAccess { get; set; }
+
     public virtual DbSet<Provincie> Provincie { get; set; }
+
+    public virtual DbSet<SecurityPermission> SecurityPermission { get; set; }
+
+    public virtual DbSet<SecurityRole> SecurityRole { get; set; }
+
+    public virtual DbSet<SecurityRolePermission> SecurityRolePermission { get; set; }
+
+    public virtual DbSet<SecurityUserPermissionOverride> SecurityUserPermissionOverride { get; set; }
+
+    public virtual DbSet<SecurityUserRole> SecurityUserRole { get; set; }
 
     public virtual DbSet<Setting> Setting { get; set; }
 
@@ -202,6 +214,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<Units> Units { get; set; }
 
     public virtual DbSet<UserCompany> UserCompany { get; set; }
+
+    public virtual DbSet<UserCompanyAccess> UserCompanyAccess { get; set; }
 
     public virtual DbSet<Users> Users { get; set; }
 
@@ -2193,6 +2207,23 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(50);
         });
 
+        modelBuilder.Entity<ProjectUserAccess>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_ProjectUserAccess_UserId");
+
+            entity.HasIndex(e => new { e.ProjectId, e.UserId }, "UX_ProjectUserAccess_Project_User").IsUnique();
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectUserAccess)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProjectUserAccess_Project");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ProjectUserAccess)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProjectUserAccess_Users");
+        });
+
         modelBuilder.Entity<Provincie>(entity =>
         {
             entity.Property(e => e.ProvincieId).HasColumnName("ProvincieID");
@@ -2203,6 +2234,79 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.CountryId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Provincie_Country");
+        });
+
+        modelBuilder.Entity<SecurityPermission>(entity =>
+        {
+            entity.HasKey(e => e.Code).HasName("PK__Security__A25C5AA682FB409D");
+
+            entity.Property(e => e.Code).HasMaxLength(200);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(e => e.ParentCode).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<SecurityRole>(entity =>
+        {
+            entity.HasKey(e => e.RoleId).HasName("PK__Security__8AFACE1A19B6092F");
+
+            entity.HasIndex(e => e.Name, "UQ__Security__737584F6B8778FC6").IsUnique();
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<SecurityRolePermission>(entity =>
+        {
+            entity.HasKey(e => new { e.RoleId, e.PermissionCode });
+
+            entity.Property(e => e.PermissionCode).HasMaxLength(200);
+
+            entity.HasOne(d => d.PermissionCodeNavigation).WithMany(p => p.SecurityRolePermission)
+                .HasForeignKey(d => d.PermissionCode)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SecurityRolePermission_Permission");
+
+            entity.HasOne(d => d.Role).WithMany(p => p.SecurityRolePermission)
+                .HasForeignKey(d => d.RoleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SecurityRolePermission_Role");
+        });
+
+        modelBuilder.Entity<SecurityUserPermissionOverride>(entity =>
+        {
+            entity.HasKey(e => new { e.UserId, e.PermissionCode });
+
+            entity.Property(e => e.PermissionCode).HasMaxLength(200);
+
+            entity.HasOne(d => d.PermissionCodeNavigation).WithMany(p => p.SecurityUserPermissionOverride)
+                .HasForeignKey(d => d.PermissionCode)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SecurityUserPermissionOverride_Permission");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SecurityUserPermissionOverride)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SecurityUserPermissionOverride_Users");
+        });
+
+        modelBuilder.Entity<SecurityUserRole>(entity =>
+        {
+            entity.HasIndex(e => new { e.UserId, e.RoleId }, "UX_SecurityUserRole_UserId_RoleId").IsUnique();
+
+            entity.HasOne(d => d.Role).WithMany(p => p.SecurityUserRole)
+                .HasForeignKey(d => d.RoleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SecurityUserRole_Role");
+
+            entity.HasOne(d => d.User).WithMany(p => p.SecurityUserRole)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_SecurityUserRole_Users");
         });
 
         modelBuilder.Entity<Setting>(entity =>
@@ -2348,6 +2452,23 @@ public partial class cpmRunningContext : DbContext
                 .HasColumnType("numeric(18, 0)")
                 .HasColumnName("UserCompanyID");
             entity.Property(e => e.UserCompanyName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<UserCompanyAccess>(entity =>
+        {
+            entity.HasIndex(e => e.CompanyId, "IX_UserCompanyAccess_CompanyId");
+
+            entity.HasIndex(e => new { e.UserId, e.CompanyId }, "UX_UserCompanyAccess_User_Company").IsUnique();
+
+            entity.HasOne(d => d.Company).WithMany(p => p.UserCompanyAccess)
+                .HasForeignKey(d => d.CompanyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserCompanyAccess_CompanyInfo");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserCompanyAccess)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_UserCompanyAccess_Users");
         });
 
         modelBuilder.Entity<Users>(entity =>

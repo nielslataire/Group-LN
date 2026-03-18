@@ -1,15 +1,23 @@
 ﻿@model CPMCore.Models.UserAdminIndexViewModel
-@using CPMCore.Services.Security
+@using FacadeCore
+@using BOCore;
 @inject IPermissionService PermissionService
 @{
     ViewData["Title"] = "Gebruikers beheren";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var roleNames = Model.Roles.Select(r => r.RoleName).Distinct().OrderBy(x => x).ToList();
-    var permissionDefsJson = System.Text.Json.JsonSerializer.Serialize(Model.PermissionDefinitions.OrderBy(x => x.SortOrder));
+    var permissionDefsJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.PermissionDefinitions.OrderBy(x => x.SortOrder),
+        new System.Text.Json.JsonSerializerOptions
+        {
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
     await PermissionService.EnsureLoadedAsync();
     var canWriteUsers = PermissionService.HasWrite(PermissionCodes.SettingsUsers);
     var canDeleteUsers = PermissionService.HasDelete(PermissionCodes.SettingsUsers);
+    var canManageRoleRights = canWriteUsers && canDeleteUsers;
 }
+
 <style>
     .invoice-tab-nav {
         background-color: #f3f5f7;
@@ -62,6 +70,26 @@
     .permission-cell input.override {
         accent-color: #fd7e14;
     }
+
+    .permission-cell .checkbox-custom {
+        display: inline-block;
+        margin: 0 auto;
+    }
+
+    .permission-header-vertical {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+        gap: .25rem;
+    }
+
+        .permission-header-vertical .header-text-vertical {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            line-height: 1;
+            font-size: .8rem;
+        }
 </style>
 
 <div class="row">
@@ -70,14 +98,7 @@
             <h1 class="font-weight-bold mb-0 mt-0">Gebruikersbeheer</h1>
             <h5 class="mb-4 mt-0">Interne en externe gebruikers + rolrechten beheer.</h5>
         </div>
-        <div class="col-sm-auto px-0">
-            @if (canWriteUsers)
-            {
-                <a href="@Url.Action("Create", "UserAdmin")" class="btn btn-primary btn-md px-3" title="Gebruiker toevoegen">
-                    <i class="fa fa-user-plus mr-2"></i>Nieuwe Gebruiker
-                </a>
-            }
-        </div>
+
     </div>
 </div>
 
@@ -98,10 +119,23 @@
 
 <div id="useradmin-intern-section" class="useradmin-section">
     <section class="card card-modern">
-        <header class="card-header">
-            <h2 class="card-title mb-0"><i class="bx bx-group mr-1"></i>Interne Gebruikers</h2>
+        <header class="card-header  d-flex justify-content-between align-items-center">
+            <h2 class="card-title mb-0 d-flex align-items-center">
+                <i class="bx bx-group me-2 fs-3"></i>
+                Interne Gebruikers
+            </h2>
+            @if (canWriteUsers)
+            {
+                <div class="card-actions d-flex align-items-center">
+                    <button type="button" class="btn btn-primary btn-md px-3" id="open-create-user-modal" title="Gebruiker toevoegen">
+                        <i class="fa fa-user-plus me-2"></i>Nieuwe Gebruiker
+                    </button>                
+            </div>
+            }
+            <h2 class="card-title mb-0"><i class="bx bx-group me-2"></i>Interne Gebruikers</h2>
+             
         </header>
-        <div class="card-body">
+        <div class="card-body pt-5">
             @foreach (var user in Model.LocalUsers)
             {
                 var role = user.Permissions.FirstOrDefault() ?? "Geen rol";
@@ -113,27 +147,35 @@
                             <div class="text-muted">@user.Email</div>
                             <span class="badge badge-light">@role</span>
                         </div>
-                        <div class="user-entry-actions">
+                        <div class="user-entry-actions actions text-end align-content-center">
                             @if (canWriteUsers)
                             {
+                                <div class="switch switch-sm switch-primary d-inline-block me-5" title="Actief / niet actief">
+                                    <input type="checkbox" data-plugin-ios-switch class="js-user-active-switch" data-user-id="@user.Id" @(user.IsActive ? "checked" : null) />
+                                </div>
                                 <a href="#" class="edit-user"
+                                   data-toggle="tooltip"
+                                   data-placement="top"
+                                   data-original-title="Bewerken"
                                    data-id="@user.Id"
                                    data-forename="@user.DisplayName.Split(' ').FirstOrDefault()"
                                    data-name="@string.Join(' ', user.DisplayName.Split(' ').Skip(1))"
                                    data-email="@user.Email"
                                    data-active="@(user.IsActive ? "true" : "false")"
                                    data-job=""
+                                   data-cellphone="@user.Cellphone"
+                                   data-role-id="@(user.CurrentRoleId?.ToString() ?? string.Empty)"
                                    title="Bewerken">
-                                    <i class="bx bx-pencil"></i>
+                                    <i class="bx bx-edit fs-5"></i>
                                 </a>
                             }
                             <a href="#" class="toggle-rights" data-user-id="@user.Id" title="Gebruikersrechten">
-                                <i class="fa fa-shield"></i>
+                                <i class="bx bx-shield fs-5"></i>
                             </a>
                             @if (canDeleteUsers)
                             {
-                                <a href="#" class="delete-user" data-id="@user.Id" data-name="@displayName" title="Verwijderen">
-                                    <i class="bx bx-trash text-danger"></i>
+                                <a href="#" class="delete-user" data-placement="top" data-original-title="Verwijderen" data-id="@user.Id" data-name="@displayName" title="Verwijderen">
+                                    <i class="bx bx-trash fs-5"></i>
                                 </a>
                             }
                         </div>
@@ -145,9 +187,34 @@
                                 <thead>
                                     <tr>
                                         <th>Pagina / Functie</th>
-                                        <th class="text-center">Lezen</th>
-                                        <th class="text-center">Schrijven</th>
-                                        <th class="text-center">Verwijderen</th>
+                                        <th class="text-center">
+                                            <div class="permission-header-vertical">
+                                               
+                                                <div class="checkbox-custom checkbox-default d-inline-block mb-0 ">
+                                                    <input type="checkbox" data-header-toggle="read">
+                                                    <label></label>
+                                                </div>
+                                                <span class="header-text-vertical">Lezen</span>
+                                            </div>
+                                        </th>
+                                        <th class="text-center">
+                                            <div class="permission-header-vertical">
+                                                <div class="checkbox-custom checkbox-default d-inline-block mb-0">
+                                                    <input type="checkbox" data-header-toggle="write">
+                                                    <label></label>
+                                                </div>
+                                                <span class="header-text-vertical">Schrijven</span>
+                                            </div>
+                                        </th>
+                                        <th class="text-center">
+                                            <div class="permission-header-vertical">
+                                                <div class="checkbox-custom checkbox-default d-inline-block mb-0">
+                                                    <input type="checkbox" data-header-toggle="delete">
+                                                    <label></label>
+                                                </div>
+                                                <span class="header-text-vertical">Verwijderen</span>
+                                            </div>
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody class="permission-body" data-role="@role"></tbody>
@@ -186,28 +253,86 @@
 
 <div id="useradmin-rolrechten-section" class="useradmin-section d-none">
     <section class="card card-modern">
-        <header class="card-header"><h2 class="card-title mb-0">Rolrechten</h2></header>
+
+        <header class="card-header d-flex justify-content-between align-items-center">
+
+            <h2 class="card-title mb-0 d-flex align-items-center">
+                <i class="bx bx-shield me-2 fs-3"></i>
+                Rolrechten instellen
+            </h2>
+
+            @if (canWriteUsers)
+            {
+                <div class="card-actions d-flex align-items-center">
+                    <select id="role-rights-role-select" class="form-control" style="max-width: 360px;">
+                        @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                </div>
+            }
+
+        </header>
         <div class="card-body">
             @if (!roleNames.Any())
             {
                 <div class="text-muted">Nog geen rollen geconfigureerd (SecurityRole).</div>
             }
-            @foreach (var role in roleNames)
+            @if (roleNames.Any())
             {
+                <div class="form-group mb-3">
+                    <label for="role-rights-role-select" class="font-weight-bold">Selecteer rol</label>
+                    <div class="d-flex align-items-center">
+
+                        @if (canManageRoleRights)
+                        {
+                            <button type="button" class="btn btn-primary mr-2" id="create-role-btn">
+                                <i class="bx bx-plus mr-1"></i>Rol toevoegen
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="delete-role-btn">
+                                <i class="bx bx-trash mr-1"></i>Rol verwijderen
+                            </button>
+                        }
+                    </div>
+                </div>
                 <div class="user-entry">
-                    <div class="user-entry-header"><strong>@role</strong></div>
                     <div class="card-body border-top">
                         <div class="table-responsive">
                             <table class="table permission-table align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th>Pagina / Functie</th>
-                                        <th class="text-center">Lezen</th>
-                                        <th class="text-center">Schrijven</th>
-                                        <th class="text-center">Verwijderen</th>
+                                        <th class="text-center">
+                                            <div class="permission-header-vertical">
+                                                <div class="checkbox-custom checkbox-default d-inline-block mb-0">
+                                                    <input type="checkbox" data-header-toggle="read">
+                                                    <label></label>
+                                                </div>
+                                                <span class="header-text-vertical">Lezen</span>
+                                            </div>
+                                        </th>
+                                        <th class="text-center">
+                                            <div class="permission-header-vertical">
+                                                <div class="checkbox-custom checkbox-default d-inline-block mb-0">
+                                                    <input type="checkbox" data-header-toggle="write">
+                                                    <label></label>
+                                                </div>
+                                                <span class="header-text-vertical">Schrijven</span>
+                                            </div>
+                                        </th>
+                                        <th class="text-center">
+                                            <div class="permission-header-vertical">
+                                                <div class="checkbox-custom checkbox-default d-inline-block mb-0">
+                                                    <input type="checkbox" data-header-toggle="delete">
+                                                    <label></label>
+                                                </div>
+                                                <span class="header-text-vertical">Verwijderen</span>
+                                            </div>
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody class="permission-body" data-role="@role"></tbody>
+                                <tbody class="permission-body" id="role-rights-body"></tbody>
                             </table>
                         </div>
                     </div>
@@ -218,21 +343,114 @@
 </div>
 
 <div class="modal fade" id="editUserModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <form method="post" action="@Url.Action("QuickUpdate", "UserAdmin")">
                 @Html.AntiForgeryToken()
                 <input type="hidden" id="edit-id" name="id" />
                 <div class="modal-header">
                     <h5 class="modal-title">Gebruiker bewerken</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+                    <button type="button" class="close js-close-edit-modal" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group"><label>Voornaam</label><input class="form-control" id="edit-forename" name="forename" /></div>
                     <div class="form-group"><label>Familienaam</label><input class="form-control" id="edit-name" name="name" /></div>
                     <div class="form-group"><label>Email</label><input class="form-control" id="edit-email" name="email" type="email" required /></div>
                     <div class="form-group"><label>Functie</label><input class="form-control" id="edit-job" name="jobFunction" /></div>
+                    <div class="form-group"><label>GSM</label><input class="form-control" id="edit-cellphone" name="cellphone" /></div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select class="form-control" id="edit-role-id" name="selectedRoleId">
+                            <option value="">Geen rol</option>
+                            @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
+                            {
+                                <option value="@role.RoleId">@role.RoleName</option>
+                            }
+                        </select>
+                    </div>
                     <div class="form-group mb-0"><label><input type="checkbox" id="edit-active" name="isActive" value="true" /> Actief</label></div>
+                    <input type="hidden" name="isActive" value="false" />
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light js-close-edit-modal" data-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary">Opslaan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createRoleModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nieuwe rol toevoegen</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="new-role-name">Rolnaam</label>
+                    <input class="form-control" id="new-role-name" />
+                </div>
+                <div class="form-group mb-0">
+                    <label for="copy-role-id">Kopieer rechten van bestaande rol (optioneel)</label>
+                    <select class="form-control" id="copy-role-id">
+                        <option value="">Geen kopie</option>
+                        @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
+                        {
+                            <option value="@role.RoleId">@role.RoleName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="save-new-role-btn">Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createUserModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <form method="post" action="@Url.Action("CreateModal", "UserAdmin")">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">Nieuwe interne gebruiker</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group"><label>Gebruikersnaam</label><input class="form-control" name="userName" required /></div>
+                    <div class="form-group"><label>Email</label><input class="form-control" name="email" type="email" required /></div>
+                    <div class="form-group"><label>Voornaam</label><input class="form-control" name="forename" /></div>
+                    <div class="form-group"><label>Familienaam</label><input class="form-control" name="name" /></div>
+                    <div class="form-group"><label>Functie</label><input class="form-control" name="jobFunction" /></div>
+                    <div class="form-group"><label>GSM</label><input class="form-control" name="cellphone" /></div>
+                    <div class="form-group">
+                        <label>Rol</label>
+                        <select class="form-control" name="selectedRoleId">
+                            <option value="">Geen rol</option>
+                            @foreach (var role in Model.Roles.OrderBy(r => r.RoleName))
+                            {
+                                <option value="@role.RoleId">@role.RoleName</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Entra gebruiker</label>
+                        <select class="form-control" name="selectedEntraObjectId">
+                            <option value="">Niet koppelen</option>
+                            @foreach (var entraUser in Model.EntraUsers.OrderBy(x => x.DisplayName))
+                            {
+                                var userLabel = string.IsNullOrWhiteSpace(entraUser.Email)
+                                ? $"{entraUser.DisplayName} ({entraUser.UserPrincipalName})"
+                                : $"{entraUser.DisplayName} ({entraUser.Email})";
+                                <option value="@entraUser.Id">@userLabel</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group mb-0"><label><input type="checkbox" name="isActive" value="true" checked /> Actief</label></div>
                     <input type="hidden" name="isActive" value="false" />
                 </div>
                 <div class="modal-footer">
@@ -268,6 +486,7 @@
 
 @section PageScripts
 {
+    <script src="~/lib/ios7-switch/ios7-switch.js"></script>
     <script>
         (function () {
             const sectionLinks = document.querySelectorAll('[data-useradmin-section]');
@@ -278,47 +497,107 @@
             };
 
             const permissionDefinitions = @Html.Raw(permissionDefsJson);
+            const canManageRoleRights = @(canManageRoleRights ? "true" : "false");
+            const canWriteUsers = @(canWriteUsers ? "true" : "false");
+            const antiForgeryTokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            const antiForgeryToken = antiForgeryTokenInput ? antiForgeryTokenInput.value : '';
+            let checkboxIdCounter = 0;
             const menuStructure = permissionDefinitions
-                .filter(function (x) { return !x.parentCode; })
+                .filter(function (x) { return !(x.parentCode ?? x.ParentCode); })
                 .map(function (parent) {
+                    const parentCode = parent.code ?? parent.Code;
+                    const parentName = parent.name ?? parent.Name;
                     return {
-                        name: parent.name,
+                        code: parentCode,
+                        name: parentName,
                         children: permissionDefinitions
-                            .filter(function (x) { return x.parentCode === parent.code; })
-                            .map(function (x) { return x.name; })
+                            .filter(function (x) { return (x.parentCode ?? x.ParentCode) === parentCode; })
+                            .map(function (x) {
+                                return {
+                                    code: x.code ?? x.Code,
+                                    name: x.name ?? x.Name
+                                };
+                            })
                     };
                 });
 
-            function defaultRightsByRole(role, rowName) {
-                if (role && role.toLowerCase().indexOf('admin') >= 0) return { r: true, w: true, d: true };
-                if (role && role.toLowerCase().indexOf('project') >= 0) {
-                    const writeRows = ['Projecten', 'Info', 'Klanten', 'Berichten'];
-                    return { r: true, w: writeRows.indexOf(rowName) >= 0, d: false };
-                }
-                return { r: true, w: false, d: false };
-            }
-
-            function buildPermissionRows(tbody, role, allowOverride) {
+            function createPermissionRows(tbody, rightsMap, options) {
                 tbody.innerHTML = '';
                 menuStructure.forEach(function (item) {
-                    addRow(item.name, false);
+                    addRow(item, false);
                     if (item.children) {
                         item.children.forEach(function (child) { addRow(child, true); });
                     }
                 });
 
-                function addRow(name, isSub) {
-                    const rights = defaultRightsByRole(role, name);
-                    const userOverride = allowOverride && isSub && name === 'Info';
-                    const effective = userOverride ? { r: rights.r, w: !rights.w, d: rights.d } : rights;
+                function addRow(item, isSub) {
+                    const right = rightsMap[item.code] || { read: false, write: false, delete: false, baseRead: false, baseWrite: false, baseDelete: false };
                     const tr = document.createElement('tr');
+                    tr.dataset.code = item.code;
                     if (isSub) tr.classList.add('submenu-row');
-                    tr.innerHTML = '<td>' + name + '</td>' +
-                        '<td class="text-center permission-cell"><input type="checkbox" ' + (effective.r ? 'checked' : '') + ' ' + (allowOverride ? '' : 'disabled') + ' class="' + (userOverride && effective.r !== rights.r ? 'override' : '') + '" /></td>' +
-                        '<td class="text-center permission-cell"><input type="checkbox" ' + (effective.w ? 'checked' : '') + ' ' + (allowOverride ? '' : 'disabled') + ' class="' + (userOverride && effective.w !== rights.w ? 'override' : '') + '" /></td>' +
-                        '<td class="text-center permission-cell"><input type="checkbox" ' + (effective.d ? 'checked' : '') + ' ' + (allowOverride ? '' : 'disabled') + ' class="' + (userOverride && effective.d !== rights.d ? 'override' : '') + '" /></td>';
+
+                    const disabled = options.editable ? '' : 'disabled';
+                    const readId = 'perm_' + (++checkboxIdCounter);
+                    const writeId = 'perm_' + (++checkboxIdCounter);
+                    const deleteId = 'perm_' + (++checkboxIdCounter);
+                    const readWarning = options.markOverride && right.read !== (right.baseRead ?? false);
+                    const writeWarning = options.markOverride && right.write !== (right.baseWrite ?? false);
+                    const deleteWarning = options.markOverride && right.delete !== (right.baseDelete ?? false);
+
+                    tr.innerHTML = '<td>' + item.name + '</td>' +
+                        '<td class="text-center permission-cell"><div class="checkbox-custom ' + (readWarning ? 'checkbox-warning' : 'checkbox-default') + '"><input data-access="read" id="' + readId + '" type="checkbox" ' + (right.read ? 'checked' : '') + ' ' + disabled + ' /><label for="' + readId + '"></label></div></td>' +
+                        '<td class="text-center permission-cell"><div class="checkbox-custom ' + (writeWarning ? 'checkbox-warning' : 'checkbox-default') + '"><input data-access="write" id="' + writeId + '" type="checkbox" ' + (right.write ? 'checked' : '') + ' ' + disabled + ' /><label for="' + writeId + '"></label></div></td>' +
+                        '<td class="text-center permission-cell"><div class="checkbox-custom ' + (deleteWarning ? 'checkbox-warning' : 'checkbox-default') + '"><input data-access="delete" id="' + deleteId + '" type="checkbox" ' + (right.delete ? 'checked' : '') + ' ' + disabled + ' /><label for="' + deleteId + '"></label></div></td>';
                     tbody.appendChild(tr);
                 }
+
+                attachColumnToggles(tbody, options.editable);
+            }
+
+            function attachColumnToggles(tbody, editable) {
+                const table = tbody.closest('table');
+                if (!table) return;
+
+                ['read', 'write', 'delete'].forEach(function (access) {
+                    const headerCheckbox = table.querySelector('thead input[data-header-toggle="' + access + '"]');
+                    if (!headerCheckbox) return;
+                    const headerId = 'hdr_' + access + '_' + (++checkboxIdCounter);
+                    const label = headerCheckbox.parentElement.querySelector('label');
+                    headerCheckbox.id = headerId;
+                    if (label) label.setAttribute('for', headerId);
+
+                    if (!editable) {
+                        headerCheckbox.checked = false;
+                        headerCheckbox.disabled = true;
+                        return;
+                    }
+
+                    headerCheckbox.disabled = false;
+                    headerCheckbox.addEventListener('change', function () {
+                        tbody.querySelectorAll('input[data-access="' + access + '"]').forEach(function (cb) {
+                            if (cb.checked !== headerCheckbox.checked) {
+                                cb.checked = headerCheckbox.checked;
+                                cb.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        });
+                    });
+                });
+            }
+
+            async function postJson(url, payload) {
+                const body = new URLSearchParams();
+                Object.keys(payload).forEach(function (key) {
+                    if (payload[key] !== undefined && payload[key] !== null) body.append(key, payload[key]);
+                });
+
+                return fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'RequestVerificationToken': antiForgeryToken
+                    },
+                    body: body.toString()
+                });
             }
 
             function showSection(key) {
@@ -339,21 +618,202 @@
             });
 
             document.querySelectorAll('.toggle-rights').forEach(function (btn) {
-                btn.addEventListener('click', function (e) {
+                btn.addEventListener('click', async function (e) {
                     e.preventDefault();
                     const panel = document.getElementById('rights-user-' + btn.dataset.userId);
                     panel.classList.toggle('d-none');
                     if (!panel.dataset.loaded) {
                         const tbody = panel.querySelector('.permission-body');
-                        buildPermissionRows(tbody, tbody.dataset.role, true);
+                        const response = await fetch('@Url.Action("PermissionMatrix", "UserAdmin")?userId=' + encodeURIComponent(btn.dataset.userId));
+                        const matrix = response.ok ? await response.json() : {};
+                        const rightsMap = {};
+
+                        menuStructure.forEach(function (item) {
+                            rightsMap[item.code] = matrix[item.code] || { read: false, write: false, delete: false, baseRead: false, baseWrite: false, baseDelete: false, overridden: false };
+                            (item.children || []).forEach(function (child) {
+                                rightsMap[child.code] = matrix[child.code] || { read: false, write: false, delete: false, baseRead: false, baseWrite: false, baseDelete: false, overridden: false };
+                            });
+                        });
+
+                        createPermissionRows(tbody, rightsMap, { editable: canWriteUsers, markOverride: true });
+
+                        if (canWriteUsers) {
+                            tbody.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+                                checkbox.addEventListener('change', async function () {
+                                    const row = checkbox.closest('tr');
+                                    const code = row.dataset.code;
+                                    const read = row.querySelector('input[data-access="read"]').checked;
+                                    const write = row.querySelector('input[data-access="write"]').checked;
+                                    const del = row.querySelector('input[data-access="delete"]').checked;
+
+                                    await postJson('@Url.Action("SaveUserPermissionOverride", "UserAdmin")', {
+                                        userId: btn.dataset.userId,
+                                        permissionCode: code,
+                                        canRead: read,
+                                        canWrite: write,
+                                        canDelete: del,
+                                        __RequestVerificationToken: antiForgeryToken
+                                    });
+                                });
+                            });
+                        }
                         panel.dataset.loaded = 'true';
                     }
                 });
             });
 
-            document.querySelectorAll('#useradmin-rolrechten-section .permission-body').forEach(function (tbody) {
-                buildPermissionRows(tbody, tbody.dataset.role, false);
+            const roleSelect = document.getElementById('role-rights-role-select');
+            const roleRightsBody = document.getElementById('role-rights-body');
+            const selectedRoleTitle = document.getElementById('selected-role-title');
+            const deleteRoleBtn = document.getElementById('delete-role-btn');
+            const createRoleBtn = document.getElementById('create-role-btn');
+            const saveNewRoleBtn = document.getElementById('save-new-role-btn');
+            const openCreateUserModalBtn = document.getElementById('open-create-user-modal');
+
+            async function loadRoleRights() {
+                if (!roleSelect || !roleRightsBody) return;
+                const roleId = roleSelect.value;
+                if (!roleId) return;
+                const roleName = roleSelect.options[roleSelect.selectedIndex].text;
+                if (selectedRoleTitle) selectedRoleTitle.textContent = roleName;
+
+                const response = await fetch('@Url.Action("RolePermissionMatrix", "UserAdmin")?roleId=' + encodeURIComponent(roleId));
+                const matrix = response.ok ? await response.json() : {};
+
+                const rightsMap = {};
+                menuStructure.forEach(function (item) {
+                    rightsMap[item.code] = matrix[item.code] || { read: false, write: false, delete: false };
+                    (item.children || []).forEach(function (child) {
+                        rightsMap[child.code] = matrix[child.code] || { read: false, write: false, delete: false };
+                    });
+                });
+
+                createPermissionRows(roleRightsBody, rightsMap, { editable: canManageRoleRights, markOverride: false });
+
+                if (canManageRoleRights) {
+                    roleRightsBody.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+                        checkbox.addEventListener('change', async function () {
+                            const row = checkbox.closest('tr');
+                            const code = row.dataset.code;
+                            const read = row.querySelector('input[data-access="read"]').checked;
+                            const write = row.querySelector('input[data-access="write"]').checked;
+                            const del = row.querySelector('input[data-access="delete"]').checked;
+
+                            await postJson('@Url.Action("SaveRolePermission", "UserAdmin")', {
+                                roleId: roleId,
+                                permissionCode: code,
+                                canRead: read,
+                                canWrite: write,
+                                canDelete: del,
+                                __RequestVerificationToken: antiForgeryToken
+                            });
+                        });
+                    });
+                }
+            }
+
+            if (roleSelect) {
+                roleSelect.addEventListener('change', loadRoleRights);
+                loadRoleRights();
+            }
+
+            if (deleteRoleBtn) {
+                deleteRoleBtn.addEventListener('click', async function () {
+                    if (!roleSelect || !roleSelect.value) return;
+                    const roleName = roleSelect.options[roleSelect.selectedIndex].text;
+                    if (!confirm('Wil je de rol "' + roleName + '" volledig verwijderen?')) return;
+
+                    const response = await postJson('@Url.Action("DeleteRole", "UserAdmin")', {
+                        roleId: roleSelect.value,
+                        __RequestVerificationToken: antiForgeryToken
+                    });
+
+                    if (response.ok) {
+                        roleSelect.options[roleSelect.selectedIndex].remove();
+                        if (roleSelect.options.length > 0) {
+                            roleSelect.selectedIndex = 0;
+                            loadRoleRights();
+                        } else {
+                            if (selectedRoleTitle) selectedRoleTitle.textContent = '';
+                            if (roleRightsBody) roleRightsBody.innerHTML = '';
+                        }
+                    }
+                });
+            }
+
+            if (createRoleBtn) {
+                createRoleBtn.addEventListener('click', function () {
+                    $('#createRoleModal').modal('show');
+                });
+            }
+
+            if (openCreateUserModalBtn) {
+                openCreateUserModalBtn.addEventListener('click', function () {
+                    $('#createUserModal').modal('show');
+                });
+            }
+
+            if (saveNewRoleBtn) {
+                saveNewRoleBtn.addEventListener('click', async function () {
+                    const nameInput = document.getElementById('new-role-name');
+                    const copySelect = document.getElementById('copy-role-id');
+                    const roleName = (nameInput.value || '').trim();
+                    if (!roleName) {
+                        alert('Rolnaam is verplicht.');
+                        return;
+                    }
+
+                    const response = await postJson('@Url.Action("CreateRole", "UserAdmin")', {
+                        roleName: roleName,
+                        copyFromRoleId: copySelect.value || null,
+                        __RequestVerificationToken: antiForgeryToken
+                    });
+
+                    if (!response.ok) {
+                        const message = await response.text();
+                        alert(message || 'Kon rol niet aanmaken.');
+                        return;
+                    }
+
+                    const result = await response.json();
+                    if (roleSelect) {
+                        const option = document.createElement('option');
+                        option.value = result.roleId;
+                        option.textContent = result.roleName;
+                        roleSelect.appendChild(option);
+                        roleSelect.value = result.roleId;
+                    }
+
+                    if (copySelect) {
+                        const optionCopy = document.createElement('option');
+                        optionCopy.value = result.roleId;
+                        optionCopy.textContent = result.roleName;
+                        copySelect.appendChild(optionCopy);
+                    }
+
+                    nameInput.value = '';
+                    copySelect.value = '';
+                    $('#createRoleModal').modal('hide');
+                    await loadRoleRights();
+                });
+            }
+
+            $('.js-close-edit-modal').on('click', function () {
+                $('#editUserModal').modal('hide');
             });
+
+            $('.js-user-active-switch').on('change', async function () {
+                const checkbox = this;
+                await postJson('@Url.Action("SetUserActive", "UserAdmin")', {
+                    userId: checkbox.dataset.userId,
+                    isActive: checkbox.checked,
+                    __RequestVerificationToken: antiForgeryToken
+                });
+            });
+
+            if (window.jQuery && $.fn && $.fn.themePluginIOS7Switch) {
+                $('.js-user-active-switch').themePluginIOS7Switch();
+            }
 
             $(document).on('click', '.edit-user', function (event) {
                 event.preventDefault();
@@ -363,6 +823,8 @@
                 $('#edit-name').val(trigger.data('name'));
                 $('#edit-email').val(trigger.data('email'));
                 $('#edit-job').val(trigger.data('job'));
+                $('#edit-cellphone').val(trigger.data('cellphone'));
+                $('#edit-role-id').val(trigger.data('role-id'));
                 $('#edit-active').prop('checked', String(trigger.data('active')) === 'true');
                 $('#editUserModal').modal('show');
             });

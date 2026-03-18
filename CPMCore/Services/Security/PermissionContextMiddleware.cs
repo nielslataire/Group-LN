@@ -1,4 +1,5 @@
 ﻿namespace CPMCore.Services.Security;
+using FacadeCore;
 
 public class PermissionContextMiddleware
 {

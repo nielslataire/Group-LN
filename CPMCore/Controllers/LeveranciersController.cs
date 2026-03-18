@@ -1,4 +1,5 @@
-﻿using CPMCore.Models.Leveranciers;
+﻿using BOCore;
+using CPMCore.Models.Leveranciers;
 using CPMCore.Services.Octopus;
 using DALCore.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +22,7 @@ using System.Threading.Tasks;
 namespace CPMCore.Controllers;
 
 [Authorize]
-[CPMCore.Filters.PermissionRead(CPMCore.Services.Security.PermissionCodes.SuppliersAll)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.SuppliersAll)]
 public class LeveranciersController : BaseController
 {
     private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
