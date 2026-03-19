@@ -108,6 +108,36 @@
             line-height: 1;
             font-size: .8rem;
         }
+
+    /* Enkel extra styling voor indeterminate / semi-checked */
+    .checkbox-custom input[type="checkbox"]:indeterminate + label::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 10px;
+        height: 2px;
+        background-color: #fff;
+        border-radius: 999px;
+        transform: translate(-50%, -50%);
+        transform-origin: center;
+        margin: 0;
+    }
+
+    .checkbox-custom.checkbox-default input[type="checkbox"]:indeterminate + label::before {
+        background: #ccc;
+        border-color: #ccc;
+    }
+
+    .checkbox-custom.checkbox-warning input[type="checkbox"]:indeterminate + label::before {
+        background: #f7c65f;
+        border-color: #f7c65f;
+    }
+
+    .checkbox-custom input[type="checkbox"]:indeterminate + label::after {
+        left: calc(50% - 0.5px);
+    }
+
 </style>
 
 <div class="row">
@@ -149,9 +179,7 @@
                         <i class="fa fa-user-plus me-2"></i>Nieuwe Gebruiker
                     </button>                
             </div>
-            }
-            <h2 class="card-title mb-0"><i class="bx bx-group me-2"></i>Interne Gebruikers</h2>
-             
+            }             
         </header>
         <div class="card-body pt-5">
             @foreach (var user in Model.LocalUsers)
@@ -442,68 +470,262 @@
                     };
                 });
 
-            function createPermissionRows(tbody, rightsMap, options) {
-                tbody.innerHTML = '';
-                menuStructure.forEach(function (item) {
-                    addRow(item, false);
-                    if (item.children) {
-                        item.children.forEach(function (child) { addRow(child, true); });
-                    }
-                });
+        function createPermissionRows(tbody, rightsMap, options) {
+            tbody.innerHTML = '';
 
-                function addRow(item, isSub) {
-                    const right = rightsMap[item.code] || { read: false, write: false, delete: false, baseRead: false, baseWrite: false, baseDelete: false };
-                    const tr = document.createElement('tr');
-                    tr.dataset.code = item.code;
-                    if (isSub) tr.classList.add('submenu-row');
+            menuStructure.forEach(function (item) {
+                addRow(item, false, null);
 
-                    const disabled = options.editable ? '' : 'disabled';
-                    const readId = 'perm_' + (++checkboxIdCounter);
-                    const writeId = 'perm_' + (++checkboxIdCounter);
-                    const deleteId = 'perm_' + (++checkboxIdCounter);
-                    const readWarning = options.markOverride && right.read !== (right.baseRead ?? false);
-                    const writeWarning = options.markOverride && right.write !== (right.baseWrite ?? false);
-                    const deleteWarning = options.markOverride && right.delete !== (right.baseDelete ?? false);
+                if (item.children && item.children.length) {
+                    item.children.forEach(function (child) {
+                        addRow(child, true, item.code);
+                    });
+                }
+            });
 
-                    tr.innerHTML = '<td>' + item.name + '</td>' +
-                        '<td class="text-center permission-cell"><div class="checkbox-custom ' + (readWarning ? 'checkbox-warning' : 'checkbox-default') + '"><input data-access="read" id="' + readId + '" type="checkbox" ' + (right.read ? 'checked' : '') + ' ' + disabled + ' /><label for="' + readId + '"></label></div></td>' +
-                        '<td class="text-center permission-cell"><div class="checkbox-custom ' + (writeWarning ? 'checkbox-warning' : 'checkbox-default') + '"><input data-access="write" id="' + writeId + '" type="checkbox" ' + (right.write ? 'checked' : '') + ' ' + disabled + ' /><label for="' + writeId + '"></label></div></td>' +
-                        '<td class="text-center permission-cell"><div class="checkbox-custom ' + (deleteWarning ? 'checkbox-warning' : 'checkbox-default') + '"><input data-access="delete" id="' + deleteId + '" type="checkbox" ' + (right.delete ? 'checked' : '') + ' ' + disabled + ' /><label for="' + deleteId + '"></label></div></td>';
-                    tbody.appendChild(tr);
+            function addRow(item, isSub, parentCode) {
+                const right = rightsMap[item.code] || {
+                    read: false,
+                    write: false,
+                    delete: false,
+                    baseRead: false,
+                    baseWrite: false,
+                    baseDelete: false
+                };
+
+                const tr = document.createElement('tr');
+                tr.dataset.code = item.code;
+                tr.dataset.isSubrow = isSub ? 'true' : 'false';
+
+                if (!isSub && item.children && item.children.length) {
+                    tr.dataset.hasChildren = 'true';
                 }
 
-                attachColumnToggles(tbody, options.editable);
+                if (isSub && parentCode) {
+                    tr.dataset.parentCode = parentCode;
+                    tr.classList.add('submenu-row');
+                }
+
+                const disabled = options.editable ? '' : 'disabled';
+                const readId = 'perm_' + (++checkboxIdCounter);
+                const writeId = 'perm_' + (++checkboxIdCounter);
+                const deleteId = 'perm_' + (++checkboxIdCounter);
+
+                const readWarning = options.markOverride && right.read !== (right.baseRead ?? false);
+                const writeWarning = options.markOverride && right.write !== (right.baseWrite ?? false);
+                const deleteWarning = options.markOverride && right.delete !== (right.baseDelete ?? false);
+
+                tr.innerHTML =
+                    '<td>' + item.name + '</td>' +
+                    '<td class="text-center permission-cell">' +
+                        '<div class="checkbox-custom ' + (readWarning ? 'checkbox-warning' : 'checkbox-default') + '">' +
+                            '<input data-access="read" id="' + readId + '" type="checkbox" ' + (right.read ? 'checked' : '') + ' ' + disabled + ' />' +
+                            '<label for="' + readId + '"></label>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="text-center permission-cell">' +
+                        '<div class="checkbox-custom ' + (writeWarning ? 'checkbox-warning' : 'checkbox-default') + '">' +
+                            '<input data-access="write" id="' + writeId + '" type="checkbox" ' + (right.write ? 'checked' : '') + ' ' + disabled + ' />' +
+                            '<label for="' + writeId + '"></label>' +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="text-center permission-cell">' +
+                        '<div class="checkbox-custom ' + (deleteWarning ? 'checkbox-warning' : 'checkbox-default') + '">' +
+                            '<input data-access="delete" id="' + deleteId + '" type="checkbox" ' + (right.delete ? 'checked' : '') + ' ' + disabled + ' />' +
+                            '<label for="' + deleteId + '"></label>' +
+                        '</div>' +
+                    '</td>';
+
+                tbody.appendChild(tr);
             }
 
-            function attachColumnToggles(tbody, editable) {
-                const table = tbody.closest('table');
-                if (!table) return;
+            attachColumnToggles(tbody, options.editable);
+            attachParentRowToggles(tbody, options.editable);
+        }
+
+                    function updateHeaderToggleState(tbody, access) {
+            const table = tbody.closest('table');
+            if (!table) return;
+
+            const headerCheckbox = table.querySelector('thead input[data-header-toggle="' + access + '"]');
+            if (!headerCheckbox) return;
+
+            const checkboxes = Array.from(tbody.querySelectorAll('input[data-access="' + access + '"]'));
+            if (!checkboxes.length) {
+                headerCheckbox.checked = false;
+                headerCheckbox.indeterminate = false;
+                return;
+            }
+
+            const checkedCount = checkboxes.filter(function (cb) { return cb.checked; }).length;
+
+            if (checkedCount === 0) {
+                headerCheckbox.checked = false;
+                headerCheckbox.indeterminate = false;
+            } else if (checkedCount === checkboxes.length) {
+                headerCheckbox.checked = true;
+                headerCheckbox.indeterminate = false;
+            } else {
+                headerCheckbox.checked = false;
+                headerCheckbox.indeterminate = true;
+            }
+        }
+
+                function getChildRows(tbody, parentCode) {
+            return Array.from(tbody.querySelectorAll('tr[data-parent-code="' + parentCode + '"]'));
+        }
+
+        function updateParentRowState(tbody, parentCode, access) {
+            const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"][data-is-subrow="false"]');
+            if (!parentRow) return;
+
+            const parentCheckbox = parentRow.querySelector('input[data-access="' + access + '"]');
+            if (!parentCheckbox) return;
+
+            const childRows = getChildRows(tbody, parentCode);
+            if (!childRows.length) {
+                parentCheckbox.indeterminate = false;
+                return;
+            }
+
+            const childCheckboxes = childRows
+                .map(function (row) { return row.querySelector('input[data-access="' + access + '"]'); })
+                .filter(Boolean);
+
+            const checkedCount = childCheckboxes.filter(function (cb) { return cb.checked; }).length;
+
+            if (checkedCount === 0) {
+                parentCheckbox.checked = false;
+                parentCheckbox.indeterminate = false;
+            } else if (checkedCount === childCheckboxes.length) {
+                parentCheckbox.checked = true;
+                parentCheckbox.indeterminate = false;
+            } else {
+                parentCheckbox.checked = false;
+                parentCheckbox.indeterminate = true;
+            }
+        }
+
+        function updateAllParentRows(tbody, access) {
+            const parentRows = tbody.querySelectorAll('tr[data-has-children="true"]');
+            parentRows.forEach(function (row) {
+                updateParentRowState(tbody, row.dataset.code, access);
+            });
+        }
+
+        function toggleChildRowsFromParent(tbody, parentCode, access, checked) {
+            const childRows = getChildRows(tbody, parentCode);
+
+            childRows.forEach(function (row) {
+                const cb = row.querySelector('input[data-access="' + access + '"]');
+                if (!cb) return;
+
+                if (cb.checked !== checked) {
+                    cb.checked = checked;
+                    cb.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
+
+                function attachParentRowToggles(tbody, editable) {
+            if (!editable) {
+                updateAllParentRows(tbody, 'read');
+                updateAllParentRows(tbody, 'write');
+                updateAllParentRows(tbody, 'delete');
+                return;
+            }
+
+            const parentRows = tbody.querySelectorAll('tr[data-has-children="true"]');
+
+            parentRows.forEach(function (parentRow) {
+                const parentCode = parentRow.dataset.code;
 
                 ['read', 'write', 'delete'].forEach(function (access) {
-                    const headerCheckbox = table.querySelector('thead input[data-header-toggle="' + access + '"]');
-                    if (!headerCheckbox) return;
-                    const headerId = 'hdr_' + access + '_' + (++checkboxIdCounter);
-                    const label = headerCheckbox.parentElement.querySelector('label');
-                    headerCheckbox.id = headerId;
-                    if (label) label.setAttribute('for', headerId);
+                    const parentCheckbox = parentRow.querySelector('input[data-access="' + access + '"]');
+                    if (!parentCheckbox) return;
 
-                    if (!editable) {
-                        headerCheckbox.checked = false;
-                        headerCheckbox.disabled = true;
-                        return;
-                    }
+                    parentCheckbox.addEventListener('change', function () {
+                        if (parentCheckbox.indeterminate) {
+                            parentCheckbox.indeterminate = false;
+                        }
 
-                    headerCheckbox.disabled = false;
-                    headerCheckbox.addEventListener('change', function () {
-                        tbody.querySelectorAll('input[data-access="' + access + '"]').forEach(function (cb) {
-                            if (cb.checked !== headerCheckbox.checked) {
-                                cb.checked = headerCheckbox.checked;
-                                cb.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        });
+                        toggleChildRowsFromParent(tbody, parentCode, access, parentCheckbox.checked);
                     });
                 });
-            }
+            });
+
+            tbody.querySelectorAll('tr[data-parent-code] input[type="checkbox"]').forEach(function (childCheckbox) {
+                childCheckbox.addEventListener('change', function () {
+                    const row = childCheckbox.closest('tr');
+                    const parentCode = row.dataset.parentCode;
+                    const access = childCheckbox.dataset.access;
+
+                    if (parentCode && access) {
+                        updateParentRowState(tbody, parentCode, access);
+                    }
+                });
+            });
+
+            updateAllParentRows(tbody, 'read');
+            updateAllParentRows(tbody, 'write');
+            updateAllParentRows(tbody, 'delete');
+        }
+
+              function attachColumnToggles(tbody, editable) {
+            const table = tbody.closest('table');
+            if (!table) return;
+
+            ['read', 'write', 'delete'].forEach(function (access) {
+                const headerCheckbox = table.querySelector('thead input[data-header-toggle="' + access + '"]');
+                if (!headerCheckbox) return;
+
+                const headerId = 'hdr_' + access + '_' + (++checkboxIdCounter);
+                const label = headerCheckbox.parentElement.querySelector('label');
+                headerCheckbox.id = headerId;
+                if (label) label.setAttribute('for', headerId);
+
+                if (!editable) {
+                    updateHeaderToggleState(tbody, access);
+                    headerCheckbox.disabled = true;
+                    return;
+                }
+
+                headerCheckbox.disabled = false;
+
+                headerCheckbox.addEventListener('change', function () {
+                    tbody.querySelectorAll('input[data-access="' + access + '"]').forEach(function (cb) {
+                        if (cb.checked !== headerCheckbox.checked) {
+                            cb.checked = headerCheckbox.checked;
+                            cb.indeterminate = false;
+                            cb.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    });
+
+                    headerCheckbox.indeterminate = false;
+                    updateAllParentRows(tbody, access);
+                    updateHeaderToggleState(tbody, access);
+                });
+
+                tbody.querySelectorAll('input[data-access="' + access + '"]').forEach(function (cb) {
+                    cb.addEventListener('change', function () {
+                        const row = cb.closest('tr');
+
+                        if (row && row.dataset.parentCode) {
+                            updateParentRowState(tbody, row.dataset.parentCode, access);
+                        }
+
+                        if (row && row.dataset.hasChildren === 'true') {
+                            updateParentRowState(tbody, row.dataset.code, access);
+                        }
+
+                        updateHeaderToggleState(tbody, access);
+                    });
+                });
+
+                updateAllParentRows(tbody, access);
+                updateHeaderToggleState(tbody, access);
+            });
+        }
 
             async function postJson(url, payload) {
                 const body = new URLSearchParams();

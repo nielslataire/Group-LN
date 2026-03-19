@@ -15,18 +15,31 @@
 	var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 	await PermissionService.EnsureLoadedAsync();
 	var canSeeKlanten = PermissionService.HasRead(PermissionCodes.Customers);
-	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.Suppliers);
+	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.SuppliersAll);
 	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.InvoicingByBillingCompany);
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
 	var customerIssuerCompanyIds = new HashSet<int>();
 	if (canSeeKlanten)
 	{
-		var userId = User.GetCpmUserId();
-		if (userId.HasValue)
+		foreach (var entry in PermissionService.EffectivePermissions)
 		{
-			var scopedIds = await SecurityService.GetUserCompanyIds(userId.Value.ToString());
-			customerIssuerCompanyIds = scopedIds.ToHashSet();
+			var code = entry.Key ?? string.Empty;
+			if (!code.StartsWith("Customers.Company.", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			if (!entry.Value.Read)
+			{
+				continue;
+			}
+
+			var suffix = code["Customers.Company.".Length..];
+			if (int.TryParse(suffix, out var companyId))
+			{
+				customerIssuerCompanyIds.Add(companyId);
+			}
 		}
 
 		if (customerIssuerCompanyIds.Count == 0)

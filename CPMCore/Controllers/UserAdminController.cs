@@ -662,11 +662,12 @@ public class UserAdminController : BaseController
     [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> RolePermissionMatrix(int roleId)
     {
+        var permissionDefinitions = await GetPermissionDefinitionsAsync();
         var roleRights = await _db.SecurityRolePermission.AsNoTracking()
             .Where(x => x.RoleId == roleId)
             .ToListAsync();
 
-        var matrix = PermissionCatalog.All.ToDictionary(
+        var matrix = permissionDefinitions.ToDictionary(
             x => x.Code,
             x =>
             {
@@ -788,6 +789,7 @@ public class UserAdminController : BaseController
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> SaveUserPermissionOverride(int userId, string permissionCode, bool? canRead, bool? canWrite, bool? canDelete)
     {
+        await EnsurePermissionCodeExistsAsync(permissionCode);
         var row = await _db.SecurityUserPermissionOverride.FirstOrDefaultAsync(x => x.UserId == userId && x.PermissionCode == permissionCode);
         if (row == null)
         {
@@ -802,5 +804,44 @@ public class UserAdminController : BaseController
         await _db.SaveChangesAsync();
         return Ok();
     }
+
+    private async Task EnsurePermissionCodeExistsAsync(string permissionCode)
+    {
+        if (string.IsNullOrWhiteSpace(permissionCode))
+            return;
+
+        var exists = await _db.SecurityPermission
+            .AsNoTracking()
+            .AnyAsync(x => x.Code == permissionCode);
+
+        if (exists)
+            return;
+
+        if (!permissionCode.StartsWith(CustomerCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var suffix = permissionCode[CustomerCompanyPermissionPrefix.Length..];
+        if (!int.TryParse(suffix, out var issuerId))
+            return;
+
+        var issuer = await _db.IssuerCompany
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == issuerId && i.IsActive);
+
+        if (issuer == null)
+            return;
+
+        _db.SecurityPermission.Add(new SecurityPermission
+        {
+            Code = permissionCode,
+            Name = issuer.Name,
+            ParentCode = PermissionCodes.Customers,
+            SortOrder = 3000 + issuerId,
+            IsActive = true
+        });
+
+        await _db.SaveChangesAsync();
+    }
+
 
 }

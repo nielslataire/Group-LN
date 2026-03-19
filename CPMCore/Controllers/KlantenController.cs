@@ -1,6 +1,7 @@
 ﻿using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models;
+using CPMCore.Models.Instellingen;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
@@ -55,16 +56,15 @@ namespace CPMCore.Controllers
         private readonly cpmRunningContext _db;
         private readonly IOctopusApiClient _octopusClient;
         private readonly IOctopusTokenManager _octopusTokens;
-        private readonly ISecurityService _securityService;
+        private const string CustomerCompanyPermissionPrefix = "Customers.Company.";
 
-        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, ISecurityService securityService)
+        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
         {
             _logger = logger;
             Configuration = configuration;
             _db = db;
             _octopusClient = octopusClient;
             _octopusTokens = octopusTokens;
-            _securityService = securityService;
         }
 
         [HttpGet]
@@ -87,6 +87,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = KlantenIndex;
             var issuerCompanies = await _db.IssuerCompany
                 .AsNoTracking()
+                   .Where(i => i.IsActive)
                  .Where(i => scope.HasAllIssuers || scope.AllowedIssuerIds.Contains(i.Id))
                 .OrderBy(i => i.Name)
                 .Select(i => new IssuerCompanyOptionViewModel
@@ -115,6 +116,7 @@ namespace CPMCore.Controllers
                     .Where(c => c.ClientAccountIssuerCompany.Any(i => i.IssuerCompanyId == issuerCompanyId))
                     .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
             }
+
             if (!scope.HasAllIssuers)
             {
                 clientsQuery = clientsQuery
@@ -270,6 +272,7 @@ namespace CPMCore.Controllers
             {
                 issuerCompanyId = null;
             }
+
             var model = new ClientFormViewModel
             {
                 SelectedIssuerCompanyIds = issuerCompanyId.HasValue
@@ -331,6 +334,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", "Je hebt geen rechten om klanten te bewerken.", "Geen toegang");
                 return RedirectToAction("AccessDenied", "Account");
             }
+
             var client = await _db.ClientAccount
                 .Include(c => c.ClientContacts)
                  .Include(c => c.ClientAccountIssuerCompany)
@@ -418,6 +422,7 @@ namespace CPMCore.Controllers
                         AttachUblByDefault = c.AttachUblByDefault
                     }).ToList()
             };
+
             await BuildFormAsync(model, ct, scope);
             return View("Edit", model);
         }
@@ -1038,13 +1043,23 @@ namespace CPMCore.Controllers
                 return new CustomerIssuerScope(false, false, new HashSet<int>());
             }
 
-            var userId = User.GetCpmUserId();
-            if (!userId.HasValue)
-            {
-                return new CustomerIssuerScope(false, false, new HashSet<int>());
-            }
-
-            var scopedIds = await _securityService.GetUserCompanyIds(userId.Value.ToString());
+            var scopedIds = permissionService.EffectivePermissions
+                .Where(x => x.Key.StartsWith(CustomerCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+                .Where(x => accessType switch
+                {
+                    PermissionAccessType.Read => x.Value.Read,
+                    PermissionAccessType.Write => x.Value.Write,
+                    PermissionAccessType.Delete => x.Value.Delete,
+                    _ => false
+                })
+                .Select(x =>
+                {
+                    var suffix = x.Key[CustomerCompanyPermissionPrefix.Length..];
+                    return int.TryParse(suffix, out var companyId) ? (int?)companyId : null;
+                })
+                .Where(x => x.HasValue)
+                .Select(x => x!.Value)
+                .ToList();
             if (scopedIds.Count == 0)
             {
                 return new CustomerIssuerScope(true, true, new HashSet<int>());
@@ -1707,8 +1722,8 @@ namespace CPMCore.Controllers
         public ActionResult DeleteClient(int id)
         {
             var scope = ResolveCustomerIssuerScopeAsync(PermissionAccessType.Delete, HttpContext.RequestAborted)
-              .GetAwaiter()
-              .GetResult();
+                .GetAwaiter()
+                .GetResult();
             if (!scope.HasAccess)
             {
                 AddMessage("error", "Je hebt geen rechten om klanten te verwijderen.", "Geen toegang");
