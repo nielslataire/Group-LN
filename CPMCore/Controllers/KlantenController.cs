@@ -1,11 +1,14 @@
 ﻿using BOCore;
+using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Projecten;
 using CPMCore.Service;
 using CPMCore.Services.Octopus;
+using CPMCore.Services.Security;
 using DALCore.Models;
 using DinkToPdf;
+using FacadeCore;
 using Humanizer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -31,12 +34,14 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 using static System.Net.Mime.MediaTypeNames;
+
 
 namespace CPMCore.Controllers
 {
     [Authorize]
-    [CPMCore.Filters.PermissionRead(PermissionCodes.CustomersAll)]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.Customers)]
     public class KlantenController : BaseController
     {
         private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
@@ -50,20 +55,29 @@ namespace CPMCore.Controllers
         private readonly cpmRunningContext _db;
         private readonly IOctopusApiClient _octopusClient;
         private readonly IOctopusTokenManager _octopusTokens;
+        private readonly ISecurityService _securityService;
 
-        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
+        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, ISecurityService securityService)
         {
             _logger = logger;
             Configuration = configuration;
             _db = db;
             _octopusClient = octopusClient;
             _octopusTokens = octopusTokens;
+            _securityService = securityService;
         }
 
         [HttpGet]
         [Breadcrumb("Klanten")]
         public async Task<IActionResult> Index(int? issuerCompanyId, CancellationToken ct)
         {
+            var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Read, ct);
+            if (!scope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten te bekijken.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var KlantenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Klanten", "Klanten")
             {
@@ -73,7 +87,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = KlantenIndex;
             var issuerCompanies = await _db.IssuerCompany
                 .AsNoTracking()
-                .Where(i => i.IsActive)
+                 .Where(i => scope.HasAllIssuers || scope.AllowedIssuerIds.Contains(i.Id))
                 .OrderBy(i => i.Name)
                 .Select(i => new IssuerCompanyOptionViewModel
                 {
@@ -92,8 +106,19 @@ namespace CPMCore.Controllers
 
             if (issuerCompanyId.HasValue)
             {
+                if (!scope.HasAllIssuers && !scope.AllowedIssuerIds.Contains(issuerCompanyId.Value))
+                {
+                    issuerCompanyId = null;
+                }
+
                 clientsQuery = clientsQuery
                     .Where(c => c.ClientAccountIssuerCompany.Any(i => i.IssuerCompanyId == issuerCompanyId))
+                    .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
+            }
+            if (!scope.HasAllIssuers)
+            {
+                clientsQuery = clientsQuery
+                    .Where(c => c.ClientAccountIssuerCompany.Any(i => scope.AllowedIssuerIds.Contains(i.IssuerCompanyId)))
                     .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
             }
 
@@ -231,24 +256,51 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public async Task<IActionResult> Create(int? issuerCompanyId, CancellationToken ct)
         {
+            var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!scope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten toe te voegen.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
+            if (issuerCompanyId.HasValue && !scope.HasAllIssuers && !scope.AllowedIssuerIds.Contains(issuerCompanyId.Value))
+            {
+                issuerCompanyId = null;
+            }
             var model = new ClientFormViewModel
             {
                 SelectedIssuerCompanyIds = issuerCompanyId.HasValue
                     ? new List<int> { issuerCompanyId.Value }
                     : new List<int>()
             };
-            await BuildFormAsync(model, ct);
+            await BuildFormAsync(model, ct, scope);
             return View("Create", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public async Task<IActionResult> Create(ClientFormViewModel model, CancellationToken ct)
         {
+            var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!scope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten toe te voegen.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
+            if (!scope.HasAllIssuers)
+            {
+                model.SelectedIssuerCompanyIds = (model.SelectedIssuerCompanyIds ?? new List<int>())
+                    .Where(scope.AllowedIssuerIds.Contains)
+                    .ToList();
+            }
+
             RemoveEmptyContacts(model);
-            await BuildFormAsync(model, ct);
+            await BuildFormAsync(model, ct, scope);
             ValidateClientType(model);
             ValidateIssuerCompanies(model);
 
@@ -270,8 +322,15 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
+            var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!scope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten te bewerken.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
             var client = await _db.ClientAccount
                 .Include(c => c.ClientContacts)
                  .Include(c => c.ClientAccountIssuerCompany)
@@ -283,6 +342,12 @@ namespace CPMCore.Controllers
             if (client == null)
             {
                 return NotFound();
+            }
+
+            if (!scope.HasAllIssuers && !client.ClientAccountIssuerCompany.Any(i => scope.AllowedIssuerIds.Contains(i.IssuerCompanyId)))
+            {
+                AddMessage("error", "Je hebt geen rechten om deze klant te bewerken.", "Geen toegang");
+                return RedirectToAction(nameof(Index));
             }
 
 
@@ -353,15 +418,21 @@ namespace CPMCore.Controllers
                         AttachUblByDefault = c.AttachUblByDefault
                     }).ToList()
             };
-
-            await BuildFormAsync(model, ct);
+            await BuildFormAsync(model, ct, scope);
             return View("Edit", model);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public async Task<IActionResult> Edit(int id, ClientFormViewModel model, CancellationToken ct)
         {
+            var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!scope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten te bewerken.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
             if (id != model.Id)
             {
                 return BadRequest();
@@ -378,8 +449,20 @@ namespace CPMCore.Controllers
             {
                 return NotFound();
             }
+            if (!scope.HasAllIssuers && !client.ClientAccountIssuerCompany.Any(i => scope.AllowedIssuerIds.Contains(i.IssuerCompanyId)))
+            {
+                AddMessage("error", "Je hebt geen rechten om deze klant te bewerken.", "Geen toegang");
+                return RedirectToAction(nameof(Index));
+            }
 
-            await BuildFormAsync(model, ct);
+            if (!scope.HasAllIssuers)
+            {
+                model.SelectedIssuerCompanyIds = (model.SelectedIssuerCompanyIds ?? new List<int>())
+                    .Where(scope.AllowedIssuerIds.Contains)
+                    .ToList();
+            }
+
+            await BuildFormAsync(model, ct, scope);
             ValidateClientType(model);
             ValidateIssuerCompanies(model);
 
@@ -520,6 +603,7 @@ namespace CPMCore.Controllers
 
         // KLANT TOEVOEGEN
         [HttpGet]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public ActionResult AddClientAccount(int id)
         {
             var referrer = Request.Headers["Referer"].ToString();
@@ -536,6 +620,7 @@ namespace CPMCore.Controllers
             return View(model);
         }
         [HttpPost]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, List<UnitBO> units)
         {
             var Referrer = TempData["Referrer"];
@@ -663,6 +748,7 @@ namespace CPMCore.Controllers
         }
 
         [HttpPost]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public PartialViewResult AddCoOwner(string Name, string Forename, string Salutation, string Street, string Housenumber, string Busnumber, int Zipcode, string Phone, string Cellphone, string Email, int OwnerType, string OwnerPercentage, string VatNumber, string CompanyName, string InvoiceAddress, string InvoiceStreet, string InvoiceHousenumber, string InvoiceBusnumber, string InvoiceZipcode, bool RequiresDigitalInvoice, bool AttachUblByDefault)
         {
             ClientContactBO nCoOwner = new ClientContactBO
@@ -826,7 +912,7 @@ namespace CPMCore.Controllers
                 ViewData = viewData
             };
         }
-        private async Task<ClientFormViewModel> BuildFormAsync(ClientFormViewModel model, CancellationToken ct)
+        private async Task<ClientFormViewModel> BuildFormAsync(ClientFormViewModel model, CancellationToken ct, CustomerIssuerScope? scope = null)
         {
             var countries = await _db.Country
                 .AsNoTracking()
@@ -869,6 +955,7 @@ namespace CPMCore.Controllers
             var issuers = await _db.IssuerCompany
                 .AsNoTracking()
                 .Where(i => i.IsActive)
+                .Where(i => scope == null || scope.HasAllIssuers || scope.AllowedIssuerIds.Contains(i.Id))
                 .OrderBy(i => i.Name)
                 .Select(i => new IssuerCompanyOptionViewModel
                 {
@@ -878,6 +965,12 @@ namespace CPMCore.Controllers
                 .ToListAsync(ct);
 
             model.SelectedIssuerCompanyIds ??= new List<int>();
+            if (scope != null && !scope.HasAllIssuers)
+            {
+                model.SelectedIssuerCompanyIds = model.SelectedIssuerCompanyIds
+                    .Where(scope.AllowedIssuerIds.Contains)
+                    .ToList();
+            }
             model.IssuerCompanies = issuers;
 
             if (!model.SelectedIssuerCompanyIds.Any() && issuers.Any())
@@ -926,6 +1019,42 @@ namespace CPMCore.Controllers
                 ModelState.AddModelError(nameof(model.SelectedIssuerCompanyIds), "Kies minstens één facturatiebedrijf.");
             }
         }
+
+        private async Task<CustomerIssuerScope> ResolveCustomerIssuerScopeAsync(PermissionAccessType accessType, CancellationToken ct)
+        {
+            var permissionService = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            await permissionService.EnsureLoadedAsync(ct);
+
+            var hasMainAccess = accessType switch
+            {
+                PermissionAccessType.Read => permissionService.HasRead(PermissionCodes.Customers),
+                PermissionAccessType.Write => permissionService.HasWrite(PermissionCodes.Customers),
+                PermissionAccessType.Delete => permissionService.HasDelete(PermissionCodes.Customers),
+                _ => false
+            };
+
+            if (!hasMainAccess)
+            {
+                return new CustomerIssuerScope(false, false, new HashSet<int>());
+            }
+
+            var userId = User.GetCpmUserId();
+            if (!userId.HasValue)
+            {
+                return new CustomerIssuerScope(false, false, new HashSet<int>());
+            }
+
+            var scopedIds = await _securityService.GetUserCompanyIds(userId.Value.ToString());
+            if (scopedIds.Count == 0)
+            {
+                return new CustomerIssuerScope(true, true, new HashSet<int>());
+            }
+
+            return new CustomerIssuerScope(true, false, scopedIds.ToHashSet());
+        }
+
+        private sealed record CustomerIssuerScope(bool HasAccess, bool HasAllIssuers, HashSet<int> AllowedIssuerIds);
+
 
         private static void MapToEntity(ClientFormViewModel model, ClientAccount entity)
         {
@@ -1561,6 +1690,7 @@ namespace CPMCore.Controllers
 
 
         // KLANT VERWIJDEREN
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
         public ActionResult PartialDeleteClientModal(int id)
         {
             var viewModel = new IdNameBO();
@@ -1573,8 +1703,31 @@ namespace CPMCore.Controllers
             return PartialView("_DeleteClientModal", viewModel);
         }
         [HttpGet]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Customers)]
         public ActionResult DeleteClient(int id)
         {
+            var scope = ResolveCustomerIssuerScopeAsync(PermissionAccessType.Delete, HttpContext.RequestAborted)
+              .GetAwaiter()
+              .GetResult();
+            if (!scope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten te verwijderen.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
+            if (!scope.HasAllIssuers)
+            {
+                var canDeleteClient = _db.ClientAccountIssuerCompany
+                    .AsNoTracking()
+                    .Any(link => link.ClientAccountId == id && scope.AllowedIssuerIds.Contains(link.IssuerCompanyId));
+
+                if (!canDeleteClient)
+                {
+                    AddMessage("error", "Je hebt geen rechten om deze klant te verwijderen.", "Geen toegang");
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
             string stri = Request.Headers["Referer"].ToString();
             List<int> Idlist = new List<int>();
             Idlist.Add(id);

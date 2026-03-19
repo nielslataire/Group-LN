@@ -2,8 +2,11 @@
 @using FacadeCore
 @using BOCore;
 @using CPMCore.Services.Security
+@using System.Collections.Generic
+@using System.Linq
 @inject IIssuerCompanyService IssuerCompanyService
 @inject IPermissionService PermissionService
+@inject ISecurityService SecurityService
 @{
 	var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 	var issuerCompanies = (await IssuerCompanyService.GetAllAsync())
@@ -11,11 +14,31 @@
 		.ToList();
 	var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 	await PermissionService.EnsureLoadedAsync();
-	var canSeeKlanten = PermissionService.HasRead(PermissionCodes.CustomersAll);
-	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.SuppliersAll);
+	var canSeeKlanten = PermissionService.HasRead(PermissionCodes.Customers);
+	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.Suppliers);
 	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.InvoicingByBillingCompany);
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
+	var customerIssuerCompanyIds = new HashSet<int>();
+	if (canSeeKlanten)
+	{
+		var userId = User.GetCpmUserId();
+		if (userId.HasValue)
+		{
+			var scopedIds = await SecurityService.GetUserCompanyIds(userId.Value.ToString());
+			customerIssuerCompanyIds = scopedIds.ToHashSet();
+		}
+
+		if (customerIssuerCompanyIds.Count == 0)
+		{
+			customerIssuerCompanyIds = issuerCompanies.Select(i => i.Id).ToHashSet();
+		}
+	}
+
+	var customerIssuerCompanies = issuerCompanies
+		.Where(i => customerIssuerCompanyIds.Contains(i.Id))
+		.ToList();
+	canSeeKlanten = canSeeKlanten && customerIssuerCompanies.Any();
 	var suppliersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var customersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var invoicesSubmenuClass = issuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
@@ -73,7 +96,7 @@
 							</a>
 							<ul class="@customersSubmenuClass">
 								<li>@Html.ActionLink("Alle klanten", "Index", "Klanten")</li>
-								@foreach (var issuer in issuerCompanies)
+								@foreach (var issuer in customerIssuerCompanies)
 								{
 									<li>@Html.ActionLink(issuer.Name, "Index", "Klanten", new { issuerCompanyId = issuer.Id }, null)</li>
 								}

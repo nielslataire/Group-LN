@@ -15,6 +15,7 @@ namespace CPMCore.Controllers;
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsUsers)]
 public class UserAdminController : BaseController
 {
+    private const string CustomerCompanyPermissionPrefix = "Customers.Company.";
     private readonly cpmRunningContext _db;
     private readonly ILogger<UserAdminController> _logger;
     private readonly GraphServiceClient? _graphClient;
@@ -114,16 +115,81 @@ public class UserAdminController : BaseController
         }
         catch { }
 
+        var permissionDefinitions = await GetPermissionDefinitionsAsync();
 
         return View(new UserAdminIndexViewModel
         {
             LocalUsers = localUsers,
             EntraUsers = entraUsers,
             Roles = roleRows,
-            PermissionDefinitions = PermissionCatalog.All
-                .Select(x => new PermissionMatrixItemViewModel { Code = x.Code, Name = x.Name, ParentCode = x.ParentCode, SortOrder = x.SortOrder })
-                .ToList()
+            PermissionDefinitions = permissionDefinitions
         });
+    }
+
+    private async Task<List<PermissionMatrixItemViewModel>> GetPermissionDefinitionsAsync()
+    {
+        var definitions = PermissionCatalog.All
+            .Where(x =>
+                !string.Equals(x.Code, PermissionCodes.CustomersAll, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(x.Code, PermissionCodes.CustomersByBillingCompany, StringComparison.OrdinalIgnoreCase))
+            .Select(x => new PermissionMatrixItemViewModel
+            {
+                Code = x.Code,
+                Name = x.Name,
+                ParentCode = x.ParentCode,
+                SortOrder = x.SortOrder
+            })
+            .ToList();
+
+        var issuers = await _db.IssuerCompany
+            .AsNoTracking()
+            .Where(i => i.IsActive)
+            .OrderBy(i => i.Name)
+            .Select(i => new { i.Id, i.Name })
+            .ToListAsync();
+
+        foreach (var issuer in issuers)
+        {
+            definitions.Add(new PermissionMatrixItemViewModel
+            {
+                Code = $"{CustomerCompanyPermissionPrefix}{issuer.Id}",
+                Name = issuer.Name,
+                ParentCode = PermissionCodes.Customers,
+                SortOrder = 3000 + issuer.Id
+            });
+        }
+
+        await EnsurePermissionRowsAsync(definitions);
+        return definitions;
+    }
+
+    private async Task EnsurePermissionRowsAsync(IEnumerable<PermissionMatrixItemViewModel> definitions)
+    {
+        var codes = definitions.Select(x => x.Code).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var existingCodes = await _db.SecurityPermission
+            .AsNoTracking()
+            .Where(x => codes.Contains(x.Code))
+            .Select(x => x.Code)
+            .ToListAsync();
+
+        var existing = existingCodes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missing = definitions.Where(x => !existing.Contains(x.Code)).ToList();
+        foreach (var item in missing)
+        {
+            _db.SecurityPermission.Add(new SecurityPermission
+            {
+                Code = item.Code,
+                Name = item.Name,
+                ParentCode = item.ParentCode,
+                SortOrder = item.SortOrder,
+                IsActive = true
+            });
+        }
+
+        if (missing.Count > 0)
+        {
+            await _db.SaveChangesAsync();
+        }
     }
 
     private static GraphServiceClient? CreateGraphClient(IConfiguration configuration, ILogger logger)
@@ -541,12 +607,13 @@ public class UserAdminController : BaseController
     [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> PermissionMatrix(int userId)
     {
+        var permissionDefinitions = await GetPermissionDefinitionsAsync();
         var roleIds = await _db.SecurityUserRole.AsNoTracking().Where(x => x.UserId == userId).Select(x => x.RoleId).ToListAsync();
         var roleRights = await _db.SecurityRolePermission.AsNoTracking().Where(x => roleIds.Contains(x.RoleId)).ToListAsync();
         var userOverrides = await _db.SecurityUserPermissionOverride.AsNoTracking().Where(x => x.UserId == userId).ToListAsync();
 
         var effective = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-        foreach (var code in PermissionCatalog.All.Select(x => x.Code))
+        foreach (var code in permissionDefinitions.Select(x => x.Code))
         {
             var rr = roleRights.Where(x => string.Equals(x.PermissionCode, code, StringComparison.OrdinalIgnoreCase));
             var baseRead = rr.Any(x => x.CanRead);
@@ -576,6 +643,7 @@ public class UserAdminController : BaseController
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> SaveRolePermission(int roleId, string permissionCode, bool canRead, bool canWrite, bool canDelete)
     {
+        await EnsurePermissionCodeExistsAsync(permissionCode);
         var row = await _db.SecurityRolePermission.FirstOrDefaultAsync(x => x.RoleId == roleId && x.PermissionCode == permissionCode);
         if (row == null)
         {

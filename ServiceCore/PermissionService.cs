@@ -34,20 +34,35 @@ public class PermissionService : IPermissionService
             return;
         }
 
-        if (user!.IsInRole("Admin") || user.IsInRole("Administrator"))
+        var isAdmin = user!.IsInRole("Admin") || user.IsInRole("Administrator");
+        if (isAdmin)
         {
-            _effective = PermissionCatalog.All.ToDictionary(x => x.Code, _ => new PermissionGrant(true, true, true), StringComparer.OrdinalIgnoreCase);
-            _loaded = true;
-            return;
+            _effective = PermissionCatalog.All.ToDictionary(
+                x => x.Code,
+                _ => new PermissionGrant(true, true, true),
+                StringComparer.OrdinalIgnoreCase);
         }
 
         try
         {
-            var roleIds = await _db.SecurityUserRole.AsNoTracking().Where(x => x.UserId == userId.Value).Select(x => x.RoleId).ToListAsync(ct);
-            var roleGrants = await _db.SecurityRolePermission.AsNoTracking().Where(x => roleIds.Contains(x.RoleId)).ToListAsync(ct);
-            foreach (var group in roleGrants.GroupBy(x => x.PermissionCode, StringComparer.OrdinalIgnoreCase))
+            if (!isAdmin)
             {
-                _effective[group.Key] = new PermissionGrant(group.Any(x => x.CanRead), group.Any(x => x.CanWrite), group.Any(x => x.CanDelete));
+                var roleIds = await _db.SecurityUserRole.AsNoTracking()
+                    .Where(x => x.UserId == userId.Value)
+                    .Select(x => x.RoleId)
+                    .ToListAsync(ct);
+
+                var roleGrants = await _db.SecurityRolePermission.AsNoTracking()
+                    .Where(x => roleIds.Contains(x.RoleId))
+                    .ToListAsync(ct);
+
+                foreach (var group in roleGrants.GroupBy(x => x.PermissionCode, StringComparer.OrdinalIgnoreCase))
+                {
+                    _effective[group.Key] = new PermissionGrant(
+                        group.Any(x => x.CanRead),
+                        group.Any(x => x.CanWrite),
+                        group.Any(x => x.CanDelete));
+                }
             }
 
             var overrides = await _db.SecurityUserPermissionOverride.AsNoTracking().Where(x => x.UserId == userId.Value).ToListAsync(ct);
@@ -62,6 +77,14 @@ public class PermissionService : IPermissionService
         }
         catch
         {
+            if (isAdmin && _effective.Count == 0)
+            {
+                _effective = PermissionCatalog.All.ToDictionary(
+                    x => x.Code,
+                    _ => new PermissionGrant(true, true, true),
+                    StringComparer.OrdinalIgnoreCase);
+            }
+
             var legacy = await _db.PermissionPerUser.AsNoTracking().Include(x => x.PermissionNavigation)
                 .Where(x => x.UserId == userId.Value)
                 .Select(x => x.PermissionNavigation.PermissionName)

@@ -1,9 +1,12 @@
 ﻿using BOCore;
 using CPMCore.Services.Security;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using FacadeCore;
+
 
 namespace CPMCore.Filters;
 
@@ -44,6 +47,31 @@ public class PermissionConventionFilter : IAsyncAuthorizationFilter
         };
 
         if (!allowed)
-            context.Result = new ForbidResult();
+        {
+            var tempDataFactory = context.HttpContext.RequestServices.GetRequiredService<ITempDataDictionaryFactory>();
+            var tempData = tempDataFactory.GetTempData(context.HttpContext);
+            const string deniedMessage = "Je hebt geen rechten om deze actie uit te voeren.";
+            tempData["Message"] = deniedMessage;
+            tempData["MessageType"] = "error";
+            tempData["MessageTitle"] = "Geen toegang";
+
+            var request = context.HttpContext.Request;
+            var isAjaxRequest = string.Equals(request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+            if (isAjaxRequest)
+            {
+                context.Result = new JsonResult(new
+                {
+                    success = false,
+                    message = deniedMessage,
+                    redirectUrl = "/Account/AccessDenied"
+                })
+                {
+                    StatusCode = StatusCodes.Status403Forbidden
+                };
+                return;
+            }
+
+            context.Result = new RedirectToActionResult("AccessDenied", "Account", null);
+        }
     }
 }

@@ -1,8 +1,14 @@
 ﻿@model CPMCore.Models.Klanten.ClientIndexViewModel
 @using CPMCore.Helpers
+@using BOCore
+@using FacadeCore
+@inject IPermissionService PermissionService
 
 @{
     ViewData["Title"] = "Klanten";
+    await PermissionService.EnsureLoadedAsync();
+    var canWriteCustomers = PermissionService.HasWrite(PermissionCodes.Customers);
+    var canDeleteCustomers = PermissionService.HasDelete(PermissionCodes.Customers);
 }
 
 @section PageStyle
@@ -17,7 +23,10 @@
         <h5 class="mb-4 mt-0">Beheer en doorzoek alle klanten</h5>
     </div>
     <div class="col-sm-auto px-0">
-        <a href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+        @if (canWriteCustomers)
+        {
+            <a href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+        }
     </div>
 </div>
 
@@ -73,9 +82,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @{
-                        var canDelete = User.IsInRole("Admin") || User.IsInRole("Administrator");
-                    }
                     @foreach (var client in Model.Clients)
                     {
                         var issuerIds = string.Join(",", client.IssuerCompanyIds);
@@ -105,11 +111,14 @@
                                 @(client.IssuerCompanies.Any() ? string.Join(", ", client.IssuerCompanies) : "-")
                             </td>
                             <td class="actions text-end">
-                                <a class="ms-1 me-1" data-placement="top" title="Bewerken" href="@Url.Action("Edit", "Klanten", new { id = client.Id })">
-                                    <i class="bx bx-pencil fs-5"></i>
-                                    <span class="visually-hidden">Bewerken</span>
-                                </a>
-                                @if (canDelete)
+                                @if (canWriteCustomers)
+                                {
+                                    <a class="ms-1 me-1" data-placement="top" title="Bewerken" href="@Url.Action("Edit", "Klanten", new { id = client.Id })">
+                                        <i class="bx bx-pencil fs-5"></i>
+                                        <span class="visually-hidden">Bewerken</span>
+                                    </a>
+                                }
+                                @if (canDeleteCustomers)
                                 {
                                     <a href="#modaldeleteclient" data-toggle="tooltip" data-placement="top" title="Verwijderen" class="deleteClient ms-1 me-1" data-id="@client.Id">
                                         <i class="bx bx-trash fs-5 text-danger"></i>
@@ -179,22 +188,27 @@
             const deleteContainerSelector = '#delete-client-container';
             const deleteUrl = '@Url.Action("PartialDeleteClientModal", "Klanten")';
 
-            $(document).on('click', '.deleteClient', function (e) {
-                e.preventDefault();
-                const id = $(this).data('id');
+             $.get(`${deleteUrl}/${id}`)
+                    .done(function (data) {
+                        $(deleteContainerSelector).html(data);
 
-                $.get(`${deleteUrl}/${id}`, function (data) {
-                    $(deleteContainerSelector).html(data);
+                        $.magnificPopup.open({
+                            items: {
+                                src: deleteModalSelector
+                            },
+                            type: 'inline',
+                            preloader: false,
+                            focus: deleteContainerSelector
+                        });
+                    })
+                    .fail(function (xhr) {
+                        if (xhr.status === 403 && xhr.responseJSON?.redirectUrl) {
+                            window.location.href = xhr.responseJSON.redirectUrl;
+                            return;
+                        }
 
-                    $.magnificPopup.open({
-                        items: {
-                            src: deleteModalSelector
-                        },
-                        type: 'inline',
-                        preloader: false,
-                        focus: deleteContainerSelector
+                        alert('Je hebt geen rechten om deze actie uit te voeren.');
                     });
-                });
             });
         })();
     </script>
