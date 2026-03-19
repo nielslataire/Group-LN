@@ -21,7 +21,8 @@
 }
 <!-- start: page -->
 <section class="content-with-menu">
-    @await Html.PartialAsync("DetailMenu", Model.Project.Id)
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.Project.Id)
         <div class="inner-body">
             <div class="row">
             <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
@@ -151,7 +152,7 @@
                 
             </div>
             <div class="row">
-                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3" ">
+                <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
                 @*KLANTEN*@
                     <div class="card card-modern card-modern-alt-padding">
                         <header class="card-header">
@@ -375,7 +376,7 @@
                 
             </div>
 		</div>
-		
+    </div>
 </section>
 <div id="modaldeleteproject" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-project-container"></div>

@@ -71,12 +71,15 @@ namespace CPMCore.Controllers
         [Breadcrumb("Klanten")]
         public async Task<IActionResult> Index(int? issuerCompanyId, CancellationToken ct)
         {
-            var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Read, ct);
-            if (!scope.HasAccess)
+            var readScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Read, ct);
+            if (!readScope.HasAccess)
             {
                 AddMessage("error", "Je hebt geen rechten om klanten te bekijken.", "Geen toegang");
                 return RedirectToAction("AccessDenied", "Account");
             }
+            var writeScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
+            var deleteScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Delete, ct);
+
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var KlantenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Klanten", "Klanten")
@@ -88,7 +91,7 @@ namespace CPMCore.Controllers
             var issuerCompanies = await _db.IssuerCompany
                 .AsNoTracking()
                    .Where(i => i.IsActive)
-                 .Where(i => scope.HasAllIssuers || scope.AllowedIssuerIds.Contains(i.Id))
+                  .Where(i => readScope.HasAllIssuers || readScope.AllowedIssuerIds.Contains(i.Id))
                 .OrderBy(i => i.Name)
                 .Select(i => new IssuerCompanyOptionViewModel
                 {
@@ -107,7 +110,7 @@ namespace CPMCore.Controllers
 
             if (issuerCompanyId.HasValue)
             {
-                if (!scope.HasAllIssuers && !scope.AllowedIssuerIds.Contains(issuerCompanyId.Value))
+                if (!readScope.HasAllIssuers && !readScope.AllowedIssuerIds.Contains(issuerCompanyId.Value))
                 {
                     issuerCompanyId = null;
                 }
@@ -117,10 +120,10 @@ namespace CPMCore.Controllers
                     .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
             }
 
-            if (!scope.HasAllIssuers)
+            if (!readScope.HasAllIssuers)
             {
                 clientsQuery = clientsQuery
-                    .Where(c => c.ClientAccountIssuerCompany.Any(i => scope.AllowedIssuerIds.Contains(i.IssuerCompanyId)))
+                    .Where(c => c.ClientAccountIssuerCompany.Any(i => readScope.AllowedIssuerIds.Contains(i.IssuerCompanyId)))
                     .OrderBy(c => string.IsNullOrWhiteSpace(c.CompanyName) ? c.Name : c.CompanyName);
             }
 
@@ -153,16 +156,56 @@ namespace CPMCore.Controllers
                         .Select(i => i.IssuerCompanyId)
                         .ToList(),
 
-                    ContactCount = c.ClientContacts.Count
+                    ContactCount = c.ClientContacts.Count,
+                    CanEdit = false,
+                    CanDelete = false
                 })
                 .ToListAsync(ct);
 
 
+            bool HasAccessForClient(CustomerIssuerScope scope, IReadOnlyList<int> issuerIds)
+            {
+                if (!scope.HasAccess)
+                {
+                    return false;
+                }
+
+                if (scope.HasAllIssuers)
+                {
+                    return true;
+                }
+
+                return issuerIds.Any(scope.AllowedIssuerIds.Contains);
+            }
+
+            var clientsWithPermissions = clients
+                .Select(client => new ClientListItemViewModel
+                {
+                    Id = client.Id,
+                    DisplayName = client.DisplayName,
+                    EnterpriseNumber = client.EnterpriseNumber,
+                    City = client.City,
+                    Email = client.Email,
+                    Phone = client.Phone,
+                    IssuerCompanies = client.IssuerCompanies,
+                    IssuerCompanyIds = client.IssuerCompanyIds,
+                    ContactCount = client.ContactCount,
+                    CanEdit = HasAccessForClient(writeScope, client.IssuerCompanyIds),
+                    CanDelete = HasAccessForClient(deleteScope, client.IssuerCompanyIds)
+                })
+                .ToList();
+
+            var canCreateClient = writeScope.HasAccess
+                && (!issuerCompanyId.HasValue
+                    || writeScope.HasAllIssuers
+                    || writeScope.AllowedIssuerIds.Contains(issuerCompanyId.Value));
+
             var model = new ClientIndexViewModel
             {
-                Clients = clients,
+                Clients = clientsWithPermissions,
                 IssuerCompanies = issuerCompanies,
-                SelectedIssuerCompanyId = issuerCompanyId
+                SelectedIssuerCompanyId = issuerCompanyId,
+                CanCreateClient = canCreateClient
             };
 
             return View(model);
@@ -171,6 +214,14 @@ namespace CPMCore.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id, CancellationToken ct)
         {
+
+            var readScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Read, ct);
+            if (!readScope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om klanten te bekijken.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
             var client = await _db.ClientAccount
                 .Include(c => c.PostalCode)
                 .Include(c => c.InvoicePostalCode)
@@ -184,6 +235,16 @@ namespace CPMCore.Controllers
             {
                 return NotFound();
             }
+
+            if (!readScope.HasAllIssuers && !client.ClientAccountIssuerCompany.Any(i => readScope.AllowedIssuerIds.Contains(i.IssuerCompanyId)))
+            {
+                AddMessage("error", "Je hebt geen rechten om deze klant te bekijken.", "Geen toegang");
+                return RedirectToAction("Index","Klanten");
+            }
+
+            var writeScope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);
+            var canEdit = writeScope.HasAccess
+                && (writeScope.HasAllIssuers || client.ClientAccountIssuerCompany.Any(i => writeScope.AllowedIssuerIds.Contains(i.IssuerCompanyId)));
 
             var clientDisplayName = string.IsNullOrWhiteSpace(client.CompanyName) ? client.Name : client.CompanyName;
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
@@ -249,7 +310,8 @@ namespace CPMCore.Controllers
                         Mobile = c.Cellphone,
                         RequiresDigitalInvoice = c.RequiresDigitalInvoice,
                         AttachUblByDefault = c.AttachUblByDefault
-                    }).ToList()
+                    }).ToList(),
+                CanEdit = canEdit
             };
 
             await BuildFormAsync(model, ct);

@@ -1,14 +1,7 @@
 ﻿@model CPMCore.Models.Klanten.ClientFormViewModel
 @using CPMCore.Helpers
 @using BOCore
-@using FacadeCore
-@inject IPermissionService PermissionService
 
-@{
-    await PermissionService.EnsureLoadedAsync();
-    var canWriteCustomers = PermissionService.HasWrite(PermissionCodes.Customers);
-    var canDeleteCustomers = PermissionService.HasDelete(PermissionCodes.Customers);
-}
 
 @{
     var isReadOnly = ViewBag.ReadOnly as bool? ?? false;
@@ -74,7 +67,7 @@
             </div>
         </div>
         <div class="col-sm-auto text-sm-end">
-            @if (canWriteCustomers)
+            @if (Model.CanEdit)
             {
                 <a href="@Url.Action("Edit", "Klanten", new { id = Model.Id })" class="btn btn-primary btn-md px-3">
                     <i class="bx bx-pencil me-1"></i>Bewerken

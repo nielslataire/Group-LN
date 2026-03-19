@@ -10,6 +10,7 @@ public class ClientIndexViewModel
     public IReadOnlyList<ClientListItemViewModel> Clients { get; init; } = new List<ClientListItemViewModel>();
     public IReadOnlyList<IssuerCompanyOptionViewModel> IssuerCompanies { get; init; } = new List<IssuerCompanyOptionViewModel>();
     public int? SelectedIssuerCompanyId { get; init; }
+    public bool CanCreateClient { get; init; }
 }
 
 public class ClientListItemViewModel
@@ -23,6 +24,8 @@ public class ClientListItemViewModel
     public IReadOnlyList<string> IssuerCompanies { get; init; } = new List<string>();
     public IReadOnlyList<int> IssuerCompanyIds { get; init; } = new List<int>();
     public int ContactCount { get; init; }
+    public bool CanEdit { get; init; }
+    public bool CanDelete { get; init; }
 }
 
 public class ClientFormViewModel
@@ -116,6 +119,8 @@ public class ClientFormViewModel
     public List<CountryOptionViewModel> Countries { get; set; } = new();
     public List<IssuerCompanyOptionViewModel> IssuerCompanies { get; set; } = new();
     public List<ContactInputViewModel> Contacts { get; set; } = new() { new ContactInputViewModel() };
+    public bool CanEdit { get; init; }
+    public bool CanDelete { get; init; }
 
     public string Title => Id.HasValue ? "Klant bewerken" : "Klant toevoegen";
     public string Subtitle => Id.HasValue ? "Werk de klantgegevens bij" : "Maak een nieuwe klant aan";

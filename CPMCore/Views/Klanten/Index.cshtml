@@ -1,15 +1,6 @@
 ﻿@model CPMCore.Models.Klanten.ClientIndexViewModel
 @using CPMCore.Helpers
 @using BOCore
-@using FacadeCore
-@inject IPermissionService PermissionService
-
-@{
-    ViewData["Title"] = "Klanten";
-    await PermissionService.EnsureLoadedAsync();
-    var canWriteCustomers = PermissionService.HasWrite(PermissionCodes.Customers);
-    var canDeleteCustomers = PermissionService.HasDelete(PermissionCodes.Customers);
-}
 
 @section PageStyle
 {
@@ -23,7 +14,7 @@
         <h5 class="mb-4 mt-0">Beheer en doorzoek alle klanten</h5>
     </div>
     <div class="col-sm-auto px-0">
-        @if (canWriteCustomers)
+        @if (Model.CanCreateClient)
         {
             <a href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
         }
@@ -111,14 +102,14 @@
                                 @(client.IssuerCompanies.Any() ? string.Join(", ", client.IssuerCompanies) : "-")
                             </td>
                             <td class="actions text-end">
-                                @if (canWriteCustomers)
+                                @if (client.CanEdit)
                                 {
                                     <a class="ms-1 me-1" data-placement="top" title="Bewerken" href="@Url.Action("Edit", "Klanten", new { id = client.Id })">
                                         <i class="bx bx-pencil fs-5"></i>
                                         <span class="visually-hidden">Bewerken</span>
                                     </a>
                                 }
-                                @if (canDeleteCustomers)
+                                @if (client.CanDelete)
                                 {
                                     <a href="#modaldeleteclient" data-toggle="tooltip" data-placement="top" title="Verwijderen" class="deleteClient ms-1 me-1" data-id="@client.Id">
                                         <i class="bx bx-trash fs-5 text-danger"></i>
@@ -184,11 +175,18 @@
             issuerFilter?.addEventListener('change', function () {
                 table.draw();
             });
-             const deleteModalSelector = '#modaldeleteclient';
+            const deleteModalSelector = '#modaldeleteclient';
             const deleteContainerSelector = '#delete-client-container';
             const deleteUrl = '@Url.Action("PartialDeleteClientModal", "Klanten")';
 
-             $.get(`${deleteUrl}/${id}`)
+            $(document).on('click', '.deleteClient', function (e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+                if (!id) {
+                    return;
+                }
+
+                $.get(`${deleteUrl}/${id}`)
                     .done(function (data) {
                         $(deleteContainerSelector).html(data);
 
