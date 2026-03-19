@@ -1,4 +1,15 @@
 ﻿﻿@using BOCore
+@{
+    var visibleStatuses = new[]
+    {
+        ConstructionIssueStatus.Open,
+        ConstructionIssueStatus.InProgress,
+        ConstructionIssueStatus.WaitingInspection,
+        ConstructionIssueStatus.Resolved,
+        ConstructionIssueStatus.Rejected,
+        ConstructionIssueStatus.Reopened
+    };
+}
 <div class="modal fade" id="issueDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -46,7 +57,7 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Status wijzigen</label>
                                     <select id="issueDetailStatusSelect" class="form-control form-control-modern">
-                                        @foreach (var status in Enum.GetValues<ConstructionIssueStatus>())
+                                        @foreach (var status in visibleStatuses)
                                         {
                                             <option value="@((int)status)">@status.GetDisplayName()</option>
                                         }

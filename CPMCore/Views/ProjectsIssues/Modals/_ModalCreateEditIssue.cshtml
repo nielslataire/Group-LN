@@ -1,6 +1,16 @@
 ﻿@using BOCore
 @model CPMCore.Models.Issues.ConstructionIssueIndexVm
-
+@{
+    var visibleStatuses = new[]
+    {
+        ConstructionIssueStatus.Open,
+        ConstructionIssueStatus.InProgress,
+        ConstructionIssueStatus.WaitingInspection,
+        ConstructionIssueStatus.Resolved,
+        ConstructionIssueStatus.Rejected,
+        ConstructionIssueStatus.Reopened
+    };
+}
 <style>
     .issue-media-add-tile {
         width: 90px;
@@ -149,7 +159,12 @@
 
                         <div class="col-md-4">
                             <label class="form-label">Status</label>
-                            <select name="Input.Status" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueStatus>()"></select>
+                            <select name="Input.Status" class="form-control">
+                                @foreach (var status in visibleStatuses)
+                                {
+                                    <option value="@((int)status)">@status.GetDisplayName()</option>
+                                }
+                            </select>
                         </div>
 
                         <div class="col-md-4">

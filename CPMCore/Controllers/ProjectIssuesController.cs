@@ -73,11 +73,12 @@ public class ProjectsIssuesController : BaseController
         };
 
 
-        filters ??= new ConstructionIssueFilterBO();
-        if (!filters.Status.HasValue)
-        {
-            filters.Status = (int)ConstructionIssueStatus.Open;
-        }
+        //filters ??= new ConstructionIssueFilterBO();
+        //var hasExplicitStatusFilter = Request.Query.ContainsKey("status");
+        //if (!filters.Status.HasValue && !hasExplicitStatusFilter)
+        //{
+        //    filters.Status = (int)ConstructionIssueStatus.Open;
+        //}
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
         var formVm = await BuildVm(projectId);
         var vm = new ConstructionIssueIndexVm

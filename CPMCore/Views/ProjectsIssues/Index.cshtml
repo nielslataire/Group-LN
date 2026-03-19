@@ -12,6 +12,15 @@
     var waitingInspectionCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.WaitingInspection);
     var resolvedCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.Resolved);
     var criticalCount = Model.Issues.Count(i => i.DueDate.HasValue && i.DueDate.Value < today);
+    var visibleStatuses = new[]
+    {
+        ConstructionIssueStatus.Open,
+        ConstructionIssueStatus.InProgress,
+        ConstructionIssueStatus.WaitingInspection,
+        ConstructionIssueStatus.Resolved,
+        ConstructionIssueStatus.Rejected,
+        ConstructionIssueStatus.Reopened
+    };
 }
 <style>
     #issueModal .modal-content {
@@ -609,10 +618,10 @@
                                 <label class="form-label">Status</label>
                                 <select class="form-control form-control-modern js-auto-filter" name="status">
                                     <option value="">Alle statussen</option>
-                                    @foreach (var s in Html.GetEnumSelectList<ConstructionIssueStatus>())
-                                    {
-                                        <option value="@s.Value" selected="@(filters.Status?.ToString() == s.Value)">@s.Text</option>
-                                    }
+                                                @foreach (var status in visibleStatuses)
+                                                {
+                                                    <option value="@((int)status)" selected="@(filters.Status == (int)status)">@status.GetDisplayName()</option>
+                                                }
                                 </select>
                             </div>
 
@@ -676,9 +685,9 @@
                                         @Html.AntiForgeryToken()
                                         <select class="form-control form-control-modern" name="Status" id="bulkStatusSelect" style="min-width: 170px;">
                                             <option value="">Kies status</option>
-                                            @foreach (var s in Html.GetEnumSelectList<ConstructionIssueStatus>())
+                                            @foreach (var status in visibleStatuses)
                                             {
-                                                <option value="@s.Value">@s.Text</option>
+                                                <option value="@((int)status)">@status.GetDisplayName()</option>
                                             }
                                         </select>
                                         <button type="submit" id="bulkStatusButton" class="btn btn-primary text-nowrap" disabled>
@@ -747,7 +756,7 @@
                                 <tbody>
                                     @foreach (var i in Model.Issues)
                                     {
-                                        <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
+                                           <tr data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)" data-status="@i.Status">
                                             <td class="col-check">
                                                 <div class="checkbox-custom checkbox-default d-inline-block">
                                                     <input type="checkbox" class="issue-check" value="@i.Id" id="issue_@i.Id" />
@@ -820,7 +829,7 @@
                                         responsibleDisplay = string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? null : i.ResponsibleOtherName;
                                     }
 
-                                    <article class="issue-item-card" data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)">
+                                    <article class="issue-item-card" data-responsible-party-id="@(i.ResponsiblePartyId?.ToString() ?? string.Empty)" data-status="@i.Status">
                                         <div class="issue-item-top">
                                             <div class="checkbox-custom checkbox-default d-inline-block mt-1">
                                                 <input type="checkbox" class="issue-check" value="@i.Id" id="issue_mobile_@i.Id" />
@@ -1028,17 +1037,19 @@
                 }
             }
 
-            let dataTableInstance = null;
-            let currentPdfDoc = null;
-            let currentPlans = [];
-            let currentPlanUrl = '';
-            let planRenderRequestId = 0;
-            const pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
-            let isPickMode = false;
-            const contractorResponsiblePartyType = @((int)ConstructionIssueResponsiblePartyType.Contractor);
-            let currentDetailIssueId = null;
-              const isMobileView = window.matchMedia('(max-width: 767.98px)').matches;
-            const detailInlineState = {
+                let dataTableInstance = null;
+                let currentPdfDoc = null;
+                let currentPlans = [];
+                let currentPlanUrl = '';
+                let planRenderRequestId = 0;
+                let issueProcessingModalShown = false;
+                let issueProcessingHideRequested = false;
+                const pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
+                let isPickMode = false;
+                const contractorResponsiblePartyType = @((int)ConstructionIssueResponsiblePartyType.Contractor);
+                let currentDetailIssueId = null;
+                const isMobileView = window.matchMedia('(max-width: 767.98px)').matches;
+                const detailInlineState = {
                 isFieldSyncing: false
             };
 
@@ -1063,6 +1074,22 @@
             }
 
             function getSelectableIssueCheckboxes(){
+                         if (dataTableInstance && typeof dataTableInstance.rows === 'function') {
+                            const visibleIssueIds = new Set(
+                                dataTableInstance
+                                    .rows({ search: 'applied', page: 'current' })
+                                    .nodes()
+                                    .toArray()
+                                    .map((row) => row?.querySelector('.issue-check')?.value)
+                                    .filter((value) => value !== null && value !== undefined && value !== '')
+                            );
+
+                            if (visibleIssueIds.size > 0) {
+                                return Array.from(document.querySelectorAll('.issue-check'))
+                                    .filter((checkbox) => visibleIssueIds.has(checkbox.value))
+                                    .filter(isElementVisible);
+                            }
+                        }
                 return Array.from(document.querySelectorAll('.issue-check')).filter((checkbox) => {
                     const row = checkbox.closest('tr');
                     if (row) {
@@ -1116,12 +1143,33 @@
                 if (processingMessage) {
                     processingMessage.textContent = message || 'Actie wordt uitgevoerd...';
                 }
-                openBootstrapModal(issueProcessingModal, issueProcessingModalEl);
-            }
+                        issueProcessingHideRequested = false;
+                        openBootstrapModal(issueProcessingModal, issueProcessingModalEl);
+                    }
 
-            function hideIssueProcessingModal(){
-                closeBootstrapModal(issueProcessingModal, issueProcessingModalEl);
-            }
+                    function hideIssueProcessingModal(){
+                        if (!issueProcessingModal) {
+                            closeBootstrapModal(issueProcessingModal, issueProcessingModalEl);
+                            return;
+                        }
+                        if (!issueProcessingModalShown) {
+                            issueProcessingHideRequested = true;
+                            return;
+                        }
+                        closeBootstrapModal(issueProcessingModal, issueProcessingModalEl);
+                    }
+
+                    issueProcessingModalEl?.addEventListener('shown.bs.modal', () => {
+                        issueProcessingModalShown = true;
+                        if (issueProcessingHideRequested) {
+                            closeBootstrapModal(issueProcessingModal, issueProcessingModalEl);
+                        }
+                    });
+
+                    issueProcessingModalEl?.addEventListener('hidden.bs.modal', () => {
+                        issueProcessingModalShown = false;
+                        issueProcessingHideRequested = false;
+                    });
 
         function resetFiltersToDefaults(){
                    if (!filterForm) return;
@@ -1207,7 +1255,7 @@
                     }
 
                     const unitCell = rowNode.cells?.[2]?.textContent?.trim() || '';
-                 const statusCell = rowNode.cells?.[6]?.textContent?.trim() || '';
+                          const statusValue = rowNode.dataset.status || '';
                     const dueDateCell = rowNode.cells?.[7]?.textContent?.trim() || '';
                     const phaseCell = rowNode.cells?.[4]?.textContent?.trim() || '';
                     const responsiblePartyId = rowNode.dataset.responsiblePartyId || '';
@@ -1238,9 +1286,8 @@
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
 
-                    if (filters.status) {
-                        const selectedStatusText = filterForm?.querySelector(`[name="status"] option[value="${filters.status}"]`)?.textContent?.trim() || '';
-                        if (!selectedStatusText || statusCell !== selectedStatusText) {
+                   if (filters.status) {
+                         if (statusValue !== filters.status) {
                             return false;
                         }
                     }
@@ -1567,6 +1614,8 @@
                 if (!responsibleNameField || !responsibleEmailField) return;
 
                 if(!companyId){
+                            responsibleNameField.value = '';
+                            responsibleEmailField.value = '';
                     responsibleNameField.disabled = false;
                     responsibleEmailField.disabled = false;
                     return;

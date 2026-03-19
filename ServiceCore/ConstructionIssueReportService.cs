@@ -84,6 +84,13 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
 
     public async Task<byte[]> GenerateReportPdf(int projectId, int reportId)
     {
+        var printableStatuses = new HashSet<int>
+        {
+            (int)ConstructionIssueStatus.Open,
+            (int)ConstructionIssueStatus.Assigned,
+            (int)ConstructionIssueStatus.InProgress,
+            (int)ConstructionIssueStatus.Reopened
+        };
         var items = await _db.ConstructionIssueReportItem
             .Where(x => x.ReportId == reportId)
             .Select(x => x.IssueId)
@@ -96,6 +103,9 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             .OrderBy(x => x.Status)
             .ThenBy(x => x.DueDate)
             .ToListAsync();
+        issues = issues
+            .Where(x => printableStatuses.Contains(x.Status))
+            .ToList();
         var project = await _db.Project
             .Include(x => x.PostalCode)
             .Include(x => x.Status)
@@ -858,6 +868,10 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
             ConstructionIssueStatus.Open => ("Open", "#e4efec", "#15322b"),
             ConstructionIssueStatus.Assigned => ("Toegewezen", "#cfe3d8", "#15322b"),
             ConstructionIssueStatus.InProgress => ("In uitvoering", "#8fbea5", "#ffffff"),
+            ConstructionIssueStatus.WaitingInspection => ("Klaar voor controle", "#fde68a", "#713f12"),
+            ConstructionIssueStatus.Resolved => ("Opgelost", "#0f766e", "#ffffff"),
+            ConstructionIssueStatus.Rejected => ("Afgewezen", "#ef4444", "#ffffff"),
+            ConstructionIssueStatus.Reopened => ("Heropend", "#a855f7", "#ffffff"),
             ConstructionIssueStatus.Closed => ("Afgerond", "#01532d", "#ffffff"),
             _ => ("Onbekend", "#e5e7eb", "#374151")
         };
