@@ -2,9 +2,11 @@
 using CPMCore.Models.Leveranciers;
 using CPMCore.Services.Octopus;
 using DALCore.Models;
+using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Graph;
 using SmartBreadcrumbs.Attributes;
 using SmartBreadcrumbs.Nodes;
@@ -22,9 +24,10 @@ using System.Threading.Tasks;
 namespace CPMCore.Controllers;
 
 [Authorize]
-[CPMCore.Filters.PermissionRead(PermissionCodes.SuppliersAll)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.Suppliers)]
 public class LeveranciersController : BaseController
 {
+    private const string SupplierCompanyPermissionPrefix = "Suppliers.Company.";
     private static readonly JsonSerializerOptions VatLookupSerializerOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -41,7 +44,7 @@ public class LeveranciersController : BaseController
         _octopusTokens = octopusTokens;
     }
 
-    private async Task<SupplierFormViewModel> BuildFormAsync(SupplierFormViewModel model, CancellationToken ct)
+    private async Task<SupplierFormViewModel> BuildFormAsync(SupplierFormViewModel model, CancellationToken ct, SupplierIssuerScope? scope = null)
     {
         var activities = await _db.Activity
             .AsNoTracking()
@@ -98,6 +101,7 @@ public class LeveranciersController : BaseController
         var issuerCompanies = await _db.IssuerCompany
             .AsNoTracking()
             .Where(i => i.IsActive)
+            .Where(i => scope == null || scope.HasAllIssuers || scope.AllowedIssuerIds.Contains(i.Id))
             .OrderBy(i => i.Name)
             .Select(i => new IssuerCompanyOptionViewModel
             {
@@ -109,6 +113,13 @@ public class LeveranciersController : BaseController
         model.IssuerCompanies = issuerCompanies;
 
         model.SelectedIssuerCompanyIds ??= new List<int>();
+        if (scope != null && !scope.HasAllIssuers)
+        {
+            model.SelectedIssuerCompanyIds = model.SelectedIssuerCompanyIds
+                .Where(scope.AllowedIssuerIds.Contains)
+                .ToList();
+        }
+
 
 
         if (!model.SelectedCountryId.HasValue && countries.Any())
@@ -634,6 +645,14 @@ public class LeveranciersController : BaseController
     [Breadcrumb("Leveranciers")]
     public async Task<IActionResult> Index(int? issuerCompanyId, CancellationToken ct)
     {
+        var readScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Read, ct);
+        if (!readScope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers te bekijken.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+        var writeScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
+        var deleteScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
         ViewData["Title"] = "Leveranciers";
 
         var suppliersQuery = _db.CompanyInfo
@@ -641,8 +660,19 @@ public class LeveranciersController : BaseController
                     .ThenInclude(link => link.IssuerCompany)
             .AsNoTracking();
 
+        if (!readScope.HasAllIssuers)
+        {
+            suppliersQuery = suppliersQuery
+                .Where(c => c.CompanyIssuerCompany.Any(ci => readScope.AllowedIssuerIds.Contains(ci.IssuerCompanyId)));
+        }
+
         if (issuerCompanyId.HasValue)
         {
+            if (!readScope.HasAllIssuers && !readScope.AllowedIssuerIds.Contains(issuerCompanyId.Value))
+            {
+                issuerCompanyId = null;
+            }
+
             suppliersQuery = suppliersQuery.Where(c => c.CompanyIssuerCompany.Any(ci => ci.IssuerCompanyId == issuerCompanyId));
         }
 
@@ -666,10 +696,47 @@ public class LeveranciersController : BaseController
                     .ToList(),
                 IssuerCompanyIds = c.CompanyIssuerCompany
                     .Select(ci => ci.IssuerCompanyId)
-                    .ToList()
+                    .ToList(),
+                CanEdit = false,
+                CanDelete = false
             })
             .OrderBy(c => c.Name)
             .ToListAsync(ct);
+
+        bool HasAccessForSupplier(SupplierIssuerScope scope, IReadOnlyList<int> issuerIds)
+        {
+            if (!scope.HasAccess)
+            {
+                return false;
+            }
+
+            if (scope.HasAllIssuers)
+            {
+                return true;
+            }
+
+            return issuerIds.Any(scope.AllowedIssuerIds.Contains);
+        }
+
+        suppliers = suppliers
+            .Select(s => new SupplierListItemViewModel
+            {
+                Id = s.Id,
+                Name = s.Name,
+                IsActive = s.IsActive,
+                EnterpriseNumber = s.EnterpriseNumber,
+                Email = s.Email,
+                CountryCode = s.CountryCode,
+                Phone = s.Phone,
+                Mobile = s.Mobile,
+                ContractCount = s.ContractCount,
+                TotalContractAmount = s.TotalContractAmount,
+                ActivityIds = s.ActivityIds,
+                IssuerCompanyIds = s.IssuerCompanyIds,
+                CanEdit = HasAccessForSupplier(writeScope, s.IssuerCompanyIds),
+                CanDelete = HasAccessForSupplier(deleteScope, s.IssuerCompanyIds)
+            })
+            .ToList();
 
         var activities = await _db.Activity
             .AsNoTracking()
@@ -686,6 +753,7 @@ public class LeveranciersController : BaseController
         var issuers = await _db.IssuerCompany
             .AsNoTracking()
             .Where(i => i.IsActive)
+             .Where(i => readScope.HasAllIssuers || readScope.AllowedIssuerIds.Contains(i.Id))
             .OrderBy(i => i.Name)
             .Select(i => new IssuerCompanyOptionViewModel
             {
@@ -699,7 +767,14 @@ public class LeveranciersController : BaseController
             Suppliers = suppliers,
             Activities = activities,
             IssuerCompanies = issuers,
-            SelectedIssuerCompanyId = issuerCompanyId
+            SelectedIssuerCompanyId = issuerCompanyId,
+            CanCreateSupplier = writeScope.HasAccess
+                  && (!issuerCompanyId.HasValue
+                      || writeScope.HasAllIssuers
+                      || writeScope.AllowedIssuerIds.Contains(issuerCompanyId.Value)),
+            WritableIssuerCompanyIds = writeScope.HasAllIssuers
+                  ? issuers.Select(i => i.Id).ToList()
+                  : writeScope.AllowedIssuerIds.ToList()
         };
 
         return View(vm);
@@ -710,9 +785,17 @@ public class LeveranciersController : BaseController
     [Breadcrumb("Detail", FromAction = nameof(Index))]
     public async Task<IActionResult> Details(int id, CancellationToken ct)
     {
+        var readScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Read, ct);
+        if (!readScope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers te bekijken.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+
         var supplier = await _db.CompanyInfo
             .Include(c => c.PostCode)
                 .ThenInclude(p => p.Country)
+                .Include(c => c.CompanyIssuerCompany)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.CompanyId == id, ct);
 
@@ -720,6 +803,18 @@ public class LeveranciersController : BaseController
         {
             return NotFound();
         }
+
+        if (!readScope.HasAllIssuers && !supplier.CompanyIssuerCompany.Any(ci => readScope.AllowedIssuerIds.Contains(ci.IssuerCompanyId)))
+        {
+            AddMessage("error", "Je hebt geen rechten om deze leverancier te bekijken.", "Geen toegang");
+            return RedirectToAction("Index","Leveranciers");
+        }
+
+        var writeScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
+        var deleteScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
+        var canEdit = writeScope.HasAccess && (writeScope.HasAllIssuers || supplier.CompanyIssuerCompany.Any(ci => writeScope.AllowedIssuerIds.Contains(ci.IssuerCompanyId)));
+        var canDelete = deleteScope.HasAccess && (deleteScope.HasAllIssuers || supplier.CompanyIssuerCompany.Any(ci => deleteScope.AllowedIssuerIds.Contains(ci.IssuerCompanyId)));
+
 
         var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var LeveranciersIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Leveranciers", "Leveranciers")
@@ -835,6 +930,8 @@ public class LeveranciersController : BaseController
         var detailModel = new SupplierDetailViewModel
         {
             Id = supplier.CompanyId,
+            CanEdit = canEdit,
+            CanDelete = canDelete,
             Name = supplier.BedrijfsNaam,
             EnterpriseNumber = supplier.Ondernemingsnummer,
             LegalForm = legalFormName ?? supplier.Type,
@@ -995,28 +1092,55 @@ public class LeveranciersController : BaseController
     }
 
     [HttpGet]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
     public async Task<IActionResult> Create(int? issuerCompanyId, CancellationToken ct)
     {
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
+        if (!scope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers toe te voegen.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+
+        if (issuerCompanyId.HasValue && !scope.HasAllIssuers && !scope.AllowedIssuerIds.Contains(issuerCompanyId.Value))
+        {
+            issuerCompanyId = null;
+        }
+
         var vm = await BuildFormAsync(new SupplierFormViewModel
         {
             SelectedIssuerCompanyIds = issuerCompanyId.HasValue
                 ? new List<int> { issuerCompanyId.Value }
                 : new List<int>()
-        }, ct);
+        }, ct, scope);
         return View(vm);
     }
-
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
     public async Task<IActionResult> Create(SupplierFormViewModel model, CancellationToken ct)
     {
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
+        if (!scope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers toe te voegen.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+
+        if (!scope.HasAllIssuers)
+        {
+            model.SelectedIssuerCompanyIds = (model.SelectedIssuerCompanyIds ?? new List<int>())
+                .Where(scope.AllowedIssuerIds.Contains)
+                .ToList();
+        }
+
         NormalizeVatInputs(model);
         NormalizeWebsiteInput(model);
         await ValidateVatInputsAsync(model, null, ct);
 
         if (!ModelState.IsValid)
         {
-            await BuildFormAsync(model, ct);
+            await BuildFormAsync(model, ct, scope);
             return View(model);
         }
 
@@ -1048,8 +1172,16 @@ public class LeveranciersController : BaseController
     }
 
     [HttpGet]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
     public async Task<IActionResult> Edit(int id, CancellationToken ct)
     {
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
+        if (!scope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers te bewerken.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+
         var entity = await _db.CompanyInfo
             .Include(c => c.Activity)
             .Include(c => c.CompanyIssuerCompany)
@@ -1063,6 +1195,12 @@ public class LeveranciersController : BaseController
         if (entity == null)
         {
             return NotFound();
+        }
+
+        if (!scope.HasAllIssuers && !entity.CompanyIssuerCompany.Any(ci => scope.AllowedIssuerIds.Contains(ci.IssuerCompanyId)))
+        {
+            AddMessage("error", "Je hebt geen rechten om deze leverancier te bewerken.", "Geen toegang");
+            return RedirectToAction("Index","Leveranciers");
         }
 
 
@@ -1159,15 +1297,22 @@ public class LeveranciersController : BaseController
                 .FirstOrDefaultAsync(ct);
         }
 
-        await BuildFormAsync(vm, ct);
+        await BuildFormAsync(vm, ct, scope);
         return View(vm);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
     public async Task<IActionResult> Edit(int id, SupplierFormViewModel model, CancellationToken ct)
     {
-       
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
+        if (!scope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers te bewerken.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+
 
         if (id != model.Id)
         {
@@ -1180,7 +1325,7 @@ public class LeveranciersController : BaseController
 
         if (!ModelState.IsValid)
         {
-            await BuildFormAsync(model, ct);
+            await BuildFormAsync(model, ct, scope);
             return View(model);
         }
 
@@ -1195,6 +1340,18 @@ public class LeveranciersController : BaseController
         if (entity == null)
         {
             return NotFound();
+        }
+        if (!scope.HasAllIssuers && !entity.CompanyIssuerCompany.Any(ci => scope.AllowedIssuerIds.Contains(ci.IssuerCompanyId)))
+        {
+            AddMessage("error", "Je hebt geen rechten om deze leverancier te bewerken.", "Geen toegang");
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!scope.HasAllIssuers)
+        {
+            model.SelectedIssuerCompanyIds = (model.SelectedIssuerCompanyIds ?? new List<int>())
+                .Where(scope.AllowedIssuerIds.Contains)
+                .ToList();
         }
 
         await PopulateSelectionsAsync(model, ct);
@@ -1248,9 +1405,15 @@ public class LeveranciersController : BaseController
     }
 
     [HttpGet]
-    [Authorize(Policy = "CpmAdmin")]
+    [CPMCore.Filters.PermissionDelete(PermissionCodes.Suppliers)]
     public async Task<IActionResult> ModalDelete(int id, CancellationToken ct)
     {
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
+        if (!scope.HasAccess)
+        {
+            return StatusCode(403, new { redirectUrl = Url.Action("AccessDenied", "Account") });
+        }
+
         var supplier = await _db.CompanyInfo
             .AsNoTracking()
             .Select(c => new SupplierDeleteViewModel
@@ -1265,19 +1428,55 @@ public class LeveranciersController : BaseController
             return NotFound();
         }
 
+        if (!scope.HasAllIssuers)
+        {
+            var supplierIssuerIds = await _db.CompanyIssuerCompany
+                .AsNoTracking()
+                .Where(ci => ci.CompanyId == id)
+                .Select(ci => ci.IssuerCompanyId)
+                .ToListAsync(ct);
+
+            if (!supplierIssuerIds.Any(scope.AllowedIssuerIds.Contains))
+            {
+                return StatusCode(403, new { redirectUrl = Url.Action("AccessDenied", "Account") });
+            }
+        }
+
         return PartialView("Modals/_ModalDeleteSupplier", supplier);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [Authorize(Policy = "CpmAdmin")]
+    [CPMCore.Filters.PermissionDelete(PermissionCodes.Suppliers)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        var scope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
+        if (!scope.HasAccess)
+        {
+            AddMessage("error", "Je hebt geen rechten om leveranciers te verwijderen.", "Geen toegang");
+            return RedirectToAction("AccessDenied", "Account");
+        }
+
         var entity = await _db.CompanyInfo.FindAsync(new object[] { id }, ct);
 
         if (entity == null)
         {
             return NotFound();
+        }
+
+        if (!scope.HasAllIssuers)
+        {
+            var supplierIssuerIds = await _db.CompanyIssuerCompany
+                .AsNoTracking()
+                .Where(ci => ci.CompanyId == id)
+                .Select(ci => ci.IssuerCompanyId)
+                .ToListAsync(ct);
+
+            if (!supplierIssuerIds.Any(scope.AllowedIssuerIds.Contains))
+            {
+                AddMessage("error", "Je hebt geen rechten om deze leverancier te verwijderen.", "Geen toegang");
+                return RedirectToAction(nameof(Index));
+            }
         }
 
         _db.CompanyInfo.Remove(entity);
@@ -1297,6 +1496,51 @@ public class LeveranciersController : BaseController
     {
         return PartialView("Partials/_SupplierContactRow", new ContactInputViewModel());
     }
+    private async Task<SupplierIssuerScope> ResolveSupplierIssuerScopeAsync(PermissionAccessType accessType, CancellationToken ct)
+    {
+        var permissionService = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+        await permissionService.EnsureLoadedAsync(ct);
+
+        var hasMainAccess = accessType switch
+        {
+            PermissionAccessType.Read => permissionService.HasRead(PermissionCodes.Suppliers),
+            PermissionAccessType.Write => permissionService.HasWrite(PermissionCodes.Suppliers),
+            PermissionAccessType.Delete => permissionService.HasDelete(PermissionCodes.Suppliers),
+            _ => false
+        };
+
+        if (!hasMainAccess)
+        {
+            return new SupplierIssuerScope(false, false, new HashSet<int>());
+        }
+
+        var scopedIds = permissionService.EffectivePermissions
+            .Where(x => x.Key.StartsWith(SupplierCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+            .Where(x => accessType switch
+            {
+                PermissionAccessType.Read => x.Value.Read,
+                PermissionAccessType.Write => x.Value.Write,
+                PermissionAccessType.Delete => x.Value.Delete,
+                _ => false
+            })
+            .Select(x =>
+            {
+                var suffix = x.Key[SupplierCompanyPermissionPrefix.Length..];
+                return int.TryParse(suffix, out var companyId) ? (int?)companyId : null;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (scopedIds.Count == 0)
+        {
+            return new SupplierIssuerScope(true, true, new HashSet<int>());
+        }
+
+        return new SupplierIssuerScope(true, false, scopedIds.ToHashSet());
+    }
+
+    private sealed record SupplierIssuerScope(bool HasAccess, bool HasAllIssuers, HashSet<int> AllowedIssuerIds);
 
     private static bool HasSupplierDataChanged(CompanyInfo entity, SupplierFormViewModel model)
     {

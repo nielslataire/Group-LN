@@ -5,6 +5,8 @@ namespace CPMCore.Models.Leveranciers;
 public class SupplierDetailViewModel
 {
     public int Id { get; init; }
+    public bool CanEdit { get; init; }
+    public bool CanDelete { get; init; }
     public string Name { get; init; } = string.Empty;
     public string? EnterpriseNumber { get; init; }
     public string? LegalForm { get; init; }

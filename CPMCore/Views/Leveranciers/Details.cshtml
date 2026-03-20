@@ -6,7 +6,6 @@
 @{
     ViewData["Title"] = Model.Name;
     var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
-    var canDelete = User.IsInRole("Admin") || User.IsInRole("Administrator");
     var departmentCount = Model.Departments?.Count() ?? 0;
     var contactCount = Model.Contacts?.Count() ?? 0;
     var contractCount = Model.Contracts?.Count() ?? 0;
@@ -50,10 +49,13 @@
     </div>
     <div class="col-sm-auto text-sm-end">
         <div class="btn-group" role="group" aria-label="Leverancier acties">
-            <a href="@Url.Action("Edit", "Leveranciers", new { id = Model.Id })" class="btn btn-primary btn-md px-3 me-1">
-                <i class="bx bx-pencil me-1"></i>Bewerken
-            </a>
-            @if (canDelete)
+            @if (Model.CanEdit)
+            {
+                <a href="@Url.Action("Edit", "Leveranciers", new { id = Model.Id })" class="btn btn-primary btn-md px-3 me-1">
+                    <i class="bx bx-pencil me-1"></i>Bewerken
+                </a>
+            }
+            @if (Model.CanDelete)
             {
                 <a href="#modaldeletesupplier" id="delete-supplier-button" data-id="@Model.Id" class="btn btn-danger btn-md px-3">
                     <i class="bx bx-trash me-1"></i>Verwijderen

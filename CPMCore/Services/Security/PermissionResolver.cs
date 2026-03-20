@@ -15,8 +15,8 @@ public class PermissionResolver : IPermissionResolver
         action = action?.Trim();
 
         if (string.Equals(controller, "Home", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Dashboard;
-        if (string.Equals(controller, "Leveranciers", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SuppliersAll;
-        if (string.Equals(controller, "Klanten", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.CustomersAll;
+        if (string.Equals(controller, "Leveranciers", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Suppliers;
+        if (string.Equals(controller, "Klanten", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Customers;
         if (string.Equals(controller, "Invoices", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.InvoicingByBillingCompany;
         if (string.Equals(controller, "UserAdmin", StringComparison.OrdinalIgnoreCase) || string.Equals(controller, "AppRoles", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsUsers;
 

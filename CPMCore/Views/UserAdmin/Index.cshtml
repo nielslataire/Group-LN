@@ -451,39 +451,46 @@
             const antiForgeryTokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
             const antiForgeryToken = antiForgeryTokenInput ? antiForgeryTokenInput.value : '';
             let checkboxIdCounter = 0;
-            const menuStructure = permissionDefinitions
-                .filter(function (x) { return !(x.parentCode ?? x.ParentCode); })
-                .map(function (parent) {
-                    const parentCode = parent.code ?? parent.Code;
-                    const parentName = parent.name ?? parent.Name;
-                    return {
-                        code: parentCode,
-                        name: parentName,
-                        children: permissionDefinitions
-                            .filter(function (x) { return (x.parentCode ?? x.ParentCode) === parentCode; })
-                            .map(function (x) {
-                                return {
-                                    code: x.code ?? x.Code,
-                                    name: x.name ?? x.Name
-                                };
-                            })
-                    };
-                });
+              const permissionItems = permissionDefinitions.map(function (x) {
+                return {
+                    code: x.code ?? x.Code,
+                    name: x.name ?? x.Name,
+                    parentCode: x.parentCode ?? x.ParentCode,
+                    children: []
+                };
+            });
+
+            const permissionItemMap = {};
+            permissionItems.forEach(function (item) {
+                permissionItemMap[item.code] = item;
+            });
+
+            permissionItems.forEach(function (item) {
+                if (!item.parentCode) return;
+                const parent = permissionItemMap[item.parentCode];
+                if (parent) {
+                    parent.children.push(item);
+                }
+            });
+
+            const menuStructure = permissionItems.filter(function (item) { return !item.parentCode; });
 
         function createPermissionRows(tbody, rightsMap, options) {
             tbody.innerHTML = '';
 
             menuStructure.forEach(function (item) {
-                addRow(item, false, null);
-
-                if (item.children && item.children.length) {
-                    item.children.forEach(function (child) {
-                        addRow(child, true, item.code);
-                    });
-                }
+                addRowRecursive(item, 0, null);
             });
 
-            function addRow(item, isSub, parentCode) {
+            function addRowRecursive(item, level, parentCode) {
+                addRow(item, level, parentCode);
+                (item.children || []).forEach(function (child) {
+                    addRowRecursive(child, level + 1, item.code);
+                });
+            }
+
+            function addRow(item, level, parentCode) {
+                const isSub = level > 0;
                 const right = rightsMap[item.code] || {
                     read: false,
                     write: false,
@@ -497,7 +504,7 @@
                 tr.dataset.code = item.code;
                 tr.dataset.isSubrow = isSub ? 'true' : 'false';
 
-                if (!isSub && item.children && item.children.length) {
+                if (item.children && item.children.length) {
                     tr.dataset.hasChildren = 'true';
                 }
 
@@ -514,9 +521,11 @@
                 const readWarning = options.markOverride && right.read !== (right.baseRead ?? false);
                 const writeWarning = options.markOverride && right.write !== (right.baseWrite ?? false);
                 const deleteWarning = options.markOverride && right.delete !== (right.baseDelete ?? false);
+                const labelPadding = isSub ? ' style="padding-left: ' + (1 + (level * 1.25)) + 'rem"' : '';
 
                 tr.innerHTML =
-                    '<td>' + item.name + '</td>' +
+                    '<td' + labelPadding + '>' + item.name + '</td>' +
+                    '<td class="text-center permission-cell">' +
                     '<td class="text-center permission-cell">' +
                         '<div class="checkbox-custom ' + (readWarning ? 'checkbox-warning' : 'checkbox-default') + '">' +
                             '<input data-access="read" id="' + readId + '" type="checkbox" ' + (right.read ? 'checked' : '') + ' ' + disabled + ' />' +
@@ -570,13 +579,45 @@
                 headerCheckbox.indeterminate = true;
             }
         }
+        function getChildRows(tbody, parentCode) {
+              return Array.from(tbody.querySelectorAll('tr[data-parent-code="' + parentCode + '"]'));
+          }
 
-                function getChildRows(tbody, parentCode) {
-            return Array.from(tbody.querySelectorAll('tr[data-parent-code="' + parentCode + '"]'));
-        }
+          function getDescendantRows(tbody, parentCode) {
+              const descendants = [];
+              const queue = getChildRows(tbody, parentCode);
 
-        function updateParentRowState(tbody, parentCode, access) {
-            const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"][data-is-subrow="false"]');
+              while (queue.length) {
+                  const row = queue.shift();
+                  descendants.push(row);
+
+                  const rowCode = row.dataset.code;
+                  if (!rowCode) continue;
+
+                  getChildRows(tbody, rowCode).forEach(function (child) {
+                      queue.push(child);
+                  });
+              }
+
+              return descendants;
+          }
+
+          function getAncestorRows(tbody, row) {
+              const ancestors = [];
+              let parentCode = row ? row.dataset.parentCode : null;
+
+              while (parentCode) {
+                  const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"]');
+                  if (!parentRow) break;
+                  ancestors.push(parentRow);
+                  parentCode = parentRow.dataset.parentCode;
+              }
+
+              return ancestors;
+          }
+
+          function updateParentRowState(tbody, parentCode, access) {
+              const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"]');
             if (!parentRow) return;
 
             const parentCheckbox = parentRow.querySelector('input[data-access="' + access + '"]');
@@ -614,7 +655,7 @@
         }
 
         function toggleChildRowsFromParent(tbody, parentCode, access, checked) {
-            const childRows = getChildRows(tbody, parentCode);
+           const childRows = getDescendantRows(tbody, parentCode);
 
             childRows.forEach(function (row) {
                 const cb = row.querySelector('input[data-access="' + access + '"]');
@@ -657,14 +698,17 @@
             tbody.querySelectorAll('tr[data-parent-code] input[type="checkbox"]').forEach(function (childCheckbox) {
                 childCheckbox.addEventListener('change', function () {
                     const row = childCheckbox.closest('tr');
-                    const parentCode = row.dataset.parentCode;
+                    let parentCode = row.dataset.parentCode;
                     const access = childCheckbox.dataset.access;
 
-                    if (parentCode && access) {
+                    while (parentCode && access) {
                         updateParentRowState(tbody, parentCode, access);
+                        const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"]');
+                        parentCode = parentRow ? parentRow.dataset.parentCode : null;
                     }
                 });
             });
+
 
             updateAllParentRows(tbody, 'read');
             updateAllParentRows(tbody, 'write');
@@ -819,6 +863,17 @@
                                         canDelete: del,
                                         __RequestVerificationToken: antiForgeryToken
                                     });
+                                     const ancestorRows = getAncestorRows(tbody, row);
+                                    for (const ancestorRow of ancestorRows) {
+                                        await postJson('@Url.Action("SaveUserPermissionOverride", "UserAdmin")', {
+                                            userId: btn.dataset.userId,
+                                            permissionCode: ancestorRow.dataset.code,
+                                            canRead: ancestorRow.querySelector('input[data-access="read"]').checked,
+                                            canWrite: ancestorRow.querySelector('input[data-access="write"]').checked,
+                                            canDelete: ancestorRow.querySelector('input[data-access="delete"]').checked,
+                                            __RequestVerificationToken: antiForgeryToken
+                                        });
+                                    }
                                 });
                             });
                         }
@@ -876,6 +931,17 @@
                                 canDelete: del,
                                 __RequestVerificationToken: antiForgeryToken
                             });
+                             const ancestorRows = getAncestorRows(roleRightsBody, row);
+                            for (const ancestorRow of ancestorRows) {
+                                await postJson('@Url.Action("SaveRolePermission", "UserAdmin")', {
+                                    roleId: roleId,
+                                    permissionCode: ancestorRow.dataset.code,
+                                    canRead: ancestorRow.querySelector('input[data-access="read"]').checked,
+                                    canWrite: ancestorRow.querySelector('input[data-access="write"]').checked,
+                                    canDelete: ancestorRow.querySelector('input[data-access="delete"]').checked,
+                                    __RequestVerificationToken: antiForgeryToken
+                                });
+                            }
                         });
                     });
                 }

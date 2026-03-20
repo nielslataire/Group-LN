@@ -1,0 +1,465 @@
+/* =========================================================
+   CPMCORE / PORTO MODERN - LEFT SIDEBAR BIG ICONS CUSTOM
+   ========================================================= */
+
+html.modern {
+	--sidebar-width: 272px;
+	--sidebar-collapsed-width: 92px;
+	--sidebar-bg: var(--primary, #01532d);
+	--sidebar-hover-bg: rgba(255, 255, 255, 0.08);
+	--sidebar-active-bg: rgba(255, 255, 255, 0.10);
+	--sidebar-text: #ffffff;
+	--sidebar-text-muted: rgba(255, 255, 255, 0.75);
+	--sidebar-submenu-bg: #0f5c4b;
+	--sidebar-submenu-hover: rgba(255, 255, 255, 0.08);
+	--sidebar-item-height: 104px;
+	--sidebar-icon-size: 34px;
+	--sidebar-label-size: 13px;
+	--sidebar-submenu-radius: 18px;
+}
+
+	/* Algemene pagina */
+	html.modern html,
+	html.modern body {
+		background: #f5f5f8;
+	}
+
+	html.modern body {
+		font-family: "Poppins", sans-serif;
+	}
+
+	/* Sidebar basis */
+	html.modern .sidebar-left {
+		width: var(--sidebar-width);
+		background: var(--sidebar-bg);
+		border-right: 0;
+		padding-bottom: 0;
+		z-index: 1011;
+	}
+
+		html.modern .sidebar-left .nano,
+		html.modern .sidebar-left .nano-content {
+			background: var(--sidebar-bg);
+		}
+
+		/* Sidebar header */
+		html.modern .sidebar-left .sidebar-header {
+			height: 12px;
+			background: var(--sidebar-bg);
+		}
+
+			html.modern .sidebar-left .sidebar-header .sidebar-title {
+				display: none;
+			}
+
+			html.modern .sidebar-left .sidebar-header .sidebar-toggle {
+				display: flex !important;
+				align-items: center;
+				justify-content: center;
+				top: -60px;
+				background-color: var(--sidebar-bg);
+				height: 75px;
+				width: 75px;
+			}
+
+				html.modern .sidebar-left .sidebar-header .sidebar-toggle i {
+					font-size: 17.6px;
+					font-size: 1.1rem;
+					color: #FFF;
+				}
+
+/* Content offset desktop */
+@media (min-width: 768px) {
+	html.modern .inner-wrapper,
+	html.modern .page-header.fixed + .content-body,
+	html.modern .content-body {
+		margin-left: var(--sidebar-width);
+	}
+}
+
+/* Header nav marge als nodig */
+@media (min-width: 992px) {
+	html.modern .header.header-nav-menu .header-nav {
+		margin-left: var(--sidebar-width);
+	}
+}
+
+/* Nav main */
+html.modern ul.nav-main {
+	margin: 0;
+	padding: 16px 0 24px;
+}
+
+	/* Group labels */
+	html.modern ul.nav-main li.nav-group-label {
+		font-size: 11px;
+		padding: 16px 22px 10px;
+		margin-top: 10px;
+		color: rgba(255,255,255,0.55);
+		text-overflow: ellipsis;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+	}
+
+	/* TOP LEVEL ITEMS */
+	html.modern ul.nav-main > li {
+		position: relative;
+		margin: 0;
+	}
+
+		html.modern ul.nav-main > li > a {
+			position: relative;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			gap: 10px;
+			min-height: var(--sidebar-item-height);
+			padding: 16px 20px;
+			color: var(--sidebar-text);
+			font-size: var(--sidebar-label-size);
+			background: transparent;
+			border-radius: 0;
+			transition: background-color 0.2s ease, color 0.2s ease;
+		}
+
+			/* volledige tegel hover */
+			html.modern ul.nav-main > li:hover > a,
+			html.modern ul.nav-main > li > a:hover {
+				background: var(--sidebar-hover-bg);
+				color: var(--sidebar-text);
+			}
+
+		/* active / expanded */
+		html.modern ul.nav-main > li.nav-active > a,
+		html.modern ul.nav-main > li.nav-expanded > a {
+			color: var(--sidebar-text);
+			background: var(--sidebar-active-bg);
+			box-shadow: none;
+		}
+
+		/* Badge */
+		html.modern ul.nav-main > li > a span.badge {
+			position: absolute;
+			right: 14px;
+			top: 12px;
+			margin: 0;
+			transform: none;
+		}
+
+		/* Iconen */
+		html.modern ul.nav-main > li i {
+			color: #FFF;
+		}
+
+		html.modern ul.nav-main > li > a > i {
+			display: block;
+			margin: 0;
+			line-height: 1;
+			color: #fff;
+		}
+
+			html.modern ul.nav-main > li > a > i.bx {
+				font-size: var(--sidebar-icon-size);
+			}
+
+			html.modern ul.nav-main > li > a > i[class*="fa-"] {
+				font-size: calc(var(--sidebar-icon-size) - 2px);
+			}
+
+		/* Tekst onder icoon */
+		html.modern ul.nav-main > li > a > span {
+			display: block;
+			width: 100%;
+			color: var(--sidebar-text);
+			font-size: var(--sidebar-label-size);
+			font-weight: 600;
+			line-height: 1.25;
+			text-align: center;
+			white-space: normal;
+			word-break: break-word;
+		}
+
+		/* Parent arrow niet tonen op tegel */
+		html.modern ul.nav-main > li.nav-parent > a:after {
+			display: none;
+		}
+
+	/* Kinderen standaard */
+	html.modern ul.nav-main li .nav-children li a {
+		color: #FFF;
+	}
+
+	/* =========================================
+   SUBMENU RECHTS ALS PANEEL
+   ========================================= */
+
+	html.modern ul.nav-main > li.nav-parent {
+		position: relative;
+	}
+
+		/* standaard verborgen */
+		html.modern ul.nav-main > li.nav-parent > ul.nav-children {
+			position: absolute;
+			top: 8px;
+			left: 100%;
+			min-width: 370px;
+			margin: 0;
+			padding: 16px 0;
+			list-style: none;
+			background: var(--sidebar-submenu-bg);
+			border-radius: 0 var(--sidebar-submenu-radius) var(--sidebar-submenu-radius) 0;
+			box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+			opacity: 0;
+			visibility: hidden;
+			transform: translateX(0);
+			z-index: 1100;
+		}
+
+		/* hover of expanded tonen */
+		html.modern ul.nav-main > li.nav-parent:hover > ul.nav-children,
+		html.modern ul.nav-main > li.nav-parent.nav-expanded > ul.nav-children {
+			opacity: 1;
+			visibility: visible;
+		}
+
+		/* subtiele verbindingslijn tussen item en submenu */
+		html.modern ul.nav-main > li.nav-parent:hover > a::after,
+		html.modern ul.nav-main > li.nav-parent.nav-expanded > a::after {
+			content: "";
+			position: absolute;
+			right: 0;
+			top: 18px;
+			bottom: 18px;
+			width: 1px;
+			background: rgba(255,255,255,0.14);
+		}
+
+		/* submenu items */
+		html.modern ul.nav-main > li.nav-parent > ul.nav-children > li {
+			margin: 0;
+		}
+
+			html.modern ul.nav-main > li.nav-parent > ul.nav-children > li > a {
+				display: flex;
+				align-items: center;
+				justify-content: flex-start;
+				text-align: left;
+				min-height: 46px;
+				padding: 10px 30px;
+				background: transparent;
+				color: rgba(255,255,255,0.94);
+				font-size: 15px;
+				font-weight: 500;
+				line-height: 1.4;
+				border-radius: 0;
+				transition: background-color 0.18s ease, padding-left 0.18s ease;
+			}
+
+				html.modern ul.nav-main > li.nav-parent > ul.nav-children > li > a:hover,
+				html.modern ul.nav-main > li.nav-parent > ul.nav-children > li.nav-active > a {
+					background: var(--sidebar-submenu-hover);
+					color: #fff;
+					padding-left: 36px;
+				}
+
+				/* submenu tekst */
+				html.modern ul.nav-main > li.nav-parent > ul.nav-children > li > a > span {
+					width: auto;
+					text-align: left;
+					font-size: 15px;
+					font-weight: 500;
+					line-height: 1.4;
+				}
+
+				/* submenu iconen als die bestaan */
+				html.modern ul.nav-main > li.nav-parent > ul.nav-children > li > a > i {
+					margin-right: 10px;
+					font-size: 16px !important;
+					line-height: 1;
+				}
+
+			/* nested submenu pijltjes */
+			html.modern ul.nav-main > li.nav-parent > ul.nav-children > li.nav-parent > a {
+				position: relative;
+			}
+
+				html.modern ul.nav-main > li.nav-parent > ul.nav-children > li.nav-parent > a:after {
+					content: "\f054";
+					font-family: "Font Awesome 5 Free";
+					font-weight: 900;
+					font-size: 10px;
+					position: absolute;
+					right: 22px;
+					top: 50%;
+					transform: translateY(-50%);
+					color: rgba(255,255,255,0.65);
+				}
+
+			/* deeper levels terug klassiek binnen submenu */
+			html.modern ul.nav-main > li.nav-parent > ul.nav-children > li.nav-parent > ul.nav-children {
+				position: static;
+				display: none;
+				min-width: 100%;
+				opacity: 1;
+				visibility: visible;
+				transform: none;
+				margin: 0;
+				padding: 4px 0 8px;
+				background: transparent;
+				border-radius: 0;
+				box-shadow: none;
+			}
+
+			html.modern ul.nav-main > li.nav-parent > ul.nav-children > li.nav-parent.nav-expanded > ul.nav-children {
+				display: block;
+			}
+
+			html.modern ul.nav-main > li.nav-parent > ul.nav-children > li.nav-parent > ul.nav-children > li > a {
+				padding: 8px 42px 8px 44px;
+				font-size: 14px;
+				color: rgba(255,255,255,0.82);
+			}
+
+/* Sidebar widget onderaan */
+html.modern .sidebar-widget .widget-header h6 {
+	font-size: 12px;
+	font-size: 0.75rem;
+	color: rgba(255,255,255,0.65);
+	font-weight: 400;
+}
+
+html.modern .sidebar-widget .widget-content,
+html.modern .sidebar-widget .widget-content a {
+	color: rgba(255,255,255,0.78);
+}
+
+/* Separator */
+html.modern .sidebar-left hr.separator {
+	border-top-color: rgba(255,255,255,0.10);
+	opacity: 1;
+}
+
+/* =========================================
+   COLLAPSED SIDEBAR
+   ========================================= */
+
+html.modern.sidebar-left-collapsed .sidebar-left {
+	width: var(--sidebar-collapsed-width);
+}
+
+@media (min-width: 768px) {
+	html.modern.sidebar-left-collapsed .inner-wrapper,
+	html.modern.sidebar-left-collapsed .page-header.fixed + .content-body,
+	html.modern.sidebar-left-collapsed .content-body {
+		margin-left: var(--sidebar-collapsed-width);
+	}
+}
+
+@media (min-width: 992px) {
+	html.modern.sidebar-left-collapsed .header.header-nav-menu .header-nav {
+		margin-left: var(--sidebar-collapsed-width);
+	}
+}
+
+html.modern.sidebar-left-collapsed .nano:not(.hovered) ul.nav-main li.nav-group-label {
+	display: none;
+}
+
+html.modern.sidebar-left-collapsed ul.nav-main > li > a {
+	min-height: 84px;
+	padding-left: 10px;
+	padding-right: 10px;
+	gap: 8px;
+}
+
+	html.modern.sidebar-left-collapsed ul.nav-main > li > a > i.bx {
+		font-size: 28px;
+	}
+
+	html.modern.sidebar-left-collapsed ul.nav-main > li > a > span {
+		font-size: 11px;
+		line-height: 1.15;
+	}
+
+html.modern.sidebar-left-collapsed ul.nav-main > li.nav-parent > ul.nav-children {
+	left: 100%;
+	top: 0;
+	min-width: 320px;
+}
+
+/* =========================================
+   HEADER / MOBILE BESTAANDE PORTO COMPAT
+   ========================================= */
+
+html.modern .header {
+	height: 70px;
+	z-index: 1011;
+}
+
+html.modern .header-right {
+	display: flex;
+	align-items: center;
+	height: 66px;
+}
+
+html.modern.fixed .page-header {
+	top: 69px;
+}
+
+/* Tablet/mobile */
+@media (max-width: 991px) {
+	html.modern .header.header-nav-menu .header-btn-collapse-nav {
+		background: transparent;
+		color: #333 !important;
+	}
+
+	html.modern .header.header-nav-menu .header-nav-main nav {
+		width: 100%;
+	}
+
+	html.modern .inner-wrapper,
+	html.modern .page-header.fixed + .content-body,
+	html.modern .content-body {
+		margin-left: 0 !important;
+	}
+
+	/* submenu op mobile gewoon onder elkaar */
+	html.modern ul.nav-main > li.nav-parent > ul.nav-children {
+		position: static;
+		min-width: 100%;
+		display: none;
+		opacity: 1;
+		visibility: visible;
+		transform: none;
+		padding: 6px 0 12px;
+		border-radius: 0;
+		box-shadow: none;
+		background: rgba(0, 0, 0, 0.12);
+	}
+
+	html.modern ul.nav-main > li.nav-parent.nav-expanded > ul.nav-children {
+		display: block;
+	}
+
+	html.modern ul.nav-main > li.nav-parent:hover > a::after,
+	html.modern ul.nav-main > li.nav-parent.nav-expanded > a::after {
+		display: none;
+	}
+}
+
+@media (max-width: 767px) {
+	html.modern .header {
+		height: 120px;
+	}
+
+	html.modern .header-right {
+		justify-content: flex-end;
+	}
+
+	html.modern .userbox {
+		position: absolute;
+		left: 15px;
+	}
+}

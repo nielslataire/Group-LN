@@ -11,6 +11,8 @@ public class SupplierIndexViewModel
     public IReadOnlyList<ActivityFilterItemViewModel> Activities { get; init; } = new List<ActivityFilterItemViewModel>();
     public IReadOnlyList<IssuerCompanyOptionViewModel> IssuerCompanies { get; init; } = new List<IssuerCompanyOptionViewModel>();
     public int? SelectedIssuerCompanyId { get; init; }
+    public bool CanCreateSupplier { get; init; }
+    public IReadOnlyList<int> WritableIssuerCompanyIds { get; init; } = new List<int>();
 }
 
 public class SupplierListItemViewModel
@@ -27,6 +29,8 @@ public class SupplierListItemViewModel
     public decimal TotalContractAmount { get; init; }
     public IReadOnlyList<int> ActivityIds { get; init; } = new List<int>();
     public IReadOnlyList<int> IssuerCompanyIds { get; init; } = new List<int>();
+    public bool CanEdit { get; init; }
+    public bool CanDelete { get; init; }
 
     public string? PrimaryPhone
     {

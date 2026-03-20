@@ -14,9 +14,9 @@
         <h5 class="mb-4 mt-0">Beheer en doorzoek alle klanten</h5>
     </div>
     <div class="col-sm-auto px-0">
-        @if (Model.CanCreateClient)
+        @if (Model.WritableIssuerCompanyIds.Any())
         {
-            <a href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+            <a id="add-client-button" href="@Url.Action("Create", "Klanten", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md @(Model.CanCreateClient ? string.Empty : "d-none")">+ Klant toevoegen</a>
         }
     </div>
 </div>
@@ -134,6 +134,8 @@
     <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function () {
+             const writableIssuerIds = new Set([@string.Join(",", Model.WritableIssuerCompanyIds)]);
+            const createBaseUrl = '@Url.Action("Create", "Klanten")';
             const table = $('#datatable-clients').DataTable({
                 paging: true,
                 ordering: true,
@@ -174,6 +176,15 @@
 
             issuerFilter?.addEventListener('change', function () {
                 table.draw();
+            const addButton = document.getElementById('add-client-button');
+                if (!addButton) {
+                    return;
+                }
+
+                const selectedIssuer = this.value;
+                const canCreate = !selectedIssuer || writableIssuerIds.has(Number(selectedIssuer));
+                addButton.classList.toggle('d-none', !canCreate);
+                addButton.href = selectedIssuer ? `${createBaseUrl}?issuerCompanyId=${encodeURIComponent(selectedIssuer)}` : createBaseUrl;
             });
             const deleteModalSelector = '#modaldeleteclient';
             const deleteContainerSelector = '#delete-client-container';

@@ -65,7 +65,10 @@
         <h5 class="mb-4 mt-0">Beheer en doorzoek alle leveranciers</h5>
     </div>
     <div class="col-sm-auto px-0">
-        <a href="@Url.Action("Create", "Leveranciers", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
+        @if (Model.WritableIssuerCompanyIds.Any())
+        {
+            <a id="add-supplier-button" href="@Url.Action("Create", "Leveranciers", new { issuerCompanyId = Model.SelectedIssuerCompanyId })" class="btn btn-primary btn-md @(Model.CanCreateSupplier ? string.Empty : "d-none")">+ Leverancier toevoegen</a>
+        }
     </div>
 </div>
 
@@ -156,9 +159,6 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @{
-                        var canDelete = User.IsInRole("Admin") || User.IsInRole("Administrator");
-                    }
                     @foreach (var supplier in Model.Suppliers)
                     {
                         var phone = supplier.PrimaryPhone;
@@ -185,11 +185,14 @@
                             <td>@supplier.ContractCount</td>
                             <td>@supplier.TotalContractAmount.ToString("C", currencyCulture)</td>
                             <td class="actions text-end">
-                                <a class="ms-1 me-1" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("Edit", "Leveranciers", new { id = supplier.Id })">
-                                    <i class="bx bx-pencil fs-5"></i>
-                                    <span class="visually-hidden">Bewerken</span>
-                                </a>
-                                @if (canDelete)
+                                @if (supplier.CanEdit)
+                                {
+                                    <a class="ms-1 me-1" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("Edit", "Leveranciers", new { id = supplier.Id })">
+                                        <i class="bx bx-pencil fs-5"></i>
+                                        <span class="visually-hidden">Bewerken</span>
+                                    </a>
+                                }
+                                @if (supplier.CanDelete)
                                 {
                                     <a href="#modaldeletesupplier" data-toggle="tooltip" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteSupplier ms-1 me-1" data-id="@supplier.Id">
                                         <i class="bx bx-trash fs-5 text-danger"></i>
@@ -218,6 +221,8 @@
     <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
     <script>
         (function () {
+               const writableIssuerIds = new Set([@string.Join(",", Model.WritableIssuerCompanyIds)]);
+            const createBaseUrl = '@Url.Action("Create", "Leveranciers")';
             const entity = {
                 singular: 'leverancier',
                 plural: 'leveranciers'
@@ -356,6 +361,12 @@
             $('#issuer-filter').on('change', function () {
                 selectedIssuerId = $(this).val() || '';
                 table.draw();
+                const addButton = document.getElementById('add-supplier-button');
+                if (addButton) {
+                    const canCreate = !selectedIssuerId || writableIssuerIds.has(Number(selectedIssuerId));
+                    addButton.classList.toggle('d-none', !canCreate);
+                    addButton.href = selectedIssuerId ? `${createBaseUrl}?issuerCompanyId=${encodeURIComponent(selectedIssuerId)}` : createBaseUrl;
+                }
             });
 
               $('#supplier-status-filter').on('change', function () {

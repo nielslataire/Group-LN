@@ -205,7 +205,10 @@ namespace CPMCore.Controllers
                 Clients = clientsWithPermissions,
                 IssuerCompanies = issuerCompanies,
                 SelectedIssuerCompanyId = issuerCompanyId,
-                CanCreateClient = canCreateClient
+                CanCreateClient = canCreateClient,
+                WritableIssuerCompanyIds = writeScope.HasAllIssuers
+                   ? issuerCompanies.Select(i => i.Id).ToList()
+                   : writeScope.AllowedIssuerIds.ToList()
             };
 
             return View(model);

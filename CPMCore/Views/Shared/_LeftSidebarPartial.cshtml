@@ -15,11 +15,13 @@
 	var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 	await PermissionService.EnsureLoadedAsync();
 	var canSeeKlanten = PermissionService.HasRead(PermissionCodes.Customers);
-	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.SuppliersAll);
+	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.Suppliers);
 	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.InvoicingByBillingCompany);
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
 	var customerIssuerCompanyIds = new HashSet<int>();
+	var supplierIssuerCompanyIds = new HashSet<int>();
+	var invoicingIssuerCompanyIds = new HashSet<int>();
 	if (canSeeKlanten)
 	{
 		foreach (var entry in PermissionService.EffectivePermissions)
@@ -51,10 +53,72 @@
 	var customerIssuerCompanies = issuerCompanies
 		.Where(i => customerIssuerCompanyIds.Contains(i.Id))
 		.ToList();
-	canSeeKlanten = canSeeKlanten && customerIssuerCompanies.Any();
-	var suppliersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
-	var customersSubmenuClass = issuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
-	var invoicesSubmenuClass = issuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	if (canSeeLeveranciers)
+	{
+		foreach (var entry in PermissionService.EffectivePermissions)
+		{
+			var code = entry.Key ?? string.Empty;
+			if (!code.StartsWith("Suppliers.Company.", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			if (!entry.Value.Read)
+			{
+				continue;
+			}
+
+			var suffix = code["Suppliers.Company.".Length..];
+			if (int.TryParse(suffix, out var companyId))
+			{
+				supplierIssuerCompanyIds.Add(companyId);
+			}
+		}
+
+		if (supplierIssuerCompanyIds.Count == 0)
+		{
+			supplierIssuerCompanyIds = issuerCompanies.Select(i => i.Id).ToHashSet();
+		}
+	}
+
+	var supplierIssuerCompanies = issuerCompanies
+		.Where(i => supplierIssuerCompanyIds.Contains(i.Id))
+		.ToList();
+	canSeeLeveranciers = canSeeLeveranciers && supplierIssuerCompanies.Any();
+	if (canSeeBoekhouding)
+	{
+		foreach (var entry in PermissionService.EffectivePermissions)
+		{
+			var code = entry.Key ?? string.Empty;
+			if (!code.StartsWith("InvoicingByBillingCompany.Company.", StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			if (!entry.Value.Read)
+			{
+				continue;
+			}
+
+			var suffix = code["InvoicingByBillingCompany.Company.".Length..];
+			if (int.TryParse(suffix, out var companyId))
+			{
+				invoicingIssuerCompanyIds.Add(companyId);
+			}
+		}
+
+		if (invoicingIssuerCompanyIds.Count == 0)
+		{
+			invoicingIssuerCompanyIds = issuerCompanies.Select(i => i.Id).ToHashSet();
+		}
+	}
+	var invoicingIssuerCompanies = issuerCompanies
+		.Where(i => invoicingIssuerCompanyIds.Contains(i.Id))
+		.ToList();
+	canSeeBoekhouding = canSeeBoekhouding && invoicingIssuerCompanies.Any();
+	var suppliersSubmenuClass = supplierIssuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var customersSubmenuClass = customerIssuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var invoicesSubmenuClass = invoicingIssuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var projectSubmenuClass = 3 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var settingsCount = canSeeAdmin ? 7 : 1;
 	var settingsSubmenuClass = settingsCount > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
@@ -93,7 +157,7 @@
 							</a>
 							<ul class="@suppliersSubmenuClass">
 								<li>@Html.ActionLink("Alle leveranciers", "Index", "Leveranciers")</li>
-								@foreach (var issuer in issuerCompanies)
+								@foreach (var issuer in supplierIssuerCompanies)
 								{
 									<li>@Html.ActionLink(issuer.Name, "Index", "Leveranciers", new { issuerCompanyId = issuer.Id }, null)</li>
 								}
@@ -146,7 +210,7 @@
 								<span class="main-nav-label">Facturatie</span>
 							</a>
 							<ul class="@invoicesSubmenuClass">
-								@foreach (var issuer in issuerCompanies)
+								@foreach (var issuer in invoicingIssuerCompanies)
 								{
 									<li>@Html.ActionLink(issuer.Name, "Index", "Invoices", new { issuerCompanyId = issuer.Id }, "")</li>
 								}

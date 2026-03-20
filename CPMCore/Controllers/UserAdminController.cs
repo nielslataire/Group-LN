@@ -16,6 +16,8 @@ namespace CPMCore.Controllers;
 public class UserAdminController : BaseController
 {
     private const string CustomerCompanyPermissionPrefix = "Customers.Company.";
+    private const string SupplierCompanyPermissionPrefix = "Suppliers.Company.";
+    private const string InvoicingCompanyPermissionPrefix = "InvoicingByBillingCompany.Company.";
     private readonly cpmRunningContext _db;
     private readonly ILogger<UserAdminController> _logger;
     private readonly GraphServiceClient? _graphClient;
@@ -131,7 +133,9 @@ public class UserAdminController : BaseController
         var definitions = PermissionCatalog.All
             .Where(x =>
                 !string.Equals(x.Code, PermissionCodes.CustomersAll, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(x.Code, PermissionCodes.CustomersByBillingCompany, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(x.Code, PermissionCodes.CustomersByBillingCompany, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(x.Code, PermissionCodes.SuppliersAll, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(x.Code, PermissionCodes.SuppliersByBillingCompany, StringComparison.OrdinalIgnoreCase))
             .Select(x => new PermissionMatrixItemViewModel
             {
                 Code = x.Code,
@@ -156,6 +160,20 @@ public class UserAdminController : BaseController
                 Name = issuer.Name,
                 ParentCode = PermissionCodes.Customers,
                 SortOrder = 3000 + issuer.Id
+            });
+            definitions.Add(new PermissionMatrixItemViewModel
+            {
+                Code = $"{SupplierCompanyPermissionPrefix}{issuer.Id}",
+                Name = issuer.Name,
+                ParentCode = PermissionCodes.Suppliers,
+                SortOrder = 4000 + issuer.Id
+            });
+            definitions.Add(new PermissionMatrixItemViewModel
+            {
+                Code = $"{InvoicingCompanyPermissionPrefix}{issuer.Id}",
+                Name = issuer.Name,
+                ParentCode = PermissionCodes.InvoicingByBillingCompany,
+                SortOrder = 5000 + issuer.Id
             });
         }
 
@@ -817,10 +835,32 @@ public class UserAdminController : BaseController
         if (exists)
             return;
 
-        if (!permissionCode.StartsWith(CustomerCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+        string? prefix = null;
+        string? parentCode = null;
+        int sortOffset = 0;
+        if (permissionCode.StartsWith(CustomerCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            prefix = CustomerCompanyPermissionPrefix;
+            parentCode = PermissionCodes.Customers;
+            sortOffset = 3000;
+        }
+        else if (permissionCode.StartsWith(SupplierCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            prefix = SupplierCompanyPermissionPrefix;
+            parentCode = PermissionCodes.Suppliers;
+            sortOffset = 4000;
+        }
+        else if (permissionCode.StartsWith(InvoicingCompanyPermissionPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            prefix = InvoicingCompanyPermissionPrefix;
+            parentCode = PermissionCodes.InvoicingByBillingCompany;
+            sortOffset = 5000;
+        }
+
+        if (prefix == null || parentCode == null)
             return;
 
-        var suffix = permissionCode[CustomerCompanyPermissionPrefix.Length..];
+        var suffix = permissionCode[prefix.Length..];
         if (!int.TryParse(suffix, out var issuerId))
             return;
 
@@ -835,13 +875,14 @@ public class UserAdminController : BaseController
         {
             Code = permissionCode,
             Name = issuer.Name,
-            ParentCode = PermissionCodes.Customers,
-            SortOrder = 3000 + issuerId,
+            ParentCode = parentCode,
+            SortOrder = sortOffset + issuerId,
             IsActive = true
         });
 
         await _db.SaveChangesAsync();
     }
+
 
 
 }

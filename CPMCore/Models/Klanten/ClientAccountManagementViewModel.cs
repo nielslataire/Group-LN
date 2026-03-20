@@ -11,6 +11,7 @@ public class ClientIndexViewModel
     public IReadOnlyList<IssuerCompanyOptionViewModel> IssuerCompanies { get; init; } = new List<IssuerCompanyOptionViewModel>();
     public int? SelectedIssuerCompanyId { get; init; }
     public bool CanCreateClient { get; init; }
+    public IReadOnlyList<int> WritableIssuerCompanyIds { get; init; } = new List<int>();
 }
 
 public class ClientListItemViewModel

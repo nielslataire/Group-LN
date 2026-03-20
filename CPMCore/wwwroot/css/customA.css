@@ -1,0 +1,362 @@
+/* Add here all your CSS customizations */
+
+.card {
+    height: 100%;
+}
+.card-body{
+    display : flex;
+    height: 100%;
+    flex-direction : column;
+}
+.card-text {
+    flex-grow: 1;
+}
+
+.table.dataTable tbody td {
+    padding-top: 0.8rem;
+    padding-bottom: 0.8rem;
+}
+
+.table th.datatable-actions,
+.table td.datatable-actions {
+    text-align: end;
+    white-space: nowrap;
+}
+
+    .table td.datatable-actions a,
+    .table td.datatable-actions button,
+    .table td.datatable-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        box-shadow: none;
+    }
+
+        .table td.datatable-actions a + a,
+        .table td.datatable-actions a + button,
+        .table td.datatable-actions button + a,
+        .table td.datatable-actions button + button {
+            margin-left: 0.5rem;
+        }
+
+    .table td.datatable-actions i {
+        font-size: 1.25rem !important;
+        color: inherit !important;
+        font-weight: 400;
+    }
+
+    .table td.datatable-actions .text-primary,
+    .table td.datatable-actions .text-secondary,
+    .table td.datatable-actions .text-success,
+    .table td.datatable-actions .text-info,
+    .table td.datatable-actions .text-warning,
+    .table td.datatable-actions .text-danger,
+    .table td.datatable-actions .text-dark,
+    .table td.datatable-actions .text-muted,
+    .table td.datatable-actions .text-light {
+        color: inherit !important;
+    }
+
+
+/*kleurenpallet*/
+:root {
+    /* Jouw bestaande groen */
+    --primary: #0a5a3b;
+    --bs-primary: var(--primary);
+    --secondary: #7A8450; /* mosgroen */
+    --info: #8A7967; /* taupe / grijsbruin */
+    /* Donker neutraal */
+    --dark: #222222;
+    /* Licht neutraal */
+    --light: #F9F9F9;
+    --custom-accent: #8B6B4A;
+}
+
+/*Badges*/
+.badge.bg-primary {
+    background-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--secondary) !important;
+    color: #fff !important;
+}
+
+.badge.bg-info {
+    background-color: var(--info) !important;
+    color: #fff !important;
+}
+
+.badge.bg-success {
+    background-color: var(--success) !important;
+    color: #fff !important;
+}
+
+.badge.bg-warning {
+    background-color: var(--warning) !important;
+    color: #000 !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger) !important;
+    color: #fff !important;
+}
+
+.badge.bg-dark {
+    background-color: var(--dark) !important;
+    color: #fff !important;
+}
+
+.badge.bg-light {
+    background-color: var(--light) !important;
+    color: #000 !important;
+}
+.badge.bg-accent {
+    background-color: var(--custom-accent) !important;
+    color: #fff !important;
+}
+
+
+
+
+
+.form-control.form-control-modern + .select2-container--bootstrap .select2-selection--single,
+.form-control.form-control-modern + .select2-container--bootstrap .select2-selection--multiple {
+    height: 46px !important;
+    line-height: 2.3 !important; /* aanpassen zodat tekst netjes gecentreerd is */
+    padding: 6px 17px !important;
+}
+
+
+/* Primary button hover should match submenu background */
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.show > .btn-primary.dropdown-toggle {
+    background-color: #0f4b40 !important;
+    border-color: #0f4b40 !important;
+}
+
+
+/* DOCS */
+.doc-thumb-column {
+    padding-left: 8px;
+}
+
+.doc-thumb-link {
+    position: relative;
+    display: inline-block;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #dce3e7;
+}
+
+.doc-thumb-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    transition: transform .2s ease;
+}
+
+.doc-thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(27, 183, 136, 0.45);
+    color: #fff;
+    font-size: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+.doc-thumb-link:hover .doc-thumb-image {
+    transform: scale(1.03);
+}
+
+.doc-thumb-link:hover .doc-thumb-overlay {
+    opacity: 1;
+}
+
+/* Button outline */
+
+.btn-outline-primary {
+    color: #0a5a3b;
+    border-color: #0a5a3b;
+}
+
+    .btn-outline-primary:hover {
+        color: #fff;
+        background-color: #0a5a3b;
+        border-color: #0a5a3b;
+    }
+
+    .btn-outline-primary:focus,
+    .btn-outline-primary.focus {
+        box-shadow: 0 0 0 0.2rem rgba(10, 90, 59, 0.25);
+    }
+
+    .btn-outline-primary.disabled,
+    .btn-outline-primary:disabled {
+        color: #0a5a3b;
+        background-color: transparent;
+    }
+
+    .btn-outline-primary:not(:disabled):not(.disabled):active,
+    .btn-outline-primary:not(:disabled):not(.disabled).active {
+        color: #fff;
+        background-color: #0a5a3b;
+        border-color: #0a5a3b;
+    }
+
+
+    /*Issuetable*/
+
+.issue-card .card-body {
+    padding: 1.5rem;
+}
+
+.issues-filter-form {
+    margin-bottom: 1.5rem;
+}
+
+    .issues-filter-form .form-label {
+        margin-bottom: 0.45rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #5f6b7a;
+    }
+
+    .issues-filter-form .input-group-text {
+        background: #fff;
+        border-color: #d7dee7;
+        color: #6b7280;
+        min-height: 45px;
+    }
+
+    .issues-filter-form .form-control,
+    .issues-filter-form .select2-selection--single {
+        min-height: 45px;
+    }
+
+.issue-table-block {
+    display: block;
+}
+
+.issue-table-wrapper {
+    border: 1px solid #d9e2ea;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.issue-table {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+    .issue-table thead th {
+        background: #f8f9fb;
+        color: #5f6b7a;
+        font-weight: 600;
+        font-size: 14px;
+        padding: 14px 18px;
+        border-top: 0 !important;
+        border-bottom: 1px solid #d9e2ea;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .issue-table tbody td {
+        padding: 16px 18px;
+        border-top: 1px solid #eef2f5;
+        vertical-align: middle;
+        background: #fff;
+    }
+
+    .issue-table tbody tr:first-child td {
+        border-top: 0;
+    }
+
+    .issue-table tbody tr:hover td {
+        background: #fcfcfd;
+    }
+
+    .issue-table .col-check {
+        width: 46px;
+        min-width: 46px;
+        text-align: center;
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .issue-table .actions {
+        white-space: nowrap;
+    }
+
+        .issue-table .actions a {
+            color: #5f6b7a;
+            text-decoration: none;
+        }
+
+            .issue-table .actions a:hover {
+                color: #0a5a3b;
+            }
+
+.issue-table-footer {
+    padding-top: 0.9rem;
+}
+
+    .issue-table-footer .dataTables_info {
+        margin: 0;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .issue-table-footer .dataTables_paginate {
+        margin: 0;
+    }
+
+    .issue-table-footer .pagination {
+        margin-bottom: 0;
+        gap: 0.25rem;
+    }
+
+    .issue-table-footer .page-item .page-link {
+        border-radius: 6px;
+        border-color: #d9e2ea;
+        color: #4b5563;
+        min-width: 36px;
+        text-align: center;
+    }
+
+    .issue-table-footer .page-item.active .page-link {
+        background-color: #0a5a3b;
+        border-color: #0a5a3b;
+        color: #fff;
+    }
+
+    .issue-table-footer .page-item.disabled .page-link {
+        color: #adb5bd;
+    }
+
+#datatable-issues_wrapper > .row:first-child {
+    margin-bottom: 0;
+}
+
+#datatable-issues_wrapper > .row:last-child {
+    display: none;
+}
+
+/* Boxicons compatibility aliases */
+.bx-arrow-out-up-square-half:before {
+    content: "\eb3e"; /* alias naar bx-link-external in lokale boxicons versie */
+}

@@ -13,6 +13,8 @@
         .OrderByDescending(y => y)
         .ToList();
     var defaultBookYear = ViewBag.DefaultBookyearLabel as string ?? bookYears.FirstOrDefault();
+    var canWriteInvoices = ViewBag.CanWriteInvoices as bool? ?? false;
+    var canDeleteInvoices = ViewBag.CanDeleteInvoices as bool? ?? false;
 }
 @functions {
     (string Icon, string Color) StatusIcon(InvoiceStatus status) => status switch
@@ -124,11 +126,16 @@
         </div>
         <div class="col-sm-auto px-0">
         <div class="btn-group" role="group" aria-label="Project acties">
-            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+            @if (canWriteInvoices)
+            {
+                <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
+            }
             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-            <button type="submit" class="btn btn-primary btn-md px-3 me-1" id="btnBookInvoices" form="invoice-book-form" disabled>Boeken facturen</button>
-
-            <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
+            @if (canWriteInvoices)
+            {
+                <button type="submit" class="btn btn-primary btn-md px-3 me-1" id="btnBookInvoices" form="invoice-book-form" disabled>Boeken facturen</button>
+                <a href="@Url.Action("Create", "Invoices", new { issuerId = ViewBag.CompanyId })" class="btn btn-primary btn-md">+ Nieuwe Factuur</a>
+            }
             </div>
         </div>
     </div>
@@ -165,10 +172,7 @@
     <div class="card card-modern">
         <div class="card-body">
             <div class="datatables-header-footer-wrapper  mt-2">
-                        @{
-                            var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
-                            var isAdminUser = User.IsInRole("Admin") || User.IsInRole("Administrator");
-                        }
+
                 <form asp-action="BookInvoices" method="post" id="invoice-book-form" class="js-invoice-processing-form" data-processing-message="Facturen worden geboekt...">
                     <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
             <div class="table-responsive-md">
@@ -213,7 +217,8 @@
                                                        data-seq="@r.OctopusDocumentSequenceNr"
                                                        data-booked="@(isBooked.ToString().ToLowerInvariant())"
                                                        data-bookable="@(isBookable.ToString().ToLowerInvariant())"
-                                                       @(isBooked ? "checked disabled" : isBookable ? null : "disabled") />
+                                                       @((!canWriteInvoices || !isBookable) ? "disabled" : null)
+                                                       @(isBooked ? "checked" : null) />
                                                 <label for="checkboxExample1"></label>
                                             </div>
                                            
@@ -255,70 +260,114 @@
 
                             <td class="col-fit text-nowrap">@r.SendMethod</td>
 
-                            <td class="col-fit text-end actions text-nowrap">
-                                                         <a data-placement="top" title="Dupliceren" data-original-title="Dupliceren"
-                                                           asp-action="Create"
-                                                           asp-route-issuerId="@ViewBag.CompanyId"
-                                                           asp-route-duplicateInvoiceId="@r.Id"
-                                                           class="ms-1 me-1">
-                                                            <i class="bx bx-copy fs-5"></i>
-                                                            <span class="visually-hidden">Dupliceren</span>
-                                                        </a>
-                                                    @if (StatusIn(r.Status, InvoiceStatus.Draft))
-                                                    {
-                                                        <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
-                                                           asp-action="Edit"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-returnUrl="@returnUrl"
-                                                           class="ms-1 me-1">
-                                                            <i class="bx bx-pencil fs-5"></i>
-                                                            <span class="visually-hidden">Bewerken</span>
-                                                        </a>
-                                                            <a data-placement="top" title="Details" data-original-title="Details"
-                                                               asp-action="Detail"
-                                                               asp-route-id="@r.Id"
-                                                               asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                               class="ms-1 me-1">
-                                                                <i class="bx bx-show fs-5"></i>
-                                                                <span class="visually-hidden">Details</span>
-                                                            </a>
-                                                        <a data-placement="top" title="Nummeren" data-original-title="Nummeren"
-                                                           asp-action="Issue"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                           class="ms-1 me-1 js-issue-invoice"
-                                                           data-processing-message="Factuur wordt genummerd...">
-                                                            <i class="bx bx-lock fs-5"> </i>
-                                                            <span class="visually-hidden">Nummeren</span>
-                                                        </a>
-                                                        @* <form asp-action="Issue"
-                                                              asp-controller="Invoices"
-                                                              method="post"
-                                                              class="d-inline">
-                                                            <input type="hidden" name="id" value="@r.Id" />
-                                                            <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
-                                                            <button type="submit" class="btn btn-xs btn-success me-1" title="Definitief maken">
-                                                                <i class="bx bx-lock fs-5"></i>
-                                                                <span class="visually-hidden">Definitief</span>
-                                                            </button>
-                                                        </form> *@
-                                                        <a href="#ModalDeleteInvoice"
-                                                           class="deleteInvoice ms-1 me-1"
-                                                           data-id="@r.Id"
-                                                           data-issuer="@ViewBag.CompanyId"
-                                                           data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                            <i class="bx bx-trash fs-5"></i>
-                                                        </a>
-                                                    }
-                                                    else if (StatusIn(r.Status, InvoiceStatus.Generating))
-                                                    {
-                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                                           asp-action="Detail"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                            <i class="bx bx-show fs-5"></i>
-                                                        </a>
-                                                @if (canManageInvoices)
+                                        <td class="col-fit text-end actions text-nowrap">
+                                            @if (canWriteInvoices)
+                                            {
+                                                <a data-placement="top" title="Dupliceren" data-original-title="Dupliceren"
+                                                   asp-action="Create"
+                                                   asp-route-issuerId="@ViewBag.CompanyId"
+                                                   asp-route-duplicateInvoiceId="@r.Id"
+                                                   class="ms-1 me-1">
+                                                    <i class="bx bx-copy fs-5"></i>
+                                                    <span class="visually-hidden">Dupliceren</span>
+                                                </a>
+                                            }
+
+                                            @if (StatusIn(r.Status, InvoiceStatus.Draft))
+                                            {
+                                                @if (canWriteInvoices)
+                                                {
+                                                    <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
+                                                       asp-action="Edit"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-returnUrl="@returnUrl"
+                                                       class="ms-1 me-1">
+                                                        <i class="bx bx-pencil fs-5"></i>
+                                                        <span class="visually-hidden">Bewerken</span>
+                                                    </a>
+                                                }
+                                                <a data-placement="top" title="Details" data-original-title="Details"
+                                                   asp-action="Detail"
+                                                   asp-route-id="@r.Id"
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                   class="ms-1 me-1">
+                                                    <i class="bx bx-show fs-5"></i>
+                                                    <span class="visually-hidden">Details</span>
+                                                </a>
+                                                <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                                   asp-action="Pdf"
+                                                   asp-route-id="@r.Id"
+                                                   target="_blank" class="ms-1 me-1">
+                                                    <i class="fa-regular fa-file-pdf fs-5"></i>
+                                                </a>
+                                                @if (r.ShowPrintButton)
+                                                {
+                                                    <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                                       asp-action="Pdf"
+                                                       asp-route-id="@r.Id"
+                                                       target="_blank" class="ms-1 me-1">
+                                                        <i class="bx bx-printer fs-5"></i>
+                                                    </a>
+                                                }
+                                                @if (canWriteInvoices)
+                                                {
+                                                    <a data-placement="top" title="Nummeren" data-original-title="Nummeren"
+                                                       asp-action="Issue"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                       class="ms-1 me-1 js-issue-invoice"
+                                                       data-processing-message="Factuur wordt genummerd...">
+                                                        <i class="bx bx-lock fs-5"></i>
+                                                        <span class="visually-hidden">Nummeren</span>
+                                                    </a>
+                                                }
+                                                @if (canDeleteInvoices)
+                                                {
+                                                    <a href="#ModalDeleteInvoice"
+                                                       class="deleteInvoice ms-1 me-1"
+                                                       data-id="@r.Id"
+                                                       data-issuer="@ViewBag.CompanyId"
+                                                       data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                        <i class="bx bx-trash fs-5"></i>
+                                                    </a>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <a data-placement="top" title="Details" data-original-title="Details"
+                                                   asp-action="Detail"
+                                                   asp-route-id="@r.Id"
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                    <i class="bx bx-show fs-5"></i>
+                                                </a>
+                                                <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
+                                                   asp-action="Pdf"
+                                                   asp-route-id="@r.Id"
+                                                   target="_blank" class="ms-1 me-1">
+                                                    <i class="fa-regular fa-file-pdf fs-5"></i>
+                                                </a>
+                                                @if (r.ShowPrintButton)
+                                                {
+                                                    <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
+                                                       asp-action="Pdf"
+                                                       asp-route-id="@r.Id"
+                                                       target="_blank" class="ms-1 me-1">
+                                                        <i class="bx bx-printer fs-5"></i>
+                                                    </a>
+                                                }
+                                                @if (canWriteInvoices && StatusIn(r.Status, InvoiceStatus.Issued))
+                                                {
+                                                    <a data-placement="top" title="Beperkt bewerken" data-original-title="Bewerken"
+                                                       asp-action="Edit"
+                                                       asp-route-id="@r.Id"
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId"
+                                                       asp-route-returnUrl="@returnUrl"
+                                                       class="ms-1 me-1">
+                                                        <i class="bx bx-pencil fs-5"></i>
+                                                        <span class="visually-hidden">Bewerken</span>
+                                                    </a>
+                                                }
+                                                @if (canWriteInvoices && !StatusIn(r.Status, InvoiceStatus.Generating))
                                                 {
                                                     <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
                                                        asp-action="Send"
@@ -327,148 +376,19 @@
                                                         <i class="bx bx-send fs-5"></i>
                                                     </a>
                                                 }
-                                                    }
-                                                    else if (StatusIn(r.Status, InvoiceStatus.Issued))
-                                                    {
-                                                        @if (isAdminUser)
-                                                        {
-                                                            <a data-placement="top" title="Beperkt bewerken" data-original-title="Bewerken"
-                                                               asp-action="Edit"
-                                                               asp-route-id="@r.Id"
-                                                               asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                               asp-route-returnUrl="@returnUrl"
-                                                               class="ms-1 me-1">
-                                                                <i class="bx bx-pencil fs-5"></i>
-                                                                <span class="visually-hidden">Bewerken</span>
-                                                            </a>
-                                                        }
-                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                                           asp-action="Detail"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                            <i class="bx bx-show fs-5"></i>
-                                                        </a>
-                                                        <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
-                                                           asp-action="Pdf"
-                                                           asp-route-id="@r.Id"
-                                                           target="_blank" class="ms-1 me-1">
-                                                            <i class="fa-regular fa-file-pdf  fs-5"></i>
-                                                        </a>
-                                                        @if (r.ShowPrintButton)
-                                                        {
-                                                            <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
-                                                               asp-action="Pdf"
-                                                               asp-route-id="@r.Id"
-                                                               target="_blank" class="ms-1 me-1">
-                                                                <i class="bx bx-printer fs-5"></i>
-                                                            </a>
-                                                        }
-                                                        @if (canManageInvoices)
-                                                        {
-                                                            <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
-                                                               asp-action="Send"
-                                                               asp-route-id="@r.Id"
-                                                               asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                                <i class="bx bx-send fs-5"></i>
-                                                            </a>
-                                                        }
-                                                        @if (isAdminUser)
-                                                        {
-                                                            <a href="#ModalDeleteInvoice"
-                                                               class="deleteInvoice ms-1 me-1"
-                                                               data-id="@r.Id"
-                                                               data-issuer="@ViewBag.CompanyId"
-                                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                                <i class="bx bx-trash fs-5"></i>
-                                                            </a>
-                                                        }
-                                                    }
-                                                    else if (StatusIn(r.Status, InvoiceStatus.Sent, InvoiceStatus.Paid, InvoiceStatus.Booked))
-                                                    {
-                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                                           asp-action="Detail"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                            <i class="bx bx-show fs-5"></i>
-                                                        </a>
-                                                        <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
-                                                           asp-action="Pdf"
-                                                           asp-route-id="@r.Id"
-                                                           target="_blank" class="ms-1 me-1">
-                                                            <i class="fa-regular fa-file-pdf  fs-5"></i>
-                                                        </a>
-                                                        @if (r.ShowPrintButton)
-                                                        {
-                                                            <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
-                                                               asp-action="Pdf"
-                                                               asp-route-id="@r.Id"
-                                                               target="_blank" class="ms-1 me-1">
-                                                                <i class="bx bx-printer fs-5"></i>
-                                                            </a>
-                                                        }
-                                                @if (canManageInvoices)
+                                                @if (canDeleteInvoices)
                                                 {
-                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
-                                                       asp-action="Send"
-                                                       asp-route-id="@r.Id"
-                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                        <i class="bx bx-send fs-5"></i>
+                                                    <a href="#ModalDeleteInvoice"
+                                                       class="deleteInvoice ms-1 me-1"
+                                                       data-id="@r.Id"
+                                                       data-issuer="@ViewBag.CompanyId"
+                                                       data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
+                                                        <i class="bx bx-trash fs-5"></i>
                                                     </a>
                                                 }
-                                                        @if (isAdminUser)
-                                                        {
-                                                            <a href="#ModalDeleteInvoice"
-                                                               class="deleteInvoice ms-1 me-1"
-                                                               data-id="@r.Id"
-                                                               data-issuer="@ViewBag.CompanyId"
-                                                               data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
-                                                                <i class="bx bx-trash fs-5"></i>
-                                                            </a>
-                                                        }
-                                                    }
-                                                    else if (StatusIn(r.Status, InvoiceStatus.Paid))
-                                                    {
-                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                                           asp-action="Detail"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                            <i class="bx bx-show fs-5"> </i>
-                                                        </a>
-                                                        <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
-                                                           asp-action="Pdf"
-                                                           asp-route-id="@r.Id"
-                                                           target="_blank" class="ms-1 me-1">
-                                                            <i class="fa-regular fa-file-pdf  fs-5"></i>
-                                                        </a>
-                                                @if (canManageInvoices)
-                                                {
-                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
-                                                       asp-action="Send"
-                                                       asp-route-id="@r.Id"
-                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                        <i class="bx bx-send fs-5"></i>
-                                                    </a>
-                                                }
-                                                    }
-                                                    else
-                                                    {
-                                                        <a data-placement="top" title="Bekijken" data-original-title="Bekijken"
-                                                           asp-action="Detail"
-                                                           asp-route-id="@r.Id"
-                                                           asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                            <i class="bx bx-show fs-5"></i>
-                                                        </a>
-                                                @if (canManageInvoices)
-                                                {
-                                                    <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
-                                                       asp-action="Send"
-                                                       asp-route-id="@r.Id"
-                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                        <i class="bx bx-send fs-5"></i>
-                                                    </a>
-                                                }
-                                                    }
-                                               </td>
+                                            }
+                                        </td>
+
                                     <td class="d-none">@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())</td>
                                         </tr>
                                     }
