@@ -12,7 +12,6 @@ using DALCore;
 using FacadeCore;
 using ServiceCore;
 using CPMCore.Models;
-using CPMCore.Service;
 
 namespace CPMCore.Controllers
 {
@@ -22,37 +21,38 @@ namespace CPMCore.Controllers
         private readonly IRazorViewEngine _razorViewEngine;
         private readonly IWebHostEnvironment _webHostEnvironment;
         private readonly ITempDataProvider _tempDataProvider;
+        private readonly IProjectService _projectService;
+        private readonly IActivityService _activityService;
 
-        // Constructor om de converter service te injecteren
         public PdfController(IConverter converter,
                         IRazorViewEngine razorViewEngine,
                         IWebHostEnvironment webHostEnvironment,
-                        ITempDataProvider tempDataProvider)
+                        ITempDataProvider tempDataProvider,
+                        IProjectService projectService,
+                        IActivityService activityService)
         {
             _converter = converter;
             _razorViewEngine = razorViewEngine;
             _webHostEnvironment = webHostEnvironment;
             _tempDataProvider = tempDataProvider;
+            _projectService = projectService;
+            _activityService = activityService;
         }
 
         public IActionResult PrintRecalculation(int projectid, int details)
         {
-            // Je view model invullen
             ProjectContractsModel viewmodel = new ProjectContractsModel();
 
-            var pservice = ServiceFactory.GetProjectService();
-            var aservice = ServiceFactory.GetActivityService();
             ViewBag.detail = details;
             viewmodel.ProjectId = projectid;
-            viewmodel.ProjectName = pservice.GetProjectNameById(projectid);
-            // Get Units
-            var response = aservice.GetActivityGroups();
+            viewmodel.ProjectName = _projectService.GetProjectNameById(projectid);
+            var response = _activityService.GetActivityGroups();
             viewmodel.ActivityGroups = response.Values;
-            var response2 = pservice.GetProjectContracts(projectid);
+            var response2 = _projectService.GetProjectContracts(projectid);
             viewmodel.Contracts = response2.Values;
-            var response3 = pservice.GetProjectBudget(projectid);
+            var response3 = _projectService.GetProjectBudget(projectid);
             viewmodel.BudgetActivities = response3.Values;
-            var response4 = pservice.GetProjectIncommingInvoicesForRecalculation(projectid);
+            var response4 = _projectService.GetProjectIncommingInvoicesForRecalculation(projectid);
             viewmodel.IncommingInvoicesActivities = response4.Values;
 
             // Render de view naar HTML

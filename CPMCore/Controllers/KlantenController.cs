@@ -4,7 +4,7 @@ using CPMCore.Models;
 using CPMCore.Models.Instellingen;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Projecten;
-using CPMCore.Service;
+using FacadeCore;
 using CPMCore.Services.Octopus;
 using CPMCore.Services.Security;
 using DALCore.Models;
@@ -53,18 +53,32 @@ namespace CPMCore.Controllers
         };
         private readonly ILogger<HomeController> _logger;
         private readonly IConfiguration Configuration;
-        private readonly cpmRunningContext _db;
+        private readonly cpmRunningContext _db; // TODO: vervangen door service methoden
         private readonly IOctopusApiClient _octopusClient;
         private readonly IOctopusTokenManager _octopusTokens;
+        private readonly IClientService _clientService;
+        private readonly IUnitService _unitService;
+        private readonly IProjectService _projectService;
+        private readonly ICountryService _countryService;
+        private readonly IActivityService _activityService;
+        private readonly IContactService _contactService;
+        private readonly DALCore.UnitOfWorkCore _uow;
         private const string CustomerCompanyPermissionPrefix = "Customers.Company.";
 
-        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
+        public KlantenController(ILogger<HomeController> logger, IConfiguration configuration, cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IClientService clientService, IUnitService unitService, IProjectService projectService, ICountryService countryService, IActivityService activityService, IContactService contactService, DALCore.UnitOfWorkCore uow)
         {
             _logger = logger;
             Configuration = configuration;
             _db = db;
             _octopusClient = octopusClient;
             _octopusTokens = octopusTokens;
+            _clientService = clientService;
+            _unitService = unitService;
+            _projectService = projectService;
+            _countryService = countryService;
+            _activityService = activityService;
+            _contactService = contactService;
+            _uow = uow;
         }
 
         [HttpGet]
@@ -567,9 +581,9 @@ namespace CPMCore.Controllers
         {
             var referrer = Request.Headers["Referer"].ToString();
             var model = new ClientModel();
-            var clientService = ServiceFactory.GetClientService();
-            var unitService = ServiceFactory.GetUnitService();
-            var projectService = ServiceFactory.GetProjectService();
+            var clientService = _clientService;
+            var unitService = _unitService;
+            var projectService = _projectService;
 
             // 1. Get Client
             var clientResponse = clientService.GetClientAccountById(clientId);
@@ -681,7 +695,7 @@ namespace CPMCore.Controllers
             // Use the referrer URL as needed
             TempData["Referrer"] = referrer;
             AddClientAccountModel model = new AddClientAccountModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             model.ProjectName = service.GetProjectNameById(id);
             model.ProjectId = id;
             model.ClientAccount.OwnerPercentage = 100;
@@ -723,8 +737,8 @@ namespace CPMCore.Controllers
             //model.ClientAccount.CoOwners = model.ClientAccount.CoOwners?.Any() == true ? model.ClientAccount.CoOwners : coowners;
             model.ClientAccount.Contacts = model.ClientAccount.Contacts?.Any() == true ? model.ClientAccount.Contacts : contacts;
 
-            var clientService = ServiceFactory.GetClientService();
-            var unitService = ServiceFactory.GetUnitService();
+            var clientService = _clientService;
+            var unitService = _unitService;
 
             // 1. Voeg klantenaccount toe
             var response = clientService.InsertUpdate(model.ClientAccount);
@@ -858,7 +872,7 @@ namespace CPMCore.Controllers
             if (Cellphone != null)
                 nCoOwner.Cellphone = Regex.Replace(Cellphone, "[^0-9]", "");
             nCoOwner.Email = Email;
-            var sservice = ServiceFactory.GetClientService();
+            var sservice = _clientService;
             var sresponse = sservice.GetClientOwnerTypeById(OwnerType);
             nCoOwner.CoOwnerType = sresponse.Value;
             var nlCulture = CultureInfo.GetCultureInfo("nl-BE");
@@ -868,9 +882,9 @@ namespace CPMCore.Controllers
             }
 
             nCoOwner.CoOwnerPercentage = parsedPercentage;
-            var countryService = ServiceFactory.GetCountryService();
+            var countryService = _countryService;
             var countryResponse = countryService.GetVisibleCountriesForSelect();
-            var ownerTypeService = ServiceFactory.GetClientService();
+            var ownerTypeService = _clientService;
             var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
 
             ViewData["Countries"] = countryResponse.Success
@@ -886,7 +900,7 @@ namespace CPMCore.Controllers
 
         private void FillInAddSelectLists(ref AddClientAccountModel model)
         {
-            var cservice = ServiceFactory.GetCountryService();
+            var cservice = _countryService;
             var cresponse = cservice.GetVisibleCountriesForSelect();
             if ((cresponse.Success))
                 model.Countries = cresponse.Values;
@@ -902,11 +916,11 @@ namespace CPMCore.Controllers
                 if (model.SelectedCoOwnerInvoiceCountry == 0)
                     model.SelectedCoOwnerInvoiceCountry = defCountry.ID;
             }
-            var oservice = ServiceFactory.GetClientService();
+            var oservice = _clientService;
             var oresponse = oservice.GetOwnerTypesForSelect();
             if ((oresponse.Success))
                 model.OwnerTypes = oresponse.Values;
-            var uservice = ServiceFactory.GetUnitService();
+            var uservice = _unitService;
             var uresponse = uservice.GetAvailableUnitsByProjectId(model.ProjectId);
             if ((uresponse.Success))
                 model.AvailableUnits = uresponse.Values;
@@ -926,7 +940,7 @@ namespace CPMCore.Controllers
         }
         public PartialViewResult BlankCoOwnerRow(string collectionName = "ClientAccount.CoOwners")
         {
-            var countryService = ServiceFactory.GetCountryService();
+            var countryService = _countryService;
             var countryResponse = countryService.GetVisibleCountriesForSelect();
             // Dummy country (bv. België)
             var country = new CountryBO { CountryId = 19 };
@@ -944,7 +958,7 @@ namespace CPMCore.Controllers
             var countries = countryResponse.Success && countryResponse.Values != null
                 ? countryResponse.Values
                 : Enumerable.Empty<IdNameBO>();
-            var ownerTypeService = ServiceFactory.GetClientService();
+            var ownerTypeService = _clientService;
             var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
             var ownerTypes = ownerTypeResponse.Success && ownerTypeResponse.Values != null
                 ? ownerTypeResponse.Values.Where(o => o.ID != 1)
@@ -966,7 +980,7 @@ namespace CPMCore.Controllers
         }
         public PartialViewResult BlankGiftRow()
         {
-            var Service = ServiceFactory.GetActivityService();
+            var Service = _activityService;
             var gift = new ClientGiftBO();
             var actResponse = Service.GetActivitiesForSelect();
             var activities = actResponse.Values;
@@ -1425,7 +1439,7 @@ namespace CPMCore.Controllers
         }
         public PartialViewResult BlankPoaRow()
         {
-            var Service = ServiceFactory.GetActivityService();
+            var Service = _activityService;
             var poa = new ClientPoaBO();
             var actResponse = Service.GetActivitiesForSelect();
             var activities = actResponse.Values;
@@ -1444,7 +1458,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public PartialViewResult AddSelectedUnits(int unitId, string unitName, string unitGroup)
         {
-            var unitService = ServiceFactory.GetUnitService();
+            var unitService = _unitService;
             var response = unitService.GetUnitById(unitId);
 
             if (!response.Success)
@@ -1478,9 +1492,9 @@ namespace CPMCore.Controllers
 
             if (clientid != 0)
             {
-                var clientService = ServiceFactory.GetClientService();
-                var unitService = ServiceFactory.GetUnitService();
-                var actService = ServiceFactory.GetActivityService();
+                var clientService = _clientService;
+                var unitService = _unitService;
+                var actService = _activityService;
 
                 var clientResponse = clientService.GetClientAccountById(clientid);
                 if (clientResponse.Success && clientResponse.Values.Any())
@@ -1562,16 +1576,8 @@ namespace CPMCore.Controllers
                 return View("EditProject", viewmodel);
             }
 
-            // 1) Één UoW voor alles in deze actie
-            using var uow = ServiceFactory.CreateUoW();
-
-            // 2) Services die DEZELFDE uow delen
-            var clientService = ServiceFactory.CreateClientService(uow);
-            var unitService = ServiceFactory.CreateUnitService(uow);
-            var actService = ServiceFactory.CreateActivityService(uow);
-            var contactService = ServiceFactory.CreateContactService(uow); // voorbeeld
-
-            await using var tx = await uow.BeginTransactionAsync();
+            // Alle geïnjecteerde services delen dezelfde scoped UoW — transactie werkt over alle services
+            await using var tx = await _uow.BeginTransactionAsync();
 
             try
             {
@@ -1592,7 +1598,7 @@ namespace CPMCore.Controllers
 
                 // 3) Eerste bewerking
                 // Clientaccount updaten
-                var r1 = clientService.InsertUpdate(viewmodel.Client);
+                var r1 = _clientService.InsertUpdate(viewmodel.Client);
                 if (!r1.Success)
                 {
                     await tx.RollbackAsync();
@@ -1604,7 +1610,7 @@ namespace CPMCore.Controllers
                 //Eenheden updaten
                 foreach (var unit in viewmodel.Units)
                 {
-                    var r2 = unitService.UpdateLandValueSold(unit);
+                    var r2 = _unitService.UpdateLandValueSold(unit);
                     if (!r2.Success)
                     {
                         await tx.RollbackAsync();
@@ -1614,7 +1620,7 @@ namespace CPMCore.Controllers
                     }
                     foreach (var constructionvalue in unit.ConstructionValues)
                     {
-                        var r3 = unitService.UpdateConstructionValueSold(constructionvalue);
+                        var r3 = _unitService.UpdateConstructionValueSold(constructionvalue);
                         if (!r3.Success)
                         {
                             await tx.RollbackAsync();
@@ -1631,7 +1637,7 @@ namespace CPMCore.Controllers
                     .ToHashSet();
 
                 // 2) Huidige gift-IDs in de database voor deze account
-                var existingIds = uow.Context.Set<ClientGift>()
+                var existingIds = _uow.Context.Set<ClientGift>()
                     .Where(g => g.ClientAccountId == viewmodel.Client.Id)   // let op: klopt de FK? (soms AccountId)
                     .Select(g => g.Id)
                     .ToList();
@@ -1641,7 +1647,7 @@ namespace CPMCore.Controllers
 
                 if (removeIds.Count > 0)
                 {
-                    var r6 = clientService.DeleteClientGift(removeIds);
+                    var r6 = _clientService.DeleteClientGift(removeIds);
                     if (!r6.Success)
                     {
                         await tx.RollbackAsync();
@@ -1655,9 +1661,9 @@ namespace CPMCore.Controllers
                     gift.AccountId = viewmodel.Client.Id;
                     foreach (var i in gift.SelectedActivityIds)
                     {
-                        gift.Activities.Add(actService.GetActivitybyId(i).Value);
+                        gift.Activities.Add(_activityService.GetActivitybyId(i).Value);
                     }
-                    var r4 = clientService.InsertUpdateClientGift(gift);
+                    var r4 = _clientService.InsertUpdateClientGift(gift);
                     if (!r4.Success)
                     {
                         await tx.RollbackAsync();
@@ -1675,7 +1681,7 @@ namespace CPMCore.Controllers
                     .ToHashSet();
 
                 // 2) Huidige poa-IDs in de database voor deze account
-                var existingPoasIds = uow.Context.Set<ClientPoa>()
+                var existingPoasIds = _uow.Context.Set<ClientPoa>()
                     .Where(g => g.ClientAccountId == viewmodel.Client.Id)   // let op: klopt de FK? (soms AccountId)
                     .Select(g => g.Id)
                     .ToList();
@@ -1685,7 +1691,7 @@ namespace CPMCore.Controllers
 
                 if (removePoasIds.Count > 0)
                 {
-                    var r6 = clientService.DeleteClientPoa(removeIds);
+                    var r6 = _clientService.DeleteClientPoa(removeIds);
                     if (!r6.Success)
                     {
                         await tx.RollbackAsync();
@@ -1699,9 +1705,9 @@ namespace CPMCore.Controllers
                     poa.AccountId = viewmodel.Client.Id;
                     foreach (var i in poa.SelectedActivityIds)
                     {
-                        poa.Activities.Add(actService.GetActivitybyId(i).Value);
+                        poa.Activities.Add(_activityService.GetActivitybyId(i).Value);
                     }
-                    var r5 = clientService.InsertUpdateClientPoa(poa);
+                    var r5 = _clientService.InsertUpdateClientPoa(poa);
                     if (!r5.Success)
                     {
                         await tx.RollbackAsync();
@@ -1716,7 +1722,7 @@ namespace CPMCore.Controllers
                 // if (!r2.Success) { await tx.RollbackAsync(); ... return View(viewmodel); }
 
                 // 5) Alles OK? Opslaan + commit
-                await uow.SaveChangesAsync();
+                await _uow.SaveChangesAsync();
                 await tx.CommitAsync();
 
                 AddMessage("success", $"Account {viewmodel.Client.DisplayName} is bijgewerkt", "Geslaagd!");
@@ -1737,7 +1743,7 @@ namespace CPMCore.Controllers
 
         private void FillInAddSelectListsEdit(ref EditClientModel model)
         {
-            var countryService = ServiceFactory.GetCountryService();
+            var countryService = _countryService;
             var countryResponse = countryService.GetVisibleCountriesForSelect();
             if (countryResponse.Success)
             {
@@ -1760,7 +1766,7 @@ namespace CPMCore.Controllers
                 }
             }
 
-            var ownerTypeService = ServiceFactory.GetClientService();
+            var ownerTypeService = _clientService;
             var ownerTypeResponse = ownerTypeService.GetOwnerTypesForSelect();
             if (ownerTypeResponse.Success)
             {
@@ -1776,7 +1782,7 @@ namespace CPMCore.Controllers
             var viewModel = new IdNameBO();
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetClientService();
+                var dservice = _clientService;
                 viewModel.Display = dservice.GetClientAccountNameById(id);
                 viewModel.ID = id;
             }
@@ -1813,9 +1819,9 @@ namespace CPMCore.Controllers
             Idlist.Add(id);
             if (id != 0)
             {
-                var uservice = ServiceFactory.GetUnitService();
+                var uservice = _unitService;
                 var response = uservice.DeleteUnitFromClientAccountByAccountId(Idlist);
-                var dservice = ServiceFactory.GetClientService();
+                var dservice = _clientService;
                 if (response.Success == true)
                 {
                     response = dservice.Delete(Idlist);

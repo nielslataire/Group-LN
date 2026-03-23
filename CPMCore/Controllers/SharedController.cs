@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BOCore;
-using CPMCore.Service;
+using FacadeCore;
 using System.Linq;
 
 
@@ -8,6 +8,17 @@ namespace CPMCore.Controllers
 {
     public class SharedController : Controller
     {
+        private readonly IPostalcodeService _postalcodeService;
+        private readonly ICountryService _countryService;
+        private readonly IUnitService _unitService;
+
+        public SharedController(IPostalcodeService postalcodeService, ICountryService countryService, IUnitService unitService)
+        {
+            _postalcodeService = postalcodeService;
+            _countryService = countryService;
+            _unitService = unitService;
+        }
+
         public IActionResult Index()
         {
             return View();
@@ -15,13 +26,11 @@ namespace CPMCore.Controllers
         [HttpPost]
         public async Task<JsonResult> GetPostcodesByCountry(string term, int CountryId)
         {
-            var pservice = ServiceFactory.GetPostalcodeService();
-            var presponse = await pservice.GetPostalcodeByCountryAndSearchstring(CountryId, term);
+            var presponse = await _postalcodeService.GetPostalcodeByCountryAndSearchstring(CountryId, term);
 
             var postalcodeList = presponse.Success
                 ? presponse.Values.Select(x => new Select2DTO
                 {
-                    // PostcodeId lijkt nullable (je castte eerder). Gebruik veilig GetValueOrDefault()
                     id = x.PostcodeId.GetValueOrDefault(),
                     text = $"{x.Postcode} - {x.Gemeente}"
                 })
@@ -33,8 +42,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public JsonResult GetPostcodeById(int id)
         {
-            var pservice = ServiceFactory.GetPostalcodeService();
-            var presponse = pservice.GetPostalcodeById(id);
+            var presponse = _postalcodeService.GetPostalcodeById(id);
             if(!presponse.Success)
                 return Json(null);
 
@@ -48,8 +56,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public string GetCountryIsoCode(int countryid)
         {
-            var pservice = ServiceFactory.GetCountryService();
-            var presponse = pservice.GetCountryById(countryid);
+            var presponse = _countryService.GetCountryById(countryid);
             CountryBO iPostcode = new CountryBO();
             if ((presponse.Success))
                 iPostcode = presponse.Values.FirstOrDefault();
@@ -58,8 +65,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public JsonResult GetAvailableUnitsByProjectId(int id)
         {
-            var pservice = ServiceFactory.GetUnitService();
-            var presponse = pservice.GetAvailableUnitsByProjectId(id);
+            var presponse = _unitService.GetAvailableUnitsByProjectId(id);
             List<IdNameBO> iList = new List<IdNameBO>();
             if ((presponse.Success))
                 iList = presponse.Values;

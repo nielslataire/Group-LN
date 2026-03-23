@@ -5,7 +5,7 @@ using CPMCore.Models;
 using CPMCore.Models.Invoicing;
 using CPMCore.Models.Klanten;
 using CPMCore.Models.Projecten;
-using CPMCore.Service;
+using FacadeCore;
 using DALCore;
 using DALCore.Models;
 using FacadeCore;
@@ -56,9 +56,18 @@ namespace CPMCore.Controllers
     public class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
-        private readonly cpmRunningContext _db;
+        private readonly cpmRunningContext _db; // TODO: vervangen door service methoden (UnitExecutionPlan, Users, CompanyContacts)
         private readonly IConfiguration Configuration;
         private readonly IWebHostEnvironment _env;
+        private readonly IProjectService _projectService;
+        private readonly IUnitService _unitService;
+        private readonly IClientService _clientService;
+        private readonly ICompanyService _companyService;
+        private readonly IActivityService _activityService;
+        private readonly IInsuranceService _insuranceService;
+        private readonly ICountryService _countryService;
+        private readonly IPostalcodeService _postalcodeService;
+        private readonly DALCore.UnitOfWorkCore _uow;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
         // Content-types die we toelaten
@@ -67,12 +76,21 @@ namespace CPMCore.Controllers
         "image/jpeg", "image/jpg", "image/png", "image/gif"
     };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, DALCore.UnitOfWorkCore uow)
         {
             _logger = logger;
             Configuration = configuration;
             _env = env;
             _db = db;
+            _projectService = projectService;
+            _unitService = unitService;
+            _clientService = clientService;
+            _companyService = companyService;
+            _activityService = activityService;
+            _insuranceService = insuranceService;
+            _countryService = countryService;
+            _postalcodeService = postalcodeService;
+            _uow = uow;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -80,7 +98,7 @@ namespace CPMCore.Controllers
         public IActionResult Index(bool showAll = false)
         {
             var model = new ShowProjectsModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
 
             var response = service.GetProjectsForList();
             if (response.Success && response.Values is not null)
@@ -131,7 +149,7 @@ namespace CPMCore.Controllers
         public IActionResult ProjectsByUserId(string userId)
         {
             var model = new ShowProjectsModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
 
             var response = service.GetProjectsForList(0, 0, userId);
             if (response.Success && response.Values is not null)
@@ -187,7 +205,7 @@ namespace CPMCore.Controllers
                 take = 3;
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
 
             var response = service.GetProjectsForList();
             if (!response.Success || response.Values is null)
@@ -270,7 +288,7 @@ namespace CPMCore.Controllers
             model.Project.Status.Id = model.Project.Status.Id == 0 ? 1 : model.Project.Status.Id;
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdate(model.Project);
 
             if (response.Success)
@@ -297,8 +315,8 @@ namespace CPMCore.Controllers
 
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ShowProjectDetail model = new ShowProjectDetail();
-            var Service = ServiceFactory.GetProjectService();
-            var cservice = ServiceFactory.GetClientService();
+            var Service = _projectService;
+            var cservice = _clientService;
             var response = Service.GetProjectByID(projectid);
             if ((response.Success))
                 model.Project = response.Value;
@@ -367,7 +385,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var service = ServiceFactory.GetProjectService();
+                var service = _projectService;
                 var response = service.GetProjectByID(id);
 
                 if (response.Success && response.Value is not null)
@@ -391,7 +409,7 @@ namespace CPMCore.Controllers
                 return RedirectToAction("Index");
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.Delete(new List<int> { id });
 
             if (response.Success)
@@ -415,7 +433,7 @@ namespace CPMCore.Controllers
                 : referrer;
 
             var model = new EditProjectDetail();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetProjectByID(projectid);
 
             if (!response.Success || response.Value == null)
@@ -457,7 +475,7 @@ namespace CPMCore.Controllers
             model.Project.Status.Id = model.SelectedStatus;
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdate(model.Project);
 
             if (response.Success)
@@ -505,8 +523,8 @@ namespace CPMCore.Controllers
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             DetailClientsModel model = new DetailClientsModel();
-            var service = ServiceFactory.GetClientService();
-            var service2 = ServiceFactory.GetProjectService();
+            var service = _clientService;
+            var service2 = _projectService;
             var response = service.GetClientAccountsByProjectIdWithUnits(projectid);
             if ((response.Success))
                 model.ClientAccounts = response.Values;
@@ -570,7 +588,7 @@ namespace CPMCore.Controllers
         public ActionResult DetailContacts(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var model = new DetailContactsModel
             {
                 ProjectId = projectid,
@@ -610,7 +628,7 @@ namespace CPMCore.Controllers
         public ActionResult ContactDetails(int projectid, string email, string fullname, string phone)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetProjectContactRequests(projectid);
             var contacts = response.Success ? response.Values : new List<ContactRequestBO>();
 
@@ -672,7 +690,7 @@ namespace CPMCore.Controllers
         public ActionResult AddContact(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var projectName = service.GetProjectNameById(projectid);
 
             var model = new ContactAddModel
@@ -730,7 +748,7 @@ namespace CPMCore.Controllers
                 Origin = User?.Identity?.Name ?? "Onbekende gebruiker"
             };
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertProjectContactRequest(request);
             AddMessage(response.Success ? "success" : "error", response.Success ? "Contact toegevoegd" : "Contact niet toegevoegd", response.Success ? "Geslaagd!" : "Fout!");
 
@@ -741,7 +759,7 @@ namespace CPMCore.Controllers
         public ActionResult EditContact(int projectid, string email, string fullname, string phone)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetProjectContactRequests(projectid);
             var contacts = response.Success ? response.Values : new List<ContactRequestBO>();
             var groupContacts = FilterContactGroup(contacts, email, fullname, phone);
@@ -773,7 +791,7 @@ namespace CPMCore.Controllers
             if (model == null)
                 return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var updatedValues = new ContactRequestBO
             {
                 Firstname = NormalizeContactName(model.Firstname),
@@ -799,7 +817,7 @@ namespace CPMCore.Controllers
             if (model == null)
                 return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.DeleteContactRequestGroup(model.ProjectId, model.Email, model.Fullname, model.Phone);
             AddMessage(response.Success ? "success" : "error", response.Success ? "Contact verwijderd" : "Contact niet verwijderd", response.Success ? "Geslaagd!" : "Fout!");
 
@@ -831,7 +849,7 @@ namespace CPMCore.Controllers
                 Origin = userName
             };
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertProjectContactRequest(request);
             AddMessage(response.Success ? "success" : "error", response.Success ? "Actie toegevoegd" : "Actie niet toegevoegd", response.Success ? "Geslaagd!" : "Fout!");
 
@@ -863,7 +881,7 @@ namespace CPMCore.Controllers
                 Origin = userName
             };
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertProjectContactRequest(request);
             AddMessage(response.Success ? "success" : "error", response.Success ? "Status bijgewerkt" : "Status niet bijgewerkt", response.Success ? "Geslaagd!" : "Fout!");
 
@@ -1071,8 +1089,8 @@ namespace CPMCore.Controllers
             // Use the referrer URL as needed
             ViewData["Referrer"] = referrer;
             var model = new AddUnitModel();
-            var service = ServiceFactory.GetUnitService();
-            var service2 = ServiceFactory.GetProjectService();
+            var service = _unitService;
+            var service2 = _projectService;
 
             // Get Units for attached unit select
             var u2response = service.GetUnitsByProjectIdForSelectAttachedUnit(projectid);
@@ -1135,8 +1153,8 @@ namespace CPMCore.Controllers
 
             if (Model.AddUnit.AttachedUnitsId == 0)
                 Model.AddUnit.AttachedUnitsId = null;
-            var service = ServiceFactory.GetUnitService();
-            var service2 = ServiceFactory.GetProjectService();
+            var service = _unitService;
+            var service2 = _projectService;
             var response = service.InsertUpdateUnit(Model.AddUnit);
             if (response.Success == true)
             {
@@ -1178,8 +1196,8 @@ namespace CPMCore.Controllers
             // Use the referrer URL as needed
             TempData["Referrer"] = referrer;
             EditUnitModel model = new EditUnitModel();
-            var service = ServiceFactory.GetUnitService();
-            var service2 = ServiceFactory.GetProjectService();
+            var service = _unitService;
+            var service2 = _projectService;
 
             // Get Unit
             var response = service.GetUnitById(unitid);
@@ -1322,8 +1340,8 @@ namespace CPMCore.Controllers
                     }
                     Model.Unit.Name = "KOPPELING";
                 }
-                var service = ServiceFactory.GetUnitService();
-                var service2 = ServiceFactory.GetProjectService();
+                var service = _unitService;
+                var service2 = _projectService;
                 try
                 {
                     var response = service.InsertUpdateUnit(Model.Unit);
@@ -1446,8 +1464,8 @@ namespace CPMCore.Controllers
         public DetailUnitsModel FillDetailUnitModel(int id)
         {
             var model = new DetailUnitsModel();
-            var service = ServiceFactory.GetUnitService();
-            var service2 = ServiceFactory.GetProjectService();
+            var service = _unitService;
+            var service2 = _projectService;
 
 
 
@@ -1493,7 +1511,7 @@ namespace CPMCore.Controllers
             UnitConstructionValueBO bo = new UnitConstructionValueBO();
             bo.UnitId = unitid;
             bo.PaymentGroupId = 0;
-            var service2 = ServiceFactory.GetProjectService();
+            var service2 = _projectService;
             var responsepaymentgroups = service2.GetProjectPaymentGroupsForSelect(projectid);
             ViewBag.paymentgroups = responsepaymentgroups.Values;
             return PartialView("_ConstructionValueRow", bo);
@@ -1512,7 +1530,7 @@ namespace CPMCore.Controllers
             var viewModel = new UnitBO();
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetUnitService();
+                var dservice = _unitService;
                 viewModel = dservice.GetUnitById(id).Value;
             }
             return PartialView("_ModalDeleteUnit", viewModel);
@@ -1521,7 +1539,7 @@ namespace CPMCore.Controllers
         {
             if (id != 0 && projectid != 0)
             {
-                var service = ServiceFactory.GetUnitService();
+                var service = _unitService;
                 List<int> ids = new List<int>();
                 ids.Add(id);
                 var response = service.DeleteUnit(ids);
@@ -1542,7 +1560,7 @@ namespace CPMCore.Controllers
         public ActionResult ModalAddUnitLink(int id)
         {
             var viewModel = new AddUnitLinkModel();
-            var service = ServiceFactory.GetUnitService();
+            var service = _unitService;
             // Get Unit
             var response = service.GetUnitById(id);
             if ((response.Success))
@@ -1562,7 +1580,7 @@ namespace CPMCore.Controllers
             Response response = new Response();
             if (ModelState.IsValid)
             {
-                var service = ServiceFactory.GetUnitService();
+                var service = _unitService;
                 model.SelectedUnits.Add(model.SelectedUnit.Id);
                 foreach (var i in model.SelectedUnits)
                 {
@@ -1597,7 +1615,7 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new DetailContractsModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetProjectContracts(projectid);
 
             if (response.Success)
@@ -1667,8 +1685,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectContractDetailModel();
-            var projectService = ServiceFactory.GetProjectService();
-            var companyService = ServiceFactory.GetCompanyService();
+            var projectService = _projectService;
+            var companyService = _companyService;
 
             model.ProjectId = projectid;
             model.ProjectName = projectService.GetProjectNameById(projectid);
@@ -1735,8 +1753,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectContractDetailModel();
-            var projectService = ServiceFactory.GetProjectService();
-            var companyService = ServiceFactory.GetCompanyService();
+            var projectService = _projectService;
+            var companyService = _companyService;
 
             model.ProjectId = projectid;
             model.ProjectName = projectService.GetProjectNameById(projectid);
@@ -1789,8 +1807,8 @@ namespace CPMCore.Controllers
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ProjectContractsModel model = new ProjectContractsModel();
-            var service = ServiceFactory.GetProjectService();
-            var aservice = ServiceFactory.GetActivityService();
+            var service = _projectService;
+            var aservice = _activityService;
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
             // Get Units
@@ -1828,8 +1846,8 @@ namespace CPMCore.Controllers
         {
             // 1) Haal het model op zoals je Recalculation-view dat ook doet
             ProjectContractsModel model = new ProjectContractsModel();
-            var service = ServiceFactory.GetProjectService();
-            var aservice = ServiceFactory.GetActivityService();
+            var service = _projectService;
+            var aservice = _activityService;
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
             // Get Units
@@ -1905,8 +1923,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectRecalculationDetailModel();
-            var projectService = ServiceFactory.GetProjectService();
-            var activityService = ServiceFactory.GetActivityService();
+            var projectService = _projectService;
+            var activityService = _activityService;
 
             model.ProjectId = projectId;
             model.ActivityID = activityId;
@@ -1992,7 +2010,7 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             //Fill model
             ProjectAddContractModel model = new ProjectAddContractModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             model.ProjectId = projectid;
 
             if (contractid == 0)
@@ -2009,7 +2027,7 @@ namespace CPMCore.Controllers
             model.ProjectName = service.GetProjectNameById(projectid);
 
             model.Insurance.Startdate = DateOnly.FromDateTime(DateTime.Now);
-            var iservice = ServiceFactory.GetInsuranceService();
+            var iservice = _insuranceService;
             var response = iservice.GetInsuranceCompaniesForSelect();
             if (response.Success)
                 model.InsuranceCompanies = response.Values;
@@ -2071,7 +2089,7 @@ namespace CPMCore.Controllers
                     model.Contract.Activities.Add(contractactivity);
                 }
 
-                var service = ServiceFactory.GetProjectService();
+                var service = _projectService;
                 var response = service.InsertUpdateProjectContract(model.Contract);
                 if (response.Success)
                 {
@@ -2099,7 +2117,7 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             //Fill model
             ProjectAddContractModel model = new ProjectAddContractModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             model.ProjectId = projectid;
 
             if (contractid == 0)
@@ -2114,7 +2132,7 @@ namespace CPMCore.Controllers
                     model.Contract = cresponse.Value;
             }
             model.ProjectName = service.GetProjectNameById(projectid);
-            var pservice = ServiceFactory.GetCompanyService();
+            var pservice = _companyService;
             var presponse = pservice.GetCompanyActivities(model.Contract.Company.ID);
             var activitiesList = new List<IdNameBO>();
 
@@ -2134,7 +2152,7 @@ namespace CPMCore.Controllers
             model.Activities = activitiesList;
             model.Insurance.Startdate = DateOnly.FromDateTime(DateTime.Now);
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
-            var iservice = ServiceFactory.GetInsuranceService();
+            var iservice = _insuranceService;
             var response = iservice.GetInsuranceCompaniesForSelect();
             if (response.Success)
                 model.InsuranceCompanies = response.Values;
@@ -2196,7 +2214,7 @@ namespace CPMCore.Controllers
                     model.Contract.Activities.Add(contractactivity);
                 }
 
-                var service = ServiceFactory.GetProjectService();
+                var service = _projectService;
                 var response = service.InsertUpdateProjectContract(model.Contract);
                 if (response.Success)
                 {
@@ -2219,7 +2237,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetProjectService();
+                var dservice = _projectService;
                 var response = dservice.GetContract(id);
 
                 if (response.Success && response.Values.Any())
@@ -2235,7 +2253,7 @@ namespace CPMCore.Controllers
         {
             if (id != 0 && projectid != 0)
             {
-                var service = ServiceFactory.GetProjectService();
+                var service = _projectService;
                 var ids = new List<int> { id };
                 var response = service.DeleteContracts(ids);
 
@@ -2258,7 +2276,7 @@ namespace CPMCore.Controllers
         {
             List<SelectListItem> items = new List<SelectListItem>();
 
-            var service2 = ServiceFactory.GetUnitService();
+            var service2 = _unitService;
 
             var responselevels = service2.GetUnitTypesByGroupId(id);
             List<IdNameBO> iList = new List<IdNameBO>();
@@ -2278,7 +2296,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public JsonResult GetCompanyActivities(int companyid)
         {
-            var pservice = ServiceFactory.GetCompanyService();
+            var pservice = _companyService;
             var presponse = pservice.GetCompanyActivities(companyid);
 
             var activitiesList = new List<Select2DTO>();
@@ -2303,7 +2321,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public JsonResult GetContractActivities(int contractid)
         {
-            var pservice = ServiceFactory.GetProjectService();
+            var pservice = _projectService;
             var presponse = pservice.GetContract(contractid);
 
             var activitiesList = new List<Select2DTO>();
@@ -2361,16 +2379,16 @@ namespace CPMCore.Controllers
             var model = new ProjectCalculationSettings
             {
                 ProjectId = projectid,
-                ProjectName = ServiceFactory.GetProjectService().GetProjectNameById(projectid)
+                ProjectName = _projectService.GetProjectNameById(projectid)
             };
 
             // Groups
-            var aservice = ServiceFactory.GetActivityService();
+            var aservice = _activityService;
             var groupsResp = aservice.GetActivityGroups();
             model.ActivityGroups = groupsResp.Values?.ToList() ?? new();
 
             // Reeds ingestelde budgetregels
-            var pservice = ServiceFactory.GetProjectService();
+            var pservice = _projectService;
             var budgetResp = pservice.GetProjectBudget(projectid);
             model.BudgetActivities = budgetResp.Values?.ToList() ?? new();
 
@@ -2441,7 +2459,7 @@ namespace CPMCore.Controllers
                 budgetactivities.ForEach(b => b.ProjectId = model.ProjectId);
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var resp = service.InsertUpdateProjectBudgetActivities(budgetactivities ?? new(), model.ProjectId);
 
             if (resp.Success)
@@ -2461,7 +2479,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public IActionResult AddBudgetActivity(int actId)
         {
-            var aservice = ServiceFactory.GetActivityService();
+            var aservice = _activityService;
             var response = aservice.GetActivitybyId(actId);
             var act = response.Value;
 
@@ -2486,12 +2504,12 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             var model = new ProjectIncommingInvoiceAddUpdateModel();
 
-            var service2 = ServiceFactory.GetProjectService();
+            var service2 = _projectService;
             model.ProjectId = projectid;
             model.ProjectName = service2.GetProjectNameById(projectid);
 
             // Get the activities
-            var service = ServiceFactory.GetActivityService();
+            var service = _activityService;
             var response = service.GetActivitiesForSelect();
 
             if (response.Success)
@@ -2604,7 +2622,7 @@ namespace CPMCore.Controllers
                     // Indien er ooit logica nodig is om contractactiviteiten op te halen, hier plaatsen
                 }
 
-                var activityService = ServiceFactory.GetActivityService();
+                var activityService = _activityService;
                 var response = activityService.GetActivitiesForSelect();
                 if (response.Success)
                 {
@@ -2618,7 +2636,7 @@ namespace CPMCore.Controllers
             }
             var Referrer = TempData["Referrer"];
             // Als het model wél geldig is, bewaar de factuur
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             model.IncommingInvoice.ProjectId = model.ProjectId;
 
             var saveResponse = projectService.InsertUpdateProjectIncommingInvoice(model.IncommingInvoice);
@@ -2649,11 +2667,11 @@ namespace CPMCore.Controllers
             };
 
             // Projectgegevens ophalen
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             model.ProjectName = projectService.GetProjectNameById(projectid);
 
             // Activiteiten ophalen
-            var activityService = ServiceFactory.GetActivityService();
+            var activityService = _activityService;
             var activityResponse = activityService.GetActivitiesForSelect();
             if (activityResponse.Success)
             {
@@ -2682,7 +2700,7 @@ namespace CPMCore.Controllers
             }
 
             // Bedrijfsnaam bepalen op basis van contract of companyId
-            var companyService = ServiceFactory.GetCompanyService();
+            var companyService = _companyService;
             if (model.IncommingInvoice?.ContractID is null || model.IncommingInvoice.ContractID == 0)
             {
                 model.CompanyName = companyService.GetCompanyNameById((int)model.IncommingInvoice.CompanyId);
@@ -2764,7 +2782,7 @@ namespace CPMCore.Controllers
                     // Indien er ooit logica nodig is om contractactiviteiten op te halen, hier plaatsen
                 }
 
-                var activityService = ServiceFactory.GetActivityService();
+                var activityService = _activityService;
                 var response = activityService.GetActivitiesForSelect();
                 if (response.Success)
                 {
@@ -2778,7 +2796,7 @@ namespace CPMCore.Controllers
             }
             var Referrer = TempData["Referrer"];
             // Als het model wél geldig is, bewaar de factuur
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             model.IncommingInvoice.ProjectId = model.ProjectId;
 
             var saveResponse = projectService.InsertUpdateProjectIncommingInvoice(model.IncommingInvoice);
@@ -2798,7 +2816,7 @@ namespace CPMCore.Controllers
         public PartialViewResult AddIncommingInvoiceDetailRow(int ActivityId, string ActivityName, int ContractId, int CompanyId)
         {
             var nIncommingInvoiceDetail = new IncommingInvoiceDetailBO();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetContractChangeOrdersForSelect(ContractId);
 
             if (response.Success)
@@ -2830,7 +2848,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetProjectService();
+                var dservice = _projectService;
                 var response = dservice.GetIncommingInvoice(id);
 
                 if (response.Success && response.Values.Any())
@@ -2846,7 +2864,7 @@ namespace CPMCore.Controllers
         {
             if (id != 0 && projectid != 0)
             {
-                var service = ServiceFactory.GetProjectService();
+                var service = _projectService;
                 var ids = new List<int> { id };
                 var response = service.DeleteIncommingInvoices(ids);
 
@@ -2875,8 +2893,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             var model = new ProjectIncommingInvoiceModel();
 
-            var service = ServiceFactory.GetCompanyService();
-            var service2 = ServiceFactory.GetProjectService();
+            var service = _companyService;
+            var service2 = _projectService;
             int companyid = 0;
             model.ProjectId = projectid;
             model.ProjectName = service2.GetProjectNameById(projectid);
@@ -2950,8 +2968,8 @@ namespace CPMCore.Controllers
             }
 
             var model = new DetailChangeOrderModel();
-            var projectService = ServiceFactory.GetProjectService();
-            var clientService = ServiceFactory.GetClientService();
+            var projectService = _projectService;
+            var clientService = _clientService;
 
             if ((projectid ?? 0) > 0)
             {
@@ -3046,8 +3064,8 @@ namespace CPMCore.Controllers
             }
 
             // 2) Services ophalen
-            var projectService = ServiceFactory.GetProjectService();
-            var clientService = ServiceFactory.GetClientService();
+            var projectService = _projectService;
+            var clientService = _clientService;
 
             // 3) Model opbouwen (zorgt ervoor dat ChangeOrder nooit null is)
             var model = new ProjectChangeOrderAddUpdateModel
@@ -3143,7 +3161,7 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdateProjectChangeOrder(model.ChangeOrder);
 
             if (response.Success)
@@ -3182,8 +3200,8 @@ namespace CPMCore.Controllers
                 return RedirectToAction("Detail", "Projecten", new { projectid });
             }
 
-            var projectService = ServiceFactory.GetProjectService();
-            var clientService = ServiceFactory.GetClientService();
+            var projectService = _projectService;
+            var clientService = _clientService;
 
             var model = new ProjectChangeOrderAddUpdateModel
             {
@@ -3249,8 +3267,8 @@ namespace CPMCore.Controllers
             }
 
             // 2) Services
-            var projectService = ServiceFactory.GetProjectService();
-            var clientService = ServiceFactory.GetClientService();
+            var projectService = _projectService;
+            var clientService = _clientService;
 
             // 3) Model opbouwen met veilige defaults
             var model = new ProjectChangeOrderAddUpdateModel
@@ -3348,7 +3366,7 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdateProjectChangeOrder(model.ChangeOrder);
 
             if (response.Success)
@@ -3370,7 +3388,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetProjectService();
+                var dservice = _projectService;
                 var response = dservice.GetChangeOrder(id);
 
                 if (response.Success && response.Values.Any())
@@ -3388,7 +3406,7 @@ namespace CPMCore.Controllers
             if (id == 0)
                 return Json(new { success = false, message = "Ongeldig ID." });
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.DeleteChangeOrders(new List<int> { id });
 
             if (response.Success)
@@ -3409,8 +3427,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectChangeOrderExportModel();
-            var clientService = ServiceFactory.GetClientService();
-            var projectService = ServiceFactory.GetProjectService();
+            var clientService = _clientService;
+            var projectService = _projectService;
 
             var changeOrderResponse = projectService.GetChangeOrder(changeorderid);
             if (changeOrderResponse.Success)
@@ -3467,7 +3485,7 @@ namespace CPMCore.Controllers
         public ActionResult Weather()
         {
             var model = new BWDModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetWheaterstationsSelect();
             if (response.Success)
             {
@@ -3478,7 +3496,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult GetCalendarBundle(int weatherstationid, int year)
         {
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
 
 
             var rain = new List<object>();
@@ -3530,7 +3548,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public JsonResult GetBadWeatherDays(int type, int weatherstationid, int year)
         {
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetBadWeatherDays(weatherstationid, type);
 
             var rows = new List<object>();
@@ -3582,7 +3600,7 @@ namespace CPMCore.Controllers
                 Type = type
             };
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdateBadWeatherDay(bwd);
 
             if (!response.Success) return 0;
@@ -3596,7 +3614,7 @@ namespace CPMCore.Controllers
         public bool DeleteBadWeatherDay(int id)
         {
             var list = new List<int> { id };
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.DeleteBadWeatherDays(list);
             return response.Success;
         }
@@ -3604,7 +3622,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public JsonResult GetVacationDays()
         {
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetVacationDays();
 
             var rows = new List<object>();
@@ -3636,7 +3654,7 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ViewBag.ImageWebURL = Configuration["URL:ImageWebURL"];
             var model = new DetailPhotosModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetPicturesByProjectId(projectid);
 
             if (response.Success)
@@ -3687,7 +3705,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetProjectService();
+                var dservice = _projectService;
                 viewModel = dservice.GetPictureById(id).Value;
             }
 
@@ -3700,7 +3718,7 @@ namespace CPMCore.Controllers
             {
                 if (type == PictureType.Hoofdfoto)
                 {
-                    var service = ServiceFactory.GetProjectService();
+                    var service = _projectService;
                     var ids = new List<int> { id };
 
                     var response1 = service.SetDefaultProjectPicture(projectid, 0);
@@ -3729,7 +3747,7 @@ namespace CPMCore.Controllers
                 else
                 {
                     DeletePictureFile(id);
-                    var service = ServiceFactory.GetProjectService();
+                    var service = _projectService;
                     var ids = new List<int> { id };
                     var response = service.DeletePicture(ids);
 
@@ -3751,7 +3769,7 @@ namespace CPMCore.Controllers
 
         public ActionResult UpdatePhotoType(int id, PictureType type)
         {
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var picture = service.GetPictureById(id).Value;
 
             if (picture != null)
@@ -3808,7 +3826,7 @@ namespace CPMCore.Controllers
         public IActionResult DetailNews(int projectId)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            var _projectService = ServiceFactory.GetProjectService();
+
 
             var model = new DetailNewsModel
             {
@@ -3867,7 +3885,7 @@ namespace CPMCore.Controllers
                 AddMessage("error", "Formulier ongeldig.", "Fout!");
                 return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
             }
-            var _projectService = ServiceFactory.GetProjectService();
+
             if (file is not null && file.Length > 0 && IsValidImage(file))
             {
 
@@ -3940,7 +3958,7 @@ namespace CPMCore.Controllers
             var vm = new ProjectNewsBO();
             if (id != 0)
             {
-                var _projectService = ServiceFactory.GetProjectService();
+    
                 var resp = _projectService.GetNewsById(id);
                 if (resp.Success && resp.Value is not null)
                     vm = resp.Value;
@@ -3952,7 +3970,7 @@ namespace CPMCore.Controllers
         {
             if (id == 0 || projectId == 0)
                 return RedirectToAction("DetailNews", new { projectId });
-            var _projectService = ServiceFactory.GetProjectService();
+
             var resp = _projectService.DeleteNews(new List<int> { id });
             if (!resp.Success)
             {
@@ -3983,7 +4001,7 @@ namespace CPMCore.Controllers
             var vm = new ProjectNewsBO();
             if (id != 0)
             {
-                var _projectService = ServiceFactory.GetProjectService();
+    
                 var resp = _projectService.GetNewsById(id);
                 if (resp.Success && resp.Value is not null)
                     vm = resp.Value;
@@ -4001,7 +4019,7 @@ namespace CPMCore.Controllers
                 return RedirectToAction("DetailNews", new { projectId = newsItem.ProjectId });
             }
 
-            var _projectService = ServiceFactory.GetProjectService();
+
 
             // Bewaar referentie naar de (mogelijke) bestaande foto om na succes op te ruimen
             var oldPicId = newsItem.Picture?.Id ?? 0;
@@ -4097,8 +4115,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
             ViewBag.DocWebUrl = Configuration["URL:DocWebUrl"];
 
-            var service = ServiceFactory.GetProjectService();
-            var cservice = ServiceFactory.GetClientService();
+            var service = _projectService;
+            var cservice = _clientService;
             var model = new DetailDocsModel
             {
                 ProjectId = projectid,
@@ -4159,7 +4177,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult ModalAddDoc(int id, int? clientaccountid)
         {
-            var clientService = ServiceFactory.GetClientService();
+            var clientService = _clientService;
             var clientsResponse = clientService.GetClientAccountsByProjectIdForSelect(id);
             var vm = new CPMCore.Models.Projecten.ProjectDocModalVM
             {
@@ -4179,13 +4197,13 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult ModalEditDoc(int id)
         {
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             var response = projectService.GetProjectDoc(id);
             if (!response.Success || response.Value is null)
                 return NotFound();
 
             var doc = response.Value;
-            var clientService = ServiceFactory.GetClientService();
+            var clientService = _clientService;
             var clientsResponse = clientService.GetClientAccountsByProjectIdForSelect(doc.ProjectId);
             var hasClient = doc.ClientAccountId.HasValue && doc.ClientAccountId.Value > 0;
 
@@ -4244,7 +4262,7 @@ namespace CPMCore.Controllers
             await GenerateDocThumbnailViaStorageAsync(uploadedFileName);
 
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdateProjectDoc(model);
 
             var clientIdVal = (model.ClientAccountId is int v && v > 0) ? v : 0;
@@ -4356,7 +4374,7 @@ namespace CPMCore.Controllers
             if (model.Docid <= 0)
                 return RedirectToAction("DetailDocs", new { projectid = model.ProjectId });
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var existingResp = service.GetProjectDoc(model.Docid);
             if (!existingResp.Success || existingResp.Value is null)
             {
@@ -4415,7 +4433,7 @@ namespace CPMCore.Controllers
             var vm = new ProjectDocBO();
             if (id != 0)
             {
-                var _projectService = ServiceFactory.GetProjectService();
+    
                 var resp = _projectService.GetProjectDoc(id);
                 if (resp.Success && resp.Value is not null)
                     vm = resp.Value;
@@ -4427,7 +4445,7 @@ namespace CPMCore.Controllers
         {
             if (id == 0 || projectId == 0)
                 return RedirectToAction("DetailDocs", new { projectId });
-            var _projectService = ServiceFactory.GetProjectService();
+
             var resp = _projectService.DeleteProjectDoc(new List<int> { id });
             if (!resp.Success)
             {
@@ -4449,7 +4467,7 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new DetailInsurancesModel();
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetProjectInsurances(projectid);
 
             if (response.Success)
@@ -4495,7 +4513,7 @@ namespace CPMCore.Controllers
                 else
                 {
                     viewmodel.Insurance.ProjectID = viewmodel.ProjectId;
-                    var service = ServiceFactory.GetInsuranceService();
+                    var service = _insuranceService;
                     response = service.InsertUpdate(viewmodel.Insurance);
                 }
             }
@@ -4520,7 +4538,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetInsuranceService();
+                var dservice = _insuranceService;
                 viewModel = dservice.GetInsuranceById(id).Value;
             }
 
@@ -4534,7 +4552,7 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetInsuranceService();
+                var dservice = _insuranceService;
                 viewModel = dservice.GetInsuranceById(id).Value;
 
                 if (viewModel != null)
@@ -4564,7 +4582,7 @@ namespace CPMCore.Controllers
 
             if (ModelState.IsValid)
             {
-                var service = ServiceFactory.GetInsuranceService();
+                var service = _insuranceService;
                 response = service.InsertUpdate(viewmodel);
             }
 
@@ -4587,15 +4605,15 @@ namespace CPMCore.Controllers
 
             if (id != 0)
             {
-                var dservice = ServiceFactory.GetInsuranceService();
+                var dservice = _insuranceService;
                 viewModel.Insurance = dservice.GetInsuranceById(id).Value;
             }
 
             // zeker dat ProjectId gezet is
             viewModel.ProjectId = viewModel.Insurance?.ProjectID ?? viewModel.ProjectId;
 
-            var service = ServiceFactory.GetInsuranceService();
-            var cservice = ServiceFactory.GetCompanyService();
+            var service = _insuranceService;
+            var cservice = _companyService;
 
             var cresponse = cservice.GetCompanyForSelectByActivity(142);
             if (cresponse.Success) viewModel.Brokers = cresponse.Values;
@@ -4617,8 +4635,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectSalesModel();
-            var service = ServiceFactory.GetProjectService();
-            var uservice = ServiceFactory.GetUnitService();
+            var service = _projectService;
+            var uservice = _unitService;
 
             model.ProjectId = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
@@ -4654,8 +4672,8 @@ namespace CPMCore.Controllers
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
 
             var model = new ProjectSalesExportModel();
-            var service2 = ServiceFactory.GetProjectService();
-            var service3 = ServiceFactory.GetUnitService();
+            var service2 = _projectService;
+            var service3 = _unitService;
 
             model.ProjectId = projectid;
             model.ProjectName = service2.GetProjectNameById(projectid);
@@ -4699,7 +4717,7 @@ namespace CPMCore.Controllers
                 viewModel.ProjectId = projectid;
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetSalesSettings(projectid);
             if (response.Success) viewModel.Settings = response.Value;
             else viewModel.Settings = new ProjectSalesSettingsBO { ProjectId = projectid };
@@ -4747,7 +4765,7 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
 
             if (model.Project == null || model.Project.Id == 0)
             {
@@ -4805,14 +4823,14 @@ namespace CPMCore.Controllers
             var ids = unitIds.Distinct().ToList();
 
             // Settings ophalen
-            var ps = ServiceFactory.GetProjectService();
+            var ps = _projectService;
             var settingsResp = ps.GetSalesSettings(projectId); // Response<ProjectSalesSettingsBO>
             if (!settingsResp.Success || settingsResp.Value == null)
                 return BadRequest("Geen verkoopinstellingen gevonden.");
             var settings = settingsResp.Value;
 
             // Units ophalen
-            var uservice = ServiceFactory.GetUnitService();
+            var uservice = _unitService;
             var unitsResp = uservice.GetUnitsById(ids);
             var units = unitsResp.Success && unitsResp.Values != null
                 ? unitsResp.Values.ToList()
@@ -4869,7 +4887,7 @@ namespace CPMCore.Controllers
 
             if (model.Project == null || model.Project.Id == 0)
             {
-                var projectResponse = ServiceFactory.GetProjectService().GetProjectByID(model.ProjectId);
+                var projectResponse = _projectService.GetProjectByID(model.ProjectId);
                 if (projectResponse.Success)
                 {
                     model.Project = projectResponse.Value;
@@ -5180,9 +5198,9 @@ namespace CPMCore.Controllers
 
 
             // In je bestaande code gaat dit via ServiceFactory.
-            var projectService = ServiceFactory.GetProjectService();
-            var clientService = ServiceFactory.GetClientService();
-            var unitService = ServiceFactory.GetUnitService();
+            var projectService = _projectService;
+            var clientService = _clientService;
+            var unitService = _unitService;
 
             var model = new ProjectInvoicingModel
             {
@@ -5226,7 +5244,7 @@ namespace CPMCore.Controllers
                 var accountIds = respCo.Values.Select(v => v.ClientAccountID).Distinct().ToList();
                 var respClients = clientService.GetClientAccountByIds(accountIds);
 
-                using var coUow = ServiceFactory.CreateUoW();
+                using var coUow = _uow;
                 var db = (cpmRunningContext)coUow.Context;
                 var detailIds = respCo.Values
                     .SelectMany(co => co.Details ?? new List<ChangeOrderDetailBO>())
@@ -5340,7 +5358,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult PaymentStages(int projectid)
         {
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
 
             var model = new ProjectPaymentStagesModel
             {
@@ -5375,7 +5393,7 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult PaymentStagesAddUpdate(int projectid, int groupid = 0)
         {
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             var model = new ProjectPaymentStagesAddUpdateModel
             {
                 ProjectId = projectid,
@@ -5444,7 +5462,7 @@ namespace CPMCore.Controllers
                 model.Group.PaymentStages.Add(stage);
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             model.Group.ProjectId = model.ProjectId;
             var response = service.InsertUpdateProjectPaymentGroup(model.Group);
 
@@ -5468,8 +5486,8 @@ namespace CPMCore.Controllers
         [HttpGet]
         public IActionResult PaymentGroupLink(int projectid)
         {
-            var projectService = ServiceFactory.GetProjectService();
-            var unitService = ServiceFactory.GetUnitService();
+            var projectService = _projectService;
+            var unitService = _unitService;
 
             var model = new ProjectPaymentGroupLinkModel
             {
@@ -5497,8 +5515,8 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 AddMessage("Error", "De betalingsschijven zijn NIET gelinkt", "Fout!");
-                var projectService = ServiceFactory.GetProjectService();
-                var unitService = ServiceFactory.GetUnitService();
+                var projectService = _projectService;
+                var unitService = _unitService;
 
                 var responseGroups = projectService.GetProjectPaymentGroupsForSelect(model.ProjectId);
                 if (responseGroups.Success)
@@ -5511,7 +5529,7 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             model.Units ??= new List<UnitBO>();
             foreach (var unit in model.Units)
             {
@@ -5526,7 +5544,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public JsonResult PaymentStagesInvoicable(int stageid, bool value)
         {
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.UpdateProjectPaymentStageInvoicable(stageid, value);
             return Json(new { success = response.Success });
         }
@@ -5534,14 +5552,14 @@ namespace CPMCore.Controllers
         private List<SelectListItem> GetVatTypeSelectList(int projectId)
         {
             var vatTypes = new List<SelectListItem>();
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             var projectResponse = projectService.GetProjectByID(projectId);
             var issuerId = projectResponse.Success ? projectResponse.Value?.IssuerCompanyIdBuilder : null;
 
             if (!issuerId.HasValue)
                 return vatTypes;
 
-            var issuerService = new IssuerCompanyService(ServiceFactory.CreateUoW());
+            var issuerService = new IssuerCompanyService(_uow);
             var issuerVatTypes = issuerService.ListVatTypeAsync(issuerId.Value).GetAwaiter().GetResult();
             vatTypes = issuerVatTypes
                 .Select(v => new SelectListItem
@@ -5563,15 +5581,15 @@ namespace CPMCore.Controllers
             if (request?.Invoices == null || request.Invoices.Count == 0)
                 return Json(new { projectid = 0 });
 
-            var clientService = ServiceFactory.GetClientService();
-            var unitService = ServiceFactory.GetUnitService();
-            var projectService = ServiceFactory.GetProjectService();
+            var clientService = _clientService;
+            var unitService = _unitService;
+            var projectService = _projectService;
 
             var response = new Response();
             int projectId = 0;
 
             var drafts = new List<InvoiceDraftBO>();
-            using var uow = ServiceFactory.CreateUoW();
+            using var uow = _uow;
             var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
             var db = (DALCore.Models.cpmRunningContext)uow.Context;
 
@@ -5724,14 +5742,14 @@ namespace CPMCore.Controllers
             if (request.Invoices.Count == 0)
                 return Json(new { projectid = 0 });
 
-            var clientService = ServiceFactory.GetClientService();
-            var unitService = ServiceFactory.GetUnitService();
-            var projectService = ServiceFactory.GetProjectService();
+            var clientService = _clientService;
+            var unitService = _unitService;
+            var projectService = _projectService;
 
             var response = new Response();
             int projectId = 0;
 
-            using var uow = ServiceFactory.CreateUoW();
+            using var uow = _uow;
             var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
 
             var clientIds = request.Invoices.Select(x => x.ClientAccountId).Distinct().ToList();
@@ -6100,8 +6118,8 @@ namespace CPMCore.Controllers
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            var projectService = ServiceFactory.GetProjectService();
-            var clientService = ServiceFactory.GetClientService();
+            var projectService = _projectService;
+            var clientService = _clientService;
 
             var cresponse = clientService.GetClientAccountsByProjectIdForSelect(model.ProjectId);
             model.ClientAccounts = cresponse.Success
@@ -6117,7 +6135,7 @@ namespace CPMCore.Controllers
 
             model.IssuerCompanies = GetIssuerCompanies();
 
-            var cservice = ServiceFactory.GetCountryService();
+            var cservice = _countryService;
             var cresponse = cservice.GetVisibleCountriesForSelect();
             if (cresponse.Success && cresponse.Values is not null)
             {
@@ -6136,7 +6154,7 @@ namespace CPMCore.Controllers
 
             model.IssuerCompanies = GetIssuerCompanies();
 
-            var cservice = ServiceFactory.GetCountryService();
+            var cservice = _countryService;
             var cresponse = cservice.GetVisibleCountriesForSelect();
             if (cresponse.Success && cresponse.Values is not null)
             {
@@ -6148,7 +6166,7 @@ namespace CPMCore.Controllers
                 }
             }
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetStatusesForSelect();
             if (response.Success && response.Values is not null)
             {
@@ -6159,7 +6177,7 @@ namespace CPMCore.Controllers
 
         private List<ProjectIssuerCompanyOptionVM> GetIssuerCompanies()
         {
-            using var uow = ServiceFactory.CreateUoW();
+            using var uow = _uow;
             return uow.IssuerCompanies.GetNoTracking()
                 .OrderBy(i => i.Name)
                 .Select(i => new ProjectIssuerCompanyOptionVM { Id = i.Id, Name = i.Name })
@@ -6169,7 +6187,7 @@ namespace CPMCore.Controllers
         private void FillInAddSelectListsDetail(ref ShowProjectDetail model)
         {
             // get the activities
-            var cservice = ServiceFactory.GetCountryService();
+            var cservice = _countryService;
             var cresponse = cservice.GetVisibleCountriesForSelect();
             if ((cresponse.Success))
                 model.Countries = cresponse.Values;
@@ -6177,7 +6195,7 @@ namespace CPMCore.Controllers
             if ((defCountry != null))
                 model.SelectedCountry = defCountry.ID;
             // Get statuses
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.GetStatusesForSelect();
             if ((response.Success))
                 model.Statuses = response.Values;
@@ -6185,7 +6203,7 @@ namespace CPMCore.Controllers
         }
         public void IncommingInvoiceFillInSelectList(ProjectIncommingInvoiceAddUpdateModel model)
         {
-            var service2 = ServiceFactory.GetProjectService();
+            var service2 = _projectService;
             var aresponse = service2.GetProjectContractsForSelect(model.ProjectId);
             if (aresponse.Success)
             {
@@ -6211,14 +6229,14 @@ namespace CPMCore.Controllers
 
         public string GetCompanyName(int companyid)
         {
-            var pservice = ServiceFactory.GetCompanyService();
+            var pservice = _companyService;
             var presponse = pservice.GetCompanyNameById(companyid);
             return presponse;
         }
         [HttpPost]
         public JsonResult GetCountryIsoCode(int countryid)
         {
-            var pservice = ServiceFactory.GetCountryService();
+            var pservice = _countryService;
             var presponse = pservice.GetCountryById(countryid);
             var country = presponse.Success ? presponse.Values.FirstOrDefault() : null;
             return Json(country?.ISOCode ?? string.Empty);
@@ -6226,7 +6244,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public async Task<JsonResult> GetPostcodesByCountry(string term, int countryId)
         {
-            var pservice = ServiceFactory.GetPostalcodeService();
+            var pservice = _postalcodeService;
             var presponse = await pservice.GetPostalcodeByCountryAndSearchstring(countryId, term ?? string.Empty);
 
             var list = new List<SelectBO>();
@@ -6247,7 +6265,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public JsonResult GetCompanys(string term)
         {
-            var pservice = ServiceFactory.GetCompanyService();
+            var pservice = _companyService;
             var presponse = pservice.GetCompanyForSearchList(term);
             var iList = new List<SelectBO>();
 
@@ -6269,7 +6287,7 @@ namespace CPMCore.Controllers
         [HttpPost]
         public JsonResult GetWheaterstations(string term)
         {
-            var pservice = ServiceFactory.GetProjectService();
+            var pservice = _projectService;
             var presponse = pservice.GetWheaterstations(term ?? string.Empty);
             var list = new List<SelectBO>();
 
@@ -6293,7 +6311,7 @@ namespace CPMCore.Controllers
             var city = string.Empty;
             if (id != 0)
             {
-                var cityService = ServiceFactory.GetPostalcodeService();
+                var cityService = _postalcodeService;
                 var postalcode = cityService.GetPostalcodeById(id);
                 if (postalcode.Success && postalcode.Value is not null)
                 {
@@ -6301,7 +6319,7 @@ namespace CPMCore.Controllers
                 }
             }
 
-            var projectService = ServiceFactory.GetProjectService();
+            var projectService = _projectService;
             return projectService.GenerateSlug($"{name} {city}".Trim());
         }
         public class Select2DTO
@@ -6378,7 +6396,7 @@ namespace CPMCore.Controllers
                 DateTimeUploaded = DateTime.Now
             };
 
-            var service = ServiceFactory.GetProjectService();
+            var service = _projectService;
             var response = service.InsertUpdatePicture(picture);
 
             if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
@@ -6397,7 +6415,7 @@ namespace CPMCore.Controllers
 
         private string? GetSignedAssetUrl(int docId, string folder)
         {
-            var svc = ServiceFactory.GetProjectService();
+            var svc = _projectService;
             var resp = svc.GetProjectDoc(docId);
             if (!resp.Success || resp.Value == null) return null;
 
@@ -6763,7 +6781,7 @@ namespace CPMCore.Controllers
                     DateTimeUploaded = DateTime.Now
                 };
 
-                var service = ServiceFactory.GetProjectService();
+                var service = _projectService;
                 var response = service.InsertUpdatePicture(picture);
 
                 if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)

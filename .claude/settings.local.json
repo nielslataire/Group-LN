@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"public.*Method\\\\|public.*Logic\\\\|public.*Calculate\\\\|public.*Process\" e:/TFS/DALCore/Models/*.cs)",
+      "Bash(xargs wc:*)",
+      "Bash(wc -l \"e:/TFS/CPMCore/Controllers\"/*.cs)",
+      "Bash(powershell.exe -Command \":*)",
+      "Bash(python3 -c \":*)",
+      "Bash(node -e \":*)",
+      "Bash(where.exe node:*)",
+      "Bash(where.exe python:*)",
+      "Bash(where.exe pwsh:*)",
+      "Bash(Get-Content \"e:/TFS/CPMCore/Views/Shared/_LeftSidebarPartialA.cshtml\")",
+      "Bash(Select-Object -Last 10)",
+      "Bash(powershell -NoProfile -NonInteractive -Command \"Get-Content ''e:/TFS/CPMCore/Views/Shared/_LeftSidebarPartialA.cshtml'' | Select-Object -Last 10\")",
+      "Bash(powershell -NoProfile -NonInteractive -Command \":*)"
+    ]
+  }
+}

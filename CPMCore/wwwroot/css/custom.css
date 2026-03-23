@@ -582,6 +582,41 @@
     #sidebar-left ul.nav-main > li.nav-parent > .flyout-menu > li > a {
         text-align: center;
     }
+
+    /* Groene mobiele header balk */
+    .header .logo-container {
+        background: #0a5a3b !important;
+        background-image: none !important;
+        border-bottom: none !important;
+        border-top: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        padding: 0 !important;
+    }
+
+    /* Zelfde grootte en positie als sidebar-toggle */
+    .header-btn-collapse-nav {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        width: 73px !important;
+        height: 60px !important;
+        float: none !important;
+        margin: 0 !important;
+        position: static !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .header-btn-collapse-nav i {
+        font-size: 22px !important;
+        color: #ffffff !important;
+        line-height: 1 !important;
+    }
 }
 
 .doc-thumb-column {
@@ -793,6 +828,30 @@
 
 #datatable-issues_wrapper > .row:last-child {
     display: none;
+}
+
+/* Detail menu positie correctie: theme.css gebruikt top: 114px maar dat is 10px te hoog */
+@media only screen and (min-width: 768px) {
+    html.fixed .inner-menu {
+        top: 124px;
+    }
+
+    html.fixed .inner-menu-toggle {
+        top: 124px;
+    }
+
+    html.fixed .inner-body {
+        border-top: 123px solid transparent;
+        margin-top: -120px;
+    }
+}
+
+/* Sidebar-header meevolgen bij hover-expand op collapsed sidebar */
+@media only screen and (min-width: 768px) {
+    html.sidebar-left-collapsed .sidebar-left:has(.nano:hover) .sidebar-header,
+    html.sidebar-left-collapsed .sidebar-left:has(.nano.hovered) .sidebar-header {
+        width: 300px;
+    }
 }
 
 /* Boxicons compatibility aliases */

@@ -1,7 +1,7 @@
 using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models;
-using CPMCore.Service;
+using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartBreadcrumbs.Attributes;
@@ -15,20 +15,25 @@ namespace CPMCore.Controllers;
 public class HomeController : BaseController
 {
     private readonly ILogger<HomeController> _logger;
+    private readonly IProjectService _projectService;
+    private readonly IClientService _clientService;
+    private readonly IInsuranceService _insuranceService;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(ILogger<HomeController> logger, IProjectService projectService, IClientService clientService, IInsuranceService insuranceService)
     {
         _logger = logger;
+        _projectService = projectService;
+        _clientService = clientService;
+        _insuranceService = insuranceService;
     }
 
     [DefaultBreadcrumb("Dashboard")]
     public IActionResult Index()
     {
         var model = new Models.Home.HomeModel();
-        var service = ServiceFactory.GetProjectService();
         var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 
-        var response = service.GetProjectsForList(0, 0, currentUserCode);
+        var response = _projectService.GetProjectsForList(0, 0, currentUserCode);
         if (response.Success)
         {
             var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
@@ -40,9 +45,8 @@ public class HomeController : BaseController
                 .ThenBy(p => p.Name)
                 .ToList();
         }
-        var service2 = ServiceFactory.GetClientService();
-        var response2 = service2.GetClientAccountsByDateDeedofSale();
-        var response3 = service.GetStatuses();
+        var response2 = _clientService.GetClientAccountsByDateDeedofSale();
+        var response3 = _projectService.GetStatuses();
         if ((response3.Success))
         {
             var uitvoeringStatusId = (int)ProjectStatusType.Uitvoering;
@@ -57,27 +61,25 @@ public class HomeController : BaseController
             model.DeedofSaleWarnings = response2.Values;
         if (!User.IsInRole("Admin"))
         {
-            var iservice = ServiceFactory.GetInsuranceService();
-            var iresponse = iservice.CheckInsurances(currentUserCode);
+            var iresponse = _insuranceService.CheckInsurances(currentUserCode);
             if ((iresponse.Success))
                 model.InsuranceWarnings = iresponse.Values;
         }
         else
         {
-            var iservice = ServiceFactory.GetInsuranceService();
-            var iresponse = iservice.CheckInsurances();
+            var iresponse = _insuranceService.CheckInsurances();
             if ((iresponse.Success))
                 model.InsuranceWarnings = iresponse.Values;
         }
         if (!User.IsInRole("Admin"))
         {
-            var iresponse = service.CheckProjectFinished(currentUserCode);
+            var iresponse = _projectService.CheckProjectFinished(currentUserCode);
             if ((iresponse.Success))
                 model.ProjectInfo = iresponse.Values;
         }
         else
         {
-            var iresponse = service.CheckProjectFinished();
+            var iresponse = _projectService.CheckProjectFinished();
             if ((iresponse.Success))
                 model.ProjectInfo = iresponse.Values;
         }

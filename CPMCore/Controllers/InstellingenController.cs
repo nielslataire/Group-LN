@@ -5,7 +5,7 @@ using CPMCore.Models.Home;
 using CPMCore.Models.Instellingen;
 using CPMCore.Models.Invoicing;
 using CPMCore.Models.Projecten;
-using CPMCore.Service;
+using FacadeCore;
 using CPMCore.Services.Octopus;
 using DALCore.Models;
 using FacadeCore;
@@ -47,7 +47,8 @@ public class InstellingenController : BaseController
     private readonly IOctopusTokenManager _octopusTokens;
     private readonly IOctopusBookyearService _octopusBookyears;
     private readonly IOctopusRelationSyncService _octopusRelations;
-    private readonly cpmRunningContext _db;
+    private readonly IActivityService _activityService;
+    private readonly IProjectService _projectService;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -63,8 +64,8 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, cpmRunningContext db)
-    { 
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService)
+    {
         _logger = logger;
         _issuers = issuers;
         _bank = bank;
@@ -74,7 +75,8 @@ public class InstellingenController : BaseController
         _octopusTokens = octopusTokens;
         _octopusBookyears = octopusBookyears;
         _octopusRelations = octopusRelations;
-        _db = db;
+        _activityService = activityService;
+        _projectService = projectService;
     }
 
     [HttpGet]
@@ -112,9 +114,8 @@ public class InstellingenController : BaseController
 
         ViewData["BreadcrumbNode"] = instellingenActivities;
 
-        var service = ServiceFactory.GetActivityService();
-        var activitiesResponse = service.GetActivities();
-        var groupsResponse = service.GetActivityGroups();
+        var activitiesResponse = _activityService.GetActivities();
+        var groupsResponse = _activityService.GetActivityGroups();
 
         var model = new ActivitySettingsViewModel
         {
@@ -135,14 +136,13 @@ public class InstellingenController : BaseController
             return RedirectToAction(nameof(Activities));
         }
 
-        var service = ServiceFactory.GetActivityService();
         var activity = new ActivityBO
         {
             Name = name?.Trim() ?? string.Empty,
             Group = new ActivityGroupBO { ID = groupId }
         };
 
-        var response = service.InsertUpdate(activity);
+        var response = _activityService.InsertUpdate(activity);
         SetActivityResponseMessage(response, "Activiteit toegevoegd.");
 
         return RedirectToAction(nameof(Activities));
@@ -158,7 +158,6 @@ public class InstellingenController : BaseController
             return RedirectToAction(nameof(Activities));
         }
 
-        var service = ServiceFactory.GetActivityService();
         var activity = new ActivityBO
         {
             ID = id,
@@ -166,7 +165,7 @@ public class InstellingenController : BaseController
             Group = new ActivityGroupBO { ID = groupId }
         };
 
-        var response = service.InsertUpdate(activity);
+        var response = _activityService.InsertUpdate(activity);
         SetActivityResponseMessage(response, "Activiteit bijgewerkt.");
 
         return RedirectToAction(nameof(Activities));
@@ -176,8 +175,7 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public IActionResult ActivityDelete(int id)
     {
-        var service = ServiceFactory.GetActivityService();
-        var response = service.Delete(new List<int> { id });
+        var response = _activityService.Delete(new List<int> { id });
         SetActivityResponseMessage(response, "Activiteit verwijderd.");
 
         return RedirectToAction(nameof(Activities));
@@ -187,14 +185,13 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public IActionResult ActivityGroupCreate(string name, int lot)
     {
-        var service = ServiceFactory.GetActivityService();
         var group = new ActivityGroupBO
         {
             Name = name?.Trim() ?? string.Empty,
             Lot = lot
         };
 
-        var response = service.InsertUpdateGroup(group);
+        var response = _activityService.InsertUpdateGroup(group);
         SetActivityResponseMessage(response, "Activiteitgroep toegevoegd.");
 
         return RedirectToAction(nameof(Activities));
@@ -204,7 +201,6 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public IActionResult ActivityGroupUpdate(int id, string name, int lot)
     {
-        var service = ServiceFactory.GetActivityService();
         var group = new ActivityGroupBO
         {
             ID = id,
@@ -212,7 +208,7 @@ public class InstellingenController : BaseController
             Lot = lot
         };
 
-        var response = service.InsertUpdateGroup(group);
+        var response = _activityService.InsertUpdateGroup(group);
         SetActivityResponseMessage(response, "Activiteitgroep bijgewerkt.");
 
         return RedirectToAction(nameof(Activities));
@@ -222,8 +218,7 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public IActionResult ActivityGroupDelete(int id)
     {
-        var service = ServiceFactory.GetActivityService();
-        var response = service.DeleteGroup(new List<int> { id });
+        var response = _activityService.DeleteGroup(new List<int> { id });
         SetActivityResponseMessage(response, "Activiteitgroep verwijderd.");
 
         return RedirectToAction(nameof(Activities));
@@ -241,8 +236,7 @@ public class InstellingenController : BaseController
     [HttpGet]
     public IActionResult GetVacationDays()
     {
-        var service = ServiceFactory.GetProjectService();
-        var response = service.GetVacationDaysGeneral();
+        var response = _projectService.GetVacationDaysGeneral();
 
         var rows = response.Success
             ? response.Values.Select(b => new
@@ -263,8 +257,7 @@ public class InstellingenController : BaseController
     public int AddVacationDay(DateOnly dag)
     {
         var day = new VacationDayBO { VacationDay = dag };
-        var service = ServiceFactory.GetProjectService();
-        var response = service.InsertUpdateVacationDay(day);
+        var response = _projectService.InsertUpdateVacationDay(day);
 
         if (!response.Success) return 0;
 
@@ -278,8 +271,7 @@ public class InstellingenController : BaseController
     public bool DeleteVacationDay(int id)
     {
         var ids = new List<int> { id };
-        var service = ServiceFactory.GetProjectService();
-        var response = service.DeleteVacationDays(ids);
+        var response = _projectService.DeleteVacationDays(ids);
         return response.Success;
     }
 
