@@ -2,6 +2,10 @@
 @using System.IO
 @using System.Text.RegularExpressions
 @model CPMCore.Models.Projecten.DetailInsurancesModel
+@{
+    var canWriteProjectInsurances = ViewBag.CanWriteProjectInsurances as bool? ?? false;
+    var canDeleteProjectInsurances = ViewBag.CanDeleteProjectInsurances as bool? ?? false;
+}
 
 
 @section PageStyle
@@ -122,9 +126,15 @@
 							</td>
 								
 							<td class="actions">
+								@if (canWriteProjectInsurances)
+								{
 									<a href="#modaleditinsurance" data-toggle="tooltip" id="editInsurance" data-placement="top" title="Bewerken" data-original-title="Bewerken" class="editInsurance" data-id="@item.Id"><i class="bx bx-edit "></i></a>
 									<a href="#modalendinsurance" data-toggle="tooltip" id="endInsurance" data-placement="top" title="Stoppen" data-original-title="Stoppen" class="endInsurance" data-id="@item.Id"><i class="bx bx-stop-circle "></i></a>
-                                 <a href="#modaldeleteinsurance" data-toggle="tooltip" id="deleteInsurance" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteInsurance" data-id="@item.Id"><i class="bx bx-trash "></i></a>
+								}
+								@if (canDeleteProjectInsurances)
+								{
+									<a href="#modaldeleteinsurance" data-toggle="tooltip" id="deleteInsurance" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteInsurance" data-id="@item.Id"><i class="bx bx-trash "></i></a>
+								}
 							</td>
 						</tr>
 

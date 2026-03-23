@@ -19,6 +19,7 @@
 } *@
 @{
 	String urlTotal = "";
+	var canWriteProjectCustomers = ViewBag.CanWriteProjectCustomers as bool? ?? false;
 }
 @section PageStyle
 {
@@ -82,7 +83,10 @@
                         <div class="btn-group" role="group" aria-label="Project acties">
                             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
                             <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-                            <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+                            @if (canWriteProjectCustomers)
+                            {
+                                <a href="@Url.Action("AddClientAccount", "Klanten", new { id = Model.ProjectId })" class="btn btn-primary btn-md">+ Klant toevoegen</a>
+                            }
                         </div>
 
                 </div>

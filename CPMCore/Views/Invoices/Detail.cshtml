@@ -11,7 +11,8 @@
     var isDraft = Model.Status == InvoiceStatus.Draft;
     var isIssued = Model.Status == InvoiceStatus.Issued;
     var isGenerating = Model.Status == InvoiceStatus.Generating;
-    var canManageInvoices = User.IsInRole("Boekhouding") || User.IsInRole("Admin") || User.IsInRole("Administrator");
+    var canWriteInvoices = ViewBag.CanWriteInvoices as bool? ?? false;
+    var canDeleteInvoices = ViewBag.CanDeleteInvoices as bool? ?? false;
     var hasDeliveryInfo = !string.IsNullOrWhiteSpace(Model.OctopusDeliveryState)
         || Model.OctopusDeliveryDateTime.HasValue
         || Model.OctopusDeliveryUpdatedAt.HasValue
@@ -99,7 +100,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
         </div>
         <div class="col-auto align-self-start">
             <div class="btn-group" role="group">
-                @if (canManageInvoices && !isGenerating)
+                @if (canWriteInvoices && !isGenerating)
                 {
                     <a class="btn btn-default btn-md px-3 me-1"
                        asp-action="Edit"
@@ -110,7 +111,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
                         Bewerken
                     </a>
                 }
-                @if (canManageInvoices && !isDraft && !isGenerating)
+                @if (canWriteInvoices && !isDraft && !isGenerating)
                 {
                     <a class="btn btn-primary btn-md px-3 me-1"
                        asp-action="Send"

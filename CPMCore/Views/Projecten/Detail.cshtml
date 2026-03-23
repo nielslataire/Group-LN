@@ -7,6 +7,8 @@
 *@
 @{
     ViewData["Title"] = Model.Project.Name;
+    var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
+    var canDeleteProject = ViewBag.CanDeleteProject as bool? ?? false;
 }
 @{
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -32,12 +34,18 @@
                 </div>
                 <div class="col-sm-auto px-0">
                     <div class="btn-group" role="group" aria-label="Project acties">
-                        <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })" class="btn btn-primary btn-md px-3 me-1">
-                            <i class="fas fa-edit me-1"></i>Bewerken
-                        </a>
-                        <a href="#modaldeleteproject" class="btn btn-danger btn-md px-3" id="delete-project-button" data-project-id="@Model.Project.Id">
-                            <i class="fas fa-trash-alt me-1"></i>Verwijderen
-                        </a>
+                        @if (canWriteProject)
+                        {
+                            <a href="@Url.Action("Edit", "Projecten", new { projectid = Model.Project.Id })" class="btn btn-primary btn-md px-3 me-1">
+                                <i class="fas fa-edit me-1"></i>Bewerken
+                            </a>
+                        }
+                        @if (canDeleteProject)
+                        {
+                            <a href="#modaldeleteproject" class="btn btn-danger btn-md px-3" id="delete-project-button" data-project-id="@Model.Project.Id">
+                                <i class="fas fa-trash-alt me-1"></i>Verwijderen
+                            </a>
+                        }
                     </div>
                 </div>
             </div>

@@ -19,6 +19,8 @@
 } *@
 @{
     String urlTotal = "";
+    var canWriteProjectUnits = ViewBag.CanWriteProjectUnits as bool? ?? false;
+    var canDeleteProjectUnits = ViewBag.CanDeleteProjectUnits as bool? ?? false;
 }
 @section PageStyle
 {
@@ -91,7 +93,10 @@
                         <div class="btn-group" role="group" aria-label="Project acties">
                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-                        <a href="@Url.Action("AddUnit", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Eenheid toevoegen</a>
+                        @if (canWriteProjectUnits)
+                        {
+                            <a href="@Url.Action("AddUnit", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Eenheid toevoegen</a>
+                        }
                         </div>
                     </div>
                 </div>

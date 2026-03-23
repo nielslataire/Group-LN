@@ -17,7 +17,7 @@ public class PermissionResolver : IPermissionResolver
         if (string.Equals(controller, "Home", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Dashboard;
         if (string.Equals(controller, "Leveranciers", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Suppliers;
         if (string.Equals(controller, "Klanten", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Customers;
-        if (string.Equals(controller, "Invoices", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.InvoicingByBillingCompany;
+        if (string.Equals(controller, "Invoices", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Invoicing;
         if (string.Equals(controller, "UserAdmin", StringComparison.OrdinalIgnoreCase) || string.Equals(controller, "AppRoles", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsUsers;
 
         if (string.Equals(controller, "Instellingen", StringComparison.OrdinalIgnoreCase))
@@ -29,7 +29,7 @@ public class PermissionResolver : IPermissionResolver
             return PermissionCodes.Settings;
         }
 
-        if (string.Equals(controller, "Projecten", StringComparison.OrdinalIgnoreCase) || string.Equals(controller, "ProjectIssues", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(controller, "Projecten", StringComparison.OrdinalIgnoreCase) || string.Equals(controller, "ProjectIssues", StringComparison.OrdinalIgnoreCase) || string.Equals(controller, "ProjectsIssues", StringComparison.OrdinalIgnoreCase))
         {
             if (string.Equals(action, "Weather", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.ProjectsWeatherDelay;
             if (action?.Contains("Document", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsDocuments;
@@ -45,6 +45,8 @@ public class PermissionResolver : IPermissionResolver
             if (action?.Contains("Contact", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsContacts;
             if (action?.Contains("Client", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsCustomers;
             if (action?.Contains("Supplier", StringComparison.OrdinalIgnoreCase) == true) return PermissionCodes.ProjectsSuppliers;
+            // Default for the dedicated issues controller is ProjectsIssues; for Projecten it is ProjectsDetail
+            if (string.Equals(controller, "ProjectsIssues", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.ProjectsIssues;
             return PermissionCodes.ProjectsDetail;
         }
 

@@ -1,5 +1,8 @@
 ﻿@using BOCore
 @model CPMCore.Models.Klanten.DetailClientsModel
+@{
+    var canDeleteProjectCustomers = ViewBag.CanDeleteProjectCustomers as bool? ?? false;
+}
 
 
 @section PageStyle
@@ -169,7 +172,7 @@
 							</td>
 							<td class="actions">
 									<a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editAccount" href="@Url.Action("EditProject", "Klanten", new { projectid = Model.ProjectId, clientid = item.Client.Id, activetab = 0 })"><i class="bx bx-edit"></i></a>
-                                                @if(User.IsInRole("Admin")) {
+                                                @if(canDeleteProjectCustomers) {
                                                 <a href="#modaldeleteclient" data-toggle="tooltip" id="deleteClient" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" class="deleteClient" data-id="@item.Client.Id"><i class="bx bx-trash "></i></a>
 												}
 							</td>

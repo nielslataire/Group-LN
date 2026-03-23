@@ -5,6 +5,7 @@
 
 @{
     ViewData["Title"] = $"Project - {Model.Project.Name}";
+    var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
 }
 
 @section PageStyle
@@ -300,7 +301,7 @@
                                 </div>
                             </div>
 
-                            @if (User.IsInRole("Admin"))
+                            @if (canWriteProject)
                             {
                                 <hr />
                                 <h4 class="fw-bold mb-3">Verplichte documenten</h4>

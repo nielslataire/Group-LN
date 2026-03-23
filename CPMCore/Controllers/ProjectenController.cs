@@ -52,7 +52,6 @@ using System.Web;
 namespace CPMCore.Controllers
 {
     [Authorize]
-    [CPMCore.Filters.PermissionRead(PermissionCodes.ProjectsDetail)]
     public class ProjectenController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
@@ -97,6 +96,9 @@ namespace CPMCore.Controllers
         [Breadcrumb("Projecten", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
         public IActionResult Index(bool showAll = false)
         {
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanReadProjectsForSale = _ps.HasRead(PermissionCodes.ProjectsForSale);
+            ViewBag.CanWriteProject = _ps.HasWrite(PermissionCodes.ProjectsDetail);
             var model = new ShowProjectsModel();
             var service = _projectService;
 
@@ -148,6 +150,8 @@ namespace CPMCore.Controllers
         [Breadcrumb("Eigen projecten", FromAction = nameof(Index))]
         public IActionResult ProjectsByUserId(string userId)
         {
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanReadProjectsForSale = _ps.HasRead(PermissionCodes.ProjectsForSale);
             var model = new ShowProjectsModel();
             var service = _projectService;
 
@@ -205,6 +209,8 @@ namespace CPMCore.Controllers
                 take = 3;
             }
 
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanReadProjectsForSale = _ps.HasRead(PermissionCodes.ProjectsForSale);
             var service = _projectService;
 
             var response = service.GetProjectsForList();
@@ -314,6 +320,9 @@ namespace CPMCore.Controllers
             //NEXT
 
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProject = _ps.HasWrite(PermissionCodes.ProjectsDetail);
+            ViewBag.CanDeleteProject = _ps.HasDelete(PermissionCodes.ProjectsDetail);
             ShowProjectDetail model = new ShowProjectDetail();
             var Service = _projectService;
             var cservice = _clientService;
@@ -401,6 +410,7 @@ namespace CPMCore.Controllers
             return PartialView("Modals/_ModalDeleteProject", model);
         }
 
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsDetail)]
         public IActionResult DeleteProject(int id)
         {
             if (id == 0)
@@ -426,6 +436,8 @@ namespace CPMCore.Controllers
         [Breadcrumb("Project bewerken", FromAction = nameof(Index))]
         public IActionResult Edit(int projectid)
         {
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProject = _ps.HasWrite(PermissionCodes.ProjectsDetail);
 
             var referrer = Request.Headers["Referer"].ToString();
             TempData["Referrer"] = string.IsNullOrEmpty(referrer)
@@ -522,6 +534,9 @@ namespace CPMCore.Controllers
         public ActionResult DetailClients(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectCustomers = _ps.HasWrite(PermissionCodes.ProjectsCustomers);
+            ViewBag.CanDeleteProjectCustomers = _ps.HasDelete(PermissionCodes.ProjectsCustomers);
             DetailClientsModel model = new DetailClientsModel();
             var service = _clientService;
             var service2 = _projectService;
@@ -581,6 +596,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = projectUnits;
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectUnits = _ps.HasWrite(PermissionCodes.ProjectsUnits);
+            ViewBag.CanDeleteProjectUnits = _ps.HasDelete(PermissionCodes.ProjectsUnits);
             return View(model);
         }
         [HttpGet]
@@ -619,6 +637,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = projectContacts;
+            var _psContacts = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectContacts = _psContacts.HasWrite(PermissionCodes.ProjectsContacts);
+            ViewBag.CanDeleteProjectContacts = _psContacts.HasDelete(PermissionCodes.ProjectsContacts);
 
             return View(model);
         }
@@ -682,6 +703,8 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid, email, fullname, phone }
             };
             ViewData["BreadcrumbNode"] = contactDetails;
+            var _psContactDet = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectContacts = _psContactDet.HasWrite(PermissionCodes.ProjectsContacts);
 
             return View(model);
         }
@@ -1535,6 +1558,7 @@ namespace CPMCore.Controllers
             }
             return PartialView("_ModalDeleteUnit", viewModel);
         }
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsUnits)]
         public ActionResult DeleteUnit(int id, int projectid)
         {
             if (id != 0 && projectid != 0)
@@ -1675,6 +1699,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = projectContracts;
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectSuppliers = _ps.HasWrite(PermissionCodes.ProjectsSuppliers);
+            ViewBag.CanDeleteProjectSuppliers = _ps.HasDelete(PermissionCodes.ProjectsSuppliers);
             return View(model);
         }
 
@@ -1838,6 +1865,8 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = projectRecalc;
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectCalculation = _ps.HasWrite(PermissionCodes.ProjectsPostCalculation);
 
             return View(model);
         }
@@ -2249,6 +2278,7 @@ namespace CPMCore.Controllers
 
             return PartialView("_ModalDeleteContract", viewModel);
         }
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsSuppliers)]
         public ActionResult DeleteContract(int id, int projectid)
         {
             if (id != 0 && projectid != 0)
@@ -2860,6 +2890,7 @@ namespace CPMCore.Controllers
 
             return PartialView("_ModalDeleteIncommingInvoice", viewModel);
         }
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsSuppliers)]
         public ActionResult DeleteIncommingInvoice(int id, int projectid)
         {
             if (id != 0 && projectid != 0)
@@ -2945,6 +2976,9 @@ namespace CPMCore.Controllers
                 Parent = projectContracts
             };
             ViewData["BreadcrumbNode"] = lastnode;
+            var _psInv = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectSuppliers = _psInv.HasWrite(PermissionCodes.ProjectsSuppliers);
+            ViewBag.CanDeleteProjectSuppliers = _psInv.HasDelete(PermissionCodes.ProjectsSuppliers);
 
             return View(model);
         }
@@ -3045,7 +3079,9 @@ namespace CPMCore.Controllers
                 ViewData["BreadcrumbNode"] = changeOrdersNode;
             }
 
-
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectChangeOrders = _ps.HasWrite(PermissionCodes.ProjectsChangeOrders);
+            ViewBag.CanDeleteProjectChangeOrders = _ps.HasDelete(PermissionCodes.ProjectsChangeOrders);
 
             return View(model);
         }
@@ -3491,6 +3527,8 @@ namespace CPMCore.Controllers
             {
                 model.WeatherStations = response.Values;
             }
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectWeather = _ps.HasWrite(PermissionCodes.ProjectsWeatherDelay);
             return View(model);
         }
         [HttpGet]
@@ -3685,7 +3723,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = projectRecalc;
-
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectPhotos = _ps.HasWrite(PermissionCodes.ProjectsPhotos);
+            ViewBag.CanDeleteProjectPhotos = _ps.HasDelete(PermissionCodes.ProjectsPhotos);
 
             return View(model);
         }
@@ -3712,6 +3752,7 @@ namespace CPMCore.Controllers
             return PartialView("_ModalDeletePhoto", viewModel);
         }
 
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsPhotos)]
         public ActionResult DeletePhoto(int id, int projectid, PictureType type)
         {
             if (id != 0 && projectid != 0)
@@ -3858,8 +3899,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectId }
             };
             ViewData["BreadcrumbNode"] = lastnode;
-
-
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectNews = _ps.HasWrite(PermissionCodes.ProjectsNews);
+            ViewBag.CanDeleteProjectNews = _ps.HasDelete(PermissionCodes.ProjectsNews);
 
             return View(model);
         }
@@ -3966,6 +4008,7 @@ namespace CPMCore.Controllers
             return PartialView("_ModalDeleteNews", vm);
         }
 
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsNews)]
         public ActionResult DeleteNews(int id, int projectId, int pictureId)
         {
             if (id == 0 || projectId == 0)
@@ -4169,7 +4212,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = lastnode;
-
+            var _psDocs = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectDocs = _psDocs.HasWrite(PermissionCodes.ProjectsDocuments);
+            ViewBag.CanDeleteProjectDocs = _psDocs.HasDelete(PermissionCodes.ProjectsDocuments);
 
             return View(model);
         }
@@ -4441,6 +4486,7 @@ namespace CPMCore.Controllers
             return PartialView("_ModalDeleteDoc", vm);
         }
 
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsDocuments)]
         public ActionResult DeleteDoc(int id, int projectId)
         {
             if (id == 0 || projectId == 0)
@@ -4494,6 +4540,9 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = lastnode;
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectInsurances = _ps.HasWrite(PermissionCodes.ProjectsInsurances);
+            ViewBag.CanDeleteProjectInsurances = _ps.HasDelete(PermissionCodes.ProjectsInsurances);
 
             return View(model);
         }
@@ -4662,6 +4711,8 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }
             };
             ViewData["BreadcrumbNode"] = lastnode;
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectSales = _ps.HasWrite(PermissionCodes.ProjectsForSale);
 
             return View(model);
         }
@@ -5195,6 +5246,8 @@ namespace CPMCore.Controllers
         public IActionResult Invoicing(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+            var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
+            ViewBag.CanWriteProjectInvoicing = _ps.HasWrite(PermissionCodes.ProjectsInvoicing);
 
 
             // In je bestaande code gaat dit via ServiceFactory.
@@ -5244,7 +5297,7 @@ namespace CPMCore.Controllers
                 var accountIds = respCo.Values.Select(v => v.ClientAccountID).Distinct().ToList();
                 var respClients = clientService.GetClientAccountByIds(accountIds);
 
-                using var coUow = _uow;
+                var coUow = _uow;
                 var db = (cpmRunningContext)coUow.Context;
                 var detailIds = respCo.Values
                     .SelectMany(co => co.Details ?? new List<ChangeOrderDetailBO>())
@@ -6177,7 +6230,7 @@ namespace CPMCore.Controllers
 
         private List<ProjectIssuerCompanyOptionVM> GetIssuerCompanies()
         {
-            using var uow = _uow;
+            var uow = _uow;
             return uow.IssuerCompanies.GetNoTracking()
                 .OrderBy(i => i.Name)
                 .Select(i => new ProjectIssuerCompanyOptionVM { Id = i.Id, Name = i.Name })

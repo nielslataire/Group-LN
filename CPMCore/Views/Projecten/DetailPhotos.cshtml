@@ -7,6 +7,7 @@
 *@
 @{
 	ViewData["Title"] = Model.ProjectName + " - Foto's";
+	var canWriteProjectPhotos = ViewBag.CanWriteProjectPhotos as bool? ?? false;
 }
 @section PageStyle
 {
@@ -26,7 +27,10 @@
                     <h5 class="mb-4 mt-0">Beheer de foto's van het project</h5>
                 </div>
                 <div class="col-sm-auto px-0">
-                        <a href="#ModalAddPhoto" class="btn btn-primary btn-md addPhoto" data-id="@Model.ProjectId" id="btnAddPhoto"><i class="fas fa-upload me-1"></i> Foto uploaden</a>
+                        @if (canWriteProjectPhotos)
+                        {
+                            <a href="#ModalAddPhoto" class="btn btn-primary btn-md addPhoto" data-id="@Model.ProjectId" id="btnAddPhoto"><i class="fas fa-upload me-1"></i> Foto uploaden</a>
+                        }
 @*                         <a href="#modaladdphoto" class="btn btn-primary btn-md modal-with-form" type="button" id="btnAddPhoto"><i class="fas fa-upload me-1"></i> Foto uploaden</a> *@
                 </div>
             </div>

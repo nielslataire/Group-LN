@@ -6,6 +6,7 @@
 
 @{
     string imageUrl = string.Empty;
+    var canReadProjectsForSale = ViewBag.CanReadProjectsForSale as bool? ?? false;
 }
 
 @if (Model?.Projects != null)
@@ -83,7 +84,7 @@
                             <div>Aantal klanten: @clientCount</div>
                         </div>
 
-                        @if (User.IsInRole("Admin") || User.IsInRole("Administrator") || User.IsInRole("Sales") || User.IsInRole("Verkoop"))
+                        @if (canReadProjectsForSale)
                         {
                             <div class="project-progress-container mt-3">
                                 <div class="project-split-row small text-muted mb-1">

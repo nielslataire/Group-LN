@@ -4,6 +4,7 @@
 
 @{
     ViewData["Title"] = "Projecten - Weerverlet";
+    var canWriteProjectWeather = ViewBag.CanWriteProjectWeather as bool? ?? false;
 }
 
 @section PageStyle
@@ -341,6 +342,8 @@
                          new SelectList(Model.WeatherStations, "ID", "Display", Model.SelectedWeatherStation),
                          new { @class = "form-control form-modern", id = "lstWeatherStations" })
                 </div>
+            @if (canWriteProjectWeather)
+            {
             <div class="col-lg-2 col-xl-2 d-flex gap-2" role="group" aria-label="Weerverlet type">
                 <button type="button" class="btn btn-outline-primary flex-fill" data-daytype="rain">
                     <i class='bx bx-cloud-rain'></i> Regendag
@@ -349,6 +352,7 @@
                     <i class='bx bx-wind'></i> Winddag
                 </button>
             </div>
+            }
             </div>   
     </div>
 </div>

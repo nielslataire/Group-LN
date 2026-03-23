@@ -1,6 +1,9 @@
 ﻿@using BOCore
 @model CPMCore.Models.Projecten.DetailUnitsModel
-
+@{
+    var canWriteProjectUnits = ViewBag.CanWriteProjectUnits as bool? ?? false;
+    var canDeleteProjectUnits = ViewBag.CanDeleteProjectUnits as bool? ?? false;
+}
 
 @section PageStyle
 {
@@ -73,10 +76,16 @@
 							<td class="actions text-right">
 								@if (unit.IsLink == false)
 								{
-									<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Koppelen" data-id="@unit.Id" href="#ModalAddLink" class="addLink"><i class="bx bx-link-alt mr-md"></i></a>
-
-									<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken" href="@Url.Action("EditUnit", "Projecten", new {projectid = unit.ProjectId, unitid = unit.Id})" class="editCompany"><i class="bx bx-edit "></i></a>
-								} <a class="deleteUnit" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@unit.Id" href="#ModalDeleteUnit"><i class="bx bx-trash"></i></a>
+									@if (canWriteProjectUnits)
+									{
+										<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Koppelen" data-id="@unit.Id" href="#ModalAddLink" class="addLink"><i class="bx bx-link-alt mr-md"></i></a>
+										<a data-toggle="tooltip" data-placement="top" title="" data-original-title="Bewerken" href="@Url.Action("EditUnit", "Projecten", new {projectid = unit.ProjectId, unitid = unit.Id})" class="editCompany"><i class="bx bx-edit "></i></a>
+									}
+								}
+								@if (canDeleteProjectUnits)
+								{
+									<a class="deleteUnit" data-toggle="tooltip" data-placement="top" title="" data-original-title="Verwijderen" data-id="@unit.Id" href="#ModalDeleteUnit"><i class="bx bx-trash"></i></a>
+								}
 							</td>
 						</tr>
 					}

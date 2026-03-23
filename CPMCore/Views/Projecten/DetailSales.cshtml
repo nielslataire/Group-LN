@@ -7,6 +7,7 @@
 *@
 @{
 	ViewData["Title"] = Model.ProjectName;
+	var canWriteProjectSales = ViewBag.CanWriteProjectSales as bool? ?? false;
 }
 @section PageStyle
 {
@@ -81,14 +82,17 @@
                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel" data-toggle="tooltip" title="Exporteren naar excel"><i class="fas fa-file-excel"></i></button>
                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf" data-toggle="tooltip" title="PDF"><i class="fas fa-file-pdf"></i></button>
 @*                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnSettings" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></button> *@
-                        <a href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-md px-3 me-1" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></a>
-                        <button id="btnCalculate"
-                                class="btn btn-primary btn-md"
-                                data-action="@Url.Action("CalculateCosts", "Projecten")"
-                                data-projectid="@Model.ProjectId"
-                                disabled>
-                            <i class="fa fa-calculator me-2"></i> <span class="btn-label">Berekenen</span>
-                        </button>
+                        @if (canWriteProjectSales)
+                        {
+                            <a href="@Url.Action("SalesSettings", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-primary btn-md px-3 me-1" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></a>
+                            <button id="btnCalculate"
+                                    class="btn btn-primary btn-md"
+                                    data-action="@Url.Action("CalculateCosts", "Projecten")"
+                                    data-projectid="@Model.ProjectId"
+                                    disabled>
+                                <i class="fa fa-calculator me-2"></i> <span class="btn-label">Berekenen</span>
+                            </button>
+                        }
                         </div>
                     </div>
                 </div>

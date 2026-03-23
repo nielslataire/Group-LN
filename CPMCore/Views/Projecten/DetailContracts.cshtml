@@ -19,6 +19,8 @@
 } *@
 @{
 	String urlTotal = "";
+	var canWriteProjectSuppliers = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
+	var canDeleteProjectSuppliers = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
 }
 @section PageStyle
 {
@@ -68,7 +70,10 @@
                         <div class="btn-group" role="group" aria-label="Project acties">
                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button>
-                        <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
+                        @if (canWriteProjectSuppliers)
+                        {
+                            <a href="@Url.Action("AddContract", "Projecten", new {projectid = Model.ProjectId})" class="btn btn-primary btn-md">+ Leverancier toevoegen</a>
+                        }
                         </div>
                     </div>
                 </div>

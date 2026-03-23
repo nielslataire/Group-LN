@@ -7,6 +7,7 @@
 *@
 @{
     ViewData["Title"] =  Model.ProjectName;
+    var canWriteProjectCalculation = ViewBag.CanWriteProjectCalculation as bool? ?? false;
 }
 @* @{
 	ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -120,20 +121,26 @@
                     </div>
                     <div class="col-sm-auto px-0">
 
-                        <a class="btn btn-default btn-md px-3" href="@Url.Action("CalculationSettings", "Projecten", new { projectid = Model.ProjectId })">
-                          <i class="fas fa-cog me-2"></i>Budget instellen
-                        </a>
+                        @if (canWriteProjectCalculation)
+                        {
+                            <a class="btn btn-default btn-md px-3" href="@Url.Action("CalculationSettings", "Projecten", new { projectid = Model.ProjectId })">
+                              <i class="fas fa-cog me-2"></i>Budget instellen
+                            </a>
+                        }
                         <a class="btn btn-default btn-md px-3" href="@Url.Action("PrintRecalculation", "Projecten", new { projectid = Model.ProjectId })">
                           <i class="fas fa-file-pdf me-2"></i>Afdrukken
                         </a>
-                        <div class="btn-group flex-wrap">
-												<button type="button" class="mb-1 mt-1 me-1 btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-plus me-2"></i>Toevoegen <span class="caret"></span></button>
-												<div class="dropdown-menu dropdown-menu-start" role="menu" style="">
-													<a class="dropdown-item text-1" href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId})">Contract</a>
-													<a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0  })">Inkomende factuur - contract</a>
-													<a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 1  })">Inkomende factuur - zonder contract</a>
-												</div>
-											</div>
+                        @if (canWriteProjectCalculation)
+                        {
+                            <div class="btn-group flex-wrap">
+                                <button type="button" class="mb-1 mt-1 me-1 btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-plus me-2"></i>Toevoegen <span class="caret"></span></button>
+                                <div class="dropdown-menu dropdown-menu-start" role="menu" style="">
+                                    <a class="dropdown-item text-1" href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId})">Contract</a>
+                                    <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0  })">Inkomende factuur - contract</a>
+                                    <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 1  })">Inkomende factuur - zonder contract</a>
+                                </div>
+                            </div>
+                        }
 
 @*                         <button type="button" class="btn btn-primary btn-md px-3" id="btnAdd"><i class="fas fa-plus me-2"></i>Inkomende factuur</button> *@
                     </div>

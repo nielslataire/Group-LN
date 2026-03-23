@@ -135,7 +135,8 @@ public class UserAdminController : BaseController
                 !string.Equals(x.Code, PermissionCodes.CustomersAll, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(x.Code, PermissionCodes.CustomersByBillingCompany, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(x.Code, PermissionCodes.SuppliersAll, StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(x.Code, PermissionCodes.SuppliersByBillingCompany, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(x.Code, PermissionCodes.SuppliersByBillingCompany, StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(x.Code, PermissionCodes.InvoicingByBillingCompany, StringComparison.OrdinalIgnoreCase))
             .Select(x => new PermissionMatrixItemViewModel
             {
                 Code = x.Code,
@@ -172,7 +173,7 @@ public class UserAdminController : BaseController
             {
                 Code = $"{InvoicingCompanyPermissionPrefix}{issuer.Id}",
                 Name = issuer.Name,
-                ParentCode = PermissionCodes.InvoicingByBillingCompany,
+                ParentCode = PermissionCodes.Invoicing,
                 SortOrder = 5000 + issuer.Id
             });
         }

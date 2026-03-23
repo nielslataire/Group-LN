@@ -96,10 +96,10 @@
 
     .permission-header-vertical {
         display: inline-flex;
-        flex-direction: row;
+        flex-direction: column-reverse;
         align-items: center;
         justify-content: center;
-        gap: .25rem;
+        gap: .4rem;
     }
 
         .permission-header-vertical .header-text-vertical {
@@ -526,7 +526,6 @@
                 tr.innerHTML =
                     '<td' + labelPadding + '>' + item.name + '</td>' +
                     '<td class="text-center permission-cell">' +
-                    '<td class="text-center permission-cell">' +
                         '<div class="checkbox-custom ' + (readWarning ? 'checkbox-warning' : 'checkbox-default') + '">' +
                             '<input data-access="read" id="' + readId + '" type="checkbox" ' + (right.read ? 'checked' : '') + ' ' + disabled + ' />' +
                             '<label for="' + readId + '"></label>' +
@@ -715,6 +714,40 @@
             updateAllParentRows(tbody, 'delete');
         }
 
+        function enforceCascade(row, changedAccess) {
+            const readCb = row.querySelector('input[data-access="read"]');
+            const writeCb = row.querySelector('input[data-access="write"]');
+            const deleteCb = row.querySelector('input[data-access="delete"]');
+            if (!readCb || !writeCb || !deleteCb) return;
+
+            if (changedAccess === 'delete' && deleteCb.checked) {
+                writeCb.checked = true;
+                readCb.checked = true;
+            } else if (changedAccess === 'write' && writeCb.checked) {
+                readCb.checked = true;
+            } else if (changedAccess === 'write' && !writeCb.checked) {
+                deleteCb.checked = false;
+            } else if (changedAccess === 'read' && !readCb.checked) {
+                writeCb.checked = false;
+                deleteCb.checked = false;
+            }
+        }
+
+        function updateAllAccessStates(tbody, row) {
+            ['read', 'write', 'delete'].forEach(function (a) {
+                let pCode = row ? row.dataset.parentCode : null;
+                while (pCode) {
+                    updateParentRowState(tbody, pCode, a);
+                    const pRow = tbody.querySelector('tr[data-code="' + pCode + '"]');
+                    pCode = pRow ? pRow.dataset.parentCode : null;
+                }
+                if (row && row.dataset.hasChildren === 'true') {
+                    updateParentRowState(tbody, row.dataset.code, a);
+                }
+                updateHeaderToggleState(tbody, a);
+            });
+        }
+
               function attachColumnToggles(tbody, editable) {
             const table = tbody.closest('table');
             if (!table) return;
@@ -753,16 +786,8 @@
                 tbody.querySelectorAll('input[data-access="' + access + '"]').forEach(function (cb) {
                     cb.addEventListener('change', function () {
                         const row = cb.closest('tr');
-
-                        if (row && row.dataset.parentCode) {
-                            updateParentRowState(tbody, row.dataset.parentCode, access);
-                        }
-
-                        if (row && row.dataset.hasChildren === 'true') {
-                            updateParentRowState(tbody, row.dataset.code, access);
-                        }
-
-                        updateHeaderToggleState(tbody, access);
+                        if (row) enforceCascade(row, access);
+                        updateAllAccessStates(tbody, row);
                     });
                 });
 

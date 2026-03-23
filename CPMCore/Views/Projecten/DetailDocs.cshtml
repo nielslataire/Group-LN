@@ -20,6 +20,7 @@
 } *@
 @{
 	String urlTotal = "";
+	var canWriteProjectDocs = ViewBag.CanWriteProjectDocs as bool? ?? false;
 }
 @section PageStyle
 {
@@ -88,9 +89,12 @@
                         <h5 class="mb-4 mt-0">@h5</h5>
                     </div>
                     <div class="col-sm-auto px-0">
-                        <a href="#modaladddoc" class="btn btn-primary btn-md modal-with-form" id="btnAddDoc">
-                            <i class="bx bx-arrow-out-up-square-half"></i> Document uploaden
-                        </a>
+                        @if (canWriteProjectDocs)
+                        {
+                            <a href="#modaladddoc" class="btn btn-primary btn-md modal-with-form" id="btnAddDoc">
+                                <i class="bx bx-arrow-out-up-square-half"></i> Document uploaden
+                            </a>
+                        }
                     </div>
                 </div>
                 @await Html.PartialAsync("Docs", Model)

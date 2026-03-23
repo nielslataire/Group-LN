@@ -10,6 +10,7 @@
 }
 @{
     String urlTotal = "";
+    var canWriteProjectChangeOrders = ViewBag.CanWriteProjectChangeOrders as bool? ?? false;
 }
 @section PageStyle
 {
@@ -87,8 +88,11 @@
                         <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf">
                             <i class="fas fa-file-pdf"></i>
                         </button>
-                        <a href="@Url.Action("AddChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientaccountid = Model.ClientAccountId })"
-                           class="btn btn-primary btn-md">+ Wijzigingsopdracht toevoegen</a>
+                        @if (canWriteProjectChangeOrders)
+                        {
+                            <a href="@Url.Action("AddChangeOrder", "Projecten", new { projectid = Model.ProjectId, clientaccountid = Model.ClientAccountId })"
+                               class="btn btn-primary btn-md">+ Wijzigingsopdracht toevoegen</a>
+                        }
                            </div>
                     </div>
                 </div>

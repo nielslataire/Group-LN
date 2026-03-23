@@ -39,7 +39,7 @@ using System.Security.Claims;
 namespace CPMCore.Controllers
 {
     [Authorize]
-    [CPMCore.Filters.PermissionRead(PermissionCodes.InvoicingByBillingCompany)]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.Invoicing)]
     public class InvoicesController : BaseController
     {
         private const string ControllerName = "Invoices";
@@ -214,9 +214,16 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> BookInvoices(int issuerCompanyId, int[] invoiceIds, CancellationToken ct = default)
         {
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAllIssuers && !writeScope.AllowedIssuerIds.Contains(issuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf te boeken.", "Geen toegang");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
             var issuer = await _ics.GetAsync(issuerCompanyId, ct);
             if (issuer == null || string.IsNullOrWhiteSpace(issuer.OctopusDossierNumber))
             {
@@ -399,6 +406,18 @@ namespace CPMCore.Controllers
                     : RedirectToAction(nameof(Index));
             }
 
+            var readScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Read, ct);
+            if (!readScope.HasAccess || (!readScope.HasAllIssuers && !readScope.AllowedIssuerIds.Contains(detail.IssuerCompanyId)))
+            {
+                AddMessage("error", "Je hebt geen rechten om deze factuur te bekijken.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
+
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            var deleteScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Delete, ct);
+            ViewBag.CanWriteInvoices = writeScope.HasAccess && (writeScope.HasAllIssuers || writeScope.AllowedIssuerIds.Contains(detail.IssuerCompanyId));
+            ViewBag.CanDeleteInvoices = deleteScope.HasAccess && (deleteScope.HasAllIssuers || deleteScope.AllowedIssuerIds.Contains(detail.IssuerCompanyId));
+
             await TryUpdateOctopusDeliveryStateAsync(detail, ct);
 
             var vm = MapDetail(detail);
@@ -436,6 +455,10 @@ namespace CPMCore.Controllers
             var detail = await _invoices.GetDetailAsync(id, ct);
             if (detail == null)
                 return NotFound();
+
+            var readScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Read, ct);
+            if (!readScope.HasAccess || (!readScope.HasAllIssuers && !readScope.AllowedIssuerIds.Contains(detail.IssuerCompanyId)))
+                return Forbid();
 
             var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
             if (issuer == null)
@@ -504,6 +527,10 @@ namespace CPMCore.Controllers
             if (detail == null)
                 return NotFound();
 
+            var readScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Read, ct);
+            if (!readScope.HasAccess || (!readScope.HasAllIssuers && !readScope.AllowedIssuerIds.Contains(detail.IssuerCompanyId)))
+                return Forbid();
+
             var issuer = await _ics.GetAsync(detail.IssuerCompanyId, ct);
             if (issuer == null)
                 return NotFound();
@@ -519,7 +546,7 @@ namespace CPMCore.Controllers
 
         //FACTUUR VERZENDEN (GET)
         [HttpGet]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Send(int id, int? issuerCompanyId = null, string? mode = null, CancellationToken ct = default)
         {
             var detail = await _invoices.GetDetailAsync(id, ct);
@@ -540,6 +567,13 @@ namespace CPMCore.Controllers
                     : RedirectToAction(nameof(Index));
             }
 
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAllIssuers && !writeScope.AllowedIssuerIds.Contains(detail.IssuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf te versturen.", "Geen toegang");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId = detail.IssuerCompanyId });
+            }
+
             var formMode = ParseSendMode(mode);
             var vm = await CreateSendViewModelAsync(detail, issuer, includeDefaults: true, checkPeppol: true, formMode, ct);
 
@@ -557,7 +591,7 @@ namespace CPMCore.Controllers
         //FACTUUR VERZENDEN (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Send(InvoiceSendVM form, CancellationToken ct = default)
         {
             var submitMode = Request?.Form?["submitMode"].ToString();
@@ -580,6 +614,13 @@ namespace CPMCore.Controllers
             {
                 AddMessage("error", "Factuur verstrekker niet gevonden.", "Factuur");
                 return RedirectToAction(nameof(Index));
+            }
+
+            var writeScopePost = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScopePost.HasAllIssuers && !writeScopePost.AllowedIssuerIds.Contains(detail.IssuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf te versturen.", "Geen toegang");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId = detail.IssuerCompanyId });
             }
 
             var formMode = isCopyRequest ? InvoiceSendFormMode.Copy : InvoiceSendFormMode.Standard;
@@ -724,9 +765,16 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> ResendOctopus(int id, int issuerCompanyId, CancellationToken ct = default)
         {
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAllIssuers && !writeScope.AllowedIssuerIds.Contains(issuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf te versturen.", "Geen toegang");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
             try
             {
                 await SendInvoiceToOctopusAsync(id, ct, sendOnly: true, forceSendStep: true);
@@ -749,9 +797,16 @@ namespace CPMCore.Controllers
         // DELETE (POST)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [CPMCore.Filters.PermissionDelete(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Delete(int id, int issuerCompanyId, CancellationToken ct = default)
         {
+            var deleteScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Delete, ct);
+            if (!deleteScope.HasAllIssuers && !deleteScope.AllowedIssuerIds.Contains(issuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf te verwijderen.", "Geen toegang");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
             try
             {
                 await _cmd.DeleteAsync(id, ct);
@@ -772,9 +827,13 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        [CPMCore.Filters.PermissionDelete(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionDelete(PermissionCodes.Invoicing)]
         public async Task<IActionResult> ModalDelete(int id, int issuerCompanyId, CancellationToken ct = default)
         {
+            var deleteScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Delete, ct);
+            if (!deleteScope.HasAllIssuers && !deleteScope.AllowedIssuerIds.Contains(issuerCompanyId))
+                return Content("<div class='p-3 text-danger'>Je hebt geen rechten om facturen voor dit facturatiebedrijf te verwijderen.</div>", "text/html");
+
             var rows = await _invoices.GetByCompanyAsync(issuerCompanyId, ct);
             var row = rows.FirstOrDefault(r => r.Id == id);
             if (row == null)
@@ -795,9 +854,16 @@ namespace CPMCore.Controllers
 
         //VAN DRAFT NAAR DEFINITIEF
         [HttpGet]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Issue(int id, int issuerCompanyId, CancellationToken ct = default)
         {
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAllIssuers && !writeScope.AllowedIssuerIds.Contains(issuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf te nummeren.", "Geen toegang");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
             // ISSUE FLOW (van draft naar definitief + verzending via Octopus)
             // Volgorde:
             // 1) Verzend eerst via Octopus met de voorziene nummering en payload.
@@ -851,10 +917,15 @@ namespace CPMCore.Controllers
 
         // CREATE (GET)
         [HttpGet]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Create(int? issuerId = null, int? duplicateInvoiceId = null, CancellationToken ct = default)
         {
-
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAccess)
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen aan te maken.", "Geen toegang");
+                return RedirectToAction("AccessDenied", "Account");
+            }
 
             InvoiceDetailBO? duplicateDetail = null;
             if (duplicateInvoiceId.HasValue && duplicateInvoiceId.Value > 0)
@@ -866,14 +937,21 @@ namespace CPMCore.Controllers
                 }
             }
 
-            // gekozen issuer (param of eerste actieve)
+            // haal actieve issuers op, gefilterd op schrijfrechten
+            var allIssuersBo = await _ics.ListActiveIssuersAsync(ct);
+            var issuersBo = writeScope.HasAllIssuers
+                ? allIssuersBo
+                : allIssuersBo.Where(i => writeScope.AllowedIssuerIds.Contains(i.Id)).ToList();
+
+            // gekozen issuer (param of eerste toegestane)
             var selectedIssuerId = duplicateDetail?.IssuerCompanyId
                 ?? issuerId
-                ?? (await _ics.GetFirstActiveIssuerIdAsync(ct))
+                ?? issuersBo.FirstOrDefault()?.Id
                 ?? 0;
 
-            // haal alles via service
-            var issuersBo = await _ics.ListActiveIssuersAsync(ct);
+            // als gekozen issuer niet toegestaan is, val terug op eerste toegestane
+            if (!writeScope.HasAllIssuers && selectedIssuerId > 0 && !writeScope.AllowedIssuerIds.Contains(selectedIssuerId))
+                selectedIssuerId = issuersBo.FirstOrDefault()?.Id ?? 0;
             var termsBo = selectedIssuerId > 0
                 ? await _ics.ListPaymentTermsAsync(selectedIssuerId, ct)
                 : Array.Empty<PaymentTermBO>();
@@ -1326,8 +1404,16 @@ namespace CPMCore.Controllers
         // CREATE DRAFT (POST) – eenvoudige conceptfactuur aanmaken
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> CreateDraft(InvoiceComposeVM vm, CancellationToken ct)
         {
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAllIssuers && !writeScope.AllowedIssuerIds.Contains(vm.IssuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf aan te maken.", "Geen toegang");
+                return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+            }
+
             if (vm.IssuerCompanyId <= 0 || vm.PartyType is null || vm.PartyId is null)
             {
                 AddMessage("error", "Kies een facturatiebedrijf en afnemer.", "Factuur");
@@ -1532,8 +1618,16 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Save(InvoiceComposeVM vm, CancellationToken ct)
         {
+            var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
+            if (!writeScope.HasAllIssuers && !writeScope.AllowedIssuerIds.Contains(vm.IssuerCompanyId))
+            {
+                AddMessage("error", "Je hebt geen rechten om facturen voor dit facturatiebedrijf aan te maken.", "Geen toegang");
+                return RedirectToAction(nameof(Create), new { issuerId = vm.IssuerCompanyId });
+            }
+
             try
             {
                 var bo = await BuildInvoiceDraftBoAsync(vm, ct);
@@ -1672,7 +1766,7 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Edit(int id, int? issuerCompanyId = null, string? returnUrl = null, CancellationToken ct = default)
         {
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
@@ -1720,7 +1814,7 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> Edit(InvoiceEditVM vm, CancellationToken ct)
         {
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
@@ -1819,7 +1913,7 @@ namespace CPMCore.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [CPMCore.Filters.PermissionWrite(PermissionCodes.InvoicingByBillingCompany)]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Invoicing)]
         public async Task<IActionResult> UpdateDraft(InvoiceDraftEditVM vm, CancellationToken ct)
         {
             var writeScope = await ResolveInvoicingIssuerScopeAsync(PermissionAccessType.Write, ct);
@@ -4948,9 +5042,9 @@ END";
 
             var hasMainAccess = accessType switch
             {
-                PermissionAccessType.Read => permissionService.HasRead(PermissionCodes.InvoicingByBillingCompany),
-                PermissionAccessType.Write => permissionService.HasWrite(PermissionCodes.InvoicingByBillingCompany),
-                PermissionAccessType.Delete => permissionService.HasDelete(PermissionCodes.InvoicingByBillingCompany),
+                PermissionAccessType.Read => permissionService.HasRead(PermissionCodes.Invoicing),
+                PermissionAccessType.Write => permissionService.HasWrite(PermissionCodes.Invoicing),
+                PermissionAccessType.Delete => permissionService.HasDelete(PermissionCodes.Invoicing),
                 _ => false
             };
 

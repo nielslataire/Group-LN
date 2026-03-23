@@ -263,51 +263,25 @@
 				</ul> *@
 
 @* 				<span class="separator"></span> *@
-
 				<div id="userbox" class="userbox">
 					<a href="#" data-bs-toggle="dropdown">
 
-						<span class="profile-picture profile-picture-as-text">JD</span>
-						<div class="profile-info profile-info-no-role" data-lock-name="John Doe" data-lock-email="johndoe@okler.com">
-							<span class="name">Hi, <strong class="font-weight-semibold">John Doe</strong></span>
+						<span class="profile-picture profile-picture-as-text">@userInitials</span>
+						<div class="profile-info profile-info-no-role" data-lock-name="@userDisplayName" data-lock-email="@userEmail">
+							<span class="name">Hallo, <strong class="font-weight-semibold">@userDisplayName</strong></span>
 						</div>
-
 						<i class="fas fa-chevron-down text-color-dark"></i>
 					</a>
 
 					<div class="dropdown-menu">
 						<ul class="list-unstyled">
-							<li>
-								<a role="menuitem" tabindex="-1" href="pages-signin.html"><i class="bx bx-log-out"></i> Logout</a>
+							<li class="mt-3">
+								<a role="menuitem" tabindex="-1" href="@Url.Action("SignOut", "Account")"><i class="bx bx-arrow-out-right-square-half" ></i> Afmelden</a>
 							</li>
 						</ul>
 					</div>
 				</div>
-
-
-@* 				<div id="userbox" class="userbox">
-					<a href="#" data-bs-toggle="dropdown">
-						<figure class="profile-picture">
-							<img src="@userPhotoUrl" alt="@userDisplayName" class="rounded-circle user-profile-photo" data-lock-picture="@userPhotoUrl" />
-							<span class="profile-picture profile-picture-as-text">@userInitials</span>
-						</figure>
-						<div class="profile-info" data-lock-name="@userDisplayName" data-lock-email="@userEmail">
-							<span class="name">@userDisplayName</span>
-							<span class="role">@userEmail</span>
-						</div>
-						<i class="fa fa-arrow-down"></i>
-					</a>
-
-					<div class="dropdown-menu">
-						<ul class="list-unstyled">
-							<li>
-								<a role="menuitem" tabindex="-1" href="@Url.Action("SignOut", "Account")"><i class="bx bx-log-out"></i> Afmelden</a>
-							</li>
-						</ul>
-					</div>
-				</div> *@
-
-			</div>
+				</div>
 			<!-- end: search & user box -->
 		</header>
 		<!-- end: header -->

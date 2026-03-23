@@ -4,6 +4,7 @@
 
 @{
     ViewData["Title"] = "Project – " + Model.ProjectName;
+    var canWriteProjectInvoicing = ViewBag.CanWriteProjectInvoicing as bool? ?? false;
 }
 
 <style>
@@ -65,7 +66,7 @@
                            title="Betalingsschijven">
                             <i class="fa fa-chart-pie me-2"></i>Betalingsschijven
                         </a>
-                        @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                        @if (canWriteProjectInvoicing)
                         {
                             <button type="button" class="btn btn-primary btn-md px-3" id="btnInvoicing" data-bs-toggle="tooltip" title="Facturen opmaken" disabled>
                                 <i class="fa fa-euro-sign me-2"></i>Facturen opmaken
@@ -114,7 +115,7 @@
                                         </td>
                                         <td></td>
                                         <td class="text-end">
-                                            @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                            @if (canWriteProjectInvoicing)
                                                 {
                                                     <div class="checkbox-custom checkbox-default d-inline-block">
                                                         <input type="checkbox" class="chkClient"
@@ -143,7 +144,7 @@
                                                 </td>
                                                 <td></td>
                                                     <td class="text-end">
-                                                        @if ((User.IsInRole("Boekhouding") || User.IsInRole("Admin")) && isFirstGroupForUnit)
+                                                        @if ((canWriteProjectInvoicing) && isFirstGroupForUnit)
                                                         {
                                                             <div class="checkbox-custom checkbox-default d-inline-block">
                                                                 <input type="checkbox" class="chkUnit"
@@ -164,7 +165,7 @@
                                                         </td>
                                                         <td class="text-end">@stage.Percentage.ToString("0.00") @Html.Raw("%")</td>
                                                         <td class="text-end">
-                                                            @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                            @if (canWriteProjectInvoicing)
                                                             {
                                                                 <div class="checkbox-custom checkbox-default d-inline-block">
                                                                     <input type="checkbox" class="chkInvoice"
@@ -220,7 +221,7 @@
                                             <td></td>
                                             <td></td>
                                             <td class="text-end">
-                                                @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                @if (canWriteProjectInvoicing)
                                                 {
                                                     <div class="checkbox-custom checkbox-default d-inline-block">
                                                         <input type="checkbox" class="chkClientCO" data-clientaccountid="@item.Client.Id" />
@@ -284,7 +285,7 @@
                                                 </td>
 
                                                 <td class="text-end">
-                                                    @if (User.IsInRole("Boekhouding") || User.IsInRole("Admin"))
+                                                    @if (canWriteProjectInvoicing)
                                                     {
                                                         <div class="checkbox-custom checkbox-default d-inline-block">
                                                             <input type="checkbox" class="chkOrderCO"

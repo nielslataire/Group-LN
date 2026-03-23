@@ -7,6 +7,8 @@
 *@
 @{
     ViewData["Title"] = Model.ProjectName + " - Factuur detail";
+    var canWriteProjectSuppliers = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
+    var canDeleteProjectSuppliers = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
 }
 @* @{
 	ViewBag.Breadcrumbs = new List<Breadcrumb>()
@@ -330,20 +332,23 @@
             </div>
             <div class="row action-buttons mt-4">
 
-                <div class="col-12 col-md-auto">
-                    <a href="@Url.Action("EditIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, invoiceid = Model.IncommingInvoice.Id })" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1"><i class="bx bx-edit text-4 me-2"></i> Factuur bewerken</a>
-@*                         <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-                            <i class="bx bx-edit text-4 me-2"></i> Factuur bewerken
-                        </button> *@
-                </div>
+                @if (canWriteProjectSuppliers)
+                {
+                    <div class="col-12 col-md-auto">
+                        <a href="@Url.Action("EditIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, invoiceid = Model.IncommingInvoice.Id })" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1"><i class="bx bx-edit text-4 me-2"></i> Factuur bewerken</a>
+                    </div>
+                }
                 <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
                     <a href="@TempData.Peek("Referrer")" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
                 </div>
-                <div class="col-12 col-md-auto ms-md-auto mt-3 mt-md-0 ms-auto">
-                    <a href="#modaldeleteinvoice" class="delete-button btn btn-danger btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 deleteInvoice" data-id="@Model.IncommingInvoice.Id" data-company="@Model.Company.Bedrijfsnaam">
-                        <i class="bx bx-trash text-4 me-2"></i> Factuur verwijderen
-                    </a>
-                </div>
+                @if (canDeleteProjectSuppliers)
+                {
+                    <div class="col-12 col-md-auto ms-md-auto mt-3 mt-md-0 ms-auto">
+                        <a href="#modaldeleteinvoice" class="delete-button btn btn-danger btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1 deleteInvoice" data-id="@Model.IncommingInvoice.Id" data-company="@Model.Company.Bedrijfsnaam">
+                            <i class="bx bx-trash text-4 me-2"></i> Factuur verwijderen
+                        </a>
+                    </div>
+                }
 
             </div>
             

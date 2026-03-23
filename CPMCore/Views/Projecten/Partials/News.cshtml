@@ -1,5 +1,9 @@
 ﻿@using BOCore
 @model CPMCore.Models.Projecten.DetailNewsModel
+@{
+    var canWriteProjectNews = ViewBag.CanWriteProjectNews as bool? ?? false;
+    var canDeleteProjectNews = ViewBag.CanDeleteProjectNews as bool? ?? false;
+}
 
 
 @section PageStyle
@@ -40,18 +44,22 @@
                                 <div class="d-flex align-items-center gap-1">
                                     <span class="badge text-bg-light">@item.NewsDate.ToString("dd MMM yyyy")</span>
 
-                                    @* --- EDIT knop opent partial in modal --- *@
-                                    <a class="btn btn-sm editNews" href="#ModalEditNews"
-                                       data-id="@item.Id"
-                                       data-toggle="tooltip"
-                                       title="Bewerken"><i class="bx bx-edit"></i></a>
-                                    @* --- DELETE knop post via verborgen formulier --- *@
-                                    <a class="btn btn-sm deleteNews" href="#ModalDeleteNews"
-                                       data-id="@item.Id"
-                                       data-toggle="tooltip"
-                                       data-project-id="@Model.ProjectId"
-                                       data-picture-id="@(item.Picture?.Id ?? 0)"
-                                       title="Verwijderen"><i class="bx bx-trash"></i></a>
+                                    @if (canWriteProjectNews)
+                                    {
+                                        <a class="btn btn-sm editNews" href="#ModalEditNews"
+                                           data-id="@item.Id"
+                                           data-toggle="tooltip"
+                                           title="Bewerken"><i class="bx bx-edit"></i></a>
+                                    }
+                                    @if (canDeleteProjectNews)
+                                    {
+                                        <a class="btn btn-sm deleteNews" href="#ModalDeleteNews"
+                                           data-id="@item.Id"
+                                           data-toggle="tooltip"
+                                           data-project-id="@Model.ProjectId"
+                                           data-picture-id="@(item.Picture?.Id ?? 0)"
+                                           title="Verwijderen"><i class="bx bx-trash"></i></a>
+                                    }
                                 </div>
                             </div>
 

@@ -217,7 +217,7 @@
                                                        data-seq="@r.OctopusDocumentSequenceNr"
                                                        data-booked="@(isBooked.ToString().ToLowerInvariant())"
                                                        data-bookable="@(isBookable.ToString().ToLowerInvariant())"
-                                                       @((!canWriteInvoices || !isBookable) ? "disabled" : null)
+                                                       @((!canWriteInvoices || !isBookable || isBooked) ? "disabled" : null)
                                                        @(isBooked ? "checked" : null) />
                                                 <label for="checkboxExample1"></label>
                                             </div>
@@ -260,14 +260,14 @@
 
                             <td class="col-fit text-nowrap">@r.SendMethod</td>
 
-                                        <td class="col-fit text-end actions text-nowrap">
+                                        <td class="col-fit actions">
+                                            <div class="d-flex align-items-center justify-content-end gap-1 flex-nowrap">
                                             @if (canWriteInvoices)
                                             {
                                                 <a data-placement="top" title="Dupliceren" data-original-title="Dupliceren"
                                                    asp-action="Create"
                                                    asp-route-issuerId="@ViewBag.CompanyId"
-                                                   asp-route-duplicateInvoiceId="@r.Id"
-                                                   class="ms-1 me-1">
+                                                   asp-route-duplicateInvoiceId="@r.Id">
                                                     <i class="bx bx-copy fs-5"></i>
                                                     <span class="visually-hidden">Dupliceren</span>
                                                 </a>
@@ -280,8 +280,7 @@
                                                     <a data-placement="top" title="Bewerken" data-original-title="Bewerken"
                                                        asp-action="Edit"
                                                        asp-route-id="@r.Id"
-                                                       asp-route-returnUrl="@returnUrl"
-                                                       class="ms-1 me-1">
+                                                       asp-route-returnUrl="@returnUrl">
                                                         <i class="bx bx-pencil fs-5"></i>
                                                         <span class="visually-hidden">Bewerken</span>
                                                     </a>
@@ -289,15 +288,14 @@
                                                 <a data-placement="top" title="Details" data-original-title="Details"
                                                    asp-action="Detail"
                                                    asp-route-id="@r.Id"
-                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                   class="ms-1 me-1">
-                                                    <i class="bx bx-show fs-5"></i>
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                    <i class="bx bx-eye fs-5"></i>
                                                     <span class="visually-hidden">Details</span>
                                                 </a>
                                                 <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                    asp-action="Pdf"
                                                    asp-route-id="@r.Id"
-                                                   target="_blank" class="ms-1 me-1">
+                                                   target="_blank">
                                                     <i class="fa-regular fa-file-pdf fs-5"></i>
                                                 </a>
                                                 @if (r.ShowPrintButton)
@@ -305,7 +303,7 @@
                                                     <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
                                                        asp-action="Pdf"
                                                        asp-route-id="@r.Id"
-                                                       target="_blank" class="ms-1 me-1">
+                                                       target="_blank">
                                                         <i class="bx bx-printer fs-5"></i>
                                                     </a>
                                                 }
@@ -315,7 +313,7 @@
                                                        asp-action="Issue"
                                                        asp-route-id="@r.Id"
                                                        asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                       class="ms-1 me-1 js-issue-invoice"
+                                                       class="js-issue-invoice"
                                                        data-processing-message="Factuur wordt genummerd...">
                                                         <i class="bx bx-lock fs-5"></i>
                                                         <span class="visually-hidden">Nummeren</span>
@@ -324,7 +322,7 @@
                                                 @if (canDeleteInvoices)
                                                 {
                                                     <a href="#ModalDeleteInvoice"
-                                                       class="deleteInvoice ms-1 me-1"
+                                                       class="deleteInvoice"
                                                        data-id="@r.Id"
                                                        data-issuer="@ViewBag.CompanyId"
                                                        data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
@@ -337,21 +335,21 @@
                                                 <a data-placement="top" title="Details" data-original-title="Details"
                                                    asp-action="Detail"
                                                    asp-route-id="@r.Id"
-                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
-                                                    <i class="bx bx-show fs-5"></i>
+                                                   asp-route-issuerCompanyId="@ViewBag.CompanyId">
+                                                    <i class="bx bx-eye fs-5"></i>
                                                 </a>
                                                 <a data-placement="top" title="PDF Export" data-original-title="PDF Export"
                                                    asp-action="Pdf"
                                                    asp-route-id="@r.Id"
-                                                   target="_blank" class="ms-1 me-1">
-                                                    <i class="fa-regular fa-file-pdf fs-5"></i>
+                                                   target="_blank">
+                                                    <i class="fa fa-file-pdf fs-5"></i>
                                                 </a>
                                                 @if (r.ShowPrintButton)
                                                 {
                                                     <a data-placement="top" title="Afdrukken" data-original-title="Afdrukken"
                                                        asp-action="Pdf"
                                                        asp-route-id="@r.Id"
-                                                       target="_blank" class="ms-1 me-1">
+                                                       target="_blank">
                                                         <i class="bx bx-printer fs-5"></i>
                                                     </a>
                                                 }
@@ -361,8 +359,7 @@
                                                        asp-action="Edit"
                                                        asp-route-id="@r.Id"
                                                        asp-route-issuerCompanyId="@ViewBag.CompanyId"
-                                                       asp-route-returnUrl="@returnUrl"
-                                                       class="ms-1 me-1">
+                                                       asp-route-returnUrl="@returnUrl">
                                                         <i class="bx bx-pencil fs-5"></i>
                                                         <span class="visually-hidden">Bewerken</span>
                                                     </a>
@@ -372,14 +369,14 @@
                                                     <a data-placement="top" title="Verzenden" data-original-title="Verzenden"
                                                        asp-action="Send"
                                                        asp-route-id="@r.Id"
-                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId" class="ms-1 me-1">
+                                                       asp-route-issuerCompanyId="@ViewBag.CompanyId">
                                                         <i class="bx bx-send fs-5"></i>
                                                     </a>
                                                 }
                                                 @if (canDeleteInvoices)
                                                 {
                                                     <a href="#ModalDeleteInvoice"
-                                                       class="deleteInvoice ms-1 me-1"
+                                                       class="deleteInvoice"
                                                        data-id="@r.Id"
                                                        data-issuer="@ViewBag.CompanyId"
                                                        data-placement="top" title="Verwijderen" data-original-title="Verwijderen">
@@ -387,6 +384,7 @@
                                                     </a>
                                                 }
                                             }
+                                            </div>
                                         </td>
 
                                     <td class="d-none">@(r.BookyearLabel ?? r.InvoiceDate.Year.ToString())</td>

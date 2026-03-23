@@ -1,6 +1,8 @@
 ﻿@using BOCore
 @model CPMCore.Models.Projecten.DetailPhotosModel
-
+@{
+    var canDeleteProjectPhotos = ViewBag.CanDeleteProjectPhotos as bool? ?? false;
+}
 
 @section PageStyle
 {
@@ -30,7 +32,9 @@
 										<label for="file_1">SELECT</label>
 									</div>
 									<div class="mg-group float-end">
-                                                <a class="deletePhoto" data-id="@picture.Id" href="#ModalDeletePhoto">DELETE</a>
+                                                @if (canDeleteProjectPhotos) {
+                                                    <a class="deletePhoto" data-id="@picture.Id" href="#ModalDeletePhoto">DELETE</a>
+                                                }
 										<button class="dropdown-toggle mg-toggle" data-bs-toggle="dropdown"><span class="caret"></span></button>
 										<div class="dropdown-menu mg-dropdown" role="menu">
                                                     @if (picture.Type == BOCore.PictureType.Hoofdfoto)

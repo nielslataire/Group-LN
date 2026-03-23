@@ -19,6 +19,7 @@
 } *@
 @{
 	String urlTotal = "";
+	var canWriteProjectNews = ViewBag.CanWriteProjectNews as bool? ?? false;
 }
 @section PageStyle
 {
@@ -56,9 +57,12 @@
 @*                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel"><i class="fas fa-file-excel"></i></button>
                     <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf"><i class="fas fa-file-pdf"></i></button> *@
                       
-                        <a href="#ModalAddNews" class="btn btn-primary btn-md addNews"
-                           data-id="@Model.ProjectId"
-                           title="Toevoegen">+ Nieuws toevoegen</a>
+                        @if (canWriteProjectNews)
+                        {
+                            <a href="#ModalAddNews" class="btn btn-primary btn-md addNews"
+                               data-id="@Model.ProjectId"
+                               title="Toevoegen">+ Nieuws toevoegen</a>
+                        }
                 </div>
             </div>
             @await Html.PartialAsync("News", Model)
