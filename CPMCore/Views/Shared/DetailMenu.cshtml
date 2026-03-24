@@ -1,4 +1,7 @@
 ﻿@model Int32
+@using FacadeCore
+@using BOCore
+@inject IPermissionService PermissionService
 
 <div class="inner-menu-toggle">
     <a href="#" class="inner-menu-expand" data-open="inner-menu">
@@ -23,121 +26,188 @@
 				@{
 					var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
 					var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-					var projectId = Model; // Pas dit aan indien je `Model` geen id is.
+					var projectId = Model;
+					await PermissionService.EnsureLoadedAsync();
+					var canSeeDetail       = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
+					var canSeeClients      = PermissionService.HasRead(PermissionCodes.ProjectsCustomers);
+					var canSeeSuppliers    = PermissionService.HasRead(PermissionCodes.ProjectsSuppliers);
+					var canSeePhotos       = PermissionService.HasRead(PermissionCodes.ProjectsPhotos);
+					var canSeeNews         = PermissionService.HasRead(PermissionCodes.ProjectsNews);
+					var canSeeUnits        = PermissionService.HasRead(PermissionCodes.ProjectsUnits);
+					var canSeeIssues       = PermissionService.HasRead(PermissionCodes.ProjectsIssues);
+					var canSeeDocs         = PermissionService.HasRead(PermissionCodes.ProjectsDocuments);
+					var canSeeInsurances   = PermissionService.HasRead(PermissionCodes.ProjectsInsurances);
+					var canSeeInvoicing    = PermissionService.HasRead(PermissionCodes.ProjectsInvoicing);
+					var canSeePostCalc     = PermissionService.HasRead(PermissionCodes.ProjectsPostCalculation);
+					var canSeeChangeOrders = PermissionService.HasRead(PermissionCodes.ProjectsChangeOrders);
+					var canSeeForSale      = PermissionService.HasRead(PermissionCodes.ProjectsForSale);
+					var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
+					var showAlgemeen    = canSeeDetail || canSeeClients || canSeeSuppliers;
+					var showDetails     = canSeePhotos || canSeeNews || canSeeUnits;
+					var showOpvolging   = canSeeIssues || canSeeDocs || canSeeInsurances;
+					var showFinancieel  = canSeeInvoicing || canSeePostCalc || canSeeChangeOrders;
+					var showVerkoop     = canSeeForSale || canSeeContacts;
 				}
-				<h6 class="title">ALGEMEEN</h6>
-				<ul class="list-unstyled mt-3 pt-3">
-					<li>
-						<a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "Detail" && currentController == "Projecten" ? "active" : "")">
-							Project
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailClients", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailClients" && currentController == "Projecten" ? "active" : "")">
-							Klanten
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailContracts", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailContracts" && currentController == "Projecten" ? "active" : "")">
-							Leveranciers
-						</a>
-					</li>
-				</ul>	
+				@if (showAlgemeen)
+				{
+					<h6 class="title">ALGEMEEN</h6>
+					<ul class="list-unstyled mt-3 pt-3">
+						@if (canSeeDetail)
+						{
+							<li>
+								<a href="@Url.Action("Detail", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "Detail" && currentController == "Projecten" ? "active" : "")">
+									Project
+								</a>
+							</li>
+						}
+						@if (canSeeClients)
+						{
+							<li>
+								<a href="@Url.Action("DetailClients", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailClients" && currentController == "Projecten" ? "active" : "")">
+									Klanten
+								</a>
+							</li>
+						}
+						@if (canSeeSuppliers)
+						{
+							<li>
+								<a href="@Url.Action("DetailContracts", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailContracts" && currentController == "Projecten" ? "active" : "")">
+									Leveranciers
+								</a>
+							</li>
+						}
+					</ul>
+				}
 
-				<h6 class="title">DETAILS</h6>
-				<ul class="list-unstyled mt-3 pt-3">
-@* 					<li>
-						<a href="@Url.Action("ProjectVacationDays", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "ProjectVacationDays" && currentController == "Projecten" ? "active" : "")">
-							Verlofdagen project
-						</a>
-					</li> *@
-					
-					<li>
-						<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailPhotos" && currentController == "Projecten" ? "active" : "")">
-							Foto's
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailNews", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailNews" && currentController == "Projecten" ? "active" : "")">
-							Nieuws
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailUnits", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailUnits" && currentController == "Projecten" ? "active" : "")">
-							Eenheden
-						</a>
-					</li>
+				@if (showDetails)
+				{
+					<h6 class="title">DETAILS</h6>
+					<ul class="list-unstyled mt-3 pt-3">
+						@if (canSeePhotos)
+						{
+							<li>
+								<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailPhotos" && currentController == "Projecten" ? "active" : "")">
+									Foto's
+								</a>
+							</li>
+						}
+						@if (canSeeNews)
+						{
+							<li>
+								<a href="@Url.Action("DetailNews", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailNews" && currentController == "Projecten" ? "active" : "")">
+									Nieuws
+								</a>
+							</li>
+						}
+						@if (canSeeUnits)
+						{
+							<li>
+								<a href="@Url.Action("DetailUnits", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailUnits" && currentController == "Projecten" ? "active" : "")">
+									Eenheden
+								</a>
+							</li>
+						}
+					</ul>
+				}
 
+				@if (showOpvolging)
+				{
+					<h6 class="title">OPVOLGING</h6>
+					<ul class="list-unstyled mt-3 pt-3">
+						@if (canSeeIssues)
+						{
+							<li>
+								<a href="@Url.Action("Index", "ProjectsIssues", new { projectId = projectId })"
+								   class="menu-item @(currentController == "ProjectsIssues" ? "active" : "")">
+									<span>Punten</span>
+								</a>
+							</li>
+						}
+						@if (canSeeDocs)
+						{
+							<li>
+								<a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailDocs" && currentController == "Projecten" ? "active" : "")">
+									Documenten
+								</a>
+							</li>
+						}
+						@if (canSeeInsurances)
+						{
+							<li>
+								<a href="@Url.Action("DetailInsurances", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailInsurances" && currentController == "Projecten" ? "active" : "")">
+									Verzekeringen
+								</a>
+							</li>
+						}
+					</ul>
+				}
 
+				@if (showFinancieel)
+				{
+					<h6 class="title">FINANCIEEL</h6>
+					<ul class="list-unstyled mt-3 pt-3">
+						@if (canSeeInvoicing)
+						{
+							<li>
+								<a href="@Url.Action("Invoicing", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "Invoicing" && currentController == "Projecten" ? "active" : "")">
+									Facturatie
+								</a>
+							</li>
+						}
+						@if (canSeePostCalc)
+						{
+							<li>
+								<a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "Recalculation" && currentController == "Projecten" ? "active" : "")">
+									Nacalculatie
+								</a>
+							</li>
+						}
+						@if (canSeeChangeOrders)
+						{
+							<li>
+								<a href="@Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailsChangeOrder" && currentController == "Projecten" ? "active" : "")">
+									Wijzigingsopdrachten
+								</a>
+							</li>
+						}
+					</ul>
+				}
 
-				</ul>
-				<h6 class="title">OPVOLGING</h6>
-				<ul class="list-unstyled mt-3 pt-3">
-					<li>
-						<a href="@Url.Action("Index", "ProjectsIssues", new { projectId = projectId })"
-						   class="menu-item @(currentController == "ProjectsIssues" ? "active" : "")">
-							<span>Punten</span>
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailDocs", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailDocs" && currentController == "Projecten" ? "active" : "")">
-							Documenten
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailInsurances", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailInsurances" && currentController == "Projecten" ? "active" : "")">
-							Vezekeringen
-						</a>
-					</li>
-
-				</ul>
-				<h6 class="title">FINANCIEEL</h6>
-				<ul class="list-unstyled mt-3 pt-3">
-					<li>
-						<a href="@Url.Action("Invoicing", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "Invoicing" && currentController == "Projecten" ? "active" : "")">
-							Facturatie
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("Recalculation", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "Recalculation" && currentController == "Projecten" ? "active" : "")">
-							Nacalculatie
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailsChangeOrder", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailsChangeOrder" && currentController == "Projecten" ? "active" : "")">
-							Wijzigingsopdrachten
-						</a>
-					</li>
-				
-				</ul>
-				<h6 class="title">VERKOOP</h6>
-				<ul class="list-unstyled mt-3 pt-3">
-					<li>
-						<a href="@Url.Action("DetailSales", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailSales" && currentController == "Projecten" ? "active" : "")">
-							Te koop
-						</a>
-					</li>
-					<li>
-						<a href="@Url.Action("DetailContacts", "Projecten", new { projectid = projectId })"
-						   class="menu-item @(currentAction == "DetailContacts" && currentController == "Projecten" ? "active" : "")">
-							Contacten
-						</a>
-					</li>
-
-				</ul>
+				@if (showVerkoop)
+				{
+					<h6 class="title">VERKOOP</h6>
+					<ul class="list-unstyled mt-3 pt-3">
+						@if (canSeeForSale)
+						{
+							<li>
+								<a href="@Url.Action("DetailSales", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailSales" && currentController == "Projecten" ? "active" : "")">
+									Te koop
+								</a>
+							</li>
+						}
+						@if (canSeeContacts)
+						{
+							<li>
+								<a href="@Url.Action("DetailContacts", "Projecten", new { projectid = projectId })"
+								   class="menu-item @(currentAction == "DetailContacts" && currentController == "Projecten" ? "active" : "")">
+									Contacten
+								</a>
+							</li>
+						}
+					</ul>
+				}
 			</div>
 		</div>
 		<div class="nano-pane" style="opacity: 1; visibility: visible; display: none;"><div class="nano-slider" style="height: 1171px; transform: translate(0px, 0px);"></div></div>

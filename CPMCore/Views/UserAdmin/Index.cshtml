@@ -186,12 +186,34 @@
             {
                 var role = user.Permissions.FirstOrDefault() ?? "Geen rol";
                 var displayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
+                var inviteStatusBadge = user.GuestInvitationStatus switch {
+                    "Draft"             => ("badge-secondary", "Draft"),
+                    "Invited"           => ("badge-info",      "Uitgenodigd"),
+                    "PendingAcceptance" => ("badge-warning",   "In afwachting"),
+                    "Redeemed"          => ("badge-success",   "Ingewisseld"),
+                    "Active"            => ("badge-success",   "Actief gast"),
+                    "Failed"            => ("badge-danger",    "Mislukt"),
+                    "Revoked"           => ("badge-dark",      "Ingetrokken"),
+                    _                  => ((string?)null, (string?)null)
+                };
                 <div class="user-entry" data-user-id="@user.Id">
                     <div class="user-entry-header">
                         <div>
                             <div class="font-weight-bold">@displayName</div>
                             <div class="text-muted">@user.Email</div>
                             <span class="badge badge-light">@role</span>
+                            @if (inviteStatusBadge.Item1 != null)
+                            {
+                                <span class="badge @inviteStatusBadge.Item1 ms-1" title="Gastuitnodiging status">
+                                    <i class="fa fa-user-secret me-1"></i>@inviteStatusBadge.Item2
+                                </span>
+                            }
+                            @if (user.GuestLastLoginAt.HasValue)
+                            {
+                                <span class="badge badge-light ms-1 small" title="Laatste login gast">
+                                    <i class="fa fa-clock me-1"></i>@user.GuestLastLoginAt.Value.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                </span>
+                            }
                         </div>
                         <div class="user-entry-actions actions text-end align-content-center">
                             @if (canWriteUsers)
@@ -199,6 +221,43 @@
                                 <div class="switch switch-sm switch-primary d-inline-block me-5" title="Actief / niet actief">
                                     <input type="checkbox" data-plugin-ios-switch class="js-user-active-switch" data-user-id="@user.Id" @(user.IsActive ? "checked" : null) />
                                 </div>
+
+                                @* ── Gastuitnodiging knoppen ── *@
+                                @if (!user.HasGuestInvitation)
+                                {
+                                    <a href="#" class="invite-guest-btn me-1"
+                                       data-id="@user.Id"
+                                       data-name="@displayName"
+                                       data-email="@user.Email"
+                                       title="Uitnodigen als externe gebruiker">
+                                        <i class="bx bx-user-plus fs-5"></i>
+                                    </a>
+                                }
+                                else
+                                {
+                                    @if (user.GuestInvitationStatus is "Invited" or "PendingAcceptance" or "Redeemed" or "Active")
+                                    {
+                                        <a href="#" class="resend-invite-btn me-1"
+                                           data-id="@user.Id"
+                                           data-name="@displayName"
+                                           title="Heruitnodigen">
+                                            <i class="bx bx-send fs-5"></i>
+                                        </a>
+                                    }
+                                    <a href="#" class="reset-invite-btn me-1"
+                                       data-id="@user.Id"
+                                       data-name="@displayName"
+                                       title="Uitnodiging resetten">
+                                        <i class="bx bx-repeat fs-5"></i>
+                                    </a>
+                                    <a href="#" class="unlink-guest-btn me-1"
+                                       data-id="@user.Id"
+                                       data-name="@displayName"
+                                       title="Koppeling verbreken">
+                                        <i class="bx bx-unlink fs-5"></i>
+                                    </a>
+                                }
+
                                 <a href="#" class="edit-user me-1"
                                    data-toggle="tooltip"
                                    data-placement="top"
@@ -1156,12 +1215,52 @@
                 $('#delete-name').text(trigger.data('name'));
                 if ($.magnificPopup) {
                     $.magnificPopup.open({
-                        items: {
-                            src: '#deleteUserModal'
-                        },
+                        items: { src: '#deleteUserModal' },
                         type: 'inline',
                         preloader: false
                     });
+                }
+            });
+
+            // ── Gastuitnodiging modalen ────────────────────────────────────
+            $(document).on('click', '.invite-guest-btn', function (event) {
+                event.preventDefault();
+                const t = $(this);
+                $('#invite-guest-user-id').val(t.data('id'));
+                $('#invite-guest-name').text(t.data('name'));
+                $('#invite-guest-email').text(t.data('email'));
+                if ($.magnificPopup) {
+                    $.magnificPopup.open({ items: { src: '#inviteGuestModal' }, type: 'inline', preloader: false });
+                }
+            });
+
+            $(document).on('click', '.resend-invite-btn', function (event) {
+                event.preventDefault();
+                const t = $(this);
+                $('#resend-invite-user-id').val(t.data('id'));
+                $('#resend-invite-name').text(t.data('name'));
+                if ($.magnificPopup) {
+                    $.magnificPopup.open({ items: { src: '#resendInviteModal' }, type: 'inline', preloader: false });
+                }
+            });
+
+            $(document).on('click', '.reset-invite-btn', function (event) {
+                event.preventDefault();
+                const t = $(this);
+                $('#reset-invite-user-id').val(t.data('id'));
+                $('#reset-invite-name').text(t.data('name'));
+                if ($.magnificPopup) {
+                    $.magnificPopup.open({ items: { src: '#resetInviteModal' }, type: 'inline', preloader: false });
+                }
+            });
+
+            $(document).on('click', '.unlink-guest-btn', function (event) {
+                event.preventDefault();
+                const t = $(this);
+                $('#unlink-guest-user-id').val(t.data('id'));
+                $('#unlink-guest-name').text(t.data('name'));
+                if ($.magnificPopup) {
+                    $.magnificPopup.open({ items: { src: '#unlinkGuestModal' }, type: 'inline', preloader: false });
                 }
             });
         })();

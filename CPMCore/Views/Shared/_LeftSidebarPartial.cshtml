@@ -19,6 +19,7 @@
 	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.InvoicingByBillingCompany);
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
+	var canSeeActivities = PermissionService.HasRead(PermissionCodes.SettingsActivities);
 	var customerIssuerCompanyIds = new HashSet<int>();
 	var supplierIssuerCompanyIds = new HashSet<int>();
 	var invoicingIssuerCompanyIds = new HashSet<int>();
@@ -120,7 +121,7 @@
 	var customersSubmenuClass = customerIssuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var invoicesSubmenuClass = invoicingIssuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var projectSubmenuClass = 3 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
-	var settingsCount = canSeeAdmin ? 7 : 1;
+	var settingsCount = (canSeeAdmin ? 6 : 0) + (canSeeActivities ? 1 : 0);
 	var settingsSubmenuClass = settingsCount > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var linksSubmenuClass = 4 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 }
@@ -218,6 +219,8 @@
 						</li>
 
 					}
+					@if (canSeeAdmin || canSeeActivities)
+				{
 					<li class="nav-parent @(currentController == "Instellingen" ? "nav-active" : string.Empty)">
 						<a class="main-nav-tile" href="#">
 							<i class="bx bx-cog" aria-hidden="true"></i>
@@ -233,9 +236,13 @@
 								<li>@Html.ActionLink("Gebruikers", "Index", "UserAdmin")</li>
 								<li>@Html.ActionLink("Rollen", "Index", "AppRoles")</li>
 							}
-							<li>@Html.ActionLink("Activiteiten", "Activities", "Instellingen")</li>
+							@if (canSeeActivities)
+							{
+								<li>@Html.ActionLink("Activiteiten", "Activities", "Instellingen")</li>
+							}
 						</ul>
 					</li>
+				}
 					<li class="nav-parent">
 						<a class="main-nav-tile" href="#">
 							<i class="bx bx-link-alt" aria-hidden="true"></i>
@@ -243,25 +250,18 @@
 						</a>
 						<ul class="@linksSubmenuClass">
 							<li>
-								<a href="http://www.copro-bouwteam.be" target="_blank">
-									www.copro-bouwteam.be
+								<a href="https://www.groupln.be" target="_blank">
+									Website Group LN
 								</a>
 							</li>
 							<li>
-								<a href="http://www.bouwenconstructie.be" target="_blank">
-									www.bouwenconstructie.be
+								<a href="https://www.bouwenconstructie.be" target="_blank">
+									Website BCO
 								</a>
 							</li>
 							<li>
-								<a href="http://www.verspurten.be" target="_blank">
-
-									www.verspurten.be
-								</a>
-							</li>
-							<li>
-								<a href="http://www.home-estate.be" target="_blank">
-
-									www.home-estate.be
+								<a href="https://www.home-estate.be" target="_blank">
+									Website Home-Estate
 								</a>
 							</li>
 						</ul>
@@ -372,25 +372,18 @@
 						</a>
 						<ul class="nav nav-children">
 							<li>
-								<a href="http://www.copro-bouwteam.be" target="_blank">
-									www.copro-bouwteam.be
+								<a href="https://www.groupln.be" target="_blank">
+									Website Group LN
 								</a>
 							</li>
 							<li>
-								<a href="http://www.bouwenconstructie.be" target="_blank">
-									www.bouwenconstructie.be
+								<a href="https://www.bouwenconstructie.be" target="_blank">
+									Website BCO
 								</a>
 							</li>
 							<li>
-								<a href="http://www.verspurten.be" target="_blank">
-
-									www.verspurten.be
-								</a>
-							</li>
-							<li>
-								<a href="http://www.home-estate.be" target="_blank">
-
-									www.home-estate.be
+								<a href="https://www.home-estate.be" target="_blank">
+									Website Home-Estate
 								</a>
 							</li>
 						</ul>

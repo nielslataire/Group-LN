@@ -1,32 +1,281 @@
-﻿@model CPMCore.Models.EntraLoginViewModel
+@model CPMCore.Models.EntraLoginViewModel
 
 @{
-    ViewBag.Title = "Aanmelden";
+    ViewBag.Title = "Aanmelden – Group LN";
     Layout = "_Base";
 }
 
-<section class="body-sign">
-    <div class="center-sign">
-        <a href="/" class="logo float-start">
-            <img src="~/img/logo.png" height="54" alt="CPMCore" />
-        </a>
+@section scripts {
+<style>
+    /* ── Reset ───────────────────────────────────────────────────── */
+    html, body { height: 100%; margin: 0; padding: 0; }
+    body > div  { height: 100%; }
 
-        <div class="panel card-sign">
-            <div class="card-title-sign mt-3 text-end">
-                <h2 class="title text-uppercase font-weight-bold m-0">
-                    <i class="bx bx-shield-quarter me-1 text-6 position-relative top-5"></i> Aanmelden
-                </h2>
+    /* ════════════════════════════════════════════════════════════════
+       DESKTOP GRID  –  twee kolommen elk 50 %
+       Rijen: [logo] [features] [copyright]  |  [card: spans alle rijen]
+    ════════════════════════════════════════════════════════════════ */
+    .gln-login {
+        min-height: 100vh;
+        background: #0a5a3b;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+            "logo  card"
+            "feat  card"
+            "copy  card";
+    }
+
+    /* ── Logo-balk ───────────────────────────────────────────────── */
+    .gln-logo-bar {
+        grid-area: logo;
+        padding: 52px 52px 0;
+    }
+    .gln-logo {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        text-decoration: none;
+    }
+    .gln-logo img  { height: 44px; }
+    .gln-company   { font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .gln-platform  { font-size: .63rem; font-weight: 700; letter-spacing: .18em;
+                     color: rgba(255,255,255,.5); text-transform: uppercase; }
+
+    /* ── Feature-tegels ──────────────────────────────────────────── */
+    .gln-features-bar {
+        grid-area: feat;
+        padding: 0 52px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .gln-features-label {
+        font-size: .68rem; font-weight: 700; letter-spacing: .14em;
+        text-transform: uppercase; color: rgba(255,255,255,.4);
+        margin-bottom: 16px;
+    }
+    .gln-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    .gln-tile {
+        background: rgba(255,255,255,.07);
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 10px;
+        padding: 18px 20px;
+        transition: background .15s;
+    }
+    .gln-tile:hover { background: rgba(255,255,255,.12); }
+    .gln-tile-icon  { font-size: 1.4rem; color: #3ecf8e; margin-bottom: 8px; }
+    .gln-tile-name  { font-weight: 600; font-size: .9rem; color: #fff; }
+    .gln-tile-desc  { font-size: .77rem; color: rgba(255,255,255,.45); margin-top: 3px; }
+
+    /* ── Copyright ───────────────────────────────────────────────── */
+    .gln-copy-bar {
+        grid-area: copy;
+        padding: 0 52px 52px;
+        font-size: .76rem;
+        color: rgba(255,255,255,.3);
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       WITTE KAART  –  rechts, spans alle rijen
+    ════════════════════════════════════════════════════════════════ */
+    .gln-right {
+        grid-area: card;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 36px;
+    }
+
+    .gln-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 44px 40px;
+        width: 100%;
+        max-width: 450px;
+        box-shadow: 0 8px 40px rgba(0,0,0,.18);
+    }
+
+    .gln-card h1 {
+        font-size: 1.75rem; font-weight: 700;
+        color: #0f1f14; margin-bottom: 8px;
+    }
+    .gln-card-sub {
+        font-size: .9rem; color: #6c757d;
+        line-height: 1.5; margin-bottom: 28px;
+    }
+
+    /* Microsoft-knop */
+    .btn-gln-ms {
+        display: flex; align-items: center; justify-content: center;
+        gap: 10px; width: 100%;
+        background: #0a5a3b; color: #fff;
+        border: none; border-radius: 8px;
+        padding: 13px 20px;
+        font-size: .97rem; font-weight: 600;
+        text-decoration: none;
+        transition: background .18s, box-shadow .18s;
+    }
+    .btn-gln-ms:hover {
+        background: #084d32; color: #fff;
+        box-shadow: 0 4px 16px rgba(10,90,59,.3);
+    }
+    .btn-gln-ms .ms-icon  { font-size: 1.15rem; }
+    .btn-gln-ms .ms-arrow { margin-left: auto; font-size: 1.05rem; }
+
+    /* Info-box */
+    .gln-info-box {
+        display: flex; gap: 10px; align-items: flex-start;
+        background: #f4f9f6; border: 1px solid #d0e8dc;
+        border-radius: 8px; padding: 12px 14px; margin-top: 28px;
+        font-size: .82rem; color: #4a5568; line-height: 1.45;
+        align-items: center;
+
+    }
+    .gln-info-box .info-icon {
+        color: #0a5a3b; font-size: 1.2rem;
+        flex-shrink: 0; margin-top: 2px;
+    }
+
+    /* Hulp-link */
+    .gln-help {
+        margin-top: 28px;
+        padding-top: 16px;
+        border-top: 1px solid #dee2e6;
+        font-size: .855rem;
+        color: #6c757d;
+    }
+    .gln-help a { color: #0a5a3b; font-weight: 600; text-decoration: none; }
+    .gln-help a:hover { text-decoration: underline; }
+
+    /* ════════════════════════════════════════════════════════════════
+       TABLET  ≤ 991px  –  één kolom, volgorde: logo → card → copy
+    ════════════════════════════════════════════════════════════════ */
+    @@media (max-width: 991px) {
+        .gln-login {
+            grid-template-columns: 1fr;
+            grid-template-rows: auto auto auto;
+            grid-template-areas:
+                "logo"
+                "card"
+                "copy";
+        }
+        .gln-features-bar { display: none; }
+        .gln-logo-bar     { padding: 30px 28px 20px; }
+        .gln-right        { padding: 0 24px 24px; align-items: flex-start; }
+        .gln-card         {
+            max-width: 520px; margin: 0 auto;
+            border-radius: 16px; padding: 36px 28px;
+        }
+        .gln-copy-bar     { padding: 0 28px 32px; text-align: center; }
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       MOBIEL  ≤ 575px
+    ════════════════════════════════════════════════════════════════ */
+    @@media (max-width: 575px) {
+        .gln-logo-bar     { padding: 24px 20px 16px; }
+        .gln-right        { padding: 0 16px 20px; }
+        .gln-card         { border-radius: 14px; padding: 28px 20px; }
+        .gln-card h1      { font-size: 1.5rem; }
+        .gln-card-sub     { font-size: .855rem; margin-bottom: 22px; }
+        .gln-copy-bar     { padding: 0 20px 28px; }
+    }
+</style>
+}
+
+<div class="gln-login">
+
+    <!-- ── Logo (desktop: kolom 1 rij 1 | mobiel: bovenaan) ──────── -->
+    <div class="gln-logo-bar">
+        <a href="/" class="gln-logo">
+            <img src="~/img/logo.png" alt="Group LN" />
+            <div>
+                <div class="gln-company">Group LN</div>
+                <div class="gln-platform">Intern Platform</div>
             </div>
-            <div class="card-body">
-                <p class="text-muted mb-4">
-                    Meld je aan met je Microsoft-account om toegang te krijgen tot CPMCore.
-                </p>
-                <a class="btn btn-primary w-100" href="@Url.Action("SignIn", "Account", new { returnUrl = Model.ReturnUrl })">
-                    <i class="bx bxl-microsoft me-2"></i> Aanmelden met Microsoft
-                </a>
+        </a>
+    </div>
+
+    <!-- ── Features (enkel desktop, kolom 1 rij 2) ───────────────── -->
+    <div class="gln-features-bar">
+        <div class="gln-features-label">Platform mogelijkheden</div>
+        <div class="gln-grid">
+            <div class="gln-tile">
+                <div class="gln-tile-icon"><i class="bx bx-grid-alt"></i></div>
+                <div class="gln-tile-name">Project dashboard</div>
+                <div class="gln-tile-desc">Volledig overzicht</div>
+            </div>
+            <div class="gln-tile">
+                <div class="gln-tile-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
+                <div class="gln-tile-name">Financieel beheer</div>
+                <div class="gln-tile-desc">Facturatie &amp; budget</div>
+            </div>
+            <div class="gln-tile">
+                <div class="gln-tile-icon"><i class="bx bx-group"></i></div>
+                <div class="gln-tile-name">Relatiebeheer</div>
+                <div class="gln-tile-desc">Klanten &amp; leveranciers</div>
+            </div>
+            <div class="gln-tile">
+                <div class="gln-tile-icon"><i class="bx bx-cog"></i></div>
+                <div class="gln-tile-name">Configuratie</div>
+                <div class="gln-tile-desc">Rollen &amp; rechten</div>
             </div>
         </div>
-
-        <p class="text-center text-muted mt-3 mb-3">&copy; Copyright @DateTime.Now.Year. All Rights Reserved.</p>
     </div>
-</section>
+
+    <!-- ── Copyright (desktop: kolom 1 rij 3 | mobiel: onderaan) ─── -->
+    <div class="gln-copy-bar">
+        &copy; @DateTime.Now.Year Group LN. Alle rechten voorbehouden.
+    </div>
+
+    <!-- ── Witte kaart (desktop: kolom 2 spans alle rijen) ────────── -->
+    <div class="gln-right">
+        <div class="gln-card">
+
+            <h1>Welkom terug</h1>
+            <p class="gln-card-sub">
+                Meld u aan met uw organisatie Microsoft-account om
+                toegang te krijgen tot het interne platform.
+            </p>
+
+            <a class="btn-gln-ms"
+               href="@Url.Action("SignIn", "Account", new { returnUrl = Model.ReturnUrl })">
+                <i class="bx bxl-microsoft ms-icon"></i>
+                Aanmelden met Microsoft
+                <i class="bx bx-chevron-right ms-arrow"></i>
+            </a>
+
+            <div class="gln-info-box">
+                <i class="bx bx-shield info-icon"></i>
+                <span>
+                    Beveiligd via Microsoft Entra ID. Alleen medewerkers
+                    met een actief organisatie-account hebben toegang.
+                </span>
+            </div>
+
+            <div class="gln-help">
+                Hulp nodig? <a href="mailto:niels.lataire@groupln.be">IT-support</a>
+            </div>
+
+            @*
+            ── Externe portalen – voorlopig uitgeschakeld ──────────
+            <div class="d-flex flex-column gap-2 mt-4">
+                <a href="#" class="gln-portal-link">
+                    Leveranciersportaal <i class="bx bx-chevron-right"></i>
+                </a>
+                <a href="#" class="gln-portal-link">
+                    Klantenportaal <i class="bx bx-chevron-right"></i>
+                </a>
+            </div>
+            *@
+
+        </div>
+    </div>
+
+</div>

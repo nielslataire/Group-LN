@@ -400,6 +400,8 @@
 #sidebar-left .sidebar-header .sidebar-toggle {
     background: #0a5a3b !important;
     border-left-color: rgba(231, 255, 241, 0.2) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
 }
 
     #sidebar-left .sidebar-header .sidebar-toggle i,

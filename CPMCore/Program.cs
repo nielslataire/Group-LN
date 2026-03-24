@@ -194,6 +194,7 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
 
 
 builder.Services.AddScoped<ICpmUserAccessService, CpmUserAccessService>();
+builder.Services.AddScoped<IEntraGuestInvitationService, EntraGuestInvitationService>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
@@ -240,6 +241,10 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
         var oid = context.Principal?.FindFirst("oid")?.Value
             ?? context.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier")?.Value
             ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        var tid = context.Principal?.FindFirst("tid")?.Value
+            ?? context.Principal?.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid")?.Value;
+
         var candidateEmails = new[]
         {
             context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
@@ -259,7 +264,7 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
             string.Join(", ", candidateEmails.Where(value => !string.IsNullOrWhiteSpace(value))));
 
         var accessService = context.HttpContext.RequestServices.GetRequiredService<ICpmUserAccessService>();
-        var accessResult = await accessService.ResolveAsync(oid, candidateEmails, context.HttpContext.RequestAborted);
+        var accessResult = await accessService.ResolveAsync(oid, candidateEmails, context.HttpContext.RequestAborted, tid);
 
         if (accessResult == null || context.Principal?.Identity is not System.Security.Claims.ClaimsIdentity identity)
         {

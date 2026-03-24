@@ -217,6 +217,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<UserCompanyAccess> UserCompanyAccess { get; set; }
 
+    public virtual DbSet<UserGuestInvitation> UserGuestInvitation { get; set; }
+
+    public virtual DbSet<UserGuestInvitationAudit> UserGuestInvitationAudit { get; set; }
+
     public virtual DbSet<Users> Users { get; set; }
 
     public virtual DbSet<UtilityPercentage> UtilityPercentage { get; set; }
@@ -2469,6 +2473,55 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserCompanyAccess_Users");
+        });
+
+        modelBuilder.Entity<UserGuestInvitation>(entity =>
+        {
+            entity.HasIndex(e => e.ExternalEmail, "IX_UserGuestInvitation_ExternalEmail");
+
+            entity.HasIndex(e => e.ExternalObjectId, "IX_UserGuestInvitation_ExternalObjectId").HasFilter("([ExternalObjectId] IS NOT NULL)");
+
+            entity.HasIndex(e => e.UserId, "IX_UserGuestInvitation_UserId");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.ExternalEmail)
+                .IsRequired()
+                .HasMaxLength(256);
+            entity.Property(e => e.ExternalObjectId).HasMaxLength(128);
+            entity.Property(e => e.ExternalTenantId).HasMaxLength(128);
+            entity.Property(e => e.InvitationStatus)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasDefaultValue("Draft");
+            entity.Property(e => e.InviteRedeemUrl).HasMaxLength(2048);
+            entity.Property(e => e.Provider)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("MicrosoftEntra");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.UserType)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Guest");
+
+            entity.HasOne(d => d.InvitedByUser).WithMany(p => p.UserGuestInvitationInvitedByUser)
+                .HasForeignKey(d => d.InvitedByUserId)
+                .HasConstraintName("FK_UserGuestInvitation_InvitedByUser");
+
+            entity.HasOne(d => d.User).WithMany(p => p.UserGuestInvitationUser)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_UserGuestInvitation_Users");
+        });
+
+        modelBuilder.Entity<UserGuestInvitationAudit>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_UserGuestInvitationAudit_UserId");
+
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(50);
+            entity.Property(e => e.Details).HasMaxLength(1000);
+            entity.Property(e => e.PerformedAt).HasDefaultValueSql("(getutcdate())");
         });
 
         modelBuilder.Entity<Users>(entity =>

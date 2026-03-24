@@ -18,7 +18,8 @@ public record CpmUserAccessResult(
 
 public interface ICpmUserAccessService
 {
-    Task<CpmUserAccessResult?> ResolveAsync(string? entraObjectId, IEnumerable<string?> emails, CancellationToken ct);
+    /// <param name="tenantId">Entra tenant-id (tid claim) — optioneel, gebruikt voor gastgebruiker-koppeling.</param>
+    Task<CpmUserAccessResult?> ResolveAsync(string? entraObjectId, IEnumerable<string?> emails, CancellationToken ct, string? tenantId = null);
     Task<IReadOnlyList<string>> GetPermissionsAsync(int userId, CancellationToken ct);
     void ApplyClaims(ClaimsIdentity identity, CpmUserAccessResult accessResult);
     Task SyncUserPhotoAsync(CpmUserAccessResult accessResult, CancellationToken ct);
@@ -40,7 +41,7 @@ public class CpmUserAccessService : ICpmUserAccessService
         _graphClient = graphClient;
     }
 
-    public async Task<CpmUserAccessResult?> ResolveAsync(string? entraObjectId, IEnumerable<string?> emails, CancellationToken ct)
+    public async Task<CpmUserAccessResult?> ResolveAsync(string? entraObjectId, IEnumerable<string?> emails, CancellationToken ct, string? tenantId = null)
     {
         if (string.IsNullOrWhiteSpace(entraObjectId))
         {
@@ -54,16 +55,31 @@ public class CpmUserAccessService : ICpmUserAccessService
             .Distinct()
             .ToList();
 
+        // Stap 1: zoek primair op EntraObjectId
         var user = await _db.Users
             .SingleOrDefaultAsync(u => u.EntraObjectId == entraObjectId, ct);
 
+        // Stap 2: fallback op e-mail (interne users en gastgebruikers met status Invited/PendingAcceptance)
         if (user == null && normalizedEmails.Count > 0)
         {
+            // 2a. match op Users.Email
             user = await _db.Users
                 .Where(u => u.Email != null)
                 .FirstOrDefaultAsync(u => normalizedEmails.Contains(u.Email.Trim().ToLower()), ct);
 
-            if (user != null)
+            // 2b. fallback op UserGuestInvitation.ExternalEmail (gast die nog niet eerder inlogde)
+            if (user == null)
+            {
+                var guestInvite = await _db.UserGuestInvitation
+                    .Where(i => normalizedEmails.Contains(i.ExternalEmail) &&
+                                (i.InvitationStatus == "Invited" || i.InvitationStatus == "PendingAcceptance"))
+                    .FirstOrDefaultAsync(ct);
+
+                if (guestInvite != null)
+                    user = await _db.Users.FirstOrDefaultAsync(u => u.Id == guestInvite.UserId, ct);
+            }
+
+            if (user != null && string.IsNullOrWhiteSpace(user.EntraObjectId))
             {
                 user.EntraObjectId = entraObjectId;
                 await _db.SaveChangesAsync(ct);
@@ -83,6 +99,9 @@ public class CpmUserAccessService : ICpmUserAccessService
             return null;
         }
 
+        // Gastuitnodiging bijwerken bij login
+        await UpdateGuestInvitationOnLoginAsync(user.Id, entraObjectId, tenantId, ct);
+
         var permissions = await GetPermissionsAsync(user.Id, ct);
         var displayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
             .Where(v => !string.IsNullOrWhiteSpace(v)));
@@ -93,6 +112,79 @@ public class CpmUserAccessService : ICpmUserAccessService
             normalizedEmails.FirstOrDefault(),
             entraObjectId,
             string.IsNullOrWhiteSpace(displayName) ? user.UserId : displayName);
+    }
+
+    /// <summary>
+    /// Werkt het gastuitnodigingsrecord bij na een succesvolle login:
+    /// OID/TID invullen, status naar Active, timestamps bijhouden.
+    /// </summary>
+    private async Task UpdateGuestInvitationOnLoginAsync(
+        int userId, string entraObjectId, string? tenantId, CancellationToken ct)
+    {
+        try
+        {
+            var invitation = await _db.UserGuestInvitation
+                .FirstOrDefaultAsync(i => i.UserId == userId, ct);
+
+            if (invitation == null)
+                return;
+
+            var now = DateTime.UtcNow;
+            var changed = false;
+
+            if (string.IsNullOrWhiteSpace(invitation.ExternalObjectId))
+            {
+                invitation.ExternalObjectId = entraObjectId;
+                changed = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(invitation.ExternalTenantId) &&
+                !string.IsNullOrWhiteSpace(tenantId))
+            {
+                invitation.ExternalTenantId = tenantId;
+                changed = true;
+            }
+
+            // Eerste redemptie
+            if (invitation.InvitationStatus is "Invited" or "PendingAcceptance")
+            {
+                invitation.InvitationRedeemedAt ??= now;
+                invitation.InvitationStatus = "Active";
+
+                _db.UserGuestInvitationAudit.Add(new UserGuestInvitationAudit
+                {
+                    UserId      = userId,
+                    Action      = "FirstLogin",
+                    Details     = $"Eerste login via Entra. OID={entraObjectId}",
+                    PerformedBy = null,
+                    PerformedAt = now
+                });
+                changed = true;
+            }
+            else
+            {
+                _db.UserGuestInvitationAudit.Add(new UserGuestInvitationAudit
+                {
+                    UserId      = userId,
+                    Action      = "LoginUpdated",
+                    Details     = $"Login. OID={entraObjectId}",
+                    PerformedBy = null,
+                    PerformedAt = now
+                });
+                changed = true;
+            }
+
+            invitation.LastLoginAt = now;
+            invitation.UpdatedAt   = now;
+
+            if (changed)
+                await _db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            // Nooit de login blokkeren door een audit-fout
+            _logger.LogWarning(ex, "Kon gastuitnodiging niet bijwerken bij login voor gebruiker {UserId}.", userId);
+        }
     }
 
     public async Task<IReadOnlyList<string>> GetPermissionsAsync(int userId, CancellationToken ct)

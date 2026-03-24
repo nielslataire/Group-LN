@@ -1,5 +1,7 @@
 ﻿using BOCore;
+using CPMCore.Helpers;
 using CPMCore.Models;
+using CPMCore.Services;
 using DALCore.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,15 +23,18 @@ public class UserAdminController : BaseController
     private readonly cpmRunningContext _db;
     private readonly ILogger<UserAdminController> _logger;
     private readonly GraphServiceClient? _graphClient;
+    private readonly IEntraGuestInvitationService _guestInvitationService;
 
     public UserAdminController(
            cpmRunningContext db,
            ILogger<UserAdminController> logger,
-           IConfiguration configuration)
+           IConfiguration configuration,
+           IEntraGuestInvitationService guestInvitationService)
     {
         _db = db;
         _logger = logger;
         _graphClient = CreateGraphClient(configuration, logger);
+        _guestInvitationService = guestInvitationService;
     }
 
     [AuthorizeForScopes(ScopeKeySection = "Graph:Scopes")]
@@ -83,12 +88,25 @@ public class UserAdminController : BaseController
             .ThenBy(u => u.Voornaam)
             .ToListAsync();
 
+        // Gastuitnodigingen voor alle gebruikers ophalen
+        var guestInvitations = new Dictionary<int, UserGuestInvitation>();
+        try
+        {
+            var allInvites = await _db.UserGuestInvitation.AsNoTracking().ToListAsync();
+            guestInvitations = allInvites.ToDictionary(i => i.UserId);
+        }
+        catch
+        {
+            // Tabel bestaat nog niet (vóór migratie)
+        }
+
         var localUsers = users.Select(user =>
         {
             var permissions = roleNamesByUser.TryGetValue(user.Id, out var roles)
                 ? roles
                 : (permissionsByUser.TryGetValue(user.Id, out var list) ? list : new List<string>());
             var hasPrimaryRole = primaryRoleByUser.TryGetValue(user.Id, out var primaryRole);
+            guestInvitations.TryGetValue(user.Id, out var invite);
 
             return new UserListItemViewModel
             {
@@ -102,7 +120,17 @@ public class UserAdminController : BaseController
                 IsActive = user.IsActive,
                 CurrentRoleId = hasPrimaryRole ? primaryRole.RoleId : (int?)null,
                 CurrentRoleName = hasPrimaryRole ? primaryRole.RoleName : null,
-                Permissions = permissions
+                Permissions = permissions,
+
+                // Gastuitnodiging
+                GuestInvitationId     = invite?.Id,
+                GuestInvitationStatus = invite?.InvitationStatus,
+                GuestUserType         = invite?.UserType,
+                GuestInvitationSentAt = invite?.InvitationSentAt,
+                GuestLastLoginAt      = invite?.LastLoginAt,
+                GuestExternalObjectId = invite?.ExternalObjectId,
+                GuestExternalTenantId = invite?.ExternalTenantId,
+                GuestInviteRedeemUrl  = invite?.InviteRedeemUrl
             };
         }).ToList();
         var entraUsers = await LoadEntraUsersAsync();
@@ -517,6 +545,9 @@ public class UserAdminController : BaseController
         try
         {
             var existingRoles = await _db.SecurityUserRole.Where(x => x.UserId == id).ToListAsync();
+            var currentRoleId = existingRoles.FirstOrDefault()?.RoleId;
+            var roleChanged = currentRoleId != selectedRoleId;
+
             _db.SecurityUserRole.RemoveRange(existingRoles);
 
             if (selectedRoleId.HasValue)
@@ -526,6 +557,12 @@ public class UserAdminController : BaseController
                 {
                     _db.SecurityUserRole.Add(new SecurityUserRole { UserId = id, RoleId = selectedRoleId.Value });
                 }
+            }
+
+            if (roleChanged)
+            {
+                var overrides = await _db.SecurityUserPermissionOverride.Where(x => x.UserId == id).ToListAsync();
+                _db.SecurityUserPermissionOverride.RemoveRange(overrides);
             }
         }
         catch
@@ -615,7 +652,17 @@ public class UserAdminController : BaseController
             .Where(p => p.UserId == user.Id)
             .ToListAsync();
 
+        var userRoles = await _db.SecurityUserRole
+            .Where(r => r.UserId == user.Id)
+            .ToListAsync();
+
+        var userOverrides = await _db.SecurityUserPermissionOverride
+            .Where(o => o.UserId == user.Id)
+            .ToListAsync();
+
         _db.PermissionPerUser.RemoveRange(permissions);
+        _db.SecurityUserRole.RemoveRange(userRoles);
+        _db.SecurityUserPermissionOverride.RemoveRange(userOverrides);
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
 
@@ -823,6 +870,78 @@ public class UserAdminController : BaseController
         await _db.SaveChangesAsync();
         return Ok();
     }
+
+    // ── Gastuitnodiging acties ───────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> InviteGuest(int userId)
+    {
+        var appBaseUrl = $"{Request.Scheme}://{Request.Host}";
+        var invitedBy = User.GetCpmUserId();
+
+        var result = await _guestInvitationService.InviteGuestAsync(userId, invitedBy, appBaseUrl);
+
+        if (result.Success)
+            TempData["Message"] = "Uitnodiging verstuurd.";
+        else
+            TempData["Error"] = result.ErrorMessage ?? "Uitnodiging mislukt.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> ResendInvite(int userId)
+    {
+        var appBaseUrl = $"{Request.Scheme}://{Request.Host}";
+        var invitedBy = User.GetCpmUserId();
+
+        var result = await _guestInvitationService.ResendInvitationAsync(userId, invitedBy, appBaseUrl);
+
+        if (result.Success)
+            TempData["Message"] = "Uitnodiging opnieuw verstuurd.";
+        else
+            TempData["Error"] = result.ErrorMessage ?? "Heruitnodiging mislukt.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> ResetInvite(int userId)
+    {
+        var performedBy = User.GetCpmUserId();
+        var result = await _guestInvitationService.ResetRedemptionAsync(userId, performedBy);
+
+        if (result.Success)
+            TempData["Message"] = "Uitnodiging gereset. U kunt de gebruiker opnieuw uitnodigen.";
+        else
+            TempData["Error"] = result.ErrorMessage ?? "Reset mislukt.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> UnlinkGuest(int userId)
+    {
+        var performedBy = User.GetCpmUserId();
+        var result = await _guestInvitationService.UnlinkGuestAsync(userId, performedBy);
+
+        if (result.Success)
+            TempData["Message"] = "Gastkoppeling verbroken.";
+        else
+            TempData["Error"] = result.ErrorMessage ?? "Ontkoppelen mislukt.";
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    // ── Einde gastuitnodiging acties ─────────────────────────────────────────
 
     private async Task EnsurePermissionCodeExistsAsync(string permissionCode)
     {

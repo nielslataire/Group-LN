@@ -1,0 +1,146 @@
+@* Modale dialogen voor B2B gastuitnodiging – worden ingeladen via @Html.Partial in _UserAdminModals *@
+
+@* ── Uitnodigen ──────────────────────────────────────────────────────────── *@
+<div id="inviteGuestModal" class="modal-block modal-block-primary mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("InviteGuest", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="invite-guest-user-id" name="userId" />
+            <header class="card-header">
+                <h2 class="card-title">Uitnodigen als externe gebruiker</h2>
+            </header>
+            <div class="card-body">
+                <div class="modal-wrapper">
+                    <div class="modal-icon"><i class="fas fa-envelope-open-text text-primary fs-1"></i></div>
+                    <div class="modal-text">
+                        <p>
+                            Een Microsoft Entra B2B-uitnodiging wordt aangemaakt voor
+                            <strong id="invite-guest-name"></strong>
+                            (<span id="invite-guest-email" class="text-muted"></span>).
+                        </p>
+                        <p class="mb-0 small text-muted">
+                            De gebruiker ontvangt een gepersonaliseerde uitnodigings-e-mail.
+                            Microsoft stuurt zelf <em>geen</em> mail.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-paper-plane me-1"></i>Uitnodigen
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>
+
+@* ── Heruitnodigen ────────────────────────────────────────────────────────── *@
+<div id="resendInviteModal" class="modal-block modal-block-warning mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("ResendInvite", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="resend-invite-user-id" name="userId" />
+            <header class="card-header">
+                <h2 class="card-title">Uitnodiging opnieuw sturen</h2>
+            </header>
+            <div class="card-body">
+                <div class="modal-wrapper">
+                    <div class="modal-icon"><i class="fas fa-redo text-warning fs-1"></i></div>
+                    <div class="modal-text">
+                        <p>
+                            Er wordt een nieuwe Entra-uitnodiging aangemaakt voor
+                            <strong id="resend-invite-name"></strong>.
+                            De vorige uitnodigingslink vervalt.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-warning text-white">
+                            <i class="fa fa-paper-plane me-1"></i>Opnieuw sturen
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>
+
+@* ── Reset uitnodiging ────────────────────────────────────────────────────── *@
+<div id="resetInviteModal" class="modal-block modal-block-danger mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("ResetInvite", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="reset-invite-user-id" name="userId" />
+            <header class="card-header">
+                <h2 class="card-title">Uitnodiging resetten</h2>
+            </header>
+            <div class="card-body">
+                <div class="modal-wrapper">
+                    <div class="modal-icon"><i class="fas fa-exclamation-triangle text-danger fs-1"></i></div>
+                    <div class="modal-text">
+                        <p>
+                            De Entra-koppeling en uitnodigingsstatus van
+                            <strong id="reset-invite-name"></strong>
+                            worden gewist. De gebruiker kan niet meer inloggen totdat u opnieuw uitnodigt.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fa fa-trash me-1"></i>Reset uitvoeren
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>
+
+@* ── Koppeling verbreken ──────────────────────────────────────────────────── *@
+<div id="unlinkGuestModal" class="modal-block modal-block-danger mfp-hide">
+    <section class="card">
+        <form method="post" action="@Url.Action("UnlinkGuest", "UserAdmin")">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="unlink-guest-user-id" name="userId" />
+            <header class="card-header">
+                <h2 class="card-title">Koppeling verbreken</h2>
+            </header>
+            <div class="card-body">
+                <div class="modal-wrapper">
+                    <div class="modal-icon"><i class="fas fa-unlink text-danger fs-1"></i></div>
+                    <div class="modal-text">
+                        <p>
+                            De gastuitnodiging en Entra-koppeling voor
+                            <strong id="unlink-guest-name"></strong>
+                            worden volledig verwijderd.
+                            Deze actie kan niet ongedaan worden gemaakt.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        <button type="button" class="btn btn-light modal-dismiss">Annuleren</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fa fa-unlink me-1"></i>Verbreken
+                        </button>
+                    </div>
+                </div>
+            </footer>
+        </form>
+    </section>
+</div>

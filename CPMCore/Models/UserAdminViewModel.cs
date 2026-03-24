@@ -15,6 +15,18 @@ namespace CPMCore.Models
         public int? CurrentRoleId { get; set; }
         public string? CurrentRoleName { get; set; }
         public List<string> Permissions { get; set; } = new();
+
+        // Gastuitnodiging (null = geen uitnodiging aangemaakt)
+        public int? GuestInvitationId { get; set; }
+        public string? GuestInvitationStatus { get; set; }
+        public string? GuestUserType { get; set; }
+        public DateTime? GuestInvitationSentAt { get; set; }
+        public DateTime? GuestLastLoginAt { get; set; }
+        public string? GuestExternalObjectId { get; set; }
+        public string? GuestExternalTenantId { get; set; }
+        public string? GuestInviteRedeemUrl { get; set; }
+
+        public bool HasGuestInvitation => GuestInvitationId.HasValue;
     }
 
     public class EntraUserListItemViewModel

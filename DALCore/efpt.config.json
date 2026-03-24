@@ -439,6 +439,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[UserGuestInvitation]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UserGuestInvitationAudit]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[Users]",
          "ObjectType": 0
       },

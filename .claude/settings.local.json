@@ -20,7 +20,9 @@
       "Bash(cmd /c \"powershell.exe -ExecutionPolicy Bypass -File \"\"c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\fix_partials.ps1\"\" > \"\"c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\fix_output.txt\"\" 2>&1\")",
       "Bash(FILE=\"/c/Users/niels/source/repos/nielslataire/Group-LN/CPMCore/Views/Projecten/Partials/Contracts.cshtml\")",
       "Bash(__NEW_LINE_2d8fe4baf6c86189__ perl -0777 -i -pe ':*)",
-      "Bash(__NEW_LINE_2d8fe4baf6c86189__ grep:*)"
+      "Bash(__NEW_LINE_2d8fe4baf6c86189__ grep:*)",
+      "Bash(\"e:/TFS/CPMCore/Views/UserAdmin/Modals/_UserAdminModals.cshtml\")",
+      "Bash(echo \"@Html.Partial\\(\"\"Modals/_GuestInviteModals\"\"\\)\")"
     ]
   }
 }
