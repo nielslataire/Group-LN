@@ -236,8 +236,14 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<WheaterStations> WheaterStations { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
+    {
+        // Connection string wordt geconfigureerd via AddDbContext in Program.cs.
+        // Deze methode mag nooit de fallback-verbinding bevatten.
+        if (!optionsBuilder.IsConfigured)
+            throw new InvalidOperationException(
+                "cpmRunningContext is niet geconfigureerd. " +
+                "Zorg dat AddDbContext wordt aangeroepen in Program.cs.");
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

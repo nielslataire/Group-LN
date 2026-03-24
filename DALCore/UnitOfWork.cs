@@ -40,7 +40,7 @@ namespace DALCore
             List<Message> messages = new List<Message>();
             try
             {
-                _context.SaveChangesAsync();
+                _context.SaveChanges();
             }
             catch (Exception ex)
             {

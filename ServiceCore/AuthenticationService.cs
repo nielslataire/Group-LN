@@ -19,7 +19,6 @@ namespace ServiceCore
         {
             var response = new GetResponse<bool> { Value = false };
 
-            // Haal gebruiker op (no tracking)
             var user = _uow.Users.GetNoTracking()
                 .SingleOrDefault(u => u.UserId == userName);
 
@@ -29,13 +28,21 @@ namespace ServiceCore
                 return response;
             }
 
-            // TODO: vervang dit door een hash-verify (bv. BCrypt/ASP.NET Core Identity)
-            var isOk = user.Password == password;
+            bool isOk;
+            if (user.Password != null && user.Password.StartsWith("$2", StringComparison.Ordinal))
+            {
+                // BCrypt hash — nieuw formaat
+                isOk = BCrypt.Net.BCrypt.Verify(password, user.Password);
+            }
+            else
+            {
+                // Transitie: bestaande plaintext-wachtwoorden worden nog aanvaard.
+                // Migreer via een SQL-script of door wachtwoorden opnieuw in te stellen.
+                isOk = user.Password == password;
+            }
 
             if (!isOk)
-            {
                 response.AddError("invalid credentials");
-            }
 
             response.Value = isOk;
             return response;

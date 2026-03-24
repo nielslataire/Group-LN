@@ -681,7 +681,7 @@
 
                                     <span class="bulk-separatorms-2 me-2"></span>
 
-                                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
+                                    <form method="post" action="@Url.Action("BulkUpdate", "ProjectsIssues", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
                                         @Html.AntiForgeryToken()
                                         <select class="form-control form-control-modern" name="Status" id="bulkStatusSelect" style="min-width: 170px;">
                                             <option value="">Kies status</option>
@@ -697,7 +697,7 @@
 
                                     <span class="bulk-separator ms-2 me-2"></span>
 
-                                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
+                                    <form method="post" action="@Url.Action("BulkUpdate", "ProjectsIssues", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
                                         @Html.AntiForgeryToken()
                                         <input type="date" class="form-control form-control-modern" name="DueDate" id="bulkDueDateInput" style="min-width: 120px;" />
                                         <button type="submit" id="bulkDueDateButton" class="btn btn-primary text-nowrap" disabled>
@@ -707,7 +707,7 @@
 
                                     <span class="bulk-separator ms-2 me-2"></span>
 
-                                    <form method="post" action="@Url.Action("BulkUpdate", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
+                                    <form method="post" action="@Url.Action("BulkUpdate", "ProjectsIssues", new { projectId })" class="d-flex align-items-center gap-2 flex-nowrap mb-0">
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="ResponsiblePartyType" value="@((int)ConstructionIssueResponsiblePartyType.Contractor)" />
                                         <select class="form-control form-control-modern" name="ResponsiblePartyId" id="bulkResponsiblePartySelect" style="min-width: 220px;">

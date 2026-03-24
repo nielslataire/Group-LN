@@ -22,7 +22,15 @@
       "Bash(__NEW_LINE_2d8fe4baf6c86189__ perl -0777 -i -pe ':*)",
       "Bash(__NEW_LINE_2d8fe4baf6c86189__ grep:*)",
       "Bash(\"e:/TFS/CPMCore/Views/UserAdmin/Modals/_UserAdminModals.cshtml\")",
-      "Bash(echo \"@Html.Partial\\(\"\"Modals/_GuestInviteModals\"\"\\)\")"
+      "Bash(echo \"@Html.Partial\\(\"\"Modals/_GuestInviteModals\"\"\\)\")",
+      "Bash(grep -r \"string.Empty\\\\|\"\"  /e/TFS/CPMCore/Controllers --include=\"*.cs \")",
+      "Bash(ls -la e:/TFS/DALCore/*.cs)",
+      "Bash(wc -l e:/TFS/BOCore/BO/**/*.vb)",
+      "Bash(grep -r \"connection\\\\|config\\\\|appsettings\" e:/TFS/DALCore/*.cs)",
+      "Bash(grep -r class.*BO$ e:/TFS/BOCore/BO/*.vb)",
+      "Bash(grep -r \"async\\\\|Task<\\\\|Task\\\\>\" e:/TFS/FacadeCore/*.cs)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet build:*)"
     ]
   }
 }
