@@ -3,6 +3,40 @@
 @{
     ViewBag.Title = "Aanmelden – Group LN";
     Layout = "_Base";
+
+    // ── Tekst per type ────────────────────────────────────────────
+    var isContractor = Model.Type == CPMCore.Models.LoginType.Contractor;
+    var isCustomer   = Model.Type == CPMCore.Models.LoginType.Customer;
+
+    var platformLabel = isCustomer   ? "Klantenportaal"
+                      : isContractor ? "Portaal"
+                      :                "Intern Platform";
+
+    var featuresLabel = (isContractor || isCustomer) ? "Wat u kunt doen" : "Platform mogelijkheden";
+
+    var cardTitle = isCustomer   ? "Welkom bij uw portaal"
+                  : isContractor ? "Welkom terug"
+                  :                "Welkom terug";
+
+    var cardSub = isCustomer
+        ? "Volg uw project, bekijk documenten en communiceer rechtstreeks met het Group LN team."
+        : isContractor
+        ? "Meld u aan met uw Microsoft-account om toegang te krijgen tot het Group LN portaal."
+        : "Meld u aan met uw organisatie Microsoft-account om toegang te krijgen tot het interne platform.";
+
+    var infoBox = isCustomer
+        ? "Beveiligde toegang via Microsoft Entra ID. Uw persoonlijke gegevens en projectinformatie zijn beschermd en alleen voor u zichtbaar."
+        : isContractor
+        ? "Uw gegevens worden beveiligd via Microsoft Entra ID. Alleen geautoriseerde gebruikers met een geldig gastaccount hebben toegang."
+        : "Beveiligd via Microsoft Entra ID. Alleen medewerkers met een actief organisatie-account hebben toegang.";
+
+    var helpEmail = isCustomer   ? "klanten@groupln.be"
+                  : isContractor ? "support@groupln.be"
+                  :                "niels.lataire@groupln.be";
+
+    var helpLabel = isCustomer   ? "Contacteer ons team"
+                  : isContractor ? "Contacteer ons"
+                  :                "IT-support";
 }
 
 @section scripts {
@@ -13,7 +47,6 @@
 
     /* ════════════════════════════════════════════════════════════════
        DESKTOP GRID  –  twee kolommen elk 50 %
-       Rijen: [logo] [features] [copyright]  |  [card: spans alle rijen]
     ════════════════════════════════════════════════════════════════ */
     .gln-login {
         min-height: 100vh;
@@ -38,9 +71,9 @@
         gap: 14px;
         text-decoration: none;
     }
-    .gln-logo img  { height: 44px; }
-    .gln-company   { font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.2; }
-    .gln-platform  { font-size: .63rem; font-weight: 700; letter-spacing: .18em;
+    .gln-logo img  { height: 88px; }
+    .gln-company   { font-size: 2.4rem; font-weight: 700; color: #fff; line-height: 1.4; }
+    .gln-platform  { font-size: 1.2rem; font-weight: 500; letter-spacing: .18em;
                      color: rgba(255,255,255,.5); text-transform: uppercase; }
 
     /* ── Feature-tegels ──────────────────────────────────────────── */
@@ -52,7 +85,7 @@
         justify-content: center;
     }
     .gln-features-label {
-        font-size: .68rem; font-weight: 700; letter-spacing: .14em;
+        font-size: .9rem; font-weight: 300; letter-spacing: .14em;
         text-transform: uppercase; color: rgba(255,255,255,.4);
         margin-bottom: 16px;
     }
@@ -69,7 +102,7 @@
         transition: background .15s;
     }
     .gln-tile:hover { background: rgba(255,255,255,.12); }
-    .gln-tile-icon  { font-size: 1.4rem; color: #3ecf8e; margin-bottom: 8px; }
+    .gln-tile-icon  { font-size: 1.8rem; color: #3ecf8e; margin-bottom: 8px; }
     .gln-tile-name  { font-weight: 600; font-size: .9rem; color: #fff; }
     .gln-tile-desc  { font-size: .77rem; color: rgba(255,255,255,.45); margin-top: 3px; }
 
@@ -135,10 +168,9 @@
         border-radius: 8px; padding: 12px 14px; margin-top: 28px;
         font-size: .82rem; color: #4a5568; line-height: 1.45;
         align-items: center;
-
     }
     .gln-info-box .info-icon {
-        color: #0a5a3b; font-size: 1.2rem;
+        color: #0a5a3b; font-size: 1.8rem;
         flex-shrink: 0; margin-top: 2px;
     }
 
@@ -153,8 +185,26 @@
     .gln-help a { color: #0a5a3b; font-weight: 600; text-decoration: none; }
     .gln-help a:hover { text-decoration: underline; }
 
+    /* Externe portalen links */
+    .gln-portal-links {
+        margin-top: 20px;
+            font-size: .69rem;
+        color: #6c757d;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+            .gln-portal-links a {
+                color: #0a5a3b;
+                font-weight: 300;
+                text-decoration: none;
+                font-size: .69rem;
+            }
+    .gln-portal-links a:hover { text-decoration: underline; }
+
     /* ════════════════════════════════════════════════════════════════
-       TABLET  ≤ 991px  –  één kolom, volgorde: logo → card → copy
+       TABLET  ≤ 991px
     ════════════════════════════════════════════════════════════════ */
     @@media (max-width: 991px) {
         .gln-login {
@@ -191,58 +241,104 @@
 
 <div class="gln-login">
 
-    <!-- ── Logo (desktop: kolom 1 rij 1 | mobiel: bovenaan) ──────── -->
+    <!-- ── Logo ──────────────────────────────────────────────────── -->
     <div class="gln-logo-bar">
         <a href="/" class="gln-logo">
-            <img src="~/img/logo.png" alt="Group LN" />
+            <img src="~/img/logo.png" alt="GROUP LN" />
             <div>
-                <div class="gln-company">Group LN</div>
-                <div class="gln-platform">Intern Platform</div>
+                <div class="gln-company">GROUP LN</div>
+                <div class="gln-platform">@platformLabel</div>
             </div>
         </a>
     </div>
 
-    <!-- ── Features (enkel desktop, kolom 1 rij 2) ───────────────── -->
+    <!-- ── Feature-tegels (enkel desktop) ────────────────────────── -->
     <div class="gln-features-bar">
-        <div class="gln-features-label">Platform mogelijkheden</div>
+        <div class="gln-features-label">@featuresLabel</div>
         <div class="gln-grid">
-            <div class="gln-tile">
-                <div class="gln-tile-icon"><i class="bx bx-grid-alt"></i></div>
-                <div class="gln-tile-name">Project dashboard</div>
-                <div class="gln-tile-desc">Volledig overzicht</div>
-            </div>
-            <div class="gln-tile">
-                <div class="gln-tile-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
-                <div class="gln-tile-name">Financieel beheer</div>
-                <div class="gln-tile-desc">Facturatie &amp; budget</div>
-            </div>
-            <div class="gln-tile">
-                <div class="gln-tile-icon"><i class="bx bx-group"></i></div>
-                <div class="gln-tile-name">Relatiebeheer</div>
-                <div class="gln-tile-desc">Klanten &amp; leveranciers</div>
-            </div>
-            <div class="gln-tile">
-                <div class="gln-tile-icon"><i class="bx bx-cog"></i></div>
-                <div class="gln-tile-name">Configuratie</div>
-                <div class="gln-tile-desc">Rollen &amp; rechten</div>
-            </div>
+            @if (isCustomer)
+            {
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-home-alt"></i></div>
+                    <div class="gln-tile-name">Uw woning volgen</div>
+                    <div class="gln-tile-desc">Bekijk de voortgang van uw project, van fundering tot oplevering.</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-list-plus"></i></div>
+                    <div class="gln-tile-name">Meerwerken bekijken</div>
+                    <div class="gln-tile-desc">Overzicht van alle aangevraagde en goedgekeurde meerwerken.</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-file"></i></div>
+                    <div class="gln-tile-name">Documenten raadplegen</div>
+                    <div class="gln-tile-desc">Al uw contracten, plannen en facturen op één plek.</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-message"></i></div>
+                    <div class="gln-tile-name">Berichten ontvangen</div>
+                    <div class="gln-tile-desc">Rechtstreeks communiceren met uw projectteam.</div>
+                </div>
+            }
+            else if (isContractor)
+            {
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-building-house"></i></div>
+                    <div class="gln-tile-name">Projecten volgen</div>
+                    <div class="gln-tile-desc">Blijf op de hoogte van de voortgang van uw projecten in real-time.</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-task"></i></div>
+                    <div class="gln-tile-name">Punten beheren</div>
+                    <div class="gln-tile-desc">Uw punten raadplegen en afvinken voor controle.</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-folder"></i></div>
+                    <div class="gln-tile-name">Documenten beheren</div>
+                    <div class="gln-tile-desc">Veilig documenten delen en raadplegen op één centrale plek.</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-group"></i></div>
+                    <div class="gln-tile-name">Direct communiceren</div>
+                    <div class="gln-tile-desc">Snel en efficiënt communiceren met het Group LN team.</div>
+                </div>
+            }
+            else
+            {
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-grid-alt"></i></div>
+                    <div class="gln-tile-name">Project dashboard</div>
+                    <div class="gln-tile-desc">Volledig overzicht</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
+                    <div class="gln-tile-name">Financieel beheer</div>
+                    <div class="gln-tile-desc">Facturatie &amp; budget</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-group"></i></div>
+                    <div class="gln-tile-name">Relatiebeheer</div>
+                    <div class="gln-tile-desc">Klanten &amp; leveranciers</div>
+                </div>
+                <div class="gln-tile">
+                    <div class="gln-tile-icon"><i class="bx bx-cog"></i></div>
+                    <div class="gln-tile-name">Configuratie</div>
+                    <div class="gln-tile-desc">Rollen &amp; rechten</div>
+                </div>
+            }
         </div>
     </div>
 
-    <!-- ── Copyright (desktop: kolom 1 rij 3 | mobiel: onderaan) ─── -->
+    <!-- ── Copyright ─────────────────────────────────────────────── -->
     <div class="gln-copy-bar">
         &copy; @DateTime.Now.Year Group LN. Alle rechten voorbehouden.
     </div>
 
-    <!-- ── Witte kaart (desktop: kolom 2 spans alle rijen) ────────── -->
+    <!-- ── Witte kaart ────────────────────────────────────────────── -->
     <div class="gln-right">
         <div class="gln-card">
 
-            <h1>Welkom terug</h1>
-            <p class="gln-card-sub">
-                Meld u aan met uw organisatie Microsoft-account om
-                toegang te krijgen tot het interne platform.
-            </p>
+            <h1>@cardTitle</h1>
+            <p class="gln-card-sub">@cardSub</p>
 
             <a class="btn-gln-ms"
                href="@Url.Action("SignIn", "Account", new { returnUrl = Model.ReturnUrl })">
@@ -253,27 +349,26 @@
 
             <div class="gln-info-box">
                 <i class="bx bx-shield info-icon"></i>
-                <span>
-                    Beveiligd via Microsoft Entra ID. Alleen medewerkers
-                    met een actief organisatie-account hebben toegang.
-                </span>
+                <span>@infoBox</span>
             </div>
 
             <div class="gln-help">
-                Hulp nodig? <a href="mailto:niels.lataire@groupln.be">IT-support</a>
+                Hulp nodig? <a href="mailto:@helpEmail">@helpLabel</a>
             </div>
 
-            @*
-            ── Externe portalen – voorlopig uitgeschakeld ──────────
-            <div class="d-flex flex-column gap-2 mt-4">
-                <a href="#" class="gln-portal-link">
-                    Leveranciersportaal <i class="bx bx-chevron-right"></i>
-                </a>
-                <a href="#" class="gln-portal-link">
-                    Klantenportaal <i class="bx bx-chevron-right"></i>
-                </a>
-            </div>
-            *@
+            @if (isCustomer)
+            {
+@*                 <div class="gln-portal-links">
+                    <span>Leverancier? <a href="/aannemer">Leveranciersportaal</a></span>
+                    <span>Intern? <a href="/">Intern platform</a></span>
+                </div> *@
+            }
+            else if (isContractor)
+            {
+                <div class="gln-portal-links">
+                    <span>Interne medewerkers melden zich aan via het <a href="/">interne platform</a>.</span>
+                </div>
+            }
 
         </div>
     </div>

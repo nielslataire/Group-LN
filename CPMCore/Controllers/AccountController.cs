@@ -21,11 +21,18 @@ public class AccountController : BaseController
     }
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
+    public IActionResult Login(string? returnUrl = null, string? type = null)
     {
+        var loginType = type?.ToLowerInvariant() switch
+        {
+            "contractor" => LoginType.Contractor,
+            "customer"   => LoginType.Customer,
+            _            => LoginType.Internal
+        };
         return View(new EntraLoginViewModel
         {
-            ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? Url.Content("~") : returnUrl
+            ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? Url.Content("~") : returnUrl,
+            Type = loginType
         });
     }
 

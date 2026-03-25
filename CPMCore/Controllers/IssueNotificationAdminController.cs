@@ -149,7 +149,7 @@ public class IssueNotificationAdminController : Controller
             Notes = vm.Notes,
             CreatedDate = DateTime.UtcNow,
             NextReminderRun = vm.ReminderFrequencyDays > 0
-                ? DateTime.UtcNow.AddDays(1).Date.AddHours(8)
+                ? ComputeNextReminderRun(vm.ReminderFrequencyDays, vm.ReminderFrequencyDays > 0 ? vm.ReminderDayOfWeek : null, BrusselsToUtcHour(vm.BrusselsReminderHour))
                 : null
         };
 
@@ -213,11 +213,11 @@ public class IssueNotificationAdminController : Controller
         entity.Notes = vm.Notes;
         entity.ModifiedDate = DateTime.UtcNow;
 
-        // If frequency changed and reminder was disabled, clear next run
+        // Herbereken NextReminderRun op basis van geconfigureerde dag en uur
         if (entity.ReminderFrequencyDays == 0)
             entity.NextReminderRun = null;
-        else if (entity.NextReminderRun == null)
-            entity.NextReminderRun = DateTime.UtcNow.AddDays(1).Date.AddHours(8);
+        else
+            entity.NextReminderRun = ComputeNextReminderRun(entity.ReminderFrequencyDays, entity.ReminderDayOfWeek, entity.ReminderHour);
 
         await _db.SaveChangesAsync();
 
@@ -332,6 +332,37 @@ public class IssueNotificationAdminController : Controller
         EmailsSent = r.EmailsSent,
         ErrorMessage = r.ErrorMessage
     };
+
+    // ── NEXT REMINDER RUN HELPER ──────────────────────────────────
+
+    private static DateTime ComputeNextReminderRun(int frequencyDays, int? dayOfWeek, int reminderHourUtc)
+    {
+        var now = DateTime.UtcNow;
+        var todayAtHour = now.Date.AddHours(reminderHourUtc);
+
+        if (dayOfWeek.HasValue)
+        {
+            var targetDow = (DayOfWeek)dayOfWeek.Value;
+            int daysUntil = ((int)targetDow - (int)now.DayOfWeek + 7) % 7;
+
+            if (daysUntil == 0)
+            {
+                // Vandaag is de geconfigureerde dag
+                if (now < todayAtHour)
+                    return todayAtHour; // uur nog niet voorbij: run vandaag
+                else
+                    return todayAtHour.AddDays(frequencyDays); // uur voorbij: volgende cyclus
+            }
+
+            return now.Date.AddDays(daysUntil).AddHours(reminderHourUtc);
+        }
+        else
+        {
+            if (now < todayAtHour)
+                return todayAtHour;
+            return todayAtHour.AddDays(frequencyDays);
+        }
+    }
 
     // ── BRUSSELS TIME HELPERS ─────────────────────────────────────
     private static TimeZoneInfo BrusselsTz => TimeZoneInfo.FindSystemTimeZoneById(

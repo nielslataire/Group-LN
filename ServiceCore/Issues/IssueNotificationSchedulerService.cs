@@ -53,8 +53,8 @@ public class IssueNotificationSchedulerService : IIssueNotificationSchedulerServ
                         return sent;
                     });
 
-                // Advance next run date
-                schedule.NextReminderRun = now.AddDays(schedule.ReminderFrequencyDays);
+                // Advance next run date – aligneer op het geconfigureerde uur
+                schedule.NextReminderRun = now.Date.AddDays(schedule.ReminderFrequencyDays).AddHours(schedule.ReminderHour);
                 schedule.ModifiedDate = now;
             }
 

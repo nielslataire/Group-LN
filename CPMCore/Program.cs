@@ -213,8 +213,12 @@ builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.AddScoped<PermissionConventionFilter>();
 
-builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultScheme          = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+})
+.AddMicrosoftIdentityWebApp(configuration.GetSection("AzureAd"))
     .EnableTokenAcquisitionToCallDownstreamApi()
     .AddMicrosoftGraph(configuration.GetSection("Graph"))
     .AddInMemoryTokenCaches();
@@ -247,6 +251,7 @@ builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefa
 });
 builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.AuthenticationScheme, options =>
 {
+    options.Prompt = "select_account"; // Voorkom stille SSO-herauthenticatie
     options.TokenValidationParameters.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
     options.Events.OnTokenValidated = async context =>
     {
@@ -347,6 +352,23 @@ var localizationOptions = new RequestLocalizationOptions
 app.UseRequestLocalization(localizationOptions);
 
 app.UseRouting();
+
+// ── PUBLIEKE PORTAAL-REDIRECTS (vóór auth – buiten MVC pipeline) ─────────────
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path.Value ?? "";
+    if (path.Equals("/aannemer", StringComparison.OrdinalIgnoreCase))
+    {
+        ctx.Response.Redirect("/Account/Login?type=contractor");
+        return;
+    }
+    if (path.Equals("/klanten", StringComparison.OrdinalIgnoreCase))
+    {
+        ctx.Response.Redirect("/Account/Login?type=customer");
+        return;
+    }
+    await next();
+});
 
 // ── EXTERNE TRIGGER ENDPOINTS (vóór auth – geen login vereist) ────────────────
 app.Map("/api/trigger", triggerApp =>
