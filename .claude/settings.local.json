@@ -30,7 +30,10 @@
       "Bash(grep -r class.*BO$ e:/TFS/BOCore/BO/*.vb)",
       "Bash(grep -r \"async\\\\|Task<\\\\|Task\\\\>\" e:/TFS/FacadeCore/*.cs)",
       "Bash(dotnet restore:*)",
-      "Bash(dotnet build:*)"
+      "Bash(dotnet build:*)",
+      "Bash(powershell -Command \"Write-Host ''Done''\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"e:\\\\TFS\\\\_fix_sidebar.ps1\")",
+      "Bash(del \"e:\\\\TFS\\\\_fix_sidebar.ps1\")"
     ]
   }
 }

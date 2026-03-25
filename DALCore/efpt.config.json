@@ -295,6 +295,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[IssueNotificationRun]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[IssueNotificationSchedule]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[IssuerBankAccount]",
          "ObjectType": 0
       },

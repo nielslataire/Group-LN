@@ -1,4 +1,4 @@
-﻿@using CPMCore.Helpers
+@using CPMCore.Helpers
 @using FacadeCore
 @using BOCore;
 @using CPMCore.Services.Security
@@ -20,6 +20,7 @@
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
 	var canSeeActivities = PermissionService.HasRead(PermissionCodes.SettingsActivities);
+	var canSeeIssueNotifications = PermissionService.HasRead(PermissionCodes.SettingsIssueNotifications);
 	var customerIssuerCompanyIds = new HashSet<int>();
 	var supplierIssuerCompanyIds = new HashSet<int>();
 	var invoicingIssuerCompanyIds = new HashSet<int>();
@@ -87,7 +88,7 @@
 	var customersSubmenuClass = customerIssuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var invoicesSubmenuClass = invoicingIssuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var projectSubmenuClass = 3 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
-	var settingsCount = (canSeeAdmin ? 6 : 0) + (canSeeActivities ? 1 : 0);
+	var settingsCount = (canSeeAdmin ? 6 : 0) + (canSeeActivities ? 1 : 0) + (canSeeIssueNotifications ? 1 : 0);
 	var settingsSubmenuClass = settingsCount > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var linksSubmenuClass = 4 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 }
@@ -185,9 +186,9 @@
 						</li>
 
 					}
-					@if (canSeeAdmin || canSeeActivities)
+					@if (canSeeAdmin || canSeeActivities || canSeeIssueNotifications)
 				{
-					<li class="nav-parent @(currentController == "Instellingen" ? "nav-active" : string.Empty)">
+					<li class="nav-parent @(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" ? "nav-active" : string.Empty)">
 						<a class="main-nav-tile" href="#">
 							<i class="bx bx-cog" aria-hidden="true"></i>
 							<span class="main-nav-label">Instellingen</span>
@@ -201,6 +202,10 @@
 								<li>@Html.ActionLink("Factuurtemplates", "InvoiceTemplates", "Instellingen")</li>
 								<li>@Html.ActionLink("Gebruikers", "Index", "UserAdmin")</li>
 								<li>@Html.ActionLink("Rollen", "Index", "AppRoles")</li>
+							}
+							@if (canSeeIssueNotifications)
+							{
+								<li>@Html.ActionLink("Puntmeldingen", "Index", "IssueNotificationAdmin")</li>
 							}
 							@if (canSeeActivities)
 							{

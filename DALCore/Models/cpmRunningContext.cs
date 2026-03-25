@@ -143,6 +143,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<InvoicingPaymentStages> InvoicingPaymentStages { get; set; }
 
+    public virtual DbSet<IssueNotificationRun> IssueNotificationRun { get; set; }
+
+    public virtual DbSet<IssueNotificationSchedule> IssueNotificationSchedule { get; set; }
+
     public virtual DbSet<IssuerBankAccount> IssuerBankAccount { get; set; }
 
     public virtual DbSet<IssuerCompany> IssuerCompany { get; set; }
@@ -236,14 +240,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<WheaterStations> WheaterStations { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        // Connection string wordt geconfigureerd via AddDbContext in Program.cs.
-        // Deze methode mag nooit de fallback-verbinding bevatten.
-        if (!optionsBuilder.IsConfigured)
-            throw new InvalidOperationException(
-                "cpmRunningContext is niet geconfigureerd. " +
-                "Zorg dat AddDbContext wordt aangeroepen in Program.cs.");
-    }
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -1737,6 +1735,30 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.GroupId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_InvoicingPaymentStages_InvoicingPaymentGroup");
+        });
+
+        modelBuilder.Entity<IssueNotificationRun>(entity =>
+        {
+            entity.HasIndex(e => e.StartedDate, "IX_IssueNotificationRun_StartedDate").IsDescending();
+
+            entity.Property(e => e.TriggeredBy)
+                .IsRequired()
+                .HasMaxLength(50)
+                .HasDefaultValue("scheduler");
+
+            entity.HasOne(d => d.Schedule).WithMany(p => p.IssueNotificationRun)
+                .HasForeignKey(d => d.ScheduleId)
+                .HasConstraintName("FK_IssueNotificationRun_Schedule");
+        });
+
+        modelBuilder.Entity<IssueNotificationSchedule>(entity =>
+        {
+            entity.Property(e => e.CreatedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.EveningUpdateHour).HasDefaultValue(18);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.ReminderFrequencyDays).HasDefaultValue(7);
+            entity.Property(e => e.SendEveningUpdate).HasDefaultValue(true);
         });
 
         modelBuilder.Entity<IssuerBankAccount>(entity =>

@@ -1,0 +1,270 @@
+@model CPMCore.Models.IssueNotification.ScheduleEditVm
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Nieuw schema" : "Schema bewerken";
+    var postAction = isNew ? "CreatePost" : "EditPost";
+    ViewBag.BreadcrumbTitle = isNew ? "Nieuw schema" : "Schema bewerken";
+    var reminderRowStyle = Model.ReminderFrequencyDays == 0 ? "display:none;" : "";
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
+    <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
+}
+
+<div class="row">
+    <div class="row justify-content-between align-items-center pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <div class="row align-items-center">
+                <div class="col-sm-auto d-flex align-items-center">
+                    <a asp-action="Index" class="text-decoration-none text-reset d-flex align-items-center">
+                        <i class="bx bx-chevron-left fs-1"></i>
+                    </a>
+                </div>
+                <div class="col-sm-auto">
+                    <h1 class="fw-bold mb-0">@ViewData["Title"]</h1>
+                    <h5 class="mb-4 mt-0">@(isNew ? "Voeg een nieuw meldingsschema toe" : "Pas het meldingsschema aan")</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form asp-action="@postAction" asp-route-id="@Model.Id" method="post" class="ecommerce-form action-buttons-fixed">
+    @Html.AntiForgeryToken()
+
+    <div class="row mt-2">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-bell"></i>
+                            <h2 class="card-big-info-title">Toewijzing</h2>
+                            <p class="card-big-info-desc">Stel in voor welke aannemer en welk project dit schema van toepassing is.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="SupplierId" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <select asp-for="SupplierId" class="form-control form-control-modern select2" id="SupplierId">
+                                        <option value="">— Alle aannemers —</option>
+                                        @foreach (var s in Model.Suppliers)
+                                        {
+                                            <option value="@s.Id" selected="@(Model.SupplierId == s.Id)">@s.Name</option>
+                                        }
+                                    </select>
+                                    <span class="form-text text-muted">Leeg laten = van toepassing op alle aannemers.</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="ProjectId" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <select asp-for="ProjectId" class="form-control form-control-modern select2" id="ProjectId">
+                                        <option value="">— Alle projecten —</option>
+                                        @foreach (var p in Model.Projects)
+                                        {
+                                            <option value="@p.Id" selected="@(Model.ProjectId == p.Id)">@p.Name</option>
+                                        }
+                                    </select>
+                                    <span class="form-text text-muted">Leeg laten = van toepassing op alle projecten.</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="ReminderFrequencyDays" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <select asp-for="ReminderFrequencyDays" class="form-control form-control-modern" id="ReminderFrequencyDays">
+                                        <option value="0">Uitgeschakeld</option>
+                                        <option value="7" selected="@(Model.ReminderFrequencyDays == 7)">Wekelijks (7 dagen)</option>
+                                        <option value="14" selected="@(Model.ReminderFrequencyDays == 14)">Tweewekelijks (14 dagen)</option>
+                                        <option value="30" selected="@(Model.ReminderFrequencyDays == 30)">Maandelijks (30 dagen)</option>
+                                    </select>
+                                    <span asp-validation-for="ReminderFrequencyDays" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3" id="row-day-of-week" style="@reminderRowStyle">
+                                <label asp-for="ReminderDayOfWeek" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <select asp-for="ReminderDayOfWeek" class="form-control form-control-modern">
+                                        <option value="">— Geen voorkeur —</option>
+                                        <option value="1" selected="@(Model.ReminderDayOfWeek == 1)">Maandag</option>
+                                        <option value="2" selected="@(Model.ReminderDayOfWeek == 2)">Dinsdag</option>
+                                        <option value="3" selected="@(Model.ReminderDayOfWeek == 3)">Woensdag</option>
+                                        <option value="4" selected="@(Model.ReminderDayOfWeek == 4)">Donderdag</option>
+                                        <option value="5" selected="@(Model.ReminderDayOfWeek == 5)">Vrijdag</option>
+                                        <option value="6" selected="@(Model.ReminderDayOfWeek == 6)">Zaterdag</option>
+                                        <option value="0" selected="@(Model.ReminderDayOfWeek == 0)">Zondag</option>
+                                    </select>
+                                    <span class="form-text text-muted">Op welke dag van de week wordt de herinnering verstuurd.</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3" id="row-reminder-hour" style="@reminderRowStyle">
+                                <label asp-for="BrusselsReminderHour" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <div class="input-group" style="max-width:180px;">
+                                        <input asp-for="BrusselsReminderHour" class="form-control form-control-modern" type="number" min="0" max="23" />
+                                        <span class="input-group-text">:00 Brussels</span>
+                                    </div>
+                                    <span class="form-text text-muted">Tijdstip waarop de herinnering wordt verstuurd (Brussels-tijd).</span>
+                                    <span asp-validation-for="BrusselsReminderHour" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-time-five"></i>
+                            <h2 class="card-big-info-title">Meldingsinstellingen</h2>
+                            <p class="card-big-info-desc">Configureer de tijdstippen en of dagelijkse updates actief zijn.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="SendEveningUpdate" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <div class="d-flex align-items-center mt-1">
+                                        <div class="switch switch-sm switch-primary">
+                                            @Html.CheckBoxFor(m => m.SendEveningUpdate, new { data_plugin_ios_switch = "" })
+                                        </div>
+                                        <span class="ms-2">Dagelijkse update (wijzigingen van vandaag)</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="BrusselsHour" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <div class="input-group" style="max-width:180px;">
+                                        <input asp-for="BrusselsHour" class="form-control form-control-modern" type="number" min="0" max="23" />
+                                        <span class="input-group-text">:00 Brussels</span>
+                                    </div>
+                                    <span class="form-text text-muted">Voer het uur in Brussels-tijd in (automatisch omgezet naar UTC).</span>
+                                    <span asp-validation-for="BrusselsHour" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
+                                <label asp-for="IsActive" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <div class="d-flex align-items-center mt-1">
+                                        <div class="switch switch-sm switch-primary">
+                                            @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
+                                        </div>
+                                        <span class="ms-2">Schema is actief</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-start pb-3">
+                                <label asp-for="Notes" class="col-lg-4 col-xl-3 control-label text-lg-end mb-0 mt-2"></label>
+                                <div class="col-lg-8 col-xl-6">
+                                    <textarea asp-for="Notes" class="form-control form-control-modern" rows="2" maxlength="500"></textarea>
+                                    <span asp-validation-for="Notes" class="text-danger"></span>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-info-circle"></i>
+                            <h2 class="card-big-info-title">Toelichting</h2>
+                            <p class="card-big-info-desc">Uitleg over hoe prioriteit en uitzonderingen werken.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <h6 class="fw-semibold mb-2">Hoe werkt de prioriteit?</h6>
+                            <p class="text-muted small">
+                                Wanneer meerdere schema's van toepassing zijn op eenzelfde aannemer/project,
+                                wordt het meest specifieke schema gebruikt:
+                            </p>
+                            <ol class="text-muted small">
+                                <li>Aannemer + project (meest specifiek)</li>
+                                <li>Aannemer + alle projecten</li>
+                                <li>Alle aannemers + project</li>
+                                <li>Globale standaard (alle aannemers + alle projecten)</li>
+                            </ol>
+                            <hr />
+                            <h6 class="fw-semibold mb-2">Wanneer wordt er <em>niet</em> verstuurd?</h6>
+                            <ul class="text-muted small mb-0">
+                                <li>Als de aannemer <strong>alleen</strong> punten heeft met status "Wacht op keuring" — hij hoeft dan niets te doen.</li>
+                                <li>Als het e-mailadres van het bedrijf niet ingevuld is in het bedrijfsfiche.</li>
+                                <li>Als het punt de vlag "Geen automatische melding" heeft.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row action-buttons">
+        <div class="col-12 col-md-auto">
+            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1">
+                <i class="bx bx-save text-4 me-2"></i> @(isNew ? "Schema aanmaken" : "Wijzigingen opslaan")
+            </button>
+        </div>
+        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+            <a asp-action="Index" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren </a>
+        </div>
+    </div>
+
+</form>
+
+@section PageScripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="~/lib/ios7-switch/ios7-switch.js"></script>
+    <script src="~/lib/select2/js/select2.js"></script>
+    <script src="~/lib/ios7-switch/ios7-switch.js"></script>
+    <script>
+        (function () {
+            $('#SupplierId').select2({
+                theme: 'bootstrap',
+                placeholder: '— Alle aannemers —',
+                allowClear: true,
+                width: '100%'
+            });
+            $('#ProjectId').select2({
+                theme: 'bootstrap',
+                placeholder: '— Alle projecten —',
+                allowClear: true,
+                width: '100%'
+            });
+
+            // Toggle day-of-week + reminder hour rows based on frequency
+            $('#ReminderFrequencyDays').on('change', function () {
+                const val = parseInt($(this).val(), 10);
+                if (val > 0) {
+                    $('#row-day-of-week').show();
+                    $('#row-reminder-hour').show();
+                } else {
+                    $('#row-day-of-week').hide();
+                    $('#row-reminder-hour').hide();
+                }
+            });
+        })();
+    </script>
+}

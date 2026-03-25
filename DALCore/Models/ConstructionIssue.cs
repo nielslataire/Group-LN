@@ -65,6 +65,8 @@ public partial class ConstructionIssue
 
     public decimal? PlanYnormalized { get; set; }
 
+    public bool DoNotAutoNotify { get; set; }
+
     public virtual ConstructionIssueCategory Category { get; set; }
 
     public virtual ICollection<ConstructionIssueHistory> ConstructionIssueHistory { get; set; } = new List<ConstructionIssueHistory>();

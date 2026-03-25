@@ -1,4 +1,5 @@
 ﻿using CPMCore.Configuration;
+using Microsoft.AspNetCore.DataProtection;
 using CPMCore.Helpers;
 using CPMCore.Models;
 using CPMCore.Service;
@@ -99,6 +100,13 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
 });
 
+// Persisteer Data Protection keys zodat ze app pool recycles overleven
+var keysFolder = Path.Combine(builder.Environment.ContentRootPath, "dataprotection-keys");
+Directory.CreateDirectory(keysFolder);
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysFolder))
+    .SetApplicationName("CPMCore");
+
 // Identity / UI context
 //builder.Services.AddDbContext<ApplicationDbContext>(options =>
 //{
@@ -167,6 +175,10 @@ builder.Services.AddScoped<IConstructionIssueService, ConstructionIssueService>(
 builder.Services.AddScoped<IConstructionIssueReportService, ConstructionIssueReportService>();
 builder.Services.AddScoped<IQRCodeService, QRCodeServiceStub>();
 builder.Services.AddScoped<IContractorPortalService, ContractorPortalServiceStub>();
+builder.Services.AddScoped<IIssueNotificationSenderService, IssueNotificationSenderService>();
+builder.Services.AddScoped<IIssueNotificationSchedulerService, IssueNotificationSchedulerService>();
+builder.Services.AddSingleton<IssueNotificationHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<IssueNotificationHostedService>());
 
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();
@@ -335,6 +347,42 @@ var localizationOptions = new RequestLocalizationOptions
 app.UseRequestLocalization(localizationOptions);
 
 app.UseRouting();
+
+// ── EXTERNE TRIGGER ENDPOINTS (vóór auth – geen login vereist) ────────────────
+app.Map("/api/trigger", triggerApp =>
+{
+    triggerApp.Run(async ctx =>
+    {
+        var cfg = ctx.RequestServices.GetRequiredService<IConfiguration>();
+        var path = ctx.Request.Path.Value ?? "";
+
+        if (path.Equals("/issue-notifications", StringComparison.OrdinalIgnoreCase)
+            && ctx.Request.Method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+        {
+            var expectedKey = cfg["TriggerKeys:IssueNotifications"];
+            var key = ctx.Request.Query["key"].FirstOrDefault();
+            if (string.IsNullOrEmpty(expectedKey) || key != expectedKey)
+            {
+                ctx.Response.StatusCode = 401;
+                await ctx.Response.WriteAsJsonAsync(new { error = "Ongeldige sleutel." });
+                return;
+            }
+            var hosted = ctx.RequestServices.GetRequiredService<IssueNotificationHostedService>();
+            _ = Task.Run(() => hosted.RunJobsAsync("http-trigger"));
+            ctx.Response.StatusCode = 202;
+            await ctx.Response.WriteAsJsonAsync(new { status = "Accepted", timestamp = DateTime.UtcNow });
+            return;
+        }
+
+        if (path.Equals("/ping", StringComparison.OrdinalIgnoreCase))
+        {
+            await ctx.Response.WriteAsJsonAsync(new { status = "alive", timestamp = DateTime.UtcNow });
+            return;
+        }
+
+        ctx.Response.StatusCode = 404;
+    });
+});
 
 //TE VERWIJDEREN ALS DE BEVEILIGING MOET GETEST WORDEN
 //if (app.Environment.IsDevelopment())

@@ -1,0 +1,302 @@
+@model CPMCore.Models.IssueNotification.IssueNotificationIndexVm
+@{
+    ViewData["Title"] = "Automatische puntmeldingen";
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+}
+
+<div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
+    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+        <h1 class="font-weight-bold mb-0 mt-0">Automatische puntmeldingen</h1>
+        <h5 class="mb-4 mt-0">Beheer de schema's voor automatische e-mailmeldingen naar aannemers</h5>
+    </div>
+    <div class="col-sm-auto px-0">
+        <a asp-action="Create" class="btn btn-primary btn-md">+ Nieuw schema</a>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="card card-modern mb-4">
+    <div class="card-body">
+        <div class="datatables-header-footer-wrapper mt-2">
+            <table class="table table-responsive-md table-hover mb-3" id="datatable-schedules" style="min-width: 720px;">
+                <thead>
+                    <tr>
+                        <th>Aannemer</th>
+                        <th>Project</th>
+                        <th>Herinnering</th>
+                        <th>Dag. update</th>
+                        <th>Volgende run</th>
+                        <th>Status</th>
+                        <th class="text-end noVis">Acties</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Schedules)
+                    {
+                        <tr>
+                            <td>@(s.SupplierName ?? "Alle aannemers")</td>
+                            <td>@(s.ProjectName ?? "Alle projecten")</td>
+                            <td>
+                                @if (s.ReminderFrequencyDays == 0)
+                                {
+                                    <span class="text-muted">Uitgeschakeld</span>
+                                }
+                                else
+                                {
+                                    var dayName = s.ReminderDayOfWeek.HasValue
+                                        ? s.ReminderDayOfWeek.Value switch
+                                        {
+                                            1 => "ma", 2 => "di", 3 => "wo", 4 => "do",
+                                            5 => "vr", 6 => "za", 0 => "zo", _ => "?"
+                                        }
+                                        : null;
+                                    <span>Om de @s.ReminderFrequencyDays dag(en)@(dayName != null ? $" · {dayName}" : ""), @s.BrusselsReminderHour:00</span>
+                                }
+                            </td>
+                            <td>
+                                @if (s.SendEveningUpdate)
+                                {
+                                    <span class="badge badge-success">Ja &nbsp;(@s.BrusselsEveningUpdateHour:00)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Nee</span>
+                                }
+                            </td>
+                            <td>
+                                @if (s.NextReminderRun.HasValue)
+                                {
+                                    <span title="@s.NextReminderRun.Value.ToString("dd/MM/yyyy HH:mm") lokaal">
+                                        @s.NextReminderRun.Value.ToString("dd/MM/yyyy")
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">–</span>
+                                }
+                            </td>
+                            <td>
+                                @if (s.IsActive)
+                                {
+                                    <span class="badge badge-success">Actief </span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-default">Inactief</span>
+                                }
+                            </td>
+                            <td class="actions text-end">
+                                <a class="ms-1 me-1" title="Bewerken" asp-action="Edit" asp-route-id="@s.Id">
+                                    <i class="bx bx-pencil fs-5"></i>
+                                    <span class="visually-hidden">Bewerken</span>
+                                </a>
+                                <a href="#" class="ms-1 me-1 sendNow"
+                                   data-url="@Url.Action("SendNow", "IssueNotificationAdmin", new { id = s.Id })"
+                                   title="Nu versturen">
+                                    <i class="bx bx-send fs-5"></i>
+                                    <span class="visually-hidden">Nu versturen</span>
+                                </a>
+                                <a href="#modalDeleteSchedule" class="ms-1 me-1 deleteSchedule"
+                                   data-id="@s.Id"
+                                   title="Verwijderen">
+                                    <i class="bx bx-trash fs-5 text-danger"></i>
+                                    <span class="visually-hidden">Verwijderen</span>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card card-modern">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 font-weight-bold">Recente uitvoeringen</h5>
+            <a asp-action="Logs" class="btn btn-default btn-sm">Alle logs bekijken</a>
+        </div>
+        <table class="table table-responsive-md table-sm table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Datum</th>
+                    <th>Type</th>
+                    <th>Getriggerd door</th>
+                    <th>Status</th>
+                    <th>Mails verstuurd</th>
+                    <th>Duur</th>
+                    <th>Fout</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.RecentRuns)
+                {
+                    <tr>
+                        <td>@r.StartedDate.ToString("dd/MM/yyyy HH:mm")<small class="text-muted ms-1">lokaal</small></td>
+                        <td>@r.RunTypeLabel</td>
+                        <td><code>@r.TriggeredBy</code></td>
+                        <td><span class="@r.StatusCssClass">@r.StatusLabel</span></td>
+                        <td>@r.EmailsSent</td>
+                        <td>
+                            @if (r.FinishedDate.HasValue)
+                            {
+                                var secs = (int)(r.FinishedDate.Value - r.StartedDate).TotalSeconds;
+                                <span>@secs s</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">–</span>
+                            }
+                        </td>
+                        <td>
+                            @if (!string.IsNullOrWhiteSpace(r.ErrorMessage))
+                            {
+                                <span class="text-danger" title="@r.ErrorMessage">
+                                    @(r.ErrorMessage.Length > 60 ? r.ErrorMessage[..60] + "…" : r.ErrorMessage)
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (!Model.RecentRuns.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-3">Nog geen uitvoeringen.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<div id="modalDeleteSchedule" class="modal-block modal-block-warning mfp-hide">
+    <div id="delete-schedule-container"></div>
+</div>
+
+<div id="modalSendNow" class="modal-block mfp-hide">
+    <section class="card">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column align-items-center text-center">
+                <div class="spinner-border text-primary mb-3" role="status" style="width:2.5rem;height:2.5rem;">
+                    <span class="visually-hidden">Laden...</span>
+                </div>
+                <p class="mb-0 fw-semibold">Meldingen worden verstuurd…</p>
+                <p class="text-muted small mt-1">Even geduld, dit kan enkele seconden duren.</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+@section PageScripts {
+    <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <script src="~/lib/magnific-popup/jquery.magnific-popup.js"></script>
+    <script>
+        (function () {
+            $('#datatable-schedules').DataTable({
+                paging: true,
+                ordering: true,
+                info: true,
+                searching: false,
+                lengthChange: false,
+                pageLength: 25,
+                language: {
+                    zeroRecords: 'Geen schema\'s gevonden',
+                    emptyTable: 'Geen schema\'s om weer te geven',
+                    info: '_START_ tot _END_ van _TOTAL_ schema\'s',
+                    infoEmpty: 'Geen schema\'s',
+                    infoFiltered: '(gefilterd uit _MAX_ schema\'s)',
+                    paginate: { previous: 'Vorige', next: 'Volgende' }
+                },
+                columnDefs: [{ orderable: false, targets: -1 }]
+            });
+
+            const token = $('input[name="__RequestVerificationToken"]').val();
+
+            // ── SEND NOW: spinner modal + AJAX POST ────────────────
+            function showPNotify(title, text, type) {
+                new PNotify({ title: title, text: text, type: type,
+                    addclass: 'stack-bar-top',
+                    stack: { dir1: 'down', dir2: 'right', push: 'top', spacing1: 5 }
+                });
+            }
+
+            $(document).on('click', '.sendNow', function (e) {
+                e.preventDefault();
+                const url = $(this).data('url');
+
+                $.magnificPopup.open({
+                    items: { src: '#modalSendNow' },
+                    type: 'inline',
+                    preloader: false,
+                    closeBtnInside: false,
+                    closeOnBgClick: false,
+                    showCloseBtn: false
+                });
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: { __RequestVerificationToken: token }
+                })
+                .done(function (result) {
+                    $.magnificPopup.close();
+                    if (result.success) {
+                        showPNotify('Verstuurd', result.message, 'success');
+                    } else {
+                        showPNotify('Fout', result.message, 'error');
+                    }
+                })
+                .fail(function () {
+                    $.magnificPopup.close();
+                    showPNotify('Fout', 'Onverwachte fout bij het versturen.', 'error');
+                });
+            });
+
+            // ── DELETE: magnific popup ─────────────────────────────
+            const deleteUrlTemplate = '@Url.Action("PartialDeleteScheduleModal", "IssueNotificationAdmin", new { id = 0 })';
+
+            $(document).on('click', '.deleteSchedule', function (e) {
+                e.preventDefault();
+                const id = $(this).data('id');
+                if (!id) return;
+
+                const url = deleteUrlTemplate.replace('/0', '/' + id);
+                $.get(url)
+                    .done(function (data) {
+                        $('#delete-schedule-container').html(data);
+                        $.magnificPopup.open({
+                            items: { src: '#modalDeleteSchedule' },
+                            type: 'inline',
+                            preloader: false,
+                            focus: '#delete-schedule-container'
+                        });
+                    })
+                    .fail(function () {
+                        alert('Er is een fout opgetreden bij het laden van de bevestiging.');
+                    });
+            });
+        })();
+    </script>
+}

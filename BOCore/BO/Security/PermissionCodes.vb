@@ -31,5 +31,6 @@
     Public Const SettingsUsers As String = "Settings.Users"
     Public Const SettingsInvoiceTemplates As String = "Settings.InvoiceTemplates"
     Public Const SettingsActivities As String = "Settings.Activities"
+    Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"
 
 End Class

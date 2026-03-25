@@ -1,0 +1,30 @@
+@{
+    var scheduleId = (int)ViewBag.ScheduleId;
+    var scheduleName = (string)ViewBag.ScheduleName;
+}
+
+<section class="card">
+    <div class="card-body text-center">
+        <div class="modal-wrapper">
+            <div class="modal-icon center">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <div class="modal-text">
+                <h4>Schema verwijderen</h4>
+                <p>U staat op het punt om het schema voor <strong>@scheduleName</strong> te verwijderen.</p>
+                <p>Bent u zeker dat u dit wilt verwijderen?</p>
+            </div>
+        </div>
+    </div>
+    <footer class="card-footer">
+        <div class="row">
+            <div class="col-md-12 text-end">
+                <form method="post" action="@Url.Action("Delete", "IssueNotificationAdmin", new { id = scheduleId })">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-warning">Verwijderen</button>
+                    <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+                </form>
+            </div>
+        </div>
+    </footer>
+</section>

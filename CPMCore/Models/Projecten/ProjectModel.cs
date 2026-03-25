@@ -1,5 +1,4 @@
-﻿using AspNetCoreGeneratedDocument;
-using BOCore;
+﻿using BOCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;

@@ -50,6 +50,8 @@ public class PermissionResolver : IPermissionResolver
             return PermissionCodes.ProjectsDetail;
         }
 
+        if (string.Equals(controller, "IssueNotificationAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsIssueNotifications;
+
         return PermissionCodes.Dashboard;
     }
 
