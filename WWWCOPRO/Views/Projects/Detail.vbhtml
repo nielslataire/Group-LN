@@ -8,9 +8,10 @@ End Code
     <link rel="stylesheet" href="~/Content/real-estate.css" />
     <link rel="stylesheet" href="~/vendor/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/Content/contact-modal.css" />
+    <link rel="stylesheet" href="~/Content/project-detail.css" />
     <style>
         .modal-block {
-            max-width: 600px !important;
+            max-width: 560px !important;
             margin: 40px auto !important;
         }
 
@@ -35,8 +36,8 @@ End Section
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h1 class="mb-none">@Model.Data.Name</h1>
-                <p class="text-muted mb-none"><i class="fa fa-map-marker mr-xs"></i>@Model.Data.Street @Model.Data.HouseNumber, @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente</p>
+                <h1 class="mb-none pb-none">@Model.Data.Name</h1>
+                <p class="project-locatie-sub mb-none"><i class="fa fa-map-marker"></i>@Model.Data.Street @Model.Data.HouseNumber, @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente</p>
             </div>
         </div>
     </div>
@@ -47,404 +48,532 @@ End Section
     <div class="row">
         <div class="col-md-7">
 
-            <span class="thumb-info-listing-type thumb-info-listing-type-detail background-color-secondary text-uppercase text-color-light font-weight-semibold p-sm pl-md pr-md">
-                @Model.Data.Name
-            </span>
+            <div class="detail-foto-wrap">
+            <div class="detail-project-badge">@Model.Data.Name</div>
 
-            <div class="thumb-gallery">
-                <div class="lightbox" data-plugin-options="{'delegate': 'a', 'type': 'image', 'gallery': {'enabled': true}}">
-                    <div class="owl-carousel owl-theme manual thumb-gallery-detail show-nav-hover mb-xs" id="thumbGalleryDetail">
-                        @If Not Model.Data.DefaultPicture Is Nothing Or Model.Data.DefaultPicture.Id = 0 Then
-                            @<text>
-                                <div>
-                                    <a href="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & Model.Data.DefaultPicture.Name)">
-                                        <span class="thumb-info thumb-info-centered-info thumb-info-no-borders font-size-xl">
-                                            <span class="thumb-info-wrapper font-size-xl">
-                                                <img alt="detailfoto" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & Model.Data.DefaultPicture.Name)" class="img-responsive">
-                                                <span class="thumb-info-title font-size-xl">
-                                                    <span class="thumb-info-inner font-size-xl"><i class="icon-magnifier icons font-size-xl"></i></span>
-                                                </span>
-                                            </span>
-                                        </span>
-                                    </a>
-                                </div>
-                            </text>
-                        End If
-
-                        @For Each picture In Model.Data.Pictures
-                            If picture.Type = BO.PictureType.Nevenfoto Then
-                                @<text>
-                                    <div>
-                                        <a href="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & picture.Name)">
-                                            <span class="thumb-info thumb-info-centered-info thumb-info-no-borders font-size-xl">
-                                                <span class="thumb-info-wrapper font-size-xl">
-                                                    <img alt="detailfoto" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & picture.Name)" class="img-responsive">
-                                                    <span class="thumb-info-title font-size-xl">
-                                                        <span class="thumb-info-inner font-size-xl"><i class="icon-magnifier icons font-size-xl"></i></span>
-                                                    </span>
-                                                </span>
-                                            </span>
-                                        </a>
-                                    </div>
-
-                                </text>
-                            End If
-                        Next
-
-                    </div>
-                </div>
-
-                <div class="owl-carousel owl-theme manual thumb-gallery-thumbs mt" id="thumbGalleryThumbs">
-                    @If (Not Model.Data.DefaultPicture Is Nothing) AndAlso Model.Data.DefaultPicture.Id = 0 Then
-                        @<text>
-                            <img alt="Property Detail" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & Model.Data.DefaultPicture.Name)" class="img-responsive cur-pointer">
-                        </text>
+            @Code
+                Dim imgBase = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
+                Dim nevenfotos = Model.Data.Pictures.Where(Function(p) p.Type = BO.PictureType.Nevenfoto).ToList()
+                Dim heeftMeerdereFotos = (Model.Data.DefaultPicture IsNot Nothing) AndAlso nevenfotos.Count > 0
+            End Code
+            <div class="foto-gallerij" id="fotoGallerij">
+                @If Model.Data.DefaultPicture IsNot Nothing Then
+                    @<a href="@Url.Content(imgBase & "pictures/" & Model.Data.DefaultPicture.Name)" class="fg-main-link" id="fgMainLink">
+                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="projectfoto">
+                        <span class="fg-zoom-ico"><i class="icon-magnifier icons font-size-xl"></i></span>
+                    </a>
+                End If
+                @If heeftMeerdereFotos Then
+                    @<text>
+                        <button class="fg-arrow fg-prev" id="fgPrev"><i class="fa fa-angle-left"></i></button>
+                        <button class="fg-arrow fg-next" id="fgNext"><i class="fa fa-angle-right"></i></button>
+                    </text>
+                End If
+                <!-- Foto data voor JS -->
+                <div id="fgData" style="display:none">
+                    @If Model.Data.DefaultPicture IsNot Nothing Then
+                        @<a data-full="@Url.Content(imgBase & "pictures/" & Model.Data.DefaultPicture.Name)"
+                            data-medium="@Url.Content(imgBase & "pictures/447/" & Model.Data.DefaultPicture.Name)"></a>
                     End If
-
-                    @For Each picture In Model.Data.Pictures
-                        If picture.Type = BO.PictureType.Nevenfoto Then
-                            @<text>
-                                <img alt="Property Detail" src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & picture.Name)" class="img-responsive cur-pointer">
-                            </text>
-                        End If
+                    @For Each nf In nevenfotos
+                        @<a data-full="@Url.Content(imgBase & "pictures/" & nf.Name)"
+                            data-medium="@Url.Content(imgBase & "pictures/447/" & nf.Name)"></a>
                     Next
-
                 </div>
             </div>
+            <div class="detail-foto-accent"></div>
+            </div><!-- /detail-foto-wrap -->
 
         </div>
         <div class="col-md-5">
+            <div class="info-kaart">
 
-            <table class="table table-striped">
-                <colgroup>
-                    <col width="35%">
-                    <col width="65%">
-                </colgroup>
-                <tbody>
-                    <tr>
-                        @If Model.SalesData.StartingPrice > 0 Then
-                            @<text>
-                                <td Class="background-color-primary text-light pt-md">
-                                    Prijzen vanaf
-                                </td>
-                                <td Class="font-size-xl font-weight-bold pt-sm pb-sm background-color-primary text-light">
-
-                                    @WWWCOPRO.Extensions.ToEuroCurrency(Model.SalesData.StartingPrice)
-                                </td>
-                            </text>
-                        ElseIf Model.SalesData.PercentageLivingUnitsSold < 15 Then
-                            @<text>
-                                <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
-                                    Lancering
-                                </td>
-
-                            </text>
-                        ElseIf Model.SalesData.PercentageLivingUnitsSold = 100 AndAlso Model.SalesData.LivingUnits > 0 Then
-                            @<text>
-                                <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
-                                    Uitverkocht
-                                </td>
-                            </text>
-                        ElseIf Model.SalesData.LivingUnits = 0 Then
-                            @<text>
-                                <td colspan="2" Class="background-color-primary text-uppercase text-center  text-light font-weight-bold  pt-md">
-                                    Binnenkort
-                                </td>
-                            </text>
-                        End If
-                    </tr>
-                    <tr>
-                        <td>
-                            Adres
-                        </td>
-                        <td>
-                            @Model.Data.Street @Model.Data.HouseNumber - @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente<br /><a href="#map" Class="font-size-sm" data-hash data-hash-offset="100">(Locatie op kaart)</a>
-                        </td>
-                    </tr>
-
-                    @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 0 Then
+                <!-- Prijs / status balk -->
+                <div class="info-kaart-prijs">
+                    @If Model.SalesData.StartingPrice > 0 Then
                         @<text>
-                            <tr>
-                                <td>
-                                    <i Class="fa fa-building"></i>
-                                </td>
-                                <td>@Model.Units.Where(Function(m) m.Type.Id = 1).Count() @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 1 Then@<text> <span style="position:relative;left:15px;">appartementen</span></text>Else @<text> <span style="position:relative;left:15px;">appartement</span></text>End if </td>
-                            </tr>
+                            <p class="info-prijs-label">Prijzen vanaf</p>
+                            <p class="info-prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(Model.SalesData.StartingPrice)</p>
                         </text>
+                    ElseIf Model.SalesData.PercentageLivingUnitsSold < 15 Then
+                        @<p class="info-prijs-status">Lancering</p>
+                    ElseIf Model.SalesData.PercentageLivingUnitsSold = 100 AndAlso Model.SalesData.LivingUnits > 0 Then
+                        @<p class="info-prijs-status">Uitverkocht</p>
+                    Else
+                        @<p class="info-prijs-status">Binnenkort</p>
+                    End If
+                </div>
+
+                <!-- Info rijen -->
+                <div class="info-kaart-rijen">
+                    <!-- Adres -->
+                    <div class="info-kaart-rij">
+                        <span class="ik-sleutel">Adres</span>
+                        <div class="ik-waarde">
+                            @Model.Data.Street @Model.Data.HouseNumber<br />
+                            @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente
+                            <a href="#map" data-hash data-hash-offset="100">Bekijk locatie op kaart &rarr;</a>
+                        </div>
+                    </div>
+
+                    <!-- Wooneenheden -->
+                    @If Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 0 Then
+                        @<div class="ik-eenheid-rij">
+                            <i class="fa fa-building"></i>
+                            <span>@Model.Units.Where(Function(m) m.Type.Id = 1).Count() @(If(Model.Units.Where(Function(m) m.Type.Id = 1).Count() > 1, "appartementen", "appartement"))</span>
+                        </div>
                     End If
                     @If Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 0 Then
-                        @<text>
-                            <tr>
-                                <td>
-                                    <i Class="fa fa-home"></i>
-                                </td>
-                                <td>@Model.Units.Where(Function(m) m.Type.Id = 2).Count() @If Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 1 Then@<text> <span style="position:relative;left:15px;">woningen</span></text>Else @<text> <span style="position:relative;left:15px;">woning</span></text>End if </td>
-                            </tr>
-                        </text>
+                        @<div class="ik-eenheid-rij">
+                            <i class="fa fa-home"></i>
+                            <span>@Model.Units.Where(Function(m) m.Type.Id = 2).Count() @(If(Model.Units.Where(Function(m) m.Type.Id = 2).Count() > 1, "woningen", "woning"))</span>
+                        </div>
                     End If
                     @If Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 0 Then
-                        @<text>
-                            <tr>
-                                <td>
-                                    <i Class="fa fa-shopping-cart"></i>
-                                </td>
-                                <td>@Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() @If Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 1 Then@<text> <span style="position:relative;left:15px;">handelspanden</span></text>Else @<text> <span style="position:relative;left:15px;">handelspand</span></text>End if </td>
-                            </tr>
-                        </text>
+                        @<div class="ik-eenheid-rij">
+                            <i class="fa fa-shopping-cart"></i>
+                            <span>@Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() @(If(Model.Units.Where(Function(m) m.Type.GroupId = 4).Count() > 1, "handelspanden", "handelspand"))</span>
+                        </div>
                     End If
                     @If Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 0 Then
-                        @<text>
-                            <tr>
-                                <td>
-                                    <i Class="fa fa-archive"></i>
-                                </td>
-                                <td>@Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() @If Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 1 Then@<text> <span style="position:relative;left:15px;">bergingen</span></text>Else @<text> <span style="position:relative;left:15px;">berging</span></text>End if </td>
-                            </tr>
-                        </text>
+                        @<div class="ik-eenheid-rij">
+                            <i class="fa fa-archive"></i>
+                            <span>@Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() @(If(Model.Units.Where(Function(m) m.Type.GroupId = 2).Count() > 1, "bergingen", "berging"))</span>
+                        </div>
                     End If
-
                     @If Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 0 Then
-                        @<text>
-                            <tr>
-                                <td>
-                                    <i Class="fa fa-road"></i>
-                                </td>
-                                <td>@Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() @If Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 1 Then@<text> <span style="position:relative;left:15px;">parkeerplaatsen</span></text>Else @<text> <span style="position:relative;left:15px;">parkeerplaats</span></text>End if </td>
-                            </tr>
-                        </text>
+                        @<div class="ik-eenheid-rij">
+                            <i class="fa fa-road"></i>
+                            <span>@Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() @(If(Model.Units.Where(Function(m) m.Type.Id = 5 Or m.Type.Id = 6).Count() > 1, "parkeerplaatsen", "parkeerplaats"))</span>
+                        </div>
                     End If
                     @If Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 0 Then
-                        @<text>
-                            <tr>
-                                <td>
-                                    <i Class="fa fa-car"></i>
-                                </td>
-                                <td>@Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() @If Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 1 Then@<text> <span style="position:relative;left:15px;">garages</span></text>Else @<text> <span style="position:relative;left:15px;">garage</span></text>End if </td>
-                            </tr>
-                        </text>
+                        @<div class="ik-eenheid-rij">
+                            <i class="fa fa-car"></i>
+                            <span>@Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() @(If(Model.Units.Where(Function(m) m.Type.Id = 7 Or m.Type.Id = 8).Count() > 1, "garages", "garage"))</span>
+                        </div>
                     End If
 
+                    <!-- Beschikbaar -->
+                    <div class="info-kaart-rij">
+                        <span class="ik-sleutel">Beschikbaar</span>
+                        <div class="ik-waarde">
+                            <span class="beschikbaar-pill">
+                                <span class="beschikbaar-dot"></span>
+                                @(Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold) wooneenheden
+                            </span>
+                        </div>
+                    </div>
 
-                    <tr>
-                        <td class="font-weight-bold text-color-primary">
-                            Beschikbaar
-                        </td>
-                        <td class="font-weight-bold text-color-primary">
-                            @(Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold) <span style="position:relative;left:15px;">wooneenheden</span>
-                        </td>
-                    </tr>
+                    <!-- Architect -->
                     @If Model.Data.Architect.ID > 0 Then
-                        @<text>
-                            <tr>
-                                <td>
-                                    Architect
-                                </td>
-                                <td>
-                                    @Model.Data.Architect.Display
-                                </td>
-                            </tr>
-                        </text>
+                        @<div class="info-kaart-rij">
+                            <span class="ik-sleutel">Architect</span>
+                            <div class="ik-waarde">@Model.Data.Architect.Display</div>
+                        </div>
                     End If
+                </div>
 
-                </tbody>
-            </table>
-
-            @If Not Model.BrochureDoc Is Nothing AndAlso Model.BrochureDoc.IsBrochure Then
-                @<text>
-                    <div class="text-center mb-md" style="margin-left: 40px; margin-right: 40px; margin-top: 20px; margin-bottom: 20px;">
-                        <a href="#modalsendbrochure" data-id="@Model.BrochureDoc.Docid" class="modal-with-form btnsendbrochure btn btn-primary btn-lg btn-block" style="border-radius:6px;">
-                            <i class="fa fa-download mr-sm"></i> DOWNLOAD BROCHURE
+                <!-- Documenten & brochure -->
+                @If Not Model.BrochureDoc Is Nothing AndAlso Model.BrochureDoc.IsBrochure Then
+                    @<div class="info-kaart-docs">
+                        <a href="#modalsendbrochure" data-id="@Model.BrochureDoc.Docid"
+                           class="info-brochure-btn modal-with-form btnsendbrochure">
+                            <i class="fa fa-download"></i> Download Brochure
                         </a>
                     </div>
-                </text>
-            End If
-            @if Model.Docs.Count > 0 AndAlso Model.SalesSetttings.SaleVisible = True Then
-                @<text>
-                    <hr />
-                    <h4 Class="pt-none mb-md text-color-dark">Documenten</h4>
-                    <ul Class="list list-icons list-borders list-primary mb-lg ">
-                        @for each doc In Model.Docs
-                            @<text>
-                                <li>  <a href="#modalsenddoc" class="modal-with-form btnsenddoc" data-toggle="tooltip" data-placement="top" title="Document opvragen" data-original-title="Document opvragen" type="button" data-id="@doc.Docid"><i Class="fa fa-download"></i> @doc.Name</a></li>
-                            </text>
-                        Next
-                    </ul>
-                </text>
-            End If
+                End If
+                @If Model.Docs.Count > 0 AndAlso Model.SalesSetttings.SaleVisible = True Then
+                    @<div class="info-kaart-docs">
+                        <p class="info-docs-kop">Documenten</p>
+                        <ul class="info-docs-lijst">
+                            @For Each doc In Model.Docs
+                                @<li>
+                                    <a href="#modalsenddoc" class="modal-with-form btnsenddoc"
+                                       data-id="@doc.Docid">
+                                        <i class="fa fa-download"></i> @doc.Name
+                                    </a>
+                                </li>
+                            Next
+                        </ul>
+                    </div>
+                End If
 
-            <div class="mt-sm mb-sm">
-                <a href="tel:+3292164950" class="contact-cta-btn" style="margin-bottom:8px;">
-                    <span class="cta-icon"><i class="fa fa-phone"></i></span>
-                    <span class="cta-text">
-                        <strong>+32 (0)9 216 49 50</strong>
-                        <small>Bel ons direct</small>
-                    </span>
-                    <span class="cta-arrow"><i class="fa fa-chevron-right"></i></span>
-                </a>
-                <a href="#modalsendmail" data-id="@Model.Data.Id"
-                   class="contact-cta-btn modal-with-form btnsendmail">
-                    <span class="cta-icon"><i class="fa fa-envelope-o"></i></span>
-                    <span class="cta-text">
-                        <strong>Informatie aanvragen</strong>
-                        <small>Vrijblijvend &mdash; wij antwoorden snel</small>
-                    </span>
-                    <span class="cta-arrow"><i class="fa fa-chevron-right"></i></span>
-                </a>
-            </div>
+                <!-- CTA sectie -->
+                <div class="info-kaart-cta">
+                    <p class="info-cta-kop">Meer weten over dit project?</p>
+
+                    <!-- Primair: informatie aanvragen -->
+                    <a href="#modalsendmail" data-id="@Model.Data.Id"
+                       class="info-cta-prim btnsendmail">
+                        <div class="cta-k-inner">
+                            <span class="cta-k-ico"><i class="fa fa-envelope-o"></i></span>
+                            <div>
+                                <span class="cta-k-title"" style="padding-top:10px;">Informatie aanvragen</span>
+                                <span class="cta-k-sub">Vrijblijvend &mdash; wij antwoorden snel</span>
+                            </div>
+                        </div>
+                        <span class="cta-k-arrow">&rsaquo;</span>
+                    </a>
+
+                    <!-- Secundair: telefoon -->
+                    <a href="tel:+3292164950" class="info-cta-sec">
+                        <div class="cta-k-inner">
+                            <span class="cta-k-ico"><i class="fa fa-phone"></i></span>
+                            <div>
+                                <span class="cta-k-title">+32 (0)9 216 49 50</span>
+                                <span class="cta-k-sub">Bel ons direct</span>
+                            </div>
+                        </div>
+                        <span class="cta-k-arrow">&rsaquo;</span>
+                    </a>
+                </div>
+
+            </div><!-- /info-kaart -->
         </div>
     </div>
-    <h4 Class="mt-md mb-md">@Model.Data.CommercialTitleNL</h4>
-    @Model.Data.CommercialTextNL
+    <div class="commercial-sectie">
+        <p class="commercial-titel">@Model.Data.CommercialTitleNL</p>
+        <div class="commercial-accent"></div>
+        <div class="project-tekst">@Model.Data.CommercialTextNL</div>
+    </div>
 
     @If Model.SalesSetttings.SaleVisible = True Then
         @<text>
             <div Class="row">
                         <div Class="col-md-12">
-                            <hr Class="solid tall">
-                            <!--APPARTEMNTEN-->
+                            <!-- APPARTEMENTEN -->
                             @If Model.Units.Where(Function(m) m.Type.Id = 1).Count > 0 Then
-                                @<text>
-                                    <h4 Class="mt-md mb-md">Appartementen</h4>
-
-                                    <table Class="table table-striped table-hover">
-                                        <thead>
-                                            <tr Class="font-weight-bold">
-                                                <td Class="text-center">lot</td>
-                                                <td class="text-center hidden-xs">verdiep</td>
-                                                <td Class="text-center hidden-xs">opp (m²)</td>
-                                                <td Class="text-center hidden-xs">terras (m²)</td>
-                                                <td Class="text-center hidden-xs">tuin (m²)</td>
-                                                <td class="text-center hidden-xs">slpks</td>
-                                                <td Class="text-center">prijs</td>
-                                                <td Class="text-center">plan</td>
-                                            </tr>
-
-                                        </thead>
-                                        <tbody>
-                                            @For Each unit In Model.Units.Where(Function(m) m.Type.Id = 1)
-
-                                                Dim isAvailable = (unit.ClientAccountId = 0)
-                                                Dim terras = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Sum(Function(i) i.Surface)
-                                                Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
-                                                Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
-                                                Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-
-                                                @<tr @(If(Not isAvailable, "style=""color:lightgray""", ""))>
-                                                    <td class="text-center">@unit.Name</td>
-                                                    <td class="hidden-xs text-center">@unit.Level</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable, String.Format("{0:n0}", unit.Surface) & " m²", "-"))</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And terras > 0, String.Format("{0:n0}", terras) & " m²", "-"))</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And tuin > 0, String.Format("{0:n0}", tuin) & " m²", "-"))</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And slpk > 0, slpk, "-"))</td>
-                                                    <td class="text-center">@(If(isAvailable, WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue), "Verkocht"))</td>
-                                                    <td class="text-center">
-                                                        @If isAvailable AndAlso unit.Plan IsNot Nothing Then
-                                                            @<a href="#modalsendplan"
-                                                                class="fa fa-download modal-with-form btnsendplan"
-                                                                data-toggle="tooltip"
-                                                                title="downloaden"
-                                                                data-id="@unit.Id"></a>
-                                                        End If
-                                                    </td>
+                                @Code
+                                    Dim aptUnits = Model.Units.Where(Function(m) m.Type.Id = 1).ToList()
+                                    Dim aptAvail = aptUnits.Where(Function(m) m.ClientAccountId = 0).ToList()
+                                    Dim aptMinPrice = If(aptAvail.Any(), aptAvail.Min(Function(m) m.TotalValue), 0)
+                                    Dim aptMaxPrice = If(aptAvail.Any(), aptAvail.Max(Function(m) m.TotalValue), 0)
+                                    Dim aptMinSurf = If(aptAvail.Any(), aptAvail.Min(Function(m) m.Surface), 0)
+                                    Dim aptMaxSurf = If(aptAvail.Any(), aptAvail.Max(Function(m) m.Surface), 0)
+                                    Dim aptSlpkList = aptAvail.Select(Function(m) If(m.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault() IsNot Nothing, m.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault().Number, 0)).ToList()
+                                    Dim aptMinSlpk = If(aptSlpkList.Any(), aptSlpkList.Min(), 0)
+                                    Dim aptMaxSlpk = If(aptSlpkList.Any(), aptSlpkList.Max(), 0)
+                                End Code
+                                @<div class="eenheid-sectie">
+                                    <h2 class="sectie-titel">Appartementen</h2>
+                                    <div class="goud-streep"></div>
+                                    <div class="tabel-wrap">
+                                        <table class="eenheid-tabel">
+                                            <thead>
+                                                <tr>
+                                                    <th>Lot</th>
+                                                    <th class="num hidden-xs">Verdiep</th>
+                                                    <th class="num hidden-xs">Opp (m²)</th>
+                                                    <th class="num hidden-xs">Terras (m²)</th>
+                                                    <th class="num hidden-xs">Tuin (m²)</th>
+                                                    <th class="hidden-xs">Slaapkamers</th>
+                                                    <th>Status</th>
+                                                    <th class="num">Prijs</th>
+                                                    <th class="center">Plan</th>
                                                 </tr>
-
-                                            Next
-                                        </tbody>
-                                    </table>
-                                </text>
-                            End if
-                            <!--WONINGEN-->
+                                            </thead>
+                                            <tbody>
+                                                @For Each unit In aptUnits
+                                                    Dim isAvailable = (unit.ClientAccountId = 0)
+                                                    Dim terras = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Sum(Function(i) i.Surface)
+                                                    Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
+                                                    Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
+                                                    Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
+                                                    @<tr class="@(If(Not isAvailable, "rij-verkocht", ""))">
+                                                        <td>
+                                                            <div class="lot-badge">
+                                                                <div class="lot-nr">@unit.Name</div>
+                                                                @unit.Name
+                                                            </div>
+                                                        </td>
+                                                        <td class="num hidden-xs">@unit.Level</td>
+                                                        <td class="num hidden-xs">@(If(unit.Surface > 0, String.Format("{0:n0}", unit.Surface) & " m²", "-"))</td>
+                                                        <td class="num hidden-xs">@(If(terras > 0, String.Format("{0:n0}", terras) & " m²", "-"))</td>
+                                                        <td class="num hidden-xs">@(If(tuin > 0, String.Format("{0:n0}", tuin) & " m²", "-"))</td>
+                                                        <td class="hidden-xs">
+                                                            @If slpk > 0 Then
+                                                                @<div class="slaap-wrap">
+                                                                    @For i = 1 To Math.Min(slpk, 4)
+                                                                        @<span class="slaap-dot"></span>
+                                                                    Next
+                                                                    @For i = slpk + 1 To 4
+                                                                        @<span class="slaap-dot leeg"></span>
+                                                                    Next
+                                                                    <span class="slaap-label">@slpk</span>
+                                                                </div>
+                                                            End If
+                                                        </td>
+                                                        <td>
+                                                            @If isAvailable Then
+                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
+                                                            Else
+                                                                @<span class="eenheid-status-pill status-verkocht"><span class="status-dot"></span>Verkocht</span>
+                                                            End If
+                                                        </td>
+                                                        <td class="num">
+                                                            @If isAvailable Then
+                                                                @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                            Else
+                                                                @<span class="prijs-verkocht">—</span>
+                                                            End If
+                                                        </td>
+                                                        <td class="center">
+                                                            @If isAvailable AndAlso unit.Plan IsNot Nothing Then
+                                                                @<a href="#modalsendplan" class="eenheid-dl-btn modal-with-form btnsendplan" title="Plan downloaden" data-id="@unit.Id">
+                                                                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                </a>
+                                                            End If
+                                                        </td>
+                                                    </tr>
+                                                Next
+                                            </tbody>
+                                            @*<tfoot>
+                                                <tr>
+                                                    <td colspan="7">@aptUnits.Count() @(If(aptUnits.Count() > 1, "appartementen", "appartement"))</td>
+                                                    <td class="num total-prijs">@If aptAvail.Any() Then @<text>@If aptMinPrice = aptMaxPrice Then @<text>@WWWCOPRO.Extensions.ToEuroCurrency(aptMinPrice)</text> Else @<text>@WWWCOPRO.Extensions.ToEuroCurrency(aptMinPrice) – @WWWCOPRO.Extensions.ToEuroCurrency(aptMaxPrice)</text> End If</text> End If</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>*@
+                                        </table>
+                                        <div class="samenvatting">
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Appartementen</div>
+                                                <div class="samenv-val">@aptUnits.Count()</div>
+                                                <div class="samenv-sub">@aptAvail.Count() beschikbaar</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Oppervlakte</div>
+                                                <div class="samenv-val">@(If(aptMinSurf = aptMaxSurf, String.Format("{0:n0}", aptMinSurf), String.Format("{0:n0}", aptMinSurf) & " – " & String.Format("{0:n0}", aptMaxSurf))) m²</div>
+                                                <div class="samenv-sub">Per appartement</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Slaapkamers</div>
+                                                <div class="samenv-val">@(If(aptMinSlpk = aptMaxSlpk, aptMinSlpk.ToString(), aptMinSlpk & " – " & aptMaxSlpk))</div>
+                                                <div class="samenv-sub">Per appartement</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Prijsrange</div>
+                                                <div class="samenv-val samenv-prijs">@If aptAvail.Any() Then @<text>@If aptMinPrice = aptMaxPrice Then @<text>@WWWCOPRO.Extensions.ToEuroCurrency(aptMinPrice)</text> Else @<text>@WWWCOPRO.Extensions.ToEuroCurrency(aptMinPrice) – @WWWCOPRO.Extensions.ToEuroCurrency(aptMaxPrice)</text> End If</text> End If</div>
+                                                <div class="samenv-sub">Per eenheid</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            End If
+                            <!-- WONINGEN -->
                             @If Model.Units.Where(Function(m) m.Type.Id = 2).Count > 0 Then
-                                @<text>
-                                    <h4 Class="mt-md mb-md">Woningen</h4>
-
-                                    <table Class="table table-striped table-hover">
-                                        <thead>
-                                            <tr Class="font-weight-bold">
-                                                <td Class="text-center">Lot</td>
-                                                <td Class="text-center hidden-xs">Bewoonbare opp (m²)</td>
-                                                <td Class="text-center hidden-xs">Grond (m²)</td>
-                                                <td class="text-center hidden-xs">Slaapkamers</td>
-                                                <td Class="text-center">Prijs</td>
-                                                <td Class="text-center">Plan</td>
-                                            </tr>
-
-                                        </thead>
-                                        <tbody>
-                                            @For Each unit In Model.Units.Where(Function(m) m.Type.Id = 2)
-
-                                                Dim isAvailable = (unit.ClientAccountId = 0)
-                                                Dim surface = unit.Surface
-                                                Dim ground = unit.GroundSurface
-                                                Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
-                                                Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-
-                                                @<tr @(If(Not isAvailable, "style=""color:lightgray""", ""))>
-                                                    <td class="text-center">@unit.Name</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And ground > 0, String.Format("{0:n0}", ground) & " m²", "-"))</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And slpk > 0, slpk, "-"))</td>
-                                                    <td class="text-center">@(If(isAvailable, WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue), "Verkocht"))</td>
-                                                    <td class="text-center">
-                                                        @If isAvailable AndAlso unit.Plan IsNot Nothing Then
-                                                            @<a href="#modalsendplan"
-                                                                class="fa fa-download modal-with-form btnsendplan"
-                                                                data-toggle="tooltip"
-                                                                title="downloaden"
-                                                                data-id="@unit.Id"></a>
-                                                        End If
-                                                    </td>
+                                @Code
+                                    Dim wonUnits = Model.Units.Where(Function(m) m.Type.Id = 2).ToList()
+                                    Dim wonAvail = wonUnits.Where(Function(m) m.ClientAccountId = 0).ToList()
+                                    Dim wonMinPrice = If(wonAvail.Any(), wonAvail.Min(Function(m) m.TotalValue), 0)
+                                    Dim wonMaxPrice = If(wonAvail.Any(), wonAvail.Max(Function(m) m.TotalValue), 0)
+                                    Dim wonMinSurf = If(wonAvail.Any(), wonAvail.Min(Function(m) m.Surface), 0)
+                                    Dim wonMaxSurf = If(wonAvail.Any(), wonAvail.Max(Function(m) m.Surface), 0)
+                                    Dim wonMinGround = If(wonAvail.Any(), wonAvail.Min(Function(m) m.GroundSurface), 0)
+                                    Dim wonMaxGround = If(wonAvail.Any(), wonAvail.Max(Function(m) m.GroundSurface), 0)
+                                    Dim wonSlpkList = wonAvail.Select(Function(m) If(m.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault() IsNot Nothing, m.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault().Number, 0)).ToList()
+                                    Dim wonMinSlpk = If(wonSlpkList.Any(), wonSlpkList.Min(), 0)
+                                    Dim wonMaxSlpk = If(wonSlpkList.Any(), wonSlpkList.Max(), 0)
+                                End Code
+                                @<div class="eenheid-sectie">
+                                    <h2 class="sectie-titel">Woningen</h2>
+                                    <div class="goud-streep"></div>
+                                    <div class="tabel-wrap">
+                                        <table class="eenheid-tabel">
+                                            <thead>
+                                                <tr>
+                                                    <th>Lot</th>
+                                                    <th class="num hidden-xs">Bewoonbaar (m²)</th>
+                                                    <th class="num hidden-xs">Grond (m²)</th>
+                                                    <th class="hidden-xs">Slaapkamers</th>
+                                                    <th>Status</th>
+                                                    <th class="num">Prijs</th>
+                                                    <th class="center">Plan</th>
                                                 </tr>
-
-                                            Next
-                                        </tbody>
-                                    </table>
-                                </text>
-                            End if
-                            <!--HANDEL-->
+                                            </thead>
+                                            <tbody>
+                                                @For Each unit In wonUnits
+                                                    Dim isAvailable = (unit.ClientAccountId = 0)
+                                                    Dim surface = unit.Surface
+                                                    Dim ground = unit.GroundSurface
+                                                    Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
+                                                    Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
+                                                    @<tr class="@(If(Not isAvailable, "rij-verkocht", ""))">
+                                                        <td>
+                                                            <div class="lot-badge">
+                                                                @*<div class="lot-nr">@unit.Name</div>*@
+                                                                @unit.Name
+                                                            </div>
+                                                        </td>
+                                                        <td class="num hidden-xs">@(If(surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
+                                                        <td class="num hidden-xs">@(If(ground > 0, String.Format("{0:n0}", ground) & " m²", "-"))</td>
+                                                        <td class="hidden-xs">
+                                                            @If slpk > 0 Then
+                                                                @<div class="slaap-wrap">
+                                                                    @For i = 1 To Math.Min(slpk, 4)
+                                                                        @<span class="slaap-dot"></span>
+                                                                    Next
+                                                                    @For i = slpk + 1 To 4
+                                                                        @<span class="slaap-dot leeg"></span>
+                                                                    Next
+                                                                    <span class="slaap-label">@slpk</span>
+                                                                </div>
+                                                            End If
+                                                        </td>
+                                                        <td>
+                                                            @If isAvailable Then
+                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
+                                                            Else
+                                                                @<span class="eenheid-status-pill status-verkocht"><span class="status-dot"></span>Verkocht</span>
+                                                            End If
+                                                        </td>
+                                                        <td class="num">
+                                                            @If isAvailable Then
+                                                                @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                            Else
+                                                                @<span class="prijs-verkocht">—</span>
+                                                            End If
+                                                        </td>
+                                                        <td class="center">
+                                                            @If isAvailable AndAlso unit.Plan IsNot Nothing Then
+                                                                @<a href="#modalsendplan" class="eenheid-dl-btn modal-with-form btnsendplan" title="Plan downloaden" data-id="@unit.Id">
+                                                                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                </a>
+                                                            End If
+                                                        </td>
+                                                    </tr>
+                                                Next
+                                            </tbody>
+                                            @*<tfoot>
+                                                <tr>
+                                                    <td colspan="5">@wonUnits.Count() @(If(wonUnits.Count() > 1, "woningen", "woning"))</td>
+                                                    <td class="num total-prijs">@If wonAvail.Any() Then @<text>@If wonMinPrice = wonMaxPrice Then @<text>@WWWCOPRO.Extensions.ToEuroCurrency(wonMinPrice)</text> Else @<text>@WWWCOPRO.Extensions.ToEuroCurrency(wonMinPrice) – @WWWCOPRO.Extensions.ToEuroCurrency(wonMaxPrice)</text> End If</text> End If</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>*@
+                                        </table>
+                                        <div class="samenvatting">
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Woningen</div>
+                                                <div class="samenv-val">@wonUnits.Count()</div>
+                                                <div class="samenv-sub">@wonAvail.Count() beschikbaar</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Bewoonbaar</div>
+                                                <div class="samenv-val">@(If(wonMinSurf = wonMaxSurf, String.Format("{0:n0}", wonMinSurf), String.Format("{0:n0}", wonMinSurf) & " – " & String.Format("{0:n0}", wonMaxSurf))) m²</div>
+                                                <div class="samenv-sub">Per woning</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Grond</div>
+                                                <div class="samenv-val">@(If(wonMinGround = wonMaxGround, String.Format("{0:n0}", wonMinGround), String.Format("{0:n0}", wonMinGround) & " – " & String.Format("{0:n0}", wonMaxGround))) m²</div>
+                                                <div class="samenv-sub">Per perceel</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Slaapkamers</div>
+                                                <div class="samenv-val">@(If(wonMinSlpk = wonMaxSlpk, wonMinSlpk.ToString(), wonMinSlpk & " – " & wonMaxSlpk))</div>
+                                                <div class="samenv-sub">Per woning</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Prijsrange</div>
+                                                <div class="samenv-val samenv-prijs">@If wonAvail.Any() Then @<text>@If wonMinPrice = wonMaxPrice Then @<text>@WWWCOPRO.Extensions.ToEuroCurrency(wonMinPrice)</text> Else @<text>@WWWCOPRO.Extensions.ToEuroCurrency(wonMinPrice) – @WWWCOPRO.Extensions.ToEuroCurrency(wonMaxPrice)</text> End If</text> End If</div>
+                                                <div class="samenv-sub">Per eenheid</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            End If
+                            <!-- HANDEL -->
                             @If Model.Units.Where(Function(m) m.Type.Id = 10).Count > 0 Then
-                                @<text>
-                                    <h4 Class="mt-md mb-md">Woningen</h4>
-
-                                    <table Class="table table-striped table-hover">
-                                        <thead>
-                                            <tr Class="font-weight-bold">
-                                                <td Class="text-center">Lot</td>
-                                                <td Class="text-center hidden-xs">Bewoonbare opp (m²)</td>
-                                                <td Class="text-center hidden-xs">Grond (m²)</td>
-                                                <td class="text-center hidden-xs">Slaapkamers</td>
-                                                <td Class="text-center">Prijs</td>
-                                                <td Class="text-center">Plan</td>
-                                            </tr>
-
-                                        </thead>
-                                        <tbody>
-                                            @For Each unit In Model.Units.Where(Function(m) m.Type.Id = 10)
-
-                                                Dim isAvailable = (unit.ClientAccountId = 0)
-                                                Dim surface = unit.Surface
-
-                                                @<tr @(If(Not isAvailable, "style=""color:lightgray""", ""))>
-                                                    <td class="text-center">@unit.Name</td>
-                                                    <td class="hidden-xs text-center">@unit.Level</td>
-                                                    <td class="text-center hidden-xs">@(If(isAvailable And surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
-                                                    <td class="text-center">@(If(isAvailable, WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue), "Verkocht"))</td>
-                                                    <td class="text-center">
-                                                        @If isAvailable AndAlso unit.Plan IsNot Nothing Then
-                                                            @<a href="#modalsendplan"
-                                                                class="fa fa-download modal-with-form btnsendplan"
-                                                                data-toggle="tooltip"
-                                                                title="downloaden"
-                                                                data-id="@unit.Id"></a>
-                                                        End If
-                                                    </td>
+                                @Code
+                                    Dim handUnits = Model.Units.Where(Function(m) m.Type.Id = 10).ToList()
+                                    Dim handAvail = handUnits.Where(Function(m) m.ClientAccountId = 0).ToList()
+                                    Dim handMinPrice = If(handAvail.Any(), handAvail.Min(Function(m) m.TotalValue), 0)
+                                    Dim handMaxPrice = If(handAvail.Any(), handAvail.Max(Function(m) m.TotalValue), 0)
+                                    Dim handMinSurf = If(handAvail.Any(), handAvail.Min(Function(m) m.Surface), 0)
+                                    Dim handMaxSurf = If(handAvail.Any(), handAvail.Max(Function(m) m.Surface), 0)
+                                End Code
+                                @<div class="eenheid-sectie">
+                                    <h2 class="sectie-titel">Handelspanden</h2>
+                                    <div class="goud-streep"></div>
+                                    <div class="tabel-wrap">
+                                        <table class="eenheid-tabel">
+                                            <thead>
+                                                <tr>
+                                                    <th>Lot</th>
+                                                    <th class="num hidden-xs">Verdiep</th>
+                                                    <th class="num hidden-xs">Opp (m²)</th>
+                                                    <th>Status</th>
+                                                    <th class="num">Prijs</th>
+                                                    <th class="center">Plan</th>
                                                 </tr>
-
-                                            Next
-                                        </tbody>
-                                    </table>
-                                </text>
-                            End if
+                                            </thead>
+                                            <tbody>
+                                                @For Each unit In handUnits
+                                                    Dim isAvailable = (unit.ClientAccountId = 0)
+                                                    Dim surface = unit.Surface
+                                                    @<tr class="@(If(Not isAvailable, "rij-verkocht", ""))">
+                                                        <td>
+                                                            <div class="lot-badge">
+                                                                <div class="lot-nr">@unit.Name</div>
+                                                                @unit.Name
+                                                            </div>
+                                                        </td>
+                                                        <td class="num hidden-xs">@unit.Level</td>
+                                                        <td class="num hidden-xs">@(If(surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
+                                                        <td>
+                                                            @If isAvailable Then
+                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
+                                                            Else
+                                                                @<span class="eenheid-status-pill status-verkocht"><span class="status-dot"></span>Verkocht</span>
+                                                            End If
+                                                        </td>
+                                                        <td class="num">
+                                                            @If isAvailable Then
+                                                                @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                            Else
+                                                                @<span class="prijs-verkocht">—</span>
+                                                            End If
+                                                        </td>
+                                                        <td class="center">
+                                                            @If isAvailable AndAlso unit.Plan IsNot Nothing Then
+                                                                @<a href="#modalsendplan" class="eenheid-dl-btn modal-with-form btnsendplan" title="Plan downloaden" data-id="@unit.Id">
+                                                                    <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                                </a>
+                                                            End If
+                                                        </td>
+                                                    </tr>
+                                                Next
+                                            </tbody>
+                                            @*<tfoot>
+                                                <tr>
+                                                    <td colspan="3">@handUnits.Count() @(If(handUnits.Count() > 1, "handelspanden", "handelspand"))</td>
+                                                    <td></td>
+                                                    <td class="num total-prijs">@If handAvail.Any() Then @<text>@If handMinPrice = handMaxPrice Then @<text>@WWWCOPRO.Extensions.ToEuroCurrency(handMinPrice)</text> Else @<text>@WWWCOPRO.Extensions.ToEuroCurrency(handMinPrice) – @WWWCOPRO.Extensions.ToEuroCurrency(handMaxPrice)</text> End If</text> End If</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>*@
+                                        </table>
+                                        <div class="samenvatting">
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Handelspanden</div>
+                                                <div class="samenv-val">@handUnits.Count()</div>
+                                                <div class="samenv-sub">@handAvail.Count() beschikbaar</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Oppervlakte</div>
+                                                <div class="samenv-val">@(If(handMinSurf = handMaxSurf, String.Format("{0:n0}", handMinSurf), String.Format("{0:n0}", handMinSurf) & " – " & String.Format("{0:n0}", handMaxSurf))) m²</div>
+                                                <div class="samenv-sub">Per pand</div>
+                                            </div>
+                                            <div class="samenv-item">
+                                                <div class="samenv-label">Prijsrange</div>
+                                                <div class="samenv-val samenv-prijs">@If handAvail.Any() Then @<text>@If handMinPrice = handMaxPrice Then @<text>@WWWCOPRO.Extensions.ToEuroCurrency(handMinPrice)</text> Else @<text>@WWWCOPRO.Extensions.ToEuroCurrency(handMinPrice) – @WWWCOPRO.Extensions.ToEuroCurrency(handMaxPrice)</text> End If</text> End If</div>
+                                                <div class="samenv-sub">Per eenheid</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            End If
 
                             <hr Class="solid tall">
                             <!--LOCATIE-->
@@ -518,6 +647,52 @@ End Section
 @section scripts
 
     <script src="~/vendor/magnific-popup/jquery.magnific-popup.js"></script>
+    <script>
+    $(function () {
+        var $main = $('#fgMainLink');
+        if (!$main.length) return;
+
+        // Bouw items op uit verborgen data-container
+        var fgItems = [];
+        $('#fgData a').each(function () {
+            fgItems.push({
+                src: $(this).data('full'),
+                medium: $(this).data('medium'),
+                type: 'image'
+            });
+        });
+        if (!fgItems.length) return;
+
+        var fgCurrentIndex = 0;
+
+        function fgGoTo(index) {
+            fgCurrentIndex = ((index % fgItems.length) + fgItems.length) % fgItems.length;
+            $('#fgMainImg').attr('src', fgItems[fgCurrentIndex].src);
+            $main.attr('href', fgItems[fgCurrentIndex].src);
+        }
+
+        $('#fgPrev').on('click', function (e) {
+            e.preventDefault();
+            fgGoTo(fgCurrentIndex - 1);
+        });
+
+        $('#fgNext').on('click', function (e) {
+            e.preventDefault();
+            fgGoTo(fgCurrentIndex + 1);
+        });
+
+        // Hoofdfoto klik: open lightbox op huidig index
+        $main.on('click', function (e) {
+            e.preventDefault();
+            $.magnificPopup.open({
+                items: fgItems,
+                type: 'image',
+                gallery: { enabled: true },
+                startAt: fgCurrentIndex
+            });
+        });
+    });
+    </script>
     <script src="~/scripts/examples.modals.js"></script>
     <script src="~/vendor/rs-plugin/js/jquery.themepunch.tools.min.js"></script>
     <script src="~/vendor/rs-plugin/js/jquery.themepunch.revolution.min.js"></script>
@@ -593,11 +768,17 @@ End Section
 
         });
     });
-    $('.btnsendmail').click(function () {
-        var url = "/Projects/SendMail"; // the url to the controller
-        var id = $(this).attr('data-id'); // the id that's given to each button in the list
-        $.get(url + '/' + id, function (data) {
+    $('.btnsendmail').click(function (e) {
+        e.preventDefault();
+        var id = $(this).attr('data-id');
+        $.get('/Projects/SendMail/' + id, function (data) {
             $('#send-mail-container').html(data);
+            $.magnificPopup.open({
+                items: { src: '#modalsendmail' },
+                type: 'inline',
+                preloader: false,
+                modal: true
+            });
         });
     });
     function openBrochureFromHash() {

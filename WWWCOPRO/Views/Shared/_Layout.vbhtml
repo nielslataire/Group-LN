@@ -31,7 +31,7 @@
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
     <!-- Web Fonts  -->
-    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800%7CShadows+Into+Light" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" type="text/css">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     @Styles.Render("~/Vendor/css")
     @Styles.Render("~/Content/theme")
@@ -65,13 +65,19 @@
                     <div class="header-row">
                         <div class="header-column">
                             <div class="header-logo">
-                                <a href="@Url.Action("Index", "Home")">
-                                    <img alt="Copro" height="80" data-sticky-width="82" data-sticky-height="40" data-sticky-top="33" src="@Url.Content("~/Content/img/logo-default.png")">
+                                <a href="@Url.Action("Index", "Home")" class="header-logo-brand">
+                                    <img alt="Group LN" class="header-brand-img" data-sticky-width="36" data-sticky-height="36" data-sticky-top="22" src="@Url.Content("~/Content/img/logoimg.jpg")">
+                                    <span class="header-brand-text">
+                                        <span class="header-brand-name">GROUP LN</span>
+                                        <span class="header-brand-sub">Projectontwikkeling</span>
+                                        <span class="header-brand-tagline">Appartementen &middot; Woningen</span>
+                                    </span>
+                                    <span class="header-brand-divider"></span>
                                 </a>
                             </div>
                         </div>
                         <div class="header-column">
-                            <ul class="header-extra-info hidden-xs ">
+                            <ul class="header-extra-info hidden-xs header-contact-list">
                                 <li>
                                     <div class="feature-box feature-box-style-3">
                                         <div class="feature-box-icon">
@@ -83,6 +89,7 @@
                                         </div>
                                     </div>
                                 </li>
+                                <li class="header-contact-divider"></li>
                                 <li>
                                     <div class="feature-box feature-box-style-3">
                                         <div class="feature-box-icon">
@@ -94,7 +101,6 @@
                                         </div>
                                     </div>
                                 </li>
-
                             </ul>
                         </div>
                     </div>

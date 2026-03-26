@@ -1,0 +1,696 @@
+/* ================================================
+   Project Detail — Info Kaart & CTA
+   Kleuren via CSS-variabelen uit skins/default.css
+   ================================================ */
+
+/* ----- Foto kolom ----- */
+.detail-foto-wrap {
+    position: relative;
+}
+.detail-project-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 2;
+    background: var(--color-primary);
+    color: var(--groen-licht, #D6E5CC);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 2px;
+    pointer-events: none;
+}
+.detail-foto-accent {
+    height: 3px;
+    background: linear-gradient(90deg, var(--olijf, #3D7A4E) 0%, transparent 70%);
+    border-radius: 0 0 2px 2px;
+    margin-top: 0;
+}
+
+/* ----- Foto galerij ----- */
+.foto-gallerij {
+    position: relative;
+    line-height: 0;
+}
+.fg-main-link {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    border-radius: 3px 3px 0 0;
+    cursor: zoom-in;
+    aspect-ratio: 1 / 1;
+}
+.fg-main-link img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 3px 3px 0 0;
+    transition: transform 0.3s ease;
+}
+.fg-main-link:hover img {
+    transform: scale(1.02);
+}
+.fg-zoom-ico {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+.fg-main-link:hover .fg-zoom-ico {
+    opacity: 1;
+}
+/* Pijltjes navigatie */
+.fg-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border-radius: 2px;
+    background: rgba(0, 0, 0, 0.40);
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+    z-index: 5;
+    padding: 0;
+}
+.fg-prev { left: 10px; }
+.fg-next { right: 10px; }
+.foto-gallerij:hover .fg-arrow {
+    opacity: 1;
+}
+.fg-arrow:hover {
+    background: rgba(0, 83, 45, 0.75);
+}
+
+/* ----- Info Kaart ----- */
+.info-kaart {
+    background: #fff;
+    border-radius: 3px;
+    border: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    overflow: hidden;
+    box-shadow: 0 2px 20px rgba(0, 83, 45, 0.06);
+}
+
+/* Prijs balk */
+.info-kaart-prijs {
+    background: var(--color-primary);
+    padding: 20px 26px;
+    border-bottom: 0.5px solid rgba(201, 169, 110, 0.2);
+}
+.info-prijs-label {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+.info-prijs-val {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 400;
+    color: #fff;
+    letter-spacing: 0.01em;
+    line-height: 1;
+    margin: 0;
+}
+.info-prijs-status {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+/* Info rijen */
+.info-kaart-rij {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 26px;
+    border-bottom: 0.5px solid var(--border, rgba(0,83,45,0.10));
+}
+.info-kaart-rij:last-child {
+    border-bottom: none;
+}
+.ik-sleutel {
+    font-size: 10.5px;
+    color: var(--tekst-sub, #5a6b58);
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-weight: 500;
+    min-width: 90px;
+    padding-top: 2px;
+    flex-shrink: 0;
+}
+.ik-waarde {
+    font-size: 14px;
+    color: var(--tekst, #2C3B2A);
+    flex: 1;
+    line-height: 1.5;
+}
+.ik-waarde a {
+    color: var(--olijf, #3D7A4E);
+    text-decoration: none;
+    font-size: 11.5px;
+    display: block;
+    margin-top: 3px;
+    opacity: 0.85;
+}
+.ik-waarde a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* Eenhedenrij (icoon + tekst) */
+.ik-eenheid-rij {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 26px;
+    border-bottom: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    font-size: 14px;
+    color: var(--tekst, #2C3B2A);
+}
+.ik-eenheid-rij i {
+    color: var(--groen-mid, #7A9E6E);
+    width: 20px;
+    text-align: center;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+/* Beschikbaar pill */
+.beschikbaar-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #EAF3DE;
+    border: 0.5px solid #C0DD97;
+    color: #3B6D11;
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 5px 13px;
+    border-radius: 20px;
+}
+.beschikbaar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #3B6D11;
+    flex-shrink: 0;
+}
+
+/* Documenten in info kaart */
+.info-kaart-docs {
+    padding: 14px 20px;
+    border-top: 0.5px solid var(--border, rgba(0,83,45,0.10));
+}
+.info-docs-kop {
+    font-size: 10px;
+    color: var(--tekst-sub, #5a6b58);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-family: var(--font-sans);
+}
+.info-docs-lijst {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.info-docs-lijst li {
+    margin-bottom: 4px;
+}
+.info-docs-lijst a {
+    color: var(--color-primary);
+    font-size: 13px;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.info-docs-lijst a:hover {
+    text-decoration: underline;
+}
+.info-brochure-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+    color: var(--color-primary) !important;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 2px;
+    padding: 10px 16px;
+    text-decoration: none !important;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition: background 0.2s, color 0.2s;
+    width: 100%;
+    margin-bottom: 4px;
+}
+.info-brochure-btn:hover {
+    background: var(--color-primary);
+    color: #fff !important;
+}
+
+/* ----- CTA sectie onderaan kaart ----- */
+.info-kaart-cta {
+    padding: 16px 20px 20px;
+    background: var(--mist, #F2F5EF);
+    border-top: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.info-cta-kop {
+    font-size: 10px;
+    color: var(--tekst-sub, #5a6b58);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 2px;
+    padding: 0 4px;
+    font-family: var(--font-sans);
+}
+
+/* Primaire CTA — Informatie aanvragen */
+.info-cta-prim {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--olijf, #3D7A4E);
+    color: #fff !important;
+    border: none;
+    border-radius: 2px;
+    padding: 16px 18px 16px 16px;
+    min-height: 68px;
+    text-decoration: none !important;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.22s, transform 0.15s;
+}
+.info-cta-prim:hover {
+    background: var(--olijf-hover, #2F6038);
+    transform: translateY(-1px);
+    color: #fff !important;
+}
+.info-cta-prim:active { transform: scale(0.99); }
+
+/* Secundaire CTA — Bel ons */
+.info-cta-sec {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: transparent;
+    color: var(--color-primary) !important;
+    border: 1.5px solid var(--color-primary);
+    border-radius: 2px;
+    padding: 14px 18px 14px 16px;
+    min-height: 60px;
+    text-decoration: none !important;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.22s, color 0.22s, transform 0.15s;
+}
+.info-cta-sec:hover {
+    background: var(--color-primary);
+    color: #fff !important;
+    transform: translateY(-1px);
+}
+.info-cta-sec:active { transform: scale(0.99); }
+
+/* Inhoud van CTA knoppen */
+.cta-k-inner {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+.cta-k-ico {
+    font-size: 18px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+.cta-k-title {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+}
+.cta-k-sub {
+    font-size: 11px;
+    opacity: 0.75;
+    display: block;
+    margin-top: 2px;
+    font-weight: 300;
+}
+.cta-k-arrow {
+    font-size: 20px;
+    opacity: 0.55;
+    font-weight: 300;
+    flex-shrink: 0;
+}
+
+/* ----- Pagina-titel: h1 meer afstand van breadcrumbs,
+         locatie dicht bij h1 ----- */
+.page-header h1 {
+    font-family: var(--font-serif) !important;
+    font-size: 36px !important;
+    font-weight: 400 !important;
+    color: var(--groen-diep, #2C3B2A) !important;
+    line-height: 1.2 !important;
+    margin-top: 18px !important;
+    margin-bottom: 3px !important;
+}
+.project-locatie-sub {
+    font-size: 14px;
+    color: var(--groen-mid, #7A9E6E);
+    font-family: var(--font-sans);
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+.project-locatie-sub i {
+    margin-right: 5px;
+}
+
+/* ----- Foto: geen ruimte tussen carousel en accent-lijn ----- */
+.thumb-gallery,
+.thumb-gallery .lightbox,
+#thumbGalleryDetail,
+#thumbGalleryDetail .owl-stage-outer,
+#thumbGalleryDetail .owl-item {
+    margin-bottom: 0 !important;
+}
+.thumb-gallery-detail.mb-xs { margin-bottom: 0 !important; }
+
+/* ----- Commerciële tekst sectie ----- */
+.commercial-sectie {
+    margin-top: 48px;
+}
+.commercial-titel {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    font-weight: 400;
+    color: var(--groen-diep, #2C3B2A);
+    line-height: 1.45;
+    margin-bottom: 10px;
+}
+.commercial-accent {
+    width: 44px;
+    height: 2px;
+    background: var(--olijf, #3D7A4E);
+    border-radius: 1px;
+    margin-bottom: 18px;
+}
+.project-tekst {
+    font-size: 15px;
+    line-height: 1.85;
+    color: var(--tekst-sub, #5a6b58);
+    font-weight: 300;
+}
+
+/* ----- Mobiel ----- */
+@media (max-width: 768px) {
+    .info-kaart { margin-top: 20px; }
+    .info-kaart-prijs { padding: 16px 18px; }
+    .info-prijs-val { font-size: 22px; }
+    .info-kaart-rij,
+    .ik-eenheid-rij { padding: 10px 18px; }
+    .info-kaart-cta { padding: 14px 16px 18px; }
+}
+
+/* ================================================
+   Eenheden tabel — modern design
+   ================================================ */
+.eenheid-sectie {
+    margin-top: 48px;
+}
+.eenheid-sectie .sectie-titel {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--tekst, #2C3B2A);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+}
+.eenheid-sectie .goud-streep {
+    width: 40px;
+    height: 2px;
+    background: var(--olijf, #3D7A4E);
+    border-radius: 1px;
+    margin-bottom: 24px;
+}
+.tabel-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* Tabel basis */
+.eenheid-tabel {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    color: var(--tekst, #2C3B2A);
+}
+.eenheid-tabel thead tr {
+    background: var(--color-primary, #00532D);
+}
+.eenheid-tabel thead th {
+    padding: 14px 20px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.7);
+    text-align: left;
+    white-space: nowrap;
+    border: none;
+}
+.eenheid-tabel thead th.num { text-align: right; }
+.eenheid-tabel thead th.center { text-align: center; }
+
+.eenheid-tabel tbody tr {
+    border-bottom: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    transition: background 0.15s;
+}
+.eenheid-tabel tbody tr:nth-child(even) { background: var(--mist, #F2F5EF); }
+.eenheid-tabel tbody tr:nth-child(odd)  { background: #fff; }
+.eenheid-tabel tbody tr:hover { background: #eaf3e4; }
+.eenheid-tabel tbody tr.rij-verkocht { opacity: 0.55; }
+
+.eenheid-tabel tbody td {
+    padding: 16px 20px;
+    vertical-align: middle;
+    border: none;
+}
+.eenheid-tabel tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.eenheid-tabel tbody td.center { text-align: center; }
+
+/* Lot badge */
+.lot-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--color-primary, #00532D);
+}
+.lot-nr {
+    width: 28px;
+    height: 28px;
+    border-radius: 2px;
+    background: var(--color-primary, #00532D);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Slaapkamers bolletjes */
+.slaap-wrap {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+.slaap-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--olijf, #3D7A4E);
+    flex-shrink: 0;
+}
+.slaap-dot.leeg {
+    background: transparent;
+    border: 1px solid var(--groen-licht, #D6E5CC);
+}
+.slaap-label {
+    font-size: 12px;
+    color: var(--tekst-sub, #5a6b58);
+    margin-left: 4px;
+}
+
+/* Prijs */
+.prijs-val {
+    font-family: var(--font-serif);
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-primary, #00532D);
+    letter-spacing: 0.01em;
+}
+.prijs-verkocht {
+    color: var(--tekst-sub, #5a6b58);
+}
+
+/* Download knop */
+.eenheid-dl-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 2px;
+    background: transparent;
+    border: 1px solid var(--groen-licht, #D6E5CC);
+    color: var(--olijf, #3D7A4E);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    text-decoration: none !important;
+}
+.eenheid-dl-btn:hover {
+    background: var(--olijf, #3D7A4E);
+    border-color: var(--olijf, #3D7A4E);
+    color: #fff;
+}
+
+/* Status pill */
+.eenheid-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+.status-beschikbaar {
+    background: #eaf3e4;
+    color: #3B6D11;
+    border: 0.5px solid #C0DD97;
+}
+.status-verkocht {
+    background: #f5f5f5;
+    color: #999;
+    border: 0.5px solid #ddd;
+}
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+}
+
+/* Tfoot totaalrij */
+.eenheid-tabel tfoot tr {
+    background: var(--mist, #F2F5EF);
+    border-top: 1px solid var(--groen-licht, #D6E5CC);
+}
+.eenheid-tabel tfoot td {
+    padding: 13px 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--tekst-sub, #5a6b58);
+    border: none;
+}
+.eenheid-tabel tfoot td.num { text-align: right; }
+.eenheid-tabel tfoot .total-prijs {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--color-primary, #00532D);
+    letter-spacing: 0.01em;
+    text-transform: none;
+}
+
+/* Samenvattingsbalk */
+.samenvatting {
+    display: flex;
+    border: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    overflow: hidden;
+}
+.samenv-item {
+    flex: 1;
+    padding: 14px 20px;
+    border-right: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    background: #fff;
+}
+.samenv-item:last-child { border-right: none; }
+.samenv-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--groen-mid, #7A9E6E);
+    margin-bottom: 4px;
+}
+.samenv-val {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    color: var(--tekst, #2C3B2A);
+    font-weight: 400;
+}
+.samenv-prijs { font-size: 15px; }
+.samenv-sub {
+    font-size: 11px;
+    color: var(--tekst-sub, #5a6b58);
+    margin-top: 2px;
+}
+
+/* Mobiel samenvatting */
+@media (max-width: 768px) {
+    .samenvatting { flex-wrap: wrap; }
+    .samenv-item {
+        flex: 0 0 50%;
+        border-bottom: 0.5px solid var(--border, rgba(0,83,45,0.10));
+    }
+    .eenheid-tabel thead th,
+    .eenheid-tabel tbody td { padding: 12px 12px; }
+}

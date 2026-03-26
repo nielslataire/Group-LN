@@ -1,29 +1,26 @@
-﻿<div class="panel-body">
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <a href="" class="modal-dismiss fa fa-close" style="color:#CCC"></a>
-        </div>
-    </div><div class="modal-wrapper">
-        <div class="modal-icon center">
-            <i class="modal-icon-featured fa fa-check"></i>
-        </div>
-        <div class="modal-text center">
-            <h4>Plan opgevraagd</h4>
 
-        </div>
+<div class="contact-modal-header contact-modal-header-success">
+    <button type="button" class="modal-dismiss contact-modal-close" aria-label="Sluiten">
+        <i class="fa fa-times"></i>
+    </button>
+    <div class="contact-modal-icon-wrap contact-modal-icon-success">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <hr />
-    <div class="col-md-12 m-md">
-        <p>Het gevraagde plan is per mail naar u verstuurd, u zult het zodadelijk in uw mailbox ontvangen, alvast bedankt voor uw intresse !</p>
-    </div>
+    <h3 class="contact-modal-title">Plan verstuurd</h3>
+    <div class="contact-modal-deco"></div>
+    <p class="contact-modal-subtitle">Het gevraagde plan is onderweg naar uw mailbox.</p>
 </div>
 
-<footer class="panel-footer">
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <button class="btn btn-default btn-block modal-dismiss">Sluiten</button>
+<div class="contact-modal-body contact-modal-body-centered">
+    <p class="contact-result-message">
+        Het gevraagde plan is per mail naar u verstuurd.<br />
+        Alvast bedankt voor uw interesse.
+    </p>
+</div>
 
-        </div>
-    </div>
-</footer>
-
+<div class="contact-modal-footer">
+    <hr class="contact-modal-footer-divider">
+    <button type="button" class="contact-btn-close modal-dismiss">
+        Sluiten
+    </button>
+</div>

@@ -3,13 +3,29 @@
    gehele huisstijl in één keer te wijzigen.
    ================================================ */
 :root {
-    --color-primary:       #00532d;
+    /* Primaire groen */
+    --color-primary:       #00532D;
     --color-primary-hover: #006638;
     --color-primary-dark:  #003d21;
 
-    /* CTA-knopkleur (goud/warm) */
+    /* Uitgebreid kleurpalet */
+    --groen-diep:          #2C3B2A;
+    --groen-mid:           #7A9E6E;
+    --groen-licht:         #D6E5CC;
+    --mist:                #F2F5EF;
+    --tekst:               #2C3B2A;
+    --tekst-sub:           #5a6b58;
+    --border:              rgba(0, 83, 45, 0.10);
+
+    /* CTA-knopkleur (olijf) */
     --color-cta:           #C9A96E;
     --color-cta-hover:     #B8935A;
+    --olijf:               #3D7A4E;
+    --olijf-hover:         #2F6038;
+
+    /* Typografie */
+    --font-serif:          'Playfair Display', 'Times New Roman', Georgia, serif;
+    --font-sans:           'Avenir', sans-serif;
 }
 
 a {

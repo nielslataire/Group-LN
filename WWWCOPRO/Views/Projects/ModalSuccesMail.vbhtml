@@ -4,10 +4,11 @@
         <i class="fa fa-times"></i>
     </button>
     <div class="contact-modal-icon-wrap contact-modal-icon-success">
-        <i class="fa fa-check"></i>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <h3 class="contact-modal-title">Bericht verstuurd!</h3>
-    <p class="contact-modal-subtitle">Bedankt voor uw aanvraag.</p>
+    <h3 class="contact-modal-title">Bericht verstuurd</h3>
+    <div class="contact-modal-deco"></div>
+    <p class="contact-modal-subtitle">Bedankt voor uw aanvraag. We nemen zo snel mogelijk contact met u op.</p>
 </div>
 
 <div class="contact-modal-body contact-modal-body-centered">
@@ -18,7 +19,8 @@
 </div>
 
 <div class="contact-modal-footer">
+    <hr class="contact-modal-footer-divider">
     <button type="button" class="contact-btn-close modal-dismiss">
-        <i class="fa fa-times"></i>&nbsp; Sluiten
+        Sluiten
     </button>
 </div>

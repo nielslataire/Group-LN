@@ -19,52 +19,45 @@
                 <i class="fa fa-times"></i>
             </button>
             <div class="contact-modal-icon-wrap">
-                <i class="fa fa-envelope"></i>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
-            <h3 class="contact-modal-title">Informatie opvragen</h3>
-            <p class="contact-modal-subtitle">Vul uw gegevens in en wij contacteren u zo snel mogelijk.</p>
+            <h3 class="contact-modal-title">Informatie aanvragen</h3>
+            <div class="contact-modal-deco"></div>
+            <p class="contact-modal-subtitle">Vul uw gegevens in en wij contacteren u zo snel mogelijk — vrijblijvend.</p>
         </div>
 
-
         <div class="contact-modal-body">
-            <div class="row">
-                <div class="col-sm-6">
-                    <div class="contact-form-group">
-                        <label for="txtFirstname" class="contact-form-label">Voornaam</label>
-                        @Html.TextBoxFor(Function(m) m.Firstname, New With {.class = "contact-form-control", .id = "txtFirstname", .autocomplete = "given-name", .placeholder = "Voornaam"})
-                    </div>
+            <div class="contact-form-grid">
+                <div>
+                    <label for="txtFirstname" class="contact-form-label">Voornaam</label>
+                    @Html.TextBoxFor(Function(m) m.Firstname, New With {.class = "contact-form-control", .id = "txtFirstname", .autocomplete = "given-name", .placeholder = "Voornaam"})
                 </div>
-                <div class="col-sm-6">
-                    <div class="contact-form-group">
-                        <label for="txtName" class="contact-form-label">Naam <span class="req-star">*</span></label>
-                        @Html.TextBoxFor(Function(m) m.Name, New With {.class = "contact-form-control", .id = "txtName", .autocomplete = "family-name", .placeholder = "Achternaam"})
-                    </div>
+                <div>
+                    <label for="txtName" class="contact-form-label">Naam <span class="req-star">*</span></label>
+                    @Html.TextBoxFor(Function(m) m.Name, New With {.class = "contact-form-control", .id = "txtName", .autocomplete = "family-name", .placeholder = "Achternaam"})
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-sm-6">
-                    <div class="contact-form-group">
-                        <label for="txtEmail" class="contact-form-label">E-mailadres <span class="req-star">*</span></label>
-                        @Html.TextBoxFor(Function(m) m.Email, New With {.class = "contact-form-control", .id = "txtEmail", .type = "email", .autocomplete = "email", .placeholder = "uw@email.be"})
-                    </div>
+                <div>
+                    <label for="txtEmail" class="contact-form-label">E-mailadres <span class="req-star">*</span></label>
+                    @Html.TextBoxFor(Function(m) m.Email, New With {.class = "contact-form-control", .id = "txtEmail", .type = "email", .autocomplete = "email", .placeholder = "uw@email.be"})
                 </div>
-                <div class="col-sm-6">
-                    <div class="contact-form-group">
-                        <label for="txtPhone" class="contact-form-label">Telefoon <span class="req-star">*</span></label>
-                        @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "contact-form-control", .id = "txtPhone", .type = "tel", .autocomplete = "tel", .placeholder = "+32 ..."})
-                    </div>
+                <div>
+                    <label for="txtPhone" class="contact-form-label">Telefoon <span class="req-star">*</span></label>
+                    @Html.TextBoxFor(Function(m) m.Phone, New With {.class = "contact-form-control", .id = "txtPhone", .type = "tel", .autocomplete = "tel", .placeholder = "+32 ..."})
                 </div>
             </div>
             <p class="contact-form-required-note"><span class="req-star">*</span> Verplichte velden</p>
         </div>
 
         <div class="contact-modal-footer">
+            <hr class="contact-modal-footer-divider">
             <button type="submit" class="contact-btn-submit" id="btnSendMail">
-                <i class="fa fa-paper-plane"></i>&nbsp; Versturen
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Versturen
             </button>
             <div class="contact-spinner hidden" id="spinnerSendMail">
                 <i class="fa fa-spinner fa-spin"></i>&nbsp; Wordt verzonden&hellip;
             </div>
+            <p class="contact-privacy-note">Uw gegevens worden vertrouwelijk behandeld. <a href="/privacy">Privacybeleid &rarr;</a></p>
         </div>
 
     </div>
