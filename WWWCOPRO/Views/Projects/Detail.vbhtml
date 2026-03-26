@@ -7,6 +7,7 @@ End Code
 @section PageStyle
     <link rel="stylesheet" href="~/Content/real-estate.css" />
     <link rel="stylesheet" href="~/vendor/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/Content/contact-modal.css" />
     <style>
         .modal-block {
             max-width: 600px !important;
@@ -16,6 +17,7 @@ End Code
         .modal-block-lg {
             max-width: 900px !important;
         }
+
     </style>
 End Section
 
@@ -33,7 +35,8 @@ End Section
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h1>Projectgegevens</h1>
+                <h1 class="mb-none">@Model.Data.Name</h1>
+                <p class="text-muted mb-none"><i class="fa fa-map-marker mr-xs"></i>@Model.Data.Street @Model.Data.HouseNumber, @Model.Data.Postalcode.Postcode @Model.Data.Postalcode.Gemeente</p>
             </div>
         </div>
     </div>
@@ -269,29 +272,23 @@ End Section
                 </text>
             End If
 
-            <div class="feature-box feature-box-light feature-box-style-5 background-color-primary p-sm m-none" style="height:70px;">
-                <div class="feature-box-icon" style="height:50px;">
-                    <i class="fa fa-phone"></i>
-                </div>
-                <div class="feature-box-info text-light">
-                    <h4 class="mb-none text-light">+32 (0)9 216 49 50</h4>
-                    <p class="text-light"><small>Neem telefonisch contact op</small></p>
-
-                </div>
-
-            </div>
-            <div class="feature-box feature-box-light feature-box-style-5 background-color-primary p-sm m-none" style="height:70px;">
-                <a href="#modalsendmail" data-id="@Model.Data.Id" class="modal-with-form btnsendmail">
-                    <div class="feature-box-icon">
-                        <i class="fa fa-envelope-o"></i>
-                    </div>
-                    <div class="feature-box-info text-light">
-                        <h4 class="mb-none text-light">
-                            Neem contact op
-                        </h4>
-                        <p class="text-light"><small>Stuur ons een email</small></p>
-
-                    </div>
+            <div class="mt-sm mb-sm">
+                <a href="tel:+3292164950" class="contact-cta-btn" style="margin-bottom:8px;">
+                    <span class="cta-icon"><i class="fa fa-phone"></i></span>
+                    <span class="cta-text">
+                        <strong>+32 (0)9 216 49 50</strong>
+                        <small>Bel ons direct</small>
+                    </span>
+                    <span class="cta-arrow"><i class="fa fa-chevron-right"></i></span>
+                </a>
+                <a href="#modalsendmail" data-id="@Model.Data.Id"
+                   class="contact-cta-btn modal-with-form btnsendmail">
+                    <span class="cta-icon"><i class="fa fa-envelope-o"></i></span>
+                    <span class="cta-text">
+                        <strong>Informatie aanvragen</strong>
+                        <small>Vrijblijvend &mdash; wij antwoorden snel</small>
+                    </span>
+                    <span class="cta-arrow"><i class="fa fa-chevron-right"></i></span>
                 </a>
             </div>
         </div>
@@ -515,13 +512,11 @@ End Section
 <div id="modalsendbrochure" class="modal-block modal-block-primary mfp-hide">
     <div id="send-brochure-container"></div>
 </div>
-<div id="modalsendmail" class="modal-block modal-block-lg modal-block-primary mfp-hide">
+<div id="modalsendmail" class="modal-block modal-block-primary mfp-hide">
     <div id="send-mail-container"></div>
 </div>
 @section scripts
 
-    <script src="~/scripts/admin/theme.admin.extension.js"></script>
-    <script src="~/scripts/admin/theme.js"></script>
     <script src="~/vendor/magnific-popup/jquery.magnific-popup.js"></script>
     <script src="~/scripts/examples.modals.js"></script>
     <script src="~/vendor/rs-plugin/js/jquery.themepunch.tools.min.js"></script>
@@ -622,12 +617,34 @@ End Section
             });
         });
     }
+
+    // Contactmodal direct openen via URL-hash: #contact of #modalsendmail
+    // Gebruik: /projects/mijn-project#contact
+    function openContactFromHash() {
+        var hash = window.location.hash;
+        if (hash !== '#contact' && hash !== '#modalsendmail') { return; }
+        var $btn = $('.btnsendmail');
+        if (!$btn.length) { return; }
+        var id = $btn.attr('data-id');
+        $.get('/Projects/SendMail/' + id, function (data) {
+            $('#send-mail-container').html(data);
+            $.magnificPopup.open({
+                items: { src: '#modalsendmail' },
+                type: 'inline'
+            });
+        });
+    }
+
     $(document).ready(function () {
         $('a[href="' + this.location.pathname + '"]').parent().addClass('active');
         openBrochureFromHash();
+        openContactFromHash();
     });
 
-    $(window).on('hashchange', openBrochureFromHash);
+    $(window).on('hashchange', function () {
+        openBrochureFromHash();
+        openContactFromHash();
+    });
 
     </script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBixojVqE0nNXAPAjgQ9Q5Gnvk5K4zEcLM"></script>
@@ -699,40 +716,15 @@ End Section
                     }
                 });
 
-			mapRef = $('#googlemaps').data('gMap.reference');
+			// Styled map (snazzymaps.com)
+			var mapStyles = [{"featureType":"water","elementType":"geometry","stylers":[{"color":"#e9e9e9"},{"lightness":17}]},{"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#f5f5f5"},{"lightness":20}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#ffffff"},{"lightness":17}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#ffffff"},{"lightness":29},{"weight":0.2}]},{"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#ffffff"},{"lightness":18}]},{"featureType":"road.local","elementType":"geometry","stylers":[{"color":"#ffffff"},{"lightness":16}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#f5f5f5"},{"lightness":21}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#dedede"},{"lightness":21}]},{"elementType":"labels.text.stroke","stylers":[{"visibility":"on"},{"color":"#ffffff"},{"lightness":16}]},{"elementType":"labels.text.fill","stylers":[{"saturation":36},{"color":"#333333"},{"lightness":40}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#f2f2f2"},{"lightness":19}]},{"featureType":"administrative","elementType":"geometry.fill","stylers":[{"color":"#fefefe"},{"lightness":20}]},{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#fefefe"},{"lightness":17},{"weight":1.2}]}];
 
-			// Create an array of styles.
-			var mapColor = "#cfa968";
-
-			var styles = [{
-				stylers: [{
-					hue: mapColor
-				}]
-			}, {
-				featureType: "road",
-				elementType: "geometry",
-				stylers: [{
-					lightness: 0
-				}, {
-					visibility: "simplified"
-				}]
-			}, {
-				featureType: "road",
-				elementType: "labels",
-				stylers: [{
-					visibility: "off"
-				}]
-			}];
-
-			// Styles from https://snazzymaps.com/
-			var styles = [{"featureType":"water","elementType":"geometry","stylers":[{"color":"#e9e9e9"},{"lightness":17}]},{"featureType":"landscape","elementType":"geometry","stylers":[{"color":"#f5f5f5"},{"lightness":20}]},{"featureType":"road.highway","elementType":"geometry.fill","stylers":[{"color":"#ffffff"},{"lightness":17}]},{"featureType":"road.highway","elementType":"geometry.stroke","stylers":[{"color":"#ffffff"},{"lightness":29},{"weight":0.2}]},{"featureType":"road.arterial","elementType":"geometry","stylers":[{"color":"#ffffff"},{"lightness":18}]},{"featureType":"road.local","elementType":"geometry","stylers":[{"color":"#ffffff"},{"lightness":16}]},{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#f5f5f5"},{"lightness":21}]},{"featureType":"poi.park","elementType":"geometry","stylers":[{"color":"#dedede"},{"lightness":21}]},{"elementType":"labels.text.stroke","stylers":[{"visibility":"on"},{"color":"#ffffff"},{"lightness":16}]},{"elementType":"labels.text.fill","stylers":[{"saturation":36},{"color":"#333333"},{"lightness":40}]},{"elementType":"labels.icon","stylers":[{"visibility":"off"}]},{"featureType":"transit","elementType":"geometry","stylers":[{"color":"#f2f2f2"},{"lightness":19}]},{"featureType":"administrative","elementType":"geometry.fill","stylers":[{"color":"#fefefe"},{"lightness":20}]},{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#fefefe"},{"lightness":17},{"weight":1.2}]}];
-
-			var styledMap = new google.maps.StyledMapType(styles, {
+			var styledMap = new google.maps.StyledMapType(mapStyles, {
 				name: 'Styled Map'
 			});
 
-			mapRef.mapTypes.set('map_style', styledMap);
-			mapRef.setMapTypeId('map_style');
+			map.mapTypes.set('map_style', styledMap);
+			map.setMapTypeId('map_style');
 
 
 

@@ -153,7 +153,7 @@
         <div role="main" class="main">
             @RenderBody()
         </div>
-        <footer id="footer" class="light">
+        <footer id="footer" class="dark footer-primary">
             <div class="container">
                 <div class="row">
                     <div class="footer-ribbon">
@@ -195,12 +195,12 @@
                     </div>
                 </div>
             </div>
-            <div class="footer-copyright" style="background-image:url(@Url.Content("~/content/skins/pattern.png"));height:45px;">
+            <div class="footer-copyright footer-copyright-primary">
                 <div class="container">
                     <div class="row">
 
                         <div class="col-md-8">
-                            <p>© Copyright 2025. All Rights Reserved.</p>
+                            <p>© Copyright 2026 Group LN. All Rights Reserved.</p>
                         </div>
                         @*<div class="col-md-4">
                                 <nav id="sub-menu">

@@ -891,6 +891,8 @@ Namespace Controllers
         End Function
         <HttpPost>
         Function SendMail(model As ProjectSendMailModel) As PartialViewResult
+            ' Honeypot: als het veld ingevuld is, is het een bot
+            If Not String.IsNullOrEmpty(Request.Form("website_url")) Then Return PartialView("ModalFailMail")
             If (Not ModelState.IsValid) Then Return PartialView("ModalFailMail")
             If (ModelState.IsValid) Then
                 Dim project As New ProjectBO

@@ -1,5 +1,53 @@
 /* Add here all your CSS customizations */
 
+/* ================================================
+   Footer — primaire achtergrond
+   ================================================ */
+#footer.footer-primary {
+    background: var(--color-primary) !important;
+    border-top: none;
+}
+#footer.footer-primary h4,
+#footer.footer-primary h5,
+#footer.footer-primary p,
+#footer.footer-primary li,
+#footer.footer-primary address,
+#footer.footer-primary strong {
+    color: rgba(255, 255, 255, 0.9) !important;
+}
+#footer.footer-primary a {
+    color: rgba(255, 255, 255, 0.75) !important;
+}
+#footer.footer-primary a:hover {
+    color: #fff !important;
+}
+#footer.footer-primary .footer-ribbon {
+    background: var(--color-cta);
+}
+#footer.footer-primary .footer-ribbon::before {
+    border-color: transparent var(--color-cta-hover) transparent transparent;
+}
+#footer.footer-primary .social-icons li a {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+#footer.footer-primary .social-icons li a:hover {
+    background: var(--color-cta) !important;
+    border-color: var(--color-cta) !important;
+}
+.footer-copyright-primary {
+    background: var(--color-primary-dark) !important;
+    background-image: none !important;
+    height: auto !important;
+    padding: 14px 0;
+}
+.footer-copyright-primary p {
+    color: rgba(255, 255, 255, 0.65) !important;
+    margin: 0;
+    font-size: 13px;
+}
+
 .media-gallery ul.mg-folders {
 	list-style: none;
 	padding: 0;
@@ -110,7 +158,7 @@
 	font-size: 22px;
 	font-size: 2.2rem;
 	color: #fff;
-	background-color: #009336;
+	background-color: #00532d;
 	border-radius: 0 0 0 0px;
 	cursor: pointer;
 	-webkit-transition: -webkit-transform 0.1s linear 0.1s;

@@ -1,29 +1,25 @@
-﻿<div class="panel-body">
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <a href="" class="modal-dismiss fa fa-close" style="color:#CCC"></a>
-        </div>
-    </div><div class="modal-wrapper">
-        <div class="modal-icon center">
-            <i class="modal-icon-fail fa fa-close"></i>
-        </div>
-        <div class="modal-text center">
-            <h4>Mail versturen mislukt.</h4>
 
-        </div>
+<div class="contact-modal-header contact-modal-header-error">
+    <button type="button" class="modal-dismiss contact-modal-close" aria-label="Sluiten">
+        <i class="fa fa-times"></i>
+    </button>
+    <div class="contact-modal-icon-wrap contact-modal-icon-error">
+        <i class="fa fa-exclamation-triangle"></i>
     </div>
-    <hr />
-    <div class="col-md-12 m-md">
-        <p>Er is iets misgelopen, probeer het opnieuw of neem contact met ons op via <a href="mailto:info@groupln.be">mail</a></p>
-    </div>
+    <h3 class="contact-modal-title">Er is iets misgegaan.</h3>
+    <p class="contact-modal-subtitle">Probeer het opnieuw of neem direct contact op.</p>
 </div>
 
-<footer class="panel-footer">
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <button class="btn btn-default btn-block modal-dismiss">Sluiten</button>
+<div class="contact-modal-body contact-modal-body-centered">
+    <p class="contact-result-message">
+        Het versturen van uw bericht is mislukt. Onze excuses voor het ongemak.<br />
+        U kunt ons ook bereiken via <a href="mailto:info@groupln.be">info@groupln.be</a> of
+        <a href="tel:+3292164950">+32 (0)9 216 49 50</a>.
+    </p>
+</div>
 
-        </div>
-    </div>
-</footer>
-
+<div class="contact-modal-footer">
+    <button type="button" class="contact-btn-close modal-dismiss">
+        Sluiten
+    </button>
+</div>

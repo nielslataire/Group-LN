@@ -1,29 +1,24 @@
-﻿<div class="panel-body">
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <a href="" class="modal-dismiss fa fa-close" style="color:#CCC"></a>
-        </div>
-    </div><div class="modal-wrapper">
-        <div class="modal-icon center">
-            <i class="modal-icon-featured fa fa-check"></i>
-        </div>
-        <div class="modal-text center">
-            <h4>Mail verstuurd</h4>
 
-        </div>
+<div class="contact-modal-header contact-modal-header-success">
+    <button type="button" class="modal-dismiss contact-modal-close" aria-label="Sluiten">
+        <i class="fa fa-times"></i>
+    </button>
+    <div class="contact-modal-icon-wrap contact-modal-icon-success">
+        <i class="fa fa-check"></i>
     </div>
-    <hr />
-    <div class="col-md-12 m-md">
-        <p>Uw informatieaanvraag is naar ons verstuurd, wij nemen zo snel mogelijk contact op hieromtrent. U zult tevens een bevestiging ontvangen in uw mailbox.</p>
-    </div>
+    <h3 class="contact-modal-title">Bericht verstuurd!</h3>
+    <p class="contact-modal-subtitle">Bedankt voor uw aanvraag.</p>
 </div>
 
-<footer class="panel-footer">
-    <div class="row">
-        <div class="col-md-12 text-right">
-            <button class="btn btn-default btn-block modal-dismiss">Sluiten</button>
+<div class="contact-modal-body contact-modal-body-centered">
+    <p class="contact-result-message">
+        Wij hebben uw informatieaanvraag goed ontvangen en nemen zo snel mogelijk contact met u op.<br />
+        U ontvangt tevens een bevestiging in uw mailbox.
+    </p>
+</div>
 
-        </div>
-    </div>
-</footer>
-
+<div class="contact-modal-footer">
+    <button type="button" class="contact-btn-close modal-dismiss">
+        <i class="fa fa-times"></i>&nbsp; Sluiten
+    </button>
+</div>
