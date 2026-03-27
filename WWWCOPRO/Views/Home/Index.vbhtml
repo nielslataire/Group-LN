@@ -147,7 +147,7 @@ End Code
         </ul>
     </div>
 </div>
-<section class="section section-light m-none">
+<section class="section section-light m-none" style="background: var(--mist) !important;">
     <div class="container">
         <div class="row mb-xl">
             <div class="col-md-4">

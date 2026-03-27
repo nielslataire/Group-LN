@@ -25,6 +25,8 @@ Partial Public Class ProjectSalesSettings
     Public Property RegistrationType As Nullable(Of Integer)
     Public Property SurveyorCost As Nullable(Of Decimal)
     Public Property ParcelCost As Nullable(Of Decimal)
+    Public Property SalesDisplayStatus As Nullable(Of Integer)
+    Public Property IsFeatured As Nullable(Of Boolean)
 
     Public Overridable Property Project As Project
 

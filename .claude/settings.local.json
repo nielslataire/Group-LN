@@ -33,7 +33,19 @@
       "Bash(dotnet build:*)",
       "Bash(powershell -Command \"Write-Host ''Done''\")",
       "Bash(powershell -ExecutionPolicy Bypass -File \"e:\\\\TFS\\\\_fix_sidebar.ps1\")",
-      "Bash(del \"e:\\\\TFS\\\\_fix_sidebar.ps1\")"
+      "Bash(del \"e:\\\\TFS\\\\_fix_sidebar.ps1\")",
+      "Bash(find /e/TFS -name *.html -newer /e/TFS/WWWCOPRO/Views/Projects/Index.vbhtml)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -rn BOb /e/TFS/WWWCOPRO/Global.asax* /e/TFS/WWWCOPRO/App_Start/*.vb)",
+      "Bash(xargs head:*)",
+      "Bash(find /e/TFS/Service -name *Sales*Translator* -o -name *SalesSetting*Translator*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"e:\\\\TFS\\\\fix_salessettings.ps1\")",
+      "Bash(find /e/TFS/CPMCore/Models/Issues -type f -name *.cs)",
+      "Bash(find /e/TFS/CPMCore/Models/IssueNotification -type f -name *.cs)",
+      "Bash(find /e/TFS/CPMCore/Controllers -type f -name *Issue*.cs)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r Reopened /e/TFS/BOCore --include=*.cs)",
+      "Bash(grep -rn \"SendReminder\\\\|SendEveningUpdate\\\\|dailyUpdate\\\\|evening\\\\|activeStatuses\\\\|openStatuses\\\\|InProgress\\\\|InUitvoering\\\\|Gepland\\\\|status.*issue\\\\|issue.*status\" e:/TFS/ServiceCore/ --include=*.cs -l)"
     ]
   }
 }

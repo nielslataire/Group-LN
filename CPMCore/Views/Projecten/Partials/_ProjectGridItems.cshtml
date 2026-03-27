@@ -40,7 +40,7 @@
             imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
         }
 
-        <div class="isotope-item status-@statusId col-sm-12 col-md-4 col-lg-2 mb-4">
+        <div class="isotope-item status-@statusId @(project.DefaultPicture?.Name is null ? "has-no-photo" : "") col-sm-12 col-md-4 col-lg-2 mb-4">
             <div class="card card-modern h-100 project-card">
                 <div class="image-frame-wrapper position-relative">
                     @if (!string.IsNullOrWhiteSpace(statusName))
@@ -64,6 +64,7 @@
                             ;
                         }
 
+                        <hr class="d-md-none my-2" />
                         <div class="project-detail-row text-muted mb-1">
                             <span class="detail-icon"><i class="fas fa-map-marker-alt"></i></span>
                             <div>@project.Postalcode?.Gemeente</div>

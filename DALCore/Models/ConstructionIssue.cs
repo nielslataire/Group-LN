@@ -67,6 +67,8 @@ public partial class ConstructionIssue
 
     public bool DoNotAutoNotify { get; set; }
 
+    public DateOnly? PlannedDate { get; set; }
+
     public virtual ConstructionIssueCategory Category { get; set; }
 
     public virtual ICollection<ConstructionIssueHistory> ConstructionIssueHistory { get; set; } = new List<ConstructionIssueHistory>();

@@ -1758,6 +1758,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Notes).HasMaxLength(500);
             entity.Property(e => e.ReminderFrequencyDays).HasDefaultValue(7);
+            entity.Property(e => e.ReminderHour).HasDefaultValue(8);
             entity.Property(e => e.SendEveningUpdate).HasDefaultValue(true);
         });
 

@@ -195,6 +195,7 @@
     <Compile Include="Enum\ProjectDocType.vb" />
     <Compile Include="Enum\ClientType.vb" />
     <Compile Include="Enum\RoomType.vb" />
+    <Compile Include="Enum\SalesDisplayStatus.vb" />
     <Compile Include="Enum\Salutation.vb" />
     <Compile Include="Enum\ProjectStatusType.vb" />
     <Compile Include="Enum\PictureType.vb" />

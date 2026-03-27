@@ -4827,22 +4827,23 @@ namespace CPMCore.Controllers
                 }
             }
 
-            if (model.Project?.IssuerCompanyIdBuilder == null)
+            bool hasBuilder = model.Project?.IssuerCompanyIdBuilder != null;
+
+            if (!hasBuilder)
             {
-                ModelState.AddModelError("Settings.BankAccountId", "Selecteer eerst een bouwer zodat de projectrekening kan worden gekoppeld.");
                 model.MissingBuilder = true;
                 model.BuilderWarning = "Er is geen bouwer gekoppeld aan dit project. Kies eerst een bouwer om een projectrekening te selecteren.";
-                await PopulateBankAccountsAsync(model);
-                return View(model);
             }
-
-            await EnsureBankAccountAsync(model);
-
-            if (model.Settings?.BankAccountId == null && string.IsNullOrWhiteSpace(model.NewBankAccountIban))
+            else
             {
-                ModelState.AddModelError("Settings.BankAccountId", "Selecteer of maak een projectrekening aan.");
-                await PopulateBankAccountsAsync(model);
-                return View(model);
+                await EnsureBankAccountAsync(model);
+
+                if (model.Settings?.BankAccountId == null && string.IsNullOrWhiteSpace(model.NewBankAccountIban))
+                {
+                    ModelState.AddModelError("Settings.BankAccountId", "Selecteer of maak een projectrekening aan.");
+                    await PopulateBankAccountsAsync(model);
+                    return View(model);
+                }
             }
 
             // Eerste bewerking

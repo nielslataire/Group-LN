@@ -19,8 +19,6 @@ public partial class IssueNotificationSchedule
 
     public int EveningUpdateHour { get; set; }
 
-    public int ReminderHour { get; set; }
-
     public bool IsActive { get; set; }
 
     public DateTime? NextReminderRun { get; set; }
@@ -34,6 +32,8 @@ public partial class IssueNotificationSchedule
     public DateTime? ModifiedDate { get; set; }
 
     public int? ReminderDayOfWeek { get; set; }
+
+    public int ReminderHour { get; set; }
 
     public virtual ICollection<IssueNotificationRun> IssueNotificationRun { get; set; } = new List<IssueNotificationRun>();
 }

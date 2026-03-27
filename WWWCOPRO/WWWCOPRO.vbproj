@@ -300,13 +300,17 @@
     <Content Include="Content\bootstrap.min.css" />
     <Content Include="Content\bootstrap.rtl.css" />
     <Content Include="Content\bootstrap.rtl.min.css" />
+    <Content Include="Content\contact-modal.css" />
     <Content Include="Content\fonts\star.eot" />
     <Content Include="Content\fonts\star.ttf" />
     <Content Include="Content\fonts\star.woff" />
     <Content Include="Content\img\gallery-year.png" />
+    <Content Include="Content\img\logoimg.jpg" />
     <Content Include="Content\img\no_image.jpg" />
     <Content Include="Content\img\team\ignace.jpg" />
     <Content Include="Content\PATTERN-dark.png" />
+    <Content Include="Content\project-detail.css" />
+    <Content Include="Content\projects-index.css" />
     <Content Include="Content\skins\PATTERN-dark.png" />
     <Content Include="Content\PATTERN.png" />
     <Content Include="Content\real-estate.css" />
@@ -345,6 +349,18 @@
     <Content Include="Content\bootstrap-grid.rtl.css.map" />
     <Content Include="Content\bootstrap-grid.min.css.map" />
     <Content Include="Content\bootstrap-grid.css.map" />
+    <Content Include="Content\fonts\Avenir-Black.ttf" />
+    <Content Include="Content\fonts\Avenir-Black.woff" />
+    <Content Include="Content\fonts\Avenir-Black.woff2" />
+    <Content Include="Content\fonts\Avenir-Book.ttf" />
+    <Content Include="Content\fonts\Avenir-Book.woff" />
+    <Content Include="Content\fonts\Avenir-Book.woff2" />
+    <Content Include="Content\fonts\Avenir-Heavy.ttf" />
+    <Content Include="Content\fonts\Avenir-Heavy.woff" />
+    <Content Include="Content\fonts\Avenir-Heavy.woff2" />
+    <Content Include="Content\fonts\Avenir-Light.ttf" />
+    <Content Include="Content\fonts\Avenir-Medium.ttf" />
+    <Content Include="Content\fonts\Avenir-Roman.ttf" />
     <None Include="My Project\Application.myapp">
       <Generator>MyApplicationCodeGenerator</Generator>
       <LastGenOutput>Application.Designer.vb</LastGenOutput>

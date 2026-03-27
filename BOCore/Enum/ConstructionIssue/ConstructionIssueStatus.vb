@@ -8,7 +8,7 @@ Public Enum ConstructionIssueStatus As Integer
     <Display(Name:="Toegewezen")>
     Assigned = 1
 
-    <Display(Name:="In uitvoering")>
+    <Display(Name:="Gepland")>
     InProgress = 2
 
     <Display(Name:="Klaar voor controle")>

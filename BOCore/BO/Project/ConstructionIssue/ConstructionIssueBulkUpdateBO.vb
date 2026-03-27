@@ -6,6 +6,7 @@
     Public Property ResponsibleOtherEmail As String
     Public Property Status As Integer?
     Public Property DueDate As DateOnly?
+    Public Property PlannedDate As DateOnly?
     Public Property Priority As Integer?
     Public Property IssueType As Integer?
     Public Property IssuePhase As Integer?

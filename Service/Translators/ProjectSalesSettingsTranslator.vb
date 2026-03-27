@@ -19,6 +19,8 @@ Public Class ProjectSalesSettingsTranslator
         If Not _entity.RegistrationType Is Nothing Then bo.RegistrationType = _entity.RegistrationType
         If Not _entity.SurveyorCost Is Nothing Then bo.SurveyorCost = _entity.SurveyorCost
         If Not _entity.ParcelCost Is Nothing Then bo.ParcelCost = _entity.ParcelCost
+        bo.SalesDisplayStatus = _entity.SalesDisplayStatus
+        bo.IsFeatured = _entity.IsFeatured
 
         Return ErrorCode.Success
     End Function
@@ -39,6 +41,8 @@ Public Class ProjectSalesSettingsTranslator
         _entity.RegistrationType = bo.RegistrationType
         _entity.SurveyorCost = bo.SurveyorCost
         _entity.ParcelCost = bo.ParcelCost
+        _entity.SalesDisplayStatus = bo.SalesDisplayStatus
+        _entity.IsFeatured = bo.IsFeatured
 
         Return ErrorCode.Success
     End Function

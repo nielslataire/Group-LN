@@ -158,4 +158,24 @@ Public Class ProjectSalesSettingsBO
             _parcelcost = value
         End Set
     End Property
+    Private _salesdisplaystatus As Integer?
+    <Display(Name:="Website status")>
+    Public Property SalesDisplayStatus() As Integer?
+        Get
+            Return _salesdisplaystatus
+        End Get
+        Set(ByVal value As Integer?)
+            _salesdisplaystatus = value
+        End Set
+    End Property
+    Private _isfeatured As Boolean?
+    <Display(Name:="Uitgelicht project")>
+    Public Property IsFeatured() As Boolean?
+        Get
+            Return _isfeatured
+        End Get
+        Set(ByVal value As Boolean?)
+            _isfeatured = value
+        End Set
+    End Property
 End Class

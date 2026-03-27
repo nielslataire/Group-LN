@@ -58,8 +58,8 @@ End Section
             End Code
             <div class="foto-gallerij" id="fotoGallerij">
                 @If Model.Data.DefaultPicture IsNot Nothing Then
-                    @<a href="@Url.Content(imgBase & "pictures/" & Model.Data.DefaultPicture.Name)" class="fg-main-link" id="fgMainLink">
-                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="projectfoto">
+                    @<a href="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="fg-main-link" id="fgMainLink">
+                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="projectfoto">
                         <span class="fg-zoom-ico"><i class="icon-magnifier icons font-size-xl"></i></span>
                     </a>
                 End If
@@ -72,11 +72,11 @@ End Section
                 <!-- Foto data voor JS -->
                 <div id="fgData" style="display:none">
                     @If Model.Data.DefaultPicture IsNot Nothing Then
-                        @<a data-full="@Url.Content(imgBase & "pictures/" & Model.Data.DefaultPicture.Name)"
+                        @<a data-full="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)"
                             data-medium="@Url.Content(imgBase & "pictures/447/" & Model.Data.DefaultPicture.Name)"></a>
                     End If
                     @For Each nf In nevenfotos
-                        @<a data-full="@Url.Content(imgBase & "pictures/" & nf.Name)"
+                        @<a data-full="@Url.Content(imgBase & "pictures/800/" & nf.Name)"
                             data-medium="@Url.Content(imgBase & "pictures/447/" & nf.Name)"></a>
                     Next
                 </div>

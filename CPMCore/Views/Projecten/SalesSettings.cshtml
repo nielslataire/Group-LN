@@ -194,6 +194,20 @@
 
 							</div>
 						</div>
+						<div class="row align-items-center pb-3">
+							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">Uitgelicht project</label>
+							<div class="col-lg-9">
+								<div class="switch switch-sm switch-primary">
+									@Html.CheckBox("Settings.IsFeatured", Model.Settings.IsFeatured ?? false, new { data_plugin_ios_switch = "" })
+								</div>
+							</div>
+						</div>
+						<div class="row align-items-center pb-3">
+							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">Website status</label>
+							<div class="col-lg-9">
+								@Html.DropDownListFor(m => m.Settings.SalesDisplayStatus, Html.GetEnumSelectList(typeof(BOCore.SalesDisplayStatus)), "Automatisch bepalen", new { @class = "form-control form-control-modern" })
+							</div>
+						</div>
 						<div class="row  align-items-center pb-3">
 							<label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3">@Html.LabelFor(m => m.Project.CommercialTitleNL)</label>
 							<div class="col-lg-9">

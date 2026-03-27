@@ -43,28 +43,53 @@
             width: 2rem;
             text-align: center;
         }
+
+        /* ── MOBILE ───────────────────────────────────────────────── */
+        @@media (max-width: 767.98px) {
+            /* Hide image wrapper when there is no project photo */
+            .isotope-item.has-no-photo .image-frame-wrapper { display: none; }
+
+            /* Status badge: reflow to card body top when image is hidden */
+            .isotope-item.has-no-photo .badge {
+                position: static !important;
+                display: inline-block;
+                margin: 0.75rem 0 0.5rem 0;
+            }
+
+            /* Use padding (not margin) for vertical gap so isotope measures it correctly */
+            #project-grid .isotope-item {
+                padding-bottom: 1rem;
+                margin-bottom: 0 !important;
+            }
+        }
     </style>
 }
 
-<div class="row justify-content-between align-items-center mb-4">
-    <div class="col-sm-auto">
+<div class="row justify-content-between align-items-center mb-3 mb-sm-4">
+    <div class="col">
         <h1 class="font-weight-bold mb-0">@ViewData["SubTitle"]</h1>
         <p class="mb-0">@ViewData["SubTitleText"]</p>
     </div>
-    <div class="col-sm-auto px-0">
-        <a href="@Url.Action("Toevoegen", "Projecten")" class="btn btn-primary btn-md">+ Project toevoegen</a>
+    <div class="col-auto text-end mt-3 mt-sm-0">
+        <a href="@Url.Action("Toevoegen", "Projecten")" class="btn btn-primary btn-md">
+            <i class="bx bx-plus"></i><span class="d-none d-sm-inline"> Project toevoegen</span>
+        </a>
     </div>
 </div>
 
 <div class="card card-modern mb-3">
     <div class="card-body">
-        <div class="input-group">
-            <span class="input-group-text"><i class="bx bx-search"></i></span>
-            <input id="search-term"
-                   type="text"
-                   class="form-control form-control-modern me-2"
-                   placeholder="Zoek op projectnaam of gemeente ...">
-            <div id="colvis-container">
+        <div class="row g-2">
+            <div class="col-12 col-sm">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bx bx-search"></i></span>
+                    <input id="search-term"
+                           type="text"
+                           class="form-control form-control-modern"
+                           placeholder="Zoek op projectnaam of gemeente ...">
+                </div>
+            </div>
+            <div class="col-12 col-sm-auto" id="colvis-container">
                 <div class="input-group">
                     <span class="input-group-text"><i class="bx bx-filter-alt"></i></span>
                     <select id="status-filter-select"
@@ -79,11 +104,8 @@
                         }
                     </select>
                 </div>
-
             </div>
-            
         </div>
-            
     </div>
 </div>
 
@@ -199,6 +221,13 @@
             }
 
             function equalizeCardBodies() {
+                // On mobile cards stack naturally — skip equalisation to avoid
+                // changing heights after isotope has already positioned items.
+                if (window.innerWidth < 768) {
+                    $('.project-card .card-body').css('min-height', '0');
+                    $grid.isotope('layout');
+                    return;
+                }
                 var maxH = 0;
                 $('.project-card .card-body').css('min-height', '0');
 
@@ -208,6 +237,8 @@
                 });
 
                 $('.project-card .card-body').css('min-height', maxH + 'px');
+                // Reposition items after height changes so nothing overlaps
+                $grid.isotope('layout');
             }
 
             $(window).on('resize', equalizeCardBodies);

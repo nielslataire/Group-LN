@@ -812,10 +812,8 @@ namespace ServiceCore
             ProjectPictures? entity;
             if (picture.Id == 0)
             {
-                entity = _uow.ProjectPictures.GetNew() ?? new ProjectPictures();
-                // Zorg dat EF dit als INSERT ziet (en niet als detachte entity)
-                ctx.Set<ProjectPictures>().Attach(entity);
-                ctx.Entry(entity).State = EntityState.Added;
+                entity = new ProjectPictures();
+                ctx.Set<ProjectPictures>().Add(entity);
             }
             else
             {
@@ -828,9 +826,8 @@ namespace ServiceCore
 
             // 3) Project-relatie expliciet vastleggen (belangrijk)
             entity.ProjectId = picture.ProjectId; // FK-waarde
-            var proj = ctx.Set<Project>().Local.FirstOrDefault(p => p.ProjectId == picture.ProjectId)
-                       ?? ctx.Attach(new Project { ProjectId = picture.ProjectId }).Entity;
-            ctx.Entry(proj).State = EntityState.Unchanged;
+            if (ctx.Set<Project>().Local.All(p => p.ProjectId != picture.ProjectId))
+                ctx.Attach(new Project { ProjectId = picture.ProjectId });
             // Als je een referentienavigatie hebt (bvb ProjectNavigation of Project), zet die dan:
             // entity.ProjectNavigation = proj;    // gebruik de juiste propertynaam
 

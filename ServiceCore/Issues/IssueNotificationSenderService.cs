@@ -15,9 +15,14 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
     private readonly IConstructionIssueReportService _reportService;
     private readonly IConfiguration _configuration;
 
-    // Open statuses that trigger a notification
-    private static readonly int[] OpenStatuses = { 0, 1, 2, 3, 7 };
-    // 0=Open, 1=Assigned, 2=InProgress, 3=WaitingInspection, 7=Reopened
+    // Statuses always included in reminder emails (regardless of planned date)
+    private static readonly int[] ReminderStatuses = { 0, 3, 7 };
+    // 0=Open, 3=WaitingInspection, 7=Reopened
+    // Status 2=Gepland is included only when PlannedDate is in the past (see query below)
+
+    // Statuses excluded from evening update emails
+    private static readonly int[] EveningExcludeStatuses = { 2, 4, 6 };
+    // 2=Gepland, 4=Resolved, 6=Rejected
 
     private const int StatusWaitingInspection = 3;
     private const int PriorityHigh = 2;
@@ -40,8 +45,12 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
         int? filterProjectId = null)
     {
         // 1. Fetch all relevant open issues
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var query = _db.ConstructionIssue
-            .Where(x => OpenStatuses.Contains(x.Status) && !x.DoNotAutoNotify);
+            .Where(x => !x.DoNotAutoNotify && (
+                ReminderStatuses.Contains(x.Status) ||
+                (x.Status == 2 && x.PlannedDate.HasValue && x.PlannedDate < today)  // Gepland maar vervallen
+            ));
 
         if (filterProjectId.HasValue)
             query = query.Where(x => x.ProjectId == filterProjectId.Value);
@@ -51,10 +60,12 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
 
         if (eveningOnly)
         {
-            var today = DateTime.UtcNow.Date;
-            query = query.Where(x =>
-                x.CreatedDate.Date == today ||
-                (x.LastUpdatedDate != null && x.LastUpdatedDate.Value.Date == today));
+            var todayDt = DateTime.UtcNow.Date;
+            query = query
+                .Where(x => !EveningExcludeStatuses.Contains(x.Status))
+                .Where(x =>
+                    x.CreatedDate.Date == todayDt ||
+                    (x.LastUpdatedDate != null && x.LastUpdatedDate.Value.Date == todayDt));
         }
 
         var issues = await query
@@ -109,6 +120,10 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
 
             // 3. Skip if ALL issues are WaitingInspection — aannemer hoeft niets te doen
             if (groupIssues.All(x => x.Status == StatusWaitingInspection))
+                continue;
+
+            // For reminders (non-evening): only send if there is at least 1 truly open issue
+            if (!eveningOnly && !groupIssues.Any(x => x.Status == 0))
                 continue;
 
             // 4. Resolve company
@@ -366,7 +381,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
     {
         0 => "Open",
         1 => "Toegewezen",
-        2 => "In uitvoering",
+        2 => "Gepland",
         3 => "Wacht op keuring",
         7 => "Heropend",
         _ => "Open"

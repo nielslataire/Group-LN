@@ -1,4 +1,4 @@
-﻿@using BOCore
+@using BOCore
 @model CPMCore.Models.Issues.ConstructionIssueIndexVm
 @{
     var visibleStatuses = new[]
@@ -71,12 +71,94 @@
         pointer-events: none;
     }
 
-        .issue-plan-overlay.is-pick-mode {
-            cursor: crosshair;
-            pointer-events: auto;
+    .issue-plan-overlay.is-pick-mode {
+        cursor: crosshair;
+        pointer-events: auto;
+    }
+
+    /* ── DESKTOP: secondary always visible, toggle hidden ─────── */
+    @@media (min-width: 768px) {
+        #meerOptiesToggle        { display: none !important; }
+        #issueMoreOptionsSection { display: block !important; }
+
+        /* Eenheid and Kamer sit side-by-side on the same "row" on desktop.
+           Because they are separate block elements (needed for mobile ordering),
+           we use inline-block + matching widths to replicate a 3-col grid row. */
+        #issueFormRowEenheid,
+        #issueFormRowKamer {
+            display: inline-block;
+            vertical-align: top;
+            width: calc(33.33% - 8px);
+            margin-bottom: 0 !important;
         }
 
-  
+        #issueFormRowEenheid { margin-right: 8px; }
+
+        /* Titel clears the inline blocks so it starts on a new line */
+        #issueFormRowTitel { display: block; margin-top: 1rem; }
+    }
+
+    /* ── MOBILE: flex-column with order + full-screen modal ────── */
+    @@media (max-width: 767.98px) {
+
+        /* Modal covers everything including the site header */
+        #issueModal {
+            z-index: 2000 !important;
+            padding-left: 0 !important;
+        }
+
+        #issueModal .modal-dialog {
+            margin: 0;
+            max-width: 100%;
+            height: 100%;
+            max-height: 100%;
+        }
+
+        #issueModal .modal-content {
+            height: 100%;
+            border-radius: 0;
+        }
+
+        /* Backdrop also needs to cover the header */
+        body.modal-open .modal-backdrop {
+            z-index: 1995 !important;
+        }
+
+        /* Modal body becomes a flex column so CSS order works */
+        #issueForm .modal-body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Mobile field order:
+           1 → Eenheid
+           2 → Titel
+           3 → Kamer / Zone
+           4 → Verantwoordelijke / Naam / Email
+           5 → Foto's
+           6 → Meer opties toggle
+           7 → Secondary (hidden by default, expands in-place) */
+        #issueFormRowEenheid         { order: 1; width: 100%; margin-right: 0; margin-bottom: 1rem !important; }
+        #issueFormRowTitel           { order: 2; }
+        #issueFormRowKamer           { order: 3; width: 100%; margin-bottom: 1rem !important; }
+        #issueFormRowResp            { order: 4; }
+        #issueFormRowFotos           { order: 5; }
+        #meerOptiesToggle            { order: 6; }
+        #issueMoreOptionsSection     { order: 7; display: none; }
+        #issueMoreOptionsSection.is-expanded { display: block; }
+
+        /* Full-width footer buttons */
+        #issueModal .modal-footer {
+            flex-direction: column-reverse;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+        }
+
+        #issueModal .modal-footer .btn {
+            width: 100%;
+            margin: 0;
+        }
+    }
 </style>
 
 <div class="modal fade" id="issueModal" tabindex="-1" aria-hidden="true">
@@ -91,167 +173,193 @@
                 </div>
 
                 <div class="modal-body overflow-auto">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Eenheid</label>
-                            <select name="Input.UnitId" id="issueUnitId" class="form-control">
-                                <option value="">Algemeen</option>
-                                @foreach (var u in Model.Form.Units)
-                                {
-                                    <option value="@u.Id">@u.Name</option>
-                                }
-                            </select>
-                        </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label">Kamer / Zone</label>
-                            <input name="Input.RoomOrZone" class="form-control" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Locatie (vrij tekst)</label>
-                            <input name="Input.LocationText" class="form-control" />
-                        </div>
+                    <!-- ① Eenheid ─────────────────────────────────────────
+                         Desktop: inline-block 33% (side-by-side with Kamer via CSS)
+                         Mobile:  full-width, order 1                         -->
+                    <div id="issueFormRowEenheid" class="mb-3">
+                        <label class="form-label">Eenheid</label>
+                        <select name="Input.UnitId" id="issueUnitId" class="form-control">
+                            <option value="">Algemeen</option>
+                            @foreach (var u in Model.Form.Units)
+                            {
+                                <option value="@u.Id">@u.Name</option>
+                            }
+                        </select>
                     </div>
 
-                    <div class="mb-3">
+                    <!-- ② Kamer / Zone ────────────────────────────────────
+                         Desktop: inline-block 33% (beside Eenheid)
+                         Mobile:  full-width, order 3                         -->
+                    <div id="issueFormRowKamer" class="mb-3">
+                        <label class="form-label">Kamer / Zone</label>
+                        <input name="Input.RoomOrZone" class="form-control" />
+                    </div>
+
+                    <!-- ③ Titel ───────────────────────────────────────────
+                         Desktop: full-width block below the inline pair
+                         Mobile:  order 2 (between Eenheid and Kamer)         -->
+                    <div id="issueFormRowTitel" class="mb-3">
                         <label class="form-label">Titel *</label>
                         <input name="Input.Title" class="form-control" required />
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Beschrijving</label>
-                        <textarea name="Input.Description" class="form-control" rows="3"></textarea>
-                    </div>
+                    <!-- ④ SECONDARY ── hidden on mobile, always on desktop ─
+                         Contains the "extra" fields: locatie vrij tekst,
+                         beschrijving, categories, plan.                       -->
+                    <div id="issueMoreOptionsSection">
 
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Categorie</label>
-                            <select name="Input.CategoryId" class="form-control" required>
-                                @foreach (var c in Model.Form.Categories)
-                                {
-                                    <option value="@c.Id">@c.Name</option>
-                                }
-                            </select>
+                        <div class="mb-3">
+                            <label class="form-label">Locatie (vrij tekst)</label>
+                            <input name="Input.LocationText" class="form-control" />
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label">Fase</label>
-                            <select name="Input.IssuePhase" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssuePhase>()"></select>
+                        <div class="mb-3">
+                            <label class="form-label">Beschrijving</label>
+                            <textarea name="Input.Description" class="form-control" rows="3"></textarea>
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label">Type</label>
-                            <select name="Input.IssueType" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueType>()"></select>
-                        </div>
-
-
-                        <div class="col-md-4">
-                            <label class="form-label d-flex justify-content-between" for="issuePriorityHighSwitch">
-                                <span>Prioriteit</span>
-                                <span id="issuePriorityLabel">Normaal</span>
-                            </label>
-                            <div class="switch switch-sm switch-danger">
-                                <input type="checkbox" id="issuePriorityHighSwitch" data-plugin-ios-switch />
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Categorie</label>
+                                <select name="Input.CategoryId" class="form-control" required>
+                                    @foreach (var c in Model.Form.Categories)
+                                    {
+                                        <option value="@c.Id">@c.Name</option>
+                                    }
+                                </select>
                             </div>
-                            <input type="hidden" name="Input.Priority" id="issuePriorityValue" value="@((int)ConstructionIssuePriority.Normal)" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Status</label>
-                            <select name="Input.Status" class="form-control">
-                                @foreach (var status in visibleStatuses)
-                                {
-                                    <option value="@((int)status)">@status.GetDisplayName()</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Deadline</label>
-                            <input type="date" name="Input.DueDate" class="form-control" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Verantwoordelijke</label>
-                            <select name="Input.ResponsiblePartyId" id="issueResponsiblePartyId" class="form-control">
-                                <option value="">Selecteer...</option>
-                                @foreach (var c in Model.Form.ResponsibleContractors)
-                                {
-                                    <option value="@c.ID">@c.Display</option>
-                                }
-                            </select>
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">Naam</label>
-                            <input name="Input.ResponsibleOtherName" id="issueResponsibleOtherName" class="form-control" />
-                        </div>
-
-                        <div class="col-md-4">
-                            <label class="form-label">E-mail</label>
-                            <input name="Input.ResponsibleOtherEmail" id="issueResponsibleOtherEmail" class="form-control" />
-                        </div>
-                    </div>
-                    <hr />
-                    <label class="form-label fw-bold">Foto's & Bijlagen</label>
-                    <div id="mediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
-                        <button type="button" id="addMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile">
-                            <i class="bx bx-camera fs-4"></i>
-                            <span style="font-size:12px;line-height:1;">Toevoegen</span>
-                        </button>
-                    </div>
-                    <input id="mediaFilesInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
-
-
-                    <hr />
-                    <label class="form-label fw-bold">Locatie op plan</label>
-                    <div class="row g-2 mb-2">
-                        <div class="col-md-3">
-                            <select id="planDocumentSelect" class="form-control" disabled>
-                                <option value="">Selecteer eerst een eenheid</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input-group">
-                                <input type="file" id="issuePlanUploadInput" class="d-none" accept="application/pdf" />
-                                <input type="text" id="issuePlanUploadName" class="form-control" placeholder="Naam plan" maxlength="200" />
-                                <button type="button" class="btn btn-outline-secondary" id="issuePlanUploadButton"><i class="bx bx-arrow-out-up-square-half"></i>Plan uploaden</button>
+                            <div class="col-md-4">
+                                <label class="form-label">Fase</label>
+                                <select name="Input.IssuePhase" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssuePhase>()"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Type</label>
+                                <select name="Input.IssueType" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueType>()"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label d-flex justify-content-between" for="issuePriorityHighSwitch">
+                                    <span>Prioriteit</span>
+                                    <span id="issuePriorityLabel">Normaal</span>
+                                </label>
+                                <div class="switch switch-sm switch-danger">
+                                    <input type="checkbox" id="issuePriorityHighSwitch" data-plugin-ios-switch />
+                                </div>
+                                <input type="hidden" name="Input.Priority" id="issuePriorityValue" value="@((int)ConstructionIssuePriority.Normal)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Status</label>
+                                <select name="Input.Status" id="issueStatusSelect" class="form-control">
+                                    @foreach (var status in visibleStatuses)
+                                    {
+                                        <option value="@((int)status)">@status.GetDisplayName()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="issueModalPlannedDateGroup" style="display:none;">
+                                <label class="form-label">Uitvoeringsdatum</label>
+                                <input type="date" name="Input.PlannedDate" id="issueModalPlannedDateInput" class="form-control" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Deadline</label>
+                                <input type="date" name="Input.DueDate" class="form-control" />
                             </div>
                         </div>
-                        <div class="col-md-2">
-                            <select id="planPageSelect" class="form-control" disabled>
-                                <option value="1">Pagina 1</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select id="planZoomSelect" class="form-control">
-                                <option value="fit">Passend</option>
-                                <option value="page-width" selected>Breedte</option>
-                                <option value="100">100%</option>
-                                <option value="150">150%</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-center justify-content-md-end">
-                            <button type="button" class="btn btn-outline-primary" id="planPickToggle">Punt aanduiden</button>
-                        </div>
-                    </div>
-                    <div id="planContainer" class="issue-plan-stage">
-                        <div id="planEmpty" class="text-muted p-3">Selecteer eerst een eenheid en plan</div>
-                        <div id="planSurface" class="issue-plan-surface" style="display:none;">
-                            <canvas id="planCanvas" class="issue-plan-canvas"></canvas>
-                            <div id="planOverlay" class="issue-plan-overlay"></div>
-                            <div id="planMarker" class="issue-plan-marker"> <i class="fa fa-location-dot"></i></div>
-                        </div>
-                        <iframe id="planFrame" class="issue-plan-frame" style="display:none;" title="Plan PDF preview"></iframe>
-                    </div>
-                    <input type="hidden" name="Input.PlanDocumentId" id="planDocumentId" />
-                    <input type="hidden" name="Input.PlanPageNumber" id="planPageNumber" value="1" />
-                    <input type="hidden" name="Input.PlanXNormalized" id="planXNormalized" />
-                    <input type="hidden" name="Input.PlanYNormalized" id="planYNormalized" />
 
-                  
-                </div>
+                        <hr />
+                        <label class="form-label fw-bold">Locatie op plan</label>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-3">
+                                <select id="planDocumentSelect" class="form-control" disabled>
+                                    <option value="">Selecteer eerst een eenheid</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input-group">
+                                    <input type="file" id="issuePlanUploadInput" class="d-none" accept="application/pdf" />
+                                    <input type="text" id="issuePlanUploadName" class="form-control" placeholder="Naam plan" maxlength="200" />
+                                    <button type="button" class="btn btn-outline-secondary" id="issuePlanUploadButton"><i class="bx bx-arrow-out-up-square-half"></i>Plan uploaden</button>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="planPageSelect" class="form-control" disabled>
+                                    <option value="1">Pagina 1</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <select id="planZoomSelect" class="form-control">
+                                    <option value="fit">Passend</option>
+                                    <option value="page-width" selected>Breedte</option>
+                                    <option value="100">100%</option>
+                                    <option value="150">150%</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-center justify-content-md-end">
+                                <button type="button" class="btn btn-outline-primary" id="planPickToggle">Punt aanduiden</button>
+                            </div>
+                        </div>
+                        <div id="planContainer" class="issue-plan-stage mb-3">
+                            <div id="planEmpty" class="text-muted p-3">Selecteer eerst een eenheid en plan</div>
+                            <div id="planSurface" class="issue-plan-surface" style="display:none;">
+                                <canvas id="planCanvas" class="issue-plan-canvas"></canvas>
+                                <div id="planOverlay" class="issue-plan-overlay"></div>
+                                <div id="planMarker" class="issue-plan-marker"><i class="fa fa-location-dot"></i></div>
+                            </div>
+                            <iframe id="planFrame" class="issue-plan-frame" style="display:none;" title="Plan PDF preview"></iframe>
+                        </div>
+                        <input type="hidden" name="Input.PlanDocumentId" id="planDocumentId" />
+                        <input type="hidden" name="Input.PlanPageNumber" id="planPageNumber" value="1" />
+                        <input type="hidden" name="Input.PlanXNormalized" id="planXNormalized" />
+                        <input type="hidden" name="Input.PlanYNormalized" id="planYNormalized" />
+
+                    </div><!-- /issueMoreOptionsSection -->
+
+                    <!-- ⑤ Verantwoordelijke ──────────────────────────────
+                         One label, three fields without individual labels.
+                         Desktop: 3-col row. Mobile: stacked, order 4.        -->
+                    <div id="issueFormRowResp" class="mb-3">
+                        <label class="form-label">Verantwoordelijke</label>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12 col-md-4">
+                                <select name="Input.ResponsiblePartyId" id="issueResponsiblePartyId" class="form-control">
+                                    <option value="">Selecteer...</option>
+                                    @foreach (var c in Model.Form.ResponsibleContractors)
+                                    {
+                                        <option value="@c.ID">@c.Display</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <input name="Input.ResponsibleOtherName" id="issueResponsibleOtherName" class="form-control" placeholder="Naam" />
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <input name="Input.ResponsibleOtherEmail" id="issueResponsibleOtherEmail" class="form-control" placeholder="E-mail" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ⑥ Foto's & Bijlagen ─────────────────────────────
+                         Mobile: order 5                                       -->
+                    <div id="issueFormRowFotos" class="mb-3">
+                        <hr class="d-none d-md-block mt-0" />
+                        <label class="form-label fw-bold">Foto's &amp; Bijlagen</label>
+                        <div id="mediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
+                            <button type="button" id="addMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile">
+                                <i class="bx bx-camera fs-4"></i>
+                                <span style="font-size:12px;line-height:1;">Toevoegen</span>
+                            </button>
+                        </div>
+                        <input id="mediaFilesInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
+                    </div>
+
+                    <!-- Meer opties toggle (mobile only, order 6) ──────── -->
+                    <div id="meerOptiesToggle" class="mt-1 mb-3">
+                        <a href="#" id="meerOptiesLink" class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none fw-semibold">
+                            <i class="bx bx-chevron-down"></i>Meer opties
+                        </a>
+                    </div>
+
+                </div><!-- /modal-body -->
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>

@@ -17,6 +17,21 @@
 <link rel="stylesheet" href="~/libn/select2/select2-bootstrap.css" />
 <link rel="stylesheet" href="~/lib/bootstrap-multiselect/bootstrap-multiselect.css" />
 <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<style>
+    @@media (max-width: 767.98px) {
+        /* Hide image link on mobile when there is no project photo */
+        #project-grid .card-no-photo > a { display: none; }
+
+        /* Consistent gutter for full-width cards */
+        #project-grid [class*="col-"] {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
+
+        /* Spacing between stacked cards */
+        #project-grid .mb-4 { margin-bottom: 1rem !important; }
+    }
+</style>
 }
 
 @section PageScripts
@@ -61,17 +76,12 @@
 				@foreach (var project in Model.Projects)
 				{
 					<div class="col-sm-12 col-xl-3 mb-4 filteritem Status@(project.Status.Id)">
-						<div class="card card-modern card-modern-alt-padding">
+						<div class="card card-modern card-modern-alt-padding @(project.DefaultPicture.Name is null ? "card-no-photo" : "")">
+							@{
+								if (project.DefaultPicture.Name is null) { urlTotal = "~/img/no_image.jpg"; }
+								else { urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name; }
+							}
 							<a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))">
-
-								@if (project.DefaultPicture.Name is null)
-								{
-									urlTotal = "~/img/no_image.jpg";
-								}
-								else
-								{
-									urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
-								}
 								<img src="@Url.Content(urlTotal)" class="card-img-top" alt="@project.Name" />
 							</a>
 							<div class="card-body bg-light">

@@ -44,6 +44,8 @@ namespace ServiceCore.Translators
                 bo.SurveyorCost = _entity.SurveyorCost;
             if (_entity.ParcelCost is not null)
                 bo.ParcelCost = _entity.ParcelCost;
+            bo.SalesDisplayStatus = _entity.SalesDisplayStatus;
+            bo.IsFeatured = _entity.IsFeatured;
 
             return ErrorCode.Success;
         }
@@ -68,6 +70,8 @@ namespace ServiceCore.Translators
             _entity.RegistrationType = (int)bo.RegistrationType;
             _entity.SurveyorCost = bo.SurveyorCost;
             _entity.ParcelCost = bo.ParcelCost;
+            _entity.SalesDisplayStatus = bo.SalesDisplayStatus;
+            _entity.IsFeatured = bo.IsFeatured;
 
             return ErrorCode.Success;
         }

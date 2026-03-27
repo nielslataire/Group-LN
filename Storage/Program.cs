@@ -109,7 +109,9 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
     }
 
     var extension = Path.GetExtension(file.FileName);
-    var generatedFileName = $"{Guid.NewGuid():N}{extension}";
+    var generatedFileName = IsSafeFileName(file.FileName)
+        ? file.FileName
+        : $"{Guid.NewGuid():N}{extension}";
 
     var storageRoot = Path.Combine(env.ContentRootPath, localSettings.RootPath);
     var targetFolderPath = Path.Combine(storageRoot, folder);
@@ -125,9 +127,9 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
     string? publicUrl = null;
     string? downloadUrl = null;
 
-    if (folder == AssetFolders.Pictures)
+    if (AssetFolders.IsPictures(folder))
     {
-        publicUrl = $"/pictures/{generatedFileName}";
+        publicUrl = $"/{folder}/{generatedFileName}";
     }
     else
     {
@@ -670,9 +672,19 @@ sealed class AssetSigningHelper
 static class AssetFolders
 {
     public const string Pictures = "pictures";
+    public const string Pictures447 = "pictures/447";
+    public const string Pictures800 = "pictures/800";
+    public const string PicturesNews = "pictures/news";
+    public const string PicturesNewsOriginal = "pictures/news/original";
+    public const string PicturesNews800 = "pictures/news/800";
     public const string Plans = "plans";
     public const string Docs = "docs";
 
-    public static bool IsValid(string folder) => folder is Pictures or Plans or Docs;
+    public static bool IsValid(string folder) =>
+        folder is Pictures or Pictures447 or Pictures800
+            or PicturesNews or PicturesNewsOriginal or PicturesNews800
+            or Plans or Docs;
+
     public static bool IsPrivate(string folder) => folder is Plans or Docs;
+    public static bool IsPictures(string folder) => folder.StartsWith("pictures", StringComparison.Ordinal);
 }

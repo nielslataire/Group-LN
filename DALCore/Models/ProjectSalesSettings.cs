@@ -37,6 +37,10 @@ public partial class ProjectSalesSettings
 
     public int? BankAccountId { get; set; }
 
+    public int? SalesDisplayStatus { get; set; }
+
+    public bool? IsFeatured { get; set; }
+
     public virtual IssuerBankAccount BankAccount { get; set; }
 
     public virtual Project Project { get; set; }

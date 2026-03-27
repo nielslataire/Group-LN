@@ -553,6 +553,8 @@
           <Property Name="SaleVisible" Type="bit" />
           <Property Name="SurveyorCost" Type="decimal" Precision="19" Scale="4" />
           <Property Name="ParcelCost" Type="decimal" Precision="19" Scale="4" />
+          <Property Name="SalesDisplayStatus" Type="int" />
+          <Property Name="IsFeatured" Type="bit" />
         </EntityType>
         <EntityType Name="ProjectStatus">
           <Key>
@@ -3648,6 +3650,8 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="RegistrationType" Type="Int32" />
           <Property Name="SurveyorCost" Type="Decimal" Precision="19" Scale="4" />
           <Property Name="ParcelCost" Type="Decimal" Precision="19" Scale="4" />
+          <Property Name="SalesDisplayStatus" Type="Int32" />
+          <Property Name="IsFeatured" Type="Boolean" />
         </EntityType>
         <Association Name="FK_ProjectSalesSettings_Project">
           <End Type="copropmModel.Project" Role="Project" Multiplicity="1" />
@@ -4913,6 +4917,8 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
                 <ScalarProperty Name="VATPercentage" ColumnName="VATPercentage" />
                 <ScalarProperty Name="Projectid" ColumnName="Projectid" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="SalesDisplayStatus" ColumnName="SalesDisplayStatus" />
+                <ScalarProperty Name="IsFeatured" ColumnName="IsFeatured" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

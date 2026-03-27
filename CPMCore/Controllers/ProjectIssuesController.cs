@@ -72,12 +72,12 @@ public class ProjectsIssuesController : BaseController
         };
 
 
-        //filters ??= new ConstructionIssueFilterBO();
-        //var hasExplicitStatusFilter = Request.Query.ContainsKey("status");
-        //if (!filters.Status.HasValue && !hasExplicitStatusFilter)
-        //{
-        //    filters.Status = (int)ConstructionIssueStatus.Open;
-        //}
+        filters ??= new ConstructionIssueFilterBO();
+        var hasExplicitStatusFilter = Request.Query.ContainsKey("status");
+        // Don't set a default server-side status filter — all issues are loaded so the
+        // client-side DataTable filter can switch statuses without a page reload.
+        // The view pre-selects "Open" in the dropdown when no explicit filter is active.
+        ViewBag.DefaultStatusValue = !hasExplicitStatusFilter ? (int)ConstructionIssueStatus.Open : (int?)null;
         ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
         var formVm = await BuildVm(projectId);
         var vm = new ConstructionIssueIndexVm
@@ -290,9 +290,9 @@ public class ProjectsIssuesController : BaseController
 
     [HttpPost("ChangeStatus")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> ChangeStatus(int projectId, int id, int newStatus, string? comment)
+    public async Task<IActionResult> ChangeStatus(int projectId, int id, int newStatus, string? comment, DateOnly? plannedDate)
     {
-        await _service.ChangeStatus(projectId, id, newStatus, comment, User.FindFirst(CpmClaims.UserId)?.Value);
+        await _service.ChangeStatus(projectId, id, newStatus, comment, User.FindFirst(CpmClaims.UserId)?.Value, plannedDate);
         return RedirectToAction(nameof(Details), new { projectId, id });
     }
 
@@ -328,6 +328,7 @@ public class ProjectsIssuesController : BaseController
             issue.ResponsibleOtherName,
             issue.ResponsibleOtherEmail,
             dueDate = issue.DueDate?.ToString("yyyy-MM-dd"),
+            plannedDate = issue.PlannedDate?.ToString("yyyy-MM-dd"),
             planDocumentId = issue.PlanDocumentId,
             planPageNumber = issue.PlanPageNumber,
             planXnormalized = issue.PlanXnormalized,
@@ -389,6 +390,7 @@ public class ProjectsIssuesController : BaseController
             issue.PlanXnormalized,
             issue.PlanYnormalized,
             dueDate = issue.DueDate?.ToString("yyyy-MM-dd"),
+            plannedDate = issue.PlannedDate?.ToString("yyyy-MM-dd"),
             media = media.Select(m => new { m.Id, m.Url })
         });
     }
@@ -397,9 +399,11 @@ public class ProjectsIssuesController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SendPreview(int projectId, [FromForm] IssueSendPreviewRequest request)
     {
+        var activeStatuses = new[] { 0, 2, 3, 7 }; // Open, Gepland, WaitingInspection, Reopened
+
         var query = _db.ConstructionIssue
             .AsNoTracking()
-            .Where(x => x.ProjectId == projectId);
+            .Where(x => x.ProjectId == projectId && activeStatuses.Contains(x.Status));
 
         var selectedIds = (request.IssueIds ?? new List<int>()).Distinct().ToList();
         var scope = (request.Scope ?? "all").Trim().ToLowerInvariant();

@@ -71,7 +71,7 @@ public class ConstructionIssueService : IConstructionIssueService
         return entity;
     }
 
-    public async Task<bool> ChangeStatus(int projectId, int id, int newStatus, string? optionalComment, string? userId)
+    public async Task<bool> ChangeStatus(int projectId, int id, int newStatus, string? optionalComment, string? userId, DateOnly? plannedDate = null)
     {
         var entity = await _db.ConstructionIssue.FirstOrDefaultAsync(x => x.ProjectId == projectId && x.Id == id);
         if (entity == null) return false;
@@ -81,6 +81,7 @@ public class ConstructionIssueService : IConstructionIssueService
         entity.LastUpdatedDate = DateTime.UtcNow;
         if (newStatus == (int)ConstructionIssueStatus.Resolved) entity.ResolvedDate = DateTime.UtcNow;
         if (newStatus == (int)ConstructionIssueStatus.Closed) entity.ClosedDate = DateTime.UtcNow;
+        if (newStatus == (int)ConstructionIssueStatus.InProgress) entity.PlannedDate = plannedDate;
         await _db.SaveChangesAsync();
         await AddHistory(id, (int)ConstructionIssueHistoryAction.StatusChanged, userId, old.ToString(), newStatus.ToString(), optionalComment);
         return true;
@@ -118,6 +119,7 @@ public class ConstructionIssueService : IConstructionIssueService
                 issue.ResponsibleOtherEmail = dto.ResponsibleOtherEmail;
             }
             if (dto.Status.HasValue) issue.Status = dto.Status.Value;
+            if (dto.Status.HasValue && dto.Status.Value == (int)ConstructionIssueStatus.InProgress && dto.PlannedDate.HasValue) issue.PlannedDate = dto.PlannedDate;
             if (dto.DueDate.HasValue) issue.DueDate = dto.DueDate;
             if (dto.Priority.HasValue) issue.Priority = dto.Priority.Value;
             if (dto.IssueType.HasValue) issue.IssueType = dto.IssueType.Value;

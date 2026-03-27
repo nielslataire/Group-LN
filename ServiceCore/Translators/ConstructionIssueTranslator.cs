@@ -28,6 +28,7 @@ internal static class ConstructionIssueTranslator
         entity.ResponsibleOtherName = bo.ResponsibleOtherName;
         entity.ResponsibleOtherEmail = bo.ResponsibleOtherEmail;
         entity.DueDate = bo.DueDate;
+        entity.PlannedDate = bo.PlannedDate;
         entity.PlanDocumentId = bo.PlanDocumentId;
         entity.PlanPageNumber = bo.PlanPageNumber;
         entity.PlanXnormalized = bo.PlanXNormalized;

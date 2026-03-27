@@ -616,11 +616,15 @@
 
                             <div class="col-12 col-md-6 col-xl">
                                 <label class="form-label">Status</label>
+                                @{
+                                    var defaultStatusVal = ViewBag.DefaultStatusValue as int?;
+                                }
                                 <select class="form-control form-control-modern js-auto-filter" name="status">
-                                    <option value="">Alle statussen</option>
+                                    <option value="" selected="@(filters.Status == null && defaultStatusVal == null)">Alle statussen</option>
                                                 @foreach (var status in visibleStatuses)
                                                 {
-                                                    <option value="@((int)status)" selected="@(filters.Status == (int)status)">@status.GetDisplayName()</option>
+                                                    var isSelected = filters.Status == (int)status || (filters.Status == null && defaultStatusVal == (int)status);
+                                                    <option value="@((int)status)" selected="@isSelected">@status.GetDisplayName()</option>
                                                 }
                                 </select>
                             </div>
@@ -690,6 +694,7 @@
                                                 <option value="@((int)status)">@status.GetDisplayName()</option>
                                             }
                                         </select>
+                                        <input type="date" name="PlannedDate" id="bulkPlannedDateInput" class="form-control form-control-modern" style="display:none;min-width:140px;" title="Uitvoeringsdatum" />
                                         <button type="submit" id="bulkStatusButton" class="btn btn-primary text-nowrap" disabled>
                                             <i class="bx bx-refresh me-1"></i>Status
                                         </button>
@@ -746,10 +751,9 @@
                                         <th>Unit</th>
                                                 <th class="room-place-cell">Kamer / plaats</th>
                                         <th>Fase</th>
-                                        <th>Locatie</th>
+                                        <th>Verantwoordelijke</th>
                                         <th>Status</th>
-                                        <th>Vervaldatum</th>
-                                        <th>Laatst verzonden</th>
+                                        <th>Geplande datum</th>
                                         <th class="text-end noVis">Acties</th>
                                     </tr>
                                 </thead>
@@ -763,17 +767,16 @@
                                                     <label for="issue_@i.Id"></label>
                                                 </div>
                                             </td>
-                                                    <td>@if (i.Priority == (int)ConstructionIssuePriority.High) {
+                                                    <td title="@(i.LastSentDate.HasValue ? "Laatste verzonden: " + i.LastSentDate.Value.ToString("dd/MM/yyyy HH:mm") : null)">@if (i.Priority == (int)ConstructionIssuePriority.High) {
                                                     <i class="bx bx-alert-circle priority-alert-icon fs-5" title="Hoge prioriteit"></i>
                                                 }
 @i.Title</td>
                                                 <td>@(i.Unit?.Name ?? "-")</td>
                                                     <td class="room-place-cell">@(string.IsNullOrWhiteSpace(i.RoomOrZone) ? "-" : i.RoomOrZone)</td>
                                                 <td>@(((ConstructionIssuePhase)i.IssuePhase).GetDisplayName())</td>
-                                                <td>@i.LocationText</td>
+                                                <td>@(Model.Form.ResponsibleContractors.FirstOrDefault(c => c.ID == i.ResponsiblePartyId)?.Display ?? (string.IsNullOrWhiteSpace(i.ResponsibleOtherName) ? "-" : i.ResponsibleOtherName))</td>
                                                 <td>@(((ConstructionIssueStatus)i.Status).GetDisplayName())</td>
-                                            <td>@(i.DueDate?.ToString("dd/MM/yyyy") ?? "-")</td>
-                                            <td>@(i.LastSentDate?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                                            <td>@(i.PlannedDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                                             <td class="actions text-end">
                                                 <a href="@Url.Action("DetailData", "ProjectsIssues", new { projectId, id = i.Id })"
                                                    class="btn ms-1 me-1 open-detail-issue"
@@ -966,6 +969,7 @@
             const issuesSelectionCountLabel = document.getElementById('issuesSelectionCountLabel');
             const bulkStatusSelect = document.getElementById('bulkStatusSelect');
             const bulkStatusButton = document.getElementById('bulkStatusButton');
+            const bulkPlannedDateInput = document.getElementById('bulkPlannedDateInput');
             const bulkDueDateInput = document.getElementById('bulkDueDateInput');
             const bulkDueDateButton = document.getElementById('bulkDueDateButton');
             const bulkResponsiblePartySelect = document.getElementById('bulkResponsiblePartySelect');
@@ -993,6 +997,8 @@
             const issueDetailPlanCanvas = document.getElementById('issueDetailPlanCanvas');
             const issueDetailPlanMarker = document.getElementById('issueDetailPlanMarker');
             const issueDetailStatusSelect = document.getElementById('issueDetailStatusSelect');
+            const issueDetailPlannedDateBlock = document.getElementById('issueDetailPlannedDateBlock');
+            const issueDetailPlannedDateInput = document.getElementById('issueDetailPlannedDateInput');
             const issueDetailPrioritySelect = document.getElementById('issueDetailPrioritySelect');
             const issueDetailResponsiblePartySelect = document.getElementById('issueDetailResponsiblePartySelect');
             const issueDetailResponsibleNameInput = document.getElementById('issueDetailResponsibleNameInput');
@@ -1325,7 +1331,7 @@
                     dom: 't<"dt-hidden-footer"ip>',
                   order: [[2, 'asc']],
                     columnDefs: [
-                        { targets: [0, 9], orderable: false, searchable: false }
+                        { targets: [0, 8], orderable: false, searchable: false }
                     ],
                     language: {
                         processing: 'Bezig met verwerken…',
@@ -1805,6 +1811,9 @@
                issueDetailPhase.textContent = data.issuePhaseLabel || '-';
 
                 if (issueDetailStatusSelect) issueDetailStatusSelect.value = data.status != null ? String(data.status) : '';
+                const isGepland = data.status === @((int)ConstructionIssueStatus.InProgress);
+                if (issueDetailPlannedDateBlock) issueDetailPlannedDateBlock.style.display = isGepland ? '' : 'none';
+                if (issueDetailPlannedDateInput) issueDetailPlannedDateInput.value = data.plannedDate || '';
                 if (issueDetailPrioritySelect) issueDetailPrioritySelect.value = data.priority != null ? String(data.priority) : '';
                 if (issueDetailResponsiblePartySelect) issueDetailResponsiblePartySelect.value = data.responsiblePartyId != null ? String(data.responsiblePartyId) : '';
                 if (issueDetailResponsibleNameInput) issueDetailResponsibleNameInput.value = data.responsibleOtherName || '';
@@ -1921,7 +1930,17 @@
             function initializeIssueDetailModal(){
                 issueDetailStatusSelect?.addEventListener('change', () => {
                     if (detailInlineState.isFieldSyncing) return;
-                    updateIssueDetailFields({ Status: issueDetailStatusSelect.value });
+                    const isGepland = issueDetailStatusSelect.value === '@((int)ConstructionIssueStatus.InProgress)';
+                    if (issueDetailPlannedDateBlock) issueDetailPlannedDateBlock.style.display = isGepland ? '' : 'none';
+                    if (!isGepland && issueDetailPlannedDateInput) issueDetailPlannedDateInput.value = '';
+                    const fields = { Status: issueDetailStatusSelect.value };
+                    if (isGepland && issueDetailPlannedDateInput?.value) fields.PlannedDate = issueDetailPlannedDateInput.value;
+                    updateIssueDetailFields(fields);
+                });
+
+                issueDetailPlannedDateInput?.addEventListener('change', () => {
+                    if (detailInlineState.isFieldSyncing) return;
+                    updateIssueDetailFields({ Status: issueDetailStatusSelect?.value, PlannedDate: issueDetailPlannedDateInput.value });
                 });
 
                 issueDetailPrioritySelect?.addEventListener('change', () => {
@@ -2037,6 +2056,12 @@
                 if (planUploadInput) planUploadInput.value = "";
                 if (planUploadName) planUploadName.value = "";
         updatePrioritySwitchFromValue(@((int)ConstructionIssuePriority.Normal));
+                if (issueModalPlannedDateGroup) issueModalPlannedDateGroup.style.display = 'none';
+                if (issueMoreOptionsSection) {
+                    issueMoreOptionsSection.classList.remove('is-expanded');
+                    if (meerOptiesLink) meerOptiesLink.innerHTML = '<i class="bx bx-chevron-down"></i>Meer opties';
+                }
+
             }
 
             function addPreview(url, existingId){
@@ -2142,6 +2167,39 @@
                 if (planXNormalizedInput.value && planYNormalizedInput.value && planOverlay.style.display !== 'none') {
                     drawMarkerFromNormalized(planXNormalizedInput.value, planYNormalizedInput.value);
                 }
+            });
+
+            // Show/hide Uitvoeringsdatum in create/edit modal based on status
+            const issueStatusSelect = document.getElementById('issueStatusSelect');
+            const issueModalPlannedDateGroup = document.getElementById('issueModalPlannedDateGroup');
+            const issueMoreOptionsSection = document.getElementById('issueMoreOptionsSection');
+            const meerOptiesLink = document.getElementById('meerOptiesLink');
+
+            function expandMeerOpties() {
+                if (issueMoreOptionsSection && !issueMoreOptionsSection.classList.contains('is-expanded')) {
+                    issueMoreOptionsSection.classList.add('is-expanded');
+                    if (meerOptiesLink) meerOptiesLink.innerHTML = '<i class="bx bx-chevron-up"></i>Minder opties';
+                }
+            }
+
+            function syncModalPlannedDateVisibility() {
+                if (issueModalPlannedDateGroup && issueStatusSelect) {
+                    const isGepland = issueStatusSelect.value === '@((int)ConstructionIssueStatus.InProgress)';
+                    issueModalPlannedDateGroup.style.display = isGepland ? '' : 'none';
+                    // Auto-expand meer opties on mobile when Gepland is selected
+                    if (isGepland) expandMeerOpties();
+                }
+            }
+            issueStatusSelect?.addEventListener('change', syncModalPlannedDateVisibility);
+
+            // Meer opties toggle
+            meerOptiesLink?.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!issueMoreOptionsSection) return;
+                const expanded = issueMoreOptionsSection.classList.toggle('is-expanded');
+                meerOptiesLink.innerHTML = expanded
+                    ? '<i class="bx bx-chevron-up"></i>Minder opties'
+                    : '<i class="bx bx-chevron-down"></i>Meer opties';
             });
         const sendState = {
                       preview: null,
@@ -2629,6 +2687,7 @@ hideIssueProcessingModal();
                     'Input.ResponsibleOtherName': data.responsibleOtherName,
                     'Input.ResponsibleOtherEmail': data.responsibleOtherEmail,
                     'Input.DueDate': data.dueDate,
+                    'Input.PlannedDate': duplicateMode ? '' : data.plannedDate,
                     'Input.PlanDocumentId': duplicateMode ? '' : data.planDocumentId,
                     'Input.PlanPageNumber': duplicateMode ? '' : data.planPageNumber,
                     'Input.PlanXNormalized': duplicateMode ? '' : data.planXnormalized,
@@ -2640,7 +2699,8 @@ hideIssueProcessingModal();
 
                 await loadPlansForUnit(data.unitId, duplicateMode ? null : data.planDocumentId, duplicateMode ? null : data.planPageNumber);
                 await syncResponsibleFromSelection();
-                    updatePrioritySwitchFromValue(data.priority);
+                updatePrioritySwitchFromValue(data.priority);
+                syncModalPlannedDateVisibility();
 
                 if (duplicateMode) {
                     issueForm.action = `/Projects/${projectId}/Issues/Create`;
@@ -2735,6 +2795,14 @@ hideIssueProcessingModal();
                       updateFilterSelectionRow();
                   });
               });
+              bulkStatusSelect?.addEventListener('change', () => {
+                  const isGepland = bulkStatusSelect.value === '@((int)ConstructionIssueStatus.InProgress)';
+                  if (bulkPlannedDateInput) {
+                      bulkPlannedDateInput.style.display = isGepland ? '' : 'none';
+                      if (!isGepland) bulkPlannedDateInput.value = '';
+                  }
+              });
+
               [bulkStatusSelect, bulkDueDateInput, bulkResponsiblePartySelect, bulkResponsibleNameInput, bulkResponsibleEmailInput].forEach((input) => {
                   input?.addEventListener('input', updateFilterSelectionRow);
                   input?.addEventListener('change', updateFilterSelectionRow);

@@ -32,6 +32,10 @@ Public Class ConstructionIssueUpsertBO
 
     <DataType(DataType.Date)>
     Public Property DueDate As DateOnly?
+
+    <DataType(DataType.Date)>
+    Public Property PlannedDate As DateOnly?
+
     Public Property PlanDocumentId As Integer?
     Public Property PlanPageNumber As Integer?
 
