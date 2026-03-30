@@ -255,6 +255,7 @@ Public Class ProjectService
                     bo.ProjectId = _entity.ProjectID
                     bo.Display = "De voorlopige opleverdatum van project " & _entity.ProjectName & " is niet ingevuld."
                     bo.Type = "danger"
+                    bo.Category = "oplevering"
                     response.AddValue(bo)
                 Else
                     'Check ProjectDocs
@@ -269,6 +270,7 @@ Public Class ProjectService
                                 bo.ProjectId = _entity.ProjectID
                                 bo.Display = "De definitieve oplevering van project " & _entity.ProjectName & " is nog niet gebeurd, gelieve deze aan te vragen!"
                                 bo.Type = "danger"
+                                bo.Category = "oplevering"
                                 response.AddValue(bo)
                             ElseIf _entity.DeliveryDate.Value.AddMonths(11).CompareTo(Date.Today) <= 0 Then
                                 Dim bo As New WarningBO
@@ -276,6 +278,7 @@ Public Class ProjectService
                                 bo.ProjectId = _entity.ProjectID
                                 bo.Display = "De definitieve oplevering van project " & _entity.ProjectName & " kan gebeuren vanaf " & _entity.DeliveryDate.Value.AddMonths(11).Date & " , gelieve deze aan te vragen!"
                                 bo.Type = "warning"
+                                bo.Category = "oplevering"
                                 response.AddValue(bo)
                             End If
                         End If
@@ -291,6 +294,7 @@ Public Class ProjectService
                     bo.ProjectId = _entity.ProjectID
                     bo.Display = "De voorlopige opleverdatum van project " & _entity.ProjectName & " is niet ingevuld."
                     bo.Type = "danger"
+                    bo.Category = "oplevering"
                     response.AddValue(bo)
                 ElseIf _entity.DeliveryDateDef Is Nothing And _entity.DocDefDelivery = True Then
                     'Check ProjectDocs
@@ -327,6 +331,7 @@ Public Class ProjectService
             boDocs.ID = _entity.ProjectID
             boDocs.ProjectId = _entity.ProjectID
             boDocs.Type = "warning"
+        boDocs.Category = "documenten"
             'If _entity.ProjectDocs.Where(Function(l) l.Type = ProjectDocType.EPB).Count = 0 Then If boDocs.Display = "" Then boDocs.Display = "Het project " & _entity.ProjectName & " ontbreekt volgende documenten : EPB Dossier" Else boDocs.Display = boDocs.Display & " , EPB Dossier"
             If (_entity.DocElectricalInspection = True) Then If _entity.ProjectDocs.Where(Function(l) l.Type = ProjectDocType.Electrical_inspection).Count = 0 Then If boDocs.Display = "" Then boDocs.Display = "Het project " & _entity.ProjectName & " ontbreekt volgende documenten : Elektrische keuring" Else boDocs.Display = boDocs.Display & " , Elektrische keuring"
             If (_entity.DocWaterInspection = True) Then If _entity.ProjectDocs.Where(Function(l) l.Type = ProjectDocType.Water_inspection).Count = 0 Then If boDocs.Display = "" Then boDocs.Display = "Het project " & _entity.ProjectName & " ontbreekt volgende documenten : Waterkeuring" Else boDocs.Display = boDocs.Display & " , Waterkeuring"

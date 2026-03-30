@@ -1,9 +1,11 @@
 using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models;
+using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SmartBreadcrumbs.Attributes;
 using System.Diagnostics;
 using System.Globalization;
@@ -18,13 +20,17 @@ public class HomeController : BaseController
     private readonly IProjectService _projectService;
     private readonly IClientService _clientService;
     private readonly IInsuranceService _insuranceService;
+    private readonly IProjectVoortgangService _voortgangService;
+    private readonly cpmRunningContext _db;
 
-    public HomeController(ILogger<HomeController> logger, IProjectService projectService, IClientService clientService, IInsuranceService insuranceService)
+    public HomeController(ILogger<HomeController> logger, IProjectService projectService, IClientService clientService, IInsuranceService insuranceService, IProjectVoortgangService voortgangService, cpmRunningContext db)
     {
         _logger = logger;
         _projectService = projectService;
         _clientService = clientService;
         _insuranceService = insuranceService;
+        _voortgangService = voortgangService;
+        _db = db;
     }
 
     [DefaultBreadcrumb("Dashboard")]
@@ -32,6 +38,17 @@ public class HomeController : BaseController
     {
         var model = new Models.Home.HomeModel();
         var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
+
+        var userId = User.GetCpmUserId();
+        if (userId.HasValue)
+        {
+            var rawDashboardType = _db.Users
+                .Where(u => u.Id == userId.Value)
+                .Select(u => u.DashboardType)
+                .FirstOrDefault();
+            if (rawDashboardType.HasValue)
+                model.DashboardType = (Models.DashboardType)rawDashboardType.Value;
+        }
 
         var response = _projectService.GetProjectsForList(0, 0, currentUserCode);
         if (response.Success)
@@ -83,6 +100,14 @@ public class HomeController : BaseController
             if ((iresponse.Success))
                 model.ProjectInfo = iresponse.Values;
         }
+
+        // Voortgang voor projectleider-dashboard
+        if (model.DashboardType == Models.DashboardType.Projectleider && model.Projects.Count > 0)
+        {
+            var projectIds = model.Projects.Select(p => p.Id);
+            model.ProjectVoortgang = _voortgangService.GetForProjects(projectIds);
+        }
+
         return View(model);
     }
 
@@ -90,6 +115,6 @@ public class HomeController : BaseController
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        return View(new ErrorViewModel { RequestId = System.Diagnostics.Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }

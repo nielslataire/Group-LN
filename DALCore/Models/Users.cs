@@ -37,6 +37,8 @@ public partial class Users
 
     public string PhotoHash { get; set; }
 
+    public int? DashboardType { get; set; }
+
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();

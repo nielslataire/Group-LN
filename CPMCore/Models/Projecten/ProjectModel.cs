@@ -301,6 +301,8 @@ namespace CPMCore.Models.Projecten
         public bool HasMoreProjects => TotalProjectCount > VisibleProjectCount;
 
         public int RemainingProjectCount => Math.Max(0, TotalProjectCount - VisibleProjectCount);
+
+        public Dictionary<int, ProjectVoortgangBO> Voortgang { get; set; } = new Dictionary<int, ProjectVoortgangBO>();
     }
 
     public class ProjectGridRenderModel
@@ -310,6 +312,8 @@ namespace CPMCore.Models.Projecten
         public List<ProjectStatusBO> Statuses { get; set; } = new List<ProjectStatusBO>();
 
         public Dictionary<int, ProjectSalesDataBO> SalesData { get; set; } = new Dictionary<int, ProjectSalesDataBO>();
+
+        public Dictionary<int, ProjectVoortgangBO> Voortgang { get; set; } = new Dictionary<int, ProjectVoortgangBO>();
     }
 
     // Detail

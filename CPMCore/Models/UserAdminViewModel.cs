@@ -27,6 +27,8 @@ namespace CPMCore.Models
         public string? GuestInviteRedeemUrl { get; set; }
 
         public bool HasGuestInvitation => GuestInvitationId.HasValue;
+
+        public DashboardType? DashboardType { get; set; }
     }
 
     public class EntraUserListItemViewModel
@@ -96,6 +98,9 @@ namespace CPMCore.Models
 
         public List<string> AvailablePermissions { get; set; } = new();
 
+        [Display(Name = "Dashboard type")]
+        public DashboardType? DashboardType { get; set; }
+
         [Display(Name = "Rollen")]
         public List<string> SelectedPermissions { get; set; } = new();
     }
@@ -141,6 +146,9 @@ namespace CPMCore.Models
 
 
         public List<string> AvailablePermissions { get; set; } = new();
+
+        [Display(Name = "Dashboard type")]
+        public DashboardType? DashboardType { get; set; }
 
         [Display(Name = "Rollen")]
         public List<string> SelectedPermissions { get; set; } = new();

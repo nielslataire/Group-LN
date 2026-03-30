@@ -169,6 +169,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<PermissionPerUser> PermissionPerUser { get; set; }
 
+    public virtual DbSet<PlanningSectie> PlanningSectie { get; set; }
+
+    public virtual DbSet<PlanningTaak> PlanningTaak { get; set; }
+
     public virtual DbSet<PostalCode> PostalCode { get; set; }
 
     public virtual DbSet<Project> Project { get; set; }
@@ -190,6 +194,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<ProjectStatus> ProjectStatus { get; set; }
 
     public virtual DbSet<ProjectUserAccess> ProjectUserAccess { get; set; }
+
+    public virtual DbSet<ProjectVoortgang> ProjectVoortgang { get; set; }
 
     public virtual DbSet<Provincie> Provincie { get; set; }
 
@@ -1993,6 +1999,43 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_PermissionPerUser_Users");
         });
 
+        modelBuilder.Entity<PlanningSectie>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Planning__3214EC073B8F4A30");
+
+            entity.HasIndex(e => e.ProjectId, "IX_PlanningSectie_ProjectId");
+
+            entity.Property(e => e.IsActief).HasDefaultValue(true);
+            entity.Property(e => e.Naam)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.HasOne(d => d.ActivityGroup).WithMany(p => p.PlanningSectie)
+                .HasForeignKey(d => d.ActivityGroupId)
+                .HasConstraintName("FK_PlanningSectie_ActivityGroup");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.PlanningSectie)
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PlanningSectie_Project");
+        });
+
+        modelBuilder.Entity<PlanningTaak>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Planning__3214EC0746AE1691");
+
+            entity.HasIndex(e => e.PlanningSectieId, "IX_PlanningTaak_PlanningSectieId");
+
+            entity.Property(e => e.Beschrijving).HasMaxLength(1000);
+            entity.Property(e => e.Naam)
+                .IsRequired()
+                .HasMaxLength(300);
+
+            entity.HasOne(d => d.PlanningSectie).WithMany(p => p.PlanningTaak)
+                .HasForeignKey(d => d.PlanningSectieId)
+                .HasConstraintName("FK_PlanningTaak_PlanningSectie");
+        });
+
         modelBuilder.Entity<PostalCode>(entity =>
         {
             entity.HasKey(e => e.PostcodeId)
@@ -2255,6 +2298,24 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProjectUserAccess_Users");
+        });
+
+        modelBuilder.Entity<ProjectVoortgang>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__ProjectV__3214EC07F6F5FA53");
+
+            entity.HasIndex(e => e.ProjectId, "UX_ProjectVoortgang_ProjectId").IsUnique();
+
+            entity.Property(e => e.BerekendOp).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.ContractueleVolwassenheidPct).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.FinancieleVoortgangPct).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.FysiekeVoortgangPct).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.Warnings).HasMaxLength(500);
+
+            entity.HasOne(d => d.Project).WithOne(p => p.ProjectVoortgang)
+                .HasForeignKey<ProjectVoortgang>(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProjectVoortgang_Project");
         });
 
         modelBuilder.Entity<Provincie>(entity =>
@@ -2665,8 +2726,6 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(50);
         });
         modelBuilder.HasSequence<int>("Seq_ConstructionIssueReportItemId").StartsAt(2L);
-
-        OnModelCreatingPartial(modelBuilder);
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

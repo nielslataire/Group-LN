@@ -1,0 +1,517 @@
+@model CPMCore.Models.Home.HomeModel
+@using CPMCore.Helpers
+@using CPMCore.Models
+@using Microsoft.Extensions.Configuration
+@using BOCore
+@inject IConfiguration Configuration
+
+@{
+    var uitvoeringStatusId  = (int)ProjectStatusType.Uitvoering;
+    var opgeleverdStatusId  = (int)ProjectStatusType.Opgeleverd;
+    var myProjects          = Model.Projects.ToList();
+    var activeProjects      = myProjects.Where(p => p.Status.Id == uitvoeringStatusId).ToList();
+    var nietOpgeleverd      = myProjects.Where(p => p.Status.Id != opgeleverdStatusId).ToList();
+    var werfProjects       = activeProjects.Any() ? activeProjects : myProjects;
+    var myProjectIds       = myProjects.Select(p => p.Id).ToHashSet();
+
+    var displayName = User.GetCpmDisplayName() ?? string.Empty;
+    var voornaam    = displayName.Split(' ').FirstOrDefault() ?? displayName;
+    var imgBase     = Configuration["URL:ImageWebUrl"] ?? string.Empty;
+
+    // Meldingen enkel voor eigen projecten, met category (enum) en bekijk-URL per bron
+    var meldingen = new List<(string Tekst, int ProjectId, string Severity, string BekijkUrl, MeldingType Category)>();
+    if (Model.InsuranceWarnings != null)
+        meldingen.AddRange(Model.InsuranceWarnings
+            .Where(w => myProjectIds.Contains(w.ProjectId))
+            .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "danger",
+                Url.Action("DetailInsurances", "Projecten", new { projectid = w.ProjectId }) ?? "#",
+                MeldingTypeHelper.FromString(w.Category))));
+    if (Model.ProjectInfo != null)
+        meldingen.AddRange(Model.ProjectInfo
+            .Where(w => myProjectIds.Contains(w.ProjectId))
+            .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "warning",
+                Url.Action("Detail", "Projecten", new { projectid = w.ProjectId }) ?? "#",
+                MeldingTypeHelper.FromString(w.Category))));
+
+    // Unieke categorieën aanwezig in meldingen, voor de filterknopen
+    var meldingCategories = meldingen.Select(m => m.Category).Distinct().OrderBy(c => (int)c).ToList();
+}
+
+<!-- ── PAGE HEADER ─────────────────────────────────────────── -->
+<div class="row justify-content-between align-items-center pt-2 pe-0">
+    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+        <h1 class="font-weight-bold mb-0 mt-0">Mijn Projecten</h1>
+        <h5 class="mb-0 mt-0">Welkom @voornaam &ndash; overzicht van je actieve werven</h5>
+    </div>
+</div>
+
+<!-- ── KPI STRIP ──────────────────────────────────────────── -->
+<div class="row gl-kpi-strip mb-2">
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-buildings"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Actieve projecten</h4>
+                            <div class="info">
+                                <strong class="amount">@nietOpgeleverd.Count</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-task"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Open punten</h4>
+                            <div class="info">
+                                <strong class="amount">—</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-alert-circle"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Urgent</h4>
+                            <div class="info">
+                                <strong class="amount">—</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+    <div class="col-12 col-md-6 col-xl-3 mb-3">
+        <section class="card card-featured-left card-featured-primary h-100 mb-0">
+            <div class="card-body d-flex align-items-center">
+                <div class="widget-summary widget-summary-md w-100">
+                    <div class="widget-summary-col widget-summary-col-icon">
+                        <div class="summary-icon bg-primary">
+                            <i class="bx bx-time"></i>
+                        </div>
+                    </div>
+                    <div class="widget-summary-col">
+                        <div class="summary">
+                            <h4 class="title">Overdue</h4>
+                            <div class="info">
+                                <strong class="amount">—</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+<div class="row pt-3">
+
+    <!-- LINKER KOLOM -->
+    <div class="col-lg-9">
+
+        @* Meldingen *@
+        @if (meldingen.Any())
+        {
+            <section class="card card-modern mb-3">
+                <header class="card-header">
+                    <div class="card-title">
+                        <i class="bx bx-bell text-primary"></i>
+                        Meldingen
+                        <span class="gl-count-badge ms-3">@meldingen.Count</span>
+                    </div>
+                </header>
+                <div class="card-body p-3 pt-1">
+                    @* Filterknopen – boven de lijst, in de body *@
+                    <div id="gl-melding-filter">
+                        <button type="button" class="btn btn-xs btn-primary active" data-filter="all">
+                            <i class="bx bx-list-ul"></i> Alles (@meldingen.Count)
+                        </button>
+                        @foreach (var cat in meldingCategories)
+                        {
+                            var cnt  = meldingen.Count(m => m.Category == cat);
+                            var icon = MeldingTypeHelper.GetIcon(cat);
+                            var lbl  = MeldingTypeHelper.GetLabel(cat);
+                            <button type="button" class="btn btn-xs btn-default" data-filter="@cat">
+                                <i class="@icon"></i> @lbl (@cnt)
+                            </button>
+                        }
+                    </div>
+                    @* Scrollbare lijst *@
+                    <div style="max-height:210px; overflow-y:auto;" id="gl-meldingen-list">
+                        @foreach (var (tekst, projectId, severity, bekijkUrl, category) in meldingen)
+                        {
+                            var itemIcon = MeldingTypeHelper.GetIcon(category);
+                            <div class="alert alert-@severity fade show p-2 d-flex align-items-center" role="alert" data-category="@category">
+                                <i class="@itemIcon fs-6 me-2"></i>
+                                <span class="flex-grow-1">@tekst</span>
+                                <a href="@bekijkUrl" class="ml-auto text-body text-nowrap me-3">Bekijk <i class="bx bx-arrow-out-up-right-square"></i></a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+        }
+
+        @* Mijn werven *@
+        <div class="gl-sectie-kop">Mijn Werven</div>
+
+        @if (!werfProjects.Any())
+        {
+            <p class="text-muted mb-3">Geen projecten gevonden.</p>
+        }
+        else
+        {
+            <div class="row mb-3">
+                @foreach (var project in werfProjects)
+                {
+                    int? daysLeft  = null;
+                    bool isOverdue = false;
+                    if (project.DeliveryDate.HasValue)
+                    {
+                        daysLeft  = (int)(project.DeliveryDate.Value.ToDateTime(TimeOnly.MinValue) - DateTime.Today).TotalDays;
+                        isOverdue = daysLeft < 0;
+                    }
+
+                    Model.ProjectVoortgang.TryGetValue(project.Id, out var vg);
+
+                    string chipClass, chipLabel;
+                    if (vg != null)
+                    {
+                        if (vg.Fase == VoortgangFase.Afgewerkt)
+                        {
+                            chipClass = "sc-donker"; chipLabel = "Afgewerkt";
+                        }
+                        else if (vg.Fase == VoortgangFase.Eindfase)
+                        {
+                            chipClass = "sc-groen"; chipLabel = "Eindfase";
+                        }
+                        else if (vg.Fase == VoortgangFase.InUitvoering)
+                        {
+                            chipClass = "sc-groen"; chipLabel = "In uitvoering";
+                        }
+                        else if (vg.Fase == VoortgangFase.InVoorbereiding)
+                        {
+                            chipClass = "sc-geel"; chipLabel = "In voorbereiding";
+                        }
+                        else
+                        {
+                            chipClass = "sc-geel"; chipLabel = "Opstart";
+                        }
+                    }
+                    else
+                    {
+                        chipClass = project.Status.Id == uitvoeringStatusId ? "sc-groen" : "sc-geel";
+                        chipLabel = project.Status.Name;
+                    }
+
+
+                    var fotoUrl = project.DefaultPicture?.Name != null
+                        ? imgBase + "pictures/447/" + project.DefaultPicture.Name
+                        : string.Empty;
+
+                    <div class="col-12 col-md-6 col-lg-3 mb-4">
+                        <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart">
+                            <div class="gl-werf-foto">
+                                @if (!string.IsNullOrEmpty(fotoUrl))
+                                {
+                                    <img src="@fotoUrl" alt="@project.Name" />
+                                }
+                                else
+                                {
+                                    <div class="gl-werf-foto-placeholder"></div>
+                                }
+                                <div class="gl-werf-overlay"></div>
+                                <span class="gl-status-chip @chipClass">@chipLabel</span>
+                                @if (vg != null && !string.IsNullOrEmpty(vg.Warnings))
+                                {
+                                    <span class="gl-warn-badge" title="@string.Join(", ", vg.WarningList)">
+                                        <i class="bx bx-error"></i>
+                                    </span>
+                                }
+                            </div>
+                            <div class="gl-werf-body">
+                                <div>
+                                    <p class="gl-werf-naam">@project.Name</p>
+                                    @if (!string.IsNullOrWhiteSpace(project.Postalcode?.Gemeente))
+                                    {
+                                        <p class="gl-werf-gem">
+                                            <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            @project.Postalcode.Gemeente
+                                        </p>
+                                    }
+                                </div>
+                                @if (vg != null)
+                                {
+                                    <div>
+                                        <div class="pb-2">
+                                            <div class="pg-row">
+                                                <span class="pg-label">Fysiek</span>
+                                                <span class="pg-pct">@vg.FysiekeVoortgangPct.ToString("0.#")%</span>
+                                            </div>
+                                            <div class="progress pg-bar">
+                                                <div class="progress-bar" style="width:@(vg.FysiekeVoortgangPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                            </div>
+                                        </div>
+                                        <div class="pb-2">
+                                            <div class="pg-row">
+                                                <span class="pg-label">Financieel</span>
+                                                <span class="pg-pct">@vg.FinancieleVoortgangPct.ToString("0.#")%</span>
+                                            </div>
+                                            <div class="progress pg-bar">
+                                                <div class="progress-bar pg-bar-hoog" style="width:@(vg.FinancieleVoortgangPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                <div class="gl-werf-footer">
+                                    <div class="gl-resterende">
+                                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        @if (isOverdue)
+                                        {
+                                            <span class="text-danger">@Math.Abs(daysLeft!.Value)d verlopen</span>
+                                        }
+                                        else if (daysLeft.HasValue)
+                                        {
+                                            <span>@daysLeft.Value d resterend</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Geen deadline</span>
+                                        }
+                                    </div>
+                                    @if (isOverdue)
+                                    {
+                                        <span class="label label-danger">Verlopen</span>
+                                    }
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+    <!-- /LINKER KOLOM -->
+
+    <!-- RECHTER KOLOM: snelacties -->
+    <div class="col-lg-3">
+        <section class="card card-modern">
+            <header class="card-header">
+                <div class="card-title">
+                    <i class="bx bx-bolt text-primary"></i>
+                    Snelacties
+                </div>
+            </header>
+            <div class="card-body p-0 pb-3">
+
+                @* Contract toevoegen *@
+                <div class="gl-sa-item-wrap">
+                    <a href="#" class="gl-snelactie js-sa-toggle" data-target="sa-contract">
+                        <i class="bx bx-file"></i>
+                        Contract toevoegen
+                        <svg class="gl-sa-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                    <div id="sa-contract" class="gl-sa-submenu">
+                        @if (!werfProjects.Any())
+                        {
+                            <span class="gl-sa-empty">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in werfProjects)
+                            {
+                                <a class="gl-sa-subitem" href="@Url.Action("AddContract", "Projecten", new { projectid = p.Id })">@p.Name</a>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Punt toevoegen *@
+                <div class="gl-sa-item-wrap">
+                    <a href="#" class="gl-snelactie js-sa-toggle" data-target="sa-punt">
+                        <i class="bx bx-alert-circle"></i>
+                        Punt toevoegen
+                        <svg class="gl-sa-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                    <div id="sa-punt" class="gl-sa-submenu">
+                        @if (!werfProjects.Any())
+                        {
+                            <span class="gl-sa-empty">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in werfProjects)
+                            {
+                                <a class="gl-sa-subitem" href="/Projects/@(p.Id)/Issues/Create">@p.Name</a>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Inkomende factuur *@
+                <div class="gl-sa-item-wrap">
+                    <a href="#" class="gl-snelactie js-sa-toggle" data-target="sa-factuur">
+                        <i class="bx bx-receipt"></i>
+                        Inkomende factuur toevoegen
+                        <svg class="gl-sa-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                    <div id="sa-factuur" class="gl-sa-submenu">
+                        @if (!werfProjects.Any())
+                        {
+                            <span class="gl-sa-empty">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in werfProjects)
+                            {
+                                <a class="gl-sa-subitem" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = p.Id, type = 0 })">@p.Name</a>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Wijzigingsopdracht *@
+                <div class="gl-sa-item-wrap">
+                    <a href="#" class="gl-snelactie js-sa-toggle" data-target="sa-wijziging">
+                        <i class="bx bx-edit"></i>
+                        Wijzigingsopdracht opmaken
+                        <svg class="gl-sa-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                    <div id="sa-wijziging" class="gl-sa-submenu">
+                        @if (!werfProjects.Any())
+                        {
+                            <span class="gl-sa-empty">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in werfProjects)
+                            {
+                                <a class="gl-sa-subitem" href="@Url.Action("AddChangeOrder", "Projecten", new { projectid = p.Id, type = 0 })">@p.Name</a>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Nacalculatie *@
+                <div class="gl-sa-item-wrap">
+                    <a href="#" class="gl-snelactie js-sa-toggle" data-target="sa-nacalc">
+                        <i class="bx bx-chart-bar-big-columns"></i>
+                        Nacalculatie bekijken
+                        <svg class="gl-sa-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                    <div id="sa-nacalc" class="gl-sa-submenu">
+                        @if (!werfProjects.Any())
+                        {
+                            <span class="gl-sa-empty">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in werfProjects)
+                            {
+                                <a class="gl-sa-subitem" href="@Url.Action("Recalculation", "Projecten", new { projectid = p.Id })">@p.Name</a>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Document uploaden *@
+                <div class="gl-sa-item-wrap">
+                    <a href="#" class="gl-snelactie js-sa-toggle" data-target="sa-document">
+                        <i class="bx bx-arrow-in-up-square-half"></i>
+                        Document uploaden
+                        <svg class="gl-sa-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                    </a>
+                    <div id="sa-document" class="gl-sa-submenu">
+                        @if (!werfProjects.Any())
+                        {
+                            <span class="gl-sa-empty">Geen projecten beschikbaar</span>
+                        }
+                        else
+                        {
+                            @foreach (var p in werfProjects)
+                            {
+                                <a class="gl-sa-subitem" href="@Url.Action("DetailDocs", "Projecten", new { projectid = p.Id })">@p.Name</a>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* Leverancier toevoegen – directe link, geen submenu *@
+                <div class="gl-sa-item-wrap">
+                    <a href="@Url.Action("Create", "Leveranciers")" class="gl-snelactie-direct">
+                        <i class="bx bx-user-plus"></i>
+                        Leverancier toevoegen
+                    </a>
+                </div>
+
+            </div>
+        </section>
+    </div>
+
+</div>
+
+<script>
+window.addEventListener('load', function () {
+    // Snelacties accordion
+    $(document).on('click', '.js-sa-toggle', function (e) {
+        e.preventDefault();
+        var $btn     = $(this);
+        var targetId = $btn.data('target');
+        var $submenu = $('#' + targetId);
+        var isOpen   = $submenu.is(':visible');
+
+        $('.gl-sa-submenu').slideUp(150);
+        $('.js-sa-toggle').removeClass('active');
+
+        if (!isOpen) {
+            $submenu.slideDown(150);
+            $btn.addClass('active');
+        }
+    });
+
+    // Meldingen filter
+    $(document).on('click', '#gl-melding-filter button', function () {
+        var filter = $(this).data('filter');
+        $('#gl-melding-filter button').removeClass('active btn-primary').addClass('btn-default');
+        $(this).removeClass('btn-default').addClass('btn-primary active');
+
+        if (filter === 'all') {
+            $('#gl-meldingen-list .gl-melding').show();
+        } else {
+            $('#gl-meldingen-list .gl-melding').hide();
+            $('#gl-meldingen-list .gl-melding[data-category="' + filter + '"]').show();
+        }
+    });
+});
+</script>

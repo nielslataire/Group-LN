@@ -85,6 +85,11 @@ namespace CPMCore.Models.Home
                 _projectInfo = value;
             }
         }
+        public DashboardType? DashboardType { get; set; }
+
+        /// <summary>Voortgang per project-id, geladen voor het projectleider-dashboard.</summary>
+        public Dictionary<int, ProjectVoortgangBO> ProjectVoortgang { get; set; } = new();
+
         private List<ProjectStatusBO> _statuses;
         public List<ProjectStatusBO> Statuses
         {

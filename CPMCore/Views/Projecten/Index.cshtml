@@ -115,9 +115,10 @@
     {
         @await Html.PartialAsync("_ProjectGridItems", new CPMCore.Models.Projecten.ProjectGridRenderModel
         {
-            Projects = Model.Projects,
-        Statuses = Model.Statuses ?? new List<ProjectStatusBO>(),
-        SalesData = Model.SalesData ?? new Dictionary<int, ProjectSalesDataBO>()
+            Projects  = Model.Projects,
+            Statuses  = Model.Statuses  ?? new List<ProjectStatusBO>(),
+            SalesData = Model.SalesData ?? new Dictionary<int, ProjectSalesDataBO>(),
+            Voortgang = Model.Voortgang ?? new Dictionary<int, ProjectVoortgangBO>()
         })
         }
     else

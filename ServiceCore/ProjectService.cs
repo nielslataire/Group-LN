@@ -276,7 +276,8 @@ namespace ServiceCore
                         ID = e.ProjectId,
                         ProjectId = e.ProjectId,
                         Display = $"De voorlopige opleverdatum van project {e.ProjectName} is niet ingevuld.",
-                        Type = "danger"
+                        Type = "danger",
+                        Category = "oplevering"
                     });
                 }
                 else
@@ -297,7 +298,8 @@ namespace ServiceCore
                                 ID = e.ProjectId,
                                 ProjectId = e.ProjectId,
                                 Display = $"De definitieve oplevering van project {e.ProjectName} is nog niet gebeurd, gelieve deze aan te vragen!",
-                                Type = "danger"
+                                Type = "danger",
+                                Category = "oplevering"
                             });
                         }
                         else if (e.DeliveryDate.Value.AddMonths(11) <= today)
@@ -307,7 +309,8 @@ namespace ServiceCore
                                 ID = e.ProjectId,
                                 ProjectId = e.ProjectId,
                                 Display = $"De definitieve oplevering van project {e.ProjectName} kan gebeuren vanaf {e.DeliveryDate.Value.AddMonths(11)} , gelieve deze aan te vragen!",
-                                Type = "warning"
+                                Type = "warning",
+                                Category = "oplevering"
                             });
                         }
                     }
@@ -327,6 +330,7 @@ namespace ServiceCore
                 boDocs.ID = e.ProjectId;
                 boDocs.ProjectId = e.ProjectId;
                 boDocs.Type = "warning";
+                boDocs.Category = "documenten";
 
                 void NeedDoc(bool required, ProjectDocType type, string label)
                 {

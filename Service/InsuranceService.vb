@@ -35,6 +35,7 @@ Public Class InsuranceService
                 bo.ProjectId = _entity.ContractActivity.Contract.ProjectID
                 bo.Display = "De ABR polis van project " & _entity.ContractActivity.Contract.Project.ProjectName & " vervalt binnen één maand, gelieve deze te verlengen !"
                 bo.Type = "warning"
+                bo.Category = "verzekering"
                 response.AddValue(bo)
             Next
         Else
@@ -45,6 +46,7 @@ Public Class InsuranceService
                 bo.ProjectId = _entity.ContractActivity.Contract.ProjectID
                 bo.Display = "De ABR polis van project " & _entity.ContractActivity.Contract.Project.ProjectName & " vervalt binnen één maand, gelieve deze te verlengen !"
                 bo.Type = "warning"
+                bo.Category = "verzekering"
                 response.AddValue(bo)
             Next
         End If
@@ -56,7 +58,7 @@ Public Class InsuranceService
                 bo.ProjectId = _entity.ContractActivity.Contract.ProjectID
                 bo.Display = "De ABR polis van project " & _entity.ContractActivity.Contract.Project.ProjectName & " is vervallen, gelieve deze te verlengen !"
                 bo.Type = "danger"
-
+                bo.Category = "verzekering"
                 response.AddValue(bo)
             Next
         Else
@@ -67,6 +69,7 @@ Public Class InsuranceService
                 bo.ProjectId = _entity.ContractActivity.Contract.ProjectID
                 bo.Display = "De ABR polis van project " & _entity.ContractActivity.Contract.Project.ProjectName & " is vervallen, gelieve deze te verlengen !"
                 bo.Type = "danger"
+                bo.Category = "verzekering"
                 response.AddValue(bo)
             Next
         End If

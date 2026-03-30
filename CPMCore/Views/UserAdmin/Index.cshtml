@@ -270,6 +270,7 @@
                                    data-job=""
                                    data-cellphone="@user.Cellphone"
                                    data-role-id="@(user.CurrentRoleId?.ToString() ?? string.Empty)"
+                                   data-dashboard-type="@(user.DashboardType.HasValue ? ((int)user.DashboardType.Value).ToString() : string.Empty)"
                                    title="Bewerken">
                                     <i class="bx bx-edit fs-5"></i>
                                 </a>
@@ -1196,6 +1197,7 @@
                 $('#edit-job').val(trigger.data('job'));
                 $('#edit-cellphone').val(trigger.data('cellphone'));
                 $('#edit-role-id').val(trigger.data('role-id'));
+                $('#edit-dashboard-type').val(trigger.data('dashboard-type') || '');
                 $('#edit-active').prop('checked', String(trigger.data('active')) === 'true');
                 if ($.magnificPopup) {
                     $.magnificPopup.open({

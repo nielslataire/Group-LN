@@ -5,6 +5,10 @@
 @inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 @{
+    var invCulture = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+@{
     string imageUrl = string.Empty;
     var canReadProjectsForSale = ViewBag.CanReadProjectsForSale as bool? ?? false;
 }
@@ -15,6 +19,8 @@
     {
         ProjectSalesDataBO projectSalesData = null;
         var hasSalesData = Model.SalesData != null && Model.SalesData.TryGetValue(project.Id, out projectSalesData);
+        ProjectVoortgangBO vg = null;
+        var hasVg = Model.Voortgang != null && Model.Voortgang.TryGetValue(project.Id, out vg);
 
         var statusName = !string.IsNullOrWhiteSpace(project.Status?.Name)
             ? project.Status.Name
@@ -85,16 +91,54 @@
                             <div>Aantal klanten: @clientCount</div>
                         </div>
 
-                        @if (canReadProjectsForSale)
+                        @if (canReadProjectsForSale || (hasVg && vg != null))
                         {
-                            <div class="project-progress-container mt-3">
-                                <div class="project-split-row small text-muted mb-1">
-                                    <div>Percentage verkocht</div>
-                                    <div class="fw-bold text-end">@soldPercentageDisplay%</div>
-                                </div>
-                                <div class="progress light">
-                                    <div class="progress-bar progress-bar-primary" role="progressbar" style="width: @soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"></div>
-                                </div>
+                            <div class="mt-3">
+                                @if (canReadProjectsForSale)
+                                {
+                                    <div class="pb-2">
+                                        <div class="pg-row">
+                                            <span class="pg-label">Percentage verkocht</span>
+                                            <span class="pg-pct">@soldPercentageDisplay%</span>
+                                        </div>
+                                        <div class="progress pg-bar">
+                                            <div class="progress-bar pg-bar-hoog" role="progressbar" style="width:@soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                }
+
+                                @if (hasVg && vg != null)
+                                {
+                                    var fysPct  = vg.FysiekeVoortgangPct.ToString("0.#");
+                                    var fysPctW = vg.FysiekeVoortgangPct.ToString("0.##", invCulture);
+                                    var finPct  = vg.FinancieleVoortgangPct.ToString("0.#");
+                                    var finPctW = vg.FinancieleVoortgangPct.ToString("0.##", invCulture);
+
+                                    <div class="pb-2">
+                                        <div class="pg-row">
+                                            <span class="pg-label">
+                                                Fysiek
+                                                @if (!string.IsNullOrEmpty(vg.Warnings))
+                                                {
+                                                    <i class="bx bx-error text-danger ms-1" title="@string.Join(", ", vg.WarningList)" style="font-size:11px;"></i>
+                                                }
+                                            </span>
+                                            <span class="pg-pct">@fysPct%</span>
+                                        </div>
+                                        <div class="progress pg-bar">
+                                            <div class="progress-bar" role="progressbar" style="width:@fysPctW%;" aria-valuenow="@fysPctW" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="pb-2">
+                                        <div class="pg-row">
+                                            <span class="pg-label">Financieel</span>
+                                            <span class="pg-pct">@finPct%</span>
+                                        </div>
+                                        <div class="progress pg-bar">
+                                            <div class="progress-bar" role="progressbar" style="width:@finPctW%;" aria-valuenow="@finPctW" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
                         }
                     </div>

@@ -8,6 +8,10 @@
 
 @section PageStyle
 {
+@if (Model.DashboardType == CPMCore.Models.DashboardType.Projectleider)
+{
+    <link rel="stylesheet" href="~/css/dashboard-projectleider.css" />
+}
 <link rel="stylesheet" href="~/lib/dropzone/basic.css" />
 <link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
 <link rel="stylesheet" href="~/lib/bootstrap-markdown/css/bootstrap-markdown.min.css" />
@@ -62,6 +66,13 @@
 	</script>
 }
 @{String urlTotal = "";}
+
+@if (Model.DashboardType == CPMCore.Models.DashboardType.Projectleider)
+{
+    await Html.RenderPartialAsync("_DashboardProjectleider", Model);
+}
+else
+{
 
 
 
@@ -217,7 +228,7 @@
 
 
 
-@* 
+@*
 <script src="~/vendor/admin/select2/select2.js"></script>
 <script src="~/vendor/admin/select2/select2_locale_nl.js"></script>
 <script src="~/vendor/admin/bootstrap-multiselect/bootstrap-multiselect.js"></script>
@@ -225,3 +236,4 @@
 
 
  *@
+} @* end else (non-projectleider dashboard) *@

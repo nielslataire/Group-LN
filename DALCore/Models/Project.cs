@@ -115,6 +115,8 @@ public partial class Project
 
     public virtual IssuerCompany IssuerCompanyIdLandOwnerNavigation { get; set; }
 
+    public virtual ICollection<PlanningSectie> PlanningSectie { get; set; } = new List<PlanningSectie>();
+
     public virtual PostalCode PostalCode { get; set; }
 
     public virtual ICollection<ProjectBudget> ProjectBudget { get; set; } = new List<ProjectBudget>();
@@ -132,6 +134,8 @@ public partial class Project
     public virtual ICollection<ProjectSalesSettings> ProjectSalesSettings { get; set; } = new List<ProjectSalesSettings>();
 
     public virtual ICollection<ProjectUserAccess> ProjectUserAccess { get; set; } = new List<ProjectUserAccess>();
+
+    public virtual ProjectVoortgang ProjectVoortgang { get; set; }
 
     public virtual CompanyInfo SecurityCoordinator { get; set; }
 

@@ -171,6 +171,7 @@ builder.Services.Configure<OctopusOptions>(builder.Configuration.GetSection("Oct
 builder.Services.Configure<FeatureFlagsOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.AddHttpClient<IOctopusApiClient, OctopusApiClient>();
 builder.Services.AddScoped<IOctopusTokenManager, OctopusTokenManager>();
+builder.Services.AddScoped<FacadeCore.IProjectVoortgangService, ServiceCore.ProjectVoortgangService>();
 builder.Services.AddScoped<IConstructionIssueService, ConstructionIssueService>();
 builder.Services.AddScoped<IConstructionIssueReportService, ConstructionIssueReportService>();
 builder.Services.AddScoped<IQRCodeService, QRCodeServiceStub>();
@@ -179,6 +180,8 @@ builder.Services.AddScoped<IIssueNotificationSenderService, IssueNotificationSen
 builder.Services.AddScoped<IIssueNotificationSchedulerService, IssueNotificationSchedulerService>();
 builder.Services.AddSingleton<IssueNotificationHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<IssueNotificationHostedService>());
+builder.Services.AddSingleton<VoortgangHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<VoortgangHostedService>());
 
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();
@@ -362,7 +365,7 @@ app.Use(async (ctx, next) =>
         ctx.Response.Redirect("/Account/Login?type=contractor");
         return;
     }
-    if (path.Equals("/klanten", StringComparison.OrdinalIgnoreCase))
+    if (path.Equals("/klantenportaal", StringComparison.OrdinalIgnoreCase))
     {
         ctx.Response.Redirect("/Account/Login?type=customer");
         return;

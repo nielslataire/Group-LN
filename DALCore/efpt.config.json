@@ -343,6 +343,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[PlanningSectie]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[PlanningTaak]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[PostalCode]",
          "ObjectType": 0
       },
@@ -384,6 +392,10 @@
       },
       {
          "Name": "[dbo].[ProjectUserAccess]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectVoortgang]",
          "ObjectType": 0
       },
       {

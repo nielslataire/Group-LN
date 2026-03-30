@@ -14,4 +14,6 @@ public partial class ActivityGroup
     public decimal? Lot { get; set; }
 
     public virtual ICollection<Activity> Activity { get; set; } = new List<Activity>();
+
+    public virtual ICollection<PlanningSectie> PlanningSectie { get; set; } = new List<PlanningSectie>();
 }

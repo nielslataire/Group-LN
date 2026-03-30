@@ -24,6 +24,15 @@
                         }
                     </select>
                 </div>
+                <div class="form-group">
+                    <label>Dashboard type</label>
+                    <select class="form-control" id="edit-dashboard-type" name="dashboardType">
+                        <option value="">Geen</option>
+                        <option value="1">Boekhouding</option>
+                        <option value="2">CEO / CFO</option>
+                        <option value="3">Projectleider</option>
+                    </select>
+                </div>
                 <div class="form-group mb-0"><label><input type="checkbox" id="edit-active" name="isActive" value="true" /> Actief</label></div>
                 <input type="hidden" name="isActive" value="false" />
             </div>
@@ -94,6 +103,15 @@
                         {
                             <option value="@role.RoleId">@role.RoleName</option>
                         }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Dashboard type</label>
+                    <select class="form-control" name="dashboardType">
+                        <option value="">Geen</option>
+                        <option value="1">Boekhouding</option>
+                        <option value="2">CEO / CFO</option>
+                        <option value="3">Projectleider</option>
                     </select>
                 </div>
                 <div class="form-group mb-3">

@@ -77,6 +77,9 @@ namespace DALCore
         public GenericRepository<OctopusBookyearPeriods> OctopusBookyearPeriods { get; }
         public GenericRepository<OctopusJournals> OctopusJournals { get; }
         public GenericRepository<Vattype> VatTypes { get; }
+        public GenericRepository<ProjectVoortgang> ProjectVoortgangs { get; }
+        public GenericRepository<PlanningSectie>   PlanningSections  { get; }
+        public GenericRepository<PlanningTaak>     PlanningTasks     { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -153,6 +156,9 @@ namespace DALCore
             OctopusBookyearPeriods = new GenericRepository<OctopusBookyearPeriods>(_context);
             OctopusJournals = new GenericRepository<OctopusJournals>(_context);
             VatTypes = new GenericRepository<Vattype>(_context);
+            ProjectVoortgangs = new GenericRepository<ProjectVoortgang>(_context);
+            PlanningSections  = new GenericRepository<PlanningSectie>(_context);
+            PlanningTasks     = new GenericRepository<PlanningTaak>(_context);
         }
 
         // Eenduidige save-methodes

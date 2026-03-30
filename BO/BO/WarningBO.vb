@@ -36,4 +36,13 @@
             _type = value
         End Set
     End Property
+    Private _category As String
+    Public Property Category() As String
+        Get
+            Return _category
+        End Get
+        Set(ByVal value As String)
+            _category = value
+        End Set
+    End Property
 End Class

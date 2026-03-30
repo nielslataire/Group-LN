@@ -66,6 +66,7 @@ namespace CPMCore.Controllers
         private readonly IInsuranceService _insuranceService;
         private readonly ICountryService _countryService;
         private readonly IPostalcodeService _postalcodeService;
+        private readonly IProjectVoortgangService _voortgangService;
         private readonly DALCore.UnitOfWorkCore _uow;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
@@ -75,7 +76,7 @@ namespace CPMCore.Controllers
         "image/jpeg", "image/jpg", "image/png", "image/gif"
     };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, DALCore.UnitOfWorkCore uow)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow)
         {
             _logger = logger;
             Configuration = configuration;
@@ -89,6 +90,7 @@ namespace CPMCore.Controllers
             _insuranceService = insuranceService;
             _countryService = countryService;
             _postalcodeService = postalcodeService;
+            _voortgangService = voortgangService;
             _uow = uow;
         }
 
@@ -130,6 +132,8 @@ namespace CPMCore.Controllers
                             .GroupBy(v => v.ProjectId)
                             .ToDictionary(g => g.Key, g => g.First());
                     }
+
+                    model.Voortgang = _voortgangService.GetForProjects(ids);
                 }
             }
 
@@ -180,6 +184,8 @@ namespace CPMCore.Controllers
                             .GroupBy(v => v.ProjectId)
                             .ToDictionary(g => g.Key, g => g.First());
                     }
+
+                    model.Voortgang = _voortgangService.GetForProjects(ids);
                 }
             }
 
@@ -252,7 +258,8 @@ namespace CPMCore.Controllers
             {
                 Projects = projects,
                 Statuses = statuses,
-                SalesData = salesData
+                SalesData = salesData,
+                Voortgang = _voortgangService.GetForProjects(ids)
             };
 
             return PartialView("_ProjectGridItems", model);

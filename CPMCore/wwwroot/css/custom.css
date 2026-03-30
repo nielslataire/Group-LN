@@ -1,6 +1,44 @@
 /* Add here all your CSS customizations */
 
-.card {
+/* ── Voortgang progress bars ────────────────────────────────────────
+   Gebruik: .pg-bar-laag / .pg-bar-midden / .pg-bar-hoog
+   op het .progress-bar element.
+   Hoogte + layout via .pg-bar (wrapper) en .pg-row (label + %).
+   ------------------------------------------------------------------ */
+.pg-bar {
+    height: 4px !important;
+    border-radius: 2px !important;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+/* Gradient loopt altijd van laag → midden → hoog over de volledige breedte.
+   De `width` van de .progress-bar knipt de gradient af op het juiste punt. */
+.pg-bar .progress-bar {
+    background: linear-gradient(90deg,
+        #d1d5db 0%,
+        #6b8f80 50%,
+        #0a5a3b 100%) !important;
+    border-radius: 2px !important;
+}
+
+/* Los gebruik buiten .pg-bar (voor achterwaartse compatibiliteit) */
+.pg-bar-laag   { background: #d1d5db !important; }
+.pg-bar-midden { background: #6b8f80 !important; }
+.pg-bar-hoog   { background: #0a5a3b !important; }
+
+.pg-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #777;
+    margin-bottom: 3px;
+}
+.pg-row .pg-label { flex: 1; }
+.pg-row .pg-pct   { font-weight: 700; white-space: nowrap; margin-left: 6px; }
+
+/*.card {
     height: 100%;
 }
 .card-body{
@@ -10,7 +48,7 @@
 }
 .card-text {
     flex-grow: 1;
-}
+}*/
 
 .table.dataTable tbody td {
     padding-top: 0.8rem;

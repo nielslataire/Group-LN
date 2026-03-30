@@ -121,6 +121,7 @@ public class UserAdminController : BaseController
                 CurrentRoleId = hasPrimaryRole ? primaryRole.RoleId : (int?)null,
                 CurrentRoleName = hasPrimaryRole ? primaryRole.RoleName : null,
                 Permissions = permissions,
+                DashboardType = user.DashboardType.HasValue ? (Models.DashboardType)user.DashboardType.Value : (Models.DashboardType?)null,
 
                 // Gastuitnodiging
                 GuestInvitationId     = invite?.Id,
@@ -366,7 +367,8 @@ public class UserAdminController : BaseController
             EntraObjectId = string.IsNullOrWhiteSpace(model.SelectedEntraObjectId)
                 ? null
                 : model.SelectedEntraObjectId.Trim(),
-            Password = string.Empty
+            Password = string.Empty,
+            DashboardType = model.DashboardType.HasValue ? (int)model.DashboardType.Value : (int?)null
         };
 
         _db.Users.Add(user);
@@ -400,7 +402,7 @@ public class UserAdminController : BaseController
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
-    public async Task<IActionResult> CreateModal(string userName, string email, string? forename, string? name, string? jobFunction, string? cellphone, int? selectedRoleId, string? selectedEntraObjectId, bool isActive)
+    public async Task<IActionResult> CreateModal(string userName, string email, string? forename, string? name, string? jobFunction, string? cellphone, int? selectedRoleId, string? selectedEntraObjectId, bool isActive, int? dashboardType)
     {
         var normalizedUserName = userName?.Trim() ?? string.Empty;
         var normalizedEmail = email?.Trim() ?? string.Empty;
@@ -451,7 +453,8 @@ public class UserAdminController : BaseController
             Gsm = cellphone?.Trim() ?? string.Empty,
             IsActive = isActive,
             EntraObjectId = normalizedEntraObjectId,
-            Password = string.Empty
+            Password = string.Empty,
+            DashboardType = dashboardType
         };
 
         _db.Users.Add(user);
@@ -515,7 +518,7 @@ public class UserAdminController : BaseController
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
-    public async Task<IActionResult> QuickUpdate(int id, string? forename, string? name, string? email, string? jobFunction, string? cellphone, int? selectedRoleId, bool isActive)
+    public async Task<IActionResult> QuickUpdate(int id, string? forename, string? name, string? email, string? jobFunction, string? cellphone, int? selectedRoleId, bool isActive, int? dashboardType)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
@@ -541,6 +544,7 @@ public class UserAdminController : BaseController
         user.Functie = jobFunction?.Trim() ?? string.Empty;
         user.Gsm = cellphone?.Trim() ?? string.Empty;
         user.IsActive = isActive;
+        user.DashboardType = dashboardType;
 
         try
         {

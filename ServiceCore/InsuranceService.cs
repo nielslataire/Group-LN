@@ -93,7 +93,8 @@ namespace ServiceCore
                     ID = e.Id,
                     ProjectId = e.ContractActivity.Contract.ProjectId,
                     Display = $"De ABR polis van project {e.ContractActivity.Contract.Project.ProjectName} vervalt binnen één maand, gelieve deze te verlengen !",
-                    Type = "warning"
+                    Type = "warning",
+                    Category = "verzekering"
                 });
             }
 
@@ -108,7 +109,8 @@ namespace ServiceCore
                     ID = e.Id,
                     ProjectId = e.ContractActivity.Contract.ProjectId,
                     Display = $"De ABR polis van project {e.ContractActivity.Contract.Project.ProjectName} is vervallen, gelieve deze te verlengen !",
-                    Type = "danger"
+                    Type = "danger",
+                    Category = "verzekering"
                 });
             }
 
