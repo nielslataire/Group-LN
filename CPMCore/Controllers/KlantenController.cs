@@ -229,6 +229,26 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        public async Task<IActionResult> Lookup(string? term, int take = 20, CancellationToken ct = default)
+        {
+            var query = _db.ClientAccount.AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(term))
+            {
+                var like = $"%{term.Trim()}%";
+                query = query.Where(c => EF.Functions.Like(c.Name, like));
+            }
+
+            var results = await query
+                .OrderBy(c => c.Name)
+                .Take(take)
+                .Select(c => new { id = c.Id, text = c.Name ?? "" })
+                .ToListAsync(ct);
+
+            return Json(new { results });
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Details(int id, CancellationToken ct)
         {
 

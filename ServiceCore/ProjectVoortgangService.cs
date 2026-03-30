@@ -214,15 +214,28 @@ namespace ServiceCore
                 ? Math.Round(totalGecontracteerd / totalBegroot * 100m, 2)
                 : 0m;
 
-            // 7. Fase bepalen op basis van fysieke voortgang
-            VoortgangFase fase = fysiekeVoortgang switch
+            // 7. Fase bepalen: opleverdatum in verleden → Afgewerkt (hoogste prioriteit)
+            var deliveryDate = _uow.Projects.GetNoTracking()
+                .Where(p => p.ProjectId == projectId)
+                .Select(p => p.DeliveryDate)
+                .FirstOrDefault();
+
+            VoortgangFase fase;
+            if (deliveryDate.HasValue && deliveryDate.Value < DateOnly.FromDateTime(DateTime.Today))
             {
-                <= 5m  => VoortgangFase.Opstart,
-                <= 25m => VoortgangFase.InVoorbereiding,
-                <= 80m => VoortgangFase.InUitvoering,
-                <= 95m => VoortgangFase.Eindfase,
-                _      => VoortgangFase.Afgewerkt,
-            };
+                fase = VoortgangFase.Afgewerkt;
+            }
+            else
+            {
+                fase = fysiekeVoortgang switch
+                {
+                    <= 5m  => VoortgangFase.Opstart,
+                    <= 25m => VoortgangFase.InVoorbereiding,
+                    <= 80m => VoortgangFase.InUitvoering,
+                    <= 95m => VoortgangFase.Eindfase,
+                    _      => VoortgangFase.Afgewerkt,
+                };
+            }
 
             // 8. Warnings
             var warnings = new List<string>();

@@ -151,6 +151,22 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        public IActionResult QuickSearch(string q)
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+                return Json(Array.Empty<object>());
+
+            var results = _uow.Projects.GetNoTracking()
+                .Where(p => p.ProjectName.Contains(q))
+                .OrderBy(p => p.ProjectName)
+                .Take(10)
+                .Select(p => new { id = p.ProjectId, name = p.ProjectName })
+                .ToList();
+
+            return Json(results);
+        }
+
+        [HttpGet]
         [Breadcrumb("Eigen projecten", FromAction = nameof(Index))]
         public IActionResult ProjectsByUserId(string userId)
         {

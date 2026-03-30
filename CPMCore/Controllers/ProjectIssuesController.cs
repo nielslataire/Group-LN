@@ -141,6 +141,31 @@ public class ProjectsIssuesController : BaseController
         return RedirectToAction(nameof(Index), new { projectId });
     }
 
+    [HttpGet("CreateForm")]
+    public async Task<IActionResult> CreateForm(int projectId)
+    {
+        var formVm = await BuildVm(projectId);
+        return View("CreateQuick", formVm);
+    }
+
+    [HttpPost("CreateQuick")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> CreateQuick(int projectId, ConstructionIssueFormVm vm, List<IFormFile>? mediaFiles)
+    {
+        vm.Input.ResponsiblePartyType = (int)ConstructionIssueResponsiblePartyType.Contractor;
+        mediaFiles = ResolveMediaFiles(mediaFiles);
+        if (!ModelState.IsValid)
+        {
+            var formVm = await BuildVm(projectId);
+            formVm.Input = vm.Input;
+            ViewBag.ErrorMessage = "Controleer de ingevulde velden.";
+            return View("CreateQuick", formVm);
+        }
+        var created = await _service.Create(projectId, vm.Input, User.FindFirst(CpmClaims.UserId)?.Value);
+        await AddIssueMedia(projectId, created.Id, mediaFiles);
+        return View("CreateQuickSuccess");
+    }
+
     [HttpPost("Create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(int projectId, ConstructionIssueFormVm vm, List<IFormFile>? mediaFiles)

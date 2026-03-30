@@ -1,0 +1,326 @@
+@model CPMCore.Models.Issues.ConstructionIssueFormVm
+@using BOCore
+@{
+    Layout = null;
+    var visibleStatuses = new[]
+    {
+        ConstructionIssueStatus.Open,
+        ConstructionIssueStatus.InProgress,
+        ConstructionIssueStatus.WaitingInspection,
+        ConstructionIssueStatus.Resolved,
+        ConstructionIssueStatus.Rejected,
+        ConstructionIssueStatus.Reopened
+    };
+}
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Nieuw punt</title>
+    <link href="http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800|Shadows+Into+Light" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.css" />
+    <link rel="stylesheet" href="~/lib/animate/animate.compat.css" />
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
+    <link rel="stylesheet" href="~/lib/boxicons/css/boxicons.min.css" />
+    <link rel="stylesheet" href="~/css/theme.css" />
+    <link rel="stylesheet" href="~/css/modern.css" />
+    <!-- Skin CSS -->
+    <link rel="stylesheet" href="~/css/skins/default.css" />
+    <link rel="stylesheet" href="~/css/skins/test.css" />
+    <link rel="stylesheet" href="~/css/skins/test-extension.css" />
+    <!-- Theme Custom CSS -->
+    <link rel="stylesheet" href="~/css/custom.css">
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; background: #fff; font-family: 'Open Sans', sans-serif; }
+
+        .cq-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            background: #0a5a3b;
+            color: #fff;
+        }
+        .cq-bar-back {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.4rem;
+            line-height: 1;
+            padding: 0 0.25rem;
+            cursor: pointer;
+        }
+        .cq-bar-title { font-size: 1rem; font-weight: 600; flex: 1; }
+        .cq-bar-submit {
+            background: #fff;
+            color: #0a5a3b;
+            border: none;
+            border-radius: 4px;
+            padding: 0.35rem 0.9rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .cq-bar-submit:active { opacity: 0.8; }
+
+        .cq-body {
+            padding: 1rem;
+            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+
+        .issue-media-add-tile {
+            width: 80px; height: 80px;
+            border: 2px dashed #2f6f57;
+            color: #2f6f57;
+            border-radius: 4px;
+            background: #f8faf9;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .issue-media-thumb {
+            width: 80px; height: 80px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+        }
+        .issue-media-item { position: relative; display: inline-block; }
+        .issue-media-remove {
+            position: absolute; top: 2px; right: 2px;
+            width: 20px; height: 20px;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            font-size: 11px;
+            line-height: 1;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .issue-media-item:hover .issue-media-remove { display: flex; }
+
+        .cq-error {
+            background: #fdf0f0;
+            border: 1px solid #e57373;
+            border-radius: 4px;
+            color: #c62828;
+            padding: 0.6rem 0.9rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+
+        @@media (min-width: 768px) {
+            .cq-body { max-width: 600px; margin: 0 auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="cq-bar">
+        <button type="button" class="cq-bar-back" id="cqBack" aria-label="Sluiten">&#8592;</button>
+        <span class="cq-bar-title">Nieuw punt</span>
+        <button type="submit" form="cqForm" class="cq-bar-submit" id="cqSubmitTop">Opslaan</button>
+    </div>
+
+    <div class="cq-body">
+        @if (ViewBag.ErrorMessage != null)
+        {
+            <div class="cq-error"><i class="bx bx-error-circle"></i> @ViewBag.ErrorMessage</div>
+        }
+
+        <form id="cqForm" method="post"
+              action="/Projects/@Model.ProjectId/Issues/CreateQuick"
+              enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            <div class="mb-3">
+                <label class="form-label">Eenheid</label>
+                <select name="Input.UnitId" class="form-control">
+                    <option value="">Algemeen</option>
+                    @foreach (var u in Model.Units)
+                    {
+                        <option value="@u.Id">@u.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Titel *</label>
+                <input name="Input.Title" class="form-control" required value="@Model.Input?.Title" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Kamer / Zone</label>
+                <input name="Input.RoomOrZone" class="form-control" value="@Model.Input?.RoomOrZone" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Verantwoordelijke</label>
+                <select name="Input.ResponsiblePartyId" class="form-control">
+                    <option value="">Selecteer...</option>
+                    @foreach (var c in Model.ResponsibleContractors)
+                    {
+                        <option value="@c.ID">@c.Display</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Foto's &amp; Bijlagen</label>
+                <div id="cqMediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
+                    <button type="button" id="cqAddMedia" class="issue-media-add-tile">
+                        <i class="bx bx-camera fs-4"></i>
+                        <span style="font-size:11px;line-height:1.2;">Toevoegen</span>
+                    </button>
+                </div>
+                <input id="cqMediaInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
+            </div>
+
+            <div class="mb-2">
+                <a href="#" id="cqMeerOpties" class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none fw-semibold">
+                    <i class="bx bx-chevron-down" id="cqMeerOptiesIcon"></i>Meer opties
+                </a>
+            </div>
+
+            <div id="cqMoreSection" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label">Beschrijving</label>
+                    <textarea name="Input.Description" class="form-control" rows="3">@Model.Input?.Description</textarea>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label">Categorie</label>
+                        <select name="Input.CategoryId" class="form-control">
+                            @foreach (var c in Model.Categories)
+                            {
+                                <option value="@c.Id">@c.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Status</label>
+                        <select name="Input.Status" id="cqStatus" class="form-control">
+                            @foreach (var status in visibleStatuses)
+                            {
+                                <option value="@((int)status)">@status.GetDisplayName()</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6" id="cqPlannedDateGroup" style="display:none;">
+                        <label class="form-label">Uitvoeringsdatum</label>
+                        <input type="date" name="Input.PlannedDate" id="cqPlannedDate" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Deadline</label>
+                        <input type="date" name="Input.DueDate" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Fase</label>
+                        <select name="Input.IssuePhase" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssuePhase>()"></select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">Type</label>
+                        <select name="Input.IssueType" class="form-control" asp-items="Html.GetEnumSelectList<ConstructionIssueType>()"></select>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Locatie (vrij tekst)</label>
+                    <input name="Input.LocationText" class="form-control" value="@Model.Input?.LocationText" />
+                </div>
+            </div>
+
+            <div class="pt-2 pb-3">
+                <button type="submit" class="btn btn-primary w-100" id="cqSubmitBottom">Punt aanmaken</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="~/lib/jquery/jquery.js"></script>
+    <script>
+        (function () {
+            // Back button
+            document.getElementById('cqBack').addEventListener('click', function () {
+                window.parent.postMessage('gl-issue-modal-close', '*');
+            });
+
+            // Meer opties toggle
+            var moreSection = document.getElementById('cqMoreSection');
+            var moreIcon = document.getElementById('cqMeerOptiesIcon');
+            document.getElementById('cqMeerOpties').addEventListener('click', function (e) {
+                e.preventDefault();
+                var open = moreSection.style.display !== 'none';
+                moreSection.style.display = open ? 'none' : 'block';
+                moreIcon.className = open ? 'bx bx-chevron-down' : 'bx bx-chevron-up';
+            });
+
+            // Status → planned date
+            var statusSel = document.getElementById('cqStatus');
+            var plannedGroup = document.getElementById('cqPlannedDateGroup');
+            var INPROGRESS = @((int)ConstructionIssueStatus.InProgress);
+            function syncPlannedDate() {
+                plannedGroup.style.display = (parseInt(statusSel.value) === INPROGRESS) ? '' : 'none';
+            }
+            statusSel.addEventListener('change', syncPlannedDate);
+
+            // Media upload preview
+            var mediaInput = document.getElementById('cqMediaInput');
+            var mediaPreview = document.getElementById('cqMediaPreview');
+            var addBtn = document.getElementById('cqAddMedia');
+            var dt = typeof DataTransfer !== 'undefined' ? new DataTransfer() : null;
+
+            addBtn.addEventListener('click', function () { mediaInput.click(); });
+
+            mediaInput.addEventListener('change', function () {
+                var files = Array.from(this.files || []);
+                files.forEach(function (file) {
+                    if (dt) dt.items.add(file);
+                    var reader = new FileReader();
+                    reader.onload = function (ev) {
+                        var item = document.createElement('div');
+                        item.className = 'issue-media-item';
+                        var img = document.createElement('img');
+                        img.className = 'issue-media-thumb';
+                        img.src = ev.target.result;
+                        var removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'issue-media-remove';
+                        removeBtn.innerHTML = '&times;';
+                        removeBtn.addEventListener('click', function () {
+                            if (dt) {
+                                var idx = Array.from(mediaPreview.querySelectorAll('.issue-media-item')).indexOf(item);
+                                dt.items.remove(idx);
+                                mediaInput.files = dt.files;
+                            }
+                            mediaPreview.removeChild(item);
+                        });
+                        item.appendChild(img);
+                        item.appendChild(removeBtn);
+                        mediaPreview.insertBefore(item, addBtn);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                if (dt) mediaInput.files = dt.files;
+                this.value = '';
+            });
+
+            // Disable submit button while submitting
+            document.getElementById('cqForm').addEventListener('submit', function () {
+                document.getElementById('cqSubmitTop').disabled = true;
+                document.getElementById('cqSubmitBottom').disabled = true;
+                document.getElementById('cqSubmitTop').textContent = 'Bezig…';
+                document.getElementById('cqSubmitBottom').textContent = 'Bezig…';
+            });
+        })();
+    </script>
+</body>
+</html>

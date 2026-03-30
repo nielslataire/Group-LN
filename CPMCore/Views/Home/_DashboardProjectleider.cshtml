@@ -116,7 +116,7 @@
                 <div class="widget-summary widget-summary-md w-100">
                     <div class="widget-summary-col widget-summary-col-icon">
                         <div class="summary-icon bg-primary">
-                            <i class="bx bx-time"></i>
+                            <i class="bx bx-timer"></i>
                         </div>
                     </div>
                     <div class="widget-summary-col">
@@ -134,11 +134,12 @@
 </div>
 
 <!-- ── MAIN CONTENT ───────────────────────────────────────── -->
-<div class="row pt-3">
+<div class="row pt-3 gl-dashboard">
 
     <!-- LINKER KOLOM -->
     <div class="col-lg-9">
 
+        <div class="gl-meldingen-section">
         @* Meldingen *@
         @if (meldingen.Any())
         {
@@ -181,7 +182,9 @@
                 </div>
             </section>
         }
+        </div>
 
+        <div class="gl-werven-section">
         @* Mijn werven *@
         <div class="gl-sectie-kop">Mijn Werven</div>
 
@@ -203,6 +206,12 @@
                     }
 
                     Model.ProjectVoortgang.TryGetValue(project.Id, out var vg);
+
+                    // Bij opgeleverde projecten: bars altijd op 100%, ongeacht berekende waarde
+                    var invCulture    = System.Globalization.CultureInfo.InvariantCulture;
+                    var displayFysPct = isOverdue ? 100m : (vg?.FysiekeVoortgangPct  ?? 0m);
+                    var displayFinPct = isOverdue ? 100m : (vg?.FinancieleVoortgangPct ?? 0m);
+                    var showBars      = vg != null || isOverdue;
 
                     string chipClass, chipLabel;
                     if (vg != null)
@@ -270,49 +279,49 @@
                                         </p>
                                     }
                                 </div>
-                                @if (vg != null)
+                                @if (showBars)
                                 {
                                     <div>
                                         <div class="pb-2">
                                             <div class="pg-row">
                                                 <span class="pg-label">Fysiek</span>
-                                                <span class="pg-pct">@vg.FysiekeVoortgangPct.ToString("0.#")%</span>
+                                                <span class="pg-pct">@displayFysPct.ToString("0.#")%</span>
                                             </div>
                                             <div class="progress pg-bar">
-                                                <div class="progress-bar" style="width:@(vg.FysiekeVoortgangPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                                <div class="progress-bar" style="width:@(displayFysPct.ToString("0.##", invCulture))%"></div>
                                             </div>
                                         </div>
                                         <div class="pb-2">
                                             <div class="pg-row">
                                                 <span class="pg-label">Financieel</span>
-                                                <span class="pg-pct">@vg.FinancieleVoortgangPct.ToString("0.#")%</span>
+                                                <span class="pg-pct">@displayFinPct.ToString("0.#")%</span>
                                             </div>
                                             <div class="progress pg-bar">
-                                                <div class="progress-bar pg-bar-hoog" style="width:@(vg.FinancieleVoortgangPct.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></div>
+                                                <div class="progress-bar pg-bar-hoog" style="width:@(displayFinPct.ToString("0.##", invCulture))%"></div>
                                             </div>
                                         </div>
                                     </div>
                                 }
                                 <div class="gl-werf-footer">
                                     <div class="gl-resterende">
-                                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                         @if (isOverdue)
                                         {
-                                            <span class="text-danger">@Math.Abs(daysLeft!.Value)d verlopen</span>
-                                        }
-                                        else if (daysLeft.HasValue)
-                                        {
-                                            <span>@daysLeft.Value d resterend</span>
+                                            <i class="bx bx-check-circle" style="color:#28a745;font-size:1rem;margin-right:4px;"></i>
+                                            <span class="text-success">Opgeleverd op @project.DeliveryDate!.Value.ToString("dd/MM/yyyy")</span>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">Geen deadline</span>
+                                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            @if (daysLeft.HasValue)
+                                            {
+                                                <span class="@(daysLeft.Value < 14 ? "text-danger" : "")">@daysLeft.Value d resterend</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Geen opleverdatum</span>
+                                            }
                                         }
                                     </div>
-                                    @if (isOverdue)
-                                    {
-                                        <span class="label label-danger">Verlopen</span>
-                                    }
                                 </div>
                             </div>
                         </a>
@@ -321,11 +330,12 @@
             </div>
         }
 
+        </div>
     </div>
     <!-- /LINKER KOLOM -->
 
-    <!-- RECHTER KOLOM: snelacties -->
-    <div class="col-lg-3">
+    <!-- RECHTER KOLOM: snelacties (enkel desktop) -->
+    <div class="col-lg-3 d-none d-lg-block">
         <section class="card card-modern">
             <header class="card-header">
                 <div class="card-title">
@@ -481,31 +491,126 @@
 
 </div>
 
+<!-- ── MOBIELE BOTTOM NAV ───────────────────────────────────────────── -->
+<nav class="gl-mob-nav d-lg-none" aria-label="Snelle acties">
+    <button class="gl-mob-nav-btn" id="mob-nav-punt" type="button" aria-label="Punt toevoegen">
+        <i class="bx bx-alert-circle"></i>
+        <span>Punt</span>
+    </button>
+    <button class="gl-mob-nav-btn" id="mob-nav-lev" type="button" aria-label="Leverancier zoeken">
+        <i class="bx bx-hard-hat"></i>
+        <span>Leverancier</span>
+    </button>
+    <button class="gl-mob-nav-btn" id="mob-nav-klant" type="button" aria-label="Klant zoeken">
+        <i class="bx bx-group"></i>
+        <span>Klant</span>
+    </button>
+</nav>
+
+<!-- ── PUNT PROJECTKEUZE SHEET ──────────────────────────────────────── -->
+<div id="gl-punt-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Punt toevoegen – kies project">
+    <div class="gl-mob-sheet-overlay" id="gl-punt-overlay"></div>
+    <div class="gl-mob-sheet-panel">
+        <div class="gl-mob-sheet-handle"></div>
+        <div class="gl-mob-sheet-header">
+            <span>Kies een project</span>
+            <button id="gl-punt-close" aria-label="Sluiten">&times;</button>
+        </div>
+        <div class="gl-mob-sheet-search">
+            <input type="text" id="gl-punt-search" placeholder="Zoek project…" autocomplete="off" />
+        </div>
+        <div class="gl-mob-sheet-list" id="gl-punt-list">
+            <div class="gl-mob-sheet-section-label" id="gl-punt-mijn-label">Mijn projecten</div>
+            @if (!werfProjects.Any())
+            {
+                <div class="gl-mob-sheet-empty">Geen actieve projecten</div>
+            }
+            else
+            {
+                @foreach (var p in werfProjects)
+                {
+                    <button type="button" class="gl-mob-sheet-item gl-punt-mijn-item"
+                            data-pid="@p.Id"
+                            data-pname="@p.Name"
+                            data-name="@p.Name.ToLower()">
+                        <i class="bx bx-map-pin"></i>
+                        @p.Name
+                    </button>
+                }
+            }
+            <div id="gl-punt-extra-label" class="gl-mob-sheet-section-label" style="display:none">Andere projecten</div>
+            <div id="gl-punt-extra"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── PUNT FULLSCREEN MODAL (iframe) ───────────────────────────────── -->
+<div id="gl-issues-modal" class="gl-fs-modal" role="dialog" aria-modal="true">
+    <iframe id="gl-issues-frame" src="about:blank" title="Punt toevoegen"></iframe>
+</div>
+
+<!-- ── LEVERANCIER ZOEK SHEET ───────────────────────────────────────── -->
+<div id="gl-lev-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Leverancier zoeken">
+    <div class="gl-mob-sheet-overlay" id="gl-lev-overlay"></div>
+    <div class="gl-mob-sheet-panel">
+        <div class="gl-mob-sheet-handle"></div>
+        <div class="gl-mob-sheet-header">
+            <span>Leverancier zoeken</span>
+            <button id="gl-lev-close" aria-label="Sluiten">&times;</button>
+        </div>
+        <div class="gl-mob-sheet-search">
+            <input type="text" id="gl-lev-search" placeholder="Naam leverancier…" autocomplete="off" />
+            <button class="gl-mob-search-btn" id="gl-lev-btn">
+                <i class="bx bx-search"></i> Zoeken
+            </button>
+        </div>
+        <div class="gl-mob-sheet-list" id="gl-lev-list">
+            <div class="gl-mob-sheet-empty" id="gl-lev-empty">Typ een naam en druk op Zoeken</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── KLANT ZOEK SHEET ─────────────────────────────────────────────── -->
+<div id="gl-klant-sheet" class="gl-mob-sheet" role="dialog" aria-modal="true" aria-label="Klant zoeken">
+    <div class="gl-mob-sheet-overlay" id="gl-klant-overlay"></div>
+    <div class="gl-mob-sheet-panel">
+        <div class="gl-mob-sheet-handle"></div>
+        <div class="gl-mob-sheet-header">
+            <span>Klant zoeken</span>
+            <button id="gl-klant-close" aria-label="Sluiten">&times;</button>
+        </div>
+        <div class="gl-mob-sheet-search">
+            <input type="text" id="gl-klant-search" placeholder="Naam klant…" autocomplete="off" />
+            <button class="gl-mob-search-btn" id="gl-klant-btn">
+                <i class="bx bx-search"></i> Zoeken
+            </button>
+        </div>
+        <div class="gl-mob-sheet-list" id="gl-klant-list">
+            <div class="gl-mob-sheet-empty" id="gl-klant-empty">Typ een naam en druk op Zoeken</div>
+        </div>
+    </div>
+</div>
+
 <script>
 window.addEventListener('load', function () {
-    // Snelacties accordion
+
+    // ── Snelacties accordion ───────────────────────────────────────────
     $(document).on('click', '.js-sa-toggle', function (e) {
         e.preventDefault();
         var $btn     = $(this);
         var targetId = $btn.data('target');
         var $submenu = $('#' + targetId);
         var isOpen   = $submenu.is(':visible');
-
         $('.gl-sa-submenu').slideUp(150);
         $('.js-sa-toggle').removeClass('active');
-
-        if (!isOpen) {
-            $submenu.slideDown(150);
-            $btn.addClass('active');
-        }
+        if (!isOpen) { $submenu.slideDown(150); $btn.addClass('active'); }
     });
 
-    // Meldingen filter
+    // ── Meldingen filter ───────────────────────────────────────────────
     $(document).on('click', '#gl-melding-filter button', function () {
         var filter = $(this).data('filter');
         $('#gl-melding-filter button').removeClass('active btn-primary').addClass('btn-default');
         $(this).removeClass('btn-default').addClass('btn-primary active');
-
         if (filter === 'all') {
             $('#gl-meldingen-list .gl-melding').show();
         } else {
@@ -513,5 +618,159 @@ window.addEventListener('load', function () {
             $('#gl-meldingen-list .gl-melding[data-category="' + filter + '"]').show();
         }
     });
+
+    // ── Generieke sheet helpers ────────────────────────────────────────
+    function openSheet(id) { $('#' + id).addClass('open'); }
+    function closeSheet(id) { $('#' + id).removeClass('open'); }
+
+    $(document).on('keydown', function (e) {
+        if (e.key === 'Escape') { $('.gl-mob-sheet.open').each(function() { closeSheet($(this).attr('id')); }); }
+    });
+
+    // ── Punt: projectkeuze sheet ───────────────────────────────────────
+    var $pSearch   = $('#gl-punt-search');
+    var $pMijn     = $('.gl-punt-mijn-item');
+    var $pMijnLbl  = $('#gl-punt-mijn-label');
+    var $pExtraLbl = $('#gl-punt-extra-label');
+    var $pExtra    = $('#gl-punt-extra');
+    var pTimer     = null;
+
+    function openPuntSheet() {
+        openSheet('gl-punt-sheet');
+        $pSearch.val('').trigger('input');
+        setTimeout(function () { $pSearch.focus(); }, 250);
+    }
+    function closePuntSheet() {
+        closeSheet('gl-punt-sheet');
+        $pSearch.val(''); $pExtra.empty(); $pExtraLbl.hide();
+        $pMijn.show(); $pMijnLbl.show();
+    }
+
+    $('#mob-nav-punt').on('click', openPuntSheet);
+    $('#gl-punt-overlay, #gl-punt-close').on('click', closePuntSheet);
+
+    $pSearch.on('input', function () {
+        var q = $(this).val().trim().toLowerCase();
+        clearTimeout(pTimer);
+        $pExtra.empty(); $pExtraLbl.hide();
+        if (q === '') { $pMijn.show(); $pMijnLbl.show(); return; }
+        var anyVis = false;
+        $pMijn.each(function () {
+            var m = $(this).data('name').indexOf(q) !== -1;
+            $(this).toggle(m); if (m) anyVis = true;
+        });
+        $pMijnLbl.toggle(anyVis);
+        if (q.length < 2) return;
+        pTimer = setTimeout(function () {
+            $.getJSON('@Url.Action("QuickSearch", "Projecten")', { q: q }, function (data) {
+                $pExtra.empty();
+                if (!data || !data.length) return;
+                var ids = [@string.Join(",", werfProjects.Select(p => p.Id))];
+                data = data.filter(function (p) { return ids.indexOf(p.id) === -1; });
+                if (!data.length) return;
+                $pExtraLbl.show();
+                $.each(data, function (_, p) {
+                    $pExtra.append(
+                        $('<button type="button">').addClass('gl-mob-sheet-item')
+                            .attr('data-pid', p.id)
+                            .attr('data-pname', p.name)
+                            .html('<i class="bx bx-map-pin"></i> ' + $('<span>').text(p.name).html())
+                    );
+                });
+            });
+        }, 300);
+    });
+
+    // Klik op project → sluit sheet, open fullscreen Issues modal
+    $(document).on('click', '.gl-punt-mijn-item, #gl-punt-extra button', function () {
+        var pid   = $(this).data('pid');
+        var pname = $(this).data('pname');
+        closePuntSheet();
+        openIssuesModal(pid, pname);
+    });
+
+    // ── Issues fullscreen modal ────────────────────────────────────────
+    var $issModal  = $('#gl-issues-modal');
+    var $issFrame  = $('#gl-issues-frame');
+
+    function openIssuesModal(projectId, projectName) {
+        $issFrame.attr('src', '/Projects/' + projectId + '/Issues/CreateForm');
+        $issModal.addClass('open');
+        $('html').addClass('gl-modal-open');
+    }
+
+    function closeIssuesModal() {
+        $issModal.removeClass('open');
+        $('html').removeClass('gl-modal-open');
+        setTimeout(function () { $issFrame.attr('src', 'about:blank'); }, 300);
+    }
+
+    window.addEventListener('message', function (e) {
+        if (e.data === 'gl-issue-modal-close') closeIssuesModal();
+        if (e.data === 'gl-issue-saved') closeIssuesModal();
+    });
+
+    // ── Leverancier zoek sheet ─────────────────────────────────────────
+    $('#mob-nav-lev').on('click', function () {
+        openSheet('gl-lev-sheet');
+        setTimeout(function () { $('#gl-lev-search').focus(); }, 250);
+    });
+    $('#gl-lev-overlay, #gl-lev-close').on('click', function () { closeSheet('gl-lev-sheet'); });
+
+    function doLevSearch() {
+        var q = $('#gl-lev-search').val().trim();
+        var $list = $('#gl-lev-list');
+        if (q.length < 1) return;
+        $list.html('<div class="gl-mob-sheet-empty">Zoeken…</div>');
+        $.getJSON('@Url.Action("Lookup", "Leveranciers")', { term: q, take: 15 }, function (data) {
+            $list.empty();
+            var items = data.results || data;
+            if (!items || !items.length) {
+                $list.html('<div class="gl-mob-sheet-empty">Geen leveranciers gevonden</div>'); return;
+            }
+            $.each(items, function (_, r) {
+                $list.append(
+                    $('<a>').addClass('gl-mob-sheet-item')
+                        .attr('href', '/Leveranciers/Details/' + r.id)
+                        .html('<i class="bx bx-hard-hat"></i> ' + $('<span>').text(r.text).html())
+                );
+            });
+        });
+    }
+
+    $('#gl-lev-btn').on('click', doLevSearch);
+    $('#gl-lev-search').on('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doLevSearch(); } });
+
+    // ── Klant zoek sheet ───────────────────────────────────────────────
+    $('#mob-nav-klant').on('click', function () {
+        openSheet('gl-klant-sheet');
+        setTimeout(function () { $('#gl-klant-search').focus(); }, 250);
+    });
+    $('#gl-klant-overlay, #gl-klant-close').on('click', function () { closeSheet('gl-klant-sheet'); });
+
+    function doKlantSearch() {
+        var q = $('#gl-klant-search').val().trim();
+        var $list = $('#gl-klant-list');
+        if (q.length < 1) return;
+        $list.html('<div class="gl-mob-sheet-empty">Zoeken…</div>');
+        $.getJSON('@Url.Action("Lookup", "Klanten")', { term: q, take: 15 }, function (data) {
+            $list.empty();
+            var items = data.results || data;
+            if (!items || !items.length) {
+                $list.html('<div class="gl-mob-sheet-empty">Geen klanten gevonden</div>'); return;
+            }
+            $.each(items, function (_, r) {
+                $list.append(
+                    $('<a>').addClass('gl-mob-sheet-item')
+                        .attr('href', '/Klanten/Details/' + r.id)
+                        .html('<i class="bx bx-user"></i> ' + $('<span>').text(r.text).html())
+                );
+            });
+        });
+    }
+
+    $('#gl-klant-btn').on('click', doKlantSearch);
+    $('#gl-klant-search').on('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); doKlantSearch(); } });
+
 });
 </script>

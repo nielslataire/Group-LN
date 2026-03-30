@@ -1,0 +1,26 @@
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Punt aangemaakt</title>
+    <style>
+        body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: sans-serif; background: #fff; }
+        .cq-success { text-align: center; color: #0a5a3b; }
+        .cq-success i { font-size: 3rem; }
+        .cq-success p { margin-top: 0.5rem; font-size: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="cq-success">
+        <div style="font-size:3rem;">✓</div>
+        <p>Punt aangemaakt</p>
+    </div>
+    <script>
+        window.parent.postMessage('gl-issue-saved', '*');
+    </script>
+</body>
+</html>

@@ -27,6 +27,14 @@
 .pg-bar-midden { background: #6b8f80 !important; }
 .pg-bar-hoog   { background: #0a5a3b !important; }
 
+/* ── Summary-icon centrering (Boxicons werken niet met line-height trick) ── */
+.widget-summary .summary-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+
 .pg-row {
     display: flex;
     align-items: center;
@@ -37,6 +45,213 @@
 }
 .pg-row .pg-label { flex: 1; }
 .pg-row .pg-pct   { font-weight: 700; white-space: nowrap; margin-left: 6px; }
+
+/* ── Dashboard mobiel: KPI strip verbergen ───────────────────────────── */
+@media (max-width: 767.98px) {
+    .gl-kpi-strip { display: none !important; }
+}
+
+/* ── Dashboard mobiel: meldingen ná werven via flex ordering ─────────── */
+/* Scoped to .gl-dashboard om layout-problemen op andere pagina's te vermijden */
+@media (max-width: 991.98px) {
+    .gl-dashboard .col-lg-9 { display: flex !important; flex-direction: column; }
+    .gl-dashboard .gl-werven-section    { order: 0; }
+    .gl-dashboard .gl-meldingen-section { order: 1; }
+}
+
+/* ── gl-mob-sheet-item als <button> (reset naar zelfde look als <a>) ─── */
+button.gl-mob-sheet-item {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    padding: 11px 8px;
+}
+
+/* ── Mobiele bottom nav ──────────────────────────────────────────────── */
+.gl-mob-nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 1050;
+    background: #0a5a3b;
+    display: flex;
+    height: 60px;
+    border-top: 2px solid rgba(255,255,255,.12);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.gl-mob-nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,.65);
+    background: none;
+    border: none;
+    gap: 2px;
+    font-size: .65rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color .15s, background .15s;
+    padding: 6px 4px;
+    -webkit-tap-highlight-color: transparent;
+}
+.gl-mob-nav-btn i { font-size: 1.45rem; line-height: 1; }
+.gl-mob-nav-btn:hover,
+.gl-mob-nav-btn:focus,
+.gl-mob-nav-btn.active {
+    color: #fff;
+    background: rgba(255,255,255,.08);
+    outline: none;
+}
+
+/* ── Body padding op mobiel (inhoud achter bottom nav) ───────────────── */
+@media (max-width: 991.98px) {
+    body { padding-bottom: calc(60px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* ── Punt bottom sheet ───────────────────────────────────────────────── */
+.gl-mob-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 1060;
+    display: none;
+    align-items: flex-end;
+}
+.gl-mob-sheet.open { display: flex; }
+.gl-mob-sheet-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+}
+.gl-mob-sheet-panel {
+    position: relative;
+    width: 100%;
+    background: #fff;
+    border-radius: 18px 18px 0 0;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: sheet-up .22s ease-out;
+}
+@keyframes sheet-up {
+    from { transform: translateY(60px); opacity: .4; }
+    to   { transform: translateY(0);    opacity: 1;  }
+}
+.gl-mob-sheet-handle {
+    width: 38px; height: 4px;
+    background: #dee2e6;
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+}
+.gl-mob-sheet-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 10px;
+    font-weight: 600;
+    font-size: .97rem;
+    color: #1a1a1a;
+    flex-shrink: 0;
+}
+.gl-mob-sheet-header button {
+    background: none; border: none;
+    font-size: 1.5rem; line-height: 1;
+    color: #999; cursor: pointer; padding: 0 2px;
+}
+.gl-mob-sheet-search {
+    padding: 0 14px 10px;
+    flex-shrink: 0;
+}
+.gl-mob-sheet-search input {
+    width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: .9rem;
+    outline: none;
+    background: #f8f9fa;
+}
+.gl-mob-sheet-search input:focus {
+    border-color: #0a5a3b;
+    background: #fff;
+}
+.gl-mob-sheet-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 0 10px 14px;
+}
+.gl-mob-sheet-section-label {
+    font-size: .72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #aaa;
+    padding: 8px 6px 4px;
+}
+.gl-mob-sheet-item {
+    display: flex;
+    align-items: center;
+    padding: 11px 8px;
+    border-radius: 9px;
+    text-decoration: none;
+    color: #212529;
+    font-size: .88rem;
+    gap: 10px;
+    border-bottom: 1px solid #f3f3f3;
+    transition: background .1s;
+}
+.gl-mob-sheet-item:last-child { border-bottom: none; }
+.gl-mob-sheet-item:hover,
+.gl-mob-sheet-item:focus { background: #f0f7f3; color: #212529; outline: none; }
+.gl-mob-sheet-item i { color: #0a5a3b; font-size: 1.05rem; flex-shrink: 0; }
+.gl-mob-sheet-empty {
+    text-align: center; color: #bbb;
+    font-size: .85rem; padding: 24px 10px;
+}
+
+/* ── Fullscreen modal (iframe wrapper voor Issues) ───────────────────── */
+.gl-fs-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #fff;
+    display: none;
+    flex-direction: column;
+}
+.gl-fs-modal.open { display: flex; }
+
+/* Verberg outer header + sidebar wanneer de modal open is */
+html.gl-modal-open .header,
+html.gl-modal-open .sidebar-left { display: none !important; }
+
+.gl-fs-modal iframe {
+    flex: 1; border: none; width: 100%; height: 100%;
+}
+
+/* ── Zoekblad (leverancier / klant) ─────────────────────────────────── */
+.gl-mob-search-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 14px;
+    background: #0a5a3b;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+}
+.gl-mob-search-btn:active { background: #084d32; }
 
 /*.card {
     height: 100%;
