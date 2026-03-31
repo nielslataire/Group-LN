@@ -256,6 +256,16 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
 {
     options.Prompt = "select_account"; // Voorkom stille SSO-herauthenticatie
     options.TokenValidationParameters.RoleClaimType = System.Security.Claims.ClaimTypes.Role;
+    options.Events.OnRemoteFailure = context =>
+    {
+        var logger = context.HttpContext.RequestServices
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("Authentication");
+        logger.LogWarning(context.Failure, "Entra authenticatie mislukt: {Message}", context.Failure?.Message);
+        context.Response.Redirect("/Account/AccessDenied");
+        context.HandleResponse();
+        return Task.CompletedTask;
+    };
     options.Events.OnTokenValidated = async context =>
     {
         var oid = context.Principal?.FindFirst("oid")?.Value

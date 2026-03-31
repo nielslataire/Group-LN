@@ -51,6 +51,7 @@ public class CpmUserAccessService : ICpmUserAccessService
         }
 
         var normalizedEmails = emails
+            .SelectMany(e => new[] { e, ExtractEmailFromExtAddress(e) })
             .Select(NormalizeEmail)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct()
@@ -282,6 +283,23 @@ public class CpmUserAccessService : ICpmUserAccessService
 
     private static string? NormalizeEmail(string? email)
         => string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+    /// <summary>
+    /// Zet een Entra B2B #EXT# UPN om naar het echte e-mailadres.
+    /// Formaat: {localpart}_{domein}#EXT#@tenant.onmicrosoft.com
+    ///       → {localpart}@{domein}
+    /// </summary>
+    private static string? ExtractEmailFromExtAddress(string? upn)
+    {
+        if (string.IsNullOrWhiteSpace(upn)) return null;
+        const string ext = "#EXT#";
+        var extIdx = upn.IndexOf(ext, StringComparison.OrdinalIgnoreCase);
+        if (extIdx < 0) return null;
+        var local = upn[..extIdx];
+        var lastUnderscore = local.LastIndexOf('_');
+        if (lastUnderscore < 0) return null;
+        return local[..lastUnderscore] + "@" + local[(lastUnderscore + 1)..];
+    }
 
     private static string ComputeHash(byte[] data)
     {
