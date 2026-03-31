@@ -1,0 +1,111 @@
+@model CPMCore.Models.ContractorPortal.ContractorWervenVm
+@{
+    ViewData["Title"] = "Werven";
+    var total   = Model.Projects.Count;
+    var actief  = Model.Projects.Count(p => p.IsActive);
+}
+
+<div class="cp-page-header">
+    <h1 class="cp-page-title">Mijn Werven</h1>
+    <p class="cp-page-sub">@total werf@(total == 1 ? "" : "en") toegewezen</p>
+</div>
+
+<!-- ── Filter bar ────────────────────────────────────────── -->
+<form method="get" action="/Portaal/Werven" class="cp-filter-bar">
+    <div class="cp-search-wrap">
+        <i class="bx bx-search"></i>
+        <input type="text" name="search" value="@Model.Search"
+               class="cp-search-input" placeholder="Zoek werf..."
+               autocomplete="off" />
+    </div>
+    <div class="cp-filter-btns">
+        <a href="/Portaal/Werven?filter=alle@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
+           class="cp-filter-btn @(Model.Filter == "alle" ? "active" : "")">Alle</a>
+        <a href="/Portaal/Werven?filter=actief@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
+           class="cp-filter-btn @(Model.Filter == "actief" ? "active" : "")">Actief</a>
+        <a href="/Portaal/Werven?filter=afgerond@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
+           class="cp-filter-btn @(Model.Filter == "afgerond" ? "active" : "")">Afgerond</a>
+    </div>
+</form>
+
+<!-- ── Grid ──────────────────────────────────────────────── -->
+@if (!Model.Projects.Any())
+{
+    <div class="cp-card" style="padding:2rem;text-align:center;">
+        <i class="bx bx-buildings" style="font-size:2.5rem;color:#d0e8dc;"></i>
+        <p style="color:#6c757d;margin-top:.5rem;">Geen werven gevonden.</p>
+    </div>
+}
+else
+{
+    <div class="cp-werven-grid">
+        @foreach (var p in Model.Projects)
+        {
+            <a href="/Portaal/Werven/@p.ProjectId" class="cp-werf-card">
+                <div class="cp-werf-card-header">
+                    <div>
+                        <div class="cp-werf-card-name">@p.Name</div>
+                    </div>
+                    @if (p.OpenCount > 0)
+                    {
+                        <div class="cp-werf-open-badge">@p.OpenCount open</div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(p.Address))
+                {
+                    <div class="cp-werf-card-addr">
+                        <i class="bx bx-map-pin"></i>@p.Address
+                    </div>
+                }
+
+                <div class="cp-werf-progress-row">
+                    <span>Voortgang</span>
+                    <span>@p.ProgressPct%</span>
+                </div>
+                <div class="cp-werf-progress-bar">
+                    <div class="cp-werf-progress-fill" style="width:@p.ProgressPct%"></div>
+                </div>
+
+                <div class="cp-werf-stats">
+                    <div class="cp-werf-stat">
+                        <div class="cp-werf-stat-val">@p.TotalCount</div>
+                        <div class="cp-werf-stat-lbl">Totaal</div>
+                    </div>
+                    <div class="cp-werf-stat">
+                        <div class="cp-werf-stat-val">@p.ResolvedCount</div>
+                        <div class="cp-werf-stat-lbl">Opgelost</div>
+                    </div>
+                    <div class="cp-werf-stat">
+                        <div class="cp-werf-stat-val">@p.UnitCount</div>
+                        <div class="cp-werf-stat-lbl">Eenheden</div>
+                    </div>
+                </div>
+
+                @if (p.OverdueCount > 0)
+                {
+                    <div class="cp-werf-overdue">
+                        <i class="bx bx-error-circle"></i>
+                        @p.OverdueCount verlopen punt@(p.OverdueCount == 1 ? "" : "en")
+                    </div>
+                }
+
+                <span class="cp-werf-link">Bekijk werf &rarr;</span>
+            </a>
+        }
+    </div>
+}
+
+@section scripts {
+<script>
+    // Live search filter
+    var searchInput = document.querySelector('.cp-search-input');
+    if (searchInput) {
+        var debounce;
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounce);
+            debounce = setTimeout(function () { searchInput.form.submit(); }, 400);
+        });
+    }
+</script>
+}

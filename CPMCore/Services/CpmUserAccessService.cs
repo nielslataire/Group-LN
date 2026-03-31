@@ -14,7 +14,8 @@ public record CpmUserAccessResult(
     IReadOnlyList<string> Permissions,
     string? Email,
     string? EntraObjectId,
-    string DisplayName);
+    string DisplayName,
+    string UserType = "internal");  // "internal" | "contractor" | "customer"
 
 public interface ICpmUserAccessService
 {
@@ -102,6 +103,19 @@ public class CpmUserAccessService : ICpmUserAccessService
         // Gastuitnodiging bijwerken bij login
         await UpdateGuestInvitationOnLoginAsync(user.Id, entraObjectId, tenantId, ct);
 
+        // Bepaal user-type via gastuitnodiging
+        var guestType = await _db.UserGuestInvitation
+            .AsNoTracking()
+            .Where(i => i.UserId == user.Id)
+            .Select(i => i.UserType)
+            .FirstOrDefaultAsync(ct);
+        var userType = guestType?.ToLowerInvariant() switch
+        {
+            "contractor" => "contractor",
+            "customer"   => "customer",
+            _            => "internal"
+        };
+
         var permissions = await GetPermissionsAsync(user.Id, ct);
         var displayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
             .Where(v => !string.IsNullOrWhiteSpace(v)));
@@ -111,7 +125,8 @@ public class CpmUserAccessService : ICpmUserAccessService
             permissions,
             normalizedEmails.FirstOrDefault(),
             entraObjectId,
-            string.IsNullOrWhiteSpace(displayName) ? user.UserId : displayName);
+            string.IsNullOrWhiteSpace(displayName) ? user.UserId : displayName,
+            userType);
     }
 
     /// <summary>
@@ -212,6 +227,7 @@ public class CpmUserAccessService : ICpmUserAccessService
 
         identity.AddClaim(new Claim(CpmClaims.EntraObjectId, accessResult.EntraObjectId ?? string.Empty));
         identity.AddClaim(new Claim(ClaimTypes.Name, accessResult.DisplayName));
+        identity.AddClaim(new Claim(CpmClaims.UserType, accessResult.UserType));
 
         foreach (var permission in accessResult.Permissions)
         {

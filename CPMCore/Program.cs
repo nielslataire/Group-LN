@@ -362,7 +362,7 @@ app.Use(async (ctx, next) =>
     var path = ctx.Request.Path.Value ?? "";
     if (path.Equals("/aannemer", StringComparison.OrdinalIgnoreCase))
     {
-        ctx.Response.Redirect("/Account/Login?type=contractor");
+        ctx.Response.Redirect("/Account/Login?type=contractor&returnUrl=/Portaal");
         return;
     }
     if (path.Equals("/klantenportaal", StringComparison.OrdinalIgnoreCase))

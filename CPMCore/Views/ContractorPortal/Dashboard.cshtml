@@ -1,0 +1,153 @@
+@model CPMCore.Models.ContractorPortal.ContractorDashboardVm
+@using BOCore
+@{
+    ViewData["Title"] = "Dashboard";
+    var voornaam = Model.CompanyName.Split(' ').FirstOrDefault() ?? Model.CompanyName;
+}
+
+<!-- ── Hero banner ────────────────────────────────────────── -->
+<div class="cp-hero">
+    <div>
+        <div class="cp-hero-label">Aannemersportaal</div>
+        <h1 class="cp-hero-title">Welkom, @Model.CompanyName</h1>
+        <p class="cp-hero-sub">
+            U heeft <strong>@Model.TotalOpen openstaande</strong> punt@(Model.TotalOpen == 1 ? "" : "en")
+            @if (Model.TotalOverdue > 0)
+            {
+                <span> waarvan <strong>@Model.TotalOverdue verlopen</strong></span>
+            }
+        </p>
+    </div>
+    <div class="cp-hero-progress">
+        <div class="cp-hero-progress-label">Voortgang</div>
+        <div class="cp-hero-progress-pct">@Model.OverallProgressPct%</div>
+        <div class="cp-hero-progress-bar">
+            <div class="cp-hero-progress-fill" style="width:@Model.OverallProgressPct%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ── KPI strip ─────────────────────────────────────────── -->
+<div class="cp-kpi-grid">
+    <div class="cp-kpi cp-kpi--red">
+        <div class="cp-kpi-icon"><i class="bx bx-error-circle"></i></div>
+        <div>
+            <div class="cp-kpi-val">@Model.TotalOpen</div>
+            <div class="cp-kpi-label">Openstaand</div>
+        </div>
+    </div>
+    <div class="cp-kpi cp-kpi--gray">
+        <div class="cp-kpi-icon"><i class="bx bx-show"></i></div>
+        <div>
+            <div class="cp-kpi-val">@Model.TotalWaitingInspection</div>
+            <div class="cp-kpi-label">Wacht op controle</div>
+        </div>
+    </div>
+    <div class="cp-kpi cp-kpi--orange">
+        <div class="cp-kpi-icon"><i class="bx bx-time"></i></div>
+        <div>
+            <div class="cp-kpi-val">@Model.TotalOverdue</div>
+            <div class="cp-kpi-label">Verlopen</div>
+        </div>
+    </div>
+    <div class="cp-kpi cp-kpi--blue">
+        <div class="cp-kpi-icon"><i class="bx bx-calendar"></i></div>
+        <div>
+            <div class="cp-kpi-val">@Model.TotalThisWeek</div>
+            <div class="cp-kpi-label">Deze week</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Overdue alert ──────────────────────────────────────── -->
+@if (Model.TotalOverdue > 0)
+{
+    <div class="cp-alert">
+        <i class="bx bx-calendar-exclamation"></i>
+        <span>@Model.TotalOverdue verlopen punt@(Model.TotalOverdue == 1 ? "" : "en") &mdash; deadline is verstreken</span>
+    </div>
+}
+
+<!-- ── Two-column grid ───────────────────────────────────── -->
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h2 class="cp-card-title"><i class="bx bx-buildings"></i> Actieve werven</h2>
+                <a href="/Portaal/Werven" class="cp-card-link">Bekijk alle <i class="bx bx-chevron-right"></i></a>
+            </div>
+            <div class="cp-card-body">
+                @if (!Model.ActiveProjects.Any())
+                {
+                    <p class="text-muted px-3 py-2" style="font-size:.85rem;">Geen actieve werven gevonden.</p>
+                }
+                else
+                {
+                    @foreach (var p in Model.ActiveProjects)
+                    {
+                        <a href="/Portaal/Werven/@p.ProjectId" class="cp-proj-row">
+                            <div class="cp-proj-icon"><i class="bx bx-building-house"></i></div>
+                            <div class="cp-proj-info">
+                                <div class="cp-proj-name">@p.Name</div>
+                                @if (!string.IsNullOrWhiteSpace(p.Address))
+                                {
+                                    <div class="cp-proj-addr"><i class="bx bx-map-pin" style="font-size:.8rem;"></i>@p.Address</div>
+                                }
+                                <div class="cp-proj-progress">
+                                    <div class="cp-proj-progress-fill" style="width:@p.ProgressPct%"></div>
+                                </div>
+                            </div>
+                            @if (p.OpenCount > 0)
+                            {
+                                <div class="cp-proj-badge">
+                                    @p.OpenCount
+                                    <span>open</span>
+                                </div>
+                            }
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="cp-card">
+            <div class="cp-card-header">
+                <h2 class="cp-card-title"><i class="bx bx-trending-up"></i> Laatste communicatie</h2>
+            </div>
+            <div class="cp-card-body">
+                @if (!Model.RecentIssues.Any())
+                {
+                    <p class="text-muted px-3 py-2" style="font-size:.85rem;">Geen recente punten.</p>
+                }
+                else
+                {
+                    @foreach (var issue in Model.RecentIssues)
+                    {
+                        var dotClass = issue.Status switch
+                        {
+                            (int)ConstructionIssueStatus.InProgress        => "cp-comm-dot--prog",
+                            (int)ConstructionIssueStatus.WaitingInspection => "cp-comm-dot--check",
+                            (int)ConstructionIssueStatus.Resolved          => "cp-comm-dot--done",
+                            (int)ConstructionIssueStatus.Rejected          => "cp-comm-dot--done",
+                            _                                               => "cp-comm-dot--open"
+                        };
+                        var sub = issue.UnitName != null
+                            ? $"{issue.ProjectName} · {issue.UnitName}"
+                            : issue.ProjectName;
+                        var dateLabel = issue.CreatedDate.ToString("d MMM", new System.Globalization.CultureInfo("nl-BE"));
+                        <a href="/Portaal/Werven/@issue.ProjectId" class="cp-comm-row">
+                            <div class="cp-comm-dot @dotClass"></div>
+                            <div class="flex-1 min-width-0">
+                                <div class="cp-comm-title">@issue.Title</div>
+                                <div class="cp-comm-sub">@sub</div>
+                            </div>
+                            <div class="cp-comm-date">@dateLabel</div>
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>

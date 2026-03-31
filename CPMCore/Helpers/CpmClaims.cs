@@ -10,6 +10,7 @@ public static class CpmClaims
     public const string Email = "cpm:email";
     public const string EntraObjectId = "cpm:entra-oid";
     public const string Permission = "cpm:permission";
+    public const string UserType = "cpm:user-type"; // "internal" | "contractor" | "customer"
 }
 
 public static class ClaimsPrincipalExtensions
@@ -31,4 +32,10 @@ public static class ClaimsPrincipalExtensions
 
     public static string? GetCpmEntraObjectId(this ClaimsPrincipal principal)
         => principal.FindFirstValue(CpmClaims.EntraObjectId);
+
+    public static string GetCpmUserType(this ClaimsPrincipal principal)
+        => principal.FindFirstValue(CpmClaims.UserType) ?? "internal";
+
+    public static bool IsContractor(this ClaimsPrincipal principal)
+        => principal.GetCpmUserType() == "contractor";
 }

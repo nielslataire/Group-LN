@@ -1,0 +1,288 @@
+@model CPMCore.Models.ContractorPortal.ContractorWerfDetailVm
+@using BOCore
+@{
+    ViewData["Title"] = Model.Name;
+    var storageBase = Model.StorageBaseUrl?.TrimEnd('/');
+}
+
+<!-- ── Back + header ──────────────────────────────────────── -->
+<a href="/Portaal/Werven" class="cp-detail-back">
+    <i class="bx bx-arrow-back"></i> Mijn Werven
+</a>
+<h1 class="cp-detail-title">@Model.Name</h1>
+@if (!string.IsNullOrWhiteSpace(Model.Address))
+{
+    <div class="cp-detail-addr"><i class="bx bx-map-pin"></i>@Model.Address</div>
+}
+
+<!-- ── Status KPIs ────────────────────────────────────────── -->
+<div class="cp-status-grid">
+    <div class="cp-status-box cp-status-box--red">
+        <div class="cp-status-val">@Model.OpenCount</div>
+        <div class="cp-status-lbl">Open</div>
+    </div>
+    <div class="cp-status-box cp-status-box--orange">
+        <div class="cp-status-val">@Model.InProgressCount</div>
+        <div class="cp-status-lbl">Bezig</div>
+    </div>
+    <div class="cp-status-box cp-status-box--blue">
+        <div class="cp-status-val">@Model.WaitingInspectionCount</div>
+        <div class="cp-status-lbl">Controle</div>
+    </div>
+    <div class="cp-status-box cp-status-box--green">
+        <div class="cp-status-val">@Model.ResolvedCount</div>
+        <div class="cp-status-lbl">Klaar</div>
+    </div>
+</div>
+
+<!-- ── Progress bar ───────────────────────────────────────── -->
+<div class="cp-prog-row">
+    <div class="cp-prog-bar">
+        <div class="cp-prog-fill" style="width:@Model.ProgressPct%"></div>
+    </div>
+    <div class="cp-prog-pct">@Model.ProgressPct%</div>
+</div>
+
+<!-- ── Tabs ──────────────────────────────────────────────── -->
+@{
+    var totalIssues = Model.IssueGroups.Sum(g => g.Issues.Count);
+}
+<div class="cp-tabs">
+    <a href="#punten" class="cp-tab active" data-tab="punten">
+        <i class="bx bx-list-check"></i> Punten
+        @if (totalIssues > 0)
+        {
+            <span class="cp-tab-badge">@totalIssues</span>
+        }
+    </a>
+    <span class="cp-tab" style="cursor:default;">
+        <i class="bx bx-map"></i> Plannen <span class="cp-tab-soon">binnenkort</span>
+    </span>
+    <span class="cp-tab" style="cursor:default;">
+        <i class="bx bx-file"></i> Docs <span class="cp-tab-soon">binnenkort</span>
+    </span>
+    <span class="cp-tab" style="cursor:default;">
+        <i class="bx bx-calendar-check"></i> Planning <span class="cp-tab-soon">binnenkort</span>
+    </span>
+    <span class="cp-tab" style="cursor:default;">
+        <i class="bx bx-chat"></i> Berichten <span class="cp-tab-soon">binnenkort</span>
+    </span>
+</div>
+
+<!-- ── Issue list ────────────────────────────────────────── -->
+<div id="tabPunten">
+    @if (!Model.IssueGroups.Any())
+    {
+        <div class="cp-card" style="padding:2rem;text-align:center;">
+            <i class="bx bx-check-circle" style="font-size:2.5rem;color:#3ecf8e;"></i>
+            <p style="color:#6c757d;margin-top:.5rem;">Geen punten toegewezen aan u voor dit project.</p>
+        </div>
+    }
+    else
+    {
+        @foreach (var group in Model.IssueGroups)
+        {
+            <div class="cp-issue-group">
+                <div class="cp-issue-group-header" onclick="toggleGroup(this)">
+                    <i class="bx bx-home-alt-2"></i>
+                    @group.GroupName
+                    <span class="cp-issue-count-badge">@group.Issues.Count</span>
+                    <i class="bx bx-chevron-up cp-issue-group-chevron open"></i>
+                </div>
+                <div class="cp-issue-group-body">
+                    @foreach (var issue in group.Issues)
+                    {
+                        var statusClass = issue.Status switch
+                        {
+                            (int)ConstructionIssueStatus.InProgress        => "cp-badge--prog",
+                            (int)ConstructionIssueStatus.WaitingInspection => "cp-badge--check",
+                            (int)ConstructionIssueStatus.Resolved          => "cp-badge--done",
+                            (int)ConstructionIssueStatus.Rejected          => "cp-badge--reject",
+                            (int)ConstructionIssueStatus.Reopened          => "cp-badge--reopen",
+                            _                                               => "cp-badge--open"
+                        };
+                        var statusLabel = issue.Status switch
+                        {
+                            (int)ConstructionIssueStatus.InProgress        => "Gepland",
+                            (int)ConstructionIssueStatus.WaitingInspection => "Controle",
+                            (int)ConstructionIssueStatus.Resolved          => "Opgelost",
+                            (int)ConstructionIssueStatus.Rejected          => "Afgekeurd",
+                            (int)ConstructionIssueStatus.Reopened          => "Heropend",
+                            _                                               => "Open"
+                        };
+                        var prioClass  = issue.Priority == (int)ConstructionIssuePriority.High ? "cp-badge--high" : "cp-badge--normal";
+                        var prioLabel  = issue.Priority == (int)ConstructionIssuePriority.High ? "Hoog" : "Normaal";
+                        var canResolve = issue.Status == (int)ConstructionIssueStatus.Open
+                                      || issue.Status == (int)ConstructionIssueStatus.InProgress
+                                      || issue.Status == (int)ConstructionIssueStatus.Reopened;
+
+                        <div class="cp-issue" id="issue-@issue.Id">
+                            <div class="cp-issue-summary" onclick="toggleIssue(@issue.Id)">
+                                <div class="cp-issue-left">
+                                    <div class="cp-issue-title">@issue.Title</div>
+                                    @{
+                                        var loc = string.IsNullOrWhiteSpace(issue.RoomOrZone)
+                                            ? issue.LocationText
+                                            : issue.RoomOrZone;
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(loc))
+                                    {
+                                        <div class="cp-issue-loc"><i class="bx bx-map-pin"></i>@loc</div>
+                                    }
+                                    @if (issue.IsOverdue && issue.DueDate.HasValue)
+                                    {
+                                        <div class="cp-issue-due"><i class="bx bx-calendar-x"></i>Deadline: @issue.DueDate.Value.ToString("dd/MM/yyyy")</div>
+                                    }
+                                </div>
+                                <div class="cp-issue-right">
+                                    <span class="cp-badge @statusClass">@statusLabel</span>
+                                    <span class="cp-badge @prioClass">@prioLabel</span>
+                                </div>
+                            </div>
+
+                            <div class="cp-issue-detail" id="detail-@issue.Id">
+                                @if (!string.IsNullOrWhiteSpace(issue.Description))
+                                {
+                                    <p class="cp-issue-desc">@issue.Description</p>
+                                }
+
+                                @if (!string.IsNullOrWhiteSpace(issue.CategoryName))
+                                {
+                                    <div style="font-size:.8rem;color:#6c757d;margin-bottom:.5rem;">
+                                        <i class="bx bx-category"></i> @issue.CategoryName
+                                        @if (issue.DueDate.HasValue)
+                                        {
+                                            <span class="ms-2"><i class="bx bx-calendar"></i> @issue.DueDate.Value.ToString("dd/MM/yyyy")</span>
+                                        }
+                                    </div>
+                                }
+
+                                <!-- Foto's -->
+                                <div class="cp-issue-section-label">Foto's (@issue.MediaFileIds.Count)</div>
+                                <div class="cp-photos-row">
+                                    @if (!issue.MediaFileIds.Any())
+                                    {
+                                        <span class="cp-photo-empty">Geen foto's</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var fileId in issue.MediaFileIds.Take(6))
+                                        {
+                                            var safeFile = System.IO.Path.GetFileName(fileId);
+                                            var url = $"{storageBase}/pictures/{Uri.EscapeDataString(safeFile)}";
+                                            <img src="@url" class="cp-photo-thumb" alt="Foto"
+                                                 onclick="openPhoto('@url')" loading="lazy" />
+                                        }
+                                    }
+                                </div>
+
+                                <!-- Opmerkingen -->
+                                <div class="cp-issue-section-label">Opmerkingen</div>
+                                <div class="cp-comment-row">
+                                    <textarea class="cp-comment-input" rows="2"
+                                              placeholder="Schrijf een opmerking..."
+                                              id="comment-@issue.Id"></textarea>
+                                    <button type="button" class="cp-comment-send"
+                                            onclick="sendComment(@issue.Id, @Model.ProjectId)"
+                                            title="Versturen">
+                                        <i class="bx bx-send"></i>
+                                    </button>
+                                </div>
+
+                                @if (canResolve)
+                                {
+                                    <button type="button" class="cp-resolve-btn"
+                                            id="resolve-btn-@issue.Id"
+                                            onclick="resolveIssue(@issue.Id, @Model.ProjectId)">
+                                        <i class="bx bx-check-circle"></i> Markeer als opgelost
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<!-- ── Lightbox ───────────────────────────────────────────── -->
+<div id="cpLightbox" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;">
+    <img id="cpLightboxImg" src="" style="max-width:95vw;max-height:90vh;border-radius:8px;" />
+</div>
+
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+<input type="hidden" id="cpAft" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
+
+@section scripts {
+<script>
+    var antiforgeryToken = document.getElementById('cpAft')?.value ?? '';
+
+    function toggleGroup(header) {
+        var body = header.nextElementSibling;
+        var chevron = header.querySelector('.cp-issue-group-chevron');
+        var collapsed = body.style.display === 'none';
+        body.style.display = collapsed ? '' : 'none';
+        chevron.classList.toggle('open', collapsed);
+    }
+
+    function toggleIssue(id) {
+        var detail = document.getElementById('detail-' + id);
+        detail.classList.toggle('open');
+    }
+
+    function openPhoto(url) {
+        var lb = document.getElementById('cpLightbox');
+        document.getElementById('cpLightboxImg').src = url;
+        lb.style.display = 'flex';
+    }
+
+    function resolveIssue(issueId, projectId) {
+        var btn = document.getElementById('resolve-btn-' + issueId);
+        if (!btn || btn.disabled) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Bezig…';
+
+        fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/Resolve', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': antiforgeryToken, 'Content-Type': 'application/json' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                btn.innerHTML = '<i class="bx bx-check-circle"></i> Klaar voor controle';
+                btn.style.background = '#2563eb';
+
+                // Update the status badge
+                var summary = document.querySelector('#issue-' + issueId + ' .cp-issue-right');
+                if (summary) {
+                    var badge = summary.querySelector('.cp-badge');
+                    if (badge) {
+                        badge.className = 'cp-badge cp-badge--check';
+                        badge.textContent = 'Controle';
+                    }
+                }
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bx bx-check-circle"></i> Markeer als opgelost';
+                alert(data.error || 'Er is een fout opgetreden.');
+            }
+        })
+        .catch(function() {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bx bx-check-circle"></i> Markeer als opgelost';
+        });
+    }
+
+    function sendComment(issueId, projectId) {
+        var textarea = document.getElementById('comment-' + issueId);
+        var text = textarea ? textarea.value.trim() : '';
+        if (!text) return;
+
+        // Optimistic clear
+        textarea.value = '';
+        textarea.placeholder = 'Opmerking verstuurd ✓';
+        setTimeout(function() { textarea.placeholder = 'Schrijf een opmerking...'; }, 2500);
+    }
+</script>
+}

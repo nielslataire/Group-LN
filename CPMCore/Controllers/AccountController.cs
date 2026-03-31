@@ -63,6 +63,8 @@ public class AccountController : BaseController
     [AllowAnonymous]
     public IActionResult AccessDenied()
     {
+        if (User.Identity?.IsAuthenticated == true && User.IsContractor())
+            return Redirect("/Portaal");
         return View();
     }
 

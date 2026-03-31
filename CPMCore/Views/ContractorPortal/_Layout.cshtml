@@ -1,0 +1,91 @@
+@using CPMCore.Helpers
+@{
+    var displayName = User.GetCpmDisplayName() ?? "";
+    var initials    = string.Concat(displayName.Split(' ').Where(w => w.Length > 0).Take(2).Select(w => w[0])).ToUpper();
+    var activeCtrl  = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
+    var today       = DateTime.Today;
+    var dayNames    = new[] { "zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag" };
+    var monthNames  = new[] { "","januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december" };
+    var dateStr     = $"{dayNames[(int)today.DayOfWeek]} {today.Day} {monthNames[today.Month]} {today.Year}";
+}
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] != null ? $"{ViewData["Title"]} – " : "")Aannemersportaal</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.css" />
+    <link rel="stylesheet" href="~/lib/boxicons/css/boxicons.min.css" />
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.min.css" />
+    <link rel="stylesheet" href="~/css/contractor-portal.css" />
+    @RenderSection("styles", required: false)
+</head>
+<body>
+<div class="cp-root">
+
+    <!-- ── Navigation ──────────────────────────────────────── -->
+    <nav class="cp-nav">
+        <a href="/Portaal" class="cp-nav-brand">
+            <div class="cp-nav-logo">LN</div>
+            <div class="cp-nav-brand-text">
+                <span class="cp-nav-brand-title">Aannemersportaal</span>
+                <span class="cp-nav-brand-sub">Group LN</span>
+            </div>
+        </a>
+
+        <div class="cp-nav-links" id="cpNavLinks">
+            <a href="/Portaal/Dashboard"
+               class="cp-nav-link @(activeCtrl == "Dashboard" ? "active" : "")">
+                <i class="bx bx-grid-alt"></i> Dashboard
+            </a>
+            <a href="/Portaal/Werven"
+               class="cp-nav-link @(activeCtrl is "Werven" or "WerfDetail" ? "active" : "")">
+                <i class="bx bx-buildings"></i> Werven
+            </a>
+        </div>
+
+        <div class="cp-nav-right">
+            <span class="cp-nav-date">@dateStr</span>
+            <div class="cp-nav-user">
+                <div class="cp-nav-avatar">
+                    <img src="/Account/ProfilePhoto" alt="@displayName"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" />
+                    <span style="display:none">@initials</span>
+                </div>
+                <span class="cp-nav-username">@displayName</span>
+            </div>
+            <a href="/Account/SignOut" class="cp-nav-signout" title="Afmelden">
+                <i class="bx bx-log-out"></i>
+            </a>
+        </div>
+
+        <button class="cp-nav-toggle" id="cpNavToggle" aria-label="Menu">
+            <i class="bx bx-menu"></i>
+        </button>
+    </nav>
+
+    <!-- ── Body ────────────────────────────────────────────── -->
+    <main class="cp-body">
+        @RenderBody()
+    </main>
+
+    <!-- ── Footer ──────────────────────────────────────────── -->
+    <footer class="cp-footer">
+        <span>© @today.Year Group LN &middot; Aannemersportaal</span>
+        <span>Vragen? <a href="mailto:info@groupln.be">info@groupln.be</a></span>
+    </footer>
+
+</div>
+
+<script src="~/lib/jquery/jquery.js"></script>
+<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Mobile nav toggle
+    document.getElementById('cpNavToggle').addEventListener('click', function () {
+        document.getElementById('cpNavLinks').classList.toggle('open');
+    });
+</script>
+@RenderSection("scripts", required: false)
+</body>
+</html>
