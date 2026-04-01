@@ -37,6 +37,10 @@ namespace CPMCore.Models
         public string DisplayName { get; set; } = string.Empty;
         public string? Email { get; set; }
         public string? UserPrincipalName { get; set; }
+        /// <summary>"Member" voor interne gebruikers, "Guest" voor B2B-gasten.</summary>
+        public string? UserType { get; set; }
+        public bool IsGuest => string.Equals(UserType, "Guest", StringComparison.OrdinalIgnoreCase)
+            || (UserPrincipalName?.Contains("#EXT#", StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
 
@@ -57,7 +61,12 @@ namespace CPMCore.Models
     public class UserAdminIndexViewModel
     {
         public List<UserListItemViewModel> LocalUsers { get; set; } = new();
+        /// <summary>Alle Entra-gebruikers (voor legacy-gebruik in dropdowns).</summary>
         public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
+        /// <summary>Interne Entra-leden (Member, geen #EXT#).</summary>
+        public List<EntraUserListItemViewModel> EntraInternalUsers { get; set; } = new();
+        /// <summary>Externe Entra-gasten (Guest / #EXT#).</summary>
+        public List<EntraUserListItemViewModel> EntraExternalUsers { get; set; } = new();
         public List<RolePermissionAssignmentViewModel> Roles { get; set; } = new();
         public List<PermissionMatrixItemViewModel> PermissionDefinitions { get; set; } = new();
     }

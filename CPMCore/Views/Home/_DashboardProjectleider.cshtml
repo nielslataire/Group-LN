@@ -591,6 +591,7 @@
     </div>
 </div>
 
+@{ var werfIds = string.Join(",", werfProjects.Select(p => p.Id)); }
 <script>
 window.addEventListener('load', function () {
 
@@ -665,7 +666,7 @@ window.addEventListener('load', function () {
             $.getJSON('@Url.Action("QuickSearch", "Projecten")', { q: q }, function (data) {
                 $pExtra.empty();
                 if (!data || !data.length) return;
-                var ids = [@string.Join(",", werfProjects.Select(p => p.Id))];
+                var ids = [@werfIds];
                 data = data.filter(function (p) { return ids.indexOf(p.id) === -1; });
                 if (!data.length) return;
                 $pExtraLbl.show();

@@ -210,6 +210,7 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
 
 builder.Services.AddScoped<ICpmUserAccessService, CpmUserAccessService>();
 builder.Services.AddScoped<IEntraGuestInvitationService, EntraGuestInvitationService>();
+builder.Services.AddScoped<IContractorInviteService, ContractorInviteService>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
@@ -271,7 +272,10 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
             context.Principal?.FindFirst("preferred_username")?.Value,
             context.Principal?.FindFirst("upn")?.Value,
             context.Principal?.FindFirst("email")?.Value,
-            context.Principal?.FindFirst("mail")?.Value
+            context.Principal?.FindFirst("mail")?.Value,
+            // Entra B2B-specifieke claims
+            context.Principal?.FindFirst("signInNames.emailAddress")?.Value,
+            context.Principal?.FindFirst("otherMails")?.Value,
         };
 
         var logger = context.HttpContext.RequestServices
@@ -294,6 +298,24 @@ builder.Services.Configure<OpenIdConnectOptions>(OpenIdConnectDefaults.Authentic
 
         await accessService.SyncUserPhotoAsync(accessResult, context.HttpContext.RequestAborted);
         accessService.ApplyClaims(identity, accessResult);
+    };
+
+    options.Events.OnRemoteFailure = context =>
+    {
+        var error = context.Failure?.Message ?? "";
+
+        // AADSTS90123: Email OTP niet ingeschakeld / claim issuance policy blocked
+        // AADSTS50020 / access_denied: gebruiker geweigerd door tenant policy
+        var friendlyMessage =
+            error.Contains("AADSTS50020")
+                ? "Uw account is nog niet geactiveerd als gast in ons systeem. Controleer uw e-mail voor een uitnodiging of neem contact op met de beheerder."
+            : error.Contains("AADSTS90123") || error.Contains("access_denied")
+                ? "Toegang geweigerd door Microsoft. Neem contact op met de beheerder."
+            : "Inloggen mislukt. Probeer opnieuw of neem contact op met de beheerder.";
+
+        context.Response.Redirect($"/Account/Login?error={Uri.EscapeDataString(friendlyMessage)}");
+        context.HandleResponse();
+        return Task.CompletedTask;
     };
 });
 

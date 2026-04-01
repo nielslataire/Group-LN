@@ -47,6 +47,7 @@ public class SupplierDepartmentDetailViewModel
 
 public class SupplierContactDetailViewModel
 {
+    public int ContactId { get; init; }
     public string? FirstName { get; init; }
     public string? LastName { get; init; }
     public string? Function { get; init; }
@@ -54,6 +55,12 @@ public class SupplierContactDetailViewModel
     public string? Mobile { get; init; }
     public string? Email { get; init; }
     public string? DepartmentName { get; init; }
+
+    // Portaal-uitnodiging
+    public string? PortaalStatus { get; init; }      // null = geen uitnodiging
+    public bool    IsFullCompanyAdmin { get; init; }
+    public int?    LinkedUserId { get; init; }
+    public DateTime? LastLoginAt { get; init; }
 }
 
 public class SupplierContractDetailViewModel

@@ -1,11 +1,13 @@
 using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models.ContractorPortal;
+using CPMCore.Services;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net.Http.Headers;
 
 namespace CPMCore.Controllers;
 
@@ -33,17 +35,23 @@ public class ContractorPortalController : BaseController
     [HttpGet("Dashboard")]
     public async Task<IActionResult> Dashboard(CancellationToken ct)
     {
-        var (companyIds, companyName) = await GetContractorContextAsync(ct);
+        var (companyIds, companyName, isFullAdmin, limitToContactIds) = await GetContractorContextAsync(ct);
         if (!companyIds.Any())
             return View(new ContractorDashboardVm { CompanyName = User.GetCpmDisplayName() ?? "" });
 
-        var projectIds = await GetProjectIdsAsync(companyIds, ct);
+        var projectIds = await GetProjectIdsAsync(companyIds, limitToContactIds, ct);
         var today = DateOnly.FromDateTime(DateTime.Today);
         var weekEnd = today.AddDays(7);
 
-        var issues = await _db.ConstructionIssue
+        // Volledig: alle punten van het bedrijf.
+        // Beperkt: enkel punten van de projecten waarvoor deze contactpersoon SiteManager is.
+        var issueQuery = _db.ConstructionIssue
             .AsNoTracking()
-            .Where(i => projectIds.Contains(i.ProjectId) && companyIds.Contains(i.ResponsiblePartyId ?? 0))
+            .Where(i => projectIds.Contains(i.ProjectId));
+        if (!isFullAdmin)
+            issueQuery = issueQuery.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+
+        var issues = await issueQuery
             .Include(i => i.Project)
             .Include(i => i.Unit)
             .OrderByDescending(i => i.CreatedDate)
@@ -65,7 +73,7 @@ public class ContractorPortalController : BaseController
         var projects = await _db.Project
             .AsNoTracking()
             .Where(p => projectIds.Contains(p.ProjectId))
-            .Include(p => p.PostalCodeNavigation)
+            .Include(p => p.PostalCode)
             .ToListAsync(ct);
 
         var activeProjects = projects
@@ -121,21 +129,28 @@ public class ContractorPortalController : BaseController
     [HttpGet("Werven")]
     public async Task<IActionResult> Werven(string filter = "alle", string? search = null, CancellationToken ct = default)
     {
-        var (companyIds, _) = await GetContractorContextAsync(ct);
-        var projectIds = companyIds.Any() ? await GetProjectIdsAsync(companyIds, ct) : new List<int>();
+        var (companyIds, _, isFullAdmin, limitToContactIds) = await GetContractorContextAsync(ct);
+        var projectIds = companyIds.Any() ? await GetProjectIdsAsync(companyIds, limitToContactIds, ct) : new List<int>();
 
         var projects = await _db.Project
             .AsNoTracking()
             .Where(p => projectIds.Contains(p.ProjectId))
-            .Include(p => p.PostalCodeNavigation)
+            .Include(p => p.PostalCode)
             .ToListAsync(ct);
 
-        var issues = companyIds.Any()
-            ? await _db.ConstructionIssue
-                .AsNoTracking()
-                .Where(i => projectIds.Contains(i.ProjectId) && companyIds.Contains(i.ResponsiblePartyId ?? 0))
-                .ToListAsync(ct)
-            : new List<ConstructionIssue>();
+        List<ConstructionIssue> issues;
+        if (!companyIds.Any())
+        {
+            issues = new List<ConstructionIssue>();
+        }
+        else
+        {
+            var q = _db.ConstructionIssue.AsNoTracking()
+                .Where(i => projectIds.Contains(i.ProjectId));
+            if (!isFullAdmin)
+                q = q.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+            issues = await q.ToListAsync(ct);
+        }
 
         var today = DateOnly.FromDateTime(DateTime.Today);
         var voortgangen = await _db.ProjectVoortgang
@@ -186,18 +201,21 @@ public class ContractorPortalController : BaseController
     [HttpGet("Werven/{projectId:int}")]
     public async Task<IActionResult> WerfDetail(int projectId, CancellationToken ct)
     {
-        var (companyIds, _) = await GetContractorContextAsync(ct);
+        var (companyIds, _, isFullAdmin, limitToContactIds) = await GetContractorContextAsync(ct);
 
         // Verify contractor has access to this project
-        var hasAccess = companyIds.Any() &&
-            await _db.Contract.AnyAsync(c => c.ProjectId == projectId && companyIds.Contains(c.CompanyId), ct);
+        var contractQuery = _db.Contract.Where(c => c.ProjectId == projectId && companyIds.Contains(c.CompanyId));
+        if (!isFullAdmin && limitToContactIds != null && limitToContactIds.Any())
+            contractQuery = contractQuery.Where(c => c.SiteManagerContactId.HasValue &&
+                                                     limitToContactIds.Contains(c.SiteManagerContactId.Value));
+        var hasAccess = companyIds.Any() && await contractQuery.AnyAsync(ct);
         if (!hasAccess)
             return Forbid();
 
         var project = await _db.Project
             .AsNoTracking()
             .Where(p => p.ProjectId == projectId)
-            .Include(p => p.PostalCodeNavigation)
+            .Include(p => p.PostalCode)
             .FirstOrDefaultAsync(ct);
         if (project == null) return NotFound();
 
@@ -205,9 +223,13 @@ public class ContractorPortalController : BaseController
             .AsNoTracking()
             .FirstOrDefaultAsync(v => v.ProjectId == projectId, ct);
 
-        var allIssues = await _db.ConstructionIssue
+        var issueQuery = _db.ConstructionIssue
             .AsNoTracking()
-            .Where(i => i.ProjectId == projectId && companyIds.Contains(i.ResponsiblePartyId ?? 0))
+            .Where(i => i.ProjectId == projectId);
+        if (!isFullAdmin)
+            issueQuery = issueQuery.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+
+        var allIssues = await issueQuery
             .Include(i => i.Category)
             .Include(i => i.Unit)
             .Include(i => i.ConstructionIssueMedia)
@@ -220,20 +242,108 @@ public class ContractorPortalController : BaseController
 
         var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
 
-        var issueRows = allIssues.Select(i => new ContractorIssueRow
-        {
-            Id           = i.Id,
-            Title        = i.Title ?? "",
-            LocationText = i.LocationText,
-            RoomOrZone   = i.RoomOrZone,
-            Status       = i.Status,
-            Priority     = i.Priority,
-            Description  = i.Description,
-            DueDate      = i.DueDate,
-            PlannedDate  = i.PlannedDate,
-            IsOverdue    = openStatuses.Contains(i.Status) && i.DueDate.HasValue && i.DueDate.Value < today,
-            CategoryName = i.Category?.Name ?? "",
-            MediaFileIds = i.ConstructionIssueMedia.Select(m => m.FileId).ToList()
+        // Plan URLs voor issues die een locatie op plan hebben
+        var planUnitIds = allIssues
+            .Where(i => i.PlanDocumentId.HasValue && i.UnitId.HasValue)
+            .Select(i => i.UnitId!.Value).Distinct().ToList();
+        var planUnits = planUnitIds.Any()
+            ? await _db.Units.AsNoTracking().Where(u => planUnitIds.Contains(u.Id)).ToListAsync(ct)
+            : new List<Units>();
+        var executionPlanIds = allIssues
+            .Where(i => i.PlanDocumentId.HasValue && i.PlanDocumentId.Value > 0)
+            .Select(i => i.PlanDocumentId!.Value).Distinct().ToList();
+        var execPlans = executionPlanIds.Any()
+            ? await _db.UnitExecutionPlan.AsNoTracking().Where(p => executionPlanIds.Contains(p.Id)).ToListAsync(ct)
+            : new List<UnitExecutionPlan>();
+
+        // Load comments for all issues (action=6 CommentAdded)
+        var issueIds = allIssues.Select(i => i.Id).ToList();
+        var historyComments = issueIds.Any()
+            ? await _db.ConstructionIssueHistory
+                .AsNoTracking()
+                .Where(h => issueIds.Contains(h.IssueId) && h.Action == (int)ConstructionIssueHistoryAction.CommentAdded)
+                .OrderBy(h => h.Timestamp)
+                .ToListAsync(ct)
+            : new List<ConstructionIssueHistory>();
+
+        // Resolve author names
+        var commentUserIds = historyComments
+            .Where(h => h.UserId != null).Select(h => h.UserId!).Distinct().ToList();
+        var commentUserData = commentUserIds.Any()
+            ? await _db.Users.AsNoTracking()
+                .Where(u => commentUserIds.Contains(u.UserId))
+                .Select(u => new { u.UserId, u.Id, u.Voornaam, u.Familienaam })
+                .ToListAsync(ct)
+            : new[] { new { UserId = "", Id = 0, Voornaam = "", Familienaam = "" } }.Take(0).ToList();
+        var commentUserMap = commentUserData.ToDictionary(u => u.UserId, u => ($"{u.Voornaam} {u.Familienaam}".Trim(), u.Id));
+        var commentUserIntIdList = commentUserData.Select(u => u.Id).ToList();
+        var contractorUserIntIds = commentUserIntIdList.Any()
+            ? (await _db.UserCompanyAccess.AsNoTracking()
+                .Where(a => commentUserIntIdList.Contains(a.UserId))
+                .Select(a => a.UserId).Distinct().ToListAsync(ct)).ToHashSet()
+            : new HashSet<int>();
+
+        var issueRows = allIssues.Select(i => {
+            string? planUrl = null;
+            if (i.PlanDocumentId.HasValue && i.UnitId.HasValue && i.PlanXnormalized.HasValue && i.PlanYnormalized.HasValue)
+            {
+                if (i.PlanDocumentId.Value == 0)
+                {
+                    var unit = planUnits.FirstOrDefault(u => u.Id == i.UnitId.Value);
+                    if (!string.IsNullOrWhiteSpace(unit?.Plan))
+                        planUrl = $"/Portaal/PlanImage?fileId={Uri.EscapeDataString(unit.Plan)}";
+                }
+                else
+                {
+                    var ep = execPlans.FirstOrDefault(p => p.Id == i.PlanDocumentId.Value);
+                    if (!string.IsNullOrWhiteSpace(ep?.FileId))
+                        planUrl = $"/Portaal/PlanImage?fileId={Uri.EscapeDataString(ep.FileId)}";
+                }
+            }
+
+            var comments = historyComments
+                .Where(h => h.IssueId == i.Id)
+                .Select(h => {
+                    var (authorName, authorIntId) = h.UserId != null && commentUserMap.TryGetValue(h.UserId, out var u) ? u : ("Onbekend", 0);
+                    string? photoUrl = null;
+                    if (!string.IsNullOrWhiteSpace(h.NewValueJson))
+                    {
+                        try {
+                            using var doc = System.Text.Json.JsonDocument.Parse(h.NewValueJson);
+                            if (doc.RootElement.TryGetProperty("photoUrl", out var el))
+                                photoUrl = el.GetString();
+                        } catch { }
+                    }
+                    return new ContractorIssueComment
+                    {
+                        AuthorName   = string.IsNullOrWhiteSpace(authorName) ? "Onbekend" : authorName,
+                        IsContractor = contractorUserIntIds.Contains(authorIntId),
+                        Text         = h.Comment ?? "",
+                        Timestamp    = h.Timestamp,
+                        PhotoUrl     = photoUrl
+                    };
+                }).ToList();
+
+            return new ContractorIssueRow
+            {
+                Id               = i.Id,
+                Title            = i.Title ?? "",
+                LocationText     = i.LocationText,
+                RoomOrZone       = i.RoomOrZone,
+                Status           = i.Status,
+                Priority         = i.Priority,
+                Description      = i.Description,
+                DueDate          = i.DueDate,
+                PlannedDate      = i.PlannedDate,
+                IsOverdue        = openStatuses.Contains(i.Status) && i.DueDate.HasValue && i.DueDate.Value < today,
+                CategoryName     = i.Category?.Name ?? "",
+                MediaFileIds     = i.ConstructionIssueMedia.Select(m => m.FileId).ToList(),
+                PlanDocumentId   = i.PlanDocumentId,
+                PlanXnormalized  = i.PlanXnormalized,
+                PlanYnormalized  = i.PlanYnormalized,
+                PlanImageUrl     = planUrl,
+                Comments         = comments
+            };
         }).ToList();
 
         // Group by unit
@@ -278,9 +388,12 @@ public class ContractorPortalController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResolveIssue(int projectId, int issueId, CancellationToken ct)
     {
-        var (companyIds, _) = await GetContractorContextAsync(ct);
-        var issue = await _db.ConstructionIssue
-            .FirstOrDefaultAsync(i => i.Id == issueId && i.ProjectId == projectId && companyIds.Contains(i.ResponsiblePartyId ?? 0), ct);
+        var (companyIds, _, isFullAdmin, limitToContactIds) = await GetContractorContextAsync(ct);
+        var issueQ = _db.ConstructionIssue
+            .Where(i => i.Id == issueId && i.ProjectId == projectId);
+        if (!isFullAdmin)
+            issueQ = issueQ.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+        var issue = await issueQ.FirstOrDefaultAsync(ct);
 
         if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
 
@@ -291,12 +404,99 @@ public class ContractorPortalController : BaseController
         return Json(new { ok });
     }
 
+    // ── AJAX: opmerking toevoegen ────────────────────────────────────────────
+
+    [HttpPost("Werven/{projectId:int}/Issues/{issueId:int}/Comment")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> AddComment(int projectId, int issueId, [FromBody] AddCommentRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req?.Comment) && string.IsNullOrWhiteSpace(req?.PhotoUrl))
+            return Json(new { ok = false, error = "Opmerking of foto vereist." });
+
+        var (companyIds, _, isFullAdmin, _) = await GetContractorContextAsync(ct);
+        var issueQ = _db.ConstructionIssue.Where(i => i.Id == issueId && i.ProjectId == projectId);
+        if (!isFullAdmin)
+            issueQ = issueQ.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+        var issue = await issueQ.FirstOrDefaultAsync(ct);
+        if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
+
+        var photoJson = !string.IsNullOrWhiteSpace(req.PhotoUrl)
+            ? System.Text.Json.JsonSerializer.Serialize(new { photoUrl = req.PhotoUrl })
+            : null;
+
+        await _issueService.AddHistory(issueId, (int)ConstructionIssueHistoryAction.CommentAdded,
+            User.GetCpmUserCode(), null, photoJson, req.Comment);
+
+        return Json(new { ok = true });
+    }
+
+    // ── AJAX: foto uploaden ──────────────────────────────────────────────────
+
+    [HttpPost("Werven/{projectId:int}/Issues/{issueId:int}/UploadPhoto")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UploadPhoto(int projectId, int issueId, IFormFile file, CancellationToken ct)
+    {
+        if (file == null || file.Length == 0)
+            return Json(new { ok = false, error = "Geen bestand geselecteerd." });
+
+        var (companyIds, _, isFullAdmin, _) = await GetContractorContextAsync(ct);
+        var issueQ = _db.ConstructionIssue.Where(i => i.Id == issueId && i.ProjectId == projectId);
+        if (!isFullAdmin)
+            issueQ = issueQ.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+        var issue = await issueQ.FirstOrDefaultAsync(ct);
+        if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
+
+        var fileId = await UploadToStorageAsync(file, "pictures", ct);
+        if (string.IsNullOrWhiteSpace(fileId))
+            return Json(new { ok = false, error = "Upload mislukt." });
+
+        await _issueService.AddMedia(projectId, issueId, fileId, (int)ConstructionIssueMediaType.Photo, User.GetCpmUserCode());
+
+        var storageBase = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        var url = $"{storageBase}/pictures/{Uri.EscapeDataString(System.IO.Path.GetFileName(fileId))}";
+        return Json(new { ok = true, url, fileId });
+    }
+
+    // ── Plan image proxy ─────────────────────────────────────────────────────
+
+    [HttpGet("PlanImage")]
+    public async Task<IActionResult> PlanImage(string fileId, CancellationToken ct)
+    {
+        var safeFile = System.IO.Path.GetFileName(fileId ?? "");
+        if (string.IsNullOrWhiteSpace(safeFile)) return NotFound();
+
+        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        var readKey = _configuration["StorageApi:ReadApiKey"];
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(readKey))
+            return NotFound();
+
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.Add("X-Api-Key", readKey);
+        var signResp = await http.PostAsync($"{baseUrl}/api/assets/plans/{Uri.EscapeDataString(safeFile)}/sign", null, ct);
+        if (!signResp.IsSuccessStatusCode) return NotFound();
+
+        var payload = await signResp.Content.ReadAsStringAsync(ct);
+        using var jsonDoc = System.Text.Json.JsonDocument.Parse(payload);
+        if (!jsonDoc.RootElement.TryGetProperty("url", out var urlEl)) return NotFound();
+
+        var signedUrl = urlEl.GetString() ?? "";
+        if (!signedUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            signedUrl = baseUrl + signedUrl;
+
+        var imgResp = await http.GetAsync(signedUrl, ct);
+        if (!imgResp.IsSuccessStatusCode) return NotFound();
+
+        var contentType = imgResp.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+        var stream = await imgResp.Content.ReadAsStreamAsync(ct);
+        return File(stream, contentType);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private async Task<(List<int> companyIds, string companyName)> GetContractorContextAsync(CancellationToken ct)
+    private async Task<(List<int> companyIds, string companyName, bool isFullAdmin, List<int>? limitToContactIds)> GetContractorContextAsync(CancellationToken ct)
     {
         var userId = User.GetCpmUserId();
-        if (userId == null) return (new List<int>(), "");
+        if (userId == null) return (new List<int>(), "", false, null);
 
         var access = await _db.UserCompanyAccess
             .AsNoTracking()
@@ -304,16 +504,36 @@ public class ContractorPortalController : BaseController
             .Include(a => a.Company)
             .ToListAsync(ct);
 
-        var companyIds = access.Select(a => a.CompanyId).Distinct().ToList();
+        var companyIds  = access.Select(a => a.CompanyId).Distinct().ToList();
         var companyName = access.FirstOrDefault()?.Company?.BedrijfsNaam ?? User.GetCpmDisplayName() ?? "";
-        return (companyIds, companyName);
+        var isFullAdmin = access.Any(a => a.Role == ContractorAccessRole.VolledigVerantwoordelijk);
+
+        // Beperkte toegang: lijst van ContactIds waarvoor deze gebruiker SiteManager is
+        List<int>? limitToContactIds = null;
+        if (!isFullAdmin)
+        {
+            limitToContactIds = access
+                .Where(a => a.Role == ContractorAccessRole.Beperkt && a.ContactId.HasValue)
+                .Select(a => a.ContactId!.Value)
+                .Distinct()
+                .ToList();
+        }
+
+        return (companyIds, companyName, isFullAdmin, limitToContactIds);
     }
 
-    private async Task<List<int>> GetProjectIdsAsync(List<int> companyIds, CancellationToken ct)
+    private async Task<List<int>> GetProjectIdsAsync(List<int> companyIds, List<int>? limitToContactIds, CancellationToken ct)
     {
-        return await _db.Contract
+        var query = _db.Contract
             .AsNoTracking()
-            .Where(c => companyIds.Contains(c.CompanyId))
+            .Where(c => companyIds.Contains(c.CompanyId));
+
+        // Beperkt: enkel projecten waarvoor dit contact als SiteManager staat
+        if (limitToContactIds != null && limitToContactIds.Any())
+            query = query.Where(c => c.SiteManagerContactId.HasValue &&
+                                     limitToContactIds.Contains(c.SiteManagerContactId.Value));
+
+        return await query
             .Select(c => c.ProjectId)
             .Distinct()
             .ToListAsync(ct);
@@ -323,9 +543,36 @@ public class ContractorPortalController : BaseController
     {
         var street = string.IsNullOrWhiteSpace(p.Number)
             ? p.Street : $"{p.Street} {p.Number}";
-        var city = p.PostalCodeNavigation != null
-            ? $"{p.PostalCodeNavigation.Postcode} {p.PostalCodeNavigation.Gemeente}"
+        var city = p.PostalCode != null
+            ? $"{p.PostalCode.Postcode} {p.PostalCode.Gemeente}"
             : null;
         return string.Join(", ", new[] { street, city }.Where(s => !string.IsNullOrWhiteSpace(s)));
     }
+
+    private async Task<string?> UploadToStorageAsync(IFormFile file, string folder, CancellationToken ct)
+    {
+        var baseUrl = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        var writeKey = _configuration["StorageApi:WriteApiKey"];
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
+            return null;
+
+        using var http = new HttpClient();
+        http.DefaultRequestHeaders.Add("X-Api-Key", writeKey);
+        using var content = new MultipartFormDataContent();
+        content.Add(new StringContent(folder), "folder");
+        await using var fileStream = file.OpenReadStream();
+        var fileContent = new StreamContent(fileStream);
+        if (!string.IsNullOrWhiteSpace(file.ContentType))
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+        content.Add(fileContent, "file", file.FileName);
+
+        var response = await http.PostAsync($"{baseUrl}/api/assets/upload", content, ct);
+        if (!response.IsSuccessStatusCode) return null;
+
+        var json = await response.Content.ReadAsStringAsync(ct);
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        return doc.RootElement.TryGetProperty("fileId", out var el) ? el.GetString() : null;
+    }
 }
+
+public record AddCommentRequest(string Comment);

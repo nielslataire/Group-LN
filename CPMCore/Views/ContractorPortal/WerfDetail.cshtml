@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = Model.Name;
     var storageBase = Model.StorageBaseUrl?.TrimEnd('/');
+    var totalAll = Model.OpenCount + Model.InProgressCount + Model.WaitingInspectionCount + Model.ResolvedCount;
+    var resolvedPct = totalAll > 0 ? (int)Math.Round((decimal)Model.ResolvedCount / totalAll * 100) : 0;
 }
 
 <!-- ── Back + header ──────────────────────────────────────── -->
@@ -38,35 +40,21 @@
 <!-- ── Progress bar ───────────────────────────────────────── -->
 <div class="cp-prog-row">
     <div class="cp-prog-bar">
-        <div class="cp-prog-fill" style="width:@Model.ProgressPct%"></div>
+        <div class="cp-prog-fill" style="width:@resolvedPct%"></div>
     </div>
-    <div class="cp-prog-pct">@Model.ProgressPct%</div>
+    <div class="cp-prog-pct">@Model.ResolvedCount/@totalAll</div>
 </div>
 
-<!-- ── Tabs ──────────────────────────────────────────────── -->
-@{
-    var totalIssues = Model.IssueGroups.Sum(g => g.Issues.Count);
-}
+<!-- ── Tabs (enkel punten zichtbaar) ─────────────────────── -->
 <div class="cp-tabs">
     <a href="#punten" class="cp-tab active" data-tab="punten">
         <i class="bx bx-list-check"></i> Punten
+        @{ var totalIssues = Model.IssueGroups.Sum(g => g.Issues.Count); }
         @if (totalIssues > 0)
         {
             <span class="cp-tab-badge">@totalIssues</span>
         }
     </a>
-    <span class="cp-tab" style="cursor:default;">
-        <i class="bx bx-map"></i> Plannen <span class="cp-tab-soon">binnenkort</span>
-    </span>
-    <span class="cp-tab" style="cursor:default;">
-        <i class="bx bx-file"></i> Docs <span class="cp-tab-soon">binnenkort</span>
-    </span>
-    <span class="cp-tab" style="cursor:default;">
-        <i class="bx bx-calendar-check"></i> Planning <span class="cp-tab-soon">binnenkort</span>
-    </span>
-    <span class="cp-tab" style="cursor:default;">
-        <i class="bx bx-chat"></i> Berichten <span class="cp-tab-soon">binnenkort</span>
-    </span>
 </div>
 
 <!-- ── Issue list ────────────────────────────────────────── -->
@@ -110,8 +98,8 @@
                             (int)ConstructionIssueStatus.Reopened          => "Heropend",
                             _                                               => "Open"
                         };
-                        var prioClass  = issue.Priority == (int)ConstructionIssuePriority.High ? "cp-badge--high" : "cp-badge--normal";
-                        var prioLabel  = issue.Priority == (int)ConstructionIssuePriority.High ? "Hoog" : "Normaal";
+                        var isHigh     = issue.Priority == (int)ConstructionIssuePriority.High;
+                        var isPlanned  = issue.Status == (int)ConstructionIssueStatus.InProgress && issue.PlannedDate.HasValue;
                         var canResolve = issue.Status == (int)ConstructionIssueStatus.Open
                                       || issue.Status == (int)ConstructionIssueStatus.InProgress
                                       || issue.Status == (int)ConstructionIssueStatus.Reopened;
@@ -120,53 +108,77 @@
                             <div class="cp-issue-summary" onclick="toggleIssue(@issue.Id)">
                                 <div class="cp-issue-left">
                                     <div class="cp-issue-title">@issue.Title</div>
+
                                     @{
-                                        var loc = string.IsNullOrWhiteSpace(issue.RoomOrZone)
-                                            ? issue.LocationText
-                                            : issue.RoomOrZone;
+                                        var locParts = new List<string>();
+                                        if (!string.IsNullOrWhiteSpace(issue.RoomOrZone)) locParts.Add(issue.RoomOrZone);
+                                        if (!string.IsNullOrWhiteSpace(issue.LocationText)) locParts.Add(issue.LocationText);
+                                        var locStr = string.Join(" – ", locParts);
                                     }
-                                    @if (!string.IsNullOrWhiteSpace(loc))
+                                    @if (!string.IsNullOrWhiteSpace(locStr))
                                     {
-                                        <div class="cp-issue-loc"><i class="bx bx-map-pin"></i>@loc</div>
+                                        <div class="cp-issue-loc"><i class="bx bx-map-pin"></i>@locStr</div>
                                     }
-                                    @if (issue.IsOverdue && issue.DueDate.HasValue)
-                                    {
-                                        <div class="cp-issue-due"><i class="bx bx-calendar-x"></i>Deadline: @issue.DueDate.Value.ToString("dd/MM/yyyy")</div>
-                                    }
+
+                                    <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem;">
+                                        @if (isPlanned)
+                                        {
+                                            <span class="cp-badge cp-badge--planned">
+                                                <i class="bx bx-calendar" style="font-size:.8em;"></i>
+                                                Gepland: @issue.PlannedDate!.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                        @if (issue.DueDate.HasValue)
+                                        {
+                                            var deadlineClass = issue.IsOverdue ? "cp-badge--overdue" : "cp-badge--deadline";
+                                            <span class="cp-badge @deadlineClass">
+                                                <i class="bx bx-calendar-x" style="font-size:.8em;"></i>
+                                                Deadline: @issue.DueDate.Value.ToString("dd/MM/yyyy")
+                                            </span>
+                                        }
+                                    </div>
                                 </div>
                                 <div class="cp-issue-right">
                                     <span class="cp-badge @statusClass">@statusLabel</span>
-                                    <span class="cp-badge @prioClass">@prioLabel</span>
+                                    @if (isHigh)
+                                    {
+                                        <span class="cp-badge cp-badge--urgent">Dringend</span>
+                                    }
                                 </div>
                             </div>
 
                             <div class="cp-issue-detail" id="detail-@issue.Id">
                                 @if (!string.IsNullOrWhiteSpace(issue.Description))
                                 {
+                                    <div class="cp-issue-section-label" style="margin-top:.75rem;">Omschrijving</div>
                                     <p class="cp-issue-desc">@issue.Description</p>
                                 }
 
-                                @if (!string.IsNullOrWhiteSpace(issue.CategoryName))
+                                <!-- Locatie details -->
+                                @if (!string.IsNullOrWhiteSpace(locStr) || !string.IsNullOrWhiteSpace(issue.CategoryName))
                                 {
-                                    <div style="font-size:.8rem;color:#6c757d;margin-bottom:.5rem;">
-                                        <i class="bx bx-category"></i> @issue.CategoryName
-                                        @if (issue.DueDate.HasValue)
+                                    <div style="font-size:.8rem;color:#6c757d;margin-bottom:.5rem;display:flex;flex-wrap:wrap;gap:.75rem;">
+                                        @if (!string.IsNullOrWhiteSpace(locStr))
                                         {
-                                            <span class="ms-2"><i class="bx bx-calendar"></i> @issue.DueDate.Value.ToString("dd/MM/yyyy")</span>
+                                            <span><i class="bx bx-map-pin"></i> <strong>Locatie:</strong> @locStr</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(issue.CategoryName))
+                                        {
+                                            <span><i class="bx bx-category"></i> @issue.CategoryName</span>
                                         }
                                     </div>
                                 }
 
                                 <!-- Foto's -->
                                 <div class="cp-issue-section-label">Foto's (@issue.MediaFileIds.Count)</div>
-                                <div class="cp-photos-row">
+                                <div class="cp-photos-row" id="photos-@issue.Id">
                                     @if (!issue.MediaFileIds.Any())
                                     {
-                                        <span class="cp-photo-empty">Geen foto's</span>
+                                        <span class="cp-photo-empty" id="no-photos-@issue.Id">Geen foto's</span>
                                     }
                                     else
                                     {
-                                        @foreach (var fileId in issue.MediaFileIds.Take(6))
+                                        @foreach (var fileId in issue.MediaFileIds)
                                         {
                                             var safeFile = System.IO.Path.GetFileName(fileId);
                                             var url = $"{storageBase}/pictures/{Uri.EscapeDataString(safeFile)}";
@@ -176,13 +188,36 @@
                                     }
                                 </div>
 
+                                <!-- Locatie op plan -->
+                                @if (issue.HasPlan)
+                                {
+                                    <div class="cp-issue-section-label">Locatie op plan</div>
+                                    <div class="cp-plan-wrap" id="plan-wrap-@issue.Id">
+                                        <img src="@issue.PlanImageUrl" class="cp-plan-img"
+                                             id="plan-img-@issue.Id"
+                                             onload="placePlanDot(@issue.Id, @issue.PlanXnormalized!.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), @issue.PlanYnormalized!.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture))"
+                                             alt="Plan" />
+                                        <div class="cp-plan-dot" id="plan-dot-@issue.Id" style="display:none;"></div>
+                                    </div>
+                                }
+
                                 <!-- Opmerkingen -->
-                                <div class="cp-issue-section-label">Opmerkingen</div>
+                                <div class="cp-issue-section-label" style="margin-top:.75rem;">Opmerking toevoegen</div>
                                 <div class="cp-comment-row">
                                     <textarea class="cp-comment-input" rows="2"
                                               placeholder="Schrijf een opmerking..."
-                                              id="comment-@issue.Id"></textarea>
-                                    <button type="button" class="cp-comment-send"
+                                              id="comment-@issue.Id"
+                                              oninput="updateCommentBtn(@issue.Id)"></textarea>
+                                    <button type="button" class="cp-photo-upload-btn"
+                                            onclick="document.getElementById('photo-input-@issue.Id').click()"
+                                            title="Foto toevoegen">
+                                        <i class="bx bx-camera"></i>
+                                    </button>
+                                    <input type="file" id="photo-input-@issue.Id" accept="image/*"
+                                           style="display:none"
+                                           onchange="uploadPhoto(@issue.Id, @Model.ProjectId, this)" />
+                                    <button type="button" class="cp-comment-send" disabled
+                                            id="comment-btn-@issue.Id"
                                             onclick="sendComment(@issue.Id, @Model.ProjectId)"
                                             title="Versturen">
                                         <i class="bx bx-send"></i>
@@ -237,6 +272,82 @@
         lb.style.display = 'flex';
     }
 
+    function updateCommentBtn(id) {
+        var textarea = document.getElementById('comment-' + id);
+        var btn = document.getElementById('comment-btn-' + id);
+        if (btn) btn.disabled = !textarea || !textarea.value.trim();
+    }
+
+    function sendComment(issueId, projectId) {
+        var textarea = document.getElementById('comment-' + issueId);
+        var text = textarea ? textarea.value.trim() : '';
+        if (!text) return;
+
+        var btn = document.getElementById('comment-btn-' + issueId);
+        if (btn) { btn.disabled = true; }
+
+        fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/Comment', {
+            method: 'POST',
+            headers: {
+                'RequestVerificationToken': antiforgeryToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ comment: text })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                textarea.value = '';
+                textarea.placeholder = 'Opmerking verstuurd ✓';
+                setTimeout(function() { textarea.placeholder = 'Schrijf een opmerking...'; }, 2500);
+            } else {
+                alert(data.error || 'Versturen mislukt.');
+                if (btn) btn.disabled = false;
+            }
+        })
+        .catch(function() {
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    function uploadPhoto(issueId, projectId, input) {
+        if (!input.files || !input.files[0]) return;
+        var file = input.files[0];
+        var formData = new FormData();
+        formData.append('file', file);
+
+        var btn = document.querySelector('#detail-' + issueId + ' .cp-photo-upload-btn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i>'; }
+
+        fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/UploadPhoto', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': antiforgeryToken },
+            body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                var row = document.getElementById('photos-' + issueId);
+                var noPhotos = document.getElementById('no-photos-' + issueId);
+                if (noPhotos) noPhotos.remove();
+                var img = document.createElement('img');
+                img.src = data.url;
+                img.className = 'cp-photo-thumb';
+                img.alt = 'Foto';
+                img.loading = 'lazy';
+                img.onclick = function() { openPhoto(data.url); };
+                row.appendChild(img);
+            } else {
+                alert(data.error || 'Upload mislukt.');
+            }
+        })
+        .catch(function() { alert('Upload mislukt.'); })
+        .finally(function() {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bx bx-camera"></i>'; }
+            input.value = '';
+        });
+    }
+
     function resolveIssue(issueId, projectId) {
         var btn = document.getElementById('resolve-btn-' + issueId);
         if (!btn || btn.disabled) return;
@@ -252,15 +363,10 @@
             if (data.ok) {
                 btn.innerHTML = '<i class="bx bx-check-circle"></i> Klaar voor controle';
                 btn.style.background = '#2563eb';
-
-                // Update the status badge
                 var summary = document.querySelector('#issue-' + issueId + ' .cp-issue-right');
                 if (summary) {
                     var badge = summary.querySelector('.cp-badge');
-                    if (badge) {
-                        badge.className = 'cp-badge cp-badge--check';
-                        badge.textContent = 'Controle';
-                    }
+                    if (badge) { badge.className = 'cp-badge cp-badge--check'; badge.textContent = 'Controle'; }
                 }
             } else {
                 btn.disabled = false;
@@ -274,15 +380,13 @@
         });
     }
 
-    function sendComment(issueId, projectId) {
-        var textarea = document.getElementById('comment-' + issueId);
-        var text = textarea ? textarea.value.trim() : '';
-        if (!text) return;
-
-        // Optimistic clear
-        textarea.value = '';
-        textarea.placeholder = 'Opmerking verstuurd ✓';
-        setTimeout(function() { textarea.placeholder = 'Schrijf een opmerking...'; }, 2500);
+    function placePlanDot(issueId, xNorm, yNorm) {
+        var img = document.getElementById('plan-img-' + issueId);
+        var dot = document.getElementById('plan-dot-' + issueId);
+        if (!img || !dot) return;
+        dot.style.left = (xNorm * 100) + '%';
+        dot.style.top  = (yNorm * 100) + '%';
+        dot.style.display = 'block';
     }
 </script>
 }

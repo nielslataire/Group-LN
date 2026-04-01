@@ -51,6 +51,7 @@ public class CpmUserAccessService : ICpmUserAccessService
         }
 
         var normalizedEmails = emails
+            .SelectMany(ExpandGuestEmail)
             .Select(NormalizeEmail)
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct()
@@ -282,6 +283,34 @@ public class CpmUserAccessService : ICpmUserAccessService
 
     private static string? NormalizeEmail(string? email)
         => string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
+    /// <summary>
+    /// Voor B2B-gastgebruikers retourneert Microsoft het echte e-mailadres niet rechtstreeks.
+    /// In plaats daarvan is preferred_username/upn in het formaat:
+    ///   {localpart}_{domain}#EXT#@{hosttenant}
+    /// waarbij de @ in het originele adres vervangen is door _.
+    /// Deze methode voegt het afgeleid origineel e-mailadres toe als extra kandidaat.
+    /// </summary>
+    private static IEnumerable<string?> ExpandGuestEmail(string? email)
+    {
+        yield return email;
+
+        if (string.IsNullOrWhiteSpace(email))
+            yield break;
+
+        var extIdx = email.IndexOf("#EXT#", StringComparison.OrdinalIgnoreCase);
+        if (extIdx <= 0)
+            yield break;
+
+        // Deel vóór #EXT# is {localpart}_{domain} waarbij de echte @ vervangen is door de laatste _
+        var localAndDomain = email[..extIdx];
+        var lastUnderscore = localAndDomain.LastIndexOf('_');
+        if (lastUnderscore <= 0)
+            yield break;
+
+        var derived = localAndDomain[..lastUnderscore] + "@" + localAndDomain[(lastUnderscore + 1)..];
+        yield return derived;
+    }
 
     private static string ComputeHash(byte[] data)
     {

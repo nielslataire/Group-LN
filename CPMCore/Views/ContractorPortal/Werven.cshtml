@@ -59,12 +59,13 @@ else
                     </div>
                 }
 
+                @{ var werfPct = p.TotalCount > 0 ? (int)Math.Round((decimal)p.ResolvedCount / p.TotalCount * 100) : 0; }
                 <div class="cp-werf-progress-row">
-                    <span>Voortgang</span>
-                    <span>@p.ProgressPct%</span>
+                    <span>Opgelost</span>
+                    <span>@p.ResolvedCount / @p.TotalCount</span>
                 </div>
                 <div class="cp-werf-progress-bar">
-                    <div class="cp-werf-progress-fill" style="width:@p.ProgressPct%"></div>
+                    <div class="cp-werf-progress-fill" style="width:@werfPct%"></div>
                 </div>
 
                 <div class="cp-werf-stats">

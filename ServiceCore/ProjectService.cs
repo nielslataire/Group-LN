@@ -267,7 +267,7 @@ namespace ServiceCore
             if (!string.IsNullOrEmpty(userid))
                 query = query.Where(m => m.AspNetUserId == userid);
 
-            foreach (var e in query)
+            foreach (var e in query.Include(m => m.ProjectDocs))
             {
                 if (e.DeliveryDate == null && e.DocDelivery == true)
                 {

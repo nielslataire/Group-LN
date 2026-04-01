@@ -27,22 +27,20 @@
     <!-- ── Navigation ──────────────────────────────────────── -->
     <nav class="cp-nav">
         <a href="/Portaal" class="cp-nav-brand">
-            <div class="cp-nav-logo">LN</div>
-            <div class="cp-nav-brand-text">
-                <span class="cp-nav-brand-title">Aannemersportaal</span>
-                <span class="cp-nav-brand-sub">Group LN</span>
-            </div>
+            <img src="~/img/logo.png" alt="Group LN" class="cp-nav-logo-img" />
         </a>
 
-        <div class="cp-nav-links" id="cpNavLinks">
-            <a href="/Portaal/Dashboard"
-               class="cp-nav-link @(activeCtrl == "Dashboard" ? "active" : "")">
-                <i class="bx bx-grid-alt"></i> Dashboard
-            </a>
-            <a href="/Portaal/Werven"
-               class="cp-nav-link @(activeCtrl is "Werven" or "WerfDetail" ? "active" : "")">
-                <i class="bx bx-buildings"></i> Werven
-            </a>
+        <div class="cp-nav-center" id="cpNavCenter">
+            <div class="cp-nav-links" id="cpNavLinks">
+                <a href="/Portaal/Dashboard"
+                   class="cp-nav-link @(activeCtrl == "Dashboard" ? "active" : "")">
+                    <i class="bx bx-grid-alt"></i> Dashboard
+                </a>
+                <a href="/Portaal/Werven"
+                   class="cp-nav-link @(activeCtrl is "Werven" or "WerfDetail" ? "active" : "")">
+                    <i class="bx bx-buildings"></i> Werven
+                </a>
+            </div>
         </div>
 
         <div class="cp-nav-right">
@@ -83,7 +81,7 @@
 <script>
     // Mobile nav toggle
     document.getElementById('cpNavToggle').addEventListener('click', function () {
-        document.getElementById('cpNavLinks').classList.toggle('open');
+        document.getElementById('cpNavCenter').classList.toggle('open');
     });
 </script>
 @RenderSection("scripts", required: false)

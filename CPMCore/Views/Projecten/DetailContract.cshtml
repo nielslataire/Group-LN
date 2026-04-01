@@ -78,6 +78,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="#" data-section-toggle="leverancier">Leverancier</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section-toggle="portaal">Portaaltoegang</a>
+                </li>
             </ul>
 
             @if (Model.HasContract)
@@ -262,6 +265,30 @@
                     </div>
                 </section>
             </div>
+
+            <div id="portaal-detail-section" class="supplier-section d-none">
+                <section class="card card-modern card-big-info">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-2-5">
+                                <i class="card-big-info-icon bx bx-buildings"></i>
+                                <h2 class="card-big-info-title">Aannemersportaal</h2>
+                                <p class="card-big-info-desc">Beheer wie voor <strong>@companyName</strong> toegang heeft tot het portaal.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-3-5 d-flex align-items-center gap-2">
+                                <a href="@Url.Action("Overzicht", "ContractorInvite", new { companyId = Model.Contract.Company.ID })"
+                                   class="btn btn-outline-primary">
+                                    <i class="bx bx-group me-1"></i>Verantwoordelijken bekijken
+                                </a>
+                                <a href="@Url.Action("Aanmaken", "ContractorInvite", new { companyId = Model.Contract.Company.ID })"
+                                   class="btn btn-primary">
+                                    <i class="bx bx-user-plus me-1"></i>Verantwoordelijke uitnodigen
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </div>
     </div>
 </section>
@@ -271,9 +298,10 @@
         (function () {
             const sectionButtons = document.querySelectorAll('[data-section-toggle]');
             const sections = {
-                contract: document.getElementById('contract-detail-section'),
-                facturen: document.getElementById('contract-invoices-section'),
-                leverancier: document.getElementById('supplier-detail-section')
+                contract:    document.getElementById('contract-detail-section'),
+                facturen:    document.getElementById('contract-invoices-section'),
+                leverancier: document.getElementById('supplier-detail-section'),
+                portaal:     document.getElementById('portaal-detail-section')
             };
 
             sectionButtons.forEach((button) => {

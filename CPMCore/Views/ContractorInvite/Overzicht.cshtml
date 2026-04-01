@@ -1,0 +1,132 @@
+@model CPMCore.Models.ContractorInvite.ContractorOverzichtVm
+@using CPMCore.Services
+@{
+    ViewData["Title"] = "Portaal-toegang — " + Model.CompanyName;
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <div>
+                <h1 class="font-weight-bold mb-0">Portaal-toegang</h1>
+                <p class="text-muted mb-0">@Model.CompanyName</p>
+            </div>
+            <a asp-action="Aanmaken" asp-route-companyId="@Model.CompanyId"
+               class="btn btn-primary">
+                <i class="bx bx-user-plus me-1"></i>Verantwoordelijke uitnodigen
+            </a>
+        </div>
+
+        @if (TempData["Message"] != null)
+        {
+            <div class="alert alert-success">@TempData["Message"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger">@TempData["Error"]</div>
+        }
+
+        <section class="card card-modern">
+            <header class="card-header">
+                <h2 class="card-title mb-0">
+                    <i class="bx bx-group me-2"></i>Verantwoordelijken (@Model.Rows.Count)
+                </h2>
+            </header>
+            <div class="card-body p-0">
+                @if (!Model.Rows.Any())
+                {
+                    <div class="p-4 text-muted">Nog geen verantwoordelijken uitgenodigd voor dit bedrijf.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Naam</th>
+                                    <th>E-mail</th>
+                                    <th class="text-center">Toegang</th>
+                                    <th class="text-center">Status uitnodiging</th>
+                                    <th class="text-center">Laatste login</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Model.Rows)
+                                {
+                                    var statusBadge = row.InvitationStatus switch {
+                                        GuestInvitationStatus.Draft             => ("badge-secondary", "Draft"),
+                                        GuestInvitationStatus.Invited           => ("badge-info",      "Uitgenodigd"),
+                                        GuestInvitationStatus.PendingAcceptance => ("badge-warning",   "In afwachting"),
+                                        GuestInvitationStatus.Redeemed          => ("badge-success",   "Ingewisseld"),
+                                        GuestInvitationStatus.Active            => ("badge-success",   "Actief"),
+                                        GuestInvitationStatus.Failed            => ("badge-danger",    "Mislukt"),
+                                        GuestInvitationStatus.Revoked           => ("badge-dark",      "Ingetrokken"),
+                                        _                                       => ("badge-light",      "Geen uitnodiging")
+                                    };
+                                    <tr class="@(row.IsActive ? "" : "table-secondary text-muted")">
+                                        <td>
+                                            <strong>@row.DisplayName</strong>
+                                            @if (!row.IsActive)
+                                            {
+                                                <span class="badge badge-secondary ms-1">Inactief</span>
+                                            }
+                                        </td>
+                                        <td class="small">@row.Email</td>
+                                        <td class="text-center">
+                                            @if (row.IsFullCompanyAdmin)
+                                            {
+                                                <span class="badge badge-primary" title="Ziet alle puntmeldingen van het bedrijf">
+                                                    <i class="bx bx-building me-1"></i>Volledig
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary" title="Enkel eigen projecten">
+                                                    Beperkt
+                                                </span>
+                                            }
+                                            <form method="post" asp-action="WijzigRol" class="d-inline ms-1">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="userId" value="@row.UserId" />
+                                                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                                                <input type="hidden" name="isFullAdmin" value="@(!row.IsFullCompanyAdmin ? "true" : "false")" />
+                                                <button type="submit" class="btn btn-link btn-sm p-0 small"
+                                                        title="@(row.IsFullCompanyAdmin ? "Beperken" : "Volledig maken")">
+                                                    @(row.IsFullCompanyAdmin ? "beperken" : "volledig")
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge @statusBadge.Item1">@statusBadge.Item2</span>
+                                        </td>
+                                        <td class="text-center small text-muted">
+                                            @(row.LastLoginAt.HasValue
+                                                ? row.LastLoginAt.Value.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                                : "—")
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" asp-action="Verwijder"
+                                                  onsubmit="return confirm('Toegang intrekken voor @row.DisplayName?')">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="userId" value="@row.UserId" />
+                                                <input type="hidden" name="companyId" value="@Model.CompanyId" />
+                                                <button type="submit" class="btn btn-link text-danger btn-sm p-0"
+                                                        title="Toegang intrekken">
+                                                    <i class="bx bx-trash fs-5"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </section>
+
+    </div>
+</div>

@@ -15,7 +15,11 @@ public partial class UserCompanyAccess
 
     public int Role { get; set; }
 
+    public int? ContactId { get; set; }
+
     public virtual CompanyInfo Company { get; set; }
+
+    public virtual CompanyContacts Contact { get; set; }
 
     public virtual Users User { get; set; }
 }

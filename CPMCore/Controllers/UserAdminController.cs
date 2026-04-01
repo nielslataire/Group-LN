@@ -150,9 +150,11 @@ public class UserAdminController : BaseController
 
         return View(new UserAdminIndexViewModel
         {
-            LocalUsers = localUsers,
-            EntraUsers = entraUsers,
-            Roles = roleRows,
+            LocalUsers        = localUsers,
+            EntraUsers        = entraUsers,
+            EntraInternalUsers = entraUsers.Where(u => !u.IsGuest).ToList(),
+            EntraExternalUsers = entraUsers.Where(u =>  u.IsGuest).ToList(),
+            Roles             = roleRows,
             PermissionDefinitions = permissionDefinitions
         });
     }
@@ -268,7 +270,7 @@ public class UserAdminController : BaseController
             return entraUsers;
         var page = await _graphClient.Users
                 .Request()
-                .Select("id,displayName,mail,userPrincipalName")
+                .Select("id,displayName,mail,userPrincipalName,userType")
                 .Top(999)
                 .GetAsync();
 
@@ -281,7 +283,8 @@ public class UserAdminController : BaseController
                         Id = u.Id ?? "",
                         DisplayName = u.DisplayName ?? "",
                         Email = u.Mail ?? "",
-                        UserPrincipalName = u.UserPrincipalName ?? ""
+                        UserPrincipalName = u.UserPrincipalName ?? "",
+                        UserType = u.UserType ?? "Member"
                     }));
                 }
 

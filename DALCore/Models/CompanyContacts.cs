@@ -34,4 +34,6 @@ public partial class CompanyContacts
     public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();
 
     public virtual CompanyDepartments Department { get; set; }
+
+    public virtual ICollection<UserCompanyAccess> UserCompanyAccess { get; set; } = new List<UserCompanyAccess>();
 }

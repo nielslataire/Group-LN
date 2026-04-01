@@ -45,10 +45,10 @@ public interface IEntraGuestInvitationService
     /// Nodigt een gebruiker uit als Entra B2B gast en stuurt branded e-mail.
     /// Idempotent: bestaand record wordt bijgewerkt.
     /// </summary>
-    Task<GuestInviteResult> InviteGuestAsync(int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default);
+    Task<GuestInviteResult> InviteGuestAsync(int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default, string loginPath = "/Account/Login");
 
     /// <summary>Maakt een nieuw Graph-invite (nieuw redeemUrl) en stuurt branded e-mail opnieuw.</summary>
-    Task<GuestInviteResult> ResendInvitationAsync(int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default);
+    Task<GuestInviteResult> ResendInvitationAsync(int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default, string loginPath = "/Account/Login");
 
     /// <summary>Zet status terug op Revoked en wist OID-koppeling zodat beheerder opnieuw kan uitnodigen.</summary>
     Task<GuestInviteResult> ResetRedemptionAsync(int userId, int? performedByUserId, CancellationToken ct = default);
@@ -109,7 +109,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
 
     // ── InviteGuestAsync ────────────────────────────────────────────────────
     public async Task<GuestInviteResult> InviteGuestAsync(
-        int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default)
+        int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default, string loginPath = "/Account/Login")
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user == null)
@@ -118,7 +118,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         if (string.IsNullOrWhiteSpace(user.Email))
             return new GuestInviteResult(false, "Gebruiker heeft geen e-mailadres.");
 
-        var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, ct);
+        var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, loginPath, ct);
         if (graphError != null)
             return new GuestInviteResult(false, graphError);
 
@@ -152,7 +152,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         await AddAuditAsync(userId, GuestAuditAction.InviteSent, invitedByUserId,
             $"Uitnodiging verstuurd naar {user.Email}.", ct);
 
-        await SendBrandedEmailAsync(user, redeemUrl, appBaseUrl, ct);
+        await SendBrandedEmailAsync(user, redeemUrl, appBaseUrl, loginPath, ct);
 
         _logger.LogInformation(
             "Gastuitnodiging verstuurd voor gebruiker {UserId} ({Email}).", userId, user.Email);
@@ -162,7 +162,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
 
     // ── ResendInvitationAsync ───────────────────────────────────────────────
     public async Task<GuestInviteResult> ResendInvitationAsync(
-        int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default)
+        int userId, int? invitedByUserId, string appBaseUrl, CancellationToken ct = default, string loginPath = "/Account/Login")
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct);
         if (user == null)
@@ -178,7 +178,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
             return new GuestInviteResult(false,
                 "Geen bestaande uitnodiging gevonden. Gebruik 'Uitnodigen' eerst.");
 
-        var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, ct);
+        var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, loginPath, ct);
         if (graphError != null)
             return new GuestInviteResult(false, graphError);
 
@@ -197,7 +197,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         await AddAuditAsync(userId, GuestAuditAction.InviteResent, invitedByUserId,
             $"Uitnodiging opnieuw verstuurd naar {user.Email}.", ct);
 
-        await SendBrandedEmailAsync(user, redeemUrl, appBaseUrl, ct);
+        await SendBrandedEmailAsync(user, redeemUrl, appBaseUrl, loginPath, ct);
 
         _logger.LogInformation(
             "Gastuitnodiging herverstuurd voor gebruiker {UserId}.", userId);
@@ -266,7 +266,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
     /// Retourneert (redeemUrl, objectId, errorMessage).
     /// </summary>
     private async Task<(string? RedeemUrl, string? ObjectId, string? Error)> CallGraphInviteAsync(
-        string email, string appBaseUrl, CancellationToken ct)
+        string email, string appBaseUrl, string loginPath, CancellationToken ct)
     {
         if (_graphClient == null)
         {
@@ -275,7 +275,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
             return (null, null, null);   // zachte fout: branded e-mail wordt toch verstuurd
         }
 
-        var loginUrl = appBaseUrl.TrimEnd('/') + "/Account/Login";
+        var loginUrl = appBaseUrl.TrimEnd('/') + loginPath;
 
         try
         {
@@ -309,9 +309,9 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
     }
 
     private async Task SendBrandedEmailAsync(
-        Users user, string? redeemUrl, string appBaseUrl, CancellationToken ct)
+        Users user, string? redeemUrl, string appBaseUrl, string loginPath, CancellationToken ct)
     {
-        var loginUrl    = appBaseUrl.TrimEnd('/') + "/Account/Login";
+        var loginUrl    = appBaseUrl.TrimEnd('/') + loginPath;
         var firstName   = HtmlEncode(user.Voornaam?.Trim());
         var companyName = HtmlEncode(_configuration["Branding:CompanyName"] ?? "CPMCore");
 

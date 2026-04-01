@@ -266,9 +266,27 @@
             <div class="row row-cols-1 row-cols-md-2 g-3">
                 @foreach (var contact in Model.Contacts)
                 {
+                    var statusBadge = contact.PortaalStatus switch {
+                        "Draft"             => ("badge-secondary", "Draft"),
+                        "Invited"           => ("badge-info",      "Uitgenodigd"),
+                        "PendingAcceptance" => ("badge-warning",   "In afwachting"),
+                        "Redeemed"          => ("badge-success",   "Ingewisseld"),
+                        "Active"            => ("badge-success",   "Actief"),
+                        "Failed"            => ("badge-danger",    "Mislukt"),
+                        "Revoked"           => ("badge-dark",      "Ingetrokken"),
+                        _                  => ((string?)null, (string?)null)
+                    };
                     <div class="col">
-                        <div class="border rounded p-3 h-100">
-                            <div class="fw-bold">@(!string.IsNullOrWhiteSpace(contact.LastName) || !string.IsNullOrWhiteSpace(contact.FirstName) ? $"{contact.FirstName} {contact.LastName}".Trim() : "Onbekende contactpersoon")</div>
+                        <div class="border rounded p-3 h-100 d-flex flex-column">
+                            <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                                <div class="fw-bold">@(!string.IsNullOrWhiteSpace(contact.LastName) || !string.IsNullOrWhiteSpace(contact.FirstName) ? $"{contact.FirstName} {contact.LastName}".Trim() : "Onbekende contactpersoon")</div>
+                                @if (statusBadge.Item1 != null)
+                                {
+                                    <span class="badge @statusBadge.Item1 flex-shrink-0" title="Portaalstatus">
+                                        <i class="bx bx-buildings me-1"></i>@statusBadge.Item2
+                                    </span>
+                                }
+                            </div>
                             @if (!string.IsNullOrWhiteSpace(contact.Function))
                             {
                                 <div class="text-muted small mb-2">@contact.Function</div>
@@ -278,7 +296,56 @@
                             <div class="mb-1"><i class="fas fa-envelope me-2 text-primary"></i>@(string.IsNullOrWhiteSpace(contact.Email) ? "-" : contact.Email)</div>
                             @if (!string.IsNullOrWhiteSpace(contact.DepartmentName))
                             {
-                                <div class="text-muted small">Afdeling: @contact.DepartmentName</div>
+                                <div class="text-muted small mb-2">Afdeling: @contact.DepartmentName</div>
+                            }
+                            @if (contact.LastLoginAt.HasValue)
+                            {
+                                <div class="text-muted small mb-2">
+                                    <i class="bx bx-log-in me-1"></i>Laatste login: @contact.LastLoginAt.Value.ToLocalTime().ToString("dd/MM/yy HH:mm")
+                                </div>
+                            }
+                            @if (contact.LinkedUserId.HasValue && contact.PortaalStatus != null)
+                            {
+                                <div class="text-muted small mb-2">
+                                    <i class="bx bx-building me-1"></i>
+                                    Toegang: @(contact.IsFullCompanyAdmin ? "Volledig bedrijf" : "Beperkt (eigen contracten als SiteManager)")
+                                </div>
+                            }
+                            @* Portaalacties — alleen tonen als e-mail aanwezig is *@
+                            @if (!string.IsNullOrWhiteSpace(contact.Email) && Model.CanEdit)
+                            {
+                                <div class="mt-auto pt-2 border-top d-flex flex-wrap gap-1">
+                                    @if (contact.PortaalStatus == null || contact.PortaalStatus is "Failed" or "Revoked")
+                                    {
+                                        <form method="post" asp-action="InviteContact" asp-controller="Leveranciers">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.ContactId" />
+                                            <input type="hidden" name="isFullAdmin" value="false" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                <i class="bx bx-user-plus me-1"></i>Uitnodigen (beperkt)
+                                            </button>
+                                        </form>
+                                        <form method="post" asp-action="InviteContact" asp-controller="Leveranciers">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.ContactId" />
+                                            <input type="hidden" name="isFullAdmin" value="true" />
+                                            <button type="submit" class="btn btn-sm btn-primary">
+                                                <i class="bx bx-building me-1"></i>Uitnodigen (volledig)
+                                            </button>
+                                        </form>
+                                    }
+                                    else if (contact.LinkedUserId.HasValue)
+                                    {
+                                        <form method="post" asp-action="RevokeContactAccess" asp-controller="Leveranciers"
+                                              onsubmit="return confirm('Portaaltoegang intrekken voor @($"{contact.FirstName} {contact.LastName}".Trim())?')">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="contactId" value="@contact.ContactId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bx bx-unlink me-1"></i>Toegang intrekken
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
                             }
                         </div>
                     </div>

@@ -1,5 +1,7 @@
 ﻿using BOCore;
+using CPMCore.Helpers;
 using CPMCore.Models.Leveranciers;
+using CPMCore.Services;
 using CPMCore.Services.Octopus;
 using DALCore.Models;
 using FacadeCore;
@@ -37,11 +39,18 @@ public class LeveranciersController : BaseController
     private readonly cpmRunningContext _db;
     private readonly IOctopusApiClient _octopusClient;
     private readonly IOctopusTokenManager _octopusTokens;
-    public LeveranciersController(cpmRunningContext db, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens)
+    private readonly IContractorInviteService _contractorInviteService;
+
+    public LeveranciersController(
+        cpmRunningContext db,
+        IOctopusApiClient octopusClient,
+        IOctopusTokenManager octopusTokens,
+        IContractorInviteService contractorInviteService)
     {
         _db = db;
         _octopusClient = octopusClient;
         _octopusTokens = octopusTokens;
+        _contractorInviteService = contractorInviteService;
     }
 
     private async Task<SupplierFormViewModel> BuildFormAsync(SupplierFormViewModel model, CancellationToken ct, SupplierIssuerScope? scope = null)
@@ -877,23 +886,64 @@ public class LeveranciersController : BaseController
             })
             .ToListAsync(ct);
 
-        var contacts = await _db.CompanyContacts
+        var rawContacts = await _db.CompanyContacts
             .Include(c => c.Department)
             .Where(c => c.CompanyId == id)
             .AsNoTracking()
             .OrderBy(c => c.ContactNaam)
             .ThenBy(c => c.ContactVoornaam)
-            .Select(c => new SupplierContactDetailViewModel
-            {
-                FirstName = c.ContactVoornaam,
-                LastName = c.ContactNaam,
-                Function = c.Functie,
-                Phone = c.Telefoon,
-                Mobile = c.Gsm,
-                Email = c.Email,
-                DepartmentName = c.Department != null ? c.Department.Naam : null
-            })
             .ToListAsync(ct);
+
+        // Invite-status ophalen per e-mail
+        var contactEmails = rawContacts
+            .Where(c => !string.IsNullOrWhiteSpace(c.Email))
+            .Select(c => c.Email!.Trim().ToLowerInvariant())
+            .Distinct()
+            .ToList();
+
+        var linkedUsers = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Email != null && contactEmails.Contains(u.Email.Trim().ToLower()))
+            .ToListAsync(ct);
+
+        var linkedUserIds = linkedUsers.Select(u => u.Id).ToList();
+        var invites = await _db.UserGuestInvitation
+            .AsNoTracking()
+            .Where(i => linkedUserIds.Contains(i.UserId))
+            .ToListAsync(ct);
+        var accessByUser = await _db.UserCompanyAccess
+            .AsNoTracking()
+            .Where(a => a.CompanyId == id && linkedUserIds.Contains(a.UserId))
+            .ToListAsync(ct);
+
+        var contacts = rawContacts.Select(c =>
+        {
+            var email = c.Email?.Trim().ToLowerInvariant();
+            var user = email != null
+                ? linkedUsers.FirstOrDefault(u => u.Email?.Trim().ToLower() == email)
+                : null;
+            var invite = user != null
+                ? invites.FirstOrDefault(i => i.UserId == user.Id)
+                : null;
+            var access = user != null
+                ? accessByUser.FirstOrDefault(a => a.UserId == user.Id)
+                : null;
+            return new SupplierContactDetailViewModel
+            {
+                ContactId       = c.ContactId,
+                FirstName       = c.ContactVoornaam,
+                LastName        = c.ContactNaam,
+                Function        = c.Functie,
+                Phone           = c.Telefoon,
+                Mobile          = c.Gsm,
+                Email           = c.Email,
+                DepartmentName  = c.Department?.Naam,
+                LinkedUserId    = user?.Id,
+                PortaalStatus   = invite?.InvitationStatus,
+                IsFullCompanyAdmin = access?.Role == CPMCore.Services.ContractorAccessRole.VolledigVerantwoordelijk,
+                LastLoginAt     = invite?.LastLoginAt
+            };
+        }).ToList();
 
         var contracts = await _db.Contract
             .Where(c => c.CompanyId == id)
@@ -958,6 +1008,92 @@ public class LeveranciersController : BaseController
 
         ViewData["Title"] = detailModel.Name;
         return View(detailModel);
+    }
+
+    // ── Portaal: contact uitnodigen ──────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
+    public async Task<IActionResult> InviteContact(int contactId, bool isFullAdmin, CancellationToken ct)
+    {
+        var contact = await _db.CompanyContacts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.ContactId == contactId, ct);
+
+        if (contact == null)
+        {
+            TempData["Error"] = "Contact niet gevonden.";
+            return RedirectToAction(nameof(Details), new { id = 0 });
+        }
+
+        if (string.IsNullOrWhiteSpace(contact.Email))
+        {
+            TempData["Error"] = "Dit contact heeft geen e-mailadres. Voeg eerst een e-mailadres toe.";
+            return RedirectToAction(nameof(Details), new { id = contact.CompanyId });
+        }
+
+        var appBaseUrl = $"{Request.Scheme}://{Request.Host}";
+        var invitedBy  = User.GetCpmUserId();
+
+        var request = new ContractorInviteRequest(
+            CompanyId:          contact.CompanyId,
+            Email:              contact.Email,
+            FirstName:          contact.ContactVoornaam ?? string.Empty,
+            LastName:           contact.ContactNaam ?? string.Empty,
+            IsFullCompanyAdmin: isFullAdmin,
+            JobFunction:        contact.Functie,
+            Phone:              contact.Gsm ?? contact.Telefoon,
+            ContactId:          isFullAdmin ? null : contact.ContactId);
+
+        var result = await _contractorInviteService.InviteResponsibleAsync(request, appBaseUrl, invitedBy, ct);
+
+        TempData[result.Success ? "Message" : "Error"] = result.Success
+            ? $"Uitnodiging verstuurd naar {contact.Email}."
+            : result.ErrorMessage ?? "Uitnodiging mislukt.";
+
+        return RedirectToAction(nameof(Details), new { id = contact.CompanyId });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.Suppliers)]
+    public async Task<IActionResult> RevokeContactAccess(int contactId, CancellationToken ct)
+    {
+        var contact = await _db.CompanyContacts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.ContactId == contactId, ct);
+
+        if (contact == null)
+            return RedirectToAction(nameof(Details), new { id = 0 });
+
+        var email = contact.Email?.Trim().ToLowerInvariant();
+        if (email != null)
+        {
+            var user = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email != null && u.Email.Trim().ToLower() == email, ct);
+            if (user != null)
+            {
+                var access = await _db.UserCompanyAccess
+                    .FirstOrDefaultAsync(a => a.UserId == user.Id && a.CompanyId == contact.CompanyId, ct);
+                if (access != null)
+                {
+                    _db.UserCompanyAccess.Remove(access);
+                }
+
+                var invite = await _db.UserGuestInvitation
+                    .FirstOrDefaultAsync(i => i.UserId == user.Id, ct);
+                if (invite != null)
+                {
+                    invite.InvitationStatus = "Revoked";
+                }
+
+                await _db.SaveChangesAsync(ct);
+            }
+        }
+
+        TempData["Message"] = "Portaaltoegang ingetrokken.";
+        return RedirectToAction(nameof(Details), new { id = contact.CompanyId });
     }
 
     [HttpGet]

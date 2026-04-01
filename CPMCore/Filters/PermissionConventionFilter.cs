@@ -26,6 +26,28 @@ public class PermissionConventionFilter : IAsyncAuthorizationFilter
         if (context.Filters.OfType<IAllowAnonymousFilter>().Any() || context.ActionDescriptor.EndpointMetadata.OfType<Microsoft.AspNetCore.Authorization.AllowAnonymousAttribute>().Any())
             return;
 
+        // Aannemers en klanten hebben geen interne permissies.
+        // Ze mogen enkel hun eigen portaal + Account (sign-out, foto) gebruiken.
+        var userType = context.HttpContext.User.FindFirst(CPMCore.Helpers.CpmClaims.UserType)?.Value;
+        if (userType == "contractor")
+        {
+            var ctrl = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var cb) ? cb : null;
+            var isAllowed = string.Equals(ctrl, "ContractorPortal", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(ctrl, "Account", StringComparison.OrdinalIgnoreCase);
+            if (!isAllowed)
+                context.Result = new RedirectResult("/Portaal");
+            return;
+        }
+        if (userType == "customer")
+        {
+            var ctrl = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var ca) ? ca : null;
+            var isAllowed = string.Equals(ctrl, "CustomerPortal", StringComparison.OrdinalIgnoreCase)
+                         || string.Equals(ctrl, "Account", StringComparison.OrdinalIgnoreCase);
+            if (!isAllowed)
+                context.Result = new RedirectResult("/klantenportaal");
+            return;
+        }
+
         var endpoint = context.HttpContext.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<PermissionAuthorizeAttribute>() != null)
             return;

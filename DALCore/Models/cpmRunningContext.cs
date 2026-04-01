@@ -2559,6 +2559,11 @@ public partial class cpmRunningContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserCompanyAccess_CompanyInfo");
 
+            entity.HasOne(d => d.Contact).WithMany(p => p.UserCompanyAccess)
+                .HasForeignKey(d => d.ContactId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_UserCompanyAccess_CompanyContacts");
+
             entity.HasOne(d => d.User).WithMany(p => p.UserCompanyAccess)
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -2726,6 +2731,8 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(50);
         });
         modelBuilder.HasSequence<int>("Seq_ConstructionIssueReportItemId").StartsAt(2L);
+
+        OnModelCreatingPartial(modelBuilder);
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

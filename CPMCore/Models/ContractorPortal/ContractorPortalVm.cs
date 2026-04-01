@@ -94,4 +94,19 @@ public class ContractorIssueRow
     public bool IsOverdue { get; set; }
     public string CategoryName { get; set; } = "";
     public List<string> MediaFileIds { get; set; } = new();
+    public int? PlanDocumentId { get; set; }
+    public decimal? PlanXnormalized { get; set; }
+    public decimal? PlanYnormalized { get; set; }
+    public string? PlanImageUrl { get; set; }
+    public bool HasPlan => PlanDocumentId.HasValue && PlanXnormalized.HasValue && PlanYnormalized.HasValue && !string.IsNullOrWhiteSpace(PlanImageUrl);
+    public List<ContractorIssueComment> Comments { get; set; } = new();
+}
+
+public class ContractorIssueComment
+{
+    public string? AuthorName { get; set; }
+    public bool IsContractor { get; set; }  // true = verstuurd vanuit portaal
+    public string Text { get; set; } = "";
+    public DateTime Timestamp { get; set; }
+    public string? PhotoUrl { get; set; }
 }
