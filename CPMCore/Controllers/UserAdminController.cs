@@ -100,40 +100,71 @@ public class UserAdminController : BaseController
             // Tabel bestaat nog niet (vóór migratie)
         }
 
-        var localUsers = users.Select(user =>
+        // Aannemers: gebruikers met een UserCompanyAccess record
+        var contractorAccesses = await _db.UserCompanyAccess
+            .AsNoTracking()
+            .Include(a => a.Company)
+            .Include(a => a.User)
+            .OrderBy(a => a.User.Familienaam)
+            .ThenBy(a => a.User.Voornaam)
+            .ToListAsync();
+        var contractorUserIds = contractorAccesses.Select(a => a.UserId).ToHashSet();
+
+        var contractorUsers = contractorAccesses.Select(a =>
         {
-            var permissions = roleNamesByUser.TryGetValue(user.Id, out var roles)
-                ? roles
-                : (permissionsByUser.TryGetValue(user.Id, out var list) ? list : new List<string>());
-            var hasPrimaryRole = primaryRoleByUser.TryGetValue(user.Id, out var primaryRole);
-            guestInvitations.TryGetValue(user.Id, out var invite);
-
-            return new UserListItemViewModel
+            guestInvitations.TryGetValue(a.UserId, out var inv);
+            var name = string.Join(' ', new[] { a.User.Voornaam, a.User.Familienaam }
+                .Where(v => !string.IsNullOrWhiteSpace(v)));
+            return new ContractorUserItem
             {
-                Id = user.Id,
-                DisplayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
-                    .Where(value => !string.IsNullOrWhiteSpace(value))),
-                UserName = user.UserId ?? string.Empty,
-                Email = user.Email ?? string.Empty,
-                Cellphone = user.Gsm,
-                EntraObjectId = user.EntraObjectId,
-                IsActive = user.IsActive,
-                CurrentRoleId = hasPrimaryRole ? primaryRole.RoleId : (int?)null,
-                CurrentRoleName = hasPrimaryRole ? primaryRole.RoleName : null,
-                Permissions = permissions,
-                DashboardType = user.DashboardType.HasValue ? (Models.DashboardType)user.DashboardType.Value : (Models.DashboardType?)null,
-
-                // Gastuitnodiging
-                GuestInvitationId     = invite?.Id,
-                GuestInvitationStatus = invite?.InvitationStatus,
-                GuestUserType         = invite?.UserType,
-                GuestInvitationSentAt = invite?.InvitationSentAt,
-                GuestLastLoginAt      = invite?.LastLoginAt,
-                GuestExternalObjectId = invite?.ExternalObjectId,
-                GuestExternalTenantId = invite?.ExternalTenantId,
-                GuestInviteRedeemUrl  = invite?.InviteRedeemUrl
+                UserId         = a.UserId,
+                DisplayName    = string.IsNullOrWhiteSpace(name) ? a.User.UserId ?? a.User.Email ?? "" : name,
+                Email          = a.User.Email ?? "",
+                CompanyId      = a.CompanyId,
+                CompanyName    = a.Company?.BedrijfsNaam ?? $"Bedrijf {a.CompanyId}",
+                Role           = a.Role,
+                InvitationStatus = inv?.InvitationStatus,
+                LastLoginAt    = inv?.LastLoginAt
             };
         }).ToList();
+
+        var localUsers = users
+            .Where(u => !contractorUserIds.Contains(u.Id))
+            .Select(user =>
+            {
+                var permissions = roleNamesByUser.TryGetValue(user.Id, out var roles)
+                    ? roles
+                    : (permissionsByUser.TryGetValue(user.Id, out var list) ? list : new List<string>());
+                var hasPrimaryRole = primaryRoleByUser.TryGetValue(user.Id, out var primaryRole);
+                guestInvitations.TryGetValue(user.Id, out var invite);
+
+                return new UserListItemViewModel
+                {
+                    Id = user.Id,
+                    DisplayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
+                        .Where(value => !string.IsNullOrWhiteSpace(value))),
+                    UserName = user.UserId ?? string.Empty,
+                    Email = user.Email ?? string.Empty,
+                    Cellphone = user.Gsm,
+                    EntraObjectId = user.EntraObjectId,
+                    IsActive = user.IsActive,
+                    CurrentRoleId = hasPrimaryRole ? primaryRole.RoleId : (int?)null,
+                    CurrentRoleName = hasPrimaryRole ? primaryRole.RoleName : null,
+                    Permissions = permissions,
+                    DashboardType = user.DashboardType.HasValue ? (Models.DashboardType)user.DashboardType.Value : (Models.DashboardType?)null,
+
+                    // Gastuitnodiging
+                    GuestInvitationId     = invite?.Id,
+                    GuestInvitationStatus = invite?.InvitationStatus,
+                    GuestUserType         = invite?.UserType,
+                    GuestInvitationSentAt = invite?.InvitationSentAt,
+                    GuestLastLoginAt      = invite?.LastLoginAt,
+                    GuestExternalObjectId = invite?.ExternalObjectId,
+                    GuestExternalTenantId = invite?.ExternalTenantId,
+                    GuestInviteRedeemUrl  = invite?.InviteRedeemUrl
+                };
+            }).ToList();
+
         var entraUsers = await LoadEntraUsersAsync();
         var roleRows = new List<RolePermissionAssignmentViewModel>();
         try
@@ -151,6 +182,7 @@ public class UserAdminController : BaseController
         return View(new UserAdminIndexViewModel
         {
             LocalUsers        = localUsers,
+            ContractorUsers   = contractorUsers,
             EntraUsers        = entraUsers,
             EntraInternalUsers = entraUsers.Where(u => !u.IsGuest).ToList(),
             EntraExternalUsers = entraUsers.Where(u =>  u.IsGuest).ToList(),

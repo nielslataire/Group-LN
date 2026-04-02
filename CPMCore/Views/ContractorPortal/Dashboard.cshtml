@@ -18,13 +18,13 @@
             }
         </p>
     </div>
-    <div class="cp-hero-progress">
+    @* <div class="cp-hero-progress">
         <div class="cp-hero-progress-label">Voortgang</div>
         <div class="cp-hero-progress-pct">@Model.OverallProgressPct%</div>
         <div class="cp-hero-progress-bar">
             <div class="cp-hero-progress-fill" style="width:@Model.OverallProgressPct%"></div>
         </div>
-    </div>
+    </div> *@
 </div>
 
 <!-- ── KPI strip ─────────────────────────────────────────── -->
@@ -93,8 +93,9 @@
                                 {
                                     <div class="cp-proj-addr"><i class="bx bx-map-pin" style="font-size:.8rem;"></i>@p.Address</div>
                                 }
+                                @{ var dashProjPct = p.TotalCount > 0 ? (int)Math.Round((decimal)p.ResolvedCount / p.TotalCount * 100) : 0; }
                                 <div class="cp-proj-progress">
-                                    <div class="cp-proj-progress-fill" style="width:@p.ProgressPct%"></div>
+                                    <div class="cp-proj-progress-fill" style="width:@dashProjPct%"></div>
                                 </div>
                             </div>
                             @if (p.OpenCount > 0)
@@ -133,12 +134,21 @@
                             (int)ConstructionIssueStatus.Rejected          => "cp-comm-dot--done",
                             _                                               => "cp-comm-dot--open"
                         };
+                        var dotTitle = issue.Status switch
+                        {
+                            (int)ConstructionIssueStatus.InProgress        => "Gepland",
+                            (int)ConstructionIssueStatus.WaitingInspection => "Wacht op controle",
+                            (int)ConstructionIssueStatus.Resolved          => "Opgelost",
+                            (int)ConstructionIssueStatus.Rejected          => "Afgekeurd",
+                            (int)ConstructionIssueStatus.Reopened          => "Heropend",
+                            _                                               => "Open"
+                        };
                         var sub = issue.UnitName != null
                             ? $"{issue.ProjectName} · {issue.UnitName}"
                             : issue.ProjectName;
                         var dateLabel = issue.CreatedDate.ToString("d MMM", new System.Globalization.CultureInfo("nl-BE"));
                         <a href="/Portaal/Werven/@issue.ProjectId" class="cp-comm-row">
-                            <div class="cp-comm-dot @dotClass"></div>
+                            <div class="cp-comm-dot @dotClass" title="@dotTitle"></div>
                             <div class="flex-1 min-width-0">
                                 <div class="cp-comm-title">@issue.Title</div>
                                 <div class="cp-comm-sub">@sub</div>

@@ -194,7 +194,7 @@ public class ContractorInviteService : IContractorInviteService
 
         // Verstuur Entra-gastuitnodiging (redirect naar aannemersportaal)
         var inviteResult = await _guestInviteService.InviteGuestAsync(
-            user.Id, invitedByUserId, appBaseUrl, ct, loginPath: "/aannemer");
+            user.Id, invitedByUserId, appBaseUrl, ct, loginPath: "/Portaal");
 
         if (!inviteResult.Success)
             return ContractorInviteResult.Fail(inviteResult.ErrorMessage ?? "Uitnodiging mislukt.");
@@ -221,7 +221,7 @@ public class ContractorInviteService : IContractorInviteService
         if (invitation != null && skipStatuses.Contains(invitation.InvitationStatus))
             return;
 
-        var result = await _guestInviteService.InviteGuestAsync(userId, invitedByUserId, appBaseUrl, ct, loginPath: "/aannemer");
+        var result = await _guestInviteService.InviteGuestAsync(userId, invitedByUserId, appBaseUrl, ct, loginPath: "/Portaal");
         if (!result.Success)
             _logger.LogWarning(
                 "Automatisch uitnodigen mislukt voor gebruiker {UserId}: {Error}",

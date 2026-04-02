@@ -53,5 +53,16 @@ public class IssueNotificationHostedService : BackgroundService
         {
             _logger.LogError(ex, "Fout tijdens uitvoering van IssueNotificationScheduler.");
         }
+
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var digest = scope.ServiceProvider.GetRequiredService<IContractorPortalDigestService>();
+            await digest.RunAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fout tijdens uitvoering van ContractorPortalDigest.");
+        }
     }
 }

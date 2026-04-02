@@ -8,10 +8,11 @@
 @{
     var uitvoeringStatusId  = (int)ProjectStatusType.Uitvoering;
     var opgeleverdStatusId  = (int)ProjectStatusType.Opgeleverd;
+    var ontwerpStatusId     = (int)ProjectStatusType.Ontwerp;
     var myProjects          = Model.Projects.ToList();
-    var activeProjects      = myProjects.Where(p => p.Status.Id == uitvoeringStatusId).ToList();
+    var activeProjects      = myProjects.Where(p => p.Status.Id == uitvoeringStatusId || p.Status.Id == ontwerpStatusId).ToList();
     var nietOpgeleverd      = myProjects.Where(p => p.Status.Id != opgeleverdStatusId).ToList();
-    var werfProjects       = activeProjects.Any() ? activeProjects : myProjects;
+    var werfProjects        = activeProjects.Any() ? activeProjects : myProjects;
     var myProjectIds       = myProjects.Select(p => p.Id).ToHashSet();
 
     var displayName = User.GetCpmDisplayName() ?? string.Empty;
@@ -33,17 +34,11 @@
                 Url.Action("Detail", "Projecten", new { projectid = w.ProjectId }) ?? "#",
                 MeldingTypeHelper.FromString(w.Category))));
 
-    // Unieke categorieën aanwezig in meldingen, voor de filterknopen
-    var meldingCategories = meldingen.Select(m => m.Category).Distinct().OrderBy(c => (int)c).ToList();
+    // Prioriteitsgroepen
+    var urgentMeldingen  = meldingen.Where(m => m.Severity == "danger").ToList();
+    var normaleMeldingen = meldingen.Where(m => m.Severity == "warning").ToList();
+    var infoMeldingen    = meldingen.Where(m => m.Severity != "danger" && m.Severity != "warning").ToList();
 }
-
-<!-- ── PAGE HEADER ─────────────────────────────────────────── -->
-<div class="row justify-content-between align-items-center pt-2 pe-0">
-    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-        <h1 class="font-weight-bold mb-0 mt-0">Mijn Projecten</h1>
-        <h5 class="mb-0 mt-0">Welkom @voornaam &ndash; overzicht van je actieve werven</h5>
-    </div>
-</div>
 
 <!-- ── KPI STRIP ──────────────────────────────────────────── -->
 <div class="row gl-kpi-strip mb-2">
@@ -136,56 +131,121 @@
 <!-- ── MAIN CONTENT ───────────────────────────────────────── -->
 <div class="row pt-3 gl-dashboard">
 
-    <!-- LINKER KOLOM -->
-    <div class="col-lg-9">
-
-        <div class="gl-meldingen-section">
-        @* Meldingen *@
-        @if (meldingen.Any())
-        {
-            <section class="card card-modern mb-3">
-                <header class="card-header">
-                    <div class="card-title">
-                        <i class="bx bx-bell text-primary"></i>
-                        Meldingen
-                        <span class="gl-count-badge ms-3">@meldingen.Count</span>
-                    </div>
-                </header>
-                <div class="card-body p-3 pt-1">
-                    @* Filterknopen – boven de lijst, in de body *@
-                    <div id="gl-melding-filter">
-                        <button type="button" class="btn btn-xs btn-primary active" data-filter="all">
-                            <i class="bx bx-list-ul"></i> Alles (@meldingen.Count)
-                        </button>
-                        @foreach (var cat in meldingCategories)
-                        {
-                            var cnt  = meldingen.Count(m => m.Category == cat);
-                            var icon = MeldingTypeHelper.GetIcon(cat);
-                            var lbl  = MeldingTypeHelper.GetLabel(cat);
-                            <button type="button" class="btn btn-xs btn-default" data-filter="@cat">
-                                <i class="@icon"></i> @lbl (@cnt)
-                            </button>
-                        }
-                    </div>
-                    @* Scrollbare lijst *@
-                    <div style="max-height:210px; overflow-y:auto;" id="gl-meldingen-list">
-                        @foreach (var (tekst, projectId, severity, bekijkUrl, category) in meldingen)
-                        {
-                            var itemIcon = MeldingTypeHelper.GetIcon(category);
-                            <div class="alert alert-@severity fade show p-2 d-flex align-items-center" role="alert" data-category="@category">
-                                <i class="@itemIcon fs-6 me-2"></i>
-                                <span class="flex-grow-1">@tekst</span>
-                                <a href="@bekijkUrl" class="ml-auto text-body text-nowrap me-3">Bekijk <i class="bx bx-arrow-out-up-right-square"></i></a>
-                            </div>
-                        }
-                    </div>
+    <!-- MELDINGSCENTRUM: 1/4 -->
+    <div class="col-lg-3 gl-mc-col">
+        <section class="card card-modern gl-mc-card">
+            <header class="card-header">
+                <div class="card-title">
+                    <i class="bx bx-bell text-primary"></i>
+                    Meldingen
+                    @if (meldingen.Any())
+                    {
+                        <span class="gl-count-badge ms-2">@meldingen.Count</span>
+                    }
                 </div>
-            </section>
-        }
-        </div>
+            </header>
+            <div class="card-body p-0 gl-mc-body">
+
+                @* ACTIE VEREIST *@
+                @if (urgentMeldingen.Any())
+                {
+                    <div class="gl-mc-group gl-mc-urgent">
+                        <div class="gl-mc-group-hdr">
+                            <i class="bx bx-error-circle"></i> ACTIE VEREIST
+                            <span class="gl-mc-cnt">@urgentMeldingen.Count</span>
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @foreach (var (tekst, projectId, severity, bekijkUrl, category) in urgentMeldingen)
+                            {
+                                var icon = MeldingTypeHelper.GetIcon(category);
+                                <div class="gl-mc-item gl-mc-item-urgent">
+                                    <i class="@icon gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">@tekst</span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-external"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* DEZE WEEK *@
+                @if (normaleMeldingen.Any())
+                {
+                    <div class="gl-mc-group gl-mc-normal">
+                        <div class="gl-mc-group-hdr">
+                            <i class="bx bx-time"></i> OP TE LOSSEN
+                            <span class="gl-mc-cnt">@normaleMeldingen.Count</span>
+                            @if (normaleMeldingen.Count > 3)
+                            {
+                                <button type="button" class="gl-mc-toon-alles ms-auto" data-group="normal">toon alles</button>
+                            }
+                        </div>
+                        <div class="gl-mc-group-body">
+                            @{ int ni = 0; }
+                            @foreach (var (tekst, projectId, severity, bekijkUrl, category) in normaleMeldingen)
+                            {
+                                var icon   = MeldingTypeHelper.GetIcon(category);
+                                var snzKey = $"gl-snz-{Math.Abs(($"{projectId}|{(int)category}|{tekst}").GetHashCode())}";
+                                <div class="gl-mc-item gl-mc-item-normal @(ni >= 3 ? "gl-mc-extra" : "")" data-snz="@snzKey">
+                                    <i class="@icon gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">@tekst</span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-external"></i></a>
+                                        <button type="button" class="gl-mc-btn-snooze" data-snz="@snzKey" title="Snooze 1 week"><i class="bx bx-alarm-snooze"></i></button>
+                                    </div>
+                                </div>
+                                ni++;
+                            }
+                        </div>
+                    </div>
+                }
+
+                @* TER INFO *@
+                @if (infoMeldingen.Any())
+                {
+                    <div class="gl-mc-group gl-mc-info">
+                        <div class="gl-mc-group-hdr gl-mc-info-toggle" role="button">
+                            <i class="bx bx-info-circle"></i> TER INFO
+                            <span class="gl-mc-cnt">@infoMeldingen.Count</span>
+                            <i class="bx bx-chevron-down gl-mc-chevron ms-auto"></i>
+                        </div>
+                        <div class="gl-mc-group-body" style="display:none">
+                            @foreach (var (tekst, projectId, severity, bekijkUrl, category) in infoMeldingen)
+                            {
+                                var icon   = MeldingTypeHelper.GetIcon(category);
+                                var snzKey = $"gl-snz-info-{Math.Abs(($"{projectId}|{(int)category}|{tekst}").GetHashCode())}";
+                                <div class="gl-mc-item gl-mc-item-info" data-snz="@snzKey">
+                                    <i class="@icon gl-mc-item-icon"></i>
+                                    <span class="gl-mc-item-text">@tekst</span>
+                                    <div class="gl-mc-item-actions">
+                                        <a href="@bekijkUrl" class="gl-mc-btn-bekijk">Bekijk <i class="bx bx-link-external"></i></a>
+                                        <button type="button" class="gl-mc-btn-snooze" data-snz="@snzKey" title="Snooze 1 week"><i class="bx bx-alarm-snooze"></i></button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (!meldingen.Any())
+                {
+                    <div class="gl-mc-empty">
+                        <i class="bx bx-check-circle"></i>
+                        <span>Geen meldingen</span>
+                    </div>
+                }
+
+            </div>
+        </section>
+    </div>
+    <!-- /MELDINGSCENTRUM -->
+
+    <!-- MIJN WERVEN: 2/4 -->
+    <div class="col-lg-6">
 
         <div class="gl-werven-section">
-        @* Mijn werven *@
         <div class="gl-sectie-kop">Mijn Werven</div>
 
         @if (!werfProjects.Any())
@@ -248,7 +308,7 @@
                         ? imgBase + "pictures/447/" + project.DefaultPicture.Name
                         : string.Empty;
 
-                    <div class="col-12 col-md-6 col-lg-3 mb-4">
+                    <div class="col-12 col-sm-6 col-lg-4 mb-4">
                         <a href="@Url.Action("Detail", "Projecten", new { projectid = project.Id })" class="gl-werf-kaart">
                             <div class="gl-werf-foto">
                                 @if (!string.IsNullOrEmpty(fotoUrl))
@@ -332,9 +392,9 @@
 
         </div>
     </div>
-    <!-- /LINKER KOLOM -->
+    <!-- /MIJN WERVEN -->
 
-    <!-- RECHTER KOLOM: snelacties (enkel desktop) -->
+    <!-- SNELACTIES: 1/4 -->
     <div class="col-lg-3 d-none d-lg-block">
         <section class="card card-modern">
             <header class="card-header">
@@ -488,6 +548,7 @@
             </div>
         </section>
     </div>
+    <!-- /SNELACTIES -->
 
 </div>
 
@@ -607,16 +668,40 @@ window.addEventListener('load', function () {
         if (!isOpen) { $submenu.slideDown(150); $btn.addClass('active'); }
     });
 
-    // ── Meldingen filter ───────────────────────────────────────────────
-    $(document).on('click', '#gl-melding-filter button', function () {
-        var filter = $(this).data('filter');
-        $('#gl-melding-filter button').removeClass('active btn-primary').addClass('btn-default');
-        $(this).removeClass('btn-default').addClass('btn-primary active');
-        if (filter === 'all') {
-            $('#gl-meldingen-list .gl-melding').show();
+    // ── Meldingscentrum ────────────────────────────────────────────────
+    var SNOOZE_MS = 7 * 24 * 60 * 60 * 1000; // 1 week
+
+    // Verberg gesnoozede items bij laden
+    $('.gl-mc-item[data-snz]').each(function () {
+        var key = $(this).data('snz');
+        var exp = localStorage.getItem(key);
+        if (exp && Date.now() < parseInt(exp, 10)) { $(this).hide(); }
+    });
+
+    // Snooze knop
+    $(document).on('click', '.gl-mc-btn-snooze', function () {
+        var key = $(this).data('snz');
+        localStorage.setItem(key, Date.now() + SNOOZE_MS);
+        $(this).closest('.gl-mc-item').slideUp(200);
+    });
+
+    // Toon alles knop (DEZE WEEK groep)
+    $(document).on('click', '.gl-mc-toon-alles', function () {
+        var $btn = $(this);
+        $btn.closest('.gl-mc-group').find('.gl-mc-extra').slideDown(150);
+        $btn.remove();
+    });
+
+    // TER INFO toggle
+    $(document).on('click', '.gl-mc-info-toggle', function () {
+        var $body = $(this).next('.gl-mc-group-body');
+        var $chev = $(this).find('.gl-mc-chevron');
+        if ($body.is(':visible')) {
+            $body.slideUp(150);
+            $chev.removeClass('gl-mc-chevron-open');
         } else {
-            $('#gl-meldingen-list .gl-melding').hide();
-            $('#gl-meldingen-list .gl-melding[data-category="' + filter + '"]').show();
+            $body.slideDown(150);
+            $chev.addClass('gl-mc-chevron-open');
         }
     });
 

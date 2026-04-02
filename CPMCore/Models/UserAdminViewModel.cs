@@ -58,9 +58,22 @@ namespace CPMCore.Models
         public string RoleName { get; set; } = string.Empty;
     }
 
+    public class ContractorUserItem
+    {
+        public int UserId { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public int CompanyId { get; set; }
+        public string CompanyName { get; set; } = string.Empty;
+        public int Role { get; set; } // ContractorAccessRole
+        public string? InvitationStatus { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+    }
+
     public class UserAdminIndexViewModel
     {
         public List<UserListItemViewModel> LocalUsers { get; set; } = new();
+        public List<ContractorUserItem> ContractorUsers { get; set; } = new();
         /// <summary>Alle Entra-gebruikers (voor legacy-gebruik in dropdowns).</summary>
         public List<EntraUserListItemViewModel> EntraUsers { get; set; } = new();
         /// <summary>Interne Entra-leden (Member, geen #EXT#).</summary>

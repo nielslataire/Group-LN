@@ -14,13 +14,16 @@ public class ContractorInviteController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IContractorInviteService _inviteService;
+    private readonly IEntraGuestInvitationService _guestInvitationService;
 
     public ContractorInviteController(
         cpmRunningContext db,
-        IContractorInviteService inviteService)
+        IContractorInviteService inviteService,
+        IEntraGuestInvitationService guestInvitationService)
     {
         _db = db;
         _inviteService = inviteService;
+        _guestInvitationService = guestInvitationService;
     }
 
     // ── Uitnodigingsformulier ────────────────────────────────────────────────
@@ -149,6 +152,10 @@ public class ContractorInviteController : BaseController
             _db.UserCompanyAccess.Remove(access);
             await _db.SaveChangesAsync(ct);
         }
+
+        // Entra-koppeling wissen zodat de gebruiker niet meer kan inloggen
+        var performedBy = User.GetCpmUserId();
+        await _guestInvitationService.ResetRedemptionAsync(userId, performedBy, ct);
 
         TempData["Message"] = "Toegang ingetrokken.";
         return RedirectToAction(nameof(Overzicht), new { companyId });

@@ -40,17 +40,20 @@ public class LeveranciersController : BaseController
     private readonly IOctopusApiClient _octopusClient;
     private readonly IOctopusTokenManager _octopusTokens;
     private readonly IContractorInviteService _contractorInviteService;
+    private readonly IEntraGuestInvitationService _guestInvitationService;
 
     public LeveranciersController(
         cpmRunningContext db,
         IOctopusApiClient octopusClient,
         IOctopusTokenManager octopusTokens,
-        IContractorInviteService contractorInviteService)
+        IContractorInviteService contractorInviteService,
+        IEntraGuestInvitationService guestInvitationService)
     {
         _db = db;
         _octopusClient = octopusClient;
         _octopusTokens = octopusTokens;
         _contractorInviteService = contractorInviteService;
+        _guestInvitationService = guestInvitationService;
     }
 
     private async Task<SupplierFormViewModel> BuildFormAsync(SupplierFormViewModel model, CancellationToken ct, SupplierIssuerScope? scope = null)
@@ -1077,18 +1080,13 @@ public class LeveranciersController : BaseController
                 var access = await _db.UserCompanyAccess
                     .FirstOrDefaultAsync(a => a.UserId == user.Id && a.CompanyId == contact.CompanyId, ct);
                 if (access != null)
-                {
                     _db.UserCompanyAccess.Remove(access);
-                }
-
-                var invite = await _db.UserGuestInvitation
-                    .FirstOrDefaultAsync(i => i.UserId == user.Id, ct);
-                if (invite != null)
-                {
-                    invite.InvitationStatus = "Revoked";
-                }
 
                 await _db.SaveChangesAsync(ct);
+
+                // Entra-koppeling en OID wissen zodat de gebruiker niet meer kan inloggen
+                var performedBy = User.GetCpmUserId();
+                await _guestInvitationService.ResetRedemptionAsync(user.Id, performedBy, ct);
             }
         }
 

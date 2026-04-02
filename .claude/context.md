@@ -1,3 +1,5 @@
+@include ./frontend-standards.md
+
 # Project Context: CPMCore Solution
 
 ## Solution structure

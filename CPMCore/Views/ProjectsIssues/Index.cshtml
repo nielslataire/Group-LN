@@ -2280,8 +2280,10 @@
 
                       const issueIdsFromRows = Array.from(new Set(summaryRows.flatMap(row => (row.issueIds || []).map(Number)).filter(Number.isFinite)));
                       const fallbackIssueIds = Array.from(new Set((sendState.preview?.issueIds || []).map(Number).filter(Number.isFinite)));
-                      const totalIssues = Number(sendState.preview?.totalIssueCount || 0) || issueIdsFromRows.length || fallbackIssueIds.length;
-                      const totalResponsibles = Number(sendState.preview?.totalResponsibleCount || 0) || summaryRows.length;
+                      const totalIssues = selectedResponsibleKey
+                          ? issueIdsFromRows.length
+                          : (Number(sendState.preview?.totalIssueCount || 0) || fallbackIssueIds.length);
+                      const totalResponsibles = summaryRows.length;
                       if (sendSummaryTotal) {
                           sendSummaryTotal.innerHTML = `<i class="bx bx-check-circle me-1 text-success"></i><b>${totalIssues}</b> punt(en) naar <b>${totalResponsibles}</b> verantwoordelijke(n)`;
                       }

@@ -1,6 +1,7 @@
 ﻿using BOCore;
 using CPMCore.Helpers;
 using CPMCore.Models.Issues;
+using CPMCore.Services;
 using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
@@ -30,13 +31,15 @@ public class ProjectsIssuesController : BaseController
     private readonly IConstructionIssueReportService _reportService;
     private readonly cpmRunningContext _db;
     private readonly IConfiguration _configuration;
+    private readonly IContractorInviteService _inviteService;
 
-    public ProjectsIssuesController(IConstructionIssueService service, IConstructionIssueReportService reportService, cpmRunningContext db, IConfiguration configuration)
+    public ProjectsIssuesController(IConstructionIssueService service, IConstructionIssueReportService reportService, cpmRunningContext db, IConfiguration configuration, IContractorInviteService inviteService)
     {
         _service = service;
         _reportService = reportService;
         _db = db;
         _configuration = configuration;
+        _inviteService = inviteService;
     }
 
     [HttpGet("~/Projects/Issues")]
@@ -105,8 +108,34 @@ public class ProjectsIssuesController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SendSelected(int projectId, ConstructionIssueSendRequestBO request, string? comment)
     {
-        var sent = await _reportService.SendSelectedIssues(projectId, request, User.FindFirst(CpmClaims.UserId)?.Value, comment);
+        var userId = User.FindFirst(CpmClaims.UserId)?.Value;
+        var sent = await _reportService.SendSelectedIssues(projectId, request, userId, comment);
         AddMessage(sent > 0 ? "success" : "error", sent > 0 ? $"{sent} punt(en) verzonden." : "Geen punten verzonden (geen geldige e-mail).", sent > 0 ? "Geslaagd" : "Fout");
+
+        // Auto-invite: ensure each responsible company's portal users are invited if not yet registered
+        if (sent > 0 && (request.IssueIds?.Any() == true))
+        {
+            var appBaseUrl = $"{Request.Scheme}://{Request.Host}";
+            var inviterUserId = User.GetCpmUserId();
+            var companyIds = await _db.ConstructionIssue
+                .Where(x => x.ProjectId == projectId && request.IssueIds.Contains(x.Id) && x.ResponsiblePartyId != null)
+                .Select(x => x.ResponsiblePartyId!.Value)
+                .Distinct()
+                .ToListAsync();
+
+            var portalUserIds = await _db.UserCompanyAccess
+                .Where(a => companyIds.Contains(a.CompanyId))
+                .Select(a => a.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            foreach (var portalUserId in portalUserIds)
+            {
+                try { await _inviteService.EnsureInvitedAsync(portalUserId, appBaseUrl, inviterUserId); }
+                catch { /* don't fail the send if invite fails */ }
+            }
+        }
+
         return RedirectToAction(nameof(Index), new { projectId });
     }
 
@@ -473,12 +502,29 @@ public class ProjectsIssuesController : BaseController
             .Select(x => new { x.CompanyId, x.BedrijfsNaam, x.Email, x.InvoiceEmail })
             .ToListAsync();
 
+        // Load contract site-manager contacts so the email shown matches the current contact, not a stale cached value
+        var contractContacts = await _db.Contract
+            .AsNoTracking()
+            .Where(c => c.ProjectId == projectId && companyIds.Contains(c.CompanyId) && c.SiteManagerContactId != null)
+            .Select(c => new { c.CompanyId, c.SiteManagerContact!.Email, ContactName = (c.SiteManagerContact.ContactVoornaam + " " + c.SiteManagerContact.ContactNaam).Trim() })
+            .ToListAsync();
+        var contractContactLookup = contractContacts
+            .GroupBy(c => c.CompanyId)
+            .ToDictionary(g => g.Key, g => g.First());
+
         var companyLookup = companyInfo.ToDictionary(
             x => x.CompanyId,
-            x => new
+            x =>
             {
-                Name = string.IsNullOrWhiteSpace(x.BedrijfsNaam) ? $"Bedrijf #{x.CompanyId}" : x.BedrijfsNaam,
-                Email = !string.IsNullOrWhiteSpace(x.InvoiceEmail) ? x.InvoiceEmail : x.Email
+                contractContactLookup.TryGetValue(x.CompanyId, out var contact);
+                return new
+                {
+                    // Display name is always the company name
+                    Name = string.IsNullOrWhiteSpace(x.BedrijfsNaam) ? $"Bedrijf #{x.CompanyId}" : x.BedrijfsNaam,
+                    // Email: prefer contract contact email, then company email
+                    Email = !string.IsNullOrWhiteSpace(contact?.Email) ? contact!.Email
+                          : !string.IsNullOrWhiteSpace(x.InvoiceEmail) ? x.InvoiceEmail : x.Email
+                };
             });
 
         string BuildResponsibleKey(int type, int? partyId, string? otherName, string? otherEmail)

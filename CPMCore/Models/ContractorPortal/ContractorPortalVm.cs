@@ -20,6 +20,8 @@ public class ContractorProjectSummary
     public string Name { get; set; } = "";
     public string Address { get; set; } = "";
     public int OpenCount { get; set; }
+    public int TotalCount { get; set; }
+    public int ResolvedCount { get; set; }
     public decimal ProgressPct { get; set; }
 }
 
@@ -97,6 +99,7 @@ public class ContractorIssueRow
     public int? PlanDocumentId { get; set; }
     public decimal? PlanXnormalized { get; set; }
     public decimal? PlanYnormalized { get; set; }
+    public int? PlanPageNumber { get; set; }
     public string? PlanImageUrl { get; set; }
     public bool HasPlan => PlanDocumentId.HasValue && PlanXnormalized.HasValue && PlanYnormalized.HasValue && !string.IsNullOrWhiteSpace(PlanImageUrl);
     public List<ContractorIssueComment> Comments { get; set; } = new();
@@ -108,5 +111,5 @@ public class ContractorIssueComment
     public bool IsContractor { get; set; }  // true = verstuurd vanuit portaal
     public string Text { get; set; } = "";
     public DateTime Timestamp { get; set; }
-    public string? PhotoUrl { get; set; }
+    public List<string> PhotoUrls { get; set; } = new();
 }

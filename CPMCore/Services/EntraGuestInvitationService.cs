@@ -118,6 +118,17 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         if (string.IsNullOrWhiteSpace(user.Email))
             return new GuestInviteResult(false, "Gebruiker heeft geen e-mailadres.");
 
+        // Contractors gaan altijd naar /aannemer, ongeacht hoe de aanroep is gedaan
+        if (loginPath == "/Account/Login")
+        {
+            var inv = await _db.UserGuestInvitation.AsNoTracking()
+                .Where(i => i.UserId == userId)
+                .Select(i => new { i.UserType })
+                .FirstOrDefaultAsync(ct);
+            if (inv?.UserType == "contractor")
+                loginPath = "/Portaal";
+        }
+
         var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, loginPath, ct);
         if (graphError != null)
             return new GuestInviteResult(false, graphError);
@@ -177,6 +188,10 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         if (invitation == null)
             return new GuestInviteResult(false,
                 "Geen bestaande uitnodiging gevonden. Gebruik 'Uitnodigen' eerst.");
+
+        // Contractors gaan altijd naar /aannemer, ongeacht hoe de aanroep is gedaan
+        if (loginPath == "/Account/Login" && invitation.UserType == "contractor")
+            loginPath = "/aannemer";
 
         var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, loginPath, ct);
         if (graphError != null)

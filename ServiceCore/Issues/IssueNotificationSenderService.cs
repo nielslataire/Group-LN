@@ -14,6 +14,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
     private readonly cpmRunningContext _db;
     private readonly IConstructionIssueReportService _reportService;
     private readonly IConfiguration _configuration;
+    private readonly IPortalInviteNotifier? _portalInviteNotifier;
 
     // Statuses always included in reminder emails (regardless of planned date)
     private static readonly int[] ReminderStatuses = { 0, 3, 7 };
@@ -31,11 +32,13 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
     public IssueNotificationSenderService(
         cpmRunningContext db,
         IConstructionIssueReportService reportService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IPortalInviteNotifier? portalInviteNotifier = null)
     {
         _db = db;
         _reportService = reportService;
         _configuration = configuration;
+        _portalInviteNotifier = portalInviteNotifier;
     }
 
     public async Task<int> SendNotificationsAsync(
@@ -95,6 +98,24 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             .Select(x => new { x.CompanyId, x.Email, x.BedrijfsNaam })
             .ToDictionaryAsync(x => x.CompanyId);
 
+        // Contract site-manager contact emails: key = (projectId, companyId)
+        // These take priority over CompanyInfo.Email so updates to the contact are reflected immediately
+        var contractContactMap = await _db.Contract
+            .Where(c => allProjectIds.Contains(c.ProjectId) && allCompanyIds.Contains(c.CompanyId) && c.SiteManagerContactId != null)
+            .Select(c => new {
+                c.ProjectId,
+                c.CompanyId,
+                c.SiteManagerContactId,
+                c.SiteManagerContact!.Email,
+                ContactFirstName = c.SiteManagerContact.ContactVoornaam ?? "",
+                ContactLastName  = c.SiteManagerContact.ContactNaam ?? "",
+                ContactName = (c.SiteManagerContact.ContactVoornaam + " " + c.SiteManagerContact.ContactNaam).Trim()
+            })
+            .ToListAsync();
+        var contractContactLookup = contractContactMap
+            .GroupBy(c => (c.ProjectId, c.CompanyId))
+            .ToDictionary(g => g.Key, g => g.First());
+
         var managerUserIds = projectMap.Values
             .Where(x => x.AspNetUserId != null)
             .Select(x => x.AspNetUserId!)
@@ -126,10 +147,15 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             if (!eveningOnly && !groupIssues.Any(x => x.Status == 0))
                 continue;
 
-            // 4. Resolve company
+            // 4. Resolve company + contact email
             if (!companyMap.TryGetValue(group.Key.ResponsiblePartyId!.Value, out var company))
                 continue;
-            if (string.IsNullOrWhiteSpace(company.Email))
+
+            var contractContact = contractContactLookup.TryGetValue((group.Key.ProjectId, group.Key.ResponsiblePartyId!.Value), out var cc) ? cc : null;
+            var recipientEmail = !string.IsNullOrWhiteSpace(contractContact?.Email) ? contractContact!.Email : company.Email;
+            var recipientName  = !string.IsNullOrWhiteSpace(contractContact?.ContactName) ? contractContact!.ContactName : company.BedrijfsNaam;
+
+            if (string.IsNullOrWhiteSpace(recipientEmail))
                 continue;
 
             // 5. Resolve project
@@ -142,7 +168,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 && managerEmailMap.TryGetValue(project.AspNetUserId, out var mgrEmail)
                 ? mgrEmail : null;
 
-            var ccEmails = replyTo != null && replyTo != company.Email
+            var ccEmails = replyTo != null && replyTo != recipientEmail
                 ? new List<string> { replyTo }
                 : new List<string>();
 
@@ -178,17 +204,49 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 ? $"Update werfpunten van vandaag – {projectName} – {sentDate:dd/MM/yyyy}"
                 : $"Herinnering openstaande werfpunten – {projectName} – {sentDate:dd/MM/yyyy}";
 
-            var html = BuildEmailHtml(
-                company.BedrijfsNaam,
+            var intro = eveningOnly
+                ? "Hieronder vindt u de werfpunten die <strong>vandaag</strong> werden aangemaakt of gewijzigd."
+                : "Hieronder vindt u een overzicht van uw <strong>openstaande werfpunten</strong>. Gelieve deze zo snel mogelijk te behandelen.";
+
+            var portalBaseUrl = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
+            var portalLoginUrl = string.IsNullOrWhiteSpace(portalBaseUrl) ? null : $"{portalBaseUrl}/Portaal";
+
+            var html = IssueEmailHtmlBuilder.BuildIssueTableEmail(
+                recipientName,
                 projectName,
                 groupIssues,
                 unitNames,
-                eveningOnly,
-                sentDate);
+                intro,
+                sentDate,
+                portalLoginUrl: portalLoginUrl);
 
             // 9. Send
-            await SendAsync(company.Email, subject, html, attachments, ccEmails, replyTo);
+            await SendAsync(recipientEmail, subject, html, attachments, ccEmails, replyTo);
             emailsSent++;
+
+            // 9b. Portal uitnodiging voor de ontvanger — ook als nog geen interne gebruiker bestaat
+            if (_portalInviteNotifier != null && !string.IsNullOrWhiteSpace(portalBaseUrl) && !string.IsNullOrWhiteSpace(recipientEmail))
+            {
+                try
+                {
+                    // Bepaal of de ontvanger een SiteManagerContact is (beperkt) of het bedrijf zelf (volledig)
+                    bool isFullAdmin  = contractContact == null;
+                    int? invContactId = contractContact != null ? contractContact.SiteManagerContactId : null;
+                    string firstName  = contractContact != null ? contractContact.ContactFirstName : "";
+                    string lastName   = contractContact != null ? contractContact.ContactLastName  : (recipientName ?? "");
+
+                    await _portalInviteNotifier.EnsureRecipientInvitedAsync(
+                        group.Key.ResponsiblePartyId!.Value,
+                        recipientEmail,
+                        firstName,
+                        lastName,
+                        isFullAdmin,
+                        invContactId,
+                        portalBaseUrl,
+                        invitedByUserId: null);
+                }
+                catch { /* uitnodiging is best-effort, niet kritiek */ }
+            }
 
             // 10. Persist notifications
             foreach (var issue in groupIssues)
@@ -201,7 +259,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                     IssueId           = issue.Id,
                     RecipientType     = group.Key.ResponsiblePartyType,
                     RecipientId       = group.Key.ResponsiblePartyId,
-                    RecipientEmail    = company.Email,
+                    RecipientEmail    = recipientEmail,
                     SentDate          = sentDate,
                     SentByUserId      = null,
                     Channel           = (int)ConstructionIssueNotificationChannel.Email,
@@ -214,195 +272,6 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
         await _db.SaveChangesAsync();
         return emailsSent;
     }
-
-    // ──────────────────────────────────────────────────────────────
-    // HTML EMAIL BUILDER
-    // ──────────────────────────────────────────────────────────────
-
-    private static string BuildEmailHtml(
-        string contractorName,
-        string projectName,
-        IList<ConstructionIssue> issues,
-        Dictionary<int, string> unitNames,
-        bool isEveningUpdate,
-        DateTime sentDate)
-    {
-        const string primary      = "#0a5a3b";
-        const string primaryLight = "#d4ede4";
-
-        var intro = isEveningUpdate
-            ? "Hieronder vindt u de werfpunten die <strong>vandaag</strong> werden aangemaakt of gewijzigd."
-            : "Hieronder vindt u een overzicht van uw <strong>openstaande werfpunten</strong>. Gelieve deze zo snel mogelijk te behandelen.";
-
-        var issuesForEmail = issues
-            .OrderBy(x => x.Priority == 3 ? 0 : x.Priority == 2 ? 1 : 2)
-            .ThenBy(x => x.DueDate)
-            .ToList();
-
-        var sb = new StringBuilder();
-        sb.Append($@"<!DOCTYPE html>
-<html lang=""nl"">
-<head>
-  <meta charset=""utf-8""/>
-  <meta name=""viewport"" content=""width=device-width,initial-scale=1""/>
-  <title>Werfpunten – Group LN</title>
-</head>
-<body style=""margin:0;padding:0;background:#f4f6f8;font-family:Arial,Helvetica,sans-serif;"">
-
-<!-- HEADER -->
-<table width=""100%"" cellpadding=""0"" cellspacing=""0"" bgcolor=""{primary}"">
-  <tr>
-    <td style=""padding:24px 32px;"">
-      <div style=""font-size:22px;font-weight:bold;color:#ffffff;letter-spacing:1px;"">Group LN</div>
-      <div style=""font-size:12px;color:{primaryLight};margin-top:4px;"">{WebUtility.HtmlEncode(projectName)} · {sentDate:dd MMMM yyyy}</div>
-    </td>
-  </tr>
-</table>
-
-<!-- WRAPPER -->
-<table width=""100%"" cellpadding=""0"" cellspacing=""0"">
-  <tr>
-    <td align=""center"" style=""padding:24px 16px;"">
-      <table width=""620"" cellpadding=""0"" cellspacing=""0"" bgcolor=""#ffffff""
-             style=""border-radius:8px;border:1px solid #dde3e9;"">
-        <tr>
-          <td style=""padding:28px 32px;"">
-
-            <!-- GREETING -->
-            <p style=""font-size:15px;color:#1f2937;margin:0 0 8px;"">Beste <strong>{WebUtility.HtmlEncode(contractorName)}</strong>,</p>
-            <p style=""font-size:14px;color:#374151;margin:0 0 24px;line-height:1.6;"">{intro}</p>
-
-            <!-- ISSUES TABLE -->
-            <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-bottom:28px;"">
-              <tr>
-                <td style=""background:{primary};border-radius:6px 6px 0 0;padding:10px 14px;"">
-                  <span style=""color:#ffffff;font-size:13px;font-weight:bold;"">{WebUtility.HtmlEncode(projectName)}</span>
-                  <span style=""color:{primaryLight};font-size:11px;margin-left:8px;"">({issuesForEmail.Count} punt{(issuesForEmail.Count == 1 ? "" : "en")})</span>
-                </td>
-              </tr>
-              <tr>
-                <td style=""border:1px solid #dde3e9;border-top:none;border-radius:0 0 6px 6px;padding:0;"">
-                  <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;"">
-                    <thead>
-                      <tr style=""background:#f9fafb;"">
-                        <th style=""padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;width:36px;"">#</th>
-                        <th style=""padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;"">Omschrijving</th>
-                        <th style=""padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;width:120px;"">Eenheid / Locatie</th>
-                        <th style=""padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;width:110px;"">Status</th>
-                        <th style=""padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;border-bottom:1px solid #e5e7eb;width:90px;"">Deadline</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-");
-
-        var rowIdx = 1;
-        foreach (var issue in issuesForEmail)
-        {
-            var rowBg         = rowIdx % 2 == 0 ? "#f9fafb" : "#ffffff";
-            var statusLabel   = GetStatusLabel(issue.Status);
-            var statusColor   = GetStatusColor(issue.Status);
-            var deadline      = issue.DueDate.HasValue ? issue.DueDate.Value.ToString("dd/MM/yyyy") : "–";
-            var priorityBadge = GetPriorityBadgeHtml(issue.Priority);
-            var title         = WebUtility.HtmlEncode(issue.Title ?? "(zonder titel)");
-            var unitName      = issue.UnitId.HasValue && unitNames.TryGetValue(issue.UnitId.Value, out var un) ? WebUtility.HtmlEncode(un) : null;
-            var roomOrZone    = !string.IsNullOrWhiteSpace(issue.RoomOrZone) ? WebUtility.HtmlEncode(issue.RoomOrZone) : null;
-            var locationCell  = BuildLocationCellHtml(unitName, roomOrZone);
-
-            sb.Append($@"
-                      <tr style=""background:{rowBg};"">
-                        <td style=""padding:9px 12px;font-size:12px;color:#6b7280;border-bottom:1px solid #f3f4f6;"">{rowIdx}</td>
-                        <td style=""padding:9px 12px;font-size:12px;color:#1f2937;border-bottom:1px solid #f3f4f6;"">{title}{priorityBadge}</td>
-                        <td style=""padding:9px 12px;font-size:11px;color:#374151;border-bottom:1px solid #f3f4f6;"">{locationCell}</td>
-                        <td style=""padding:9px 12px;border-bottom:1px solid #f3f4f6;"">
-                          <span style=""background:{statusColor.Bg};color:{statusColor.Text};font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;white-space:nowrap;display:inline-block;"">{statusLabel}</span>
-                        </td>
-                        <td style=""padding:9px 12px;font-size:12px;color:#374151;border-bottom:1px solid #f3f4f6;"">{deadline}</td>
-                      </tr>
-");
-            rowIdx++;
-        }
-
-        sb.Append($@"
-                    </tbody>
-                  </table>
-                </td>
-              </tr>
-            </table>
-
-            <!-- CLOSING -->
-            <p style=""font-size:13px;color:#6b7280;margin:16px 0 0;line-height:1.6;"">
-              De openstaande punten zijn ook beschikbaar als PDF-rapport in bijlage.<br/>
-              Gelieve bij vragen contact op te nemen met uw projectleider.
-            </p>
-
-          </td>
-        </tr>
-      </table>
-    </td>
-  </tr>
-</table>
-
-<!-- FOOTER -->
-<table width=""100%"" cellpadding=""0"" cellspacing=""0"">
-  <tr>
-    <td align=""center"" style=""padding:16px;color:#9ca3af;font-size:11px;"">
-      Group LN &nbsp;·&nbsp; Automatisch gegenereerd bericht &nbsp;·&nbsp; {sentDate:dd/MM/yyyy HH:mm} UTC
-    </td>
-  </tr>
-</table>
-
-</body>
-</html>");
-
-        return sb.ToString();
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // HELPERS
-    // ──────────────────────────────────────────────────────────────
-
-    private static string BuildLocationCellHtml(string unitName, string roomOrZone)
-    {
-        if (unitName == null && roomOrZone == null)
-            return "<span style=\"color:#9ca3af;\">–</span>";
-
-        var sb = new StringBuilder();
-        if (unitName != null)
-            sb.Append($"<span style=\"font-weight:600;\">{unitName}</span>");
-        if (roomOrZone != null)
-        {
-            if (unitName != null) sb.Append("<br/>");
-            sb.Append($"<span style=\"color:#6b7280;\">{roomOrZone}</span>");
-        }
-        return sb.ToString();
-    }
-
-    private static string GetStatusLabel(int status) => status switch
-    {
-        0 => "Open",
-        1 => "Toegewezen",
-        2 => "Gepland",
-        3 => "Wacht op keuring",
-        7 => "Heropend",
-        _ => "Open"
-    };
-
-    private static (string Bg, string Text) GetStatusColor(int status) => status switch
-    {
-        0 => ("#fee2e2", "#b91c1c"),   // red
-        1 => ("#fef3c7", "#92400e"),   // amber
-        2 => ("#dbeafe", "#1e40af"),   // blue
-        3 => ("#ede9fe", "#5b21b6"),   // purple
-        7 => ("#fce7f3", "#9d174d"),   // pink/dark red
-        _ => ("#f3f4f6", "#374151")
-    };
-
-    private static string GetPriorityBadgeHtml(int priority) => priority switch
-    {
-        2 => " &nbsp;<span style=\"background:#fff3cd;color:#856404;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;\">DRINGEND</span>",
-        3 => " &nbsp;<span style=\"background:#fee2e2;color:#b91c1c;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;\">KRITIEK</span>",
-        _ => string.Empty
-    };
 
     private static string SanitizeFileName(string name)
     {

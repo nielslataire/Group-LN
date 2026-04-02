@@ -260,9 +260,18 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         var ids = request.IssueIds?.Distinct().ToList() ?? new List<int>();
         if (!ids.Any()) return 0;
 
+        var allUnitIds = await _db.ConstructionIssue
+            .Where(x => x.ProjectId == projectId && ids.Contains(x.Id) && x.UnitId.HasValue)
+            .Select(x => x.UnitId!.Value).Distinct().ToListAsync();
+        var unitNames = allUnitIds.Any()
+            ? await _db.Units.Where(u => allUnitIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.Name ?? "")
+            : new Dictionary<int, string>();
+
         var issues = await _db.ConstructionIssue
             .Where(x => x.ProjectId == projectId && ids.Contains(x.Id))
             .ToListAsync();
+
+        var projectName = await _db.Project.Where(p => p.ProjectId == projectId).Select(p => p.ProjectName).FirstOrDefaultAsync() ?? $"Project {projectId}";
 
         var groups = request.GroupByResponsible
             ? issues.GroupBy(x => new { x.ResponsiblePartyType, x.ResponsiblePartyId, x.ResponsibleOtherName, x.ResponsibleOtherEmail })
@@ -272,13 +281,16 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         foreach (var g in groups)
         {
             var issueIds = g.Select(x => x.Id).ToList();
-            var email = await ResolveRecipientEmail(g.Key.ResponsiblePartyType, g.Key.ResponsiblePartyId, g.Key.ResponsibleOtherEmail);
+            var groupIssues = g.ToList();
+            var email = await ResolveRecipientEmail(g.Key.ResponsiblePartyType, g.Key.ResponsiblePartyId, g.Key.ResponsibleOtherEmail, projectId);
             if (string.IsNullOrWhiteSpace(email))
                 continue;
 
+            var recipientName = await ResolveRecipientName(g.Key.ResponsiblePartyType, g.Key.ResponsiblePartyId, g.Key.ResponsibleOtherName, projectId);
+
             var report = await CreateReportEntity(projectId, request.ReportType, g.Key.ResponsiblePartyType, g.Key.ResponsiblePartyId, g.Key.ResponsibleOtherName, g.Key.ResponsibleOtherEmail, issueIds, userId);
             var pdf = await GenerateReportPdf(projectId, report.Id);
-            await SendReportEmail(projectId, report.Id, email, pdf, comment);
+            await SendReportEmail(projectId, report.Id, email, pdf, recipientName, projectName, groupIssues, unitNames, comment);
 
             var sentDate = DateTime.UtcNow;
             foreach (var issue in g)
@@ -313,14 +325,21 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         var sentDate = DateTime.UtcNow;
         var count = 0;
 
+        var projectName = await _db.Project.Where(x => x.ProjectId == projectId).Select(x => x.ProjectName).FirstOrDefaultAsync() ?? $"Project {projectId}";
+        var unitIds = issues.Where(x => x.UnitId.HasValue).Select(x => x.UnitId!.Value).Distinct().ToList();
+        var unitNames = unitIds.Count > 0
+            ? await _db.Units.Where(x => unitIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Name)
+            : new Dictionary<int, string>();
+
         foreach (var issue in issues)
         {
-            var email = await ResolveRecipientEmail(issue.ResponsiblePartyType, issue.ResponsiblePartyId, issue.ResponsibleOtherEmail);
+            var email = await ResolveRecipientEmail(issue.ResponsiblePartyType, issue.ResponsiblePartyId, issue.ResponsibleOtherEmail, projectId);
             if (string.IsNullOrWhiteSpace(email)) continue;
 
+            var recipientName = await ResolveRecipientName(issue.ResponsiblePartyType, issue.ResponsiblePartyId, issue.ResponsibleOtherName, projectId);
             var report = await CreateReportEntity(projectId, request.ReportType, issue.ResponsiblePartyType, issue.ResponsiblePartyId, issue.ResponsibleOtherName, issue.ResponsibleOtherEmail, new List<int> { issue.Id }, userId);
             var pdf = await GenerateReportPdf(projectId, report.Id);
-            await SendReportEmail(projectId, report.Id, email, pdf, null);
+            await SendReportEmail(projectId, report.Id, email, pdf, recipientName, projectName, new List<ConstructionIssue> { issue }, unitNames);
 
             issue.LastSentDate = sentDate;
             _db.ConstructionIssueNotification.Add(new ConstructionIssueNotification
@@ -343,12 +362,19 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         return count;
     }
 
-    private async Task SendReportEmail(int projectId, int reportId, string toEmail, byte[] pdfBytes, string? comment = null)
+    private async Task SendReportEmail(
+        int projectId, int reportId, string toEmail, byte[] pdfBytes,
+        string recipientName, string projectName,
+        IList<ConstructionIssue> issues, Dictionary<int, string> unitNames,
+        string? comment = null)
     {
-        var projectName = await _db.Project.Where(x => x.ProjectId == projectId).Select(x => x.ProjectName).FirstOrDefaultAsync() ?? $"Project {projectId}";
-        var subject = $"[{projectName}] Puntenlijst – {DateTime.Now:yyyy-MM-dd}";
-        var commentBlock = string.IsNullOrWhiteSpace(comment) ? string.Empty : $"<p><strong>Opmerking:</strong><br/>{System.Net.WebUtility.HtmlEncode(comment)}</p>";
-        var body = $"<p>Beste,</p><p>In bijlage vindt u de puntenlijst.</p>{commentBlock}<p>Bekijk details in CPMCore: /Projects/{projectId}/Issues</p>";
+        var sentDate = DateTime.UtcNow;
+        var subject  = $"Puntenlijst – {projectName} – {sentDate:dd/MM/yyyy}";
+        var intro = "Hieronder vindt u een overzicht van de puntenlijst. In bijlage vindt u ook de volledige PDF.";
+        var portalBaseUrl = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
+        var portalLoginUrl = string.IsNullOrWhiteSpace(portalBaseUrl) ? null : $"{portalBaseUrl}/Portaal";
+        var body = IssueEmailHtmlBuilder.BuildIssueTableEmail(
+            recipientName, projectName, issues, unitNames, intro, sentDate, comment, portalLoginUrl);
 
         var smtpUser = _configuration["EmailSettings:SmtpUser"] ?? throw new InvalidOperationException("EmailSettings:SmtpUser missing");
         var smtpPass = _configuration["EmailSettings:SmtpPass"] ?? throw new InvalidOperationException("EmailSettings:SmtpPass missing");
@@ -372,10 +398,22 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         await client.SendMailAsync(message);
     }
 
-    private async Task<string?> ResolveRecipientEmail(int responsiblePartyType, int? responsiblePartyId, string? responsibleOtherEmail)
+    private async Task<string?> ResolveRecipientEmail(int responsiblePartyType, int? responsiblePartyId, string? responsibleOtherEmail, int? projectId = null)
     {
         if (responsiblePartyId.HasValue)
         {
+            // Prefer the contract's SiteManagerContact email so changes to the contact are reflected immediately
+            if (projectId.HasValue)
+            {
+                var contactEmail = await _db.Contract
+                    .Where(c => c.ProjectId == projectId.Value && c.CompanyId == responsiblePartyId.Value && c.SiteManagerContact != null)
+                    .Select(c => c.SiteManagerContact!.Email)
+                    .FirstOrDefaultAsync();
+                if (!string.IsNullOrWhiteSpace(contactEmail))
+                    return contactEmail;
+            }
+
+            // Fall back to the general company email
             var companyEmail = await _db.CompanyInfo
                 .Where(x => x.CompanyId == responsiblePartyId.Value)
                 .Select(x => x.Email)
@@ -385,6 +423,31 @@ public class ConstructionIssueReportService : IConstructionIssueReportService
         }
 
         return string.IsNullOrWhiteSpace(responsibleOtherEmail) ? null : responsibleOtherEmail;
+    }
+
+    private async Task<string> ResolveRecipientName(int responsiblePartyType, int? responsiblePartyId, string? responsibleOtherName, int? projectId = null)
+    {
+        if (responsiblePartyId.HasValue)
+        {
+            // Prefer the contract's SiteManagerContact name
+            if (projectId.HasValue)
+            {
+                var contactName = await _db.Contract
+                    .Where(c => c.ProjectId == projectId.Value && c.CompanyId == responsiblePartyId.Value && c.SiteManagerContact != null)
+                    .Select(c => (c.SiteManagerContact!.ContactVoornaam + " " + c.SiteManagerContact.ContactNaam).Trim())
+                    .FirstOrDefaultAsync();
+                if (!string.IsNullOrWhiteSpace(contactName))
+                    return contactName;
+            }
+
+            var companyName = await _db.CompanyInfo
+                .Where(x => x.CompanyId == responsiblePartyId.Value)
+                .Select(x => x.BedrijfsNaam)
+                .FirstOrDefaultAsync();
+            if (!string.IsNullOrWhiteSpace(companyName))
+                return companyName;
+        }
+        return string.IsNullOrWhiteSpace(responsibleOtherName) ? "Aannemer" : responsibleOtherName;
     }
 
     private static void RenderIssueCard(IContainer container, ConstructionIssue issue, int badgeNumber, string primaryColor, IReadOnlyDictionary<int, string> responsibleNames, ConstructionIssueReportService service)

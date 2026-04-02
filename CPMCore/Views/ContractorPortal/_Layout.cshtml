@@ -13,6 +13,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="@Url.Content("~/img/favicon.ico")" type="image/x-icon" />
     <title>@(ViewData["Title"] != null ? $"{ViewData["Title"]} – " : "")Aannemersportaal</title>
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700,800" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.css" />
@@ -28,6 +29,10 @@
     <nav class="cp-nav">
         <a href="/Portaal" class="cp-nav-brand">
             <img src="~/img/logo.png" alt="Group LN" class="cp-nav-logo-img" />
+            <div class="cp-nav-brand-text">
+                <div class="cp-nav-brand-name">GROUP LN</div>
+                <div class="cp-nav-brand-sub">AANNEMERSPORTAAL</div>
+            </div>
         </a>
 
         <div class="cp-nav-center" id="cpNavCenter">

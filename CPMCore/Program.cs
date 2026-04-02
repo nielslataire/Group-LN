@@ -178,6 +178,7 @@ builder.Services.AddScoped<IQRCodeService, QRCodeServiceStub>();
 builder.Services.AddScoped<IContractorPortalService, ContractorPortalServiceStub>();
 builder.Services.AddScoped<IIssueNotificationSenderService, IssueNotificationSenderService>();
 builder.Services.AddScoped<IIssueNotificationSchedulerService, IssueNotificationSchedulerService>();
+builder.Services.AddScoped<IContractorPortalDigestService, ContractorPortalDigestService>();
 builder.Services.AddSingleton<IssueNotificationHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<IssueNotificationHostedService>());
 builder.Services.AddSingleton<VoortgangHostedService>();
@@ -211,6 +212,7 @@ builder.Services.AddSingleton<IConverter, SynchronizedConverter>(serviceProvider
 builder.Services.AddScoped<ICpmUserAccessService, CpmUserAccessService>();
 builder.Services.AddScoped<IEntraGuestInvitationService, EntraGuestInvitationService>();
 builder.Services.AddScoped<IContractorInviteService, ContractorInviteService>();
+builder.Services.AddScoped<IPortalInviteNotifier, PortalInviteNotifier>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPermissionResolver, PermissionResolver>();
@@ -376,24 +378,26 @@ var localizationOptions = new RequestLocalizationOptions
 
 app.UseRequestLocalization(localizationOptions);
 
-app.UseRouting();
-
-// ── PUBLIEKE PORTAAL-REDIRECTS (vóór auth – buiten MVC pipeline) ─────────────
+// ── PORTAAL-SHORTCUTS: path rewrite vóór routing zodat de browser-URL clean blijft ──
+// Bezoekers zien /portaal of /aannemer in de adresbalk, niet Account/Login?...
 app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
-    if (path.Equals("/aannemer", StringComparison.OrdinalIgnoreCase))
+    // Exacte case-sensitive vergelijking: /Portaal (het echte portaal) wordt NIET gematcht
+    if (path is "/aannemer" or "/portaal" or "/Aannemer")
     {
-        ctx.Response.Redirect("/Account/Login?type=contractor&returnUrl=/Portaal");
-        return;
+        ctx.Request.Path        = "/Account/Login";
+        ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Portaal");
     }
-    if (path.Equals("/klantenportaal", StringComparison.OrdinalIgnoreCase))
+    else if (path is "/klantenportaal" or "/Klantenportaal")
     {
-        ctx.Response.Redirect("/Account/Login?type=customer");
-        return;
+        ctx.Request.Path        = "/Account/Login";
+        ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=customer&returnUrl=/Klantenportaal");
     }
     await next();
 });
+
+app.UseRouting();
 
 // ── EXTERNE TRIGGER ENDPOINTS (vóór auth – geen login vereist) ────────────────
 app.Map("/api/trigger", triggerApp =>

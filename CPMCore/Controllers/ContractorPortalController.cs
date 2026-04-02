@@ -76,19 +76,23 @@ public class ContractorPortalController : BaseController
             .Include(p => p.PostalCode)
             .ToListAsync(ct);
 
+        var doneStatuses = new[] { (int)ConstructionIssueStatus.Resolved, (int)ConstructionIssueStatus.Rejected };
+
         var activeProjects = projects
             .Where(p => p.StatusId != (int)ProjectStatusType.Opgeleverd)
             .Select(p =>
             {
-                var pIssues = issues.Where(i => i.ProjectId == p.ProjectId && openStatuses.Contains(i.Status)).ToList();
-                var pVg = voortgangen.FirstOrDefault(v => v.ProjectId == p.ProjectId);
+                var pAll     = issues.Where(i => i.ProjectId == p.ProjectId).ToList();
+                var pVg      = voortgangen.FirstOrDefault(v => v.ProjectId == p.ProjectId);
                 return new ContractorProjectSummary
                 {
-                    ProjectId   = p.ProjectId,
-                    Name        = p.ProjectName ?? $"Project {p.ProjectId}",
-                    Address     = FormatAddress(p),
-                    OpenCount   = pIssues.Count,
-                    ProgressPct = pVg?.FysiekeVoortgangPct ?? 0m
+                    ProjectId    = p.ProjectId,
+                    Name         = p.ProjectName ?? $"Project {p.ProjectId}",
+                    Address      = FormatAddress(p),
+                    OpenCount    = pAll.Count(i => openStatuses.Contains(i.Status)),
+                    TotalCount   = pAll.Count,
+                    ResolvedCount= pAll.Count(i => doneStatuses.Contains(i.Status)),
+                    ProgressPct  = pVg?.FysiekeVoortgangPct ?? 0m
                 };
             })
             .OrderBy(p => p.Name)
@@ -305,13 +309,19 @@ public class ContractorPortalController : BaseController
                 .Where(h => h.IssueId == i.Id)
                 .Select(h => {
                     var (authorName, authorIntId) = h.UserId != null && commentUserMap.TryGetValue(h.UserId, out var u) ? u : ("Onbekend", 0);
-                    string? photoUrl = null;
+                    var photoUrls = new List<string>();
                     if (!string.IsNullOrWhiteSpace(h.NewValueJson))
                     {
                         try {
                             using var doc = System.Text.Json.JsonDocument.Parse(h.NewValueJson);
-                            if (doc.RootElement.TryGetProperty("photoUrl", out var el))
-                                photoUrl = el.GetString();
+                            // Support both single photoUrl (legacy) and photoUrls array
+                            if (doc.RootElement.TryGetProperty("photoUrls", out var arrEl) && arrEl.ValueKind == System.Text.Json.JsonValueKind.Array)
+                                photoUrls = arrEl.EnumerateArray().Select(e => e.GetString()).Where(s => s != null).Cast<string>().ToList();
+                            else if (doc.RootElement.TryGetProperty("photoUrl", out var singleEl))
+                            {
+                                var s = singleEl.GetString();
+                                if (s != null) photoUrls.Add(s);
+                            }
                         } catch { }
                     }
                     return new ContractorIssueComment
@@ -320,7 +330,7 @@ public class ContractorPortalController : BaseController
                         IsContractor = contractorUserIntIds.Contains(authorIntId),
                         Text         = h.Comment ?? "",
                         Timestamp    = h.Timestamp,
-                        PhotoUrl     = photoUrl
+                        PhotoUrls    = photoUrls
                     };
                 }).ToList();
 
@@ -341,6 +351,7 @@ public class ContractorPortalController : BaseController
                 PlanDocumentId   = i.PlanDocumentId,
                 PlanXnormalized  = i.PlanXnormalized,
                 PlanYnormalized  = i.PlanYnormalized,
+                PlanPageNumber   = i.PlanPageNumber,
                 PlanImageUrl     = planUrl,
                 Comments         = comments
             };
@@ -410,7 +421,8 @@ public class ContractorPortalController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> AddComment(int projectId, int issueId, [FromBody] AddCommentRequest req, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(req?.Comment) && string.IsNullOrWhiteSpace(req?.PhotoUrl))
+        var hasPhotos = req?.PhotoUrls?.Any(u => !string.IsNullOrWhiteSpace(u)) == true;
+        if (string.IsNullOrWhiteSpace(req?.Comment) && !hasPhotos)
             return Json(new { ok = false, error = "Opmerking of foto vereist." });
 
         var (companyIds, _, isFullAdmin, _) = await GetContractorContextAsync(ct);
@@ -420,8 +432,9 @@ public class ContractorPortalController : BaseController
         var issue = await issueQ.FirstOrDefaultAsync(ct);
         if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
 
-        var photoJson = !string.IsNullOrWhiteSpace(req.PhotoUrl)
-            ? System.Text.Json.JsonSerializer.Serialize(new { photoUrl = req.PhotoUrl })
+        var cleanUrls = req?.PhotoUrls?.Where(u => !string.IsNullOrWhiteSpace(u)).ToList() ?? new List<string>();
+        var photoJson = cleanUrls.Any()
+            ? System.Text.Json.JsonSerializer.Serialize(new { photoUrls = cleanUrls })
             : null;
 
         await _issueService.AddHistory(issueId, (int)ConstructionIssueHistoryAction.CommentAdded,
@@ -450,8 +463,7 @@ public class ContractorPortalController : BaseController
         if (string.IsNullOrWhiteSpace(fileId))
             return Json(new { ok = false, error = "Upload mislukt." });
 
-        await _issueService.AddMedia(projectId, issueId, fileId, (int)ConstructionIssueMediaType.Photo, User.GetCpmUserCode());
-
+        // Photo is attached to the comment — do NOT add to issue media separately
         var storageBase = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
         var url = $"{storageBase}/pictures/{Uri.EscapeDataString(System.IO.Path.GetFileName(fileId))}";
         return Json(new { ok = true, url, fileId });
@@ -575,4 +587,4 @@ public class ContractorPortalController : BaseController
     }
 }
 
-public record AddCommentRequest(string Comment);
+public record AddCommentRequest(string? Comment, List<string>? PhotoUrls = null);

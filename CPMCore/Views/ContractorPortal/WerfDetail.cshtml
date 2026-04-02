@@ -20,19 +20,19 @@
 <!-- ── Status KPIs ────────────────────────────────────────── -->
 <div class="cp-status-grid">
     <div class="cp-status-box cp-status-box--red">
-        <div class="cp-status-val">@Model.OpenCount</div>
+        <div class="cp-status-val" id="kpi-open">@Model.OpenCount</div>
         <div class="cp-status-lbl">Open</div>
     </div>
     <div class="cp-status-box cp-status-box--orange">
-        <div class="cp-status-val">@Model.InProgressCount</div>
+        <div class="cp-status-val" id="kpi-inprogress">@Model.InProgressCount</div>
         <div class="cp-status-lbl">Bezig</div>
     </div>
     <div class="cp-status-box cp-status-box--blue">
-        <div class="cp-status-val">@Model.WaitingInspectionCount</div>
+        <div class="cp-status-val" id="kpi-waiting">@Model.WaitingInspectionCount</div>
         <div class="cp-status-lbl">Controle</div>
     </div>
     <div class="cp-status-box cp-status-box--green">
-        <div class="cp-status-val">@Model.ResolvedCount</div>
+        <div class="cp-status-val" id="kpi-resolved">@Model.ResolvedCount</div>
         <div class="cp-status-lbl">Klaar</div>
     </div>
 </div>
@@ -40,9 +40,9 @@
 <!-- ── Progress bar ───────────────────────────────────────── -->
 <div class="cp-prog-row">
     <div class="cp-prog-bar">
-        <div class="cp-prog-fill" style="width:@resolvedPct%"></div>
+        <div class="cp-prog-fill" id="prog-fill" style="width:@resolvedPct%"></div>
     </div>
-    <div class="cp-prog-pct">@Model.ResolvedCount/@totalAll</div>
+    <div class="cp-prog-pct" id="prog-label">@Model.ResolvedCount/@totalAll</div>
 </div>
 
 <!-- ── Tabs (enkel punten zichtbaar) ─────────────────────── -->
@@ -55,6 +55,21 @@
             <span class="cp-tab-badge">@totalIssues</span>
         }
     </a>
+</div>
+
+<!-- ── Search + filter tabs ──────────────────────────────── -->
+<div class="cp-issue-toolbar">
+    <div class="cp-issue-search-wrap">
+        <i class="bx bx-search cp-issue-search-icon"></i>
+        <input type="text" id="issueSearch" class="cp-issue-search" placeholder="Zoek punt..." oninput="filterIssues()" />
+    </div>
+    <div class="cp-issue-filter-tabs" id="issueFilterTabs">
+        <button class="cp-filter-tab active" data-filter="active" onclick="setFilter(this,'active')">Alle</button>
+        <button class="cp-filter-tab" data-filter="open"    onclick="setFilter(this,'open')">Open</button>
+        <button class="cp-filter-tab" data-filter="bezig"   onclick="setFilter(this,'bezig')">Bezig</button>
+        <button class="cp-filter-tab" data-filter="controle" onclick="setFilter(this,'controle')">Controle</button>
+        <button class="cp-filter-tab" data-filter="klaar"   onclick="setFilter(this,'klaar')">Klaar</button>
+    </div>
 </div>
 
 <!-- ── Issue list ────────────────────────────────────────── -->
@@ -70,7 +85,7 @@
     {
         @foreach (var group in Model.IssueGroups)
         {
-            <div class="cp-issue-group">
+            <div class="cp-issue-group" data-group>
                 <div class="cp-issue-group-header" onclick="toggleGroup(this)">
                     <i class="bx bx-home-alt-2"></i>
                     @group.GroupName
@@ -103,8 +118,13 @@
                         var canResolve = issue.Status == (int)ConstructionIssueStatus.Open
                                       || issue.Status == (int)ConstructionIssueStatus.InProgress
                                       || issue.Status == (int)ConstructionIssueStatus.Reopened;
+                        var prevStatusIsOpen = issue.Status == (int)ConstructionIssueStatus.Open
+                                           || issue.Status == (int)ConstructionIssueStatus.Reopened;
 
-                        <div class="cp-issue" id="issue-@issue.Id">
+                        <div class="cp-issue" id="issue-@issue.Id"
+                             data-prev-status="@(prevStatusIsOpen ? "open" : "inprogress")"
+                             data-status="@issue.Status"
+                             data-title="@(issue.Title ?? "")">
                             <div class="cp-issue-summary" onclick="toggleIssue(@issue.Id)">
                                 <div class="cp-issue-left">
                                     <div class="cp-issue-title">@issue.Title</div>
@@ -139,7 +159,7 @@
                                     </div>
                                 </div>
                                 <div class="cp-issue-right">
-                                    <span class="cp-badge @statusClass">@statusLabel</span>
+                                    <span class="cp-badge @statusClass" id="status-badge-@issue.Id">@statusLabel</span>
                                     @if (isHigh)
                                     {
                                         <span class="cp-badge cp-badge--urgent">Dringend</span>
@@ -150,72 +170,108 @@
                             <div class="cp-issue-detail" id="detail-@issue.Id">
                                 @if (!string.IsNullOrWhiteSpace(issue.Description))
                                 {
-                                    <div class="cp-issue-section-label" style="margin-top:.75rem;">Omschrijving</div>
                                     <p class="cp-issue-desc">@issue.Description</p>
                                 }
 
                                 <!-- Locatie details -->
                                 @if (!string.IsNullOrWhiteSpace(locStr) || !string.IsNullOrWhiteSpace(issue.CategoryName))
                                 {
-                                    <div style="font-size:.8rem;color:#6c757d;margin-bottom:.5rem;display:flex;flex-wrap:wrap;gap:.75rem;">
+                                    <div style="font-size:.8rem;color:#6c757d;margin-bottom:.5rem,margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.75rem;">
                                         @if (!string.IsNullOrWhiteSpace(locStr))
                                         {
-                                            <span><i class="bx bx-map-pin"></i> <strong>Locatie:</strong> @locStr</span>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(issue.CategoryName))
-                                        {
-                                            <span><i class="bx bx-category"></i> @issue.CategoryName</span>
+                                            <strong>Locatie:</strong> @locStr
                                         }
                                     </div>
                                 }
 
                                 <!-- Foto's -->
+
+                                @if (!issue.MediaFileIds.Any())
+                                {
+                                    
+                                }
+                                else
+                                {
                                 <div class="cp-issue-section-label">Foto's (@issue.MediaFileIds.Count)</div>
                                 <div class="cp-photos-row" id="photos-@issue.Id">
-                                    @if (!issue.MediaFileIds.Any())
-                                    {
-                                        <span class="cp-photo-empty" id="no-photos-@issue.Id">Geen foto's</span>
-                                    }
-                                    else
-                                    {
                                         @foreach (var fileId in issue.MediaFileIds)
                                         {
                                             var safeFile = System.IO.Path.GetFileName(fileId);
                                             var url = $"{storageBase}/pictures/{Uri.EscapeDataString(safeFile)}";
                                             <img src="@url" class="cp-photo-thumb" alt="Foto"
                                                  onclick="openPhoto('@url')" loading="lazy" />
-                                        }
-                                    }
+                                        }     
                                 </div>
+                                }
 
                                 <!-- Locatie op plan -->
                                 @if (issue.HasPlan)
                                 {
                                     <div class="cp-issue-section-label">Locatie op plan</div>
-                                    <div class="cp-plan-wrap" id="plan-wrap-@issue.Id">
-                                        <img src="@issue.PlanImageUrl" class="cp-plan-img"
-                                             id="plan-img-@issue.Id"
-                                             onload="placePlanDot(@issue.Id, @issue.PlanXnormalized!.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture), @issue.PlanYnormalized!.Value.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture))"
-                                             alt="Plan" />
-                                        <div class="cp-plan-dot" id="plan-dot-@issue.Id" style="display:none;"></div>
+                                    <div class="cp-plan-wrap" id="plan-wrap-@issue.Id"
+                                         data-plan-url="@issue.PlanImageUrl"
+                                         data-plan-x="@issue.PlanXnormalized!.Value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)"
+                                         data-plan-y="@issue.PlanYnormalized!.Value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)"
+                                         data-plan-page="@(issue.PlanPageNumber ?? 1)">
+                                        <canvas id="plan-canvas-@issue.Id" class="cp-plan-canvas"></canvas>
+                                        <div id="plan-marker-@issue.Id" class="cp-plan-marker"><i class="fa fa-location-dot"></i></div>
                                     </div>
                                 }
 
-                                <!-- Opmerkingen -->
+                                <!-- Communicatie -->
+                                @if (!issue.Comments.Any())
+                                {
+                                }
+                                else
+                                {
+                                <div class="cp-issue-section-label" style="margin-top:.75rem;">Communicatie</div>
+                                <div class="cp-comm-list" id="comm-list-@issue.Id">
+
+                                    @foreach (var comment in issue.Comments)
+                                    {
+                                        var entryClass = comment.IsContractor ? "cp-comm-entry cp-comm-entry--contractor" : "cp-comm-entry cp-comm-entry--internal";
+                                        <div class="@entryClass">
+                                            <div class="cp-comm-meta">
+                                                <span class="cp-comm-author">@comment.AuthorName</span>
+                                                <span class="cp-comm-time">@comment.Timestamp.ToString("dd/MM/yyyy HH:mm")</span>
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(comment.Text))
+                                            {
+                                                <div class="cp-comm-text">@comment.Text</div>
+                                            }
+                                            @if (comment.PhotoUrls.Any())
+                                            {
+                                                <div class="cp-photos-row" style="margin-top:.4rem;">
+                                                    @foreach (var photoUrl in comment.PhotoUrls)
+                                                    {
+                                                        <img src="@photoUrl" class="cp-photo-thumb"
+                                                             onclick="openPhoto('@photoUrl')" loading="lazy" alt="Foto" />
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                 }
+                                <!-- Opmerking toevoegen -->
                                 <div class="cp-issue-section-label" style="margin-top:.75rem;">Opmerking toevoegen</div>
                                 <div class="cp-comment-row">
-                                    <textarea class="cp-comment-input" rows="2"
+                                    <textarea class="cp-comment-input" rows="3"
                                               placeholder="Schrijf een opmerking..."
                                               id="comment-@issue.Id"
                                               oninput="updateCommentBtn(@issue.Id)"></textarea>
-                                    <button type="button" class="cp-photo-upload-btn"
-                                            onclick="document.getElementById('photo-input-@issue.Id').click()"
-                                            title="Foto toevoegen">
-                                        <i class="bx bx-camera"></i>
-                                    </button>
-                                    <input type="file" id="photo-input-@issue.Id" accept="image/*"
-                                           style="display:none"
-                                           onchange="uploadPhoto(@issue.Id, @Model.ProjectId, this)" />
+                                    <div class="cp-comment-photo-col">
+                                        <input type="file" id="photo-input-@issue.Id" accept="image/*"
+                                               multiple style="display:none"
+                                               onchange="selectPhotos(@issue.Id, this)" />
+                                        <button type="button" class="cp-photo-add-tile"
+                                                onclick="document.getElementById('photo-input-@issue.Id').click()"
+                                                id="photo-tile-@issue.Id">
+                                            <i class="bx bx-camera" style="font-size:1.4rem;"></i>
+                                            <span style="font-size:11px;line-height:1.2;">Toevoegen</span>
+                                        </button>
+                                        <div class="cp-photo-thumbs-col" id="photo-thumbs-@issue.Id"></div>
+                                    </div>
                                     <button type="button" class="cp-comment-send" disabled
                                             id="comment-btn-@issue.Id"
                                             onclick="sendComment(@issue.Id, @Model.ProjectId)"
@@ -250,8 +306,19 @@
 <input type="hidden" id="cpAft" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
 @section scripts {
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>
     var antiforgeryToken = document.getElementById('cpAft')?.value ?? '';
+
+    // ── PDF.js setup ──────────────────────────────────────
+    var pdfJsApi = window.pdfjsLib || window['pdfjs-dist/build/pdf'] || null;
+    if (pdfJsApi) {
+        pdfJsApi.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+
+    // Pending photos per issue (array of File objects, not yet uploaded)
+    var pendingPhotos = {};   // issueId → File[]
+    var pendingPreviews = {}; // issueId → dataURL[]
 
     function toggleGroup(header) {
         var body = header.nextElementSibling;
@@ -264,6 +331,10 @@
     function toggleIssue(id) {
         var detail = document.getElementById('detail-' + id);
         detail.classList.toggle('open');
+        if (detail.classList.contains('open')) {
+            // requestAnimationFrame zodat het element zichtbaar is vóór renderen
+            requestAnimationFrame(function() { renderPlanForIssue(id); });
+        }
     }
 
     function openPhoto(url) {
@@ -272,80 +343,141 @@
         lb.style.display = 'flex';
     }
 
+    function escapeHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Called when user selects one or more photos
+    function selectPhotos(issueId, input) {
+        if (!input.files || !input.files.length) return;
+        if (!pendingPhotos[issueId]) pendingPhotos[issueId] = [];
+        if (!pendingPreviews[issueId]) pendingPreviews[issueId] = [];
+
+        Array.from(input.files).forEach(function(file) {
+            pendingPhotos[issueId].push(file);
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                pendingPreviews[issueId].push(e.target.result);
+                renderPhotoThumbs(issueId);
+            };
+            reader.readAsDataURL(file);
+        });
+        input.value = ''; // allow re-selecting same file
+        updateCommentBtn(issueId);
+    }
+
+    function renderPhotoThumbs(issueId) {
+        var container = document.getElementById('photo-thumbs-' + issueId);
+        if (!container) return;
+        var previews = pendingPreviews[issueId] || [];
+        container.innerHTML = previews.map(function(src, idx) {
+            return '<div style="position:relative;display:inline-block;">'
+                + '<img src="' + escapeHtml(src) + '" class="cp-photo-thumb" style="cursor:default;" alt="preview" />'
+                + '<button type="button" onclick="removePhoto(' + issueId + ',' + idx + ')" '
+                + 'style="position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>'
+                + '</div>';
+        }).join('');
+    }
+
+    function removePhoto(issueId, idx) {
+        if (pendingPhotos[issueId]) pendingPhotos[issueId].splice(idx, 1);
+        if (pendingPreviews[issueId]) pendingPreviews[issueId].splice(idx, 1);
+        renderPhotoThumbs(issueId);
+        updateCommentBtn(issueId);
+    }
+
     function updateCommentBtn(id) {
         var textarea = document.getElementById('comment-' + id);
         var btn = document.getElementById('comment-btn-' + id);
-        if (btn) btn.disabled = !textarea || !textarea.value.trim();
+        var hasPhotos = (pendingPhotos[id] || []).length > 0;
+        if (btn) btn.disabled = !(textarea && textarea.value.trim()) && !hasPhotos;
     }
 
-    function sendComment(issueId, projectId) {
+    async function sendComment(issueId, projectId) {
         var textarea = document.getElementById('comment-' + issueId);
         var text = textarea ? textarea.value.trim() : '';
-        if (!text) return;
+        var files = pendingPhotos[issueId] || [];
+        if (!text && !files.length) return;
 
         var btn = document.getElementById('comment-btn-' + issueId);
-        if (btn) { btn.disabled = true; }
+        if (btn) btn.disabled = true;
 
-        fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/Comment', {
-            method: 'POST',
-            headers: {
-                'RequestVerificationToken': antiforgeryToken,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ comment: text })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
+        // Upload all pending photos
+        var uploadedUrls = [];
+        for (var i = 0; i < files.length; i++) {
+            var formData = new FormData();
+            formData.append('file', files[i]);
+            try {
+                var uploadResp = await fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/UploadPhoto', {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': antiforgeryToken },
+                    body: formData
+                });
+                var uploadData = await uploadResp.json();
+                if (uploadData.ok) {
+                    uploadedUrls.push(uploadData.url);
+                } else {
+                    alert(uploadData.error || 'Foto upload mislukt.');
+                    if (btn) btn.disabled = false;
+                    return;
+                }
+            } catch (e) {
+                alert('Foto upload mislukt.');
+                if (btn) btn.disabled = false;
+                return;
+            }
+        }
+
+        // Send comment with all photo URLs
+        try {
+            var resp = await fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/Comment', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': antiforgeryToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ comment: text, photoUrls: uploadedUrls })
+            });
+            var data = await resp.json();
             if (data.ok) {
-                textarea.value = '';
-                textarea.placeholder = 'Opmerking verstuurd ✓';
-                setTimeout(function() { textarea.placeholder = 'Schrijf een opmerking...'; }, 2500);
+                // Clear form
+                if (textarea) { textarea.value = ''; textarea.placeholder = 'Opmerking verstuurd ✓'; }
+                setTimeout(function() { if (textarea) textarea.placeholder = 'Schrijf een opmerking...'; }, 2500);
+
+                // Clear photos
+                pendingPhotos[issueId] = [];
+                pendingPreviews[issueId] = [];
+                renderPhotoThumbs(issueId);
+
+                // Add comment to communicatie list
+                var commList = document.getElementById('comm-list-' + issueId);
+                if (commList) {
+                    var emptyMsg = commList.querySelector('.cp-comm-empty');
+                    if (emptyMsg) emptyMsg.remove();
+                    var now = new Date();
+                    var pad = function(n) { return n.toString().padStart(2, '0'); };
+                    var dateStr = pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear()
+                                + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                    var entry = document.createElement('div');
+                    entry.className = 'cp-comm-entry cp-comm-entry--contractor';
+                    var html = '<div class="cp-comm-meta"><span class="cp-comm-author">U</span><span class="cp-comm-time">' + escapeHtml(dateStr) + '</span></div>';
+                    if (text) html += '<div class="cp-comm-text">' + escapeHtml(text) + '</div>';
+                    if (uploadedUrls.length) {
+                        html += '<div class="cp-photos-row" style="margin-top:.4rem;">';
+                        uploadedUrls.forEach(function(u) {
+                            html += '<img src="' + escapeHtml(u) + '" class="cp-photo-thumb" style="cursor:pointer;" onclick="openPhoto(\'' + escapeHtml(u) + '\')" loading="lazy" alt="Foto" />';
+                        });
+                        html += '</div>';
+                    }
+                    entry.innerHTML = html;
+                    commList.appendChild(entry);
+                }
+
+                if (btn) btn.disabled = false;
             } else {
                 alert(data.error || 'Versturen mislukt.');
                 if (btn) btn.disabled = false;
             }
-        })
-        .catch(function() {
+        } catch (e) {
             if (btn) btn.disabled = false;
-        });
-    }
-
-    function uploadPhoto(issueId, projectId, input) {
-        if (!input.files || !input.files[0]) return;
-        var file = input.files[0];
-        var formData = new FormData();
-        formData.append('file', file);
-
-        var btn = document.querySelector('#detail-' + issueId + ' .cp-photo-upload-btn');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i>'; }
-
-        fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/UploadPhoto', {
-            method: 'POST',
-            headers: { 'RequestVerificationToken': antiforgeryToken },
-            body: formData
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.ok) {
-                var row = document.getElementById('photos-' + issueId);
-                var noPhotos = document.getElementById('no-photos-' + issueId);
-                if (noPhotos) noPhotos.remove();
-                var img = document.createElement('img');
-                img.src = data.url;
-                img.className = 'cp-photo-thumb';
-                img.alt = 'Foto';
-                img.loading = 'lazy';
-                img.onclick = function() { openPhoto(data.url); };
-                row.appendChild(img);
-            } else {
-                alert(data.error || 'Upload mislukt.');
-            }
-        })
-        .catch(function() { alert('Upload mislukt.'); })
-        .finally(function() {
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bx bx-camera"></i>'; }
-            input.value = '';
-        });
+        }
     }
 
     function resolveIssue(issueId, projectId) {
@@ -361,13 +493,26 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.ok) {
+                // Update status badge
+                var badge = document.getElementById('status-badge-' + issueId);
+                if (badge) { badge.className = 'cp-badge cp-badge--check'; badge.textContent = 'Controle'; }
+
+                // Update resolve button
                 btn.innerHTML = '<i class="bx bx-check-circle"></i> Klaar voor controle';
                 btn.style.background = '#2563eb';
-                var summary = document.querySelector('#issue-' + issueId + ' .cp-issue-right');
-                if (summary) {
-                    var badge = summary.querySelector('.cp-badge');
-                    if (badge) { badge.className = 'cp-badge cp-badge--check'; badge.textContent = 'Controle'; }
+
+                // Update KPI boxes: decrement open or inprogress, increment waiting
+                var issueEl = document.getElementById('issue-' + issueId);
+                var prevStatus = issueEl ? issueEl.dataset.prevStatus : 'open';
+                if (prevStatus === 'open') {
+                    var openVal = document.getElementById('kpi-open');
+                    if (openVal) { var n = parseInt(openVal.textContent) - 1; openVal.textContent = Math.max(0, isNaN(n) ? 0 : n); }
+                } else {
+                    var inprogVal = document.getElementById('kpi-inprogress');
+                    if (inprogVal) { var m = parseInt(inprogVal.textContent) - 1; inprogVal.textContent = Math.max(0, isNaN(m) ? 0 : m); }
                 }
+                var waitingVal = document.getElementById('kpi-waiting');
+                if (waitingVal) { var w = parseInt(waitingVal.textContent) + 1; if (!isNaN(w)) waitingVal.textContent = w; }
             } else {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="bx bx-check-circle"></i> Markeer als opgelost';
@@ -380,13 +525,92 @@
         });
     }
 
-    function placePlanDot(issueId, xNorm, yNorm) {
-        var img = document.getElementById('plan-img-' + issueId);
-        var dot = document.getElementById('plan-dot-' + issueId);
-        if (!img || !dot) return;
-        dot.style.left = (xNorm * 100) + '%';
-        dot.style.top  = (yNorm * 100) + '%';
-        dot.style.display = 'block';
+    async function renderPlanForIssue(issueId) {
+        var wrap = document.getElementById('plan-wrap-' + issueId);
+        var canvas = document.getElementById('plan-canvas-' + issueId);
+        var marker = document.getElementById('plan-marker-' + issueId);
+        if (!wrap || !canvas || !marker) return;
+        if (canvas.dataset.rendered === '1') return;
+        canvas.dataset.rendered = '1';
+
+        var url = wrap.dataset.planUrl;
+        var xNorm = parseFloat(wrap.dataset.planX);
+        var yNorm = parseFloat(wrap.dataset.planY);
+        var pageNumber = parseInt(wrap.dataset.planPage) || 1;
+        if (!url || !pdfJsApi) return;
+
+        try {
+            var pdfDoc = await pdfJsApi.getDocument(url).promise;
+            var safePage = Math.min(Math.max(1, pageNumber), pdfDoc.numPages || 1);
+            var pdfPage = await pdfDoc.getPage(safePage);
+            var baseViewport = pdfPage.getViewport({ scale: 1 });
+            var containerWidth = wrap.clientWidth || 400;
+            var maxHeight = 400;
+            var scale = Math.min(containerWidth / baseViewport.width, maxHeight / baseViewport.height, 1);
+            var viewport = pdfPage.getViewport({ scale: scale });
+
+            canvas.width  = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            canvas.style.width  = Math.floor(viewport.width)  + 'px';
+            canvas.style.height = Math.floor(viewport.height) + 'px';
+
+            await pdfPage.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+
+            if (Number.isFinite(xNorm) && Number.isFinite(yNorm)) {
+                var rect       = canvas.getBoundingClientRect();
+                var parentRect = canvas.parentElement.getBoundingClientRect();
+                marker.style.left    = ((rect.left - parentRect.left) + xNorm * rect.width)  + 'px';
+                marker.style.top     = ((rect.top  - parentRect.top)  + yNorm * rect.height) + 'px';
+                marker.style.display = 'block';
+            }
+        } catch(e) {
+            console.warn('Plan renderen mislukt voor issue ' + issueId, e);
+        }
     }
+
+    // ── Search + filter ──────────────────────────────────────
+    // Status mappings: 0=Open,2=InProgress/Bezig,3=WaitingInspection/Controle,
+    //                  4=Resolved,6=Rejected,7=Reopened
+    var activeFilter = 'active'; // default: all active (not resolved/rejected)
+
+    function setFilter(btn, filter) {
+        activeFilter = filter;
+        document.querySelectorAll('.cp-filter-tab').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        filterIssues();
+    }
+
+    function filterIssues() {
+        var search = (document.getElementById('issueSearch')?.value || '').toLowerCase().trim();
+        var groups = document.querySelectorAll('[data-group]');
+        groups.forEach(function(group) {
+            var issues = group.querySelectorAll('.cp-issue');
+            var anyVisible = false;
+            issues.forEach(function(issue) {
+                var status = parseInt(issue.dataset.status ?? '-1');
+                var title  = (issue.dataset.title || '').toLowerCase();
+                var passFilter = matchesFilter(status, activeFilter);
+                var passSearch = !search || title.includes(search);
+                var visible = passFilter && passSearch;
+                issue.style.display = visible ? '' : 'none';
+                if (visible) anyVisible = true;
+            });
+            group.style.display = anyVisible ? '' : 'none';
+        });
+    }
+
+    function matchesFilter(status, filter) {
+        switch (filter) {
+            case 'active':   return status !== 4 && status !== 6; // hide resolved+rejected
+            case 'open':     return status === 0 || status === 7;
+            case 'bezig':    return status === 2;
+            case 'controle': return status === 3;
+            case 'klaar':    return status === 4 || status === 6;
+            default:         return true;
+        }
+    }
+
+    // Apply default filter on load
+    filterIssues();
 </script>
 }

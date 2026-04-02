@@ -132,6 +132,124 @@
 }
 .gl-tag { font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 2px; display: inline-block; }
 
+/* ── Meldingscentrum ─────────────────────────────────────────────────── */
+
+@media (min-width: 992px) {
+    .gl-mc-col { position: sticky; top: 70px; align-self: flex-start; }
+}
+
+.gl-mc-card { overflow: hidden; }
+.gl-mc-body {
+    max-height: calc(100vh - 260px);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Groep header */
+.gl-mc-group-hdr {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(0,0,0,.07);
+    user-select: none;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.gl-mc-group + .gl-mc-group > .gl-mc-group-hdr { border-top: 1px solid rgba(0,0,0,.07); }
+
+/* ACTIE VEREIST – rood */
+.gl-mc-urgent > .gl-mc-group-hdr  { background: #fdf2f2; color: #b91c1c; }
+.gl-mc-urgent > .gl-mc-group-hdr > i { color: #ef4444; }
+
+/* DEZE WEEK – geel */
+.gl-mc-normal > .gl-mc-group-hdr  { background: #fefce8; color: #92400e; }
+.gl-mc-normal > .gl-mc-group-hdr > i { color: #d97706; }
+
+/* TER INFO – blauw */
+.gl-mc-info > .gl-mc-group-hdr    { background: #eff6ff; color: #1e40af; cursor: pointer; }
+.gl-mc-info > .gl-mc-group-hdr > i:first-child { color: #3b82f6; }
+.gl-mc-info > .gl-mc-group-hdr:hover { background: #dbeafe; }
+
+/* Teller badge */
+.gl-mc-cnt {
+    min-width: 16px; height: 16px;
+    border-radius: 8px; padding: 0 4px;
+    background: rgba(0,0,0,.15);
+    font-size: 9px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    line-height: 1;
+}
+
+/* "toon alles" knop */
+.gl-mc-toon-alles {
+    background: none; border: none; padding: 0;
+    font-size: 9.5px; font-weight: 600;
+    color: inherit; opacity: .7;
+    cursor: pointer; text-decoration: underline;
+}
+.gl-mc-toon-alles:hover { opacity: 1; }
+
+/* Chevron */
+.gl-mc-chevron { font-size: 13px; transition: transform .2s; }
+.gl-mc-chevron.gl-mc-chevron-open { transform: rotate(180deg); }
+
+/* Item */
+.gl-mc-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    font-size: 11.5px;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    line-height: 1.4;
+}
+.gl-mc-item:last-child { border-bottom: none; }
+.gl-mc-item-urgent  { background: #fff5f5; }
+.gl-mc-item-normal  { background: #fffef0; }
+.gl-mc-item-info    { background: #f0f7ff; }
+.gl-mc-item-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; color: #888; }
+.gl-mc-item-urgent  .gl-mc-item-icon { color: #dc2626; }
+.gl-mc-item-normal  .gl-mc-item-icon { color: #d97706; }
+.gl-mc-item-info    .gl-mc-item-icon { color: #3b82f6; }
+.gl-mc-item-text { flex: 1; min-width: 0; }
+
+/* Acties onder tekst */
+.gl-mc-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.gl-mc-btn-bekijk {
+    font-size: 10px; font-weight: 600;
+    color: #0a5a3b; text-decoration: none;
+    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 2px;
+}
+.gl-mc-btn-bekijk:hover { text-decoration: underline; color: #0a5a3b; }
+.gl-mc-btn-snooze {
+    background: none; border: none; padding: 1px 3px;
+    font-size: 12px; color: #bbb; cursor: pointer;
+    line-height: 1; border-radius: 2px;
+}
+.gl-mc-btn-snooze:hover { color: #888; background: rgba(0,0,0,.05); }
+
+/* Lege staat */
+.gl-mc-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px 16px; gap: 6px;
+    color: #aaa; font-size: 11.5px;
+}
+.gl-mc-empty > i { font-size: 24px; color: #0a5a3b; opacity: .4; }
+
 /* Snelacties accordion */
 .gl-sa-item-wrap { border-bottom: 1px solid rgba(0,0,0,.06); }
 .gl-sa-item-wrap:last-child { border-bottom: none; }

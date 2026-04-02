@@ -17,10 +17,13 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 .cp-nav-brand {
-    display: flex; align-items: center;
+    display: flex; align-items: center; gap: 0.6rem;
     text-decoration: none; flex-shrink: 0;
 }
 .cp-nav-logo-img { height: 36px; width: auto; object-fit: contain; display: block; }
+.cp-nav-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.cp-nav-brand-name { font-size: 0.9rem; font-weight: 700; color: #fff; }
+.cp-nav-brand-sub  { font-size: 0.7rem; color: rgba(255,255,255,0.75); font-weight: 400; }
 
 /* Center nav: brand left, links center, right right */
 .cp-nav-center {
@@ -109,34 +112,40 @@
 .cp-hero-progress-fill { height: 100%; background: #3ecf8e; border-radius: 3px; transition: width 0.5s; }
 
 /* ── KPI cards ───────────────────────────────────────────── */
-.cp-kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
-@media (min-width: 768px) { .cp-kpi-grid { grid-template-columns: repeat(4, 1fr); } }
+.cp-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; }
+@media (min-width: 768px) { .cp-kpi-grid { gap: 0.75rem; } }
 
 .cp-kpi {
     border-radius: 10px;
-    padding: 1rem 1.25rem;
-    display: flex; align-items: center; gap: 1rem;
+    padding: 0.6rem 0.75rem;
+    display: flex; align-items: center; gap: 0.6rem;
+}
+@media (min-width: 768px) {
+    .cp-kpi { padding: 1rem 1.25rem; gap: 1rem; }
 }
 .cp-kpi-icon {
     width: 44px; height: 44px; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
     font-size: 1.3rem; flex-shrink: 0;
 }
-.cp-kpi-val { font-size: 1.75rem; font-weight: 800; line-height: 1; }
-.cp-kpi-label { font-size: 0.75rem; font-weight: 500; margin-top: 0.1rem; opacity: 0.8; }
+@media (max-width: 767px) { .cp-kpi-icon { display: none; } }
+.cp-kpi-val { font-size: 1.3rem; font-weight: 800; line-height: 1; }
+@media (min-width: 768px) { .cp-kpi-val { font-size: 1.75rem; } }
+.cp-kpi-label { font-size: 0.65rem; font-weight: 500; margin-top: 0.1rem; opacity: 0.8; }
+@media (min-width: 768px) { .cp-kpi-label { font-size: 0.75rem; } }
 
-.cp-kpi--red    { background: #fff1f0; border: 1px solid #fecaca; }
-.cp-kpi--red    .cp-kpi-icon { background: #ffe4e4; color: #e53e3e; }
-.cp-kpi--red    .cp-kpi-val  { color: #e53e3e; }
-.cp-kpi--gray   { background: #f7f8fa; border: 1px solid #d1d5db; }
-.cp-kpi--gray   .cp-kpi-icon { background: #edf0f3; color: #6c757d; }
-.cp-kpi--gray   .cp-kpi-val  { color: #495057; }
-.cp-kpi--orange { background: #fffbeb; border: 1px solid #fed7aa; }
-.cp-kpi--orange .cp-kpi-icon { background: #fef3c7; color: #d97706; }
-.cp-kpi--orange .cp-kpi-val  { color: #d97706; }
-.cp-kpi--blue   { background: #eff6ff; border: 1px solid #bfdbfe; }
-.cp-kpi--blue   .cp-kpi-icon { background: #dbeafe; color: #2563eb; }
-.cp-kpi--blue   .cp-kpi-val  { color: #2563eb; }
+.cp-kpi--red    { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-kpi--red    .cp-kpi-icon { background: rgba(10,90,59,0.1); color: #0a5a3b; }
+.cp-kpi--red    .cp-kpi-val  { color: #0a5a3b; }
+.cp-kpi--gray   { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-kpi--gray   .cp-kpi-icon { background: rgba(10,90,59,0.1); color: #0a5a3b; }
+.cp-kpi--gray   .cp-kpi-val  { color: #0a5a3b; }
+.cp-kpi--orange { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-kpi--orange .cp-kpi-icon { background: rgba(10,90,59,0.1); color: #0a5a3b; }
+.cp-kpi--orange .cp-kpi-val  { color: #0a5a3b; }
+.cp-kpi--blue   { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-kpi--blue   .cp-kpi-icon { background: rgba(10,90,59,0.1); color: #0a5a3b; }
+.cp-kpi--blue   .cp-kpi-val  { color: #0a5a3b; }
 
 /* ── Alert banner ────────────────────────────────────────── */
 .cp-alert {
@@ -151,6 +160,7 @@
 /* ── Cards ───────────────────────────────────────────────── */
 .cp-card {
     background: #fff;
+    border: 1px solid #dee2e6;
     border-radius: 10px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.07);
     overflow: hidden;
@@ -210,10 +220,10 @@
 }
 .cp-comm-row:last-child { border-bottom: 0; }
 .cp-comm-row:hover { background: #f9fbfa; }
-.cp-comm-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.cp-comm-dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; cursor: default; }
 .cp-comm-dot--open   { background: #e53e3e; }
 .cp-comm-dot--prog   { background: #d97706; }
-.cp-comm-dot--check  { background: #2563eb; }
+.cp-comm-dot--check  { background: #9ca3af; }
 .cp-comm-dot--done   { background: #3ecf8e; }
 .cp-comm-title { font-size: 0.875rem; font-weight: 600; color: #1a2e22; }
 .cp-comm-sub { font-size: 0.75rem; color: #6c757d; }
@@ -296,23 +306,25 @@
 .cp-detail-addr { font-size: 0.85rem; color: #6c757d; display: flex; align-items: center; gap: 0.3rem; margin-bottom: 1.25rem; }
 
 /* ── WerfDetail: status KPIs ─────────────────────────────── */
-.cp-status-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
-@media (min-width: 576px) { .cp-status-grid { grid-template-columns: repeat(4, 1fr); } }
+.cp-status-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+@media (min-width: 576px) { .cp-status-grid { gap: 0.75rem; } }
 .cp-status-box {
-    background: #fff; border-radius: 10px;
-    padding: 1rem; text-align: center;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b;
+    border-radius: 10px; padding: 0.6rem 0.5rem; text-align: center;
 }
-.cp-status-val { font-size: 1.75rem; font-weight: 800; line-height: 1; }
-.cp-status-lbl { font-size: 0.75rem; color: #6c757d; margin-top: 0.2rem; }
-.cp-status-box--red    { background: #fff1f0; border: 1px solid #fecaca; }
-.cp-status-box--red    .cp-status-val { color: #e53e3e; }
-.cp-status-box--orange { background: #fffbeb; border: 1px solid #fed7aa; }
-.cp-status-box--orange .cp-status-val { color: #d97706; }
-.cp-status-box--blue   { background: #eff6ff; border: 1px solid #bfdbfe; }
-.cp-status-box--blue   .cp-status-val { color: #2563eb; }
-.cp-status-box--green  { background: #f0fdf4; border: 1px solid #bbf7d0; }
-.cp-status-box--green  .cp-status-val { color: #16a34a; }
+@media (min-width: 576px) { .cp-status-box { padding: 1rem; } }
+.cp-status-val { font-size: 1.3rem; font-weight: 800; line-height: 1; color: #0a5a3b; }
+@media (min-width: 576px) { .cp-status-val { font-size: 1.75rem; } }
+.cp-status-lbl { font-size: 0.65rem; color: #0a5a3b; margin-top: 0.2rem; opacity: 0.8; }
+@media (min-width: 576px) { .cp-status-lbl { font-size: 0.75rem; } }
+.cp-status-box--red    { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-status-box--red    .cp-status-val { color: #0a5a3b; }
+.cp-status-box--orange { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-status-box--orange .cp-status-val { color: #0a5a3b; }
+.cp-status-box--blue   { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-status-box--blue   .cp-status-val { color: #0a5a3b; }
+.cp-status-box--green  { background: rgba(10,90,59,0.04); border: 1px solid #0a5a3b; }
+.cp-status-box--green  .cp-status-val { color: #0a5a3b; }
 
 /* ── Progress row ────────────────────────────────────────── */
 .cp-prog-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
@@ -338,16 +350,49 @@
 }
 .cp-tab-soon { font-size: 0.65rem; color: #9ca3af; background: #f3f4f6; padding: 0.1rem 0.45rem; border-radius: 4px; }
 
+/* ── Issue toolbar (search + filter tabs) ────────────────── */
+.cp-issue-toolbar {
+    display: flex; flex-direction: column; gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.cp-issue-search-wrap {
+    position: relative;
+}
+.cp-issue-search-icon {
+    position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+    color: #6c757d; font-size: 1rem; pointer-events: none;
+}
+.cp-issue-search {
+    width: 100%; padding: 0.55rem 0.9rem 0.55rem 2.2rem;
+    border: 1px solid #d1d5db; border-radius: 8px;
+    font-size: 0.875rem; background: #fff; color: #1a2e22;
+    outline: none; transition: border-color 0.15s;
+}
+.cp-issue-search:focus { border-color: #0a5a3b; }
+.cp-issue-filter-tabs {
+    display: flex; gap: 0.35rem; flex-wrap: nowrap; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.cp-issue-filter-tabs::-webkit-scrollbar { display: none; }
+.cp-filter-tab {
+    padding: 0.35rem 0.85rem; font-size: 0.8rem; font-weight: 500;
+    border: 1px solid #d1d5db; border-radius: 4px;
+    background: #fff; color: #495057; cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+    white-space: nowrap; flex-shrink: 0;
+}
+.cp-filter-tab:hover { border-color: #0a5a3b; color: #0a5a3b; }
+.cp-filter-tab.active { background: #0a5a3b; color: #fff; border-color: #0a5a3b; font-weight: 600; }
+
 /* ── Issue group ─────────────────────────────────────────── */
-.cp-issue-group { margin-bottom: 1.25rem; }
+.cp-issue-group { margin-bottom: 1.25rem; border: 1px solid #dee2e6; border-radius: 10px; overflow: hidden; background: #fff; }
 .cp-issue-group-header {
     display: flex; align-items: center; gap: 0.6rem;
     padding: 0.75rem 1rem;
     font-size: 0.9rem; font-weight: 700; color: #1a2e22;
     cursor: pointer; user-select: none;
-    background: #fff; border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    margin-bottom: 0.5rem;
+    background: #f8f9fa; border-bottom: 1px solid #dee2e6;
 }
 .cp-issue-group-header i.bx-home-alt-2 { color: #0a5a3b; font-size: 1.25rem; }
 .cp-issue-count-badge {
@@ -358,13 +403,13 @@
 .cp-issue-group-chevron { margin-left: auto; color: #9ca3af; transition: transform 0.2s; }
 .cp-issue-group-chevron.open { transform: rotate(180deg); }
 
-/* ── Issue card ──────────────────────────────────────────── */
+/* ── Issue row (flat list, no individual cards) ──────────── */
 .cp-issue {
-    background: #fff; border-radius: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.07);
-    margin-bottom: 0.5rem; overflow: hidden;
-    margin-left: 1.25rem;
+    background: #fff; overflow: hidden;
+    border-bottom: 1px solid #f3f4f6;
+    margin: 0;
 }
+.cp-issue:last-child { border-bottom: none; }
 .cp-issue-summary {
     padding: 0.85rem 1rem;
     display: flex; align-items: flex-start; justify-content: space-between;
@@ -456,18 +501,61 @@
 
 /* ── Plan display ────────────────────────────────────────── */
 .cp-plan-wrap {
-    position: relative; display: inline-block;
+    position: relative; display: block;
     max-width: 100%; margin-bottom: 0.75rem;
     border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;
+    line-height: 0;
 }
-.cp-plan-img { max-width: 100%; max-height: 280px; display: block; }
-.cp-plan-dot {
-    position: absolute; width: 16px; height: 16px;
-    background: #e53e3e; border: 2px solid #fff;
-    border-radius: 50%; transform: translate(-50%, -50%);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+.cp-plan-canvas {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+.cp-plan-marker {
+    position: absolute;
+    display: none;
+    z-index: 10;
     pointer-events: none;
+    line-height: 1;
+    transform: translate(-50%, -100%);
 }
+.cp-plan-marker i {
+    font-size: 28px;
+    color: red;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35), 0 0 2px rgba(255,255,255,0.75);
+}
+
+/* ── Photo add tile (Toevoegen-style, full textarea height) ─ */
+.cp-comment-photo-col {
+    display: flex; flex-direction: column; align-items: center;
+    gap: .35rem; flex-shrink: 0; align-self: stretch;
+}
+.cp-photo-add-tile {
+    flex: 1; min-height: 60px; width: 64px;
+    border: 2px dashed #2f6f57; color: #2f6f57;
+    border-radius: 6px; background: #f8faf9;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.cp-photo-add-tile:hover { background: #edf5f0; border-color: #0a5a3b; }
+.cp-photo-thumbs-col { display: flex; flex-wrap: wrap; gap: 3px; max-width: 64px; }
+
+/* ── Comment entries (Communicatie) ─────────────────────── */
+.cp-comm-list { display: flex; flex-direction: column; gap: .5rem; margin-bottom: .75rem; }
+.cp-comm-empty { font-size: .82rem; color: #9ca3af; }
+.cp-comm-entry {
+    background: #f8fafc; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: .55rem .75rem;
+    font-size: .85rem;
+}
+.cp-comm-entry--contractor { background: #f0fdf4; border-color: #bbf7d0; }
+.cp-comm-entry--internal   { background: #eff6ff; border-color: #bfdbfe; }
+.cp-comm-meta { display: flex; align-items: center; gap: .5rem; margin-bottom: .25rem; }
+.cp-comm-author { font-weight: 600; color: #1a2e22; }
+.cp-comm-time { font-size: .75rem; color: #6c757d; }
+.cp-comm-text { color: #374151; line-height: 1.45; white-space: pre-wrap; }
 
 /* ── Mobile bottom padding ───────────────────────────────── */
 @media (max-width: 767.98px) {
@@ -477,13 +565,20 @@
 }
 
 /* ── Hamburger / mobile nav ──────────────────────────────── */
-.cp-nav-toggle { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; padding: 0.25rem; }
+.cp-nav-toggle { display: none; background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; padding: 0.25rem; flex-shrink: 0; }
 @media (max-width: 639.98px) {
+    /* Brand stays left; center hidden; right+toggle pushed to the far right */
     .cp-nav-center { display: none; }
-    .cp-nav-center.open { display: flex; position: absolute; top: 56px; left: 0; right: 0; background: #085230; justify-content: flex-start; flex-direction: column; z-index: 300; padding: 0.5rem 0; }
+    .cp-nav-center.open {
+        display: flex; position: absolute; top: 56px; left: 0; right: 0;
+        background: #085230; justify-content: flex-start;
+        flex-direction: column; z-index: 300; padding: 0.5rem 0;
+    }
     .cp-nav-links { flex-direction: column; width: 100%; }
     .cp-nav-link { border-radius: 0; padding: 0.65rem 1.25rem; }
-    .cp-nav-toggle { display: flex; align-items: center; margin-left: 0.5rem; }
-    .cp-nav-right { gap: 0.6rem; }
+    /* Push right section + toggle all the way to the right */
+    .cp-nav-right { margin-left: auto; gap: 0.5rem; }
+    .cp-nav-toggle { display: flex; align-items: center; }
     .cp-nav-username { display: none; }
+    .cp-nav-date { display: none; }
 }
