@@ -31,8 +31,7 @@
                         <div class="col-12 col-md-4">
                             <img src="@($"{baseUrl}{fileName}")"
                                  alt="@item.TitleNL"
-                                 class="img-fluid rounded-start w-100 h-100 object-fit-cover"
-                                 style="max-height:220px;"
+                                 class="img-fluid rounded-start w-100 h-100 object-fit-cover gl-news-img"
                                  loading="lazy">
                         </div>
                     }
@@ -63,8 +62,7 @@
                                 </div>
                             </div>
 
-                            <p class="card-text text-muted mb-0"
-                               style="-webkit-line-clamp:3;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;">
+                            <p class="card-text text-muted mb-0 gl-line-clamp-3">
                                 @item.TextNL
                             </p>
                         </div>
@@ -78,7 +76,7 @@ else
 {
 <div class="card card-modern mb-4">
         <div class="card-body align-items-center text-center card-big-info">
-            <div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+            <div class="col-12 mb-3 gl-empty-state-icon">
                 <i class="bx bx-news"></i>
              
             </div>

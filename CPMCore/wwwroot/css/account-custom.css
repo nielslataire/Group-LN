@@ -1,0 +1,388 @@
+/*
+ * account-custom.css
+ * Stijlen voor Account views: Login en AccessDenied
+ * Alle custom klassen starten met gl- prefix
+ */
+
+/* ═══════════════════════════════════════════════════════════════════
+   LOGIN PAGE  –  gl-login-*  /  gl-*
+   (gl- is de bestaande prefix, behouden voor achterwaartse compatibiliteit)
+═══════════════════════════════════════════════════════════════════ */
+
+/* ── Reset ───────────────────────────────────────────────────────── */
+html, body { height: 100%; margin: 0; padding: 0; }
+body > div  { height: 100%; }
+
+/* ════════════════════════════════════════════════════════════════════
+   DESKTOP GRID  –  twee kolommen elk 50 %
+════════════════════════════════════════════════════════════════════ */
+.gl-login {
+    min-height: 100vh;
+    background: #0a5a3b;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+        "logo  card"
+        "feat  card"
+        "copy  card";
+}
+
+/* ── Logo-balk ───────────────────────────────────────────────────── */
+.gl-logo-bar {
+    grid-area: logo;
+    padding: 52px 52px 0;
+}
+.gl-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+}
+.gl-logo img  { height: 88px; }
+.gl-company   { font-size: 2.4rem; font-weight: 700; color: #fff; line-height: 1.4; }
+.gl-platform  { font-size: 1.2rem; font-weight: 500; letter-spacing: .18em;
+                 color: rgba(255,255,255,.5); text-transform: uppercase; }
+
+/* ── Feature-tegels ──────────────────────────────────────────────── */
+.gl-features-bar {
+    grid-area: feat;
+    padding: 0 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.gl-features-label {
+    font-size: .9rem; font-weight: 300; letter-spacing: .14em;
+    text-transform: uppercase; color: rgba(255,255,255,.4);
+    margin-bottom: 16px;
+}
+.gl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.gl-tile {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: background .15s;
+}
+.gl-tile:hover { background: rgba(255,255,255,.12); }
+.gl-tile-icon  { font-size: 1.8rem; color: #3ecf8e; margin-bottom: 8px; }
+.gl-tile-name  { font-weight: 600; font-size: .9rem; color: #fff; }
+.gl-tile-desc  { font-size: .77rem; color: rgba(255,255,255,.45); margin-top: 3px; }
+
+/* ── Copyright ───────────────────────────────────────────────────── */
+.gl-copy-bar {
+    grid-area: copy;
+    padding: 0 52px 52px;
+    font-size: .76rem;
+    color: rgba(255,255,255,.3);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   WITTE KAART  –  rechts, spans alle rijen
+════════════════════════════════════════════════════════════════════ */
+.gl-right {
+    grid-area: card;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 36px;
+}
+
+.gl-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 44px 40px;
+    width: 100%;
+    max-width: 450px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.18);
+}
+
+.gl-card h1 {
+    font-size: 1.75rem; font-weight: 700;
+    color: #0f1f14; margin-bottom: 8px;
+}
+.gl-card-sub {
+    font-size: .9rem; color: #6c757d;
+    line-height: 1.5; margin-bottom: 28px;
+}
+
+/* Microsoft-knop */
+.btn-gl-ms {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; width: 100%;
+    background: #0a5a3b; color: #fff;
+    border: none; border-radius: 8px;
+    padding: 13px 20px;
+    font-size: .97rem; font-weight: 600;
+    text-decoration: none;
+    transition: background .18s, box-shadow .18s;
+}
+.btn-gl-ms:hover {
+    background: #084d32; color: #fff;
+    box-shadow: 0 4px 16px rgba(10,90,59,.3);
+}
+.btn-gl-ms .ms-icon  { font-size: 1.15rem; }
+.btn-gl-ms .ms-arrow { margin-left: auto; font-size: 1.05rem; }
+
+/* Info-box */
+.gl-info-box {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: #f4f9f6; border: 1px solid #d0e8dc;
+    border-radius: 8px; padding: 12px 14px; margin-top: 28px;
+    font-size: .82rem; color: #4a5568; line-height: 1.45;
+    align-items: center;
+}
+.gl-info-box .info-icon {
+    color: #0a5a3b; font-size: 1.8rem;
+    flex-shrink: 0; margin-top: 2px;
+}
+
+/* Foutmelding */
+.gl-error-box {
+    background: #fdf2f2;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    font-size: .86rem;
+    color: #721c24;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.gl-error-box .gl-error-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* Hulp-link */
+.gl-help {
+    margin-top: 28px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+    font-size: .855rem;
+    color: #6c757d;
+}
+.gl-help a { color: #0a5a3b; font-weight: 600; text-decoration: none; }
+.gl-help a:hover { text-decoration: underline; }
+
+/* Externe portalen links */
+.gl-portal-links {
+    margin-top: 20px;
+    font-size: .69rem;
+    color: #6c757d;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.gl-portal-links a {
+    color: #0a5a3b;
+    font-weight: 300;
+    text-decoration: none;
+    font-size: .69rem;
+}
+.gl-portal-links a:hover { text-decoration: underline; }
+
+/* ════════════════════════════════════════════════════════════════════
+   TABLET  ≤ 991px
+════════════════════════════════════════════════════════════════════ */
+@media (max-width: 991px) {
+    .gl-login {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+        grid-template-areas:
+            "logo"
+            "card"
+            "copy";
+    }
+    .gl-features-bar { display: none; }
+    .gl-logo-bar     { padding: 30px 28px 20px; }
+    .gl-right        { padding: 0 24px 24px; align-items: flex-start; }
+    .gl-card         {
+        max-width: 520px; margin: 0 auto;
+        border-radius: 16px; padding: 36px 28px;
+    }
+    .gl-copy-bar     { padding: 0 28px 32px; text-align: center; }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MOBIEL  ≤ 575px
+════════════════════════════════════════════════════════════════════ */
+@media (max-width: 575px) {
+    .gl-logo-bar     { padding: 24px 20px 16px; }
+    .gl-right        { padding: 0 16px 20px; }
+    .gl-card         { border-radius: 14px; padding: 28px 20px; }
+    .gl-card h1      { font-size: 1.5rem; }
+    .gl-card-sub     { font-size: .855rem; margin-bottom: 22px; }
+    .gl-copy-bar     { padding: 0 20px 28px; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ACCESS DENIED PAGE  –  gl-access-*
+═══════════════════════════════════════════════════════════════════ */
+
+@font-face {
+    font-family: "Avenir-Black";
+    src: url('/fonts/Avenir-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+}
+
+:root {
+    --gl-access-primary: var(--primary, #0a5a3b);
+    --gl-access-card: #f5f5f5;
+    --gl-access-text: #1e293b;
+    --gl-access-muted: #64748b;
+    --gl-access-line: #d5dce5;
+    --gl-access-danger: #e53935;
+    --gl-access-danger-soft: #f5e9e9;
+}
+
+.gl-access-page {
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background: var(--gl-access-primary);
+    padding: 24px;
+}
+
+.gl-access-shell {
+    width: min(100%, 980px);
+    min-height: min(95dvh, 760px);
+    border-radius: 16px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 34px 26px 26px;
+    z-index: 2;
+    background: transparent;
+}
+
+.gl-access-shell .btn {
+    border-radius: 8px;
+}
+
+.gl-access-brand {
+    text-align: center;
+    margin-top: 8px;
+}
+
+.gl-access-brand-logo {
+    width: 86px;
+    height: auto;
+    display: block;
+    margin: 0 auto 10px;
+}
+
+.gl-access-brand-title {
+    color: #fff;
+    font-family: "Avenir-Black", "Avenir Next", "Segoe UI", Arial, sans-serif;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: 40px;
+    line-height: 1;
+}
+
+.gl-access-card {
+    width: min(100%, 480px);
+    margin: 32px auto 0;
+    border-radius: 16px;
+    background: var(--gl-access-card);
+    box-shadow: 0 12px 40px rgba(9, 30, 20, .18);
+    padding: 30px 30px 26px;
+    text-align: center;
+}
+
+.gl-access-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    margin: 0 auto 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gl-access-danger-soft);
+    color: var(--gl-access-danger);
+    font-size: 34px;
+}
+
+.gl-access-card p {
+    margin: 0 auto 26px;
+    max-width: 360px;
+    color: var(--gl-access-muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.gl-access-help {
+    font-size: 14px;
+    color: #7b8698;
+}
+.gl-access-help a {
+    color: #0d2f4f;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.gl-access-copyright {
+    margin-top: 22px;
+    text-align: center;
+    color: rgba(220,231,224,.55);
+    font-size: 14px;
+}
+
+@media (max-width: 991.98px) {
+    .gl-access-shell {
+        min-height: min(100dvh, 1080px);
+        border-radius: 20px;
+        padding: 28px 16px 20px;
+    }
+    .gl-access-brand-title {
+        font-size: 24px;
+    }
+    .gl-access-card {
+        width: min(100%, 540px);
+        padding: 28px 22px 22px;
+        border-radius: 18px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .gl-access-page {
+        padding: 18px 10px;
+        align-items: stretch;
+    }
+    .gl-access-shell {
+        min-height: calc(100dvh - 36px);
+        margin: auto;
+        padding: 26px 12px 18px;
+        border-radius: 16px;
+    }
+    .gl-access-card {
+        width: min(100%, 420px);
+        margin-top: 24px;
+        padding: 24px 18px 20px;
+    }
+    .gl-access-card p {
+        font-size: 14px;
+    }
+    .gl-access-help {
+        font-size: 12px;
+    }
+    .gl-access-copyright {
+        font-size: 14px;
+        margin-top: 18px;
+    }
+}

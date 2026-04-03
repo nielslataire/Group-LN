@@ -1,21 +1,21 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceComposeVM
 
-<section class="card card-modern mt-4" id="freeLineBlock" style="display:none">
+<section class="card card-modern mt-4 d-none" id="freeLineBlock">
     <div class="card-body pb-2">
         <div class="d-flex justify-content-between align-items-center">
             <h3 class="fw-bold mb-0">Vrije lijnen</h3>
         </div>
 
         <div class="table-responsive mt-3 mb-0">
-            <table id="freeLinesTable" class="table align-middle" style="width:100%">
+            <table id="freeLinesTable" class="table align-middle w-100">
                 <thead>
                     <tr>
-                        <th style="width:36px;"></th>   <!-- drag handle -->
+                        <th class="gl-col-drag"></th>   <!-- drag handle -->
                         <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
                         <th>Omschrijving</th>
-                        <th class="text-end" style="width:140px">Bedrag</th>
-                        <th class="text-end" style="width:200px">BTW&nbsp;%</th>
-                        <th class="text-end" style="width:50px">Acties</th>
+                        <th class="text-end gl-col-140">Bedrag</th>
+                        <th class="text-end gl-col-200">BTW&nbsp;%</th>
+                        <th class="text-end gl-col-sm">Acties</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -30,8 +30,8 @@
 
 <!-- Template + Hidden -->
 <template id="freeLineRowTpl">
-    <tr class="free-row">
-        <td class="reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
+    <tr class="gl-free-row">
+        <td class="gl-reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
         <td></td>
         <td><input class="form-control form-control-sm js-fl-text" data-col="Text" maxlength="200" /></td>
         <td class="text-end"><input class="form-control form-control-sm text-end js-fl-price" data-col="Price" type="text" /></td>

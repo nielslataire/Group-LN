@@ -74,7 +74,7 @@
 									}
 									else
 									{
-										<select id="ddlCompany" class="form-control" style="width: 100%;">
+										<select id="ddlCompany" class="form-control w-100">
 											<!-- Voeg hier de opties toe -->
 										</select>
 										@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
@@ -152,8 +152,7 @@
 								<div class="col-lg-8 col-xl-6">
 									<div class="d-flex align-items-start gap-2">
 										<select id="lstActivities" name="SelectedActivities" multiple
-												class="form-control populate select2" data-plugin-selectTwo
-												style="flex: 1; min-height: 38px;">
+												class="form-control populate select2 gl-flex-input" data-plugin-selectTwo>
 											<!-- Opties -->
 										</select>
 										<button type="button" class="btn btn-outline-secondary" id="btnAddActivities">

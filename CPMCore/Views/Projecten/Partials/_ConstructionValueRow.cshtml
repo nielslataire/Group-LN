@@ -21,15 +21,15 @@
         @* ValueSold is niet editbaar? dan hidden ok *@
         @Html.HiddenFor(m => m.ValueSold)
 
-        <td style="width:30%">
+        <td class="gl-cv-col-30">
             @Html.EditorFor(m => m.Value, new { htmlAttributes = new { @class = "form-control form-control-modern", placeholder = "Bouwwaarde" } })
         </td>
 
-        <td style="width:30%">
+        <td class="gl-cv-col-30">
             @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern", placeholder = "Omschrijving" })
         </td>
 
-        <td style="width:35%">
+        <td class="gl-cv-col-35">
             @Html.DropDownListFor(
             m => m.PaymentGroupId,
                 paymentGroups,
@@ -38,7 +38,7 @@
                 )
     </td>
 
-    <td style="width:5%">
+    <td class="gl-cv-col-5">
         <a href="#" class="deleteConstructionRow ms-2" data-toggle="tooltip" title="Verwijderen">
             <i class="fa fa-trash"></i>
         </a>

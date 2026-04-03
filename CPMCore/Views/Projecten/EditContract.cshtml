@@ -76,7 +76,7 @@
 									}
 									else
 									{
-										<select id="ddlCompany" class="form-control" style="width: 100%;">
+										<select id="ddlCompany" class="form-control w-100">
 											<!-- Voeg hier de opties toe -->
 										</select>
 										@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
@@ -162,7 +162,7 @@
 
 										<select id="lstActivities" name="SelectedActivities" multiple
 												class="form-control populate select2" data-plugin-selectTwo
-												style="flex: 1; min-height: 38px;">
+												class="gl-flex-input">
 												@foreach (var activity in Model.Activities)
 												{
 													var isDisabled = Model.Contract.Activities.Any(ca => ca.Activity.ID == activity.ID);

@@ -211,7 +211,7 @@
                             <span class="gl-mc-cnt">@infoMeldingen.Count</span>
                             <i class="bx bx-chevron-down gl-mc-chevron ms-auto"></i>
                         </div>
-                        <div class="gl-mc-group-body" style="display:none">
+                        <div class="gl-mc-group-body d-none">
                             @foreach (var (tekst, projectId, severity, bekijkUrl, category) in infoMeldingen)
                             {
                                 var icon   = MeldingTypeHelper.GetIcon(category);
@@ -343,21 +343,21 @@
                                 {
                                     <div>
                                         <div class="pb-2">
-                                            <div class="pg-row">
-                                                <span class="pg-label">Fysiek</span>
-                                                <span class="pg-pct">@displayFysPct.ToString("0.#")%</span>
+                                            <div class="gl-pg-row">
+                                                <span class="gl-pg-label">Fysiek</span>
+                                                <span class="gl-pg-pct">@displayFysPct.ToString("0.#")%</span>
                                             </div>
-                                            <div class="progress pg-bar">
-                                                <div class="progress-bar" style="width:@(displayFysPct.ToString("0.##", invCulture))%"></div>
+                                            <div class="progress gl-pg-bar">
+                                                <div class="progress-bar gl-pg-bar-fys" style="--gl-fill-width:@(displayFysPct.ToString("0.##", invCulture))%"></div>
                                             </div>
                                         </div>
                                         <div class="pb-2">
-                                            <div class="pg-row">
-                                                <span class="pg-label">Financieel</span>
-                                                <span class="pg-pct">@displayFinPct.ToString("0.#")%</span>
+                                            <div class="gl-pg-row">
+                                                <span class="gl-pg-label">Financieel</span>
+                                                <span class="gl-pg-pct">@displayFinPct.ToString("0.#")%</span>
                                             </div>
-                                            <div class="progress pg-bar">
-                                                <div class="progress-bar pg-bar-hoog" style="width:@(displayFinPct.ToString("0.##", invCulture))%"></div>
+                                            <div class="progress gl-pg-bar">
+                                                <div class="progress-bar gl-pg-bar-hoog" style="--gl-fill-width:@(displayFinPct.ToString("0.##", invCulture))%"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -366,7 +366,7 @@
                                     <div class="gl-resterende">
                                         @if (isOverdue)
                                         {
-                                            <i class="bx bx-check-circle" style="color:#28a745;font-size:1rem;margin-right:4px;"></i>
+                                            <i class="bx bx-check-circle gl-icon-opgeleverd"></i>
                                             <span class="text-success">Opgeleverd op @project.DeliveryDate!.Value.ToString("dd/MM/yyyy")</span>
                                         }
                                         else
@@ -599,7 +599,7 @@
                     </button>
                 }
             }
-            <div id="gl-punt-extra-label" class="gl-mob-sheet-section-label" style="display:none">Andere projecten</div>
+            <div id="gl-punt-extra-label" class="gl-mob-sheet-section-label d-none">Andere projecten</div>
             <div id="gl-punt-extra"></div>
         </div>
     </div>
@@ -653,6 +653,7 @@
 </div>
 
 @{ var werfIds = string.Join(",", werfProjects.Select(p => p.Id)); }
+@section PageScripts {
 <script>
 window.addEventListener('load', function () {
 
@@ -696,12 +697,12 @@ window.addEventListener('load', function () {
     $(document).on('click', '.gl-mc-info-toggle', function () {
         var $body = $(this).next('.gl-mc-group-body');
         var $chev = $(this).find('.gl-mc-chevron');
-        if ($body.is(':visible')) {
-            $body.slideUp(150);
-            $chev.removeClass('gl-mc-chevron-open');
-        } else {
-            $body.slideDown(150);
+        if ($body.hasClass('d-none')) {
+            $body.removeClass('d-none');
             $chev.addClass('gl-mc-chevron-open');
+        } else {
+            $body.addClass('d-none');
+            $chev.removeClass('gl-mc-chevron-open');
         }
     });
 
@@ -728,8 +729,8 @@ window.addEventListener('load', function () {
     }
     function closePuntSheet() {
         closeSheet('gl-punt-sheet');
-        $pSearch.val(''); $pExtra.empty(); $pExtraLbl.hide();
-        $pMijn.show(); $pMijnLbl.show();
+        $pSearch.val(''); $pExtra.empty(); $pExtraLbl.addClass('d-none');
+        $pMijn.removeClass('d-none'); $pMijnLbl.removeClass('d-none');
     }
 
     $('#mob-nav-punt').on('click', openPuntSheet);
@@ -738,14 +739,14 @@ window.addEventListener('load', function () {
     $pSearch.on('input', function () {
         var q = $(this).val().trim().toLowerCase();
         clearTimeout(pTimer);
-        $pExtra.empty(); $pExtraLbl.hide();
-        if (q === '') { $pMijn.show(); $pMijnLbl.show(); return; }
+        $pExtra.empty(); $pExtraLbl.addClass('d-none');
+        if (q === '') { $pMijn.removeClass('d-none'); $pMijnLbl.removeClass('d-none'); return; }
         var anyVis = false;
         $pMijn.each(function () {
             var m = $(this).data('name').indexOf(q) !== -1;
-            $(this).toggle(m); if (m) anyVis = true;
+            $(this).toggleClass('d-none', !m); if (m) anyVis = true;
         });
-        $pMijnLbl.toggle(anyVis);
+        $pMijnLbl.toggleClass('d-none', !anyVis);
         if (q.length < 2) return;
         pTimer = setTimeout(function () {
             $.getJSON('@Url.Action("QuickSearch", "Projecten")', { q: q }, function (data) {
@@ -754,7 +755,7 @@ window.addEventListener('load', function () {
                 var ids = [@werfIds];
                 data = data.filter(function (p) { return ids.indexOf(p.id) === -1; });
                 if (!data.length) return;
-                $pExtraLbl.show();
+                $pExtraLbl.removeClass('d-none');
                 $.each(data, function (_, p) {
                     $pExtra.append(
                         $('<button type="button">').addClass('gl-mob-sheet-item')
@@ -860,3 +861,4 @@ window.addEventListener('load', function () {
 
 });
 </script>
+}

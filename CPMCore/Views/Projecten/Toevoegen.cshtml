@@ -93,7 +93,7 @@
                                     @Html.LabelFor(m => m.Project.Postalcode.Gemeente)
                                 </label>
                                 <div class="col-lg-3 col-xl-3">
-                                    <select id="PostalSelect" class="form-control" style="width: 100%;">
+                                    <select id="PostalSelect" class="form-control w-100">
                                         @if (Model.SelectedPostalcode > 0)
                                         {
                                             <option value="@Model.SelectedPostalcode" selected>
@@ -171,7 +171,7 @@
                                 </div>
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="WheaterSelect">@Html.LabelFor(m => m.Project.WheaterStation)</label>
                                 <div class="col-lg-3 col-xl-3">
-                                    <select id="WheaterSelect" class="form-control" style="width: 100%;">
+                                    <select id="WheaterSelect" class="form-control w-100">
                                         @if (Model.Project.WheaterStation.Id > 0)
                                         {
                                             <option value="@Model.Project.WheaterStation.Id" selected>@Model.Project.WheaterStation.Name</option>
@@ -182,7 +182,7 @@
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="DeveloperSelect">@Html.LabelFor(m => m.Project.Developer)</label>
                                 <div class="col-lg-3 col-xl-3">
-                                    <select id="DeveloperSelect" class="form-control" style="width: 100%;">
+                                    <select id="DeveloperSelect" class="form-control w-100">
                                         @if (Model.Project.Developer.ID > 0)
                                         {
                                             <option value="@Model.Project.Developer.ID" selected>@Model.Project.Developer.Display</option>
@@ -191,7 +191,7 @@
                                 </div>
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="BuilderSelect">@Html.LabelFor(m => m.Project.Builder)</label>
                                 <div class="col-lg-3 col-xl-3">
-                                    <select id="BuilderSelect" class="form-control" style="width: 100%;">
+                                    <select id="BuilderSelect" class="form-control w-100">
                                         @if (Model.Project.Builder.ID > 0)
                                         {
                                             <option value="@Model.Project.Builder.ID" selected>@Model.Project.Builder.Display</option>

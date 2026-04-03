@@ -6,56 +6,9 @@
     ViewData["Title"] = issue.Title;
 }
 
-<style>
-    .issue-media-add-tile {
-        width: 90px;
-        height: 90px;
-        border: 2px dashed #2f6f57;
-        color: #2f6f57;
-        border-radius: 4px;
-        background: #f8faf9;
-    }
-
-    .issue-media-item:hover .issue-media-remove {
-        opacity: 1;
-    }
-
-    .issue-media-remove {
-        width: 20px;
-        height: 20px;
-        opacity: 0;
-        transition: opacity .15s ease-in-out;
-    }
-
-    .issue-plan-stage {
-        position: relative;
-        width: 100%;
-        min-height: 520px;
-        border: 1px dashed #c8d0d7;
-        border-radius: 6px;
-        background: #fafafa;
-        overflow: auto;
-    }
-
-    .issue-plan-canvas, .issue-plan-frame {
-        display: block;
-        width: 100%;
-        background: #fff;
-        border: 0;
-    }
-
-    .issue-plan-marker {
-        position: absolute;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: red;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 0 0 1px rgba(0,0,0,.15);
-        pointer-events: none;
-        display: none;
-    }
-</style>
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/issues-custom.css" />
+}
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -74,11 +27,11 @@
                         <div class="col-md-2"><select id="detailPlanPageSelect" class="form-control" disabled><option value="1">Pagina 1</option></select></div>
                         <div class="col-md-3"><select id="detailPlanZoomSelect" class="form-control"><option value="fit">Passend</option><option value="page-width">Breedte</option><option value="100">100%</option><option value="150">150%</option></select></div>
                     </div>
-                    <div id="detailPlanContainer" class="issue-plan-stage d-flex align-items-center justify-content-center">
+                    <div id="detailPlanContainer" class="gl-plan-stage-full d-flex align-items-center justify-content-center">
                         <div id="detailPlanEmpty" class="text-muted">Geen plan geselecteerd</div>
-                        <canvas id="detailPlanCanvas" class="issue-plan-canvas" style="display:none;"></canvas>
-                        <iframe id="detailPlanFrame" class="issue-plan-frame" style="display:none;" title="Plan PDF preview"></iframe>
-                        <div id="detailPlanMarker" class="issue-plan-marker"></div>
+                        <canvas id="detailPlanCanvas" class="gl-plan-canvas"></canvas>
+                        <iframe id="detailPlanFrame" class="gl-plan-frame" title="Plan PDF preview"></iframe>
+                        <div id="detailPlanMarker" class="gl-plan-marker"></div>
                     </div>
                 </div>
             </section>
@@ -92,14 +45,14 @@
                             @foreach (var m in issue.ConstructionIssueMedia.OrderByDescending(x => x.CreatedDate))
                             {
                                 var url = Model.MediaUrls.ContainsKey(m.Id) ? Model.MediaUrls[m.Id] : null;
-                                <div class="position-relative issue-media-item" data-existing-media-card="@m.Id" style="width:90px;">
+                                <div class="position-relative issue-media-item gl-media-item-wrap" data-existing-media-card="@m.Id">
                                     @if (!string.IsNullOrWhiteSpace(url))
                                     {
-                                        <img src="@url" style="width:90px;height:90px;object-fit:cover;border-radius:4px;" alt="Issue media" />
+                                        <img src="@url" class="gl-media-thumb" alt="Issue media" />
                                     }
                                     else
                                     {
-                                        <div class="d-flex flex-column align-items-center justify-content-center" style="width:90px;height:90px;border-radius:4px;background:#f3f5f7;border:1px solid #d7dde3;">
+                                        <div class="gl-media-placeholder">
                                             <i class="bx bxs-file text-muted fs-1"></i>
                                         </div>
                                     }
@@ -107,7 +60,7 @@
                                     <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 p-0 issue-media-remove" data-remove-existing-media="@m.Id">×</button>
                                 </div>
                             }
-                            <button type="button" id="detailAddMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile"><i class="bx bx-camera fs-4"></i><span style="font-size:12px;line-height:1;">Toevoegen</span></button>
+                            <button type="button" id="detailAddMediaButton" class="btn d-inline-flex flex-column align-items-center justify-content-center issue-media-add-tile"><i class="bx bx-camera fs-4"></i><span class="gl-media-add-label">Toevoegen</span></button>
                         </div>
                         <input id="detailMediaFilesInput" name="files" type="file" accept="image/*" multiple class="d-none" />
                         <button class="btn btn-primary" type="submit">Bijlagen opslaan</button>
@@ -293,9 +246,8 @@
 
             function addPreview(url){
                 const wrapper = document.createElement('div');
-                wrapper.className = 'position-relative issue-media-item';
-                wrapper.style.width = '90px';
-                wrapper.innerHTML = `<img src="${url}" style="width:90px;height:90px;object-fit:cover;border-radius:4px;" alt="Nieuwe foto" />`;
+                wrapper.className = 'position-relative issue-media-item gl-media-item-wrap';
+                wrapper.innerHTML = `<img src="${url}" class="gl-media-thumb" alt="Nieuwe foto" />`;
                 const remove = document.createElement('button');
                 remove.type = 'button';
                 remove.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 p-0 issue-media-remove';

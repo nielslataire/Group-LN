@@ -6,6 +6,12 @@
 @{
 	ViewData["Title"] = "Klant - " + Model.Client.DisplayName;
 }
+
+@section PageStyle
+{
+	<link rel="stylesheet" href="~/css/klanten-custom.css" />
+}
+
 <!-- start: page -->
 
 <!-- Page Content -->
@@ -327,7 +333,7 @@
 			var contact = Model.Client.Contacts[i];
 			var isLast = (i == Model.Client.Contacts.Count() - 1);
 			string mbClass = isLast ? "" : "mb-3";
-			<div class="flex-fill d-flex @mbClass" style="flex-basis: calc(100% / @contactCount);">
+			<div class="flex-fill d-flex @mbClass">
 				<section class="card card-modern card-horizontal w-100">
 					<header class="card-header bg-primary">
 						<div class="card-header-icon">
@@ -387,7 +393,7 @@
 
 						<li>
 							<div class="post-image">
-								<div class="d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+								<div class="d-flex align-items-center justify-content-center gl-icon-box-50">
 									<a href="@Url.Action("ViewDoc", "Projecten", new { id = doc.Docid })" target="_blank">
 										<i class="@iconClass fa-2x"></i>
 									</a>
@@ -420,7 +426,7 @@
 				@foreach (var order in Model.ChangeOrders)
 				{
 					<li>
-						<div class="post-image d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+						<div class="post-image d-flex align-items-center justify-content-center gl-icon-box-50">
 								<a href="@Url.Action("ChangeOrderPDF", "Projecten", new { changeorderid = order.Id })" target="_blank">
 								<i class="fas fa-file-pdf fa-2x"></i>
 								</a>

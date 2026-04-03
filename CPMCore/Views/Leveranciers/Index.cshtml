@@ -19,44 +19,7 @@
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-    <style>
-        #datatable-suppliers.dataTable > thead > tr > th,
-        #datatable-suppliers.dataTable > tbody > tr > td {
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-            line-height: 1.2 !important;
-            vertical-align: middle !important;
-        }
-
-        #datatable-suppliers td.actions {
-            white-space: nowrap;
-            width: 1%;
-        }
-
-            #datatable-suppliers td.actions i {
-                line-height: 1 !important;
-            }
-
-        #datatable-suppliers th.actions {
-            width: 1%;
-            white-space: nowrap;
-        }
-
-        #datatable-suppliers {
-            table-layout: fixed;
-        }
-
-            #datatable-suppliers th,
-            #datatable-suppliers td {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-        #datatable-suppliers_wrapper .dataTables_paginate {
-            margin-top: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/klanten-custom.css" />
 }
 
 <div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
@@ -146,7 +109,7 @@
     <div class="card-body">
         <div class="datatables-header-footer-wrapper mt-2">
             <div class="datatable-header d-flex justify-content-end mb-3" id="colvis-container"></div>
-            <table class="table table-responsive-md table-hover mb-3" id="datatable-suppliers" style="min-width: 720px;">
+            <table class="table table-responsive-md table-hover mb-3 gl-table-min-720" id="datatable-suppliers">
                 <thead>
                     <tr>
                         <th>Bedrijfsnaam</th>

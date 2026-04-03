@@ -17,52 +17,7 @@
 }
 
 @section PageStyle {
-    <style>
-        .project-card {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-            .project-card .card-body {
-                flex: 1 1 auto;
-                display: flex;
-                flex-direction: column;
-            }
-
-        .project-details {
-            flex: 1 1 auto;
-        }
-
-        .project-detail-row {
-            display: flex;
-            column-gap: .75rem;
-        }
-
-        .detail-icon {
-            width: 2rem;
-            text-align: center;
-        }
-
-        /* ── MOBILE ───────────────────────────────────────────────── */
-        @@media (max-width: 767.98px) {
-            /* Hide image wrapper when there is no project photo */
-            .isotope-item.has-no-photo .image-frame-wrapper { display: none; }
-
-            /* Status badge: reflow to card body top when image is hidden */
-            .isotope-item.has-no-photo .badge {
-                position: static !important;
-                display: inline-block;
-                margin: 0.75rem 0 0.5rem 0;
-            }
-
-            /* Use padding (not margin) for vertical gap so isotope measures it correctly */
-            #project-grid .isotope-item {
-                padding-bottom: 1rem;
-                margin-bottom: 0 !important;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 
 <div class="row justify-content-between align-items-center mb-3 mb-sm-4">
@@ -129,7 +84,7 @@
     }
 </div>
 
-<div class="text-center mt-4" id="load-more-container" @(Model.HasMoreProjects && Model.BatchSize > 0 ? string.Empty : "style=\"display:none;\"")>
+<div class="text-center mt-4 @(Model.HasMoreProjects && Model.BatchSize > 0 ? string.Empty : "d-none")" id="load-more-container">
     <button type="button" id="load-more-projects" class="btn btn-primary" data-url="@Url.Action("LoadMoreProjects", "Projecten")">
         Laad meer
     </button>
@@ -225,19 +180,19 @@
                 // On mobile cards stack naturally — skip equalisation to avoid
                 // changing heights after isotope has already positioned items.
                 if (window.innerWidth < 768) {
-                    $('.project-card .card-body').css('min-height', '0');
+                    $('.gl-project-card .card-body').css('min-height', '0');
                     $grid.isotope('layout');
                     return;
                 }
                 var maxH = 0;
-                $('.project-card .card-body').css('min-height', '0');
+                $('.gl-project-card .card-body').css('min-height', '0');
 
-                $('.project-card .card-body').each(function () {
+                $('.gl-project-card .card-body').each(function () {
                     var h = $(this).outerHeight();
                     if (h > maxH) maxH = h;
                 });
 
-                $('.project-card .card-body').css('min-height', maxH + 'px');
+                $('.gl-project-card .card-body').css('min-height', maxH + 'px');
                 // Reposition items after height changes so nothing overlaps
                 $grid.isotope('layout');
             }

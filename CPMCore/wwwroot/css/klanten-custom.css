@@ -1,0 +1,240 @@
+/* ============================================================
+   Klanten & Leveranciers – custom stijlen
+   Verplaatst vanuit inline <style> blokken in de views.
+   Alle custom classes gebruiken de gl- prefix.
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   gl-tab-nav  (was: .client-tab-nav / .supplier-tab-nav)
+   Gebruikt in: Klanten/Form.cshtml, Leveranciers/Details.cshtml
+   ---------------------------------------------------------- */
+.gl-tab-nav {
+    background-color: #f3f5f7;
+    border-radius: 6px;
+    padding: 6px;
+    gap: 4px;
+}
+
+.gl-tab-nav .nav-link {
+    color: #6c757d;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    padding: 10px 16px;
+}
+
+.gl-tab-nav .nav-link.active {
+    background-color: #ffffff;
+    color: #1f2d3d;
+    border-color: #e3e6ea;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+/* ----------------------------------------------------------
+   gl-delete-action  (was: .deleteContact in AddClientAccount)
+   Gebruikt in: Klanten/AddClientAccount.cshtml
+   ---------------------------------------------------------- */
+.gl-delete-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: inherit;
+    padding: 0.4rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s ease;
+}
+
+.gl-delete-action:hover {
+    background-color: #e6f4ea;
+}
+
+.gl-delete-action i {
+    font-size: 1.25rem;
+}
+
+/* ----------------------------------------------------------
+   gl-tabs-nav  (was: .tabs .nav-tabs overrides in EditProject)
+   Gebruikt in: Klanten/EditProject.cshtml
+   ---------------------------------------------------------- */
+.gl-tabs .nav-tabs {
+    background-color: #e0e0e0;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 0;
+    color: #333;
+}
+
+.gl-tabs .nav-tabs .nav-link {
+    border: none;
+    color: #333;
+    background-color: transparent;
+    font-weight: 500;
+    padding: 12px 20px;
+    margin-bottom: 0;
+    border-radius: 0;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.gl-tabs .nav-tabs .nav-link:hover {
+    background-color: #d0d0d0;
+    color: #333;
+    border-top: 0;
+}
+
+.gl-tabs .nav-tabs .nav-link.active {
+    background-color: #f9f9f9;
+    color: #111;
+    border: none;
+    border-bottom: 0px solid transparent;
+}
+
+.gl-tabs .nav-tabs .nav-link:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+.gl-tabs .tab-content {
+    background-color: transparent;
+    padding-top: 15px;
+}
+
+.gl-tabs .nav-tabs .nav-link.active {
+    border-color: transparent !important;
+}
+
+html body .gl-tabs .nav-tabs .nav-link,
+html.dark body .gl-tabs .nav-tabs .nav-link,
+html body .gl-tabs .nav-tabs .nav-link:hover,
+html.dark body .gl-tabs .nav-tabs .nav-link:hover {
+    color: #555 !important;
+}
+
+html body .gl-tabs .nav-tabs .nav-link.active,
+html.dark body .gl-tabs .nav-tabs .nav-link.active {
+    color: #111 !important;
+    background-color: #f5f5f5 !important;
+    border-color: transparent !important;
+}
+
+html body .gl-tabs .nav-tabs .nav-link:hover {
+    background-color: #e0e0e0 !important;
+}
+
+/* ----------------------------------------------------------
+   gl-colvis-btn  (was: div.dt-buttons .btn.buttons-colvis in DetailCO)
+   Gebruikt in: Klanten/DetailCO.cshtml
+   ---------------------------------------------------------- */
+div.dt-buttons .btn.buttons-colvis::after {
+    font-family: "Font Awesome 6 Free";
+    content: "\f078";
+    font-weight: 900;
+    font-size: 0.85rem;
+    vertical-align: middle;
+    border: none;
+    margin-left: 0.5rem;
+    transition: transform 0.2s ease;
+}
+
+div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
+    transform: rotate(180deg);
+}
+
+/* ----------------------------------------------------------
+   gl-details-control  (was: td.details-control in DetailCO)
+   Gebruikt in: Klanten/DetailCO.cshtml, Klanten/Partials/ChangeOrders.cshtml
+   ---------------------------------------------------------- */
+td.gl-details-control,
+th.gl-details-control {
+    cursor: pointer;
+    width: 36px;
+    text-align: center;
+}
+
+td.gl-details-control i.bx {
+    line-height: 1;
+    transition: transform .15s ease;
+    font-size: 1.1rem;
+}
+
+/* ----------------------------------------------------------
+   gl-table-min  (was: style="min-width: 720px;" on tables)
+   Gebruikt in: Klanten/Index.cshtml, Leveranciers/Index.cshtml
+   ---------------------------------------------------------- */
+.gl-table-min-720 {
+    min-width: 720px;
+}
+
+.gl-table-min-550 {
+    min-width: 550px;
+}
+
+/* ----------------------------------------------------------
+   gl-icon-box  (was: style="width:50px;height:50px;" in Detail.cshtml)
+   Gebruikt in: Klanten/Detail.cshtml
+   ---------------------------------------------------------- */
+.gl-icon-box-50 {
+    width: 50px;
+    height: 50px;
+}
+
+/* ----------------------------------------------------------
+   Leveranciers/Index – DataTable stijlen
+   (was: inline <style> in Leveranciers/Index.cshtml)
+   ---------------------------------------------------------- */
+#datatable-suppliers.dataTable > thead > tr > th,
+#datatable-suppliers.dataTable > tbody > tr > td {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    line-height: 1.2 !important;
+    vertical-align: middle !important;
+}
+
+#datatable-suppliers td.actions {
+    white-space: nowrap;
+    width: 1%;
+}
+
+#datatable-suppliers td.actions i {
+    line-height: 1 !important;
+}
+
+#datatable-suppliers th.actions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+#datatable-suppliers {
+    table-layout: fixed;
+}
+
+#datatable-suppliers th,
+#datatable-suppliers td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#datatable-suppliers_wrapper .dataTables_paginate {
+    margin-top: 1rem;
+}
+
+/* ----------------------------------------------------------
+   gl-no-shadow  (was: style="box-shadow:none;" in EditProject)
+   Gebruikt in: Klanten/EditProject.cshtml
+   ---------------------------------------------------------- */
+.gl-no-shadow {
+    box-shadow: none !important;
+}
+
+/* ----------------------------------------------------------
+   gl-co-th-40 / gl-co-th-10  (was: style="width:X%" in DetailCO JS template)
+   Gebruikt in: Klanten/DetailCO.cshtml (JS-gegenereerde tabel)
+   ---------------------------------------------------------- */
+.gl-co-th-40 {
+    width: 40%;
+}
+
+.gl-co-th-10 {
+    width: 10%;
+}

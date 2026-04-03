@@ -38,7 +38,7 @@
                         @if (group.ID == Model.GroupID)
                         {
                             <li class="background-color-primary">
-                                <span style="color:#FFF">@group.Name</span>
+                                <span class="gl-active-group-label">@group.Name</span>
                             </li>
                         }
                         else
@@ -101,9 +101,8 @@
                                 {
                                     <h3 class="text-primary">@comp.Company.Display</h3>
                                     <div class="datatables-header-footer-wrapper mt-2 mb-4">
-                                        <table class="table table-ecommerce-simple table-striped mb-0 datatable-invoices-list"
+                                        <table class="table table-ecommerce-simple table-striped mb-0 datatable-invoices-list gl-table-min-w"
                                                id="datatable-invoices-list"
-                                               style="min-width: 550px;"
                                                data-toggle="table"
                                                data-show-columns="true"
                                                data-toolbar-align="right">
@@ -139,9 +138,8 @@
                                 {
                                     <h3 class="text-primary">@cont.Company.Display</h3>
                                     <div class="datatables-header-footer-wrapper mt-2 mb-4">
-                                        <table class="table table-ecommerce-simple table-striped mb-0 datatable-invoices-list"
+                                        <table class="table table-ecommerce-simple table-striped mb-0 datatable-invoices-list gl-table-min-w"
                                                id="datatable-invoices-list"
-                                               style="min-width: 550px;"
                                                data-toggle="table"
                                                data-show-columns="true"
                                                data-toolbar-align="right">
@@ -224,8 +222,8 @@
                         });
 
                         return $('<tr/>')
-                            .append('<td colspan="4" style="text-align: right;"><strong>Totaal voor ' + group + ':</strong></td>')
-                                .append('<td style="text-align: right;"><strong>€ ' + total.toLocaleString('nl-BE', {
+                            .append('<td colspan="4" class="gl-td-text-right"><strong>Totaal voor ' + group + ':</strong></td>')
+                                .append('<td class="gl-td-text-right"><strong>€ ' + total.toLocaleString('nl-BE', {
                                 minimumFractionDigits: 2,
                                 maximumFractionDigits: 2
                             }) + '</strong></td>');

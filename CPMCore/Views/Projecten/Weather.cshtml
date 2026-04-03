@@ -10,58 +10,7 @@
 @section PageStyle
 {
 @* 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css"> *@
-    <style>
-        /* Container breedte zodat 2x6 maanden past */
-        #weatherCalendar {
-/*             max-width: 1600px;
-            margin: 0 auto; */
-        }
-
-        /* Weekenden donker + niet klikbaar */
-        .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-frame,
-        .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-frame {
-            background: #999;
-        }
-
-        .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
-        .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number {
-            color: #ccc;
-        }
-
-        .fc .fc-daygrid-day.fc-day-sat,
-        .fc .fc-daygrid-day.fc-day-sun {
-            pointer-events: none;
-        }
-        /* Kleiner dagnummer */
-        .fc .fc-daygrid-day-number {
-            font-size: 10px; /* bv. 10–11px */
-            line-height: 14px;
-            padding: 1;
-            padding-bottom:0;
-        }
-
-        /* Grotere dagcellen in de year-view */
-        #weatherCalendar .fc-multimonth .fc-daygrid-day-frame {
-            min-height: 44px; /* > maak dit 56/72/88px naar smaak */
-            display: flex;
-            flex-direction: column;
-        }
-
-
-
-        #weatherCalendar .fc-daygrid-day-events {
-            margin-top: 2px;
-        }
-
-        /* pill-styling compact zodat er 2-3 onder elkaar passen */
-        #weatherCalendar .fc-daygrid-event {
-            margin: 2px 0;
-            padding: 0 6px;
-            font-size: 11px;
-            line-height: 1.15;
-            border-radius: 6px;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 
 @section PageScripts {

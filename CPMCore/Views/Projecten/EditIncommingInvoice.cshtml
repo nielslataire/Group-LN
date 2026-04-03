@@ -64,7 +64,7 @@
 										@Html.LabelFor(m => m.ProjectContracts)
 									</label>
 									<div class="col-lg-8 col-xl-6">
-											<select id="ddlCompany" class="form-control" style="width: 100%;">
+											<select id="ddlCompany" class="form-control w-100">
 												<!-- Voeg hier de opties toe -->
 											</select>
 											@Html.HiddenFor(m => m.IncommingInvoice.CompanyId, new { id = "txtCompanyID", @class = "form-control" })
@@ -119,7 +119,7 @@
 								</label>
 								<div class="col-lg-8 col-xl-6">
 									<div class="d-flex align-items-start gap-2">
-										@Html.ListBoxFor(m => m.SelectedActivities, new SelectList(Model.ListActivities, "ID", "Display", Model.SelectedActivities, "Group"), new { @class = "form-control populate select2", multiple = "", id = "lstActivities", data_plugin_selectTwo = "", style = "flex: 1; min-height: 38px;" })
+										@Html.ListBoxFor(m => m.SelectedActivities, new SelectList(Model.ListActivities, "ID", "Display", Model.SelectedActivities, "Group"), new { @class = "form-control populate select2 gl-flex-input", multiple = "", id = "lstActivities", data_plugin_selectTwo = "" })
 @* 
 										<select id="lstActivities" name="SelectedActivities" multiple
 												class="form-control populate select2" data-plugin-selectTwo

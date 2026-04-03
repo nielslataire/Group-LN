@@ -17,12 +17,9 @@
     var vatTypes = ViewBag.VatTypes as List<SelectListItem> ?? new List<SelectListItem>();
 }
 
-<style>
-    .payment-stage-row .deleteRow.disabled {
-        pointer-events: none;
-        opacity: 0.6;
-    }
-</style>
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
+}
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">

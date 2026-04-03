@@ -71,13 +71,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
 }
 @section PageStyle
 {
-    <style>
-        .invoice-lines-table th,
-        .invoice-lines-table td {
-            padding-left: 18pt;
-            padding-right: 18pt;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/invoices-custom.css" />
 }
 
 
@@ -274,7 +268,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
             }
             @if (!string.IsNullOrWhiteSpace(Model.DetailText))
             {
-                <p class="mb-0" style="white-space:pre-line;">@Model.DetailText</p>
+                <p class="mb-0 gl-ws-preline">@Model.DetailText</p>
             }
         </div>
     </div>
@@ -286,7 +280,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-striped mb-0 invoice-lines-table">
+            <table class="table table-striped mb-0 gl-invoice-lines-table">
                 <thead class="table-light">
                     <tr>
                         <th>Omschrijving</th>
@@ -355,7 +349,7 @@ string DocumentType(InvoiceStatus status, bool isCreditNote)
             }
             @if (!string.IsNullOrWhiteSpace(Model.ExtraInfo))
             {
-                <p class="mb-0" style="white-space:pre-line;">@Model.ExtraInfo</p>
+                <p class="mb-0 gl-ws-preline">@Model.ExtraInfo</p>
             }
         </div>
     </div>

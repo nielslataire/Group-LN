@@ -1,0 +1,772 @@
+/* ============================================================
+   issues-custom.css
+   Alle custom stijlen voor ProjectsIssues views
+   ============================================================ */
+
+/* ── Index: modal ──────────────────────────────────────────── */
+#issueModal .modal-content {
+    max-height: 90vh;
+}
+
+#issueModal form {
+    min-height: 0;
+}
+
+#issueModal .modal-body {
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* ── Index: tab nav ────────────────────────────────────────── */
+.issues-tab-nav {
+    background-color: #f3f5f7;
+    border-radius: 6px;
+    padding: 6px;
+    gap: 4px;
+}
+
+.issues-tab-nav .nav-link {
+    color: #6c757d;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    padding: 10px 16px;
+}
+
+.issues-tab-nav .nav-link.active {
+    background-color: #ffffff;
+    color: #1f2d3d;
+    border-color: #e3e6ea;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Index: status widget ──────────────────────────────────── */
+.issue-status-widget {
+    border: 1px solid var(--primary, #0088cc);
+    border-radius: 6px;
+}
+
+/* ── Index: selection toolbar ──────────────────────────────── */
+.issues-selection-toolbar {
+    overflow-x: auto;
+    border: 1px solid #e3e6ea;
+    border-radius: 6px;
+    padding: 6px;
+    gap: 4px;
+    box-shadow: none;
+}
+
+.issues-selection-toolbar .form-control {
+    min-height: 38px;
+}
+
+.issues-selection-toolbar .btn {
+    min-height: 38px;
+}
+
+.issues-selection-toolbar .bulk-separator {
+    width: 1px;
+    align-self: stretch;
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+/* ── Index: bulk toolbar specific widths ───────────────────── */
+#bulkStatusSelect       { min-width: 170px; }
+#bulkPlannedDateInput   { min-width: 140px; }
+#bulkDueDateInput       { min-width: 120px; }
+#bulkResponsiblePartySelect { min-width: 220px; }
+#bulkResponsibleNameInput   { min-width: 120px; }
+#bulkResponsibleEmailInput  { min-width: 220px; }
+
+/* ── Index: bulk planned date (hidden until InProgress) ──────── */
+#bulkPlannedDateInput {
+    display: none;
+}
+
+/* ── Index: tab nav light variant ─────────────────────────── */
+.issues-tab-nav-light {
+    background-color: var(--bs-light, #f8f9fa);
+}
+
+/* ── Index + _ModalIssueDetail: plan stage (detail tab) ───── */
+#issueDetailTab .issue-plan-stage {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    line-height: 0;
+}
+
+#issueDetailTab .issue-plan-canvas {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+}
+
+/* ── Shared: plan markers ──────────────────────────────────── */
+.issue-plan-marker,
+#planMarker,
+#issueDetailPlanMarker {
+    position: absolute;
+    display: none;
+    z-index: 10;
+    pointer-events: none;
+    line-height: 1;
+    transform: translate(-50%, -100%);
+}
+
+.issue-plan-marker i,
+#planMarker i,
+#issueDetailPlanMarker i {
+    font-size: 28px;
+    color: red;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 2px rgba(255, 255, 255, 0.75);
+}
+
+/* ── Index: inline edit ────────────────────────────────────── */
+.issue-detail-inline-edit .form-control {
+    min-height: 38px;
+}
+
+/* ── Index: priority ───────────────────────────────────────── */
+.priority-alert-icon {
+    color: #dc3545;
+    margin-right: 6px;
+    vertical-align: text-bottom;
+}
+
+.issue-priority-high-badge {
+    background: #dc3545;
+    color: #fff;
+}
+
+/* ── Index: table ──────────────────────────────────────────── */
+.issue-table .room-place-cell {
+    white-space: nowrap;
+}
+
+.issue-table {
+    min-width: 1100px;
+}
+
+/* ── Index: checkbox indeterminate ────────────────────────── */
+.checkbox-custom.is-indeterminate label:before {
+    background: #dde3e9;
+    border-color: #b6c0ca;
+}
+
+.checkbox-custom.is-indeterminate label:after {
+    display: none !important;
+    content: none !important;
+}
+
+/* ── Index: status widget body ─────────────────────────────── */
+.issue-status-widget .card-body {
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.issue-status-widget .summary {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* ── Index: hidden mobile elements (default desktop) ───────── */
+.issues-mobile-header,
+.issues-mobile-checkall,
+.issues-mobile-cards,
+.issue-status-label-mobile,
+.project-issues-mobile-tab-actions,
+.issue-detail-mobile-actions,
+.project-issues-back-link {
+    display: none;
+}
+
+/* ── Index: desktop overrides ──────────────────────────────── */
+@media (min-width: 768px) {
+    .project-issues-mobile-tab-actions,
+    .issues-mobile-header,
+    .issues-mobile-checkall,
+    .issues-mobile-cards,
+    .issue-detail-mobile-actions {
+        display: none !important;
+    }
+
+    .issue-table-block {
+        display: block !important;
+    }
+
+    .issue-table td.actions {
+        white-space: nowrap;
+    }
+
+    .issue-table .actions .open-detail-issue,
+    .issue-table .actions .open-edit-issue,
+    .issue-table .actions .open-duplicate-issue,
+    .issue-table .actions .deleteIssue {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+}
+
+/* ── Index: mobile overrides ───────────────────────────────── */
+@media (max-width: 767.98px) {
+    .project-issues-heading-row {
+        padding-top: .25rem !important;
+    }
+
+    .project-issues-heading-col {
+        margin-top: .25rem !important;
+        margin-bottom: .5rem !important;
+    }
+
+    .project-issues-subtitle {
+        margin-bottom: .5rem !important;
+    }
+
+    .project-issues-header-actions {
+        display: none;
+    }
+
+    .project-issues-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .project-issues-back-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid #d8dee4;
+        border-radius: 8px;
+        color: #1f2d3d;
+        text-decoration: none;
+    }
+
+    .project-issues-mobile-tab-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 0;
+    }
+
+    .issues-mobile-nav-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .project-issues-mobile-add {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .issue-status-label-desktop {
+        display: none;
+    }
+
+    .issue-status-label-mobile {
+        display: inline;
+    }
+
+    .issue-status-widget .card-body {
+        min-height: 70px;
+        padding: 12px;
+    }
+
+    .issue-status-widget .summary {
+        gap: 4px;
+    }
+
+    .issue-status-widget .summary h4 {
+        margin: 0;
+        font-size: 0.9rem;
+    }
+
+    .issue-status-widget .summary h2 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+
+    .issues-mobile-header,
+    .issues-mobile-checkall,
+    .issues-mobile-cards {
+        display: block;
+    }
+
+    .issues-mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    #toggleFiltersButton {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    #issuesFiltersPanel.is-collapsed {
+        display: none;
+    }
+
+    #issuesFilterSelectionRow .d-flex {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 10px;
+    }
+
+    #issuesFilterSelectionRow form {
+        width: 100%;
+        flex-wrap: wrap !important;
+    }
+
+    .mobile-hide-filter {
+        display: none !important;
+    }
+
+    .mobile-filter-action-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+
+    .issue-table-block {
+        display: none;
+    }
+
+    .issues-mobile-cards {
+        display: grid;
+        gap: 12px;
+    }
+
+    .issue-item-card {
+        border: 1px solid #d8dee4;
+        border-radius: 8px;
+        padding: 14px;
+        background: #fff;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .issue-item-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .issue-item-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .issue-item-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .issue-item-description {
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+
+    .issue-card-detail-trigger {
+        color: inherit;
+        text-decoration: none;
+        display: block;
+    }
+
+    .issue-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .issue-item-meta .badge {
+        font-size: .72rem;
+        font-weight: 400;
+        background: #eef2f6;
+        color: #3c4a59;
+        border: 1px solid #dde3ea;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #issueDetailModal {
+        z-index: 200000 !important;
+    }
+
+    .issue-detail-mobile-actions {
+        display: flex !important;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e3e6ea;
+    }
+
+    .issue-detail-mobile-actions .btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #issueDetailSendButton {
+        display: none;
+    }
+}
+
+/* ── _ModalCreateEditIssue: plan stage (in modal) ──────────── */
+.issue-plan-stage {
+    position: relative;
+    width: 100%;
+    min-height: 220px;
+    max-height: 520px;
+    overflow: auto;
+    border: 1px dashed #c8d0d7;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+.issue-plan-surface {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+
+.issue-plan-canvas {
+    display: block;
+    max-width: none;
+    width: auto;
+    height: auto;
+}
+
+.issue-plan-frame {
+    display: block;
+    width: 100%;
+    min-height: 520px;
+    border: 0;
+    background: #fff;
+}
+
+.issue-plan-overlay {
+    position: absolute;
+    inset: 0;
+    cursor: default;
+    pointer-events: none;
+}
+
+.issue-plan-overlay.is-pick-mode {
+    cursor: crosshair;
+    pointer-events: auto;
+}
+
+/* ── _ModalCreateEditIssue: planned date (hidden until InProgress) */
+#issueModalPlannedDateGroup {
+    display: none;
+}
+
+/* ── _ModalCreateEditIssue: plan surface/frame (hidden until plan chosen) */
+#planSurface,
+#planFrame {
+    display: none;
+}
+
+/* ── _ModalCreateEditIssue: desktop ────────────────────────── */
+@media (min-width: 768px) {
+    #meerOptiesToggle        { display: none !important; }
+    #issueMoreOptionsSection { display: block !important; }
+
+    #issueFormRowEenheid,
+    #issueFormRowKamer {
+        display: inline-block;
+        vertical-align: top;
+        width: calc(33.33% - 8px);
+        margin-bottom: 0 !important;
+    }
+
+    #issueFormRowEenheid { margin-right: 8px; }
+
+    #issueFormRowTitel { display: block; margin-top: 1rem; }
+}
+
+/* ── _ModalCreateEditIssue: mobile ─────────────────────────── */
+@media (max-width: 767.98px) {
+    #issueModal {
+        z-index: 2000 !important;
+        padding-left: 0 !important;
+    }
+
+    #issueModal .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100%;
+        max-height: 100%;
+    }
+
+    #issueModal .modal-content {
+        height: 100%;
+        border-radius: 0;
+    }
+
+    body.modal-open .modal-backdrop {
+        z-index: 1995 !important;
+    }
+
+    #issueForm .modal-body {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #issueFormRowEenheid         { order: 1; width: 100%; margin-right: 0; margin-bottom: 1rem !important; }
+    #issueFormRowTitel           { order: 2; }
+    #issueFormRowKamer           { order: 3; width: 100%; margin-bottom: 1rem !important; }
+    #issueFormRowResp            { order: 4; }
+    #issueFormRowFotos           { order: 5; }
+    #meerOptiesToggle            { order: 6; }
+    #issueMoreOptionsSection     { order: 7; display: none; }
+    #issueMoreOptionsSection.is-expanded { display: block; }
+
+    #issueModal .modal-footer {
+        flex-direction: column-reverse;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+
+    #issueModal .modal-footer .btn {
+        width: 100%;
+        margin: 0;
+    }
+}
+
+/* ── _ModalCreateEditIssue / Details / CreateQuick: media tiles */
+.issue-media-add-tile {
+    width: 90px;
+    height: 90px;
+    border: 2px dashed #2f6f57;
+    color: #2f6f57;
+    border-radius: 4px;
+    background: #f8faf9;
+}
+
+.issue-media-remove {
+    width: 20px;
+    height: 20px;
+    opacity: 0;
+    transition: opacity .15s ease-in-out;
+}
+
+.issue-media-item:hover .issue-media-remove {
+    opacity: 1;
+}
+
+/* ── Details: plan stage (full-page detail view) ───────────── */
+.gl-plan-stage-full {
+    position: relative;
+    width: 100%;
+    min-height: 520px;
+    border: 1px dashed #c8d0d7;
+    border-radius: 6px;
+    background: #fafafa;
+    overflow: auto;
+}
+
+.gl-plan-canvas,
+.gl-plan-frame {
+    display: block;
+    width: 100%;
+    background: #fff;
+    border: 0;
+}
+
+.gl-plan-marker {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: red;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .15);
+    pointer-events: none;
+    display: none;
+}
+
+/* ── Details: hidden canvas/iframe (shown via JS) ──────────── */
+#detailPlanCanvas,
+#detailPlanFrame {
+    display: none;
+}
+
+/* ── Details: media item fixed size ───────────────────────── */
+.gl-media-item-wrap {
+    width: 90px;
+}
+
+.gl-media-thumb {
+    width: 90px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.gl-media-placeholder {
+    width: 90px;
+    height: 90px;
+    border-radius: 4px;
+    background: #f3f5f7;
+    border: 1px solid #d7dde3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Details / _ModalCreateEditIssue: media add label ──────── */
+.gl-media-add-label {
+    font-size: 12px;
+    line-height: 1;
+}
+
+/* ── Index: detail modal photo thumbnails ─────────────────── */
+.gl-detail-photo-thumb {
+    width: auto;
+    height: 225px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+/* ── CreateQuick: standalone page ──────────────────────────── */
+.cq-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    background: #0a5a3b;
+    color: #fff;
+}
+
+.cq-bar-back {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 0 0.25rem;
+    cursor: pointer;
+}
+
+.cq-bar-title {
+    font-size: 1rem;
+    font-weight: 600;
+    flex: 1;
+}
+
+.cq-bar-submit {
+    background: #fff;
+    color: #0a5a3b;
+    border: none;
+    border-radius: 4px;
+    padding: 0.35rem 0.9rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.cq-bar-submit:active {
+    opacity: 0.8;
+}
+
+.cq-body {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.cq-error {
+    background: #fdf0f0;
+    border: 1px solid #e57373;
+    border-radius: 4px;
+    color: #c62828;
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+/* ── CreateQuick: media add label ──────────────────────────── */
+.gl-cq-media-add-label {
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+/* ── CreateQuick: more-options section (hidden until toggled) */
+#cqMoreSection {
+    display: none;
+}
+
+/* ── CreateQuick: planned date group (hidden until InProgress) */
+#cqPlannedDateGroup {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .cq-body {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+}
+
+/* ── CreateQuickSuccess ─────────────────────────────────────── */
+.cq-success {
+    text-align: center;
+    color: #0a5a3b;
+}
+
+.cq-success-icon {
+    font-size: 3rem;
+}
+
+.cq-success p {
+    margin-top: 0.5rem;
+    font-size: 1rem;
+}
+
+/* ── _ModalIssueDetail: hidden blocks (shown via JS) ────────── */
+#issueDetailPlanBlock,
+#issueDetailPlannedDateBlock {
+    display: none;
+}
+
+/* ── _modalSendIssues / _ModalPrintIssues: scrollable list ─── */
+.gl-send-summary-list,
+.gl-print-summary-list {
+    max-height: 220px;
+    overflow-y: auto;
+}

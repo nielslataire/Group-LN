@@ -6,6 +6,7 @@
 {
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    <link rel="stylesheet" href="~/css/klanten-custom.css" />
 }
 
 <div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
@@ -61,7 +62,7 @@
 <div class="card card-modern">
     <div class="card-body">
         <div class="datatables-header-footer-wrapper mt-2">
-            <table class="table table-responsive-md table-hover mb-3" id="datatable-clients" style="min-width: 720px;">
+            <table class="table table-responsive-md table-hover mb-3 gl-table-min-720" id="datatable-clients">
                 <thead>
                     <tr>
                         <th>Naam</th>
@@ -127,7 +128,7 @@
 <div id="modaldeleteclient" class="modal-block modal-block-warning mfp-hide">
     <div id="delete-client-container"></div>
 </div>
-@section PageScripts
+@section PageScript
 {
     <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
     <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>

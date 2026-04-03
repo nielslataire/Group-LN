@@ -26,22 +26,7 @@
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-    <style>
-        div.dt-buttons .btn.buttons-colvis::after {
-            font-family: "Font Awesome 6 Free";
-            content: "\f078"; /* Unicode voor fa-chevron-down */
-            font-weight: 900; /* Voor solid stijl */
-            font-size: 0.85rem;
-            vertical-align: middle;
-            border: none;
-            margin-left: 0.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
-            transform: rotate(180deg);
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -227,8 +212,8 @@
           if (!btn) return;
 
           // verberg preview, toon upload
-          document.getElementById('photo-preview').style.display = 'none';
-          document.getElementById('photo-upload').style.display  = 'block';
+          document.getElementById('photo-preview').classList.add('d-none');
+          document.getElementById('photo-upload').classList.remove('d-none');
 
           // wis verborgen velden zodat server weet dat de foto weg moet
           const picName = document.querySelector('input[name="Picture.Name"]');

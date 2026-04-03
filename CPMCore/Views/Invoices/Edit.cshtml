@@ -17,29 +17,7 @@
 
 @section PageStyle {
     <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css" />
-    <style>
-        .desc-textarea {
-            resize: vertical;
-            min-height: 48px;
-            max-height: 220px;
-            white-space: pre-wrap;
-            overflow: auto;
-        }
-
-        .summary-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: #6c757d;
-            margin-bottom: 0.25rem;
-            display: block;
-        }
-
-        .table-lines td,
-        .table-lines th {
-            vertical-align: middle;
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/invoices-custom.css" />
 }
 
 <form asp-action="Edit" method="post" class="ecommerce-form action-buttons-fixed">
@@ -87,37 +65,37 @@
                 <div class="card-body">
                     <div class="row g-4">
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Documenttype</span>
+                            <span class="gl-summary-label">Documenttype</span>
                             <div class="fw-semibold">@Model.DocumentType</div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Klant</span>
+                            <span class="gl-summary-label">Klant</span>
                             <div class="fw-semibold">@Model.ClientName</div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Status</span>
+                            <span class="gl-summary-label">Status</span>
                             <div class="fw-semibold">@Model.StatusLabel</div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Factuurdatum</span>
+                            <span class="gl-summary-label">Factuurdatum</span>
                             <div class="fw-semibold">@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</div>
                         </div>
                     </div>
                     <div class="row g-4 mt-1">
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Totaal excl. btw</span>
+                            <span class="gl-summary-label">Totaal excl. btw</span>
                             <div class="fw-semibold">@Model.TotalExclVat.ToString("N2", culture)</div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">BTW</span>
+                            <span class="gl-summary-label">BTW</span>
                             <div class="fw-semibold">@Model.TotalVat.ToString("N2", culture)</div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Te betalen</span>
+                            <span class="gl-summary-label">Te betalen</span>
                             <div class="fw-bold">@Model.TotalInclVat.ToString("N2", culture)</div>
                         </div>
                         <div class="col-md-3 col-6">
-                            <span class="summary-label">Vervaldatum</span>
+                            <span class="gl-summary-label">Vervaldatum</span>
                             <div class="fw-semibold">@(Model.ExpirationDate.HasValue? Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture) : "—")</div>
                         </div>
                     </div>
@@ -134,17 +112,17 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label" asp-for="HeaderDescription"></label>
-                            <textarea asp-for="HeaderDescription" class="form-control form-control-modern desc-textarea" rows="4"></textarea>
+                            <textarea asp-for="HeaderDescription" class="form-control form-control-modern gl-desc-textarea gl-desc-textarea--tall" rows="4"></textarea>
                             <span asp-validation-for="HeaderDescription" class="text-danger"> </span>
                         </div>
                         <div class="col-12">
                             <label class="form-label" asp-for="DetailDescription"></label>
-                            <textarea asp-for="DetailDescription" class="form-control form-control-modern desc-textarea" rows="5"></textarea>
+                            <textarea asp-for="DetailDescription" class="form-control form-control-modern gl-desc-textarea gl-desc-textarea--tall" rows="5"></textarea>
                             <span asp-validation-for="DetailDescription" class="text-danger"></span>
                         </div>
                         <div class="col-12">
                             <label class="form-label" asp-for="FooterDescription"></label>
-                            <textarea asp-for="FooterDescription" class="form-control form-control-modern desc-textarea" rows="4"></textarea>
+                            <textarea asp-for="FooterDescription" class="form-control form-control-modern gl-desc-textarea gl-desc-textarea--tall" rows="4"></textarea>
                             <span asp-validation-for="FooterDescription" class="text-danger"></span>
                         </div>
                     </div>
@@ -164,14 +142,14 @@
                     @if (Model.Lines != null && Model.Lines.Count > 0)
                     {
                         <div class="table-responsive mt-3 mb-0">
-                            <table class="table table-lines align-middle mb-0" style="width:100%">
+                            <table class="table gl-table-lines align-middle mb-0 w-100">
                                 <thead>
                                     <tr>
                                         <th>Omschrijving</th>
-                                        <th class="text-end text-nowrap" style="width:140px;">Excl. BTW</th>
-                                        <th class="text-end text-nowrap" style="width:120px;">BTW&nbsp;%</th>
-                                        <th class="text-end text-nowrap" style="width:140px;">BTW</th>
-                                        <th class="text-end text-nowrap" style="width:140px;">Incl. BTW</th>
+                                        <th class="text-end text-nowrap gl-col-140">Excl. BTW</th>
+                                        <th class="text-end text-nowrap gl-col-120">BTW&nbsp;%</th>
+                                        <th class="text-end text-nowrap gl-col-140">BTW</th>
+                                        <th class="text-end text-nowrap gl-col-140">Incl. BTW</th>
                                     </tr>
                                 </thead>
                                 <tbody>

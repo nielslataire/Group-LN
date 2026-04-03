@@ -1,4 +1,4 @@
-@include ./frontend-standards.md
+@include ./context/frontend-standards.md
 
 # Project Context: CPMCore Solution
 

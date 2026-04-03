@@ -10,30 +10,12 @@
     var groupIndex = 0;
 }
 
-<style>
-
-    .form-control[disabled], .form-select[disabled] {
-        background: #f8f9fa;
-        opacity: 1;
-    }
-
-    .stage-row + .stage-row {
-        border-top: 1px solid #eee;
-    }
-
-    .stage-header {
-        color: #666;
-        font-size: .9rem;
-    }
-</style>
-
 
 @foreach (var g in groups)
 {
     var gi = groupIndex++;
     <h3>@g.Key</h3>
-    <table class="table table-responsive-sm table-hover mb-0"
-           style="min-width: 550px;">
+    <table class="table table-responsive-sm table-hover mb-0 gl-min-w-550">
 
         <thead>
             <tr>
@@ -63,7 +45,7 @@
                         <div class="checkbox-custom checkbox-default m-0">
                             <input type="checkbox"
                                    id="@checkboxId"
-                                   class="js-stage-row"
+                                   class="js-gl-stage-row"
                                    data-group="@gi"
                                    data-unitid="@(m.UnitId?.ToString() ?? "")"
                                    data-unittype="@m.UnitType"

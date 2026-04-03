@@ -25,33 +25,7 @@
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-    <style>
-        div.dt-buttons .btn.buttons-colvis::after {
-            font-family: "Font Awesome 6 Free";
-            content: "\f078"; /* Unicode voor fa-chevron-down */
-            font-weight: 900; /* Voor solid stijl */
-            font-size: 0.85rem;
-            vertical-align: middle;
-            border: none;
-            margin-left: 0.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
-            transform: rotate(180deg);
-        }
-          td.details-control {
-            cursor: pointer;
-            width: 36px;
-            text-align: center;
-          }
-          td.details-control i.bx {
-            line-height: 1;
-            transition: transform .15s ease;
-            font-size: 1.1rem; /* optioneel */
-          }
-
-    </style>
+    <link rel="stylesheet" href="~/css/klanten-custom.css" />
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -148,13 +122,13 @@
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th style="width:40%">Omschrijving</th>
-                                <th class="text-end" style="width:10%">Meetmethode</th>
-                                <th class="text-end" style="width:10%">Meeteenheid</th>
-                                <th class="text-end" style="width:10%">Aantal</th>
-                                <th class="text-end" style="width:10%">Eenheidsprijs</th>
-                                <th class="text-end" style="width:10%">Commissie</th>
-                                <th class="text-end" style="width:10%">Totaal</th>
+                                <th class="gl-co-th-40">Omschrijving</th>
+                                <th class="text-end gl-co-th-10">Meetmethode</th>
+                                <th class="text-end gl-co-th-10">Meeteenheid</th>
+                                <th class="text-end gl-co-th-10">Aantal</th>
+                                <th class="text-end gl-co-th-10">Eenheidsprijs</th>
+                                <th class="text-end gl-co-th-10">Commissie</th>
+                                <th class="text-end gl-co-th-10">Totaal</th>
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
@@ -216,7 +190,7 @@
                 }
             },
             columnDefs: [
-                { targets: 0, orderable: false, className: 'details-control', width: 36 }
+                { targets: 0, orderable: false, className: 'gl-details-control', width: 36 }
             ],
             order: [[1, 'asc']] // kolom 0 = toggler; datum staat op 1
         });
@@ -239,7 +213,7 @@
         });
 
                 // Keyboard support (Enter/Space)
-        $('#datatable-clients-list tbody').on('keydown', 'td.details-control', function (e) {
+        $('#datatable-clients-list tbody').on('keydown', 'td.gl-details-control', function (e) {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             $(this).click();
@@ -247,7 +221,7 @@
         });
 
         // Subrows togglen + Boxicons wisselen
-        $('#datatable-clients-list tbody').on('click', 'td.details-control', function () {
+        $('#datatable-clients-list tbody').on('click', 'td.gl-details-control', function () {
           const tr = $(this).closest('tr');
           const row = table.row(tr);
           const $icon = $(this).find('i.bx');

@@ -47,7 +47,7 @@
         }
 
         <div class="isotope-item status-@statusId @(project.DefaultPicture?.Name is null ? "has-no-photo" : "") col-sm-12 col-md-4 col-lg-2 mb-4">
-            <div class="card card-modern h-100 project-card">
+            <div class="card card-modern h-100 gl-project-card">
                 <div class="image-frame-wrapper position-relative">
                     @if (!string.IsNullOrWhiteSpace(statusName))
                     {
@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="card-body bg-light">
-                    <div class="project-details">
+                    <div class="gl-project-details">
                         <h4 class="fw-bold mb-1">@project.Name</h4>
 
                         @if (!string.IsNullOrWhiteSpace(project.CommercialTitleNL))
@@ -71,23 +71,23 @@
                         }
 
                         <hr class="d-md-none my-2" />
-                        <div class="project-detail-row text-muted mb-1">
-                            <span class="detail-icon"><i class="fas fa-map-marker-alt"></i></span>
+                        <div class="gl-project-detail-row text-muted mb-1">
+                            <span class="gl-detail-icon"><i class="fas fa-map-marker-alt"></i></span>
                             <div>@project.Postalcode?.Gemeente</div>
                         </div>
 
                         @if (project.StartDateConstruction != null)
                         {
-                            <div class="project-detail-row text-muted mb-1">
-                                <span class="detail-icon"><i class="fas fa-calendar-alt"></i></span>
+                            <div class="gl-project-detail-row text-muted mb-1">
+                                <span class="gl-detail-icon"><i class="fas fa-calendar-alt"></i></span>
                                 <div>
                                     Start: @project.StartDateConstruction.Value.ToString("dd/MM/yyyy")
                                 </div>
                             </div>
                         }
 
-                        <div class="project-detail-row text-muted">
-                            <span class="detail-icon"><i class="fas fa-users"></i></span>
+                        <div class="gl-project-detail-row text-muted">
+                            <span class="gl-detail-icon"><i class="fas fa-users"></i></span>
                             <div>Aantal klanten: @clientCount</div>
                         </div>
 
@@ -97,12 +97,12 @@
                                 @if (canReadProjectsForSale)
                                 {
                                     <div class="pb-2">
-                                        <div class="pg-row">
-                                            <span class="pg-label">Percentage verkocht</span>
-                                            <span class="pg-pct">@soldPercentageDisplay%</span>
+                                        <div class="gl-pg-row">
+                                            <span class="gl-pg-label">Percentage verkocht</span>
+                                            <span class="gl-pg-pct">@soldPercentageDisplay%</span>
                                         </div>
-                                        <div class="progress pg-bar">
-                                            <div class="progress-bar pg-bar-hoog" role="progressbar" style="width:@soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress gl-pg-bar">
+                                            <div class="progress-bar gl-pg-bar-sold" role="progressbar" style="--gl-fill-width:@soldPercentageStyleText%;" aria-valuenow="@soldPercentageStyleText" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                 }
@@ -115,27 +115,27 @@
                                     var finPctW = vg.FinancieleVoortgangPct.ToString("0.##", invCulture);
 
                                     <div class="pb-2">
-                                        <div class="pg-row">
-                                            <span class="pg-label">
+                                        <div class="gl-pg-row">
+                                            <span class="gl-pg-label">
                                                 Fysiek
                                                 @if (!string.IsNullOrEmpty(vg.Warnings))
                                                 {
-                                                    <i class="bx bx-error text-danger ms-1" title="@string.Join(", ", vg.WarningList)" style="font-size:11px;"></i>
+                                                    <i class="bx bx-error text-danger ms-1 small" title="@string.Join(", ", vg.WarningList)"></i>
                                                 }
                                             </span>
-                                            <span class="pg-pct">@fysPct%</span>
+                                            <span class="gl-pg-pct">@fysPct%</span>
                                         </div>
-                                        <div class="progress pg-bar">
-                                            <div class="progress-bar" role="progressbar" style="width:@fysPctW%;" aria-valuenow="@fysPctW" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress gl-pg-bar">
+                                            <div class="progress-bar gl-pg-bar-fys" role="progressbar" style="--gl-fill-width:@fysPctW%;" aria-valuenow="@fysPctW" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                     <div class="pb-2">
-                                        <div class="pg-row">
-                                            <span class="pg-label">Financieel</span>
-                                            <span class="pg-pct">@finPct%</span>
+                                        <div class="gl-pg-row">
+                                            <span class="gl-pg-label">Financieel</span>
+                                            <span class="gl-pg-pct">@finPct%</span>
                                         </div>
-                                        <div class="progress pg-bar">
-                                            <div class="progress-bar" role="progressbar" style="width:@finPctW%;" aria-valuenow="@finPctW" aria-valuemin="0" aria-valuemax="100"></div>
+                                        <div class="progress gl-pg-bar">
+                                            <div class="progress-bar gl-pg-bar-fin" role="progressbar" style="--gl-fill-width:@finPctW%;" aria-valuenow="@finPctW" aria-valuemin="0" aria-valuemax="100"></div>
                                         </div>
                                     </div>
                                 }

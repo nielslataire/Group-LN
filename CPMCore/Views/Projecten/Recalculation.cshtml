@@ -29,85 +29,7 @@
 <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
 <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
 <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-<style>
-    .select2-container--default .select2-selection--multiple {
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    padding: 0.375rem 0.75rem;
-    height: auto;
-    min-height: 38px;
-    }
-
-    .select2-container--default .select2-selection--single {
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    height: 38px;
-    padding: 0.375rem 0.75rem;
-    }
-
-    .select2-container--default .select2-selection--multiple .select2-selection__choice {
-    background-color: #e9ecef;
-    border: 1px solid #ced4da;
-    border-radius: 0.2rem;
-    color: #495057;
-    }
-    /* Zorg dat de eerste kolom zich aanpast aan de inhoud */
-    table td:first-child,
-    table th:first-child {
-    white-space: nowrap;
-    width: 1%;
-    }
-    /* Verwijder achtergrondkleur bij geopende accordion button */
-    .accordion-button:not(.collapsed) {
-    background-color: transparent !important;
-    box-shadow: none;
-    }
-
-    /* Verwijder border color van accordion button wanneer gesloten */
-    .accordion-button.collapsed {
-    border-color: transparent !important;
-    }
-
-    /* Optioneel: Zorg dat hover en focus geen ongewenste stijlen geven */
-    .accordion-button:focus {
-    box-shadow: none;
-    }
-
-    .accordion-button:hover {
-    background-color: transparent;
-    }
-
-    .accordion-button {
-    position: relative;
-    padding-left: 2rem; /* ruimte voor het icoon links */
-    }
-
-    .accordion-button::before {
-    content: "";
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    width: 1rem;
-    height: 1rem;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='%23333' viewBox='0 0 16 16'%3e%3cpath d='M6 12L10 8L6 4' stroke='%23333' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-size: 1rem;
-    transform: translateY(-50%);
-    transition: transform 0.2s ease-in-out;
-    }
-
-    /* open = rotate chevron down */
-    .accordion-button:not(.collapsed)::before {
-    transform: translateY(-50%) rotate(90deg);
-    }
-
-    /* verberg standaard ::after */
-    .accordion-button::after {
-    display: none;
-    }
-
-
-</style>
+<link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -134,7 +56,7 @@
                         {
                             <div class="btn-group flex-wrap">
                                 <button type="button" class="mb-1 mt-1 me-1 btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-plus me-2"></i>Toevoegen <span class="caret"></span></button>
-                                <div class="dropdown-menu dropdown-menu-start" role="menu" style="">
+                                <div class="dropdown-menu dropdown-menu-start" role="menu">
                                     <a class="dropdown-item text-1" href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId})">Contract</a>
                                     <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 0  })">Inkomende factuur - contract</a>
                                     <a class="dropdown-item text-1" href="@Url.Action("AddIncommingInvoice", "Projecten", new { projectid = Model.ProjectId, type = 1  })">Inkomende factuur - zonder contract</a>
@@ -148,7 +70,7 @@
             </div>
             <section class="card card-featured-left card-featured-primary mb-4">
                 <div class="card-body">
-                    <h2 class="card-title m-4 h1" style="font-size: 2rem;">Totaaloverzicht</h2>
+                    <h2 class="card-title m-4 h1 gl-section-title">Totaaloverzicht</h2>
                     <div class="row p-4 text-center">
                         <div class="col">
                             <div class="widget-summary">
@@ -272,7 +194,7 @@
             </section>
             <section class="card mb-4">
                 <div class="card-body">
-                    <h2 class="card-title h1 m-4" style="font-size: 2rem;">Categorieën</h2>
+                    <h2 class="card-title h1 m-4 gl-section-title">Categorieën</h2>
                     <div class="accordion m-4" id="accordionExample">
                         @foreach (var categorie in Model.ActivityGroups)
                         {
@@ -369,14 +291,14 @@
                                         <table class="table table-responsive-md mb-0 align-middle">
                                             <thead>
                                                 <tr>
-                                                    <th style="width:auto;">Lot</th>
-                                                    <th class="text-end" style="width: 12%;">Begroot</th>
-                                                    <th class="text-end" style="width: 12%;">Gecontracteerd</th>
-                                                    <th class="text-end" style="width: 12%;">Gefactureerd</th>
-                                                    <th class="text-end" style="width: 12%;">Meerwerken klanten</th>
-                                                    <th class="text-end" style="width: 12%;">Verschil Begroot vs Contract</th>
-                                                    <th class="text-end" style="width: 12%;">Verschil Contract vs Factuur</th>
-                                                    <th class="text-end" style="width: 12%;">Status</th>
+                                                    <th class="gl-col-auto">Lot</th>
+                                                    <th class="text-end gl-col-12pct">Begroot</th>
+                                                    <th class="text-end gl-col-12pct">Gecontracteerd</th>
+                                                    <th class="text-end gl-col-12pct">Gefactureerd</th>
+                                                    <th class="text-end gl-col-12pct">Meerwerken klanten</th>
+                                                    <th class="text-end gl-col-12pct">Verschil Begroot vs Contract</th>
+                                                    <th class="text-end gl-col-12pct">Verschil Contract vs Factuur</th>
+                                                    <th class="text-end gl-col-12pct">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody>

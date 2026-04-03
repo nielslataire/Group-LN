@@ -1,0 +1,155 @@
+/* ============================================================
+   Invoices - custom styling
+   ============================================================ */
+
+/* ── DataTable column sizing ────────────────────────────────── */
+#datatable-invoice-list th.gl-col-fit,
+#datatable-invoice-list td.gl-col-fit {
+    width: 1%;
+    white-space: nowrap;
+}
+
+#datatable-invoice-list th.gl-col-grow,
+#datatable-invoice-list td.gl-col-grow {
+    width: 100%;
+}
+
+#datatable-invoice-list .gl-td-ellipsis {
+    max-width: 1px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#datatable-invoice-list td.actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#datatable-invoice-list thead th {
+    font-weight: 600;
+}
+
+.gl-status-col .badge {
+    vertical-align: middle;
+}
+
+.gl-dropdown-item-form {
+    margin: 0;
+}
+
+.dropdown-menu .dropdown-item.d-flex i {
+    width: 1.25rem;
+    text-align: center;
+}
+
+/* ── Select2 height ─────────────────────────────────────────── */
+.select2-container--bootstrap .select2-selection--single {
+    height: 45px;
+    line-height: 45px;
+}
+
+.gl-form-control-modern {
+    height: 45px;
+}
+
+.select2-container--bootstrap .select2-selection__rendered {
+    line-height: 43px;
+}
+
+.select2-container--bootstrap .select2-selection__arrow {
+    height: 43px;
+}
+
+/* ── Form elements ──────────────────────────────────────────── */
+.gl-desc-textarea {
+    resize: vertical;
+    min-height: 48px;
+    max-height: 160px;
+    white-space: pre-wrap;
+    overflow: auto;
+}
+
+.gl-desc-textarea--tall {
+    max-height: 220px;
+}
+
+.gl-summary-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+/* ── Table styling ──────────────────────────────────────────── */
+.gl-table-lines td,
+.gl-table-lines th {
+    vertical-align: middle;
+}
+
+.gl-invoice-lines-table th,
+.gl-invoice-lines-table td {
+    padding-left: 18pt;
+    padding-right: 18pt;
+}
+
+/* ── Free lines table ───────────────────────────────────────── */
+#freeLinesTable .gl-reorder-handle {
+    cursor: move;
+    user-select: none;
+    text-align: center;
+    width: 36px;
+}
+
+/* ── Stage lines table ──────────────────────────────────────── */
+.form-control[disabled], .form-select[disabled] {
+    background: #f8f9fa;
+    opacity: 1;
+}
+
+.gl-stage-row + .gl-stage-row {
+    border-top: 1px solid #eee;
+}
+
+.gl-stage-header {
+    color: #666;
+    font-size: .9rem;
+}
+
+/* ── Change order lines table ───────────────────────────────── */
+.gl-co-top {
+    border: 1px solid #eee;
+    border-radius: .5rem;
+}
+
+.gl-co-top th, .gl-co-top td {
+    vertical-align: middle;
+}
+
+/* ── Column widths ──────────────────────────────────────────── */
+.gl-col-drag { width: 36px; }
+.gl-col-xs   { width: 40px; }
+.gl-col-sm   { width: 50px; }
+.gl-col-cb   { width: 60px; }
+.gl-col-100  { width: 100px; }
+.gl-col-120  { width: 120px; }
+.gl-col-130  { width: 130px; }
+.gl-col-140  { width: 140px; }
+.gl-col-160  { width: 160px; }
+.gl-col-180  { width: 180px; }
+.gl-col-200  { width: 200px; }
+.gl-col-350  { width: 350px; }
+.gl-min-w-550 { min-width: 550px; }
+.gl-min-w-620 { min-width: 620px; }
+.gl-min-w-650 { min-width: 650px; }
+.gl-min-w-680 { min-width: 680px; }
+.gl-min-w-900 { min-width: 900px; }
+.gl-max-w-200 { max-width: 200px; }
+.gl-ws-prewrap { white-space: pre-wrap; }
+.gl-ws-preline { white-space: pre-line; }
+.gl-color-brown { color: saddlebrown; }
+.gl-color-dynamic { color: var(--gl-status-color, inherit); }
+.gl-muted { color: #6c757d; }

@@ -5,102 +5,102 @@
     var actief  = Model.Projects.Count(p => p.IsActive);
 }
 
-<div class="cp-page-header">
-    <h1 class="cp-page-title">Mijn Werven</h1>
-    <p class="cp-page-sub">@total werf@(total == 1 ? "" : "en") toegewezen</p>
+<div class="gl-cp-page-header">
+    <h1 class="gl-cp-page-title">Mijn Werven</h1>
+    <p class="gl-cp-page-sub">@total werf@(total == 1 ? "" : "en") toegewezen</p>
 </div>
 
 <!-- ── Filter bar ────────────────────────────────────────── -->
-<form method="get" action="/Portaal/Werven" class="cp-filter-bar">
-    <div class="cp-search-wrap">
+<form method="get" action="/Portaal/Werven" class="gl-cp-filter-bar">
+    <div class="gl-cp-search-wrap">
         <i class="bx bx-search"></i>
         <input type="text" name="search" value="@Model.Search"
-               class="cp-search-input" placeholder="Zoek werf..."
+               class="gl-cp-search-input" placeholder="Zoek werf..."
                autocomplete="off" />
     </div>
-    <div class="cp-filter-btns">
+    <div class="gl-cp-filter-btns">
         <a href="/Portaal/Werven?filter=alle@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
-           class="cp-filter-btn @(Model.Filter == "alle" ? "active" : "")">Alle</a>
+           class="gl-cp-filter-btn @(Model.Filter == "alle" ? "active" : "")">Alle</a>
         <a href="/Portaal/Werven?filter=actief@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
-           class="cp-filter-btn @(Model.Filter == "actief" ? "active" : "")">Actief</a>
+           class="gl-cp-filter-btn @(Model.Filter == "actief" ? "active" : "")">Actief</a>
         <a href="/Portaal/Werven?filter=afgerond@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
-           class="cp-filter-btn @(Model.Filter == "afgerond" ? "active" : "")">Afgerond</a>
+           class="gl-cp-filter-btn @(Model.Filter == "afgerond" ? "active" : "")">Afgerond</a>
     </div>
 </form>
 
 <!-- ── Grid ──────────────────────────────────────────────── -->
 @if (!Model.Projects.Any())
 {
-    <div class="cp-card" style="padding:2rem;text-align:center;">
-        <i class="bx bx-buildings" style="font-size:2.5rem;color:#d0e8dc;"></i>
-        <p style="color:#6c757d;margin-top:.5rem;">Geen werven gevonden.</p>
+    <div class="gl-cp-card gl-cp-empty-state">
+        <i class="bx bx-buildings gl-cp-empty-icon"></i>
+        <p class="gl-cp-empty-text">Geen werven gevonden.</p>
     </div>
 }
 else
 {
-    <div class="cp-werven-grid">
+    <div class="gl-cp-werven-grid">
         @foreach (var p in Model.Projects)
         {
-            <a href="/Portaal/Werven/@p.ProjectId" class="cp-werf-card">
-                <div class="cp-werf-card-header">
+            <a href="/Portaal/Werven/@p.ProjectId" class="gl-cp-werf-card">
+                <div class="gl-cp-werf-card-header">
                     <div>
-                        <div class="cp-werf-card-name">@p.Name</div>
+                        <div class="gl-cp-werf-card-name">@p.Name</div>
                     </div>
                     @if (p.OpenCount > 0)
                     {
-                        <div class="cp-werf-open-badge">@p.OpenCount open</div>
+                        <div class="gl-cp-werf-open-badge">@p.OpenCount open</div>
                     }
                 </div>
 
                 @if (!string.IsNullOrWhiteSpace(p.Address))
                 {
-                    <div class="cp-werf-card-addr">
+                    <div class="gl-cp-werf-card-addr">
                         <i class="bx bx-map-pin"></i>@p.Address
                     </div>
                 }
 
                 @{ var werfPct = p.TotalCount > 0 ? (int)Math.Round((decimal)p.ResolvedCount / p.TotalCount * 100) : 0; }
-                <div class="cp-werf-progress-row">
+                <div class="gl-cp-werf-progress-row">
                     <span>Opgelost</span>
                     <span>@p.ResolvedCount / @p.TotalCount</span>
                 </div>
-                <div class="cp-werf-progress-bar">
-                    <div class="cp-werf-progress-fill" style="width:@werfPct%"></div>
+                <div class="gl-cp-werf-progress-bar">
+                    <div class="gl-cp-werf-progress-fill" style="--gl-fill-width:@werfPct%"></div>
                 </div>
 
-                <div class="cp-werf-stats">
-                    <div class="cp-werf-stat">
-                        <div class="cp-werf-stat-val">@p.TotalCount</div>
-                        <div class="cp-werf-stat-lbl">Totaal</div>
+                <div class="gl-cp-werf-stats">
+                    <div class="gl-cp-werf-stat">
+                        <div class="gl-cp-werf-stat-val">@p.TotalCount</div>
+                        <div class="gl-cp-werf-stat-lbl">Totaal</div>
                     </div>
-                    <div class="cp-werf-stat">
-                        <div class="cp-werf-stat-val">@p.ResolvedCount</div>
-                        <div class="cp-werf-stat-lbl">Opgelost</div>
+                    <div class="gl-cp-werf-stat">
+                        <div class="gl-cp-werf-stat-val">@p.ResolvedCount</div>
+                        <div class="gl-cp-werf-stat-lbl">Opgelost</div>
                     </div>
-                    <div class="cp-werf-stat">
-                        <div class="cp-werf-stat-val">@p.UnitCount</div>
-                        <div class="cp-werf-stat-lbl">Eenheden</div>
+                    <div class="gl-cp-werf-stat">
+                        <div class="gl-cp-werf-stat-val">@p.UnitCount</div>
+                        <div class="gl-cp-werf-stat-lbl">Eenheden</div>
                     </div>
                 </div>
 
                 @if (p.OverdueCount > 0)
                 {
-                    <div class="cp-werf-overdue">
+                    <div class="gl-cp-werf-overdue">
                         <i class="bx bx-error-circle"></i>
                         @p.OverdueCount verlopen punt@(p.OverdueCount == 1 ? "" : "en")
                     </div>
                 }
 
-                <span class="cp-werf-link">Bekijk werf &rarr;</span>
+                <span class="gl-cp-werf-link">Bekijk werf &rarr;</span>
             </a>
         }
     </div>
 }
 
-@section scripts {
+@section PageScript {
 <script>
     // Live search filter
-    var searchInput = document.querySelector('.cp-search-input');
+    var searchInput = document.querySelector('.gl-cp-search-input');
     if (searchInput) {
         var debounce;
         searchInput.addEventListener('input', function () {

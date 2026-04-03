@@ -8,67 +8,67 @@
 }
 
 <!-- ── Back + header ──────────────────────────────────────── -->
-<a href="/Portaal/Werven" class="cp-detail-back">
+<a href="/Portaal/Werven" class="gl-cp-detail-back">
     <i class="bx bx-arrow-back"></i> Mijn Werven
 </a>
-<h1 class="cp-detail-title">@Model.Name</h1>
+<h1 class="gl-cp-detail-title">@Model.Name</h1>
 @if (!string.IsNullOrWhiteSpace(Model.Address))
 {
-    <div class="cp-detail-addr"><i class="bx bx-map-pin"></i>@Model.Address</div>
+    <div class="gl-cp-detail-addr"><i class="bx bx-map-pin"></i>@Model.Address</div>
 }
 
 <!-- ── Status KPIs ────────────────────────────────────────── -->
-<div class="cp-status-grid">
-    <div class="cp-status-box cp-status-box--red">
-        <div class="cp-status-val" id="kpi-open">@Model.OpenCount</div>
-        <div class="cp-status-lbl">Open</div>
+<div class="gl-cp-status-grid">
+    <div class="gl-cp-status-box gl-cp-status-box--red">
+        <div class="gl-cp-status-val" id="kpi-open">@Model.OpenCount</div>
+        <div class="gl-cp-status-lbl">Open</div>
     </div>
-    <div class="cp-status-box cp-status-box--orange">
-        <div class="cp-status-val" id="kpi-inprogress">@Model.InProgressCount</div>
-        <div class="cp-status-lbl">Bezig</div>
+    <div class="gl-cp-status-box gl-cp-status-box--orange">
+        <div class="gl-cp-status-val" id="kpi-inprogress">@Model.InProgressCount</div>
+        <div class="gl-cp-status-lbl">Bezig</div>
     </div>
-    <div class="cp-status-box cp-status-box--blue">
-        <div class="cp-status-val" id="kpi-waiting">@Model.WaitingInspectionCount</div>
-        <div class="cp-status-lbl">Controle</div>
+    <div class="gl-cp-status-box gl-cp-status-box--blue">
+        <div class="gl-cp-status-val" id="kpi-waiting">@Model.WaitingInspectionCount</div>
+        <div class="gl-cp-status-lbl">Controle</div>
     </div>
-    <div class="cp-status-box cp-status-box--green">
-        <div class="cp-status-val" id="kpi-resolved">@Model.ResolvedCount</div>
-        <div class="cp-status-lbl">Klaar</div>
+    <div class="gl-cp-status-box gl-cp-status-box--green">
+        <div class="gl-cp-status-val" id="kpi-resolved">@Model.ResolvedCount</div>
+        <div class="gl-cp-status-lbl">Klaar</div>
     </div>
 </div>
 
 <!-- ── Progress bar ───────────────────────────────────────── -->
-<div class="cp-prog-row">
-    <div class="cp-prog-bar">
-        <div class="cp-prog-fill" id="prog-fill" style="width:@resolvedPct%"></div>
+<div class="gl-cp-prog-row">
+    <div class="gl-cp-prog-bar">
+        <div class="gl-cp-prog-fill" id="prog-fill" style="--gl-fill-width:@resolvedPct%"></div>
     </div>
-    <div class="cp-prog-pct" id="prog-label">@Model.ResolvedCount/@totalAll</div>
+    <div class="gl-cp-prog-pct" id="prog-label">@Model.ResolvedCount/@totalAll</div>
 </div>
 
 <!-- ── Tabs (enkel punten zichtbaar) ─────────────────────── -->
-<div class="cp-tabs">
-    <a href="#punten" class="cp-tab active" data-tab="punten">
+<div class="gl-cp-tabs">
+    <a href="#punten" class="gl-cp-tab active" data-tab="punten">
         <i class="bx bx-list-check"></i> Punten
         @{ var totalIssues = Model.IssueGroups.Sum(g => g.Issues.Count); }
         @if (totalIssues > 0)
         {
-            <span class="cp-tab-badge">@totalIssues</span>
+            <span class="gl-cp-tab-badge">@totalIssues</span>
         }
     </a>
 </div>
 
 <!-- ── Search + filter tabs ──────────────────────────────── -->
-<div class="cp-issue-toolbar">
-    <div class="cp-issue-search-wrap">
-        <i class="bx bx-search cp-issue-search-icon"></i>
-        <input type="text" id="issueSearch" class="cp-issue-search" placeholder="Zoek punt..." oninput="filterIssues()" />
+<div class="gl-cp-issue-toolbar">
+    <div class="gl-cp-issue-search-wrap">
+        <i class="bx bx-search gl-cp-issue-search-icon"></i>
+        <input type="text" id="issueSearch" class="gl-cp-issue-search" placeholder="Zoek punt..." oninput="filterIssues()" />
     </div>
-    <div class="cp-issue-filter-tabs" id="issueFilterTabs">
-        <button class="cp-filter-tab active" data-filter="active" onclick="setFilter(this,'active')">Alle</button>
-        <button class="cp-filter-tab" data-filter="open"    onclick="setFilter(this,'open')">Open</button>
-        <button class="cp-filter-tab" data-filter="bezig"   onclick="setFilter(this,'bezig')">Bezig</button>
-        <button class="cp-filter-tab" data-filter="controle" onclick="setFilter(this,'controle')">Controle</button>
-        <button class="cp-filter-tab" data-filter="klaar"   onclick="setFilter(this,'klaar')">Klaar</button>
+    <div class="gl-cp-issue-filter-tabs" id="issueFilterTabs">
+        <button class="gl-cp-filter-tab active" data-filter="active" onclick="setFilter(this,'active')">Alle</button>
+        <button class="gl-cp-filter-tab" data-filter="open"    onclick="setFilter(this,'open')">Open</button>
+        <button class="gl-cp-filter-tab" data-filter="bezig"   onclick="setFilter(this,'bezig')">Bezig</button>
+        <button class="gl-cp-filter-tab" data-filter="controle" onclick="setFilter(this,'controle')">Controle</button>
+        <button class="gl-cp-filter-tab" data-filter="klaar"   onclick="setFilter(this,'klaar')">Klaar</button>
     </div>
 </div>
 
@@ -76,33 +76,33 @@
 <div id="tabPunten">
     @if (!Model.IssueGroups.Any())
     {
-        <div class="cp-card" style="padding:2rem;text-align:center;">
-            <i class="bx bx-check-circle" style="font-size:2.5rem;color:#3ecf8e;"></i>
-            <p style="color:#6c757d;margin-top:.5rem;">Geen punten toegewezen aan u voor dit project.</p>
+        <div class="gl-cp-card gl-cp-empty-state">
+            <i class="bx bx-check-circle gl-cp-empty-icon--done"></i>
+            <p class="gl-cp-empty-text">Geen punten toegewezen aan u voor dit project.</p>
         </div>
     }
     else
     {
         @foreach (var group in Model.IssueGroups)
         {
-            <div class="cp-issue-group" data-group>
-                <div class="cp-issue-group-header" onclick="toggleGroup(this)">
+            <div class="gl-cp-issue-group" data-group>
+                <div class="gl-cp-issue-group-header" onclick="toggleGroup(this)">
                     <i class="bx bx-home-alt-2"></i>
                     @group.GroupName
-                    <span class="cp-issue-count-badge">@group.Issues.Count</span>
-                    <i class="bx bx-chevron-up cp-issue-group-chevron open"></i>
+                    <span class="gl-cp-issue-count-badge">@group.Issues.Count</span>
+                    <i class="bx bx-chevron-up gl-cp-issue-group-chevron open"></i>
                 </div>
-                <div class="cp-issue-group-body">
+                <div class="gl-cp-issue-group-body">
                     @foreach (var issue in group.Issues)
                     {
                         var statusClass = issue.Status switch
                         {
-                            (int)ConstructionIssueStatus.InProgress        => "cp-badge--prog",
-                            (int)ConstructionIssueStatus.WaitingInspection => "cp-badge--check",
-                            (int)ConstructionIssueStatus.Resolved          => "cp-badge--done",
-                            (int)ConstructionIssueStatus.Rejected          => "cp-badge--reject",
-                            (int)ConstructionIssueStatus.Reopened          => "cp-badge--reopen",
-                            _                                               => "cp-badge--open"
+                            (int)ConstructionIssueStatus.InProgress        => "gl-cp-badge--prog",
+                            (int)ConstructionIssueStatus.WaitingInspection => "gl-cp-badge--check",
+                            (int)ConstructionIssueStatus.Resolved          => "gl-cp-badge--done",
+                            (int)ConstructionIssueStatus.Rejected          => "gl-cp-badge--reject",
+                            (int)ConstructionIssueStatus.Reopened          => "gl-cp-badge--reopen",
+                            _                                               => "gl-cp-badge--open"
                         };
                         var statusLabel = issue.Status switch
                         {
@@ -121,13 +121,13 @@
                         var prevStatusIsOpen = issue.Status == (int)ConstructionIssueStatus.Open
                                            || issue.Status == (int)ConstructionIssueStatus.Reopened;
 
-                        <div class="cp-issue" id="issue-@issue.Id"
+                        <div class="gl-cp-issue" id="issue-@issue.Id"
                              data-prev-status="@(prevStatusIsOpen ? "open" : "inprogress")"
                              data-status="@issue.Status"
                              data-title="@(issue.Title ?? "")">
-                            <div class="cp-issue-summary" onclick="toggleIssue(@issue.Id)">
-                                <div class="cp-issue-left">
-                                    <div class="cp-issue-title">@issue.Title</div>
+                            <div class="gl-cp-issue-summary" onclick="toggleIssue(@issue.Id)">
+                                <div class="gl-cp-issue-left">
+                                    <div class="gl-cp-issue-title">@issue.Title</div>
 
                                     @{
                                         var locParts = new List<string>();
@@ -137,46 +137,46 @@
                                     }
                                     @if (!string.IsNullOrWhiteSpace(locStr))
                                     {
-                                        <div class="cp-issue-loc"><i class="bx bx-map-pin"></i>@locStr</div>
+                                        <div class="gl-cp-issue-loc"><i class="bx bx-map-pin"></i>@locStr</div>
                                     }
 
-                                    <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem;">
+                                    <div class="gl-cp-badges-row">
                                         @if (isPlanned)
                                         {
-                                            <span class="cp-badge cp-badge--planned">
-                                                <i class="bx bx-calendar" style="font-size:.8em;"></i>
+                                            <span class="gl-cp-badge gl-cp-badge--planned">
+                                                <i class="bx bx-calendar gl-cp-icon-sm"></i>
                                                 Gepland: @issue.PlannedDate!.Value.ToString("dd/MM/yyyy")
                                             </span>
                                         }
                                         @if (issue.DueDate.HasValue)
                                         {
-                                            var deadlineClass = issue.IsOverdue ? "cp-badge--overdue" : "cp-badge--deadline";
-                                            <span class="cp-badge @deadlineClass">
-                                                <i class="bx bx-calendar-x" style="font-size:.8em;"></i>
+                                            var deadlineClass = issue.IsOverdue ? "gl-cp-badge--overdue" : "gl-cp-badge--deadline";
+                                            <span class="gl-cp-badge @deadlineClass">
+                                                <i class="bx bx-calendar-x gl-cp-icon-sm"></i>
                                                 Deadline: @issue.DueDate.Value.ToString("dd/MM/yyyy")
                                             </span>
                                         }
                                     </div>
                                 </div>
-                                <div class="cp-issue-right">
-                                    <span class="cp-badge @statusClass" id="status-badge-@issue.Id">@statusLabel</span>
+                                <div class="gl-cp-issue-right">
+                                    <span class="gl-cp-badge @statusClass" id="status-badge-@issue.Id">@statusLabel</span>
                                     @if (isHigh)
                                     {
-                                        <span class="cp-badge cp-badge--urgent">Dringend</span>
+                                        <span class="gl-cp-badge gl-cp-badge--urgent">Dringend</span>
                                     }
                                 </div>
                             </div>
 
-                            <div class="cp-issue-detail" id="detail-@issue.Id">
+                            <div class="gl-cp-issue-detail" id="detail-@issue.Id">
                                 @if (!string.IsNullOrWhiteSpace(issue.Description))
                                 {
-                                    <p class="cp-issue-desc">@issue.Description</p>
+                                    <p class="gl-cp-issue-desc">@issue.Description</p>
                                 }
 
                                 <!-- Locatie details -->
                                 @if (!string.IsNullOrWhiteSpace(locStr) || !string.IsNullOrWhiteSpace(issue.CategoryName))
                                 {
-                                    <div style="font-size:.8rem;color:#6c757d;margin-bottom:.5rem,margin-top:.5rem;display:flex;flex-wrap:wrap;gap:.75rem;">
+                                    <div class="gl-cp-meta-row">
                                         @if (!string.IsNullOrWhiteSpace(locStr))
                                         {
                                             <strong>Locatie:</strong> @locStr
@@ -192,13 +192,13 @@
                                 }
                                 else
                                 {
-                                <div class="cp-issue-section-label">Foto's (@issue.MediaFileIds.Count)</div>
-                                <div class="cp-photos-row" id="photos-@issue.Id">
+                                <div class="gl-cp-issue-section-label">Foto's (@issue.MediaFileIds.Count)</div>
+                                <div class="gl-cp-photos-row" id="photos-@issue.Id">
                                         @foreach (var fileId in issue.MediaFileIds)
                                         {
                                             var safeFile = System.IO.Path.GetFileName(fileId);
                                             var url = $"{storageBase}/pictures/{Uri.EscapeDataString(safeFile)}";
-                                            <img src="@url" class="cp-photo-thumb" alt="Foto"
+                                            <img src="@url" class="gl-cp-photo-thumb" alt="Foto"
                                                  onclick="openPhoto('@url')" loading="lazy" />
                                         }     
                                 </div>
@@ -207,14 +207,14 @@
                                 <!-- Locatie op plan -->
                                 @if (issue.HasPlan)
                                 {
-                                    <div class="cp-issue-section-label">Locatie op plan</div>
-                                    <div class="cp-plan-wrap" id="plan-wrap-@issue.Id"
+                                    <div class="gl-cp-issue-section-label">Locatie op plan</div>
+                                    <div class="gl-cp-plan-wrap" id="plan-wrap-@issue.Id"
                                          data-plan-url="@issue.PlanImageUrl"
                                          data-plan-x="@issue.PlanXnormalized!.Value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)"
                                          data-plan-y="@issue.PlanYnormalized!.Value.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)"
                                          data-plan-page="@(issue.PlanPageNumber ?? 1)">
-                                        <canvas id="plan-canvas-@issue.Id" class="cp-plan-canvas"></canvas>
-                                        <div id="plan-marker-@issue.Id" class="cp-plan-marker"><i class="fa fa-location-dot"></i></div>
+                                        <canvas id="plan-canvas-@issue.Id" class="gl-cp-plan-canvas"></canvas>
+                                        <div id="plan-marker-@issue.Id" class="gl-cp-plan-marker"><i class="fa fa-location-dot"></i></div>
                                     </div>
                                 }
 
@@ -224,27 +224,27 @@
                                 }
                                 else
                                 {
-                                <div class="cp-issue-section-label" style="margin-top:.75rem;">Communicatie</div>
-                                <div class="cp-comm-list" id="comm-list-@issue.Id">
+                                <div class="gl-cp-issue-section-label gl-cp-mt-sm">Communicatie</div>
+                                <div class="gl-cp-comm-list" id="comm-list-@issue.Id">
 
                                     @foreach (var comment in issue.Comments)
                                     {
-                                        var entryClass = comment.IsContractor ? "cp-comm-entry cp-comm-entry--contractor" : "cp-comm-entry cp-comm-entry--internal";
+                                        var entryClass = comment.IsContractor ? "gl-cp-comm-entry gl-cp-comm-entry--contractor" : "gl-cp-comm-entry gl-cp-comm-entry--internal";
                                         <div class="@entryClass">
-                                            <div class="cp-comm-meta">
-                                                <span class="cp-comm-author">@comment.AuthorName</span>
-                                                <span class="cp-comm-time">@comment.Timestamp.ToString("dd/MM/yyyy HH:mm")</span>
+                                            <div class="gl-cp-comm-meta">
+                                                <span class="gl-cp-comm-author">@comment.AuthorName</span>
+                                                <span class="gl-cp-comm-time">@comment.Timestamp.ToString("dd/MM/yyyy HH:mm")</span>
                                             </div>
                                             @if (!string.IsNullOrWhiteSpace(comment.Text))
                                             {
-                                                <div class="cp-comm-text">@comment.Text</div>
+                                                <div class="gl-cp-comm-text">@comment.Text</div>
                                             }
                                             @if (comment.PhotoUrls.Any())
                                             {
-                                                <div class="cp-photos-row" style="margin-top:.4rem;">
+                                                <div class="gl-cp-photos-row gl-cp-photos-row--comment">
                                                     @foreach (var photoUrl in comment.PhotoUrls)
                                                     {
-                                                        <img src="@photoUrl" class="cp-photo-thumb"
+                                                        <img src="@photoUrl" class="gl-cp-photo-thumb"
                                                              onclick="openPhoto('@photoUrl')" loading="lazy" alt="Foto" />
                                                     }
                                                 </div>
@@ -254,25 +254,25 @@
                                 </div>
                                  }
                                 <!-- Opmerking toevoegen -->
-                                <div class="cp-issue-section-label" style="margin-top:.75rem;">Opmerking toevoegen</div>
-                                <div class="cp-comment-row">
-                                    <textarea class="cp-comment-input" rows="3"
+                                <div class="gl-cp-issue-section-label gl-cp-mt-sm">Opmerking toevoegen</div>
+                                <div class="gl-cp-comment-row">
+                                    <textarea class="gl-cp-comment-input" rows="3"
                                               placeholder="Schrijf een opmerking..."
                                               id="comment-@issue.Id"
                                               oninput="updateCommentBtn(@issue.Id)"></textarea>
-                                    <div class="cp-comment-photo-col">
+                                    <div class="gl-cp-comment-photo-col">
                                         <input type="file" id="photo-input-@issue.Id" accept="image/*"
-                                               multiple style="display:none"
+                                               multiple class="gl-cp-hidden"
                                                onchange="selectPhotos(@issue.Id, this)" />
-                                        <button type="button" class="cp-photo-add-tile"
+                                        <button type="button" class="gl-cp-photo-add-tile"
                                                 onclick="document.getElementById('photo-input-@issue.Id').click()"
                                                 id="photo-tile-@issue.Id">
-                                            <i class="bx bx-camera" style="font-size:1.4rem;"></i>
-                                            <span style="font-size:11px;line-height:1.2;">Toevoegen</span>
+                                            <i class="bx bx-camera gl-cp-icon-lg"></i>
+                                            <span class="gl-cp-icon-label">Toevoegen</span>
                                         </button>
-                                        <div class="cp-photo-thumbs-col" id="photo-thumbs-@issue.Id"></div>
+                                        <div class="gl-cp-photo-thumbs-col" id="photo-thumbs-@issue.Id"></div>
                                     </div>
-                                    <button type="button" class="cp-comment-send" disabled
+                                    <button type="button" class="gl-cp-comment-send" disabled
                                             id="comment-btn-@issue.Id"
                                             onclick="sendComment(@issue.Id, @Model.ProjectId)"
                                             title="Versturen">
@@ -282,7 +282,7 @@
 
                                 @if (canResolve)
                                 {
-                                    <button type="button" class="cp-resolve-btn"
+                                    <button type="button" class="gl-cp-resolve-btn"
                                             id="resolve-btn-@issue.Id"
                                             onclick="resolveIssue(@issue.Id, @Model.ProjectId)">
                                         <i class="bx bx-check-circle"></i> Markeer als opgelost
@@ -298,14 +298,14 @@
 </div>
 
 <!-- ── Lightbox ───────────────────────────────────────────── -->
-<div id="cpLightbox" onclick="this.style.display='none'" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;">
-    <img id="cpLightboxImg" src="" style="max-width:95vw;max-height:90vh;border-radius:8px;" />
+<div id="cpLightbox" class="gl-cp-lightbox">
+    <img id="cpLightboxImg" src="" class="gl-cp-lightbox-img" alt="Foto" />
 </div>
 
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 <input type="hidden" id="cpAft" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
-@section scripts {
+@section PageScript {
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>
     var antiforgeryToken = document.getElementById('cpAft')?.value ?? '';
@@ -322,7 +322,7 @@
 
     function toggleGroup(header) {
         var body = header.nextElementSibling;
-        var chevron = header.querySelector('.cp-issue-group-chevron');
+        var chevron = header.querySelector('.gl-cp-issue-group-chevron');
         var collapsed = body.style.display === 'none';
         body.style.display = collapsed ? '' : 'none';
         chevron.classList.toggle('open', collapsed);
@@ -337,10 +337,14 @@
         }
     }
 
+    document.getElementById('cpLightbox').addEventListener('click', function () {
+        this.classList.remove('open');
+    });
+
     function openPhoto(url) {
         var lb = document.getElementById('cpLightbox');
         document.getElementById('cpLightboxImg').src = url;
-        lb.style.display = 'flex';
+        lb.classList.add('open');
     }
 
     function escapeHtml(str) {
@@ -371,10 +375,9 @@
         if (!container) return;
         var previews = pendingPreviews[issueId] || [];
         container.innerHTML = previews.map(function(src, idx) {
-            return '<div style="position:relative;display:inline-block;">'
-                + '<img src="' + escapeHtml(src) + '" class="cp-photo-thumb" style="cursor:default;" alt="preview" />'
-                + '<button type="button" onclick="removePhoto(' + issueId + ',' + idx + ')" '
-                + 'style="position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">✕</button>'
+            return '<div class="gl-cp-photo-wrap">'
+                + '<img src="' + escapeHtml(src) + '" class="gl-cp-photo-thumb gl-cp-photo-thumb--preview" alt="preview" />'
+                + '<button type="button" class="gl-cp-photo-remove-btn" onclick="removePhoto(' + issueId + ',' + idx + ')">✕</button>'
                 + '</div>';
         }).join('');
     }
@@ -449,20 +452,20 @@
                 // Add comment to communicatie list
                 var commList = document.getElementById('comm-list-' + issueId);
                 if (commList) {
-                    var emptyMsg = commList.querySelector('.cp-comm-empty');
+                    var emptyMsg = commList.querySelector('.gl-cp-comm-empty');
                     if (emptyMsg) emptyMsg.remove();
                     var now = new Date();
                     var pad = function(n) { return n.toString().padStart(2, '0'); };
                     var dateStr = pad(now.getDate()) + '/' + pad(now.getMonth()+1) + '/' + now.getFullYear()
                                 + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
                     var entry = document.createElement('div');
-                    entry.className = 'cp-comm-entry cp-comm-entry--contractor';
-                    var html = '<div class="cp-comm-meta"><span class="cp-comm-author">U</span><span class="cp-comm-time">' + escapeHtml(dateStr) + '</span></div>';
-                    if (text) html += '<div class="cp-comm-text">' + escapeHtml(text) + '</div>';
+                    entry.className = 'gl-cp-comm-entry gl-cp-comm-entry--contractor';
+                    var html = '<div class="gl-cp-comm-meta"><span class="gl-cp-comm-author">U</span><span class="gl-cp-comm-time">' + escapeHtml(dateStr) + '</span></div>';
+                    if (text) html += '<div class="gl-cp-comm-text">' + escapeHtml(text) + '</div>';
                     if (uploadedUrls.length) {
-                        html += '<div class="cp-photos-row" style="margin-top:.4rem;">';
+                        html += '<div class="gl-cp-photos-row gl-cp-photos-row--comment">';
                         uploadedUrls.forEach(function(u) {
-                            html += '<img src="' + escapeHtml(u) + '" class="cp-photo-thumb" style="cursor:pointer;" onclick="openPhoto(\'' + escapeHtml(u) + '\')" loading="lazy" alt="Foto" />';
+                            html += '<img src="' + escapeHtml(u) + '" class="gl-cp-photo-thumb" onclick="openPhoto(\'' + escapeHtml(u) + '\')" loading="lazy" alt="Foto" />';
                         });
                         html += '</div>';
                     }
@@ -495,11 +498,11 @@
             if (data.ok) {
                 // Update status badge
                 var badge = document.getElementById('status-badge-' + issueId);
-                if (badge) { badge.className = 'cp-badge cp-badge--check'; badge.textContent = 'Controle'; }
+                if (badge) { badge.className = 'gl-cp-badge gl-cp-badge--check'; badge.textContent = 'Controle'; }
 
                 // Update resolve button
                 btn.innerHTML = '<i class="bx bx-check-circle"></i> Klaar voor controle';
-                btn.style.background = '#2563eb';
+                btn.classList.add('gl-cp-resolve-btn--done');
 
                 // Update KPI boxes: decrement open or inprogress, increment waiting
                 var issueEl = document.getElementById('issue-' + issueId);
@@ -575,7 +578,7 @@
 
     function setFilter(btn, filter) {
         activeFilter = filter;
-        document.querySelectorAll('.cp-filter-tab').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.gl-cp-filter-tab').forEach(function(b) { b.classList.remove('active'); });
         btn.classList.add('active');
         filterIssues();
     }
@@ -584,7 +587,7 @@
         var search = (document.getElementById('issueSearch')?.value || '').toLowerCase().trim();
         var groups = document.querySelectorAll('[data-group]');
         groups.forEach(function(group) {
-            var issues = group.querySelectorAll('.cp-issue');
+            var issues = group.querySelectorAll('.gl-cp-issue');
             var anyVisible = false;
             issues.forEach(function(issue) {
                 var status = parseInt(issue.dataset.status ?? '-1');

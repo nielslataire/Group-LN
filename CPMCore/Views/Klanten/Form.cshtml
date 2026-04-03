@@ -19,36 +19,11 @@
 
 @section PageStyle
 {
+    <link rel="stylesheet" href="~/css/klanten-custom.css" />
     @if (!isReadOnly)
     {
         <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
         <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
-    }
-    else
-    {
-        <style>
-            .client-tab-nav {
-                background-color: #f3f5f7;
-                border-radius: 6px;
-                padding: 6px;
-                gap: 4px;
-            }
-
-                .client-tab-nav .nav-link {
-                    color: #6c757d;
-                    font-weight: 600;
-                    border-radius: 6px;
-                    border: 1px solid transparent;
-                    padding: 10px 16px;
-                }
-
-                    .client-tab-nav .nav-link.active {
-                        background-color: #ffffff;
-                        color: #1f2d3d;
-                        border-color: #e3e6ea;
-                        box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-                    }
-        </style>
     }
 }
 
@@ -76,7 +51,7 @@
         </div>
     </div>
 
-    <ul class="nav nav-pills client-tab-nav mb-4" role="tablist">
+    <ul class="nav nav-pills gl-tab-nav mb-4" role="tablist">
         <li class="nav-item">
             <a class="nav-link active" href="#" data-section-toggle="algemeen">Algemeen</a>
         </li>
@@ -294,7 +269,7 @@ else
                         e.preventDefault();
                         const target = this.getAttribute('data-section-toggle');
 
-                        document.querySelectorAll('.client-tab-nav .nav-link').forEach((link) => link.classList.remove('active'));
+                        document.querySelectorAll('.gl-tab-nav .nav-link').forEach((link) => link.classList.remove('active'));
                         this.classList.add('active');
 
                         Object.values(sections).forEach((section) => section?.classList.add('d-none'));

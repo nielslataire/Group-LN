@@ -48,13 +48,12 @@
                             }
 
                             <!-- Preview + Verwijder knop (als er al een foto is) -->
-                            <div id="photo-preview" style="display:@(hasPhoto ? "block" : "none")">
+                            <div id="photo-preview" class="@(hasPhoto ? "" : "d-none")">
                                 @if (hasPhoto)
                                 {
                                     <img src="@($"{baseUrl}{fileName}")"
                                          alt="@Model.TitleNL"
-                                         class="img-fluid rounded mb-2"
-                                         style="max-height:220px;" loading="lazy" />
+                                         class="img-fluid rounded mb-2 gl-news-image" loading="lazy" />
                                     <div>
                                         <button type="button" class="btn btn-outline-danger btn-sm btnRemovePhoto">
                                             <i class="bx bx-trash"></i> Verwijder foto
@@ -64,7 +63,7 @@
                             </div>
 
                             <!-- File upload (zichtbaar als er geen foto is of na verwijderen) -->
-                            <div id="photo-upload" style="display:@(hasPhoto ? "none" : "block")">
+                            <div id="photo-upload" class="@(hasPhoto ? "d-none" : "")">
                                 <input type="file"
                                        id="file"
                                        name="file"

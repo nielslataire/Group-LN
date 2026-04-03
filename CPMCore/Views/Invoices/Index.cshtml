@@ -51,73 +51,7 @@
 {
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-    <style>
-        div.dt-buttons .btn.buttons-colvis::after {
-            font-family: "Font Awesome 6 Free";
-            content: "\f078"; /* Unicode voor fa-chevron-down */
-            font-weight: 900; /* Voor solid stijl */
-            font-size: 0.85rem;
-            vertical-align: middle;
-            border: none;
-            margin-left: 0.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
-            transform: rotate(180deg);
-        }
-    </style>
-    <style>
-     
-        /* ---- Kolomlogica: fit vs grow ---- */
-
-        /* Fit-kolommen: zo klein mogelijk, nooit wrappen */
-        #datatable-invoice-list th.col-fit,
-        #datatable-invoice-list td.col-fit {
-            width: 1%;
-            white-space: nowrap;
-        }
-
-        /* Grow-kolom: pakt de resterende ruimte */
-        #datatable-invoice-list th.col-grow,
-        #datatable-invoice-list td.col-grow {
-            width: 100%;
-        }
-
-        /* Ellipsis voor lange tekst in cells (vooral klant) */
-        #datatable-invoice-list .td-ellipsis {
-            max-width: 1px; /* truc zodat ellipsis werkt in tables */
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* Acties compacter + geen wrap */
-        #datatable-invoice-list td.actions a {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Optioneel: iets meer visuele hiërarchie in de tabel */
-        #datatable-invoice-list thead th {
-            font-weight: 600;
-        }
-
-        .status-col .badge {
-            vertical-align: middle;
-        }
-
-        .dropdown-item-form {
-            margin: 0;
-        }
-
-        .dropdown-menu .dropdown-item.d-flex i {
-            width: 1.25rem;
-            text-align: center;
-        }
-
-    </style>
+    <link rel="stylesheet" href="~/css/invoices-custom.css" />
 }
  <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
         <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
@@ -176,19 +110,19 @@
                 <form asp-action="BookInvoices" method="post" id="invoice-book-form" class="js-invoice-processing-form" data-processing-message="Facturen worden geboekt...">
                     <input type="hidden" name="issuerCompanyId" value="@ViewBag.CompanyId" />
             <div class="table-responsive-md">
-                <table class="table table-hover mb-0 w-100 dt-invoice" id="datatable-invoice-list">
+                <table class="table table-hover mb-0 w-100 gl-dt-invoice" id="datatable-invoice-list">
                     <thead>
                         <tr>
-                            <th class="col-fit text-center">Boeken</th>
-                            <th class="col-fit">Type</th>
-                            <th class="col-fit">Factuurnr</th>
-                            <th class="col-fit">Datum</th>
-                            <th class="col-grow">Klant</th>
-                            <th class="col-fit text-end">Totaal</th>
-                            <th class="col-fit">Status</th>
-                            <th class="col-fit">Project</th>
-                            <th class="col-fit">Verzendwijze</th>
-                            <th class="col-fit text-end">Acties</th>
+                            <th class="gl-col-fit text-center">Boeken</th>
+                            <th class="gl-col-fit">Type</th>
+                            <th class="gl-col-fit">Factuurnr</th>
+                            <th class="gl-col-fit">Datum</th>
+                            <th class="gl-col-grow">Klant</th>
+                            <th class="gl-col-fit text-end">Totaal</th>
+                            <th class="gl-col-fit">Status</th>
+                            <th class="gl-col-fit">Project</th>
+                            <th class="gl-col-fit">Verzendwijze</th>
+                            <th class="gl-col-fit text-end">Acties</th>
                                 <th class="d-none">Boekjaar</th>
                         </tr>
                     </thead>
@@ -208,7 +142,7 @@
                                     && r.Status != InvoiceStatus.Generating;
 
                                     <tr>
-                                        <td class="col-fit text-center">
+                                        <td class="gl-col-fit text-center">
                                             <div class="checkbox-custom checkbox-default">
                                                 <input type="checkbox"
                                                        class="form-check-input invoice-book-checkbox"
@@ -223,29 +157,28 @@
                                             </div>
                                            
                                         </td>
-                            <td class="col-fit">@typeLabel</td>
+                            <td class="gl-col-fit">@typeLabel</td>
 
-                            <td class="col-fit" data-order="@r.InvoiceSortValue">
+                            <td class="gl-col-fit" data-order="@r.InvoiceSortValue">
                                 @(!string.IsNullOrEmpty(shownId) ? shownId : Html.Raw("&nbsp;"))
                             </td>
 
-                            <td class="col-fit text-nowrap">@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
+                            <td class="gl-col-fit text-nowrap">@r.InvoiceDate.ToString("dd/MM/yyyy", culture)</td>
 
-                            <td class="col-grow td-ellipsis" title="@r.ClientName">@r.ClientName</td>
+                            <td class="gl-col-grow gl-td-ellipsis" title="@r.ClientName">@r.ClientName</td>
 
-                            <td class="col-fit text-end text-nowrap">
+                            <td class="gl-col-fit text-end text-nowrap">
                                 @(r.GrossTotal.HasValue ? r.GrossTotal.Value.ToString("C", culture) : "-")
                             </td>
 
-                            <td class="col-fit status-col" data-order="@r.StatusLabel">
-                                <span class="status-icon" style="color:@statusDisplay.Color">
+                            <td class="gl-col-fit gl-status-col" data-order="@r.StatusLabel">
+                                <span class="status-icon gl-color-dynamic" style="--gl-status-color:@statusDisplay.Color">
                                     <i class="@statusDisplay.Icon fs-5"></i>
                                 </span>
 
                                 @if (r.DigitallySent)
                                 {
-                                    <span class="status-icon"
-                                          style="color:saddlebrown"
+                                    <span class="status-icon gl-color-brown"
                                           data-bs-toggle="tooltip"
                                           data-bs-placement="top"
                                           title="Verzonden via peppol">
@@ -254,13 +187,13 @@
                                 }
                             </td>
 
-                            <td class="col-fit td-ellipsis" title="@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)">
+                            <td class="gl-col-fit gl-td-ellipsis" title="@(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)">
                                 @(string.IsNullOrWhiteSpace(r.ProjectName) ? "-" : r.ProjectName)
                             </td>
 
-                            <td class="col-fit text-nowrap">@r.SendMethod</td>
+                            <td class="gl-col-fit text-nowrap">@r.SendMethod</td>
 
-                                        <td class="col-fit actions">
+                                        <td class="gl-col-fit actions">
                                             <div class="d-flex align-items-center justify-content-end gap-1 flex-nowrap">
                                             @if (canWriteInvoices)
                                             {

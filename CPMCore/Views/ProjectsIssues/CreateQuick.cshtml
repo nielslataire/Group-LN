@@ -31,97 +31,7 @@
     <link rel="stylesheet" href="~/css/skins/test-extension.css" />
     <!-- Theme Custom CSS -->
     <link rel="stylesheet" href="~/css/custom.css">
-    <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; padding: 0; background: #fff; font-family: 'Open Sans', sans-serif; }
-
-        .cq-bar {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.6rem 1rem;
-            background: #0a5a3b;
-            color: #fff;
-        }
-        .cq-bar-back {
-            background: none;
-            border: none;
-            color: #fff;
-            font-size: 1.4rem;
-            line-height: 1;
-            padding: 0 0.25rem;
-            cursor: pointer;
-        }
-        .cq-bar-title { font-size: 1rem; font-weight: 600; flex: 1; }
-        .cq-bar-submit {
-            background: #fff;
-            color: #0a5a3b;
-            border: none;
-            border-radius: 4px;
-            padding: 0.35rem 0.9rem;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-        }
-        .cq-bar-submit:active { opacity: 0.8; }
-
-        .cq-body {
-            padding: 1rem;
-            padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-        }
-
-        .issue-media-add-tile {
-            width: 80px; height: 80px;
-            border: 2px dashed #2f6f57;
-            color: #2f6f57;
-            border-radius: 4px;
-            background: #f8faf9;
-            display: inline-flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-        .issue-media-thumb {
-            width: 80px; height: 80px;
-            border-radius: 4px;
-            object-fit: cover;
-            border: 1px solid #ddd;
-        }
-        .issue-media-item { position: relative; display: inline-block; }
-        .issue-media-remove {
-            position: absolute; top: 2px; right: 2px;
-            width: 20px; height: 20px;
-            background: rgba(0,0,0,0.55);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            font-size: 11px;
-            line-height: 1;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        }
-        .issue-media-item:hover .issue-media-remove { display: flex; }
-
-        .cq-error {
-            background: #fdf0f0;
-            border: 1px solid #e57373;
-            border-radius: 4px;
-            color: #c62828;
-            padding: 0.6rem 0.9rem;
-            margin-bottom: 1rem;
-            font-size: 0.875rem;
-        }
-
-        @@media (min-width: 768px) {
-            .cq-body { max-width: 600px; margin: 0 auto; }
-        }
-    </style>
+    <link rel="stylesheet" href="~/css/issues-custom.css" />
 </head>
 <body>
     <div class="cq-bar">
@@ -178,7 +88,7 @@
                 <div id="cqMediaPreview" class="d-flex flex-wrap gap-2 mb-2 align-items-start">
                     <button type="button" id="cqAddMedia" class="issue-media-add-tile">
                         <i class="bx bx-camera fs-4"></i>
-                        <span style="font-size:11px;line-height:1.2;">Toevoegen</span>
+                        <span class="gl-cq-media-add-label">Toevoegen</span>
                     </button>
                 </div>
                 <input id="cqMediaInput" name="mediaFiles" type="file" accept="image/*" multiple class="d-none" />
@@ -190,7 +100,7 @@
                 </a>
             </div>
 
-            <div id="cqMoreSection" style="display:none;">
+            <div id="cqMoreSection">
                 <div class="mb-3">
                     <label class="form-label">Beschrijving</label>
                     <textarea name="Input.Description" class="form-control" rows="3">@Model.Input?.Description</textarea>
@@ -215,7 +125,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-6" id="cqPlannedDateGroup" style="display:none;">
+                    <div class="col-6" id="cqPlannedDateGroup">
                         <label class="form-label">Uitvoeringsdatum</label>
                         <input type="date" name="Input.PlannedDate" id="cqPlannedDate" class="form-control" />
                     </div>

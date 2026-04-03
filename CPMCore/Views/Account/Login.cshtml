@@ -40,343 +40,147 @@
 }
 
 @section styles {
-<style>
-    /* ── Reset ───────────────────────────────────────────────────── */
-    html, body { height: 100%; margin: 0; padding: 0; }
-    body > div  { height: 100%; }
-
-    /* ════════════════════════════════════════════════════════════════
-       DESKTOP GRID  –  twee kolommen elk 50 %
-    ════════════════════════════════════════════════════════════════ */
-    .gln-login {
-        min-height: 100vh;
-        background: #0a5a3b;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto 1fr auto;
-        grid-template-areas:
-            "logo  card"
-            "feat  card"
-            "copy  card";
-    }
-
-    /* ── Logo-balk ───────────────────────────────────────────────── */
-    .gln-logo-bar {
-        grid-area: logo;
-        padding: 52px 52px 0;
-    }
-    .gln-logo {
-        display: inline-flex;
-        align-items: center;
-        gap: 14px;
-        text-decoration: none;
-    }
-    .gln-logo img  { height: 88px; }
-    .gln-company   { font-size: 2.4rem; font-weight: 700; color: #fff; line-height: 1.4; }
-    .gln-platform  { font-size: 1.2rem; font-weight: 500; letter-spacing: .18em;
-                     color: rgba(255,255,255,.5); text-transform: uppercase; }
-
-    /* ── Feature-tegels ──────────────────────────────────────────── */
-    .gln-features-bar {
-        grid-area: feat;
-        padding: 0 52px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-    .gln-features-label {
-        font-size: .9rem; font-weight: 300; letter-spacing: .14em;
-        text-transform: uppercase; color: rgba(255,255,255,.4);
-        margin-bottom: 16px;
-    }
-    .gln-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    .gln-tile {
-        background: rgba(255,255,255,.07);
-        border: 1px solid rgba(255,255,255,.1);
-        border-radius: 10px;
-        padding: 18px 20px;
-        transition: background .15s;
-    }
-    .gln-tile:hover { background: rgba(255,255,255,.12); }
-    .gln-tile-icon  { font-size: 1.8rem; color: #3ecf8e; margin-bottom: 8px; }
-    .gln-tile-name  { font-weight: 600; font-size: .9rem; color: #fff; }
-    .gln-tile-desc  { font-size: .77rem; color: rgba(255,255,255,.45); margin-top: 3px; }
-
-    /* ── Copyright ───────────────────────────────────────────────── */
-    .gln-copy-bar {
-        grid-area: copy;
-        padding: 0 52px 52px;
-        font-size: .76rem;
-        color: rgba(255,255,255,.3);
-    }
-
-    /* ════════════════════════════════════════════════════════════════
-       WITTE KAART  –  rechts, spans alle rijen
-    ════════════════════════════════════════════════════════════════ */
-    .gln-right {
-        grid-area: card;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 36px;
-    }
-
-    .gln-card {
-        background: #fff;
-        border-radius: 20px;
-        padding: 44px 40px;
-        width: 100%;
-        max-width: 450px;
-        box-shadow: 0 8px 40px rgba(0,0,0,.18);
-    }
-
-    .gln-card h1 {
-        font-size: 1.75rem; font-weight: 700;
-        color: #0f1f14; margin-bottom: 8px;
-    }
-    .gln-card-sub {
-        font-size: .9rem; color: #6c757d;
-        line-height: 1.5; margin-bottom: 28px;
-    }
-
-    /* Microsoft-knop */
-    .btn-gln-ms {
-        display: flex; align-items: center; justify-content: center;
-        gap: 10px; width: 100%;
-        background: #0a5a3b; color: #fff;
-        border: none; border-radius: 8px;
-        padding: 13px 20px;
-        font-size: .97rem; font-weight: 600;
-        text-decoration: none;
-        transition: background .18s, box-shadow .18s;
-    }
-    .btn-gln-ms:hover {
-        background: #084d32; color: #fff;
-        box-shadow: 0 4px 16px rgba(10,90,59,.3);
-    }
-    .btn-gln-ms .ms-icon  { font-size: 1.15rem; }
-    .btn-gln-ms .ms-arrow { margin-left: auto; font-size: 1.05rem; }
-
-    /* Info-box */
-    .gln-info-box {
-        display: flex; gap: 10px; align-items: flex-start;
-        background: #f4f9f6; border: 1px solid #d0e8dc;
-        border-radius: 8px; padding: 12px 14px; margin-top: 28px;
-        font-size: .82rem; color: #4a5568; line-height: 1.45;
-        align-items: center;
-    }
-    .gln-info-box .info-icon {
-        color: #0a5a3b; font-size: 1.8rem;
-        flex-shrink: 0; margin-top: 2px;
-    }
-
-    /* Hulp-link */
-    .gln-help {
-        margin-top: 28px;
-        padding-top: 16px;
-        border-top: 1px solid #dee2e6;
-        font-size: .855rem;
-        color: #6c757d;
-    }
-    .gln-help a { color: #0a5a3b; font-weight: 600; text-decoration: none; }
-    .gln-help a:hover { text-decoration: underline; }
-
-    /* Externe portalen links */
-    .gln-portal-links {
-        margin-top: 20px;
-            font-size: .69rem;
-        color: #6c757d;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-            .gln-portal-links a {
-                color: #0a5a3b;
-                font-weight: 300;
-                text-decoration: none;
-                font-size: .69rem;
-            }
-    .gln-portal-links a:hover { text-decoration: underline; }
-
-    /* ════════════════════════════════════════════════════════════════
-       TABLET  ≤ 991px
-    ════════════════════════════════════════════════════════════════ */
-    @@media (max-width: 991px) {
-        .gln-login {
-            grid-template-columns: 1fr;
-            grid-template-rows: auto auto auto;
-            grid-template-areas:
-                "logo"
-                "card"
-                "copy";
-        }
-        .gln-features-bar { display: none; }
-        .gln-logo-bar     { padding: 30px 28px 20px; }
-        .gln-right        { padding: 0 24px 24px; align-items: flex-start; }
-        .gln-card         {
-            max-width: 520px; margin: 0 auto;
-            border-radius: 16px; padding: 36px 28px;
-        }
-        .gln-copy-bar     { padding: 0 28px 32px; text-align: center; }
-    }
-
-    /* ════════════════════════════════════════════════════════════════
-       MOBIEL  ≤ 575px
-    ════════════════════════════════════════════════════════════════ */
-    @@media (max-width: 575px) {
-        .gln-logo-bar     { padding: 24px 20px 16px; }
-        .gln-right        { padding: 0 16px 20px; }
-        .gln-card         { border-radius: 14px; padding: 28px 20px; }
-        .gln-card h1      { font-size: 1.5rem; }
-        .gln-card-sub     { font-size: .855rem; margin-bottom: 22px; }
-        .gln-copy-bar     { padding: 0 20px 28px; }
-    }
-</style>
+    <link rel="stylesheet" href="~/css/account-custom.css" />
 }
 
-<div class="gln-login">
+<div class="gl-login">
 
     <!-- ── Logo ──────────────────────────────────────────────────── -->
-    <div class="gln-logo-bar">
-        <a href="/" class="gln-logo">
+    <div class="gl-logo-bar">
+        <a href="/" class="gl-logo">
             <img src="~/img/logo.png" alt="GROUP LN" />
             <div>
-                <div class="gln-company">GROUP LN</div>
-                <div class="gln-platform">@platformLabel</div>
+                <div class="gl-company">GROUP LN</div>
+                <div class="gl-platform">@platformLabel</div>
             </div>
         </a>
     </div>
 
     <!-- ── Feature-tegels (enkel desktop) ────────────────────────── -->
-    <div class="gln-features-bar">
-        <div class="gln-features-label">@featuresLabel</div>
-        <div class="gln-grid">
+    <div class="gl-features-bar">
+        <div class="gl-features-label">@featuresLabel</div>
+        <div class="gl-grid">
             @if (isCustomer)
             {
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-home-alt"></i></div>
-                    <div class="gln-tile-name">Uw woning volgen</div>
-                    <div class="gln-tile-desc">Bekijk de voortgang van uw project, van fundering tot oplevering.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-home-alt"></i></div>
+                    <div class="gl-tile-name">Uw woning volgen</div>
+                    <div class="gl-tile-desc">Bekijk de voortgang van uw project, van fundering tot oplevering.</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-list-plus"></i></div>
-                    <div class="gln-tile-name">Meerwerken bekijken</div>
-                    <div class="gln-tile-desc">Overzicht van alle aangevraagde en goedgekeurde meerwerken.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-list-plus"></i></div>
+                    <div class="gl-tile-name">Meerwerken bekijken</div>
+                    <div class="gl-tile-desc">Overzicht van alle aangevraagde en goedgekeurde meerwerken.</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-file"></i></div>
-                    <div class="gln-tile-name">Documenten raadplegen</div>
-                    <div class="gln-tile-desc">Al uw contracten, plannen en facturen op één plek.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-file"></i></div>
+                    <div class="gl-tile-name">Documenten raadplegen</div>
+                    <div class="gl-tile-desc">Al uw contracten, plannen en facturen op één plek.</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-message"></i></div>
-                    <div class="gln-tile-name">Berichten ontvangen</div>
-                    <div class="gln-tile-desc">Rechtstreeks communiceren met uw projectteam.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-message"></i></div>
+                    <div class="gl-tile-name">Berichten ontvangen</div>
+                    <div class="gl-tile-desc">Rechtstreeks communiceren met uw projectteam.</div>
                 </div>
             }
             else if (isContractor)
             {
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-building-house"></i></div>
-                    <div class="gln-tile-name">Projecten volgen</div>
-                    <div class="gln-tile-desc">Blijf op de hoogte van de voortgang van uw projecten in real-time.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-building-house"></i></div>
+                    <div class="gl-tile-name">Projecten volgen</div>
+                    <div class="gl-tile-desc">Blijf op de hoogte van de voortgang van uw projecten in real-time.</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-task"></i></div>
-                    <div class="gln-tile-name">Punten beheren</div>
-                    <div class="gln-tile-desc">Uw punten raadplegen en afvinken voor controle.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-task"></i></div>
+                    <div class="gl-tile-name">Punten beheren</div>
+                    <div class="gl-tile-desc">Uw punten raadplegen en afvinken voor controle.</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-folder"></i></div>
-                    <div class="gln-tile-name">Documenten beheren</div>
-                    <div class="gln-tile-desc">Veilig documenten delen en raadplegen op één centrale plek.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-folder"></i></div>
+                    <div class="gl-tile-name">Documenten beheren</div>
+                    <div class="gl-tile-desc">Veilig documenten delen en raadplegen op één centrale plek.</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-group"></i></div>
-                    <div class="gln-tile-name">Direct communiceren</div>
-                    <div class="gln-tile-desc">Snel en efficiënt communiceren met het Group LN team.</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-group"></i></div>
+                    <div class="gl-tile-name">Direct communiceren</div>
+                    <div class="gl-tile-desc">Snel en efficiënt communiceren met het Group LN team.</div>
                 </div>
             }
             else
             {
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-grid-alt"></i></div>
-                    <div class="gln-tile-name">Project dashboard</div>
-                    <div class="gln-tile-desc">Volledig overzicht</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-grid-alt"></i></div>
+                    <div class="gl-tile-name">Project dashboard</div>
+                    <div class="gl-tile-desc">Volledig overzicht</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
-                    <div class="gln-tile-name">Financieel beheer</div>
-                    <div class="gln-tile-desc">Facturatie &amp; budget</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-bar-chart-alt-2"></i></div>
+                    <div class="gl-tile-name">Financieel beheer</div>
+                    <div class="gl-tile-desc">Facturatie &amp; budget</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-group"></i></div>
-                    <div class="gln-tile-name">Relatiebeheer</div>
-                    <div class="gln-tile-desc">Klanten &amp; leveranciers</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-group"></i></div>
+                    <div class="gl-tile-name">Relatiebeheer</div>
+                    <div class="gl-tile-desc">Klanten &amp; leveranciers</div>
                 </div>
-                <div class="gln-tile">
-                    <div class="gln-tile-icon"><i class="bx bx-cog"></i></div>
-                    <div class="gln-tile-name">Configuratie</div>
-                    <div class="gln-tile-desc">Rollen &amp; rechten</div>
+                <div class="gl-tile">
+                    <div class="gl-tile-icon"><i class="bx bx-cog"></i></div>
+                    <div class="gl-tile-name">Configuratie</div>
+                    <div class="gl-tile-desc">Rollen &amp; rechten</div>
                 </div>
             }
         </div>
     </div>
 
     <!-- ── Copyright ─────────────────────────────────────────────── -->
-    <div class="gln-copy-bar">
+    <div class="gl-copy-bar">
         &copy; @DateTime.Now.Year Group LN. Alle rechten voorbehouden.
     </div>
 
     <!-- ── Witte kaart ────────────────────────────────────────────── -->
-    <div class="gln-right">
-        <div class="gln-card">
+    <div class="gl-right">
+        <div class="gl-card">
 
             <h1>@cardTitle</h1>
-            <p class="gln-card-sub">@cardSub</p>
+            <p class="gl-card-sub">@cardSub</p>
 
             @{
                 var loginError = Context.Request.Query["error"].ToString();
             }
             @if (!string.IsNullOrWhiteSpace(loginError))
             {
-                <div style="background:#fdf2f2;border:1px solid #f5c6cb;border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:.86rem;color:#721c24;display:flex;gap:10px;align-items:flex-start;">
-                    <i class="bx bx-error-circle" style="font-size:1.3rem;flex-shrink:0;margin-top:1px;"></i>
+                <div class="gl-error-box">
+                    <i class="bx bx-error-circle gl-error-icon"></i>
                     <span>@loginError</span>
                 </div>
             }
 
-            <a class="btn-gln-ms"
+            <a class="btn-gl-ms"
                href="@Url.Action("SignIn", "Account", new { returnUrl = Model.ReturnUrl })">
                 <i class="bx bxl-microsoft ms-icon"></i>
                 Aanmelden met Microsoft
                 <i class="bx bx-chevron-right ms-arrow"></i>
             </a>
 
-            <div class="gln-info-box">
+            <div class="gl-info-box">
                 <i class="bx bx-shield info-icon"></i>
                 <span>@infoBox</span>
             </div>
 
-            <div class="gln-help">
+            <div class="gl-help">
                 Hulp nodig? <a href="mailto:@helpEmail">@helpLabel</a>
             </div>
 
             @if (isCustomer)
             {
-@*                 <div class="gln-portal-links">
+@*                 <div class="gl-portal-links">
                     <span>Leverancier? <a href="/aannemer">Leveranciersportaal</a></span>
                     <span>Intern? <a href="/">Intern platform</a></span>
                 </div> *@
             }
             else if (isContractor)
             {
-                <div class="gln-portal-links">
+                <div class="gl-portal-links">
                     <span>Interne medewerkers melden zich aan via het <a href="/">interne platform</a>.</span>
                 </div>
             }

@@ -1,6 +1,63 @@
 ﻿<script src="https://cdn.jsdelivr.net/npm/ajv@8/dist/ajv.min.js" crossorigin="anonymous"></script>
 <script>
     (function () {
+        const table = document.getElementById('paymentTermsTable');
+        const addBtn = document.getElementById('addPaymentTermRow');
+        if (!table || !addBtn) return;
+
+        const tbody = table.querySelector('tbody');
+        const getNextIndex = () => tbody.querySelectorAll('tr[data-row]').length;
+
+        addBtn.addEventListener('click', () => {
+            const index = getNextIndex();
+            const row = document.createElement('tr');
+            row.setAttribute('data-row', index);
+            row.innerHTML = `
+                <td>
+                    <input type="hidden" name="PaymentTerms[${index}].Id" value="0" />
+                    <input class="form-control form-control-modern" name="PaymentTerms[${index}].Name" placeholder="Naam" />
+                </td>
+                <td>
+                    <select class="form-control form-control-modern" name="PaymentTerms[${index}].TermType">
+                        <option value="0">Dagen</option>
+                        <option value="1">Dagen na einde maand</option>
+                        <option value="2">Tekst</option>
+                    </select>
+                </td>
+                <td>
+                    <input class="form-control form-control-modern" name="PaymentTerms[${index}].Days" value="0" type="number" min="0" />
+                </td>
+                <td>
+                    <select class="form-control form-control-modern" name="PaymentTerms[${index}].DisplayMode">
+                        <option value="0">Vervaldatum</option>
+                        <option value="1">Extra tekst</option>
+                    </select>
+                </td>
+                <td>
+                    <input class="form-control form-control-modern" name="PaymentTerms[${index}].DisplayText" placeholder="Tekst op factuur" />
+                </td>
+                <td>
+                    <input class="form-control form-control-modern" name="PaymentTerms[${index}].Description" placeholder="Omschrijving" />
+                </td>
+                <td class="text-center">
+                    <input type="hidden" name="PaymentTerms[${index}].IsDeleted" value="false" />
+                    <input class="form-check-input js-paymentterm-delete" type="checkbox" data-index="${index}" />
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        tbody.addEventListener('change', (event) => {
+            const target = event.target;
+            if (!target.classList.contains('js-paymentterm-delete')) return;
+            const index = target.getAttribute('data-index');
+            const hidden = tbody.querySelector(`input[name="PaymentTerms[${index}].IsDeleted"]`);
+            if (hidden) hidden.value = target.checked ? 'true' : 'false';
+        });
+    })();
+</script>
+<script>
+    (function () {
         const defaultsElement = document.getElementById('invoice-layout-defaults');
         if (!defaultsElement) {
             return;

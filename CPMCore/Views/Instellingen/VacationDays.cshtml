@@ -8,46 +8,7 @@
 
 @section PageStyle
 {
-@* 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.css"> *@
-    <style>
-        /* Weekend donkergrijs + dagnummer wit */
-        .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-frame,
-        .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-frame {
-            background: #999999;
-        }
-
-        .fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
-        .fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number {
-            color: #CCCCCC;
-        }
-
-        /* Dagnummer op 'verlofdag' ook wit (2 opties) */
-
-        /* Optie A: moderne browsers, werkt met :has() */
-        .fc .fc-daygrid-day:has(.fc-bg-event) .fc-daygrid-day-number {
-            color: #CCCCCC;
-        }
-
-        /* Optie B: fallback via JS-class .has-vacation (zie JS hieronder) */
-        .fc .fc-daygrid-day.has-vacation .fc-daygrid-day-number {
-            color: #CCCCCC;
-        }
-        /* Volledig klikgedrag uit voor weekendcellen */
-        .fc .fc-daygrid-day.fc-day-sat,
-        .fc .fc-daygrid-day.fc-day-sun {
-            pointer-events: none;
-
-        }
-
-        .fc .fc-daygrid-event {
-            border-radius: 6px;
-            padding: 0 6px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-    </style>
+    <link rel="stylesheet" href="~/css/instellingen-custom.css" />
 }
 
 @section PageScripts

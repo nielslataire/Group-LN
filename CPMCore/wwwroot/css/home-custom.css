@@ -1,0 +1,19 @@
+/* ===================================================================
+   Home / Dashboard (niet-projectleider)
+   Structurele CSS voor het projectgrid op het standaard dashboard.
+   Bootstrap utility classes worden in HTML gebruikt.
+   =================================================================== */
+
+@media (max-width: 767.98px) {
+    /* Hide image link on mobile when there is no project photo */
+    #project-grid .card-no-photo > a { display: none; }
+
+    /* Consistent gutter for full-width cards */
+    #project-grid [class*="col-"] {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    /* Spacing between stacked cards */
+    #project-grid .mb-4 { margin-bottom: 1rem !important; }
+}

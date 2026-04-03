@@ -14,42 +14,9 @@
         };
 }
 
-<style>
-    .invoice-tab-nav {
-        background-color: #f3f5f7;
-        border-radius: 6px;
-        padding: 6px;
-        gap: 4px;
-    }
-
-    .payment-stages-table {
-        table-layout: fixed;
-    }
-
-        .payment-stages-table .col-stage-name {
-            width: auto;
-        }
-
-        .payment-stages-table .col-percentage,
-        .payment-stages-table .col-invoicable {
-            width: 170px;
-        }
-
-        .invoice-tab-nav .nav-link {
-            color: #6c757d;
-            font-weight: 600;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            padding: 10px 16px;
-        }
-
-            .invoice-tab-nav .nav-link.active {
-                background-color: #ffffff;
-                color: #1f2d3d;
-                border-color: #e3e6ea;
-                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-            }
-</style>
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
+}
 
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -71,7 +38,7 @@
 
             @if (Model.Groups?.Any() == true)
             {
-                <ul class="nav nav-pills invoice-tab-nav mb-4" role="tablist">
+                <ul class="nav nav-pills gl-invoice-tab-nav mb-4" role="tablist">
                     @for (int i = 0; i < Model.Groups.Count; i++)
                     {
                         var group = Model.Groups[i];
@@ -98,7 +65,7 @@
                         </div>
                         <div class="card-body pt-2">
                             <div class="table-responsive">
-                                <table class="table align-middle mb-0 payment-stages-table">
+                                <table class="table align-middle mb-0 gl-payment-stages-table">
                                     <colgroup>
                                         <col class="col-stage-name" />
                                         <col class="col-percentage" />
@@ -107,8 +74,8 @@
                                     <thead>
                                         <tr class="table-secondary">
                                             <th>Schijf</th>
-                                            <th class="text-end" style="white-space:nowrap;">Percentage</th>
-                                            <th class="text-end" style="white-space:nowrap;">Factureerbaar</th>
+                                            <th class="text-end text-nowrap">Percentage</th>
+                                            <th class="text-end text-nowrap">Factureerbaar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -149,11 +116,11 @@
 @section PageScripts {
     <script>
         $(function () {
-            $('.invoice-tab-nav .nav-link').on('click', function (e) {
+            $('.gl-invoice-tab-nav .nav-link').on('click', function (e) {
                 e.preventDefault();
                 var target = $(this).data('target');
 
-                $('.invoice-tab-nav .nav-link').removeClass('active');
+                $('.gl-invoice-tab-nav .nav-link').removeClass('active');
                 $(this).addClass('active');
 
                 $('.payment-group-card').addClass('d-none');

@@ -7,29 +7,9 @@
     var canWriteProjectInvoicing = ViewBag.CanWriteProjectInvoicing as bool? ?? false;
 }
 
-<style>
-    .invoice-tab-nav {
-        background-color: #f3f5f7;
-        border-radius: 6px;
-        padding: 6px;
-        gap: 4px;
-    }
-
-        .invoice-tab-nav .nav-link {
-            color: #6c757d;
-            font-weight: 600;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            padding: 10px 16px;
-        }
-
-            .invoice-tab-nav .nav-link.active {
-                background-color: #ffffff;
-                color: #1f2d3d;
-                border-color: #e3e6ea;
-                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-            }
-</style>
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
+}
 
 @functions {
     string FormatStageName(string name)
@@ -77,7 +57,7 @@
                 </div>
             </div>
 
-            <ul class="nav nav-pills invoice-tab-nav mb-4 bg-light" role="tablist">
+            <ul class="nav nav-pills gl-invoice-tab-nav mb-4 bg-light" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link active" href="#" data-invoice-section="schijven">Schijven</a>
                 </li>
@@ -100,8 +80,8 @@
                                 <thead>
                                     <tr class="table-secondary">
                                         <th>Schijf</th>
-                                        <th class="text-end" style="white-space:nowrap;">Percentage</th>
-                                        <th class="text-end" style="white-space:nowrap;">Selectie</th>
+                                        <th class="text-end text-nowrap">Percentage</th>
+                                        <th class="text-end text-nowrap">Selectie</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -201,10 +181,10 @@
                                 <thead>
                                     <tr class="table-secondary">
                                         <th colspan="2">Wijzigingsopdracht</th>
-                                        <th class="text-end" style="white-space:nowrap;">Bedrag</th>
-                                        <th class="text-end" style="white-space:nowrap;">Openstaand bedrag</th>
-                                        <th class="text-end" style="white-space:nowrap;">Percentage</th>
-                                        <th class="text-end" style="white-space:nowrap;">Selectie</th>
+                                        <th class="text-end text-nowrap">Bedrag</th>
+                                        <th class="text-end text-nowrap">Openstaand bedrag</th>
+                                        <th class="text-end text-nowrap">Percentage</th>
+                                        <th class="text-end text-nowrap">Selectie</th>
                                     </tr>
                                 </thead>
 
@@ -247,7 +227,7 @@
                                             var detailIdsCsv = string.Join(",", detailIds);
 
                                             <tr class="table-light">
-                                                <td class="text-center" style="width:36px;">
+                                                <td class="details-control text-center">
                                                     <button type="button"
                                                             class="btn btn-link p-0 co-toggle"
                                                             data-target="co-details-@item.Client.Id-@orderGroup.Key.ChangeOrderId"
@@ -263,11 +243,11 @@
                                                 <td class="text-end">@orderRemaining.ToString("C")</td>
 
                                                 <!-- Percentage (ALTIJD rechts) -->
-                                                <td style="white-space:nowrap;">
+                                                <td class="text-nowrap">
                                                     <div class="d-flex justify-content-end">
                                                         <div class="input-group input-group-sm w-auto">
                                                             <input type="number"
-                                                                   class="form-control text-end co-order-percentage"
+                                                                   class="form-control text-end co-order-percentage gl-pct-input"
                                                                    data-coid="@orderGroup.Key.ChangeOrderId"
                                                                    data-clientaccountid="@item.Client.Id"
                                                                    data-max="@maxPercentage.ToString(CultureInfo.InvariantCulture)"
@@ -275,8 +255,7 @@
                                                                    min="0"
                                                                    max="@maxPercentage.ToString(CultureInfo.InvariantCulture)"
                                                                    step="0.01"
-                                                                   value="@maxPercentage.ToString(CultureInfo.InvariantCulture)"
-                                                                   style="width:100px;" />
+                                                                   value="@maxPercentage.ToString(CultureInfo.InvariantCulture)" />
                                                             <span class="input-group-text">
                                                                 <i class="fa fa-percentage"></i>
                                                             </span>
@@ -346,8 +325,8 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Klant</th>
-                                        <th class="text-end" style="white-space:nowrap;">Bedrag</th>
-                                        <th class="text-end" style="white-space:nowrap;">Factuur opmaken</th>
+                                        <th class="text-end text-nowrap">Bedrag</th>
+                                        <th class="text-end text-nowrap">Factuur opmaken</th>
                                     </tr>
                                 </thead>
                                 <tbody>

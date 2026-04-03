@@ -1,0 +1,79 @@
+/* ============================================================
+   Instellingen – custom styles
+   Gebruik uitsluitend gl-* class namen voor project-specifieke stijlen.
+   Bootstrap/Porto classes worden hier NIET overschreven.
+   ============================================================ */
+
+/* --- Pagina-opvulling onderaan (action-buttons-fixed) --- */
+.gl-body-padding {
+    padding-bottom: 80px;
+}
+
+/* --- Tab-navigatie (activiteiten / series / ...) --- */
+.gl-settings-tab-nav {
+    background-color: #f3f5f7;
+    border-radius: 6px;
+    padding: 6px;
+    gap: 4px;
+}
+
+.gl-settings-tab-nav .nav-link {
+    color: #6c757d;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    padding: 10px 16px;
+}
+
+.gl-settings-tab-nav .nav-link.active {
+    background-color: #ffffff;
+    color: #1f2d3d;
+    border-color: #e3e6ea;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Inline-breedte voor sequentie-input --- */
+.gl-sequence-number-input {
+    width: 300px;
+}
+
+/* --- Minimumbreedte bedrijventabel --- */
+.gl-companies-table {
+    min-width: 550px;
+}
+
+/* --- FullCalendar verlofdagen-stijlen --- */
+.fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-frame,
+.fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-frame {
+    background: #999999;
+}
+
+.fc .fc-daygrid-day.fc-day-sat .fc-daygrid-day-number,
+.fc .fc-daygrid-day.fc-day-sun .fc-daygrid-day-number {
+    color: #CCCCCC;
+}
+
+/* Dagnummer op verlofdag ook wit – optie A: :has() */
+.fc .fc-daygrid-day:has(.fc-bg-event) .fc-daygrid-day-number {
+    color: #CCCCCC;
+}
+
+/* Optie B: fallback via JS-class .has-vacation */
+.fc .fc-daygrid-day.has-vacation .fc-daygrid-day-number {
+    color: #CCCCCC;
+}
+
+/* Klikgedrag uit voor weekendcellen */
+.fc .fc-daygrid-day.fc-day-sat,
+.fc .fc-daygrid-day.fc-day-sun {
+    pointer-events: none;
+}
+
+.fc .fc-daygrid-event {
+    border-radius: 6px;
+    padding: 0 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+

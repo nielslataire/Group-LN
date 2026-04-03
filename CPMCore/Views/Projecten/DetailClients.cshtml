@@ -26,48 +26,7 @@
     <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
-    <style>
-        div.dt-buttons .btn.buttons-colvis::after {
-            font-family: "Font Awesome 6 Free";
-            content: "\f078"; /* Unicode voor fa-chevron-down */
-            font-weight: 900; /* Voor solid stijl */
-            font-size: 0.85rem;
-            vertical-align: middle;
-            border: none;
-            margin-left: 0.5rem;
-            transition: transform 0.2s ease;
-        }
-
-        div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
-            transform: rotate(180deg);
-        }
-    </style>
-
-    <style>
-
-        /* Alleen deze tabel compacter maken */
-        #datatable-clients-list.dataTable > thead > tr > th,
-        #datatable-clients-list.dataTable > tbody > tr > td {
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-            line-height: 1.2 !important;
-            vertical-align: middle !important;
-        }
-
-        /* Status-dot uit Porto: geen extra hoogte laten forceren */
-        #datatable-clients-list .ecommerce-status {
-            display: inline-block;
-            margin: 0 !important;
-            line-height: 1 !important;
-            vertical-align: middle !important;
-        }
-
-        /* Optioneel: iconen-kolom iets strakker */
-        #datatable-clients-list td.actions i {
-            line-height: 1 !important;
-        }
-
-    </style>
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">

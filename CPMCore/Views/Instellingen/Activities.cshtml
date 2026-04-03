@@ -7,31 +7,8 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/css/instellingen-custom.css" />
 }
-
-<style>
-    .invoice-tab-nav {
-        background-color: #f3f5f7;
-        border-radius: 6px;
-        padding: 6px;
-        gap: 4px;
-    }
-
-        .invoice-tab-nav .nav-link {
-            color: #6c757d;
-            font-weight: 600;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            padding: 10px 16px;
-        }
-
-            .invoice-tab-nav .nav-link.active {
-                background-color: #ffffff;
-                color: #1f2d3d;
-                border-color: #e3e6ea;
-                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-            }
-</style>
 
 <div class="row">
     <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
@@ -51,16 +28,16 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<ul class="nav nav-pills invoice-tab-nav mb-4" role="tablist">
+<ul class="nav nav-pills gl-settings-tab-nav mb-4" role="tablist">
     <li class="nav-item">
-        <a class="nav-link active" href="#" data-settings-section="activiteiten">Activiteiten</a>
+        <a class="nav-link active" href="#" data-gl-settings-section="activiteiten">Activiteiten</a>
     </li>
     <li class="nav-item">
-        <a class="nav-link" href="#" data-settings-section="groepen">Activiteitgroepen</a>
+        <a class="nav-link" href="#" data-gl-settings-section="groepen">Activiteitgroepen</a>
     </li>
 </ul>
 
-<div id="activiteiten-section" class="settings-section">
+<div id="activiteiten-section" class="gl-settings-section">
 
 
     <section class="card card-modern mb-4">
@@ -182,7 +159,7 @@
     </section>
 </div>
 
-<div id="groepen-section" class="settings-section d-none">
+<div id="groepen-section" class="gl-settings-section d-none">
     <section class="card card-modern mb-4">
         <div class="card-header border-0 pb-0">
             <h2 class="card-title mb-0">Activiteitgroep toevoegen</h2>
@@ -267,7 +244,7 @@
     <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
     <script>
         (function () {
-            const sectionLinks = document.querySelectorAll('[data-settings-section]');
+            const sectionLinks = document.querySelectorAll('[data-gl-settings-section]');
             const sections = {
                 activiteiten: document.getElementById('activiteiten-section'),
                 groepen: document.getElementById('groepen-section')
@@ -283,7 +260,7 @@
                     sections[key].classList.remove('d-none');
                 }
 
-                const activeLink = document.querySelector(`[data-settings-section="${key}"]`);
+                const activeLink = document.querySelector(`[data-gl-settings-section="${key}"]`);
                 if (activeLink) {
                     activeLink.classList.add('active');
                 }

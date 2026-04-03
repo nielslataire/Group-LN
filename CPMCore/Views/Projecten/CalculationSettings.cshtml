@@ -28,141 +28,7 @@
     <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
     <link rel="stylesheet" href="~/css/detailmenuactionbuttons.css" />
-    <style>
-        /* Lovable/clean header vibe + jouw groen */
-        .page-header-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px
-        }
-
-        .page-title {
-            font-weight: 700;
-            font-size: 28px
-        }
-
-        .card {
-            background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 14px;
-            box-shadow: 0 1px 2px rgba(0,0,0,.04);
-            margin-bottom: 16px
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 14px 16px;
-            border-bottom: 1px solid #eef2f4
-        }
-
-        .card-body {
-            padding: 16px
-        }
-
-        .group-row {
-            background: #f8fafb;
-            font-weight: 600
-        }
-
-        .group-total {
-            font-weight: 700
-        }
-
-        .total-badge {
-            background: #01532d;
-            color: #fff;
-            border-radius: 10px;
-            padding: 4px 10px;
-            font-weight: 700
-        }
-
-        .btn-primary {
-            background: #01532d;
-            border-color: #01532d
-        }
-
-            .btn-primary:hover {
-                filter: brightness(0.95)
-            }
-
-        .currency-input {
-            max-width: 220px
-        }
-
-        .icon-link {
-            cursor: pointer
-        }
-        /* Select2 netjes in input-group */
-        .input-group .select2-container {
-            flex: 1 1 auto; /* meerekken */
-            width: 1% !important; /* override inline width:100% van select2 */
-            min-width: 0; /* voorkomen dat hij duwt */
-        }
-
-            .input-group .select2-container .select2-selection {
-                border-top-left-radius: 0;
-                border-bottom-left-radius: 0; /* na het icon */
-                min-height: calc(2.25rem + 2px); /* match form-control hoogte */
-                display: flex;
-                align-items: center;
-                padding-top: .375rem;
-                padding-bottom: .375rem;
-            }
-
-        .input-group .select2-selection--multiple .select2-search__field {
-            margin-top: 0.2rem; /* kleine correctie meerdere tags */
-        }
-
-        #colvis-container {
-            display: flex;
-            align-items: stretch;
-        }
-
-            #colvis-container .btn {
-                border-top-left-radius: 0;
-                border-bottom-left-radius: 0; /* na de select */
-                white-space: nowrap;
-            }
-        /* Tabel lay-out: 40% | 60% | klein */
-        .table-budget {
-            table-layout: fixed;
-        }
-            /* respecteert colgroup */
-            .table-budget .col-desc {
-                width: 40%;
-            }
-
-            .table-budget .col-amount {
-                width: 55%;
-            }
-
-            .table-budget .col-actions {
-                width: 5%;
-                white-space: nowrap;
-            }
-        /* zo klein als kan */
-
-        /* Grotere, full-width bedrag-input */
-        .currency-input {
-            width: 100% !important;
-            max-width: none;
-        }
-
-        /* Zorg dat inputs in tabellen niet krimpen tot 0 bij table-layout: fixed */
-        .table-budget td .form-control {
-            min-width: 0;
-        }
-
-        .table-budget > tbody > tr:last-child > td,
-        .table-budget > tbody > tr:last-child > th {
-            border-bottom: 0 !important;
-        }
-
-
-    </style>
+    <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -264,11 +130,11 @@
                                     <div class="card-body">
                                         <h3 class="font-weight-semibold mb-3">@g.Name</h3>
                                         <div class="table-responsive">
-                                            <table class="table table-sm align-middle mb-0 table-budget">
+                                            <table class="table table-sm align-middle mb-0 gl-table-budget">
                                                 <colgroup>
-                                                    <col class="col-desc" />
-                                                    <col class="col-amount" />
-                                                    <col class="col-actions" />
+                                                    <col class="gl-col-desc" />
+                                                    <col class="gl-col-amount" />
+                                                    <col class="gl-col-actions" />
                                                 </colgroup>
                                                 <thead>
                                                     <tr class="text-muted">
@@ -308,7 +174,7 @@
                     {
                         <div class="card card-modern mb-4">
                             <div class="card-body align-items-center text-center card-big-info">
-                                <div class="col-12 mb-3" style="font-size:83.2px; font-weight:400;color:#e7e7e7;">
+                                <div class="col-12 mb-3 gl-empty-state-icon">
                                     <i class="bx bx-file"></i>
 
                                 </div>

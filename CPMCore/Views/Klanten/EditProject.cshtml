@@ -15,80 +15,7 @@
 	<link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
 	<link rel="stylesheet" href="~/lib/dropzone/basic.css" />
 	<link rel="stylesheet" href="~/lib/dropzone/dropzone.css" />
-	<style>
-		/* Algemeen container padding en achtergrond */
-		.tabs .nav-tabs {
-			background-color: #e0e0e0; /* middelgrijs */
-			padding: 10px 15px;
-			border: none;
-			border-radius: 0;
-			color: #333;
-		}
-
-			/* Verwijder default border en accentkleur */
-			.tabs .nav-tabs .nav-link {
-				border: none;
-				color: #333;
-				background-color: transparent;
-				font-weight: 500;
-				padding: 12px 20px;
-				margin-bottom: 0;
-				border-radius: 0;
-				transition: background-color 0.2s ease-in-out;
-			}
-
-				/* Hover effect zonder accentkleur */
-				.tabs .nav-tabs .nav-link:hover {
-					background-color: #d0d0d0; /* iets donkerder grijs */
-					color: #333; /* iets donkerder tekstkleur */
-					border-top: 0
-				}
-
-				/* Actieve tab */
-				.tabs .nav-tabs .nav-link.active {
-					background-color: #f9f9f9; /* lichtgrijs */
-					color: #111; /* bijna zwart */
-					border: none;
-					border-bottom: 0px solid transparent; /* verwijder border */
-				}
-
-				/* Focus outline uitschakelen voor cleaner UI */
-				.tabs .nav-tabs .nav-link:focus {
-					box-shadow: none;
-					outline: none;
-				}
-
-		/* Tab pane zonder achtergrond indien nodig */
-		.tabs .tab-content {
-			background-color: transparent;
-			padding-top: 15px;
-		}
-
-		.tabs .nav-tabs .nav-link.active {
-			border-color: transparent !important;
-		}
-
-		/* Overschrijf Porto's groene kleur */
-		html body .tabs .nav-tabs .nav-link,
-		html.dark body .tabs .nav-tabs .nav-link,
-		html body .tabs .nav-tabs .nav-link:hover,
-		html.dark body .tabs .nav-tabs .nav-link:hover {
-			color: #555 !important; /* donkergrijs voor niet-actieve tabs */
-		}
-
-			/* Actieve tab donkerder maken */
-			html body .tabs .nav-tabs .nav-link.active,
-			html.dark body .tabs .nav-tabs .nav-link.active {
-				color: #111 !important; /* bijna zwart */
-				background-color: #f5f5f5 !important;
-				border-color: transparent !important;
-			}
-
-			/* Hover effect grijs maken */
-			html body .tabs .nav-tabs .nav-link:hover {
-				background-color: #e0e0e0 !important;
-			}
-	</style>
+	<link rel="stylesheet" href="~/css/klanten-custom.css" />
 }
 
 
@@ -115,7 +42,7 @@
 	@Html.HiddenFor(m => m.Client.Id)
 	@Html.HiddenFor(m => m.Client.OwnerPercentage)
 	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
-	<div class="tabs mt-4 border-0">
+	<div class="tabs gl-tabs mt-4 border-0">
 		<ul class="nav nav-tabs nav-justified" role="tablist">
 			<li class="nav-item" role="presentation">
 				<a class="nav-link active" data-bs-toggle="tab" href="#algemeen" role="tab" aria-selected="true">
@@ -151,7 +78,7 @@
 			</li>
 		</ul>
 
-		<div class="tab-content bg-transparent mt-4 p-0" style="box-shadow: none;">
+		<div class="tab-content bg-transparent mt-4 p-0 gl-no-shadow">
 			<!-- ALGEMEEN -->
 			<div id="algemeen" class="tab-pane show active" role="tabpanel">
 				<section class="card card-modern card-big-info">
