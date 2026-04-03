@@ -384,7 +384,7 @@ app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
     // Exacte case-sensitive vergelijking: /Portaal (het echte portaal) wordt NIET gematcht
-    if (path is "/aannemer" or "/portaal" or "/Aannemer")
+    if (path is "/aannemer" or "/portaal" or "/Aannemer" or "/Portaal")
     {
         ctx.Request.Path        = "/Account/Login";
         ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Portaal");
