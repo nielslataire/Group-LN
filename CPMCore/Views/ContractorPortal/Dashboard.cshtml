@@ -74,7 +74,7 @@
         <div class="gl-cp-card">
             <div class="gl-cp-card-header">
                 <h2 class="gl-cp-card-title"><i class="bx bx-buildings"></i> Actieve werven</h2>
-                <a href="/Portaal/Werven" class="gl-cp-card-link">Bekijk alle <i class="bx bx-chevron-right"></i></a>
+                <a href="/Werfportaal/Werven" class="gl-cp-card-link">Bekijk alle <i class="bx bx-chevron-right"></i></a>
             </div>
             <div class="gl-cp-card-body">
                 @if (!Model.ActiveProjects.Any())
@@ -85,7 +85,7 @@
                 {
                     @foreach (var p in Model.ActiveProjects)
                     {
-                        <a href="/Portaal/Werven/@p.ProjectId" class="gl-cp-proj-row">
+                        <a href="/Werfportaal/Werven/@p.ProjectId" class="gl-cp-proj-row">
                             <div class="gl-cp-proj-icon"><i class="bx bx-building-house"></i></div>
                             <div class="gl-cp-proj-info">
                                 <div class="gl-cp-proj-name">@p.Name</div>
@@ -147,7 +147,7 @@
                             ? $"{issue.ProjectName} · {issue.UnitName}"
                             : issue.ProjectName;
                         var dateLabel = issue.CreatedDate.ToString("d MMM", new System.Globalization.CultureInfo("nl-BE"));
-                        <a href="/Portaal/Werven/@issue.ProjectId" class="gl-cp-comm-row">
+                        <a href="/Werfportaal/Werven/@issue.ProjectId" class="gl-cp-comm-row">
                             <div class="gl-cp-comm-dot @dotClass" title="@dotTitle"></div>
                             <div class="flex-1 min-width-0">
                                 <div class="gl-cp-comm-title">@issue.Title</div>

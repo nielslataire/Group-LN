@@ -115,7 +115,6 @@
                 dt.rows({ order: 'applied' }).nodes().each(function (row) {
                     current.push($(row).find('td:eq(2)').text()); // omschrijving
                 });
-                console.log('[TEST] nieuwe volgorde:', current);
             });
 
             // sanity: ook na tekenen/ordenen hernummeren

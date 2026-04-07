@@ -27,7 +27,7 @@
 
     <!-- ── Navigation ──────────────────────────────────────── -->
     <nav class="gl-cp-nav">
-        <a href="/Portaal" class="gl-cp-nav-brand">
+        <a href="/Werfportaal" class="gl-cp-nav-brand">
             <img src="~/img/logo.png" alt="Group LN" class="gl-cp-nav-logo-img" />
             <div class="gl-cp-nav-brand-text">
                 <div class="gl-cp-nav-brand-name">GROUP LN</div>
@@ -37,11 +37,11 @@
 
         <div class="gl-cp-nav-center" id="cpNavCenter">
             <div class="gl-cp-nav-links" id="cpNavLinks">
-                <a href="/Portaal/Dashboard"
+                <a href="/Werfportaal/Dashboard"
                    class="gl-cp-nav-link @(activeCtrl == "Dashboard" ? "active" : "")">
                     <i class="bx bx-grid-alt"></i> Dashboard
                 </a>
-                <a href="/Portaal/Werven"
+                <a href="/Werfportaal/Werven"
                    class="gl-cp-nav-link @(activeCtrl is "Werven" or "WerfDetail" ? "active" : "")">
                     <i class="bx bx-buildings"></i> Werven
                 </a>
@@ -84,6 +84,6 @@
 <script src="~/lib/jquery/jquery.js"></script>
 <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/contractor-portal.js"></script>
-@RenderSection("PageScript", required: false)
+@RenderSection("PageScripts", required: false)
 </body>
 </html>

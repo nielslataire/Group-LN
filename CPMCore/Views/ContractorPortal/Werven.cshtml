@@ -11,7 +11,7 @@
 </div>
 
 <!-- ── Filter bar ────────────────────────────────────────── -->
-<form method="get" action="/Portaal/Werven" class="gl-cp-filter-bar">
+<form method="get" action="/Werfportaal/Werven" class="gl-cp-filter-bar">
     <div class="gl-cp-search-wrap">
         <i class="bx bx-search"></i>
         <input type="text" name="search" value="@Model.Search"
@@ -19,11 +19,11 @@
                autocomplete="off" />
     </div>
     <div class="gl-cp-filter-btns">
-        <a href="/Portaal/Werven?filter=alle@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
+        <a href="/Werfportaal/Werven?filter=alle@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
            class="gl-cp-filter-btn @(Model.Filter == "alle" ? "active" : "")">Alle</a>
-        <a href="/Portaal/Werven?filter=actief@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
+        <a href="/Werfportaal/Werven?filter=actief@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
            class="gl-cp-filter-btn @(Model.Filter == "actief" ? "active" : "")">Actief</a>
-        <a href="/Portaal/Werven?filter=afgerond@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
+        <a href="/Werfportaal/Werven?filter=afgerond@(!string.IsNullOrWhiteSpace(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search ?? "")}" : "")"
            class="gl-cp-filter-btn @(Model.Filter == "afgerond" ? "active" : "")">Afgerond</a>
     </div>
 </form>
@@ -41,7 +41,7 @@ else
     <div class="gl-cp-werven-grid">
         @foreach (var p in Model.Projects)
         {
-            <a href="/Portaal/Werven/@p.ProjectId" class="gl-cp-werf-card">
+            <a href="/Werfportaal/Werven/@p.ProjectId" class="gl-cp-werf-card">
                 <div class="gl-cp-werf-card-header">
                     <div>
                         <div class="gl-cp-werf-card-name">@p.Name</div>
@@ -97,7 +97,7 @@ else
     </div>
 }
 
-@section PageScript {
+@section PageScripts {
 <script>
     // Live search filter
     var searchInput = document.querySelector('.gl-cp-search-input');

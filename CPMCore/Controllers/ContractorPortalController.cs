@@ -12,7 +12,7 @@ using System.Net.Http.Headers;
 namespace CPMCore.Controllers;
 
 [Authorize]
-[Route("Portaal")]
+[Route("Werfportaal")]
 public class ContractorPortalController : BaseController
 {
     private readonly cpmRunningContext _db;
@@ -295,13 +295,13 @@ public class ContractorPortalController : BaseController
                 {
                     var unit = planUnits.FirstOrDefault(u => u.Id == i.UnitId.Value);
                     if (!string.IsNullOrWhiteSpace(unit?.Plan))
-                        planUrl = $"/Portaal/PlanImage?fileId={Uri.EscapeDataString(unit.Plan)}";
+                        planUrl = $"/Werfportaal/PlanImage?fileId={Uri.EscapeDataString(unit.Plan)}";
                 }
                 else
                 {
                     var ep = execPlans.FirstOrDefault(p => p.Id == i.PlanDocumentId.Value);
                     if (!string.IsNullOrWhiteSpace(ep?.FileId))
-                        planUrl = $"/Portaal/PlanImage?fileId={Uri.EscapeDataString(ep.FileId)}";
+                        planUrl = $"/Werfportaal/PlanImage?fileId={Uri.EscapeDataString(ep.FileId)}";
                 }
             }
 

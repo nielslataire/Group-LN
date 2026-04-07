@@ -29,9 +29,10 @@ public class AccountController : BaseController
             "customer"   => LoginType.Customer,
             _            => LoginType.Internal
         };
+        var safeReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Content("~");
         return View(new EntraLoginViewModel
         {
-            ReturnUrl = string.IsNullOrWhiteSpace(returnUrl) ? Url.Content("~") : returnUrl,
+            ReturnUrl = safeReturnUrl,
             Type = loginType
         });
     }
@@ -40,7 +41,7 @@ public class AccountController : BaseController
     [HttpGet]
     public IActionResult SignIn(string? returnUrl = null)
     {
-        var redirectUrl = string.IsNullOrWhiteSpace(returnUrl) ? Url.Content("~") : returnUrl;
+        var redirectUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Content("~");
         var properties = new AuthenticationProperties { RedirectUri = redirectUrl };
 
         return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
@@ -64,7 +65,7 @@ public class AccountController : BaseController
     public IActionResult AccessDenied()
     {
         if (User.Identity?.IsAuthenticated == true && User.IsContractor())
-            return Redirect("/Portaal");
+            return Redirect("/Werfportaal");
         return View();
     }
 

@@ -126,7 +126,7 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
                 .Select(i => new { i.UserType })
                 .FirstOrDefaultAsync(ct);
             if (inv?.UserType == "contractor")
-                loginPath = "/Portaal";
+                loginPath = "/Werfportaal";
         }
 
         var (redeemUrl, objectId, graphError) = await CallGraphInviteAsync(user.Email, appBaseUrl, loginPath, ct);

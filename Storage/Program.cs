@@ -22,6 +22,23 @@ builder.Services.Configure<FormOptions>(options =>
     options.MultipartBodyLengthLimit = 20 * 1024 * 1024;
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+                "https://groupln.be",
+                "https://www.groupln.be",
+                "https://cpm.groupln.be",
+                "https://bouwenconstructie.be",
+                "https://www.bouwenconstructie.be",
+                "https://home-estate.be",
+                "https://www.home-estate.be")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var app = builder.Build();
 var logger = app.Logger;
 
@@ -63,6 +80,7 @@ app.UseExceptionHandler(handler =>
 });
 
 app.UseHttpsRedirection();
+app.UseCors();
 
 app.UseStaticFiles(new StaticFileOptions
 {

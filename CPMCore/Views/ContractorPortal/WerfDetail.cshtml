@@ -8,7 +8,7 @@
 }
 
 <!-- ── Back + header ──────────────────────────────────────── -->
-<a href="/Portaal/Werven" class="gl-cp-detail-back">
+<a href="/Werfportaal/Werven" class="gl-cp-detail-back">
     <i class="bx bx-arrow-back"></i> Mijn Werven
 </a>
 <h1 class="gl-cp-detail-title">@Model.Name</h1>
@@ -305,7 +305,7 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 <input type="hidden" id="cpAft" value="@Antiforgery.GetAndStoreTokens(Context).RequestToken" />
 
-@section PageScript {
+@section PageScripts {
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>
     var antiforgeryToken = document.getElementById('cpAft')?.value ?? '';
@@ -411,7 +411,7 @@
             var formData = new FormData();
             formData.append('file', files[i]);
             try {
-                var uploadResp = await fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/UploadPhoto', {
+                var uploadResp = await fetch('/Werfportaal/Werven/' + projectId + '/Issues/' + issueId + '/UploadPhoto', {
                     method: 'POST',
                     headers: { 'RequestVerificationToken': antiforgeryToken },
                     body: formData
@@ -433,7 +433,7 @@
 
         // Send comment with all photo URLs
         try {
-            var resp = await fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/Comment', {
+            var resp = await fetch('/Werfportaal/Werven/' + projectId + '/Issues/' + issueId + '/Comment', {
                 method: 'POST',
                 headers: { 'RequestVerificationToken': antiforgeryToken, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ comment: text, photoUrls: uploadedUrls })
@@ -489,7 +489,7 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Bezig…';
 
-        fetch('/Portaal/Werven/' + projectId + '/Issues/' + issueId + '/Resolve', {
+        fetch('/Werfportaal/Werven/' + projectId + '/Issues/' + issueId + '/Resolve', {
             method: 'POST',
             headers: { 'RequestVerificationToken': antiforgeryToken, 'Content-Type': 'application/json' }
         })

@@ -35,7 +35,7 @@ public class PermissionConventionFilter : IAsyncAuthorizationFilter
             var isAllowed = string.Equals(ctrl, "ContractorPortal", StringComparison.OrdinalIgnoreCase)
                          || string.Equals(ctrl, "Account", StringComparison.OrdinalIgnoreCase);
             if (!isAllowed)
-                context.Result = new RedirectResult("/Portaal");
+                context.Result = new RedirectResult("/Werfportaal");
             return;
         }
         if (userType == "customer")

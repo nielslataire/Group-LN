@@ -1,12 +1,11 @@
-﻿; (() => {
+; (() => {
     function colReport() {
         const $tbl = $('#freeLinesTable');
         const headCols = $tbl.find('thead th').length;
         const bodyCols = $tbl.find('tbody tr:first td').length;
-        console.log('[DEBUG] thead cols =', headCols, 'tbody cols =', bodyCols);
         if (headCols !== bodyCols) {
             console.warn('%cKolom mismatch!', 'color:red;font-weight:bold');
-        } else { console.log('%cKolomtelling OK', 'color:green;font-weight:bold'); }
+        }
     }
     function dumpOrder() {
         const rows = [];
@@ -16,16 +15,14 @@
                 text: ($(this).find('.js-fl-text').val() || '').trim()
             });
         });
-        console.table(rows);
     }
     function hookEvents() {
         const $tbl = $('#freeLinesTable');
         $tbl.on('row-reorder.dt', function (e, diff, edit) {
-            console.log('[DEBUG] row-reorder fired. diff:', diff, 'edit:', edit);
             dumpOrder();
         });
         $tbl.on('draw.dt order.dt', function () {
-            console.log('[DEBUG] draw/order event'); dumpOrder();
+            dumpOrder();
         });
     }
     window.CPM = window.CPM || {};

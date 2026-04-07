@@ -379,15 +379,15 @@ var localizationOptions = new RequestLocalizationOptions
 app.UseRequestLocalization(localizationOptions);
 
 // ── PORTAAL-SHORTCUTS: path rewrite vóór routing zodat de browser-URL clean blijft ──
-// Bezoekers zien /portaal of /aannemer in de adresbalk, niet Account/Login?...
+// Bezoekers zien /werfportaal of /aannemer in de adresbalk, niet Account/Login?...
 app.Use(async (ctx, next) =>
 {
     var path = ctx.Request.Path.Value ?? "";
-    // Exacte case-sensitive vergelijking: /Portaal (het echte portaal) wordt NIET gematcht
-    if (path is "/aannemer" or "/portaal" or "/Aannemer" or "/Portaal")
+    // Alle varianten van de shortcut-paden → contractor login; /Werfportaal (het echte portaal) wordt ook gematcht
+    if (path is "/aannemer" or "/Aannemer" or "/portaal" or "/Portaal" or "/werfportaal" or "/Werfportaal")
     {
         ctx.Request.Path        = "/Account/Login";
-        ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Portaal");
+        ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Werfportaal");
     }
     else if (path is "/klantenportaal" or "/Klantenportaal")
     {
