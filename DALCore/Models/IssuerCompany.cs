@@ -117,6 +117,8 @@ public partial class IssuerCompany
 
     public string EmailPaidBodyTemplate { get; set; }
 
+    public decimal? RatePerKm { get; set; }
+
     public virtual ICollection<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; } = new List<ClientAccountIssuerCompany>();
 
     public virtual ICollection<ClientContactIssuerCompany> ClientContactIssuerCompany { get; set; } = new List<ClientContactIssuerCompany>();
@@ -135,9 +137,13 @@ public partial class IssuerCompany
 
     public virtual IssuerBankAccount IssuerBankAccount { get; set; }
 
+    public virtual ICollection<IssuerCompanyUserRate> IssuerCompanyUserRate { get; set; } = new List<IssuerCompanyUserRate>();
+
     public virtual ICollection<OctopusBookyears> OctopusBookyears { get; set; } = new List<OctopusBookyears>();
 
     public virtual ICollection<PaymentTerms> PaymentTerms { get; set; } = new List<PaymentTerms>();
+
+    public virtual ICollection<Project> ProjectCoordinationIssuerCompany { get; set; } = new List<Project>();
 
     public virtual ICollection<Project> ProjectIssuerCompanyIdBuilderNavigation { get; set; } = new List<Project>();
 

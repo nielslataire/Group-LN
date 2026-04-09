@@ -288,6 +288,15 @@ Public Class UnitBO
             _paymentgroupid = value
         End Set
     End Property
+    Private _isoption As Boolean
+    Public Property IsOption() As Boolean
+        Get
+            Return _isoption
+        End Get
+        Set(ByVal value As Boolean)
+            _isoption = value
+        End Set
+    End Property
     Private _constructionvalues As List(Of UnitConstructionValueBO)
 
     Public Property ConstructionValues() As List(Of UnitConstructionValueBO)

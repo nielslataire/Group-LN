@@ -39,9 +39,13 @@ public partial class Users
 
     public int? DashboardType { get; set; }
 
+    public virtual ICollection<IssuerCompanyUserRate> IssuerCompanyUserRate { get; set; } = new List<IssuerCompanyUserRate>();
+
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
+
+    public virtual ICollection<ProjectHourlyRate> ProjectHourlyRate { get; set; } = new List<ProjectHourlyRate>();
 
     public virtual ICollection<ProjectUserAccess> ProjectUserAccess { get; set; } = new List<ProjectUserAccess>();
 

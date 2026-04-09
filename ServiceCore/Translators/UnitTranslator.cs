@@ -29,6 +29,7 @@ namespace ServiceCore.Translators
             bo.BusNumber = _entity.Busnumber;
             bo.PreKad = _entity.PreKad;
             bo.IsLink = _entity.IsLink;
+            bo.IsOption = _entity.IsOption;
             bo.Plan = _entity.Plan;
             if (_entity.Surface is not null)
                 bo.Surface = _entity.Surface;
@@ -94,6 +95,7 @@ namespace ServiceCore.Translators
             _entity.ConstructionValue = bo.ConstructionValue;
             _entity.LandValue = bo.LandValue;
             _entity.IsLink = bo.IsLink;
+            _entity.IsOption = bo.IsOption;
             _entity.Surface = bo.Surface;
             _entity.GroundSurface = bo.GroundSurface;
             _entity.Level = bo.Level;

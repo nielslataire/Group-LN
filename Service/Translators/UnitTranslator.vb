@@ -26,6 +26,7 @@ Public Class UnitTranslator
         If Not _entity.AttachedUnit_attachedunit Is Nothing Then bo.AttachedUnitsId = _entity.AttachedUnit_attachedunit.Id
         If Not _entity.InvoicingPaymentGroup Is Nothing Then bo.PaymentGroupId = _entity.InvoicingPaymentGroup.Id
         If Not _entity.Landshare Is Nothing Then bo.Landshare = _entity.Landshare
+        bo.IsOption = _entity.IsOption
         If (_entity.UnitTypes IsNot Nothing) Then
             Dim UnitType As New UnitTypeBO
             Dim err = UnitTypeTranslator.TranslateEntityToBO(_entity.UnitTypes, UnitType)

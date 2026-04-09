@@ -311,6 +311,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[IssuerCompanyUserRate]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[OctopusBookyearPeriods]",
          "ObjectType": 0
       },
@@ -367,7 +371,15 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ProjectContractSlice]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ProjectDocs]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[ProjectHourlyRate]",
          "ObjectType": 0
       },
       {

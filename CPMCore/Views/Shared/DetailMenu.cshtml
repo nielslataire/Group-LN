@@ -2,6 +2,7 @@
 @using FacadeCore
 @using BOCore
 @inject IPermissionService PermissionService
+@inject IProjectService ProjectService
 
 <div class="inner-menu-toggle">
     <a href="#" class="inner-menu-expand" data-open="inner-menu">
@@ -28,6 +29,8 @@
 					var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
 					var projectId = Model;
 					await PermissionService.EnsureLoadedAsync();
+					var _proj = ProjectService.GetProjectByID(projectId);
+					var isCoordinationProject = _proj.Success && _proj.Value?.IsCoordinationProject == true;
 					var canSeeDetail       = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 					var canSeeClients      = PermissionService.HasRead(PermissionCodes.ProjectsCustomers);
 					var canSeeSuppliers    = PermissionService.HasRead(PermissionCodes.ProjectsSuppliers);
@@ -42,11 +45,15 @@
 					var canSeeChangeOrders = PermissionService.HasRead(PermissionCodes.ProjectsChangeOrders);
 					var canSeeForSale      = PermissionService.HasRead(PermissionCodes.ProjectsForSale);
 					var canSeeContacts     = PermissionService.HasRead(PermissionCodes.ProjectsContacts);
-					var showAlgemeen    = canSeeDetail || canSeeClients || canSeeSuppliers;
-					var showDetails     = canSeePhotos || canSeeNews || canSeeUnits;
-					var showOpvolging   = canSeeIssues || canSeeDocs || canSeeInsurances;
-					var showFinancieel  = canSeeInvoicing || canSeePostCalc || canSeeChangeOrders;
-					var showVerkoop     = canSeeForSale || canSeeContacts;
+					// Zuiver coördinatieproject: foto's, nieuws en contacten niet tonen
+					var showPhotos    = canSeePhotos    && !isCoordinationProject;
+					var showNews      = canSeeNews      && !isCoordinationProject;
+					var showContacts  = canSeeContacts  && !isCoordinationProject;
+					var showAlgemeen  = canSeeDetail || canSeeClients || canSeeSuppliers;
+					var showDetails   = showPhotos || showNews || canSeeUnits;
+					var showOpvolging = canSeeIssues || canSeeDocs || canSeeInsurances || true;
+					var showFinancieel = canSeeInvoicing || canSeePostCalc || canSeeChangeOrders;
+					var showVerkoop   = canSeeForSale || showContacts;
 				}
 				@if (showAlgemeen)
 				{
@@ -86,7 +93,7 @@
 				{
 					<h6 class="title">DETAILS</h6>
 					<ul class="list-unstyled mt-3 pt-3">
-						@if (canSeePhotos)
+						@if (showPhotos)
 						{
 							<li>
 								<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
@@ -95,7 +102,7 @@
 								</a>
 							</li>
 						}
-						@if (canSeeNews)
+						@if (showNews)
 						{
 							<li>
 								<a href="@Url.Action("DetailNews", "Projecten", new { projectid = projectId })"
@@ -147,6 +154,12 @@
 								</a>
 							</li>
 						}
+						<li>
+							<a href="@Url.Action("DetailCoordinatie", "Projecten", new { projectid = projectId })"
+							   class="menu-item @(currentAction == "DetailCoordinatie" && currentController == "Projecten" ? "active" : "")">
+								Coördinatie
+							</a>
+						</li>
 					</ul>
 				}
 
@@ -197,7 +210,7 @@
 								</a>
 							</li>
 						}
-						@if (canSeeContacts)
+						@if (showContacts)
 						{
 							<li>
 								<a href="@Url.Action("DetailContacts", "Projecten", new { projectid = projectId })"

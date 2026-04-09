@@ -1,0 +1,30 @@
+@model CPMCore.Models.Projecten.ProjectContractSliceVM
+@using HtmlHelpers.BeginCollectionItemCore
+<div class="row slice-row align-items-center pb-2">
+    @using (Html.BeginCollectionItem("ContractSlices"))
+    {
+        @Html.HiddenFor(m => m.Id)
+        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Schijf</label>
+        <div class="col-lg-4 col-xl-5">
+            @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern form-control-sm", placeholder = "Omschrijving" })
+        </div>
+        <div class="col-lg-1 col-xl-1">
+            <div class="input-group input-group-sm">
+                @Html.TextBoxFor(m => m.Percentage, new
+                {
+                    @class = "form-control form-control-modern form-control-sm slice-pct",
+                    type = "number",
+                    step = "0.01",
+                    min = "0.01",
+                    max = "100",
+                    placeholder = "%",
+                    value = Model.Percentage > 0 ? Model.Percentage.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : ""
+                })
+                <span class="input-group-text text-sm">%</span>
+            </div>
+        </div>
+        <div class="col-lg-1">
+            <button type="button" class="btn btn-sm remove-slice"><i class="bx bx-x"></i></button>
+        </div>
+    }
+</div>

@@ -11,6 +11,7 @@ using DALCore.Models;
 using ServiceCore.Translators;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using ServiceCore.Helpers;
 //using System.Data.Entity;
 
 namespace ServiceCore
@@ -18,10 +19,12 @@ namespace ServiceCore
     public class ProjectService : IProjectService
     {
         private readonly UnitOfWorkCore _uow;
+        private readonly IRouteService _routeService;
 
-        public ProjectService(UnitOfWorkCore uow)
+        public ProjectService(UnitOfWorkCore uow, IRouteService routeService)
         {
-            _uow = uow;
+            _uow          = uow;
+            _routeService = routeService;
         }
 
         public GetResponse<ProjectBO> GetProjectByID(int id)
@@ -2708,6 +2711,134 @@ namespace ServiceCore
             var result = _uow.SaveChanges();
             response.AddSaveChangesResult(result, "IDs gekopieerd", "IDs niet gekopieerd");
             return response;
+        }
+
+        // ── Coordinatieproject: contract schijven ─────────────────────────────
+
+        public GetResponse<ProjectContractSliceBO> GetContractSlices(int projectId)
+        {
+            var response = new GetResponse<ProjectContractSliceBO>();
+            var slices = _uow.ProjectContractSlices.GetNoTracking()
+                .Where(s => s.ProjectId == projectId)
+                .OrderBy(s => s.SortOrder)
+                .ThenBy(s => s.Id)
+                .ToList();
+
+            foreach (var s in slices)
+            {
+                response.AddValue(new ProjectContractSliceBO
+                {
+                    Id = s.Id,
+                    ProjectId = s.ProjectId,
+                    Description = s.Description,
+                    Percentage = s.Percentage,
+                    SortOrder = s.SortOrder
+                });
+            }
+            return response;
+        }
+
+        public Response SaveContractSlices(int projectId, List<ProjectContractSliceBO> slices)
+        {
+            var response = new Response();
+
+            // Verwijder bestaande schijven voor dit project
+            var existing = _uow.ProjectContractSlices.GetNormal()
+                .Where(s => s.ProjectId == projectId)
+                .ToList();
+            foreach (var e in existing)
+                _uow.ProjectContractSlices.DeleteObject(e);
+
+            // Voeg nieuwe schijven toe
+            int order = 0;
+            foreach (var bo in slices)
+            {
+                var entity = new ProjectContractSlice
+                {
+                    ProjectId = projectId,
+                    Description = bo.Description,
+                    Percentage = bo.Percentage,
+                    SortOrder = order++
+                };
+                _uow.ProjectContractSlices.Add(entity);
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Schijven opgeslagen", "Schijven niet opgeslagen");
+            return response;
+        }
+
+        // ── Coordinatieproject: uurtarieven regie ─────────────────────────────
+
+        public GetResponse<ProjectHourlyRateBO> GetProjectHourlyRates(int projectId)
+        {
+            var response = new GetResponse<ProjectHourlyRateBO>();
+            var rates = _uow.ProjectHourlyRates.GetNoTracking()
+                .Where(r => r.ProjectId == projectId)
+                .Include(r => r.User)
+                .ToList();
+
+            foreach (var r in rates)
+            {
+                response.AddValue(new ProjectHourlyRateBO
+                {
+                    Id = r.Id,
+                    ProjectId = r.ProjectId,
+                    UserId = r.UserId,
+                    UserFullName = r.User != null ? $"{r.User.Voornaam} {r.User.Familienaam}".Trim() : r.UserId,
+                    HourlyRate = r.HourlyRate
+                });
+            }
+            return response;
+        }
+
+        public Response SaveProjectHourlyRates(int projectId, List<ProjectHourlyRateBO> rates)
+        {
+            var response = new Response();
+
+            // Verwijder bestaande tarieven voor dit project
+            var existing = _uow.ProjectHourlyRates.GetNormal()
+                .Where(r => r.ProjectId == projectId)
+                .ToList();
+            foreach (var e in existing)
+                _uow.ProjectHourlyRates.DeleteObject(e);
+
+            // Voeg nieuwe tarieven toe
+            foreach (var bo in rates.Where(r => !string.IsNullOrWhiteSpace(r.UserId)))
+            {
+                var entity = new ProjectHourlyRate
+                {
+                    ProjectId = projectId,
+                    UserId = bo.UserId,
+                    HourlyRate = bo.HourlyRate
+                };
+                _uow.ProjectHourlyRates.Add(entity);
+            }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Uurtarieven opgeslagen", "Uurtarieven niet opgeslagen");
+            return response;
+        }
+
+        // ── Afstandsberekening ────────────────────────────────────────────────
+
+        public async Task<(decimal? distanceKm, int? durationSeconds)> CalculateRouteAsync(int issuerCompanyId, int postalCodeId)
+        {
+            var company = _uow.IssuerCompanies.GetNoTracking()
+                .FirstOrDefault(c => c.Id == issuerCompanyId);
+            if (company == null) return (null, null);
+
+            var postalCode = _uow.PostalCodes.GetNoTracking()
+                .FirstOrDefault(p => p.PostcodeId == postalCodeId);
+            if (postalCode == null) return (null, null);
+
+            var origin      = $"{company.AddressLine1}, {company.PostalCode} {company.City}, Belgium";
+            var destination = $"{postalCode.Postcode} {postalCode.Gemeente}, Belgium";
+
+            var result = await _routeService.ComputeRouteAsync(origin, destination);
+            if (result == null) return (null, null);
+
+            return (result.DistanceKm, result.DurationSeconds);
         }
 
     }

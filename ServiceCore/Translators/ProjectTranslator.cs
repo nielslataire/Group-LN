@@ -50,6 +50,15 @@ namespace ServiceCore.Translators
             bo.IssuerCompanyIdLandOwner = _entity.IssuerCompanyIdLandOwner;
             // bo.UploadToFacebook = _entity.UploadToFacebook
 
+            // Coordinatieproject
+            bo.IsCoordinationProject = _entity.IsCoordinationProject;
+            bo.CoordinationIssuerCompanyId = _entity.CoordinationIssuerCompanyId;
+            if (_entity.ContractType.HasValue)
+                bo.ContractType = (CoordinationContractType)_entity.ContractType.Value;
+            bo.ProjectDistanceKm    = _entity.ProjectDistanceKm;
+            bo.RouteDurationSeconds = _entity.RouteDurationSeconds;
+            bo.KmAllowance          = _entity.KmAllowance;
+
             // Gemeente en postcode van het project
             if ((_entity.PostalCode != null))
             {
@@ -153,6 +162,14 @@ namespace ServiceCore.Translators
             _entity.IssuerCompanyIdBuilder = bo.IssuerCompanyIdBuilder;
             _entity.IssuerCompanyIdLandOwner = bo.IssuerCompanyIdLandOwner;
             _entity.ProjectType = (int)bo.ProjectType;
+
+            // Coordinatieproject
+            _entity.IsCoordinationProject = bo.IsCoordinationProject;
+            _entity.CoordinationIssuerCompanyId = bo.IsCoordinationProject ? bo.CoordinationIssuerCompanyId : null;
+            _entity.ContractType = bo.IsCoordinationProject && bo.ContractType.HasValue ? (int?)bo.ContractType.Value : null;
+            _entity.ProjectDistanceKm    = bo.ProjectDistanceKm;
+            _entity.RouteDurationSeconds = bo.RouteDurationSeconds;
+            _entity.KmAllowance          = bo.KmAllowance;
 
 
             if ((bo.Postalcode != null && bo.Postalcode.PostcodeId != 0))

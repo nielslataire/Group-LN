@@ -104,20 +104,31 @@ public class CpmUserAccessService : ICpmUserAccessService
         // Gastuitnodiging bijwerken bij login
         await UpdateGuestInvitationOnLoginAsync(user.Id, entraObjectId, tenantId, ct);
 
-        // Bepaal user-type via gastuitnodiging
-        var guestType = await _db.UserGuestInvitation
-            .AsNoTracking()
-            .Where(i => i.UserId == user.Id)
-            .Select(i => i.UserType)
-            .FirstOrDefaultAsync(ct);
-        var userType = guestType?.ToLowerInvariant() switch
-        {
-            "contractor" => "contractor",
-            "customer"   => "customer",
-            _            => "internal"
-        };
-
         var permissions = await GetPermissionsAsync(user.Id, ct);
+
+        // Interne gebruikers hebben permissies in PermissionPerUser.
+        // Iemand met interne permissies is altijd "internal", ook als er een
+        // contractor- of customer-gastuitnodiging bestaat voor diezelfde login.
+        string userType;
+        if (permissions.Any())
+        {
+            userType = "internal";
+        }
+        else
+        {
+            // Geen interne permissies → bepaal type via gastuitnodiging
+            var guestType = await _db.UserGuestInvitation
+                .AsNoTracking()
+                .Where(i => i.UserId == user.Id)
+                .Select(i => i.UserType)
+                .FirstOrDefaultAsync(ct);
+            userType = guestType?.ToLowerInvariant() switch
+            {
+                "contractor" => "contractor",
+                "customer"   => "customer",
+                _            => "internal"
+            };
+        }
         var displayName = string.Join(' ', new[] { user.Voornaam, user.Familienaam }
             .Where(v => !string.IsNullOrWhiteSpace(v)));
 

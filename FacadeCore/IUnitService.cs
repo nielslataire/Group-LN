@@ -30,6 +30,7 @@ namespace FacadeCore
 
         GetResponse<UnitTypeBO> GetUniqueUnitTypesInProjectByProjectId(int id);
         GetResponse<UnitWithStagesBO> GetClientUnitsWithStages(int ClientAcccountId);
+        Response SetUnitIsOption(int unitId, bool isOption);
         Response InsertUpdateUnit(UnitBO bo);
         Response InsertUpdateUnitToClientAccount(UnitBO bo);
         Response DeleteUnit(List<int> ids);

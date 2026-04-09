@@ -597,6 +597,21 @@ namespace ServiceCore
             return response;
         }
 
+        public Response SetUnitIsOption(int unitId, bool isOption)
+        {
+            var response = new Response();
+            var entity = _uow.Units.GetById(unitId);
+            if (entity == null)
+            {
+                response.AddError("unit not found");
+                return response;
+            }
+            entity.IsOption = isOption;
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Status opgeslagen", "Geen wijzigingen");
+            return response;
+        }
+
         public Response InsertUpdateUnit(UnitBO bo)
         {
             var response = new Response();

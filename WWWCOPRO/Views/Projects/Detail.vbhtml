@@ -246,7 +246,7 @@ End Section
                             @If Model.Units.Where(Function(m) m.Type.Id = 1).Count > 0 Then
                                 @Code
                                     Dim aptUnits = Model.Units.Where(Function(m) m.Type.Id = 1).ToList()
-                                    Dim aptAvail = aptUnits.Where(Function(m) m.ClientAccountId = 0).ToList()
+                                    Dim aptAvail = aptUnits.Where(Function(m) m.ClientAccountId = 0 AndAlso Not m.IsOption).ToList()
                                     Dim aptMinPrice = If(aptAvail.Any(), aptAvail.Min(Function(m) m.TotalValue), 0)
                                     Dim aptMaxPrice = If(aptAvail.Any(), aptAvail.Max(Function(m) m.TotalValue), 0)
                                     Dim aptMinSurf = If(aptAvail.Any(), aptAvail.Min(Function(m) m.Surface), 0)
@@ -275,12 +275,14 @@ End Section
                                             </thead>
                                             <tbody>
                                                 @For Each unit In aptUnits
-                                                    Dim isAvailable = (unit.ClientAccountId = 0)
+                                                    Dim isInOption = unit.IsOption
+                                                    Dim isSold = (unit.ClientAccountId <> 0 AndAlso Not isInOption)
+                                                    Dim isAvailable = (Not isInOption AndAlso Not isSold)
                                                     Dim terras = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Sum(Function(i) i.Surface)
                                                     Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
                                                     Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-                                                    @<tr class="@(If(Not isAvailable, "rij-verkocht", ""))">
+                                                    @<tr class="@(If(isSold, "rij-verkocht", ""))">
                                                         <td>
                                                             <div class="lot-badge">
                                                                 <div class="lot-nr">@unit.Name</div>
@@ -305,14 +307,16 @@ End Section
                                                             End If
                                                         </td>
                                                         <td>
-                                                            @If isAvailable Then
-                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
-                                                            Else
+                                                            @If isInOption Then
+                                                                @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
+                                                            ElseIf isSold Then
                                                                 @<span class="eenheid-status-pill status-verkocht"><span class="status-dot"></span>Verkocht</span>
+                                                            Else
+                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If isAvailable Then
+                                                            @If Not isSold Then
                                                                 @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                             Else
                                                                 @<span class="prijs-verkocht">—</span>
@@ -365,7 +369,7 @@ End Section
                             @If Model.Units.Where(Function(m) m.Type.Id = 2).Count > 0 Then
                                 @Code
                                     Dim wonUnits = Model.Units.Where(Function(m) m.Type.Id = 2).ToList()
-                                    Dim wonAvail = wonUnits.Where(Function(m) m.ClientAccountId = 0).ToList()
+                                    Dim wonAvail = wonUnits.Where(Function(m) m.ClientAccountId = 0 AndAlso Not m.IsOption).ToList()
                                     Dim wonMinPrice = If(wonAvail.Any(), wonAvail.Min(Function(m) m.TotalValue), 0)
                                     Dim wonMaxPrice = If(wonAvail.Any(), wonAvail.Max(Function(m) m.TotalValue), 0)
                                     Dim wonMinSurf = If(wonAvail.Any(), wonAvail.Min(Function(m) m.Surface), 0)
@@ -394,12 +398,14 @@ End Section
                                             </thead>
                                             <tbody>
                                                 @For Each unit In wonUnits
-                                                    Dim isAvailable = (unit.ClientAccountId = 0)
+                                                    Dim isInOption = unit.IsOption
+                                                    Dim isSold = (unit.ClientAccountId <> 0 AndAlso Not isInOption)
+                                                    Dim isAvailable = (Not isInOption AndAlso Not isSold)
                                                     Dim surface = unit.Surface
                                                     Dim ground = unit.GroundSurface
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
                                                     Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-                                                    @<tr class="@(If(Not isAvailable, "rij-verkocht", ""))">
+                                                    @<tr class="@(If(isSold, "rij-verkocht", ""))">
                                                         <td>
                                                             <div class="lot-badge">
                                                                 @*<div class="lot-nr">@unit.Name</div>*@
@@ -422,14 +428,16 @@ End Section
                                                             End If
                                                         </td>
                                                         <td>
-                                                            @If isAvailable Then
-                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
-                                                            Else
+                                                            @If isInOption Then
+                                                                @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
+                                                            ElseIf isSold Then
                                                                 @<span class="eenheid-status-pill status-verkocht"><span class="status-dot"></span>Verkocht</span>
+                                                            Else
+                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If isAvailable Then
+                                                            @If Not isSold Then
                                                                 @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                             Else
                                                                 @<span class="prijs-verkocht">—</span>
@@ -487,7 +495,7 @@ End Section
                             @If Model.Units.Where(Function(m) m.Type.Id = 10).Count > 0 Then
                                 @Code
                                     Dim handUnits = Model.Units.Where(Function(m) m.Type.Id = 10).ToList()
-                                    Dim handAvail = handUnits.Where(Function(m) m.ClientAccountId = 0).ToList()
+                                    Dim handAvail = handUnits.Where(Function(m) m.ClientAccountId = 0 AndAlso Not m.IsOption).ToList()
                                     Dim handMinPrice = If(handAvail.Any(), handAvail.Min(Function(m) m.TotalValue), 0)
                                     Dim handMaxPrice = If(handAvail.Any(), handAvail.Max(Function(m) m.TotalValue), 0)
                                     Dim handMinSurf = If(handAvail.Any(), handAvail.Min(Function(m) m.Surface), 0)
@@ -510,9 +518,11 @@ End Section
                                             </thead>
                                             <tbody>
                                                 @For Each unit In handUnits
-                                                    Dim isAvailable = (unit.ClientAccountId = 0)
+                                                    Dim isInOption = unit.IsOption
+                                                    Dim isSold = (unit.ClientAccountId <> 0 AndAlso Not isInOption)
+                                                    Dim isAvailable = (Not isInOption AndAlso Not isSold)
                                                     Dim surface = unit.Surface
-                                                    @<tr class="@(If(Not isAvailable, "rij-verkocht", ""))">
+                                                    @<tr class="@(If(isSold, "rij-verkocht", ""))">
                                                         <td>
                                                             <div class="lot-badge">
                                                                 <div class="lot-nr">@unit.Name</div>
@@ -522,14 +532,16 @@ End Section
                                                         <td class="num hidden-xs">@unit.Level</td>
                                                         <td class="num hidden-xs">@(If(surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
                                                         <td>
-                                                            @If isAvailable Then
-                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
-                                                            Else
+                                                            @If isInOption Then
+                                                                @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
+                                                            ElseIf isSold Then
                                                                 @<span class="eenheid-status-pill status-verkocht"><span class="status-dot"></span>Verkocht</span>
+                                                            Else
+                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If isAvailable Then
+                                                            @If Not isSold Then
                                                                 @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                             Else
                                                                 @<span class="prijs-verkocht">—</span>

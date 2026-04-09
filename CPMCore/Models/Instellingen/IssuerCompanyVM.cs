@@ -151,6 +151,25 @@ namespace CPMCore.Models.Instellingen
         public List<VatTypeVM> VatTypes { get; set; } = new();
         public List<PaymentTermVM> PaymentTerms { get; set; } = new();
         public IReadOnlyList<InvoiceLayoutTemplateOptionVM> InvoiceTemplates { get; set; } = new List<InvoiceLayoutTemplateOptionVM>();
+
+        // Standaard tarieven voor coördinatieprojecten
+        [Display(Name = "Km-tarief verplaatsing (€/km)")]
+        public decimal? RatePerKm { get; set; }
+
+        public List<IssuerUserRateVM> UserRates { get; set; } = new();
+
+        // Beschikbare gebruikers voor tarief-koppeling (readonly, voor de dropdown)
+        public List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableUsers { get; set; } = new();
+    }
+
+    public class IssuerUserRateVM
+    {
+        public string UserId { get; set; } = "";
+        public string UserFullName { get; set; } = "";
+
+        [Display(Name = "Uurtarief (€)")]
+        [Range(0, 9999.99, ErrorMessage = "Uurtarief moet positief zijn.")]
+        public decimal HourlyRate { get; set; }
     }
 
     public class PaymentTermVM

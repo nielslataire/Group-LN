@@ -20,4 +20,5 @@ public interface IConstructionIssueService
     Task<List<ConstructionIssueNotification>> GetNotifications(int projectId, int issueId);
     Task<List<ConstructionIssueCategory>> GetCategories();
     Task<List<Units>> GetProjectUnits(int projectId);
+    Task<List<WarningBO>> GetContractorCommentMeldingen(IEnumerable<int> projectIds, int daysBack = 7);
 }

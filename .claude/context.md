@@ -6,7 +6,7 @@
 - CPMCore = ASP.NET Core MVC (UI layer: controllers + views)
 - ServiceCore = business logic
 - FacadeCore = orchestration / coordination layer
-- DALCore = Entity Framework Core models & DbContext
+- DALCore = Entity Framework Core models & DbContextals 
 - BOCore = shared business objects, enums, DTOs, helpers
 
 ## Architecture rules (VERY IMPORTANT)

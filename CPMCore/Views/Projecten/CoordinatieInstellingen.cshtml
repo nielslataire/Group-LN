@@ -1,0 +1,378 @@
+@using BOCore
+@using CPMCore.Models.Projecten
+@model CPMCore.Models.Projecten.CoordinatieInstellingenVM
+@{
+    ViewData["Title"] = "Coördinatie-instellingen – " + Model.ProjectName;
+    var projectid = Model.ProjectId;
+    var usedUserIds = Model.HourlyRates.Select(r => r.UserId).ToHashSet();
+    var availableForFirst = Model.AvailableUsers.Where(u => !usedUserIds.Contains(u.Group)).ToList();
+    var totalPct = Model.ContractSlices.Sum(s => s.Percentage);
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/css/detailmenuactionbuttons.css" />
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", projectid)
+        <div class="inner-body">
+            <form asp-action="CoordinatieInstellingen" asp-controller="Projecten" method="post"
+                  class="ecommerce-form action-buttons-fixed">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="ProjectId" />
+                <input type="hidden" asp-for="ProjectName" />
+
+                <div class="row">
+                    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                            <h1 class="font-weight-bold mb-0 mt-0">Coördinatie-instellingen</h1>
+                            <h5 class="mb-4 mt-0">Stel het contracttype, de schijven en uurtarieven in</h5>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col">
+                        <section class="card card-modern card-big-info">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-lg-2-5 col-xl-1-5">
+                                        <i class="card-big-info-icon bx bx-briefcase"></i>
+                                        <h2 class="card-big-info-title">Contracttype</h2>
+                                        <p class="card-big-info-desc">Kies het stelsel van coördinatie.</p>
+                                    </div>
+                                    <div class="col-lg-3-5 col-xl-4-5">
+                                        <div class="form-group">
+                                        <div class="row align-items-center pb-3">
+                                            <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+                                                @Html.LabelFor(m => m.CoordinationIssuerCompanyId)
+                                            </label>
+                                                <div class="col-lg-5 col-xl-6">
+                                                @Html.DropDownListFor(m => m.CoordinationIssuerCompanyId,
+                                                    new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.CoordinationIssuerCompanyId),
+                                                    "-- Selecteer facturatiebedrijf --",
+                                                    new { @class = "form-control form-control-modern" })
+                                            </div>
+                                        </div>
+
+                                        <div class="row align-items-center pb-3">
+                                            <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+                                                @Html.LabelFor(m => m.ContractType)
+                                            </label>
+                                                <div class="col-lg-5 col-xl-6">
+                                                <select id="ContractType" asp-for="ContractType"
+                                                        asp-items="Html.GetEnumSelectList<BOCore.CoordinationContractType>()"
+                                                        class="form-control form-control-modern">
+                                                    <option value="">-- Selecteer type --</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                            </div>
+                                        @if (Model.ProjectDistanceKm.HasValue)
+                                        {
+                                            <div class="form-group row align-items-center pb-3">
+                                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Berekende afstand</label>
+                                                    <div class="col-lg-5 col-xl-6">
+                                                    <span class="form-control-plaintext fw-bold">@Model.ProjectDistanceKm?.ToString("0.##") km</span>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (Model.RouteDurationSeconds.HasValue)
+                                        {
+                                            var dur = TimeSpan.FromSeconds(Model.RouteDurationSeconds.Value);
+                                            var durStr = dur.Hours > 0
+                                                ? $"{dur.Hours}u {dur.Minutes}min"
+                                                : $"{dur.Minutes}min";
+                                            <div class="form-group row align-items-center pb-3">
+                                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Berekende reistijd</label>
+                                                    <div class="col-lg-5 col-xl-6">
+                                                    <span class="form-control-plaintext fw-bold">@durStr</span>
+                                                </div>
+                                            </div>
+                                        }
+
+                                        <div class="form-group row align-items-center pb-3">
+                                            <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+                                                @Html.LabelFor(m => m.KmAllowance)
+                                            </label>
+                                                <div class="col-lg-5 col-xl-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text">€</span>
+                                                    <input asp-for="KmAllowance" class="form-control form-control-modern"
+                                                           type="number" step="0.01" min="0" placeholder="0,00" />
+                                                    <span class="input-group-text">/km</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                        </<div>
+                        </div>
+
+                        <div id="slicesSection" style="display:none">
+                            <div class="row mt-4">
+                                <div class="col">
+                        <section class="card card-modern card-big-info">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-lg-2-5 col-xl-1-5">
+                                        <i class="card-big-info-icon bx bx-layers-plus-alt"></i>
+                                        <h2 class="card-big-info-title">Coördinatieschijven</h2>
+                                        <p class="card-big-info-desc">Vul de schijven voor de facturatie hier in</p>
+                                    </div>
+                                    <div class="col-lg-3-5 col-xl-4-5">
+                                        @* ── Schijven ── *@
+                                            <div id="slicesContainer">
+                                                @foreach (var slice in Model.ContractSlices)
+                                                {
+                                                    @Html.Partial("Partials/_SliceRow", slice)
+                                                }
+                                            </div>
+                                            <div class="row mt-2 align-items-center">
+                                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Totaal</label>
+                                                <div class="col-lg-4 col-xl-5">
+                                                    <button type="button" id="addSlice" class="btn btn-outline-secondary btn-sm w-100">
+                                                        <i class="bx bx-plus"></i> Schijf toevoegen
+                                                    </button>
+                                                </div>
+                                                <div class="col-lg-1 col-xl-1">
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="text" id="slicesTotal" class="form-control form-control-sm text-end" value="0" disabled />
+                                                        <span class="input-group-text">%</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        
+
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                                    </<div>
+                                    </div>
+                                    <div class="row mt-4">
+                                        <div class="col">
+                        <div id="regieSection" style="display:none">
+                        <section class="card card-modern card-big-info">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-lg-2-5 col-xl-1-5">
+                                        <i class="card-big-info-icon bx bx-stopwatch"></i>
+                                        <h2 class="card-big-info-title">Regietarieven</h2>
+                                        <p class="card-big-info-desc">Vul de uurtarieven van de werknemers voor dit project in</p>
+                                    </div>
+                                    <div class="col-lg-3-5 col-xl-4-5">
+                                        @* ── Regie ── *@
+                                            <div id="ratesContainer">
+                                                @{
+                                                    ViewData["AvailableUsers"] = Model.AvailableUsers
+                                                        .Select(u => new SelectListItem { Value = u.Group, Text = u.Display })
+                                                        .ToList();
+                                                }
+                                                @foreach (var rate in Model.HourlyRates)
+                                                {
+                                                    @Html.Partial("Partials/_RateRow", rate)
+                                                }
+                                            </div>
+                                            <div class="row mt-2 align-items-center">
+                                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0"></label>
+                                                <div class="col-lg-4 col-xl-5">
+                                                    <button type="button" id="addRate" class="btn btn-outline-secondary btn-sm w-100">
+                                                        <i class="bx bx-plus"></i> Tarief toevoegen
+                                                    </button>
+                                                </div>
+                                            </div>
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                                            </<div>
+                                            </div>
+
+                    <div class="row action-buttons" style="padding-left: 299px;">
+                        <div class="col-12 col-md-auto">
+                            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1">
+                                <i class="bx bx-save text-4 me-2"></i> Wijzigingen opslaan
+                            </button>
+                        </div>
+                        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
+                            <a href="@Url.Action("DetailCoordinatie", "Projecten", new { projectid })"
+                               class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+@section PageScripts
+{
+    <script>
+    $(function () {
+        // Alle gebruikers (voor dynamische rijen)
+        var allUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.AvailableUsers.Select(u => new { id = u.Group, text = u.Display }).ToList()));
+
+        // Cache van standaardwaarden per facturatiebedrijf
+        var issuerDefaults = {};
+
+        function loadIssuerDefaults(companyId, callback) {
+            if (!companyId) return;
+            if (issuerDefaults[companyId]) { callback(issuerDefaults[companyId]); return; }
+            $.getJSON('@Url.Action("GetIssuerCompanyDefaults", "Projecten")', { issuerCompanyId: companyId }, function (data) {
+                issuerDefaults[companyId] = data;
+                callback(data);
+            });
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // PRIJS PER KM – vul standaard in vanuit facturatiebedrijf
+        // ─────────────────────────────────────────────────────────────
+        $('#CoordinationIssuerCompanyId').on('change', function () {
+            var companyId = $(this).val();
+            var $kmField = $('[name="KmAllowance"]');
+            if (!$kmField.val()) {
+                loadIssuerDefaults(companyId, function (defaults) {
+                    if (defaults.ratePerKm != null) {
+                        $kmField.val(defaults.ratePerKm);
+                    }
+                });
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────────
+        // CONTRACTTYPE ZICHTBAARHEID
+        // ─────────────────────────────────────────────────────────────
+        function updateContractTypeVisibility() {
+            var type = $('#ContractType').val();
+            var showSlices = (type === '1' || type === '3');
+            var showRegie  = (type === '2' || type === '3');
+            $('#slicesSection').toggle(showSlices);
+            $('#regieSection').toggle(showRegie);
+            if (showSlices) updateSlicesUI();
+            if (showRegie)  updateAddRateButton();
+        }
+        $('#ContractType').on('change', updateContractTypeVisibility);
+        updateContractTypeVisibility();
+
+        // Zorg dat er altijd minstens 1 rij is als de sectie zichtbaar wordt
+        $('#ContractType').on('change', function () {
+            var type = $(this).val();
+            if ((type === '1' || type === '3') && $('#slicesContainer .slice-row').length === 0) {
+                $('#addSlice').trigger('click');
+            }
+            if ((type === '2' || type === '3') && $('#ratesContainer .rate-row').length === 0) {
+                $('#addRate').trigger('click');
+            }
+        });
+
+        // ─────────────────────────────────────────────────────────────
+        // SCHIJVEN
+        // ─────────────────────────────────────────────────────────────
+        function updateSlicesUI() {
+            var total = 0;
+            $('.slice-pct').each(function () { total += parseFloat($(this).val()) || 0; });
+            var rounded = Math.round(total * 100) / 100;
+            $('#slicesTotal').val(rounded);
+            $('#slicesTotal').toggleClass('text-success fw-bold', rounded === 100).toggleClass('text-danger', rounded !== 100 && rounded > 0);
+            $('#addSlice').prop('disabled', rounded >= 100);
+        }
+        updateSlicesUI();
+        $(document).on('input', '.slice-pct', updateSlicesUI);
+
+        $('#addSlice').on('click', function () {
+            $.get('@Url.Action("BlankSliceRow", "Projecten")', function (html) {
+                $('#slicesContainer').append(html);
+                updateSlicesUI();
+            });
+        });
+
+        $(document).on('click', '.remove-slice', function () {
+            $(this).closest('.slice-row').remove();
+            updateSlicesUI();
+        });
+
+        // ─────────────────────────────────────────────────────────────
+        // UURTARIEVEN – exclusieve gebruikerslijst
+        // ─────────────────────────────────────────────────────────────
+        function getUsedUserIds() {
+            var ids = [];
+            $('#ratesContainer .rate-user').each(function () {
+                var v = $(this).val();
+                if (v) ids.push(v);
+            });
+            return ids;
+        }
+
+        function refreshAllUserDropdowns() {
+            var usedIds = getUsedUserIds();
+            $('#ratesContainer .rate-user').each(function () {
+                var selectedId = $(this).val();
+                $(this).find('option').each(function () {
+                    var val = $(this).val();
+                    $(this).toggle(!val || val === selectedId || usedIds.indexOf(val) === -1);
+                });
+            });
+            updateAddRateButton();
+        }
+
+        function updateAddRateButton() {
+            var usedIds = getUsedUserIds();
+            var hasMore = allUsers.some(function (u) { return usedIds.indexOf(u.id) === -1; });
+            $('#addRate').prop('disabled', !hasMore);
+        }
+
+        $('#addRate').on('click', function () {
+            $.get('@Url.Action("BlankRateRow", "Projecten")', function (html) {
+                $('#ratesContainer').append(html);
+                refreshAllUserDropdowns();
+            });
+        });
+
+        $(document).on('change', '.rate-user', function () {
+            var $select = $(this);
+            var selected = $select.find('option:selected').text();
+            var $row = $select.closest('.rate-row');
+            $row.find('input[name*="UserFullName"]').val(selected);
+            refreshAllUserDropdowns();
+
+            // Vul uurtarief in vanuit facturatiebedrijf als het veld nog leeg is
+            var userId = $select.val();
+            var companyId = $('#CoordinationIssuerCompanyId').val();
+            if (userId && companyId) {
+                var $rateField = $row.find('input[name$=".HourlyRate"]');
+                if (!$rateField.val()) {
+                    loadIssuerDefaults(companyId, function (defaults) {
+                        var match = (defaults.userRates || []).find(function (r) { return r.userId === userId; });
+                        if (match) $rateField.val(match.hourlyRate);
+                    });
+                }
+            }
+        });
+
+        $(document).on('click', '.remove-rate', function () {
+            $(this).closest('.rate-row').remove();
+            refreshAllUserDropdowns();
+        });
+
+        // Init: zorg voor minstens 1 lege rij als secties al zichtbaar zijn na laden
+        var initType = $('#ContractType').val();
+        if ((initType === '1' || initType === '3') && $('#slicesContainer .slice-row').length === 0) {
+            $('#addSlice').trigger('click');
+        }
+        if ((initType === '2' || initType === '3') && $('#ratesContainer .rate-row').length === 0) {
+            $('#addRate').trigger('click');
+        }
+        if (initType === '2' || initType === '3') {
+            refreshAllUserDropdowns();
+        }
+    });
+    </script>
+}

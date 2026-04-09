@@ -630,6 +630,7 @@
           <Property Name="GroundSurface" Type="decimal" Precision="6" Scale="2" />
           <Property Name="ConstructionValueId" Type="int" />
           <Property Name="LandValueInvoiceId" Type="int" />
+          <Property Name="IsOption" Type="bit" Nullable="false" />
         </EntityType>
         <EntityType Name="UnitTypes">
           <Key>
@@ -3248,6 +3249,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <NavigationProperty Name="UnitConstructionValue" Relationship="copropmModel.FK_UnitConstructionValue_Units" FromRole="Units" ToRole="UnitConstructionValue" />
           <Property Name="LandValueInvoiceId" Type="Int32" />
           <NavigationProperty Name="Invoices" Relationship="copropmModel.FK_Units_Invoices" FromRole="Units" ToRole="Invoices" />
+          <Property Name="IsOption" Type="Boolean" Nullable="false" />
         </EntityType>
         <EntityType Name="UnitTypes">
           <Key>
@@ -4759,6 +4761,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
                 <ScalarProperty Name="TypeId" ColumnName="TypeId" />
                 <ScalarProperty Name="Name" ColumnName="Name" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="IsOption" ColumnName="IsOption" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

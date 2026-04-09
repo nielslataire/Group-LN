@@ -251,6 +251,15 @@ Public Class UnitBO
             _linkedunits = value
         End Set
     End Property
+    Private _isoption As Boolean
+    Public Property IsOption() As Boolean
+        Get
+            Return _isoption
+        End Get
+        Set(ByVal value As Boolean)
+            _isoption = value
+        End Set
+    End Property
     Private _islink As Boolean
     Public Property IsLink() As Boolean
         Get

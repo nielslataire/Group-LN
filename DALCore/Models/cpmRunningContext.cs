@@ -151,6 +151,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<IssuerCompany> IssuerCompany { get; set; }
 
+    public virtual DbSet<IssuerCompanyUserRate> IssuerCompanyUserRate { get; set; }
+
     public virtual DbSet<MigrationHistory> MigrationHistory { get; set; }
 
     public virtual DbSet<OctopusBookyearPeriods> OctopusBookyearPeriods { get; set; }
@@ -181,7 +183,11 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ProjectConnectionKey> ProjectConnectionKey { get; set; }
 
+    public virtual DbSet<ProjectContractSlice> ProjectContractSlice { get; set; }
+
     public virtual DbSet<ProjectDocs> ProjectDocs { get; set; }
+
+    public virtual DbSet<ProjectHourlyRate> ProjectHourlyRate { get; set; }
 
     public virtual DbSet<ProjectLevels> ProjectLevels { get; set; }
 
@@ -1834,6 +1840,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.Phone2).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(16);
+            entity.Property(e => e.RatePerKm).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.TemplateKey).HasMaxLength(64);
             entity.Property(e => e.UblAttachPdf).HasDefaultValue(true);
             entity.Property(e => e.VatNumber).HasMaxLength(32);
@@ -1850,6 +1857,26 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.DefaultVatType).WithMany(p => p.IssuerCompany)
                 .HasForeignKey(d => d.DefaultVatTypeId)
                 .HasConstraintName("FK_IssuerCompany_DefaultVatType");
+        });
+
+        modelBuilder.Entity<IssuerCompanyUserRate>(entity =>
+        {
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.UserId }, "UQ_IssuerCompanyUserRate_CompanyUser").IsUnique();
+
+            entity.Property(e => e.HourlyRate).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasMaxLength(128);
+
+            entity.HasOne(d => d.IssuerCompany).WithMany(p => p.IssuerCompanyUserRate)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .HasConstraintName("FK_IssuerCompanyUserRate_IssuerCompany");
+
+            entity.HasOne(d => d.User).WithMany(p => p.IssuerCompanyUserRate)
+                .HasPrincipalKey(p => p.UserId)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IssuerCompanyUserRate_Users");
         });
 
         modelBuilder.Entity<MigrationHistory>(entity =>
@@ -2083,8 +2110,11 @@ public partial class cpmRunningContext : DbContext
                 .HasColumnType("numeric(18, 0)")
                 .HasColumnName("FacebookAlbumID");
             entity.Property(e => e.FacebookPlaceId).HasMaxLength(128);
+            entity.Property(e => e.KmAllowance).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.Number).HasMaxLength(10);
             entity.Property(e => e.PostalCodeId).HasColumnName("PostalCodeID");
+            entity.Property(e => e.ProjectDistanceKm).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.RouteDurationSeconds);
             entity.Property(e => e.ProjectName)
                 .IsRequired()
                 .HasMaxLength(50);
@@ -2107,6 +2137,10 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Builder).WithMany(p => p.ProjectBuilder)
                 .HasForeignKey(d => d.BuilderId)
                 .HasConstraintName("FK_Project_CompanyInfo5");
+
+            entity.HasOne(d => d.CoordinationIssuerCompany).WithMany(p => p.ProjectCoordinationIssuerCompany)
+                .HasForeignKey(d => d.CoordinationIssuerCompanyId)
+                .HasConstraintName("FK_Project_CoordinationIssuerCompany");
 
             entity.HasOne(d => d.DefaultPicture).WithMany(p => p.Project)
                 .HasForeignKey(d => d.DefaultPictureId)
@@ -2184,6 +2218,16 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_PCK_Unit");
         });
 
+        modelBuilder.Entity<ProjectContractSlice>(entity =>
+        {
+            entity.Property(e => e.Description).HasMaxLength(255);
+            entity.Property(e => e.Percentage).HasColumnType("decimal(5, 2)");
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectContractSlice)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_ProjectContractSlice_Project");
+        });
+
         modelBuilder.Entity<ProjectDocs>(entity =>
         {
             entity.Property(e => e.Filename)
@@ -2199,6 +2243,26 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.ProjectId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProjectDocs_Project");
+        });
+
+        modelBuilder.Entity<ProjectHourlyRate>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProjectId, e.UserId }, "UQ_ProjectHourlyRate_ProjectUser").IsUnique();
+
+            entity.Property(e => e.HourlyRate).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasMaxLength(128);
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectHourlyRate)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_ProjectHourlyRate_Project");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ProjectHourlyRate)
+                .HasPrincipalKey(p => p.UserId)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProjectHourlyRate_Users");
         });
 
         modelBuilder.Entity<ProjectLevels>(entity =>

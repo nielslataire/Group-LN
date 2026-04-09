@@ -578,6 +578,31 @@ public class InstellingenController : BaseController
         vm.InvoiceTemplates = templates;
         ApplyInvoiceTemplateDefaults(vm, templates);
 
+        // Standaard uurtarieven laden
+        var userRates = await _issuers.GetUserRatesAsync(id, ct);
+        vm.UserRates = userRates.Select(r => new IssuerUserRateVM
+        {
+            UserId = r.UserId,
+            UserFullName = r.UserFullName,
+            HourlyRate = r.HourlyRate
+        }).ToList();
+
+        // RatePerKm uit de BO (is al in GetAsync gemapt)
+        vm.RatePerKm = bo.RatePerKm;
+
+        // Beschikbare gebruikers voor de dropdown (via _projectService context)
+        using var scope = HttpContext.RequestServices.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
+        vm.AvailableUsers = db.Users
+            .AsNoTracking()
+            .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+            .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+            {
+                Value = u.UserId,
+                Text = (u.Voornaam + " " + u.Familienaam).Trim()
+            })
+            .ToList();
+
         if (TempData["OctopusDossiers"] is string dossiersJson && !string.IsNullOrWhiteSpace(dossiersJson))
         {
             ViewBag.OctopusDossiers = JsonConvert.DeserializeObject<List<OctopusDossierItem>>(dossiersJson) ?? new List<OctopusDossierItem>();
@@ -759,6 +784,20 @@ public class InstellingenController : BaseController
                 IssuerCompanyId = vm.Id
             }),
             ct);
+
+        // Standaard uurtarieven per gebruiker opslaan
+        await _issuers.SyncUserRatesAsync(
+            vm.Id,
+            (vm.UserRates ?? new List<IssuerUserRateVM>()).Select(r => new IssuerCompanyUserRateBO
+            {
+                IssuerCompanyId = vm.Id,
+                UserId = r.UserId,
+                HourlyRate = r.HourlyRate
+            }),
+            ct);
+
+        // Km-tarief opslaan
+        await _issuers.UpdateRatePerKmAsync(vm.Id, vm.RatePerKm, ct);
 
         AddMessage("success", "Mijn bedrijf " +vm.Name + " opgeslagen.", "Geslaagd!");
         return RedirectToAction(nameof(IssuerCompanies));

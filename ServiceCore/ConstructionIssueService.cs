@@ -258,4 +258,90 @@ public class ConstructionIssueService : IConstructionIssueService
         });
         await _db.SaveChangesAsync();
     }
+
+    public async Task<List<WarningBO>> GetContractorCommentMeldingen(IEnumerable<int> projectIds, int daysBack = 7)
+    {
+        var projectIdList = projectIds.ToList();
+        if (!projectIdList.Any()) return new List<WarningBO>();
+
+        var cutoff = DateTime.UtcNow.AddDays(-daysBack);
+
+        // Aannemer-gebruikers: Users.Id zit in UserCompanyAccess.UserId
+        var contractorIntIds = await _db.UserCompanyAccess
+            .AsNoTracking()
+            .Select(a => a.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        if (!contractorIntIds.Any()) return new List<WarningBO>();
+
+        // Haal hun string UserId's op (gebruikt in ConstructionIssueHistory.UserId)
+        var contractorUsers = await _db.Users
+            .AsNoTracking()
+            .Where(u => contractorIntIds.Contains(u.Id) && u.UserId != null)
+            .Select(u => new { u.UserId, u.Voornaam, u.Familienaam })
+            .ToListAsync();
+
+        var contractorStringIdSet = contractorUsers.Select(u => u.UserId!).ToHashSet();
+        if (!contractorStringIdSet.Any()) return new List<WarningBO>();
+
+        // Punten voor deze projecten
+        var issues = await _db.ConstructionIssue
+            .AsNoTracking()
+            .Where(i => projectIdList.Contains(i.ProjectId))
+            .Select(i => new { i.Id, i.ProjectId, i.Title })
+            .ToListAsync();
+
+        var issueIds = issues.Select(i => i.Id).ToList();
+        if (!issueIds.Any()) return new List<WarningBO>();
+
+        // Recente commentaren van aannemers
+        var recentComments = await _db.ConstructionIssueHistory
+            .AsNoTracking()
+            .Where(h => issueIds.Contains(h.IssueId)
+                     && h.Action == (int)ConstructionIssueHistoryAction.CommentAdded
+                     && h.Timestamp >= cutoff
+                     && h.UserId != null
+                     && contractorStringIdSet.Contains(h.UserId))
+            .OrderByDescending(h => h.Timestamp)
+            .ToListAsync();
+
+        if (!recentComments.Any()) return new List<WarningBO>();
+
+        // Projectnamen ophalen
+        var projectNames = await _db.Project
+            .AsNoTracking()
+            .Where(p => projectIdList.Contains(p.ProjectId))
+            .Select(p => new { p.ProjectId, p.ProjectName })
+            .ToDictionaryAsync(p => p.ProjectId, p => p.ProjectName ?? $"Project {p.ProjectId}");
+
+        // Naam van commentaarauteur opzoeken
+        var userNameMap = contractorUsers
+            .Where(u => u.UserId != null)
+            .ToDictionary(u => u.UserId!, u => $"{u.Voornaam} {u.Familienaam}".Trim());
+
+        var issueLookup = issues.ToDictionary(i => i.Id);
+
+        // Één melding per punt met de meest recente opmerking
+        return recentComments
+            .GroupBy(h => h.IssueId)
+            .Select(g =>
+            {
+                var latest = g.First();
+                var issue = issueLookup.TryGetValue(g.Key, out var iss) ? iss : null;
+                var authorName = latest.UserId != null && userNameMap.TryGetValue(latest.UserId, out var n) ? n : "Aannemer";
+                var projectId = issue?.ProjectId ?? 0;
+                var issueTitle = issue?.Title ?? "punt";
+                var projectName = projectNames.TryGetValue(projectId, out var pn) ? pn : $"Project {projectId}";
+                return new WarningBO
+                {
+                    ID = g.Key,
+                    ProjectId = projectId,
+                    Display = $"{authorName} plaatste een opmerking op \"{issueTitle}\" ({projectName})",
+                    Type = "info",
+                    Category = "aannemercommentaar"
+                };
+            })
+            .ToList();
+    }
 }

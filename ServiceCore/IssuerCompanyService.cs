@@ -460,7 +460,8 @@ namespace ServiceCore
                 OctopusDossierNumber = x.OctopusDossierNumber,
                 OctopusCustomFieldsJson = x.OctopusCustomFieldsJson,
                 OctopusCustomFieldMappingsJson = x.OctopusCustomFieldMappingsJson,
-                OctopusDownloadLinkCustomFieldKeyId = x.OctopusDownloadLinkCustomFieldKeyId
+                OctopusDownloadLinkCustomFieldKeyId = x.OctopusDownloadLinkCustomFieldKeyId,
+                RatePerKm = x.RatePerKm
             };
         }
 
@@ -530,6 +531,56 @@ namespace ServiceCore
 
             return JsonSerializer.Deserialize<List<OctopusCustomFieldMappingBO>>(json)
                    ?? new List<OctopusCustomFieldMappingBO>();
+        }
+
+        // ── Standaard uurtarieven per facturatiebedrijf ───────────────────────
+
+        public async Task<IReadOnlyList<IssuerCompanyUserRateBO>> GetUserRatesAsync(int issuerId, CancellationToken ct = default)
+        {
+            var rates = await _db.IssuerCompanyUserRate
+                .AsNoTracking()
+                .Where(r => r.IssuerCompanyId == issuerId)
+                .Include(r => r.User)
+                .ToListAsync(ct);
+
+            return rates.Select(r => new IssuerCompanyUserRateBO
+            {
+                Id = r.Id,
+                IssuerCompanyId = r.IssuerCompanyId,
+                UserId = r.UserId,
+                UserFullName = r.User != null ? $"{r.User.Voornaam} {r.User.Familienaam}".Trim() : r.UserId,
+                HourlyRate = r.HourlyRate
+            }).ToList();
+        }
+
+        public async Task SyncUserRatesAsync(int issuerId, IEnumerable<IssuerCompanyUserRateBO> rates, CancellationToken ct = default)
+        {
+            var existing = await _db.IssuerCompanyUserRate
+                .Where(r => r.IssuerCompanyId == issuerId)
+                .ToListAsync(ct);
+
+            _db.IssuerCompanyUserRate.RemoveRange(existing);
+
+            foreach (var bo in rates.Where(r => !string.IsNullOrWhiteSpace(r.UserId)))
+            {
+                _db.IssuerCompanyUserRate.Add(new IssuerCompanyUserRate
+                {
+                    IssuerCompanyId = issuerId,
+                    UserId = bo.UserId,
+                    HourlyRate = bo.HourlyRate
+                });
+            }
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task UpdateRatePerKmAsync(int issuerId, decimal? ratePerKm, CancellationToken ct = default)
+        {
+            var company = await _db.IssuerCompany.FirstOrDefaultAsync(c => c.Id == issuerId, ct);
+            if (company == null) return;
+
+            company.RatePerKm = ratePerKm;
+            await _db.SaveChangesAsync(ct);
         }
     }
 }

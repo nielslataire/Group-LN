@@ -1,0 +1,38 @@
+@model CPMCore.Models.Projecten.ProjectHourlyRateVM
+@using HtmlHelpers.BeginCollectionItemCore
+@{
+    var availableUsers = ViewData["AvailableUsers"] as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new();
+}
+<div class="row rate-row pb-2 align-items-center">
+    @using (Html.BeginCollectionItem("HourlyRates"))
+    {
+
+        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Uurtarief</label>
+        <div class="col-lg-4 col-xl-5">
+            @Html.DropDownListFor(m => m.UserId,
+            new SelectList(availableUsers, "Value", "Text", Model.UserId),
+                "-- Selecteer persoon --",
+                new { @class = "form-control form-control-modern form-control-sm rate-user" })
+        @Html.HiddenFor(m => m.UserFullName)
+        </div>
+        <div class="col-lg-1 col-xl-1">
+            <div class="input-group input-group-sm">
+            <span class="input-group-text">€</span>
+            @Html.TextBoxFor(m => m.HourlyRate, new
+                        {
+                    @class = "form-control form-control-modern form-control-sm",
+                        type = "number",
+                        step = "0.01",
+                        min = "0",
+                        placeholder = "0,00",
+                        value = Model.HourlyRate > 0 ? Model.HourlyRate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : ""
+                        })
+            <span class="input-group-text">/u</span>
+        </div>
+    </div>
+    <div class="col-lg-1">
+        <button type="button" class="btn btn-sm remove-rate"><i class="bx bx-x"></i></button>
+    </div>
+
+    }
+</div>

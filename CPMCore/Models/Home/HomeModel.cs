@@ -85,6 +85,7 @@ namespace CPMCore.Models.Home
                 _projectInfo = value;
             }
         }
+        public List<WarningBO>? ContractorCommentMeldingen { get; set; }
         public DashboardType? DashboardType { get; set; }
 
         /// <summary>Voortgang per project-id, geladen voor het projectleider-dashboard.</summary>

@@ -83,6 +83,18 @@ public partial class Project
 
     public int? IssuerCompanyIdLandOwner { get; set; }
 
+    public bool IsCoordinationProject { get; set; }
+
+    public int? CoordinationIssuerCompanyId { get; set; }
+
+    public int? ContractType { get; set; }
+
+    public decimal? ProjectDistanceKm { get; set; }
+
+    public int? RouteDurationSeconds { get; set; }
+
+    public decimal? KmAllowance { get; set; }
+
     public virtual CompanyInfo Architect { get; set; }
 
     public virtual Users AspNetUser { get; set; }
@@ -98,6 +110,8 @@ public partial class Project
     public virtual ICollection<ContactRequests> ContactRequests { get; set; } = new List<ContactRequests>();
 
     public virtual ICollection<Contract> Contract { get; set; } = new List<Contract>();
+
+    public virtual IssuerCompany CoordinationIssuerCompany { get; set; }
 
     public virtual ProjectPictures DefaultPicture { get; set; }
 
@@ -123,7 +137,11 @@ public partial class Project
 
     public virtual ICollection<ProjectConnectionKey> ProjectConnectionKey { get; set; } = new List<ProjectConnectionKey>();
 
+    public virtual ICollection<ProjectContractSlice> ProjectContractSlice { get; set; } = new List<ProjectContractSlice>();
+
     public virtual ICollection<ProjectDocs> ProjectDocs { get; set; } = new List<ProjectDocs>();
+
+    public virtual ICollection<ProjectHourlyRate> ProjectHourlyRate { get; set; } = new List<ProjectHourlyRate>();
 
     public virtual ICollection<ProjectLevels> ProjectLevels { get; set; } = new List<ProjectLevels>();
 

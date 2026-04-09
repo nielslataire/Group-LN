@@ -1,0 +1,32 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+<div class="card card-modern">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Regie – Uurtarieven</h5>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.HourlyRates.Any())
+        {
+            <p class="text-muted p-3 mb-0">Geen uurtarieven geconfigureerd. Stel ze in via de instellingen.</p>
+        }
+        else
+        {
+            <table id="dt-regie" class="table table-bordered table-striped mb-0 w-100">
+                <thead>
+                    <tr>
+                        <th>Medewerker</th>
+                        <th class="text-end">Uurtarief (€)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var rate in Model.HourlyRates)
+                    {
+                        <tr>
+                            <td>@rate.UserFullName</td>
+                            <td class="text-end">€ @rate.HourlyRate.ToString("0.00")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

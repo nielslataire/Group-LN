@@ -36,6 +36,7 @@ Partial Public Class Units
     Public Property GroundSurface As Nullable(Of Decimal)
     Public Property ConstructionValueId As Nullable(Of Integer)
     Public Property LandValueInvoiceId As Nullable(Of Integer)
+    Public Property IsOption As Boolean
 
     Public Overridable Property Project As Project
     Public Overridable Property ProjectLevels As ProjectLevels

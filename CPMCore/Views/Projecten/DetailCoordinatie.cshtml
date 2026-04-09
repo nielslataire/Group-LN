@@ -1,0 +1,115 @@
+@using BOCore
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@{
+    ViewData["Title"] = Model.ProjectName;
+    var contractType = Model.ContractType;
+    var showSchijven = contractType == CoordinationContractType.Schijven || contractType == CoordinationContractType.Gemengd;
+    var showRegie    = contractType == CoordinationContractType.Regie    || contractType == CoordinationContractType.Gemengd;
+    var settingsUrl  = Url.Action("CoordinatieInstellingen", "Projecten", new { projectid = Model.ProjectId });
+}
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+}
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+            <div class="row">
+                <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                    <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                        <h1 class="font-weight-bold mb-0 mt-0">Coördinatie</h1>
+                        <h5 class="mb-4 mt-0">Overzicht van schijven en/of regie voor dit coördinatieproject</h5>
+                    </div>
+                    <div class="col-sm-auto px-0">
+                        <div class="btn-group" role="group" aria-label="Coördinatie acties">
+                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel" data-toggle="tooltip" title="Exporteren naar excel"><i class="fas fa-file-excel"></i></button>
+                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf" data-toggle="tooltip" title="PDF"><i class="fas fa-file-pdf"></i></button>
+                            <a href="@settingsUrl" class="btn btn-primary btn-md px-3 me-1" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!showSchijven && !showRegie)
+                {
+                    <div class="alert alert-warning mt-3">
+                        Geen contracttype geconfigureerd voor dit coördinatieproject. Stel het type in via de <a href="@settingsUrl">instellingen</a>.
+                    </div>
+                }
+                else
+                {
+                    @if (showSchijven && showRegie)
+                    {
+                        <!-- Gemengd: twee tabbladen -->
+                        <ul class="nav nav-tabs mt-3" id="coordTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tab-schijven" data-bs-toggle="tab" data-bs-target="#pane-schijven" type="button" role="tab">Schijven</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-regie" data-bs-toggle="tab" data-bs-target="#pane-regie" type="button" role="tab">Regie</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content mt-3" id="coordTabContent">
+                            <div class="tab-pane fade show active" id="pane-schijven" role="tabpanel">
+                                @await Html.PartialAsync("Partials/_CoordinatieSchijven", Model)
+                            </div>
+                            <div class="tab-pane fade" id="pane-regie" role="tabpanel">
+                                @await Html.PartialAsync("Partials/_CoordinatieRegie", Model)
+                            </div>
+                        </div>
+                    }
+                    else if (showSchijven)
+                    {
+                        <div class="mt-3">
+                            @await Html.PartialAsync("Partials/_CoordinatieSchijven", Model)
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-3">
+                            @await Html.PartialAsync("Partials/_CoordinatieRegie", Model)
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</section>
+@section PageScripts
+{
+    <script src="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.js" integrity="sha384-GC9Im1BDtt06YOKSzkS553+5q43Nos2JSnLM31TjWFcFbzZrFhAtgCzrHDGM0iDy" crossorigin="anonymous"></script>
+    <script>
+        const dtSchijven = document.getElementById('dt-schijven');
+        if (dtSchijven) {
+            const dt = new DataTable('#dt-schijven', {
+                layout: {
+                    topStart: {
+                        buttons: [
+                            { extend: 'excel', text: '<i class="fa fa-file-excel"></i>', className: 'btn btn-primary btn-md', titleAttr: 'Exporteer naar excel', exportOptions: { columns: ':visible' } },
+                            { extend: 'pdf',   text: '<i class="fa fa-file-pdf"></i>',   className: 'btn btn-primary btn-md', titleAttr: 'Exporteer naar pdf',   exportOptions: { columns: ':visible' } }
+                        ]
+                    }
+                },
+                paging: false, info: false, searching: false
+            });
+            $(".buttons-excel").hide();
+            $(".buttons-pdf").hide();
+        }
+        const dtRegie = document.getElementById('dt-regie');
+        if (dtRegie) {
+            const dt2 = new DataTable('#dt-regie', {
+                layout: {
+                    topStart: {
+                        buttons: [
+                            { extend: 'excel', text: '<i class="fa fa-file-excel"></i>', className: 'btn btn-primary btn-md', titleAttr: 'Exporteer naar excel', exportOptions: { columns: ':visible' } },
+                            { extend: 'pdf',   text: '<i class="fa fa-file-pdf"></i>',   className: 'btn btn-primary btn-md', titleAttr: 'Exporteer naar pdf',   exportOptions: { columns: ':visible' } }
+                        ]
+                    }
+                },
+                paging: false, info: false, searching: false
+            });
+        }
+        $("#btnExportExcel").on('click', function () { $(".buttons-excel").first().trigger("click"); });
+        $("#btnExportPdf").on('click', function ()   { $(".buttons-pdf").first().trigger("click");   });
+    </script>
+}

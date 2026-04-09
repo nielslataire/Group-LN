@@ -65,4 +65,7 @@
     Public Property OctopusCustomFieldMappingsJson As String
     Public Property OctopusDownloadLinkCustomFieldKeyId As Integer?
 
+    ' Km-tarief verplaatsing (voor coördinatieprojecten)
+    Public Property RatePerKm As Decimal?
+
 End Class

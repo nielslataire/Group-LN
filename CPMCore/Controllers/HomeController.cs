@@ -21,20 +21,22 @@ public class HomeController : BaseController
     private readonly IClientService _clientService;
     private readonly IInsuranceService _insuranceService;
     private readonly IProjectVoortgangService _voortgangService;
+    private readonly IConstructionIssueService _issueService;
     private readonly cpmRunningContext _db;
 
-    public HomeController(ILogger<HomeController> logger, IProjectService projectService, IClientService clientService, IInsuranceService insuranceService, IProjectVoortgangService voortgangService, cpmRunningContext db)
+    public HomeController(ILogger<HomeController> logger, IProjectService projectService, IClientService clientService, IInsuranceService insuranceService, IProjectVoortgangService voortgangService, IConstructionIssueService issueService, cpmRunningContext db)
     {
         _logger = logger;
         _projectService = projectService;
         _clientService = clientService;
         _insuranceService = insuranceService;
         _voortgangService = voortgangService;
+        _issueService = issueService;
         _db = db;
     }
 
     [DefaultBreadcrumb("Dashboard")]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
         var model = new Models.Home.HomeModel();
         var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
@@ -106,6 +108,13 @@ public class HomeController : BaseController
         {
             var projectIds = model.Projects.Select(p => p.Id);
             model.ProjectVoortgang = _voortgangService.GetForProjects(projectIds);
+        }
+
+        // Aannemer-commentaar meldingen voor projectleider-dashboard
+        if (model.DashboardType == Models.DashboardType.Projectleider && model.Projects.Count > 0)
+        {
+            var projectIds = model.Projects.Select(p => p.Id);
+            model.ContractorCommentMeldingen = await _issueService.GetContractorCommentMeldingen(projectIds);
         }
 
         return View(model);

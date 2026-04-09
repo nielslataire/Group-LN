@@ -170,6 +170,7 @@ builder.Services.AddHttpClient<IPeppolSender, PeppolSender>();
 builder.Services.Configure<OctopusOptions>(builder.Configuration.GetSection("Octopus"));
 builder.Services.Configure<FeatureFlagsOptions>(builder.Configuration.GetSection("Features"));
 builder.Services.AddHttpClient<IOctopusApiClient, OctopusApiClient>();
+builder.Services.AddHttpClient<FacadeCore.IRouteService, ServiceCore.RouteService>();
 builder.Services.AddScoped<IOctopusTokenManager, OctopusTokenManager>();
 builder.Services.AddScoped<FacadeCore.IProjectVoortgangService, ServiceCore.ProjectVoortgangService>();
 builder.Services.AddScoped<IConstructionIssueService, ConstructionIssueService>();
@@ -378,25 +379,6 @@ var localizationOptions = new RequestLocalizationOptions
 
 app.UseRequestLocalization(localizationOptions);
 
-// ── PORTAAL-SHORTCUTS: path rewrite vóór routing zodat de browser-URL clean blijft ──
-// Bezoekers zien /werfportaal of /aannemer in de adresbalk, niet Account/Login?...
-app.Use(async (ctx, next) =>
-{
-    var path = ctx.Request.Path.Value ?? "";
-    // Alle varianten van de shortcut-paden → contractor login; /Werfportaal (het echte portaal) wordt ook gematcht
-    if (path is "/aannemer" or "/Aannemer" or "/portaal" or "/Portaal" or "/werfportaal" or "/Werfportaal")
-    {
-        ctx.Request.Path        = "/Account/Login";
-        ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Werfportaal");
-    }
-    else if (path is "/klantenportaal" or "/Klantenportaal")
-    {
-        ctx.Request.Path        = "/Account/Login";
-        ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=customer&returnUrl=/Klantenportaal");
-    }
-    await next();
-});
-
 app.UseRouting();
 
 // ── EXTERNE TRIGGER ENDPOINTS (vóór auth – geen login vereist) ────────────────
@@ -442,6 +424,27 @@ app.Map("/api/trigger", triggerApp =>
 //    app.MapControllers();
 
 app.UseAuthentication();
+
+// ── PORTAAL-SHORTCUTS: na authenticatie zodat ingelogde gebruikers niet opnieuw naar login worden gestuurd ──
+app.Use(async (ctx, next) =>
+{
+    if (!(ctx.User.Identity?.IsAuthenticated == true))
+    {
+        var path = ctx.Request.Path.Value ?? "";
+        if (path is "/aannemer" or "/Aannemer" or "/portaal" or "/Portaal" or "/werfportaal" or "/Werfportaal")
+        {
+            ctx.Request.Path        = "/Account/Login";
+            ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Werfportaal");
+        }
+        else if (path is "/klantenportaal" or "/Klantenportaal")
+        {
+            ctx.Request.Path        = "/Account/Login";
+            ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=customer&returnUrl=/Klantenportaal");
+        }
+    }
+    await next();
+});
+
 app.UseMiddleware<PermissionContextMiddleware>();
 app.UseAuthorization();
 

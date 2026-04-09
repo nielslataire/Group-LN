@@ -67,6 +67,18 @@ namespace CPMCore.Models.Projecten
             }
         }
         public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; }
+
+        // Coördinatieproject - contract schijven (JSON serialized voor form binding)
+        [ValidateNever]
+        public List<ProjectContractSliceVM> ContractSlices { get; set; } = new List<ProjectContractSliceVM>();
+
+        // Coördinatieproject - uurtarieven (JSON serialized voor form binding)
+        [ValidateNever]
+        public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new List<ProjectHourlyRateVM>();
+
+        // Beschikbare gebruikers voor uurtarieven
+        [ValidateNever]
+        public List<IdNameBO> AvailableUsers { get; set; } = new List<IdNameBO>();
     }
 
     public class EditProjectDetail
@@ -245,6 +257,18 @@ namespace CPMCore.Models.Projecten
                 _docs = value;
             }
         }
+
+        // Coördinatieproject - contract schijven
+        [ValidateNever]
+        public List<ProjectContractSliceVM> ContractSlices { get; set; } = new List<ProjectContractSliceVM>();
+
+        // Coördinatieproject - uurtarieven
+        [ValidateNever]
+        public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new List<ProjectHourlyRateVM>();
+
+        // Beschikbare gebruikers voor uurtarieven
+        [ValidateNever]
+        public List<IdNameBO> AvailableUsers { get; set; } = new List<IdNameBO>();
     }
 
     public class ShowProjectsModel
@@ -3887,6 +3911,62 @@ namespace CPMCore.Models.Projecten
             }
         }
         private string m_text;
+    }
+
+    // ── Coördinatieproject helper ViewModels ──────────────────────────────────
+
+    public class ProjectContractSliceVM
+    {
+        public int Id { get; set; }
+
+        [Display(Name = "Omschrijving")]
+        public string Description { get; set; }
+
+        [Display(Name = "Percentage (%)")]
+        [Range(0.01, 100, ErrorMessage = "Percentage moet tussen 0,01 en 100 liggen.")]
+        public decimal Percentage { get; set; }
+    }
+
+    public class ProjectHourlyRateVM
+    {
+        public string UserId { get; set; }
+
+        [Display(Name = "Naam")]
+        public string UserFullName { get; set; }
+
+        [Display(Name = "Uurtarief (€)")]
+        [Range(0, 9999.99, ErrorMessage = "Uurtarief moet positief zijn.")]
+        public decimal HourlyRate { get; set; }
+    }
+
+    public class ProjectCoordinatieModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+        public BOCore.CoordinationContractType? ContractType { get; set; }
+        public decimal? ProjectDistanceKm { get; set; }
+        public decimal? KmAllowance { get; set; }
+        public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
+        public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
+    }
+
+    public class CoordinatieInstellingenVM
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+        [Display(Name = "Coördinatiebedrijf")]
+        public int? CoordinationIssuerCompanyId { get; set; }
+        [Display(Name = "Facturatiewijze")]
+        public BOCore.CoordinationContractType? ContractType { get; set; }
+        [Display(Name = "Prijs per km")]
+        public decimal? KmAllowance { get; set; }
+        public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
+        public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
+        // Alleen voor weergave, niet gepost
+        public decimal? ProjectDistanceKm { get; set; }
+        public int? RouteDurationSeconds { get; set; }
+        public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; } = new();
+        public List<IdNameBO> AvailableUsers { get; set; } = new();
     }
 }
 

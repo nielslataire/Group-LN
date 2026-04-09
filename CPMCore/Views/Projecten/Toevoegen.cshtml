@@ -62,7 +62,46 @@
                                     @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
                                 </div> 
                             }
-
+                            <div class="form-group">
+                            <div class="row align-items-center pb-3">
+                                <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2" id="IsCoordinationProject" asp-for="Project.IsCoordinationProject">Zuiver coördinatieproject</label>
+                                <div class="col-lg-7 col-xl-8">
+                                    <div class="switch switch-sm switch-primary">
+                                        @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { data_plugin_ios_switch = "", id = "IsCoordinationProject" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
+                                    @Html.LabelFor(m => m.Project.CoordinationIssuerCompanyId)
+                                </label>
+                                <div class="col-lg-3 col-xl-3">
+                                    @Html.DropDownListFor(m => m.Project.CoordinationIssuerCompanyId,
+                                    new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.CoordinationIssuerCompanyId),
+                                                                "-- Selecteer coördinatiebedrijf --",
+                                                                new { @class = "form-control form-control-modern", id = "CoordinationIssuerCompanyId" })
+                                </div>
+                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project.ContractType">
+                                    @Html.LabelFor(m => m.Project.ContractType)
+                                </label>
+                                <div class="col-lg-3 col-xl-3">
+                                    <select asp-for="Project.ContractType"
+                                            asp-items="Html.GetEnumSelectList<BOCore.CoordinationContractType>()"
+                                            class="form-control form-control-modern">
+                                        <option value="">-- Selecteer type --</option>
+                                    </select>
+                                    </div>
+                            </div>
+                            @if (Model.Project.ProjectDistanceKm.HasValue)
+                                {
+                                    <div class="row align-items-center pb-3">
+                                        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Afstand</label>
+                                        <div class="col-lg-4 col-xl-4">
+                                            <span class="form-control-plaintext">@Model.Project.ProjectDistanceKm?.ToString("0.##") km</span>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Name">
                                     @Html.LabelFor(m => m.Project.Name)
@@ -216,6 +255,28 @@
         </div>
     </div>
 
+    @* ── Coördinatieproject ───────────────────────────────────────────────── *@
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-briefcase"></i>
+                            <h2 class="card-big-info-title">Type project</h2>
+                            <p class="card-big-info-desc">Is dit een eigen project of een coördinatieproject?</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+
+
+
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
     <div class="row action-buttons">
         <div class="col-12 col-md-auto">
             <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
@@ -233,6 +294,7 @@
     <script src="~/lib/select2/js/select2.js"></script>
     <script src="~/lib/select2/js/i18n/nl.js"></script>
     <script src="~/js/theme.admin.extension.js"></script>
+    <script src="~/lib/ios7-switch/ios7-switch.js"></script>
     <script>
         function bindSelect(selectId, options) {
                 const $select = $(selectId);
@@ -355,6 +417,107 @@
                 if ($('#PostalSelect').val()) {
                         $('#SelectedPostalcode').val($('#PostalSelect').val());
                 }
+
+                // ── Coördinatieproject logica ─────────────────────────────────────
+                var availableUsers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.AvailableUsers.Select(u => new { id = u.Group, text = u.Display }).ToList()));
+
+                function updateCoordinationVisibility() {
+                    var isCoord = $('#IsCoordinationProject').is(':checked');
+                    $('#coordinationFields').toggle(isCoord);
+                    if (isCoord) updateContractTypeVisibility();
+                }
+
+                function updateContractTypeVisibility() {
+                    var type = $('#ContractType').val();
+                    var showSlices = (type === '1' || type === '3');
+                    var showRegie = (type === '2' || type === '3');
+                    $('#slicesSection').toggle(showSlices);
+                    $('#regieSection').toggle(showRegie);
+                    updateSlicesTotal();
+                }
+
+                $('#IsCoordinationProject').on('change', updateCoordinationVisibility);
+                $('#ContractType').on('change', updateContractTypeVisibility);
+
+                // Initialisatie
+                updateCoordinationVisibility();
+
+                // ── Schijven ──────────────────────────────────────────────────────
+                var sliceIndex = @Model.ContractSlices.Count;
+
+                function updateSlicesTotal() {
+                    var total = 0;
+                    $('.slice-pct').each(function () {
+                        var v = parseFloat($(this).val()) || 0;
+                        total += v;
+                    });
+                    var rounded = Math.round(total * 100) / 100;
+                    $('#slicesTotal').text(rounded);
+                    $('#slicesTotal').parent().toggleClass('bg-success', rounded === 100).toggleClass('bg-secondary', rounded !== 100);
+                }
+
+                $(document).on('input', '.slice-pct', updateSlicesTotal);
+
+                $('#addSlice').on('click', function () {
+                    var idx = sliceIndex++;
+                    var row = '<div class="row slice-row mb-2">' +
+                        '<div class="col-lg-6"><input type="text" name="ContractSlices[' + idx + '].Description" class="form-control form-control-modern" placeholder="Omschrijving" /></div>' +
+                        '<div class="col-lg-3"><div class="input-group"><input type="number" name="ContractSlices[' + idx + '].Percentage" class="form-control form-control-modern slice-pct" step="0.01" min="0.01" max="100" placeholder="%" /><span class="input-group-text">%</span></div></div>' +
+                        '<div class="col-lg-1"><button type="button" class="btn btn-danger btn-sm remove-slice"><i class="bx bx-trash"></i></button></div>' +
+                        '</div>';
+                    $('#slicesContainer').append(row);
+                    updateSlicesTotal();
+                });
+
+                $(document).on('click', '.remove-slice', function () {
+                    $(this).closest('.slice-row').remove();
+                    // Hernummer indexes
+                    $('#slicesContainer .slice-row').each(function (i) {
+                        $(this).find('input[name*="Description"]').attr('name', 'ContractSlices[' + i + '].Description');
+                        $(this).find('input[name*="Percentage"]').attr('name', 'ContractSlices[' + i + '].Percentage');
+                    });
+                    sliceIndex = $('#slicesContainer .slice-row').length;
+                    updateSlicesTotal();
+                });
+
+                // ── Uurtarieven ───────────────────────────────────────────────────
+                var rateIndex = @Model.HourlyRates.Count;
+
+                function buildUserOptions(selectedId) {
+                    var html = '<option value="">-- Selecteer persoon --</option>';
+                    availableUsers.forEach(function (u) {
+                        html += '<option value="' + u.id + '"' + (u.id === selectedId ? ' selected' : '') + '>' + u.text + '</option>';
+                    });
+                    return html;
+                }
+
+                $('#addRate').on('click', function () {
+                    var idx = rateIndex++;
+                    var row = '<div class="row rate-row mb-2">' +
+                        '<div class="col-lg-6"><select name="HourlyRates[' + idx + '].UserId" class="form-control form-control-modern rate-user">' + buildUserOptions('') + '</select>' +
+                        '<input type="hidden" name="HourlyRates[' + idx + '].UserFullName" value="" /></div>' +
+                        '<div class="col-lg-3"><div class="input-group"><span class="input-group-text">€</span><input type="number" name="HourlyRates[' + idx + '].HourlyRate" class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" /></div></div>' +
+                        '<div class="col-lg-1"><button type="button" class="btn btn-danger btn-sm remove-rate"><i class="bx bx-trash"></i></button></div>' +
+                        '</div>';
+                    $('#ratesContainer').append(row);
+                });
+
+                $(document).on('change', '.rate-user', function () {
+                    var selected = $(this).find('option:selected').text();
+                    $(this).closest('.rate-row').find('input[name*="UserFullName"]').val(selected);
+                });
+
+                $(document).on('click', '.remove-rate', function () {
+                    $(this).closest('.rate-row').remove();
+                    $('#ratesContainer .rate-row').each(function (i) {
+                        $(this).find('select').attr('name', 'HourlyRates[' + i + '].UserId');
+                        $(this).find('input[name*="UserFullName"]').attr('name', 'HourlyRates[' + i + '].UserFullName');
+                        $(this).find('input[name*="HourlyRate"]').attr('name', 'HourlyRates[' + i + '].HourlyRate');
+                    });
+                    rateIndex = $('#ratesContainer .rate-row').length;
+                });
+
         });
     </script>
 }

@@ -178,6 +178,17 @@ namespace FacadeCore
 
 
         Response Copyids();
+
+        // Coordinatieproject - contract schijven
+        GetResponse<ProjectContractSliceBO> GetContractSlices(int projectId);
+        Response SaveContractSlices(int projectId, List<ProjectContractSliceBO> slices);
+
+        // Coordinatieproject - uurtarieven regie
+        GetResponse<ProjectHourlyRateBO> GetProjectHourlyRates(int projectId);
+        Response SaveProjectHourlyRates(int projectId, List<ProjectHourlyRateBO> rates);
+
+        // Route-berekening (Google Maps Routes API)
+        Task<(decimal? distanceKm, int? durationSeconds)> CalculateRouteAsync(int issuerCompanyId, int postalCodeId);
     }
 
     public interface IProjectSupplierLookupService

@@ -25,6 +25,11 @@ namespace FacadeCore
         Task<IReadOnlyList<CompanyLegalFormBO>> ListLegalFormsAsync(CancellationToken ct = default);
         Task SyncOctopusCustomFieldsAsync(int issuerId, IEnumerable<OctopusCustomFieldBO> customFields, CancellationToken ct = default);
         Task<IReadOnlyList<OctopusCustomFieldBO>> ListOctopusCustomFieldsAsync(int issuerId, CancellationToken ct = default);
+
+        // Standaard uurtarieven per facturatiebedrijf
+        Task<IReadOnlyList<IssuerCompanyUserRateBO>> GetUserRatesAsync(int issuerId, CancellationToken ct = default);
+        Task SyncUserRatesAsync(int issuerId, IEnumerable<IssuerCompanyUserRateBO> rates, CancellationToken ct = default);
+        Task UpdateRatePerKmAsync(int issuerId, decimal? ratePerKm, CancellationToken ct = default);
     }
     // Lichte BO’s voor de UI-lijsten
     public class IssuerListItemBO

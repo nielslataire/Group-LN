@@ -33,6 +33,12 @@
             .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "warning",
                 Url.Action("Detail", "Projecten", new { projectid = w.ProjectId }) ?? "#",
                 MeldingTypeHelper.FromString(w.Category))));
+    if (Model.ContractorCommentMeldingen != null)
+        meldingen.AddRange(Model.ContractorCommentMeldingen
+            .Where(w => myProjectIds.Contains(w.ProjectId))
+            .Select(w => (w.Display ?? string.Empty, w.ProjectId, w.Type ?? "info",
+                Url.Action("Details", "ProjectsIssues", new { projectId = w.ProjectId, id = w.ID }) ?? "#",
+                MeldingTypeHelper.FromString(w.Category))));
 
     // Prioriteitsgroepen
     var urgentMeldingen  = meldingen.Where(m => m.Severity == "danger").ToList();

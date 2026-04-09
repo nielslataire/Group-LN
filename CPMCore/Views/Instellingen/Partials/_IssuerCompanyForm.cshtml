@@ -959,8 +959,129 @@
             </div>
         </section>
 
+        @* ── Standaard tarieven coördinatieprojecten ───────────────────────── *@
+        <section class="card card-modern card-big-info mt-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-time-five"></i>
+                        <h2 class="card-big-info-title">Tarieven coördinatie</h2>
+                        <p class="card-big-info-desc">Standaard uurtarieven en km-vergoeding voor coördinatieprojecten.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="RatePerKm" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    <input asp-for="RatePerKm" class="form-control form-control-modern" type="number" step="0.01" min="0" placeholder="0,00" />
+                                    <span class="input-group-text">/km</span>
+                                </div>
+                                <small class="text-muted">Verplaatsingsvergoeding per kilometer.</small>
+                            </div>
+                        </div>
+
+                        <hr />
+                        <h6 class="fw-bold mb-3">Standaard uurtarieven per persoon</h6>
+
+                        <div id="userRatesContainer">
+                            @for (int i = 0; i < Model.UserRates.Count; i++)
+                            {
+                                <div class="row user-rate-row mb-2">
+                                    <div class="col-md-6">
+                                        <select name="UserRates[@i].UserId" class="form-control form-control-modern user-rate-user">
+                                            <option value="">-- Selecteer persoon --</option>
+                                            @foreach (var u in Model.AvailableUsers)
+                                            {
+                                                if (Model.UserRates[i].UserId == u.Value)
+                                                {
+                                                    <option value="@u.Value" selected>@u.Text</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@u.Value">@u.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                        <input type="hidden" name="UserRates[@i].UserFullName" value="@Model.UserRates[i].UserFullName" />
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="input-group">
+                                            <span class="input-group-text">€</span>
+                                            <input type="number" name="UserRates[@i].HourlyRate"
+                                                   value="@Model.UserRates[i].HourlyRate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" />
+                                            <span class="input-group-text">/u</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="button" class="btn btn-danger btn-sm remove-user-rate"><i class="bx bx-trash"></i></button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="mt-2">
+                            <button type="button" id="addUserRate" class="btn btn-outline-secondary btn-sm">
+                                <i class="bx bx-plus"></i> Tarief toevoegen
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </div>
 </div>
+
+<script>
+    (function () {
+        var availableUsersIssuer = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.AvailableUsers.Select(u => new { id = u.Value, text = u.Text }).ToList()));
+        var userRateIndex = @Model.UserRates.Count;
+
+        function buildUserRateOptions(selectedId) {
+            var html = '<option value="">-- Selecteer persoon --</option>';
+            availableUsersIssuer.forEach(function (u) {
+                html += '<option value="' + u.id + '"' + (u.id === selectedId ? ' selected' : '') + '>' + u.text + '</option>';
+            });
+            return html;
+        }
+
+        document.getElementById('addUserRate').addEventListener('click', function () {
+            var idx = userRateIndex++;
+            var row = document.createElement('div');
+            row.className = 'row user-rate-row mb-2';
+            row.innerHTML = '<div class="col-md-6"><select name="UserRates[' + idx + '].UserId" class="form-control form-control-modern user-rate-user">' + buildUserRateOptions('') + '</select>' +
+                '<input type="hidden" name="UserRates[' + idx + '].UserFullName" value="" /></div>' +
+                '<div class="col-md-3"><div class="input-group"><span class="input-group-text">€</span><input type="number" name="UserRates[' + idx + '].HourlyRate" class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" /><span class="input-group-text">/u</span></div></div>' +
+                '<div class="col-md-1"><button type="button" class="btn btn-danger btn-sm remove-user-rate"><i class="bx bx-trash"></i></button></div>';
+            document.getElementById('userRatesContainer').appendChild(row);
+        });
+
+        document.getElementById('userRatesContainer').addEventListener('click', function (e) {
+            var btn = e.target.closest('.remove-user-rate');
+            if (!btn) return;
+            btn.closest('.user-rate-row').remove();
+            var rows = document.querySelectorAll('#userRatesContainer .user-rate-row');
+            rows.forEach(function (row, i) {
+                row.querySelector('select').name = 'UserRates[' + i + '].UserId';
+                row.querySelector('input[type="hidden"]').name = 'UserRates[' + i + '].UserFullName';
+                row.querySelector('input[type="number"]').name = 'UserRates[' + i + '].HourlyRate';
+            });
+            userRateIndex = rows.length;
+        });
+
+        document.getElementById('userRatesContainer').addEventListener('change', function (e) {
+            if (!e.target.classList.contains('user-rate-user')) return;
+            var sel = e.target;
+            var hidden = sel.closest('.user-rate-row').querySelector('input[type="hidden"]');
+            if (hidden) hidden.value = sel.options[sel.selectedIndex].text;
+        });
+    })();
+</script>
+
 @if (octopusRelationSuggestions.Any())
 {
     <div class="modal fade show d-block" id="octopus-relation-suggestions" aria-modal="true" role="dialog">

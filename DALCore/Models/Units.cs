@@ -43,6 +43,8 @@ public partial class Units
 
     public bool IsLink { get; set; }
 
+    public bool IsOption { get; set; }
+
     public decimal? Surface { get; set; }
 
     public int? Level { get; set; }

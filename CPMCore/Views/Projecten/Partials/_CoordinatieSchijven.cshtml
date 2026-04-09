@@ -1,0 +1,44 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@{
+    var totalPct = Model.ContractSlices.Sum(s => s.Percentage);
+}
+<div class="card card-modern">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Contractschijven</h5>
+    </div>
+    <div class="card-body p-0">
+        @if (!Model.ContractSlices.Any())
+        {
+            <p class="text-muted p-3 mb-0">Geen schijven geconfigureerd. Stel ze in via de instellingen.</p>
+        }
+        else
+        {
+            <table id="dt-schijven" class="table table-bordered table-striped mb-0 w-100">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Omschrijving</th>
+                        <th class="text-end">Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.ContractSlices.Count; i++)
+                    {
+                        var slice = Model.ContractSlices[i];
+                        <tr>
+                            <td>@(i + 1)</td>
+                            <td>@slice.Description</td>
+                            <td class="text-end">@slice.Percentage.ToString("0.##") %</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="fw-bold">
+                        <td colspan="2" class="text-end">Totaal</td>
+                        <td class="text-end @(totalPct != 100 ? "text-danger" : "")">@totalPct.ToString("0.##") %</td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+    </div>
+</div>

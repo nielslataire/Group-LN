@@ -708,7 +708,7 @@ namespace CPMCore.Controllers
         // KLANT TOEVOEGEN
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
-        public ActionResult AddClientAccount(int id)
+        public ActionResult AddClientAccount(int id, int? unitId = null)
         {
             var referrer = Request.Headers["Referer"].ToString();
 
@@ -721,6 +721,22 @@ namespace CPMCore.Controllers
             model.ClientAccount.OwnerPercentage = 100;
             model.ClientAccount.OwnerType.Id = 1;
             FillInAddSelectLists(ref model);
+
+            if (unitId.HasValue)
+            {
+                var unitResp = _unitService.GetUnitById(unitId.Value);
+                if (unitResp.Success)
+                {
+                    var unit = unitResp.Value;
+                    unit.LandValueSold = unit.LandValue;
+                    foreach (var cv in unit.ConstructionValues)
+                        cv.ValueSold = cv.Value;
+                    model.AddedUnits.Add(unit);
+                    // verwijder de eenheid uit de beschikbare lijst
+                    model.AvailableUnits.RemoveAll(u => u.ID == unitId.Value);
+                }
+            }
+
             return View(model);
         }
         [HttpPost]

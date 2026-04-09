@@ -45,6 +45,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 
 
 
@@ -295,6 +296,7 @@ namespace CPMCore.Controllers
             model.Project.Postalcode.Country.ISOCode = "BE";
 
             FillInAddSelectLists(model);
+            FillInAvailableUsers(model);
 
             ViewData["Title"] = "Project toevoegen";
 
@@ -304,11 +306,12 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
-        public IActionResult Toevoegen(ProjectModel model)
+        public async Task<IActionResult> Toevoegen(ProjectModel model)
         {
             if (!ModelState.IsValid)
             {
                 FillInAddSelectLists(model);
+                FillInAvailableUsers(model);
                 return View(model);
             }
 
@@ -317,11 +320,39 @@ namespace CPMCore.Controllers
             model.Project.Status.Id = model.Project.Status.Id == 0 ? 1 : model.Project.Status.Id;
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
+            // Routeberekening voor coördinatieproject
+            if (model.Project.IsCoordinationProject && model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
+            {
+                var (distKm, durSec) = await _projectService.CalculateRouteAsync(
+                    model.Project.CoordinationIssuerCompanyId.Value,
+                    model.SelectedPostalcode);
+                model.Project.ProjectDistanceKm    = distKm;
+                model.Project.RouteDurationSeconds = durSec;
+            }
+
             var service = _projectService;
             var response = service.InsertUpdate(model.Project);
 
             if (response.Success)
             {
+                var newProjectId = model.Project.Id;
+
+                // Sla contract schijven op
+                if (model.Project.IsCoordinationProject && model.ContractSlices?.Count > 0)
+                    service.SaveContractSlices(newProjectId, model.ContractSlices.Select(s => new ProjectContractSliceBO
+                    {
+                        Description = s.Description,
+                        Percentage = s.Percentage
+                    }).ToList());
+
+                // Sla uurtarieven op
+                if (model.Project.IsCoordinationProject && model.HourlyRates?.Count > 0)
+                    service.SaveProjectHourlyRates(newProjectId, model.HourlyRates.Select(r => new ProjectHourlyRateBO
+                    {
+                        UserId = r.UserId,
+                        HourlyRate = r.HourlyRate
+                    }).ToList());
+
                 AddMessage("success", $"Het project {model.Project.Name} is toegevoegd", "Geslaagd!");
                 return RedirectToAction("Index", "Home");
             }
@@ -329,6 +360,7 @@ namespace CPMCore.Controllers
             AddMessage("error", $"Het project {model.Project.Name} is NIET toegevoegd", "Fout!");
 
             FillInAddSelectLists(model);
+            FillInAvailableUsers(model);
             return View(model);
         }
 
@@ -485,8 +517,31 @@ namespace CPMCore.Controllers
             model.SelectedStatus = model.Project.Status.Id;
 
             FillInAddSelectListsDetailEdit(model);
+            FillInAvailableUsers(model);
 
             model.Users = GetOrderedUsers();
+
+            // Laad schijven en uurtarieven
+            if (model.Project.IsCoordinationProject)
+            {
+                var slicesResp = _projectService.GetContractSlices(projectid);
+                if (slicesResp.Success)
+                    model.ContractSlices = slicesResp.Values.Select(s => new ProjectContractSliceVM
+                    {
+                        Id = s.Id,
+                        Description = s.Description,
+                        Percentage = s.Percentage
+                    }).ToList();
+
+                var ratesResp = _projectService.GetProjectHourlyRates(projectid);
+                if (ratesResp.Success)
+                    model.HourlyRates = ratesResp.Values.Select(r => new ProjectHourlyRateVM
+                    {
+                        UserId = r.UserId,
+                        UserFullName = r.UserFullName,
+                        HourlyRate = r.HourlyRate
+                    }).ToList();
+            }
 
             ViewData["Title"] = $"Project - {model.Project.Name}";
 
@@ -496,11 +551,12 @@ namespace CPMCore.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [Breadcrumb("Project bewerken", FromAction = nameof(Index))]
-        public IActionResult Edit(EditProjectDetail model)
+        public async Task<IActionResult> Edit(EditProjectDetail model)
         {
             if (!ModelState.IsValid)
             {
                 FillInAddSelectListsDetailEdit(model);
+                FillInAvailableUsers(model);
                 model.Users = GetOrderedUsers();
                 return View(model);
             }
@@ -510,11 +566,37 @@ namespace CPMCore.Controllers
             model.Project.Status.Id = model.SelectedStatus;
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
+            // Routeberekening bij wijziging coördinatieproject-instellingen
+            if (model.Project.IsCoordinationProject && model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
+            {
+                var (distKm, durSec) = await _projectService.CalculateRouteAsync(
+                    model.Project.CoordinationIssuerCompanyId.Value,
+                    model.SelectedPostalcode);
+                model.Project.ProjectDistanceKm    = distKm;
+                model.Project.RouteDurationSeconds = durSec;
+            }
+
             var service = _projectService;
             var response = service.InsertUpdate(model.Project);
 
             if (response.Success)
             {
+                var projectId = model.Project.Id;
+
+                // Sla contract schijven op
+                service.SaveContractSlices(projectId, model.ContractSlices?.Select(s => new ProjectContractSliceBO
+                {
+                    Description = s.Description,
+                    Percentage = s.Percentage
+                }).ToList() ?? new List<ProjectContractSliceBO>());
+
+                // Sla uurtarieven op
+                service.SaveProjectHourlyRates(projectId, model.HourlyRates?.Select(r => new ProjectHourlyRateBO
+                {
+                    UserId = r.UserId,
+                    HourlyRate = r.HourlyRate
+                }).ToList() ?? new List<ProjectHourlyRateBO>());
+
                 AddMessage("success", $"{model.Project.Name} is bijgewerkt", "Geslaagd!");
                 return RedirectToAction("Detail", new { projectid = model.Project.Id });
             }
@@ -522,6 +604,7 @@ namespace CPMCore.Controllers
             AddMessage("error", $"{model.Project.Name} is NIET bijgewerkt", "Fout!");
 
             FillInAddSelectListsDetailEdit(model);
+            FillInAvailableUsers(model);
             model.Users = GetOrderedUsers();
             return View(model);
         }
@@ -4740,6 +4823,222 @@ namespace CPMCore.Controllers
             return View(model);
         }
 
+        [HttpPost]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.ProjectsForSale)]
+        public IActionResult SetUnitIsOption(int unitId, bool isOption)
+        {
+            var response = _unitService.SetUnitIsOption(unitId, isOption);
+            if (!response.Success)
+                return Json(new { success = false, message = string.Join(", ", response.Messages.Where(m => m.Type == MessageType.Error).Select(m => m.Message)) });
+            return Json(new { success = true, isOption });
+        }
+
+        [HttpGet]
+        [Breadcrumb("Coördinatie", FromAction = "Detail")]
+        public IActionResult DetailCoordinatie(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var projResp = _projectService.GetProjectByID(projectid);
+            if (!projResp.Success)
+                return NotFound();
+
+            var proj = projResp.Value;
+            var model = new Models.Projecten.ProjectCoordinatieModel
+            {
+                ProjectId         = projectid,
+                ProjectName       = proj.Name,
+                ContractType      = proj.ContractType,
+                ProjectDistanceKm = proj.ProjectDistanceKm,
+                KmAllowance       = proj.KmAllowance
+            };
+
+            var slicesResp = _projectService.GetContractSlices(projectid);
+            if (slicesResp.Success)
+                model.ContractSlices = slicesResp.Values.Select(s => new Models.Projecten.ProjectContractSliceVM
+                {
+                    Id          = s.Id,
+                    Description = s.Description,
+                    Percentage  = s.Percentage
+                }).ToList();
+
+            var ratesResp = _projectService.GetProjectHourlyRates(projectid);
+            if (ratesResp.Success)
+                model.HourlyRates = ratesResp.Values.Select(r => new Models.Projecten.ProjectHourlyRateVM
+                {
+                    UserId       = r.UserId,
+                    UserFullName = r.UserFullName,
+                    HourlyRate   = r.HourlyRate
+                }).ToList();
+
+            var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
+            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", proj.Name)
+            {
+                Parent = projectenIndex,
+                RouteValues = new { projectid }
+            };
+            var lastnode = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailCoordinatie", "Projecten", "Coördinatie")
+            {
+                Parent = projectDetail,
+                RouteValues = new { projectid }
+            };
+            ViewData["BreadcrumbNode"] = lastnode;
+
+            return View(model);
+        }
+
+        [HttpGet]
+        [Breadcrumb("Coördinatie-instellingen", FromAction = "DetailCoordinatie")]
+        public IActionResult CoordinatieInstellingen(int projectid)
+        {
+            ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
+
+            var projResp = _projectService.GetProjectByID(projectid);
+            if (!projResp.Success)
+                return NotFound();
+
+            var proj = projResp.Value;
+            var model = new Models.Projecten.CoordinatieInstellingenVM
+            {
+                ProjectId                  = projectid,
+                ProjectName                = proj.Name,
+                CoordinationIssuerCompanyId = proj.CoordinationIssuerCompanyId,
+                ContractType               = proj.ContractType,
+                KmAllowance                = proj.KmAllowance,
+                ProjectDistanceKm          = proj.ProjectDistanceKm,
+                RouteDurationSeconds       = proj.RouteDurationSeconds,
+                IssuerCompanies            = GetIssuerCompanies(),
+            };
+
+            FillInAvailableUsersForCoord(model);
+
+            var slicesResp = _projectService.GetContractSlices(projectid);
+            if (slicesResp.Success)
+                model.ContractSlices = slicesResp.Values.Select(s => new Models.Projecten.ProjectContractSliceVM
+                {
+                    Id          = s.Id,
+                    Description = s.Description,
+                    Percentage  = s.Percentage
+                }).ToList();
+
+            var ratesResp = _projectService.GetProjectHourlyRates(projectid);
+            if (ratesResp.Success)
+                model.HourlyRates = ratesResp.Values.Select(r => new Models.Projecten.ProjectHourlyRateVM
+                {
+                    UserId       = r.UserId,
+                    UserFullName = r.UserFullName,
+                    HourlyRate   = r.HourlyRate
+                }).ToList();
+
+            SetCoordinatieBreadcrumb(projectid, proj.Name);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CoordinatieInstellingen(Models.Projecten.CoordinatieInstellingenVM vm)
+        {
+            var projectid = vm.ProjectId;
+
+            // Laad het bestaande project om alle velden te bewaren
+            var projResp = _projectService.GetProjectByID(projectid);
+            if (!projResp.Success)
+                return NotFound();
+
+            var proj = projResp.Value;
+
+            // Coördinatie-velden bijwerken
+            proj.IsCoordinationProject      = true;
+            proj.CoordinationIssuerCompanyId = vm.CoordinationIssuerCompanyId;
+            proj.ContractType               = vm.ContractType;
+            proj.KmAllowance               = vm.KmAllowance;
+
+            // Route herberekenen indien coördinatiebedrijf en postcode beschikbaar
+            if (proj.CoordinationIssuerCompanyId.HasValue && proj.Postalcode?.PostcodeId > 0)
+            {
+                var (distKm, durSec) = await _projectService.CalculateRouteAsync(
+                    proj.CoordinationIssuerCompanyId.Value, (int)proj.Postalcode.PostcodeId.Value);
+                proj.ProjectDistanceKm    = distKm;
+                proj.RouteDurationSeconds = durSec;
+            }
+
+            _projectService.InsertUpdate(proj);
+
+            // Schijven en uurtarieven opslaan
+            _projectService.SaveContractSlices(projectid, (vm.ContractSlices ?? new()).Select(s => new BOCore.ProjectContractSliceBO
+            {
+                Description = s.Description,
+                Percentage  = s.Percentage
+            }).ToList());
+
+            _projectService.SaveProjectHourlyRates(projectid, (vm.HourlyRates ?? new())
+                .Where(r => !string.IsNullOrWhiteSpace(r.UserId))
+                .Select(r => new BOCore.ProjectHourlyRateBO
+                {
+                    UserId    = r.UserId,
+                    HourlyRate = r.HourlyRate
+                }).ToList());
+
+            return RedirectToAction(nameof(DetailCoordinatie), new { projectid });
+        }
+
+        [HttpGet]
+        public IActionResult GetIssuerCompanyDefaults(int issuerCompanyId)
+        {
+            var company = _db.IssuerCompany
+                .AsNoTracking()
+                .Where(c => c.Id == issuerCompanyId)
+                .Select(c => new
+                {
+                    ratePerKm = c.RatePerKm,
+                    userRates = c.IssuerCompanyUserRate.Select(r => new { userId = r.UserId, hourlyRate = r.HourlyRate }).ToList()
+                })
+                .FirstOrDefault();
+
+            if (company == null)
+                return NotFound();
+
+            return Json(company);
+        }
+
+        [HttpGet]
+        public PartialViewResult BlankSliceRow()
+        {
+            var viewData = new ViewDataDictionary<Models.Projecten.ProjectContractSliceVM>(
+                ViewData, new Models.Projecten.ProjectContractSliceVM());
+            return new PartialViewResult
+            {
+                ViewName = "Partials/_SliceRow",
+                ViewData = viewData
+            };
+        }
+
+        [HttpGet]
+        public PartialViewResult BlankRateRow()
+        {
+            var users = _db.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+                .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
+                {
+                    Value = u.UserId,
+                    Text = (u.Voornaam + " " + u.Familienaam).Trim()
+                })
+                .ToList();
+
+            var viewData = new ViewDataDictionary<Models.Projecten.ProjectHourlyRateVM>(
+                ViewData, new Models.Projecten.ProjectHourlyRateVM())
+            {
+                { "AvailableUsers", users }
+            };
+            return new PartialViewResult
+            {
+                ViewName = "Partials/_RateRow",
+                ViewData = viewData
+            };
+        }
+
         [HttpGet]
         public IActionResult SalesListPdf(int projectid)
         {
@@ -6259,6 +6558,55 @@ namespace CPMCore.Controllers
                 .OrderBy(i => i.Name)
                 .Select(i => new ProjectIssuerCompanyOptionVM { Id = i.Id, Name = i.Name })
                 .ToList();
+        }
+
+        private void FillInAvailableUsers(ProjectModel model)
+        {
+            model.AvailableUsers = _db.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+                .Select(u => new IdNameBO { ID = 0, Display = (u.Voornaam + " " + u.Familienaam).Trim(), Group = u.UserId })
+                .ToList();
+        }
+
+        private void FillInAvailableUsers(EditProjectDetail model)
+        {
+            model.AvailableUsers = _db.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+                .Select(u => new IdNameBO { ID = 0, Display = (u.Voornaam + " " + u.Familienaam).Trim(), Group = u.UserId })
+                .ToList();
+        }
+
+        private void FillInAvailableUsersForCoord(Models.Projecten.CoordinatieInstellingenVM model)
+        {
+            model.AvailableUsers = _db.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+                .Select(u => new IdNameBO { ID = 0, Display = (u.Voornaam + " " + u.Familienaam).Trim(), Group = u.UserId })
+                .ToList();
+        }
+
+        private void SetCoordinatieBreadcrumb(int projectid, string projectName)
+        {
+            var idx = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var projIdx = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = idx };
+            var detail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", projectName)
+            {
+                Parent = projIdx,
+                RouteValues = new { projectid }
+            };
+            var coord = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailCoordinatie", "Projecten", "Coördinatie")
+            {
+                Parent = detail,
+                RouteValues = new { projectid }
+            };
+            var instellingen = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("CoordinatieInstellingen", "Projecten", "Instellingen")
+            {
+                Parent = coord,
+                RouteValues = new { projectid }
+            };
+            ViewData["BreadcrumbNode"] = instellingen;
         }
 
         private void FillInAddSelectListsDetail(ref ShowProjectDetail model)

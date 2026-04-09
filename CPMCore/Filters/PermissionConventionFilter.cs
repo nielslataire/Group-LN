@@ -31,12 +31,21 @@ public class PermissionConventionFilter : IAsyncAuthorizationFilter
         var userType = context.HttpContext.User.FindFirst(CPMCore.Helpers.CpmClaims.UserType)?.Value;
         if (userType == "contractor")
         {
-            var ctrl = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var cb) ? cb : null;
-            var isAllowed = string.Equals(ctrl, "ContractorPortal", StringComparison.OrdinalIgnoreCase)
-                         || string.Equals(ctrl, "Account", StringComparison.OrdinalIgnoreCase);
-            if (!isAllowed)
-                context.Result = new RedirectResult("/Werfportaal");
-            return;
+            // Als deze gebruiker ook interne permissies heeft, behandel hem als intern.
+            // Dit vangt het geval op waarbij iemand zowel aannemer als interne gebruiker is,
+            // of waarbij een verouderde cookie nog UserType="contractor" bevat terwijl de
+            // gebruiker inmiddels interne rechten heeft.
+            await _permissionService.EnsureLoadedAsync(context.HttpContext.RequestAborted);
+            if (!_permissionService.EffectivePermissions.Any())
+            {
+                var ctrl = context.ActionDescriptor.RouteValues.TryGetValue("controller", out var cb) ? cb : null;
+                var isAllowed = string.Equals(ctrl, "ContractorPortal", StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(ctrl, "Account", StringComparison.OrdinalIgnoreCase);
+                if (!isAllowed)
+                    context.Result = new RedirectResult("/Werfportaal");
+                return;
+            }
+            // Gebruiker heeft interne permissies → verder als interne gebruiker
         }
         if (userType == "customer")
         {

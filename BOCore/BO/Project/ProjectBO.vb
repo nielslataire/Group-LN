@@ -412,4 +412,94 @@ Public Class ProjectBO
             _clientcount = value
         End Set
     End Property
+
+    ' ── Coordinatieproject ──────────────────────────────────────────────────
+    Private _isCoordinationProject As Boolean
+    <Display(Name:="Coördinatieproject")>
+    Public Property IsCoordinationProject() As Boolean
+        Get
+            Return _isCoordinationProject
+        End Get
+        Set(ByVal value As Boolean)
+            _isCoordinationProject = value
+        End Set
+    End Property
+
+    Private _coordinationIssuerCompanyId As Integer?
+    <Display(Name:="Coördinatiebedrijf")>
+    Public Property CoordinationIssuerCompanyId() As Integer?
+        Get
+            Return _coordinationIssuerCompanyId
+        End Get
+        Set(ByVal value As Integer?)
+            _coordinationIssuerCompanyId = value
+        End Set
+    End Property
+
+    Private _contractType As CoordinationContractType?
+    <Display(Name:="Contracttype")>
+    Public Property ContractType() As CoordinationContractType?
+        Get
+            Return _contractType
+        End Get
+        Set(ByVal value As CoordinationContractType?)
+            _contractType = value
+        End Set
+    End Property
+
+    Private _projectDistanceKm As Decimal?
+    <Display(Name:="Afstand (km)")>
+    Public Property ProjectDistanceKm() As Decimal?
+        Get
+            Return _projectDistanceKm
+        End Get
+        Set(ByVal value As Decimal?)
+            _projectDistanceKm = value
+        End Set
+    End Property
+
+    Private _routeDurationSeconds As Integer?
+    <Display(Name:="Reistijd (seconden)")>
+    Public Property RouteDurationSeconds() As Integer?
+        Get
+            Return _routeDurationSeconds
+        End Get
+        Set(ByVal value As Integer?)
+            _routeDurationSeconds = value
+        End Set
+    End Property
+
+    Private _kmAllowance As Decimal?
+    <Display(Name:="Verplaatsingsvergoeding (€/km)")>
+    Public Property KmAllowance() As Decimal?
+        Get
+            Return _kmAllowance
+        End Get
+        Set(ByVal value As Decimal?)
+            _kmAllowance = value
+        End Set
+    End Property
+
+    Private _contractSlices As List(Of ProjectContractSliceBO)
+    Public Property ContractSlices() As List(Of ProjectContractSliceBO)
+        Get
+            If _contractSlices Is Nothing Then _contractSlices = New List(Of ProjectContractSliceBO)
+            Return _contractSlices
+        End Get
+        Set(ByVal value As List(Of ProjectContractSliceBO))
+            _contractSlices = value
+        End Set
+    End Property
+
+    Private _hourlyRates As List(Of ProjectHourlyRateBO)
+    Public Property HourlyRates() As List(Of ProjectHourlyRateBO)
+        Get
+            If _hourlyRates Is Nothing Then _hourlyRates = New List(Of ProjectHourlyRateBO)
+            Return _hourlyRates
+        End Get
+        Set(ByVal value As List(Of ProjectHourlyRateBO))
+            _hourlyRates = value
+        End Set
+    End Property
+
 End Class
