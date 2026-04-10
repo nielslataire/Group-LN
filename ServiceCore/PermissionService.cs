@@ -114,22 +114,42 @@ public class PermissionService : IPermissionService
     {
         if (!_loaded) return false;
 
-        if (_effective.TryGetValue(code, out var grant))
+        var hasDirect = _effective.TryGetValue(code, out var grant);
+        if (hasDirect)
         {
-            return access switch
+            var directResult = access switch
             {
-                PermissionAccessType.Read => grant.Read,
-                PermissionAccessType.Write => grant.Write,
-                PermissionAccessType.Delete => grant.Delete,
+                PermissionAccessType.Read => grant!.Read,
+                PermissionAccessType.Write => grant!.Write,
+                PermissionAccessType.Delete => grant!.Delete,
                 _ => false
             };
+            // Directe match geeft toegang: meteen teruggeven.
+            if (directResult) return true;
+            // Directe entry ontzegt toegang: toch child-permissies controleren.
+            // (bv. rol ontzegt "Suppliers" maar gebruiker heeft override "Suppliers.Company.5")
+        }
+        else
+        {
+            // Geen directe match: zoek omhoog naar parent-permissie
+            // ("Suppliers.Company" → "Suppliers")
+            var parent = code.Contains('.') ? code[..code.LastIndexOf('.')] : null;
+            if (!string.IsNullOrWhiteSpace(parent))
+                return Has(parent, access);
         }
 
-        var parent = code.Contains('.') ? code[..code.LastIndexOf('.')] : null;
-        if (!string.IsNullOrWhiteSpace(parent))
-            return Has(parent, access);
-
-        return false;
+        // Zoek omlaag: als de gebruiker een child-permissie heeft (bv. "Suppliers.Company.5")
+        // dan heeft hij impliciet ook toegang tot de parent ("Suppliers").
+        var prefix = code + ".";
+        return _effective.Any(kv =>
+            kv.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
+            access switch
+            {
+                PermissionAccessType.Read => kv.Value.Read,
+                PermissionAccessType.Write => kv.Value.Write,
+                PermissionAccessType.Delete => kv.Value.Delete,
+                _ => false
+            });
     }
 
     private void GrantAll(string code) => _effective[code] = new PermissionGrant(true, true, true);

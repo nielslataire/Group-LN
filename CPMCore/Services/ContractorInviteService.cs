@@ -167,6 +167,17 @@ public class ContractorInviteService : IContractorInviteService
         }
         await _db.SaveChangesAsync(ct);
 
+        // Interne gebruikers (met permissies) mogen nooit worden omgezet naar contractor.
+        var isInternalUser = await _db.PermissionPerUser
+            .AnyAsync(p => p.UserId == user.Id, ct);
+
+        if (isInternalUser)
+        {
+            // Wel de company-toegang toevoegen (zodat de interne gebruiker
+            // ook als verantwoordelijke zichtbaar is), maar UserType nooit wijzigen.
+            return ContractorInviteResult.Ok(user.Id);
+        }
+
         // UserGuestInvitation: zet UserType = "contractor"
         var invitation = await _db.UserGuestInvitation
             .FirstOrDefaultAsync(i => i.UserId == user.Id, ct);

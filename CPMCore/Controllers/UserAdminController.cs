@@ -618,6 +618,33 @@ public class UserAdminController : BaseController
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
+    public async Task<IActionResult> ResetToInternal(int id)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        if (user == null)
+            return NotFound();
+
+        // Verwijder UserCompanyAccess (aannemer-koppeling)
+        var companyAccesses = await _db.UserCompanyAccess
+            .Where(a => a.UserId == id)
+            .ToListAsync();
+        _db.UserCompanyAccess.RemoveRange(companyAccesses);
+
+        // Zet UserGuestInvitation terug naar "internal"
+        var invitation = await _db.UserGuestInvitation
+            .FirstOrDefaultAsync(i => i.UserId == id);
+        if (invitation != null)
+            invitation.UserType = "internal";
+
+        await _db.SaveChangesAsync();
+
+        TempData["Message"] = "Gebruiker teruggezet naar intern.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
     public async Task<IActionResult> LinkEntra(int id, string? linkEntraObjectId)
     {
         if (string.IsNullOrWhiteSpace(linkEntraObjectId))

@@ -5,10 +5,10 @@
     {
         @Html.HiddenFor(m => m.Id)
         <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Schijf</label>
-        <div class="col-lg-4 col-xl-5">
+        <div class="col-lg-3 col-xl-4">
             @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern form-control-sm", placeholder = "Omschrijving" })
         </div>
-        <div class="col-lg-1 col-xl-1">
+        <div class="col-lg-2 col-xl-2">
             <div class="input-group input-group-sm">
                 @Html.TextBoxFor(m => m.Percentage, new
                 {

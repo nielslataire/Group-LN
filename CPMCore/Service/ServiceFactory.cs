@@ -45,7 +45,7 @@ namespace CPMCore.Service
         public static IContactService GetContactService()
             => new ContactService(CreateUoW());
         public static IProjectService GetProjectService()
-            => new ProjectService(CreateUoW());
+            => new ProjectService(CreateUoW(), NullRouteService.Instance);
         public static IUnitService GetUnitService()
             => new UnitService(CreateUoW());
         public static IClientService GetClientService()
@@ -73,7 +73,7 @@ namespace CPMCore.Service
         public static IContactService CreateContactService(UnitOfWorkCore uow)
             => new ContactService(uow);
         public static IProjectService CreateProjectService(UnitOfWorkCore uow)
-            => new ProjectService(uow);
+            => new ProjectService(uow, NullRouteService.Instance);
         public static IUnitService CreateUnitService(UnitOfWorkCore uow)
             => new UnitService(uow);
         public static IClientService CreateClientService(UnitOfWorkCore uow)

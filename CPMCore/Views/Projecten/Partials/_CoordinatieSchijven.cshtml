@@ -1,6 +1,7 @@
 @model CPMCore.Models.Projecten.ProjectCoordinatieModel
 @{
     var totalPct = Model.ContractSlices.Sum(s => s.Percentage);
+    var canInvoice = Model.CoordinationIssuerCompanyId.HasValue && Model.ContractPrice.HasValue && Model.ContractPrice > 0;
 }
 <div class="card card-modern">
     <div class="card-header">
@@ -19,6 +20,10 @@
                         <th>#</th>
                         <th>Omschrijving</th>
                         <th class="text-end">Percentage</th>
+                        @if (canInvoice)
+                        {
+                            <th class="text-end text-nowrap">Selectie</th>
+                        }
                     </tr>
                 </thead>
                 <tbody>
@@ -29,12 +34,25 @@
                             <td>@(i + 1)</td>
                             <td>@slice.Description</td>
                             <td class="text-end">@slice.Percentage.ToString("0.##") %</td>
+                            @if (canInvoice)
+                            {
+                                <td class="text-end">
+                                    <div class="checkbox-custom checkbox-default d-inline-block">
+                                        <input type="checkbox" class="chkCoordSlice"
+                                               id="coord-slice-@slice.Id"
+                                               name="sliceIds"
+                                               value="@slice.Id"
+                                               form="coordInvoiceForm" />
+                                        <label for="coord-slice-@slice.Id"></label>
+                                    </div>
+                                </td>
+                            }
                         </tr>
                     }
                 </tbody>
                 <tfoot>
                     <tr class="fw-bold">
-                        <td colspan="2" class="text-end">Totaal</td>
+                        <td colspan="@(canInvoice ? 3 : 2)" class="text-end">Totaal</td>
                         <td class="text-end @(totalPct != 100 ? "text-danger" : "")">@totalPct.ToString("0.##") %</td>
                     </tr>
                 </tfoot>

@@ -8,14 +8,14 @@
     {
 
         <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Uurtarief</label>
-        <div class="col-lg-4 col-xl-5">
+        <div class="col-lg-3 col-xl-4">
             @Html.DropDownListFor(m => m.UserId,
             new SelectList(availableUsers, "Value", "Text", Model.UserId),
                 "-- Selecteer persoon --",
                 new { @class = "form-control form-control-modern form-control-sm rate-user" })
         @Html.HiddenFor(m => m.UserFullName)
         </div>
-        <div class="col-lg-1 col-xl-1">
+        <div class="col-lg-2 col-xl-2">
             <div class="input-group input-group-sm">
             <span class="input-group-text">€</span>
             @Html.TextBoxFor(m => m.HourlyRate, new

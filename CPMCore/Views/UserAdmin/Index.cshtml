@@ -361,6 +361,7 @@
                             <th>Rol</th>
                             <th>Status</th>
                             <th>Laatste login</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -394,6 +395,15 @@
                                 </td>
                                 <td><span class="badge @statusBadge.Item1">@statusBadge.Item2</span></td>
                                 <td class="text-muted small">@(c.LastLoginAt.HasValue ? c.LastLoginAt.Value.ToLocalTime().ToString("dd/MM/yy HH:mm") : "—")</td>
+                                <td>
+                                    <form asp-action="ResetToInternal" asp-route-id="@c.UserId" method="post"
+                                          onsubmit="return confirm('Aannemer-toegang verwijderen en terugzetten als interne gebruiker?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="btn btn-xs btn-outline-warning" title="Terugzetten als interne gebruiker">
+                                            <i class="bx bx-undo"></i>
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         }
                     </tbody>

@@ -2212,7 +2212,8 @@ namespace CPMCore.Controllers
             if ((ModelState.IsValid))
             {
                 //Referrer
-                var Referrer = TempData["Referrer"];
+                var referrer = TempData["Referrer"] as string
+                    ?? Url.Action("DetailContracts", "Projecten", new { projectid = model.ProjectId });
                 foreach (var contractactivity in activities)
                 {
                     if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
@@ -2229,7 +2230,7 @@ namespace CPMCore.Controllers
                 if (response.Success)
                 {
                     AddMessage("success", "Het contract is toegevoegd aan het project " + model.ProjectName, "Geslaagd!");
-                    return Redirect(Referrer.ToString());
+                    return Redirect(referrer);
                 }
                 else
                 {
@@ -2337,7 +2338,8 @@ namespace CPMCore.Controllers
             if ((ModelState.IsValid))
             {
                 //Referrer
-                var Referrer = TempData["Referrer"];
+                var referrer = TempData["Referrer"] as string
+                    ?? Url.Action("DetailContracts", "Projecten", new { projectid = model.ProjectId });
                 foreach (var contractactivity in activities)
                 {
                     if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
@@ -2353,12 +2355,12 @@ namespace CPMCore.Controllers
                 var response = service.InsertUpdateProjectContract(model.Contract);
                 if (response.Success)
                 {
-                    AddMessage("success", "Het contract is toegevoegd aan het project " + model.ProjectName, "Geslaagd!");
-                    return Redirect(Referrer.ToString());
+                    AddMessage("success", "Het contract is bijgewerkt voor project " + model.ProjectName, "Geslaagd!");
+                    return Redirect(referrer);
                 }
                 else
                 {
-                    AddMessage("error", "Het contract is NIET toegevoegd aan het project " + model.ProjectName, "Fout!");
+                    AddMessage("error", "Het contract is NIET bijgewerkt voor project " + model.ProjectName, "Fout!");
                     return View(model);
                 }
             }
@@ -4846,11 +4848,12 @@ namespace CPMCore.Controllers
             var proj = projResp.Value;
             var model = new Models.Projecten.ProjectCoordinatieModel
             {
-                ProjectId         = projectid,
-                ProjectName       = proj.Name,
-                ContractType      = proj.ContractType,
-                ProjectDistanceKm = proj.ProjectDistanceKm,
-                KmAllowance       = proj.KmAllowance
+                ProjectId                  = projectid,
+                ProjectName                = proj.Name,
+                ContractType               = proj.ContractType,
+                ProjectDistanceKm          = proj.ProjectDistanceKm,
+                KmAllowance                = proj.KmAllowance,
+                CoordinationIssuerCompanyId = proj.CoordinationIssuerCompanyId,
             };
 
             var slicesResp = _projectService.GetContractSlices(projectid);
@@ -4870,6 +4873,12 @@ namespace CPMCore.Controllers
                     UserFullName = r.UserFullName,
                     HourlyRate   = r.HourlyRate
                 }).ToList();
+
+            model.ContractPrice = _db.Contract
+                .AsNoTracking()
+                .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
+                .SelectMany(c => c.ContractActivity.Where(a => a.ActivityId == 277).Select(a => a.Price))
+                .FirstOrDefault();
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
@@ -4931,6 +4940,13 @@ namespace CPMCore.Controllers
                     HourlyRate   = r.HourlyRate
                 }).ToList();
 
+            // Laad contractprijs van het coördinatiecontract (lot 277 = projectcoordinatie)
+            model.ContractPrice = _db.Contract
+                .AsNoTracking()
+                .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
+                .SelectMany(c => c.ContractActivity.Where(a => a.ActivityId == 277).Select(a => a.Price))
+                .FirstOrDefault();
+
             SetCoordinatieBreadcrumb(projectid, proj.Name);
             return View(model);
         }
@@ -4980,6 +4996,53 @@ namespace CPMCore.Controllers
                     HourlyRate = r.HourlyRate
                 }).ToList());
 
+            // Coördinatiecontract aanmaken/bijwerken indien facturatiebedrijf geselecteerd
+            if (vm.CoordinationIssuerCompanyId.HasValue)
+            {
+                var linkedCompanyId = _db.CompanyIssuerCompany
+                    .Where(c => c.IssuerCompanyId == vm.CoordinationIssuerCompanyId.Value)
+                    .Select(c => (int?)c.CompanyId)
+                    .FirstOrDefault();
+
+                if (linkedCompanyId.HasValue)
+                {
+                    var existingContract = _db.Contract
+                        .Include(c => c.ContractActivity)
+                        .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
+                        .FirstOrDefault();
+
+                    if (existingContract == null)
+                    {
+                        var contractBo = new BOCore.ContractBO
+                        {
+                            ProjectId      = projectid,
+                            VatPercentage  = 21,
+                            PaymentTerm    = 14,
+                            ContractSigned = true,
+                            GuaranteeType  = BOCore.ContractGuaranteeType.NoGuarantee
+                        };
+                        contractBo.Company.ID = linkedCompanyId.Value;
+                        contractBo.Activities.Add(new BOCore.ContractActivityBO
+                        {
+                            Activity = new BOCore.ActivityBO { ID = 277 },
+                            Price    = vm.ContractPrice
+                        });
+                        _projectService.InsertUpdateProjectContract(contractBo);
+                    }
+                    else
+                    {
+                        existingContract.CompanyId      = linkedCompanyId.Value;
+                        existingContract.VatPercentage  = 21;
+                        existingContract.PaymentTerm    = 14;
+                        existingContract.ContractSigned = true;
+                        var coordActivity = existingContract.ContractActivity.FirstOrDefault(a => a.ActivityId == 277);
+                        if (coordActivity != null)
+                            coordActivity.Price = vm.ContractPrice;
+                        _db.SaveChanges();
+                    }
+                }
+            }
+
             return RedirectToAction(nameof(DetailCoordinatie), new { projectid });
         }
 
@@ -5017,8 +5080,10 @@ namespace CPMCore.Controllers
         [HttpGet]
         public PartialViewResult BlankRateRow()
         {
+            var internalUserIds = _db.PermissionPerUser.Select(p => p.UserId).Distinct();
             var users = _db.Users
                 .AsNoTracking()
+                .Where(u => u.IsActive && internalUserIds.Contains(u.Id))
                 .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
                 .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
                 {
@@ -6228,6 +6293,93 @@ namespace CPMCore.Controllers
             public List<ClientAccountChangeOrderInvoiceBO> Invoices { get; set; } = new();
         }
 
+        public class MakeCoordSliceInvoicesRequest
+        {
+            public int ProjectId { get; set; }
+            public List<int> SliceIds { get; set; } = new();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MakeCoordSliceInvoices(int projectId, List<int> sliceIds)
+        {
+            if (sliceIds == null || sliceIds.Count == 0)
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+
+            var proj = _db.Project
+                .AsNoTracking()
+                .Where(p => p.ProjectId == projectId)
+                .Select(p => new { p.ProjectId, p.CoordinationIssuerCompanyId })
+                .FirstOrDefault();
+
+            if (proj == null || !proj.CoordinationIssuerCompanyId.HasValue)
+            {
+                AddMessage("error", "Geen coördinatiebedrijf ingesteld.", "Fout!");
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+            }
+
+            var issuerCompanyId = proj.CoordinationIssuerCompanyId.Value;
+
+            // Ontvanger: externe company gekoppeld aan het facturatiebedrijf
+            var linkedCompanyId = _db.CompanyIssuerCompany
+                .Where(c => c.IssuerCompanyId == issuerCompanyId)
+                .Select(c => (int?)c.CompanyId)
+                .FirstOrDefault();
+
+            // Contractprijs ophalen
+            var contractPrice = _db.Contract
+                .AsNoTracking()
+                .Where(c => c.ProjectId == projectId && c.ContractActivity.Any(a => a.ActivityId == 277))
+                .SelectMany(c => c.ContractActivity.Where(a => a.ActivityId == 277).Select(a => a.Price))
+                .FirstOrDefault() ?? 0m;
+
+            // Geselecteerde schijven ophalen
+            var slices = _db.ProjectContractSlice
+                .AsNoTracking()
+                .Where(s => s.ProjectId == projectId && sliceIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.Description, s.Percentage })
+                .ToList();
+
+            if (!slices.Any())
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+
+            using var uow = _uow;
+            var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
+
+            var draft = new InvoiceDraftBO
+            {
+                IssuerCompanyId = issuerCompanyId,
+                InvoiceDate     = DateOnly.FromDateTime(DateTime.Today),
+                Mode            = InvoiceMode.Free,
+                ProjectId       = projectId,
+                CompanyId       = linkedCompanyId
+            };
+
+            foreach (var slice in slices)
+            {
+                var amount = contractPrice * slice.Percentage / 100m;
+                draft.Lines.Add(new InvoiceLineBO
+                {
+                    Text           = $"Projectcoördinatie – {slice.Description} ({slice.Percentage:0.##}%)",
+                    Price          = Math.Round(amount, 2, MidpointRounding.AwayFromZero),
+                    VatPercentage  = 21m,
+                    LineType       = "detail"
+                });
+            }
+
+            try
+            {
+                await cmd.CreateWithLinesAsync(draft, issueNow: false);
+                AddMessage("success", "Het conceptfactuur is aangemaakt.", "Gelukt!");
+            }
+            catch (Exception ex)
+            {
+                AddMessage("error", $"Factuur kon niet worden aangemaakt: {ex.Message}", "Fout!");
+            }
+
+            return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+        }
+
         private static InvoiceDraftBO? BuildStageInvoiceDraft(
                                   int issuerCompanyId,
                                   int? clientAccountId,
@@ -6580,8 +6732,10 @@ namespace CPMCore.Controllers
 
         private void FillInAvailableUsersForCoord(Models.Projecten.CoordinatieInstellingenVM model)
         {
+            var internalUserIds = _db.PermissionPerUser.Select(p => p.UserId).Distinct();
             model.AvailableUsers = _db.Users
                 .AsNoTracking()
+                .Where(u => u.IsActive && internalUserIds.Contains(u.Id))
                 .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
                 .Select(u => new IdNameBO { ID = 0, Display = (u.Voornaam + " " + u.Familienaam).Trim(), Group = u.UserId })
                 .ToList();

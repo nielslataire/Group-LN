@@ -3946,6 +3946,8 @@ namespace CPMCore.Models.Projecten
         public BOCore.CoordinationContractType? ContractType { get; set; }
         public decimal? ProjectDistanceKm { get; set; }
         public decimal? KmAllowance { get; set; }
+        public int? CoordinationIssuerCompanyId { get; set; }
+        public decimal? ContractPrice { get; set; }
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
         public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
     }
@@ -3960,6 +3962,8 @@ namespace CPMCore.Models.Projecten
         public BOCore.CoordinationContractType? ContractType { get; set; }
         [Display(Name = "Prijs per km")]
         public decimal? KmAllowance { get; set; }
+        [Display(Name = "Contractprijs")]
+        public decimal? ContractPrice { get; set; }
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
         public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
         // Alleen voor weergave, niet gepost
