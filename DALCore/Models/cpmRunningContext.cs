@@ -1270,6 +1270,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.ProjectId).HasColumnName("ProjectID");
             entity.Property(e => e.SiteManagerContactId).HasColumnName("SiteManagerContactID");
             entity.Property(e => e.VatPercentage).HasColumnType("numeric(18, 0)");
+            entity.Property(e => e.ContractName).HasMaxLength(200).IsRequired(false);
 
             entity.HasOne(d => d.Company).WithMany(p => p.Contract)
                 .HasForeignKey(d => d.CompanyId)

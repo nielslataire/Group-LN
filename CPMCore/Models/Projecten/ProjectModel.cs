@@ -3794,10 +3794,17 @@ namespace CPMCore.Models.Projecten
     }
     public class ContractSupplierRowModel
     {
-        public ContractBO Contract { get; set; }
+        public ContractSupplierRowModel()
+        {
+            Contracts = new List<ContractBO>();
+        }
+        public List<ContractBO> Contracts { get; set; }
+        public ContractBO Contract => Contracts?.FirstOrDefault();
         public IdNameBO Company { get; set; }
         public decimal TotalInvoiced { get; set; }
-        public bool HasContract => Contract != null;
+        public bool HasContract => Contracts?.Any() == true;
+        public bool AllContractsSigned => Contracts?.Any() == true && Contracts.All(c => c.ContractSigned);
+        public decimal TotalContractPrice => Contracts?.Sum(c => c.Activities?.Sum(a => a.Price ?? 0) ?? 0) ?? 0;
     }
 
     public class ProjectContractDetailModel
@@ -3807,8 +3814,10 @@ namespace CPMCore.Models.Projecten
             _contract = new ContractBO();
             _company = new CompanyBO();
             _incommingInvoices = new List<IncommingInvoiceBO>();
+            Contracts = new List<ContractBO>();
         }
 
+        public List<ContractBO> Contracts { get; set; }
         public bool HasContract { get; set; }
 
         private int _projectid;

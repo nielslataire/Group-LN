@@ -1,17 +1,36 @@
-﻿@using BOCore
+@using BOCore
+@using System.Globalization
+@using System.Text.Json
 @model CPMCore.Models.Projecten.DetailContractsModel
 @{
     var canWriteProjectSuppliers = ViewBag.CanWriteProjectSuppliers as bool? ?? false;
     var canDeleteProjectSuppliers = ViewBag.CanDeleteProjectSuppliers as bool? ?? false;
+    var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
+
+    // Hulpfuncties voor weergave contractvelden
+    string FmtVat(ContractBO c) =>
+        c.VatPercentage is null ? "-" : c.VatPercentage.Value.ToString("N2", currencyCulture);
+
+    string FmtPaymentTerm(ContractBO c) =>
+        c.PaymentTerm is null ? "-" : $"{c.PaymentTerm:0} dagen";
+
+    string FmtCashDiscount(ContractBO c) =>
+        c.CashDiscount
+            ? $"{c.CashDiscountPercentage?.ToString("N2", currencyCulture)}% binnen {c.CashDiscountPaymentTerm:0} dagen"
+            : "-";
+
+    string FmtGuarantee(ContractBO c) =>
+        c.GuaranteeType == ContractGuaranteeType.FinancialGuarantee
+            ? $"{c.GuaranteePercentage?.ToString("N2", currencyCulture)}% {c.GuaranteeType.GetDisplayName()}"
+            : c.GuaranteeType.GetDisplayName();
 }
 
 @section PageStyle
 {
 <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
 <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
-
-
 }
+
 @if (Model.SupplierRows.Any())
 {
 @Html.HiddenFor(m => m.ProjectId, new {id = "txtProjectId"})
@@ -28,131 +47,123 @@
 <div class="card card-modern">
 	<div class="card-body">
 		<div class="datatables-header-footer-wrapper mt-2">
-			<table class="table table-responsive-md table-hover mb-0 gl-table-min-w" id="datatable-contracts-list" data-toggle="table" data-show-columns="true" data-toolbar-align="right">
+			<table class="table table-responsive-md table-hover mb-0 gl-table-min-w" id="datatable-contracts-list">
+				<thead>
+					<tr>
+						<th data-sortable="false" style="width:2rem"></th>
+						<th data-sortable="true">Bedrijf</th>
+						<th data-sortable="true" class="text-end">Contracten</th>
+						<th data-sortable="true" class="text-end">Totale contractprijs</th>
+						<th data-sortable="true" class="text-end">Totaal gefactureerd</th>
+						<th data-sortable="false" class="text-end">BTW %</th>
+						<th data-sortable="false" class="text-end">Betaaltermijn</th>
+						<th data-sortable="false" class="text-end">Korting contant</th>
+						<th data-sortable="false" class="text-end">Waarborg</th>
+						<th class="noVis" data-sortable="false">Acties</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var row in Model.SupplierRows)
+					{
+						var hasMultiple = row.HasContract && row.Contracts.Count > 1;
+						var hasSingle   = row.HasContract && row.Contracts.Count == 1;
 
-					<thead>
-						<tr>
-							<th data-sortable="false">Status</th>
-							<th data-sortable="true">Bedrijf</th>
-							<th data-sortable="true" class="text-right">Contractprijs</th>
-							<th data-sortable="true" class="text-right">Totaal gefactureerd</th>
-							<th data-sortable="false" class="hidden-xs text-right">BTW %</th>
-							<th data-sortable="false" class="hidden-xs text-right">Betaaltermijn</th>
-							<th data-sortable="false" class="hidden-xs text-right">Korting contant</th>
-							<th data-sortable="false" class="hidden-xs text-right">Borg</th>
-							<th class="hidden-xs noVis" data-sortable="false">Acties</th>
-						</tr>
-					</thead>
-					<tbody>
-						@foreach (var row in Model.SupplierRows)
+						// Bouw JSON voor expandeerbare contractenrijen (inclusief contractvelden)
+						string contractsJson = null;
+						if (hasMultiple)
 						{
-							<tr>
-								<td>
+							contractsJson = JsonSerializer.Serialize(
+								row.Contracts.Select(c => new
+								{
+									id          = c.Id,
+									name        = string.IsNullOrWhiteSpace(c.ContractName) ? "Contract" : c.ContractName,
+									price       = (c.Activities?.Sum(a => a.Price ?? 0) ?? 0).ToString("C", currencyCulture),
+									signed      = c.ContractSigned,
+									vat         = FmtVat(c),
+									paymentTerm = FmtPaymentTerm(c),
+									cashDiscount= FmtCashDiscount(c),
+									guarantee   = FmtGuarantee(c)
+								})
+							);
+						}
+
+						<tr data-contracts="@contractsJson">
+							<td class="align-middle" style="width:2rem;white-space:nowrap">
+								@if (hasMultiple)
+								{
+									<i class="bx bx-chevron-right supplier-toggle fs-5" style="cursor:pointer;vertical-align:middle"></i>
+								}
+								else
+								{
+									<span style="display:inline-block;width:1.1rem"></span>
+								}
+							</td>
+							<td class="align-middle">
+								<div class="d-flex align-items-center gap-2">
 									@if (!row.HasContract)
 									{
-										<span class="ecommerce-status canceled" data-toggle="tooltip" data-placement="top" title="Geen contract"></span>
+										<span class="ecommerce-status canceled" title="Geen contract"></span>
 									}
-									else if (row.Contract?.ContractSigned == true)
+									else if (row.AllContractsSigned)
 									{
-										<span class="ecommerce-status completed" data-toggle="tooltip" data-placement="top" title="Contract getekend"></span>
+										<span class="ecommerce-status completed" title="Alle contracten getekend"></span>
 									}
 									else
 									{
-										<span class="ecommerce-status failed" data-toggle="tooltip" data-placement="top" title="Contract niet getekend"></span>
+										<span class="ecommerce-status failed" title="Contract(en) niet getekend"></span>
 									}
-								</td>
-								<td>
 									@row.Company?.Display
-								</td>
-								<td>
-									@if (row.HasContract)
+								</div>
+							</td>
+							<td class="text-end align-middle">
+								@(row.HasContract ? row.Contracts.Count.ToString() : "-")
+							</td>
+							<td class="text-end align-middle">
+								@(row.HasContract ? row.TotalContractPrice.ToString("C", currencyCulture) : "-")
+							</td>
+							<td class="text-end align-middle">@row.TotalInvoiced.ToString("C", currencyCulture)</td>
+							@* BTW %, Betaaltermijn, Korting contant, Waarborg: enkel voor enkelvoudig contract *@
+							<td class="text-end align-middle">
+								@(hasSingle ? FmtVat(row.Contract) : "-")
+							</td>
+							<td class="text-end align-middle">
+								@(hasSingle ? FmtPaymentTerm(row.Contract) : "-")
+							</td>
+							<td class="text-end align-middle">
+								@(hasSingle ? FmtCashDiscount(row.Contract) : "-")
+							</td>
+							<td class="text-end align-middle">
+								@(hasSingle ? FmtGuarantee(row.Contract) : "-")
+							</td>
+							<td class="actions align-middle">
+								@if (row.Company != null)
+								{
+									<a class="ms-1 me-1" title="Detail"
+									   href="@Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
+										<i class="bx bx-eye fs-5"></i>
+									</a>
+									@if (hasSingle && canWriteProjectSuppliers)
 									{
-										@String.Format("{0:C}", row.Contract.Activities.Sum(m => m.Price))
+										<a class="ms-1 me-1" title="Bewerken"
+										   href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })">
+											<i class="bx bx-edit fs-5"></i>
+										</a>
 									}
-									else
+									@if (canWriteProjectSuppliers)
 									{
-										@Html.Raw("-")
+										<a class="ms-1 me-1" title="Contract toevoegen"
+										   href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })">
+											<i class="bx bx-plus fs-5"></i>
+										</a>
 									}
-								</td>
-								<td>
-									@String.Format("{0:C}", row.TotalInvoiced)
-								</td>
-								<td>
-									@if (row.Contract?.VatPercentage != null)
-									{
-										@Html.DisplayFor(m => row.Contract.VatPercentage)
-									}
-									else
-									{
-										@Html.Raw("-")
-									}
-								</td>
-								<td>
-									@if (row.Contract?.PaymentTerm != null)
-									{
-										@Html.DisplayFor(m => row.Contract.PaymentTerm) @Html.Raw(" dagen")
-									}
-									else
-									{
-										@Html.Raw("-")
-									}
-								</td>
-								<td>
-									@if (row.Contract?.CashDiscount != false)
-									{
-										@Html.DisplayFor(m => row.Contract.CashDiscountPercentage) @Html.Raw(" binnen de ") @Html.DisplayFor(m => row.Contract.CashDiscountPaymentTerm) @Html.Raw(" dagen")
-									}
-									else
-									{
-										@Html.Raw("-")
-									}
-								</td>
-								<td>
-									@if (row.Contract?.GuaranteeType == ContractGuaranteeType.FinancialGuarantee)
-									{
-										@Html.DisplayFor(m => row.Contract.GuaranteePercentage) @Html.Raw(" ") @row.Contract.GuaranteeType.GetDisplayName()
-									}
-									else if (row.HasContract)
-									{
-										@row.Contract.GuaranteeType.GetDisplayName()
-									}
-									else
-									{
-										@Html.Raw("-")
-									}
-								</td>
-								<td class="actions">
-									@if (row.HasContract)
-									{
-										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })"><i class="bx bx-eye fs-5"></i></a>
-										
-										@if (canWriteProjectSuppliers)
-										{
-											<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" id="editContract" href="@Url.Action("EditContract", "Projecten", new { projectid = Model.ProjectId, contractid = row.Contract.Id })"><i class="bx bx-edit fs-5"></i></a>
-										}
-										@if (canDeleteProjectSuppliers)
-										{
-											<a class="ms-1 me-1 deleteContract" href="#modaldeletecontract" data-toggle="tooltip" id="deleteContract" data-placement="top" title="Verwijderen" data-original-title="Verwijderen" data-id="@row.Contract.Id"><i class="bx bx-trash fs-5"></i></a>
-										}
-									}
-									else if (row.Company != null)
-									{
-										<a class="ms-1 me-1" data-toggle="tooltip" data-placement="top" title="Detail" data-original-title="Detail" href="@Url.Action("DetailSupplier", "Projecten", new { projectid = Model.ProjectId, companyid = row.Company.ID })"><i class="bx bx-eye fs-5"></i></a>
-									}
-									else
-									{
-										@Html.Raw("-")
-									}
-
-								</td>
-							</tr>
-
-						}
-					</tbody>
+								}
+							</td>
+						</tr>
+					}
+				</tbody>
 			</table>
 		</div>
 	</div>
-
 </div>
 }
 else
@@ -161,13 +172,12 @@ else
 		<div class="card-body align-items-center text-center card-big-info">
 			<div class="col-12 mb-3 gl-empty-state-icon">
 				<i class="bx bx-file"></i>
-
 			</div>
 			<div class="col-12 text-muted mb-3">
 				<h4>Nog geen leveranciers toegevoegd</h4>
 			</div>
 			<div class="col-12 text-muted">
-				<a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default btn-md">+ Een eerste leverancier toevoegenn</a>
+				<a href="@Url.Action("AddContract", "Projecten", new { projectid = Model.ProjectId })" class="btn btn-default btn-md">+ Een eerste leverancier toevoegen</a>
 			</div>
 		</div>
 	</div>

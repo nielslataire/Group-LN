@@ -1761,13 +1761,21 @@ namespace CPMCore.Controllers
                 .ToHashSet();
 
             var rows = new List<ContractSupplierRowModel>();
-            foreach (var contract in model.Contracts)
+
+            // Groepeer contracten per leverancier (één rij per bedrijf)
+            var contractsByCompany = model.Contracts
+                .Where(c => c.Company != null)
+                .GroupBy(c => c.Company.ID)
+                .ToList();
+
+            foreach (var group in contractsByCompany)
             {
-                var summary = invoiceSummaries.FirstOrDefault(s => s.Company?.ID == contract.Company?.ID);
+                var company = group.First().Company;
+                var summary = invoiceSummaries.FirstOrDefault(s => s.Company?.ID == company.ID);
                 rows.Add(new ContractSupplierRowModel
                 {
-                    Contract = contract,
-                    Company = contract.Company,
+                    Contracts = group.ToList(),
+                    Company = company,
                     TotalInvoiced = summary?.TotalInvoiced ?? 0
                 });
             }
@@ -1776,7 +1784,7 @@ namespace CPMCore.Controllers
             {
                 rows.Add(new ContractSupplierRowModel
                 {
-                    Contract = null,
+                    Contracts = new List<ContractBO>(),
                     Company = summary.Company,
                     TotalInvoiced = summary.TotalInvoiced
                 });
@@ -1850,9 +1858,18 @@ namespace CPMCore.Controllers
                         .OrderByDescending(m => m.IncommingInvoiceDate)
                         .ToList();
                 }
+
+                // Laad alle contracten van deze leverancier voor dit project
+                var allContractsResponse = projectService.GetProjectContracts(projectid);
+                if (allContractsResponse.Success)
+                {
+                    model.Contracts = allContractsResponse.Values
+                        .Where(c => c.Company?.ID == companyId)
+                        .ToList();
+                }
             }
 
-            model.HasContract = model.Contract != null;
+            model.HasContract = model.Contracts.Any();
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -1892,7 +1909,6 @@ namespace CPMCore.Controllers
             model.ProjectId = projectid;
             model.ProjectName = projectService.GetProjectNameById(projectid);
             model.Contract = null;
-            model.HasContract = false;
 
             var companyResponse = companyService.GetCompanyByID(companyid);
             if (companyResponse.Success)
@@ -1907,6 +1923,16 @@ namespace CPMCore.Controllers
                     .OrderByDescending(m => m.IncommingInvoiceDate)
                     .ToList();
             }
+
+            // Laad alle contracten van deze leverancier voor dit project
+            var allContractsResponse = projectService.GetProjectContracts(projectid);
+            if (allContractsResponse.Success)
+            {
+                model.Contracts = allContractsResponse.Values
+                    .Where(c => c.Company?.ID == companyid)
+                    .ToList();
+            }
+            model.HasContract = model.Contracts.Any();
 
             var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")

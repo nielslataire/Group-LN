@@ -142,4 +142,15 @@ Public Class ContractBO
         End Set
     End Property
 
+    Private _contractName As String
+    <Display(Name:="Contractnaam")>
+    Public Property ContractName() As String
+        Get
+            Return _contractName
+        End Get
+        Set(ByVal value As String)
+            _contractName = value
+        End Set
+    End Property
+
 End Class

@@ -31,6 +31,20 @@
     <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/projecten-custom.css" />
+    <style>
+        /* DataTables child-wrapper: geen padding, geen border */
+        #datatable-contracts-list tr.child > td.child {
+            padding: 0 !important;
+            border-top: 0 !important;
+            border-bottom: 0 !important;
+        }
+        /* Inner tabel: geen borders op de rijen (Bootstrap .table voegt ze toe) */
+        #datatable-contracts-list td.child .table > tbody > tr > td {
+            border-top: 0 !important;
+            border-bottom: 0 !important;
+            vertical-align: middle;
+        }
+    </style>
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -179,6 +193,75 @@
                     closeBtnInside: true
                 });
             });
+        });
+
+        // ===== Chevron expand/collapse voor meerdere contracten =====
+        const canWriteContracts = @((ViewBag.CanWriteProjectSuppliers as bool? ?? false).ToString().ToLower());
+        const editContractBaseUrl = '@Url.Action("EditContract", "Projecten")';
+        const projectIdForEdit = @Model.ProjectId;
+
+        function getColWidths() {
+            return Array.from(
+                document.querySelectorAll('#datatable-contracts-list thead th')
+            ).map(th => th.offsetWidth + 'px');
+        }
+
+        function buildContractChildRows(contracts) {
+            const w = getColWidths();
+
+            const rows = contracts.map(function (c) {
+                const statusClass = c.signed ? 'completed' : 'failed';
+                const statusTitle = c.signed ? 'Contract getekend' : 'Contract niet getekend';
+                const statusDot   = `<span class="ecommerce-status ${statusClass}" title="${statusTitle}"></span>`;
+
+                const editBtn = canWriteContracts
+                    ? `<a class="ms-1 me-1" title="Bewerken"
+                          href="${editContractBaseUrl}?projectid=${projectIdForEdit}&contractid=${c.id}">
+                           <i class="bx bx-edit fs-5"></i>
+                       </a>`
+                    : '';
+
+                // Kolommen 0-9 in dezelfde volgorde als de thead
+                return `<tr>
+                    <td style="width:${w[0]}"></td>
+                    <td style="width:${w[1]}">
+                        <div class="d-flex align-items-center gap-2" style="padding-left:5.5rem">
+                            ${statusDot}
+                            ${c.name}
+                        </div>
+                    </td>
+                    <td style="width:${w[2]}"></td>
+                    <td style="width:${w[3]};text-align:right">${c.price}</td>
+                    <td style="width:${w[4]}"></td>
+                    <td style="width:${w[5]};text-align:right">${c.vat}</td>
+                    <td style="width:${w[6]};text-align:right">${c.paymentTerm}</td>
+                    <td style="width:${w[7]};text-align:right">${c.cashDiscount}</td>
+                    <td style="width:${w[8]};text-align:right">${c.guarantee}</td>
+                    <td style="width:${w[9]}" class="actions">${editBtn}</td>
+                </tr>`;
+            }).join('');
+
+            // .table geeft Bootstrap-padding + thema-linkkleur; fixed-layout + breedtes voor exacte uitlijning
+            return `<table class="table mb-0" style="width:100%;table-layout:fixed">
+                        <tbody>${rows}</tbody>
+                    </table>`;
+        }
+
+        $(document).on('click', '.supplier-toggle', function () {
+            const $icon = $(this);
+            const tr    = $icon.closest('tr');
+            const row   = table.row(tr);
+            const contractsRaw = tr.attr('data-contracts');
+            if (!contractsRaw) return;
+
+            if (row.child.isShown()) {
+                row.child.hide();
+                $icon.removeClass('bx-chevron-down').addClass('bx-chevron-right');
+            } else {
+                const contracts = JSON.parse(contractsRaw);
+                row.child(buildContractChildRows(contracts)).show();
+                $icon.removeClass('bx-chevron-right').addClass('bx-chevron-down');
+            }
         });
     </script>
 }

@@ -31,6 +31,8 @@ public partial class Contract
 
     public int? SiteManagerContactId { get; set; }
 
+    public string ContractName { get; set; }
+
     public virtual CompanyInfo Company { get; set; }
 
     public virtual ICollection<ContractActivity> ContractActivity { get; set; } = new List<ContractActivity>();
