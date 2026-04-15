@@ -14,12 +14,27 @@
             </div>
             <div class="modal-body">
                 @Html.AntiForgeryToken()
-                <input type="hidden" id="qc-issuer-company-id" value="@Model.IssuerCompanyId" />
                 <input type="hidden" id="qc-postal-code-id" name="PostalCodeId" value="" />
                 <input type="hidden" id="qc-invoice-postal-code-id" name="InvoicePostalCodeId" value="" />
 
                 <div class="row g-3 mb-3">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Facturatiebedrijf</label>
+                        <select id="qc-issuer-company-id" class="form-control form-control-modern">
+                            @foreach (var issuer in Model.IssuerCompanies)
+                            {
+                                <option value="@issuer.Id" selected="@(issuer.Id == Model.IssuerCompanyId ? "selected" : null)">@issuer.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Soort</label>
+                        <select id="qc-party-type" class="form-control form-control-modern">
+                            <option value="client">Klant</option>
+                            <option value="supplier">Leverancier</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label mb-1">Type</label>
                         <select id="qc-is-company" class="form-control form-control-modern">
                             <option value="true">Onderneming</option>
@@ -59,7 +74,11 @@
                                 <option value="Mevr">Mevr.</option>
                             </select>
                         </div>
-                        <div class="col-md-9">
+                        <div class="col-md-4">
+                            <label class="form-label mb-1">Voornaam</label>
+                            <input type="text" id="qc-forename" class="form-control form-control-modern" placeholder="Voornaam" />
+                        </div>
+                        <div class="col-md-5">
                             <label class="form-label mb-1">Naam</label>
                             <input type="text" id="qc-name" class="form-control form-control-modern" placeholder="Naam" />
                         </div>
@@ -115,13 +134,13 @@
                         <select id="qc-country" class="form-control form-control-modern">
                             @foreach (var country in Model.Countries)
                             {
-                                <option value="@country.Id" data-isocode="@country.IsoCode">@country.Name</option>
+                                <option value="@country.Id" data-isocode="@country.IsoCode" selected="@(country.IsoCode == Model.DefaultCountryCode ? "selected" : null)">@country.Name</option>
                             }
                         </select>
                     </div>
                 </div>
 
-                <div class="row g-3 mb-3">
+                <div id="qc-invoice-address-toggle-row" class="row g-3 mb-3">
                     <div class="col-md-12 d-flex align-items-center gap-2">
                         <div class="switch switch-sm switch-primary">
                             <input type="checkbox" id="qc-use-invoice-address" data-plugin-ios-switch />
@@ -158,7 +177,7 @@
                             <select id="qc-invoice-country" class="form-control form-control-modern">
                                 @foreach (var country in Model.Countries)
                                 {
-                                    <option value="@country.Id" data-isocode="@country.IsoCode">@country.Name</option>
+                                    <option value="@country.Id" data-isocode="@country.IsoCode" selected="@(country.IsoCode == Model.DefaultCountryCode ? "selected" : null)">@country.Name</option>
                                 }
                             </select>
                         </div>
@@ -182,8 +201,33 @@
 (function () {
     const postcodesUrl = '@postcodesUrl';
     const submitUrl = '@submitUrl';
-    const token = document.querySelector('#quickCreateClientModal [name="__RequestVerificationToken"]')?.value ?? '';
+    const modalEl = document.getElementById('quickCreateClientModal');
+    if (!modalEl) return;
 
+    const token = modalEl.querySelector('[name="__RequestVerificationToken"]')?.value ?? '';
+
+    // ── Zichtbaarheid toggles ───────────────────────────────────────────
+    function updateTypeVisibility() {
+        const isCompany = document.getElementById('qc-is-company').value === 'true';
+        document.getElementById('qc-company-fields').classList.toggle('d-none', !isCompany);
+        document.getElementById('qc-person-fields').classList.toggle('d-none', isCompany);
+    }
+
+    function updatePartyTypeVisibility() {
+        const isSupplier = document.getElementById('qc-party-type').value === 'supplier';
+        document.getElementById('quickCreateClientModalLabel').textContent =
+            isSupplier ? 'Nieuwe leverancier toevoegen' : 'Nieuwe klant toevoegen';
+        document.getElementById('qc-invoice-address-toggle-row').classList.toggle('d-none', isSupplier);
+        if (isSupplier) {
+            document.getElementById('qc-invoice-address-section').classList.add('d-none');
+            document.getElementById('qc-use-invoice-address').checked = false;
+        }
+    }
+
+    document.getElementById('qc-is-company').addEventListener('change', updateTypeVisibility);
+    document.getElementById('qc-party-type').addEventListener('change', updatePartyTypeVisibility);
+
+    // ── Select2 postcodes ───────────────────────────────────────────────
     function initSelect2(selectEl, countrySelectEl) {
         $(selectEl).select2({
             theme: 'bootstrap',
@@ -193,30 +237,22 @@
                 type: 'POST',
                 delay: 250,
                 data: function (params) {
-                    return {
-                        term: params.term,
-                        CountryId: $(countrySelectEl).val() || 0
-                    };
+                    return { term: params.term, CountryId: $(countrySelectEl).val() || 0 };
                 },
-                processResults: function (data) {
-                    return { results: data };
-                }
+                processResults: function (data) { return { results: data }; }
             },
             placeholder: 'Zoek postcode',
             minimumInputLength: 2,
-            dropdownParent: $('#quickCreateClientModal')
+            dropdownParent: $(modalEl)
         });
-
         $(selectEl).on('select2:select', function (e) {
             const hiddenId = selectEl === '#qc-postal-code' ? '#qc-postal-code-id' : '#qc-invoice-postal-code-id';
             $(hiddenId).val(e.params.data.id);
         });
-
         $(selectEl).on('select2:clear', function () {
             const hiddenId = selectEl === '#qc-postal-code' ? '#qc-postal-code-id' : '#qc-invoice-postal-code-id';
             $(hiddenId).val('');
         });
-
         $(countrySelectEl).on('change', function () {
             $(selectEl).val(null).trigger('change');
             const hiddenId = selectEl === '#qc-postal-code' ? '#qc-postal-code-id' : '#qc-invoice-postal-code-id';
@@ -224,52 +260,44 @@
         });
     }
 
-    const modalEl = document.getElementById('quickCreateClientModal');
-    if (!modalEl) return;
-
+    // ── Modal shown: initialiseer plugins en bind checkbox-events ──────
     modalEl.addEventListener('shown.bs.modal', function () {
-        if (!$('#qc-postal-code').data('select2')) {
-            initSelect2('#qc-postal-code', '#qc-country');
-        }
-        if (!$('#qc-invoice-postal-code').data('select2')) {
-            initSelect2('#qc-invoice-postal-code', '#qc-invoice-country');
-        }
+        if (!$('#qc-postal-code').data('select2')) initSelect2('#qc-postal-code', '#qc-country');
+        if (!$('#qc-invoice-postal-code').data('select2')) initSelect2('#qc-invoice-postal-code', '#qc-invoice-country');
+
         if (typeof ios7Switch !== 'undefined') {
             $(modalEl).find('[data-plugin-ios-switch]').each(function () {
-                if (!$(this).data('ios7-switch')) {
-                    new ios7Switch(this);
-                }
+                if (!$(this).data('ios7-switch')) new ios7Switch(this);
             });
         }
+
+        // Bind checkbox events NA ios7Switch init zodat listeners niet verloren gaan
+        $(document.getElementById('qc-use-invoice-address')).off('change.qc').on('change.qc', function () {
+            document.getElementById('qc-invoice-address-section').classList.toggle('d-none', !this.checked);
+        });
     });
 
-    document.getElementById('qc-is-company')?.addEventListener('change', function () {
-        const isCompany = this.value === 'true';
-        document.getElementById('qc-company-fields').classList.toggle('d-none', !isCompany);
-        document.getElementById('qc-person-fields').classList.toggle('d-none', isCompany);
-    });
-
-    document.getElementById('qc-use-invoice-address')?.addEventListener('change', function () {
-        document.getElementById('qc-invoice-address-section').classList.toggle('d-none', !this.checked);
-    });
-
-    document.getElementById('qc-save-btn')?.addEventListener('click', function () {
+    // ── Opslaan ────────────────────────────────────────────────────────
+    document.getElementById('qc-save-btn').addEventListener('click', function () {
         const errorEl = document.getElementById('qc-error-message');
         errorEl.classList.add('d-none');
 
         const isCompany = document.getElementById('qc-is-company').value === 'true';
-        const useInvoiceAddress = document.getElementById('qc-use-invoice-address').checked;
+        const isSupplier = document.getElementById('qc-party-type').value === 'supplier';
+        const useInvoiceAddress = !isSupplier && document.getElementById('qc-use-invoice-address').checked;
 
         const data = new FormData();
         data.append('__RequestVerificationToken', token);
         data.append('IssuerCompanyId', document.getElementById('qc-issuer-company-id').value);
         data.append('IsCompany', isCompany);
+        data.append('IsSupplier', isSupplier);
         if (isCompany) {
             data.append('CompanyName', document.getElementById('qc-company-name').value);
             data.append('EnterpriseNumber', document.getElementById('qc-enterprise-number').value);
             data.append('EnterpriseNumberCountryCode', document.getElementById('qc-vat-country').value);
         } else {
             data.append('Salutation', document.getElementById('qc-salutation').value);
+            data.append('Forename', document.getElementById('qc-forename').value);
             data.append('Name', document.getElementById('qc-name').value);
         }
         data.append('Email', document.getElementById('qc-email').value);
@@ -300,9 +328,7 @@
             contentType: false,
             success: function (response) {
                 if (response.success) {
-                    if (window.onQuickCreateClientSuccess) {
-                        window.onQuickCreateClientSuccess(response);
-                    }
+                    if (window.onQuickCreateClientSuccess) window.onQuickCreateClientSuccess(response);
                     bootstrap.Modal.getInstance(modalEl)?.hide();
                 } else {
                     errorEl.textContent = response.error || 'Er is een fout opgetreden.';

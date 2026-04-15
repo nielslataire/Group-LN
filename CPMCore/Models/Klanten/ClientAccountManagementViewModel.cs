@@ -175,7 +175,9 @@ public class IssuerCompanyOptionViewModel
 public class QuickCreateClientDto
 {
     public bool IsCompany { get; set; } = true;
+    public bool IsSupplier { get; set; } = false;
     public string? CompanyName { get; set; }
+    public string? Forename { get; set; }
     public string? Name { get; set; }
     public string? Salutation { get; set; }
     public string? EnterpriseNumber { get; set; }
@@ -199,5 +201,6 @@ public class QuickCreateClientModalViewModel
 {
     public int IssuerCompanyId { get; set; }
     public List<CountryOptionViewModel> Countries { get; set; } = new();
+    public List<IssuerCompanyOptionViewModel> IssuerCompanies { get; set; } = new();
     public string DefaultCountryCode { get; set; } = "BE";
 }

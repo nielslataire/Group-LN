@@ -439,10 +439,17 @@ namespace CPMCore.Controllers
                 })
                 .ToListAsync(ct);
 
+            var issuers = await _db.IssuerCompany
+                .AsNoTracking()
+                .OrderBy(i => i.Name)
+                .Select(i => new IssuerCompanyOptionViewModel { Id = i.Id, Name = i.Name })
+                .ToListAsync(ct);
+
             var vm = new QuickCreateClientModalViewModel
             {
                 IssuerCompanyId = issuerCompanyId,
                 Countries = countries,
+                IssuerCompanies = issuers,
                 DefaultCountryCode = "BE"
             };
 
@@ -454,59 +461,112 @@ namespace CPMCore.Controllers
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public async Task<IActionResult> QuickCreate([FromForm] QuickCreateClientDto dto, CancellationToken ct)
         {
-            var displayName = dto.IsCompany
+            var entityName = dto.IsCompany
                 ? (dto.CompanyName ?? "").Trim()
-                : string.Join(" ", new[] { dto.Salutation, dto.Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
+                : string.Join(" ", new[] { dto.Forename, dto.Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
-            if (string.IsNullOrWhiteSpace(displayName))
+            var displayName = dto.IsCompany
+                ? entityName
+                : string.Join(" ", new[] { dto.Salutation, dto.Forename, dto.Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            if (string.IsNullOrWhiteSpace(entityName))
                 return Json(new { success = false, error = "Naam is verplicht." });
 
-            var entity = new ClientAccount
+            if (dto.IsSupplier)
             {
-                Name = displayName,
-                CompanyName = dto.IsCompany ? dto.CompanyName : null,
-                Vatnumber = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
-                Email = dto.Email,
-                InvoiceEmail = dto.InvoiceEmail,
-                RequiresDigitalInvoice = dto.RequiresDigitalInvoice,
-                Street = dto.Street,
-                Housenumber = dto.HouseNumber,
-                Busnumber = dto.BusNumber,
-                PostalCodeId = dto.PostalCodeId > 0 ? dto.PostalCodeId : null,
-                InvoiceAddress = dto.UseInvoiceAddress,
-                InvoiceStreet = dto.UseInvoiceAddress ? dto.InvoiceStreet : null,
-                InvoiceHousenumber = dto.UseInvoiceAddress ? dto.InvoiceHouseNumber : null,
-                InvoiceBusnumber = dto.UseInvoiceAddress ? dto.InvoiceBusNumber : null,
-                InvoicePostalCodeId = dto.UseInvoiceAddress && dto.InvoicePostalCodeId > 0 ? dto.InvoicePostalCodeId : null,
-                OwnerPercentage = 100,
-                OwnerTypeId = 1
-            };
-
-            if (dto.IssuerCompanyId > 0)
-            {
-                var issuer = await _db.IssuerCompany.FindAsync(new object[] { dto.IssuerCompanyId }, ct);
-                if (issuer != null)
+                // Save as CompanyInfo (leverancier)
+                var supplier = new CompanyInfo
                 {
-                    entity.ClientAccountIssuerCompany.Add(new ClientAccountIssuerCompany
+                    BedrijfsNaam = displayName,
+                    Ondernemingsnummer = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
+                    Email = dto.Email,
+                    InvoiceEmail = dto.InvoiceEmail,
+                    RequiresDigitalInvoice = dto.RequiresDigitalInvoice,
+                    Straat = dto.Street,
+                    Huisnummer = dto.HouseNumber,
+                    Busnummer = dto.BusNumber,
+                    PostCodeId = dto.PostalCodeId > 0 ? dto.PostalCodeId : null,
+                    IsActive = true
+                };
+
+                if (dto.IssuerCompanyId > 0)
+                {
+                    var issuer = await _db.IssuerCompany.FindAsync(new object[] { dto.IssuerCompanyId }, ct);
+                    if (issuer != null)
                     {
-                        IssuerCompany = issuer,
-                        IssuerCompanyId = issuer.Id
-                    });
+                        supplier.CompanyIssuerCompany.Add(new CompanyIssuerCompany
+                        {
+                            Company = supplier,
+                            IssuerCompany = issuer,
+                            IssuerCompanyId = issuer.Id
+                        });
+                    }
                 }
+
+                _db.CompanyInfo.Add(supplier);
+                await _db.SaveChangesAsync(ct);
+
+                return Json(new
+                {
+                    success = true,
+                    id = $"su:{supplier.CompanyId}",
+                    display = displayName,
+                    text = displayName,
+                    name = displayName,
+                    type = "Supplier"
+                });
             }
-
-            _db.ClientAccount.Add(entity);
-            await _db.SaveChangesAsync(ct);
-
-            return Json(new
+            else
             {
-                success = true,
-                id = $"ca:{entity.Id}",
-                display = displayName,
-                text = displayName,
-                name = displayName,
-                type = "ClientAccount"
-            });
+                // Save as ClientAccount (klant)
+                var entity = new ClientAccount
+                {
+                    Name = entityName,
+                    CompanyName = dto.IsCompany ? dto.CompanyName : null,
+                    Salutation = dto.IsCompany ? null : dto.Salutation,
+                    Vatnumber = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
+                    Email = dto.Email,
+                    InvoiceEmail = dto.InvoiceEmail,
+                    RequiresDigitalInvoice = dto.RequiresDigitalInvoice,
+                    Street = dto.Street,
+                    Housenumber = dto.HouseNumber,
+                    Busnumber = dto.BusNumber,
+                    PostalCodeId = dto.PostalCodeId > 0 ? dto.PostalCodeId : null,
+                    InvoiceAddress = dto.UseInvoiceAddress,
+                    InvoiceStreet = dto.UseInvoiceAddress ? dto.InvoiceStreet : null,
+                    InvoiceHousenumber = dto.UseInvoiceAddress ? dto.InvoiceHouseNumber : null,
+                    InvoiceBusnumber = dto.UseInvoiceAddress ? dto.InvoiceBusNumber : null,
+                    InvoicePostalCodeId = dto.UseInvoiceAddress && dto.InvoicePostalCodeId > 0 ? dto.InvoicePostalCodeId : null,
+                    OwnerPercentage = 100,
+                    OwnerTypeId = 1
+                };
+
+                if (dto.IssuerCompanyId > 0)
+                {
+                    var issuer = await _db.IssuerCompany.FindAsync(new object[] { dto.IssuerCompanyId }, ct);
+                    if (issuer != null)
+                    {
+                        entity.ClientAccountIssuerCompany.Add(new ClientAccountIssuerCompany
+                        {
+                            IssuerCompany = issuer,
+                            IssuerCompanyId = issuer.Id
+                        });
+                    }
+                }
+
+                _db.ClientAccount.Add(entity);
+                await _db.SaveChangesAsync(ct);
+
+                return Json(new
+                {
+                    success = true,
+                    id = $"ca:{entity.Id}",
+                    display = displayName,
+                    text = displayName,
+                    name = displayName,
+                    type = "ClientAccount"
+                });
+            }
         }
 
         [HttpGet]

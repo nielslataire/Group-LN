@@ -388,14 +388,14 @@
             $('#partySelect').append(option).trigger('change');
             $('#partySelect').trigger({
                 type: 'select2:select',
-                params: { data: { id: data.id, display: data.display, text: data.display, name: data.display, type: 'ClientAccount' } }
+                params: { data: { id: data.id, display: data.display, text: data.display, name: data.display, type: data.type } }
             });
         };
 
         document.getElementById('btn-quick-create-client')?.addEventListener('click', function () {
             $.get(quickCreateModalUrl + '?issuerCompanyId=' + encodeURIComponent(issuerCompanyId))
                 .done(function (html) {
-                    document.getElementById('quick-create-client-container').innerHTML = html;
+                    $('#quick-create-client-container').html(html);
                     const modalEl = document.getElementById('quickCreateClientModal');
                     if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
                 });

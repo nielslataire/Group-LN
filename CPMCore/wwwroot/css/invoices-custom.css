@@ -331,11 +331,15 @@
 .invoice-preview-sheet {
     flex: 1 1 0;
     overflow-y: auto;
-    padding: 2rem;
+    padding: 50px;
     background: #fff;
     margin: 1rem;
     border-radius: 6px;
     box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+.invoice-preview-empty {
+    display: none !important;
 }
 
 .invoice-preview-empty {
