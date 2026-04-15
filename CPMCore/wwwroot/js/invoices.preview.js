@@ -18,9 +18,10 @@
         let v = $('#StartAs').val();
         if (v == null) v = $('input[name="StartAs"]:checked').val();
         v = (v ?? '').toString().toLowerCase();
-        if (v === 'invoice' || v === '1') return 'Factuur';
-        if (v === 'draft' || v === '0' || v === 'concept') return 'Concept';
-        return 'Concept';
+        const isCredit = $('#IsCreditNote').is(':checked');
+        const isInvoice = (v === 'invoice' || v === '1');
+        if (isInvoice) return isCredit ? 'Creditnota' : 'Factuur';
+        return isCredit ? 'Proforma creditnota' : 'Proforma factuur';
     }
 
     function getSelectedTermOption() {
@@ -34,27 +35,73 @@
         return { days, name, termType, displayMode, displayText };
     }
 
+    function buildAddressLines(d) {
+        if (!d) return [];
+        const lines = [];
+        // Straat + huisnummer + busnummer
+        const streetParts = [d.street, d.houseNumber, d.busNumber ? ('bus ' + d.busNumber) : null].filter(Boolean);
+        if (streetParts.length) lines.push(streetParts.join(' '));
+        // Postcode + gemeente
+        const cityParts = [d.postalCode, d.city].filter(Boolean);
+        if (cityParts.length) lines.push(cityParts.join(' '));
+        // Land
+        if (d.countryCode) lines.push(d.countryCode);
+        return lines;
+    }
+
+    function buildPaymentTermsText(term, dt) {
+        if ($('#IsPrepaid').is(':checked')) return 'Reeds voldaan';
+        if (!term) return '';
+        if (term.displayMode === 1 && term.displayText) return term.displayText;
+        if (!dt) return '';
+        const dueDate = calculateDueDate(dt, term.days, term.termType);
+        if (!dueDate || dueDate === '—') return '';
+        if (term.days > 0) return `Te betalen binnen ${term.days} dagen (vóór ${dueDate})`;
+        return `Te betalen vóór ${dueDate}`;
+    }
+
     function updateHeader() {
-        const issuerTxt = $('#IssuerCompanyId option:selected').text() || '';
-        $('#pvIssuer').text(issuerTxt || '—');
+        // Titel
+        $('#pvStartAs').text(readStartAsText());
 
-        const mode = $('#Mode').val();
-        $('#pvMode').text({ '1': 'Vrije lijnen', '2': 'Schijven', '3': 'Wijzigingsopdrachten', '4': 'Nutsaansluitingen' }[mode] || '—');
+        // Facturatiebedrijf
+        const issuer = window.currentIssuerDetails;
+        $('#pvIssuerName').text(issuer ? (issuer.name || '—') : ($('#IssuerCompanyId option:selected').text() || '—'));
+        if (issuer) {
+            const addrLines = buildAddressLines(issuer);
+            $('#pvIssuerAddr').html(addrLines.map(l => esc(l)).join('<br>'));
+            $('#pvIssuerEnterprise').text(issuer.enterpriseNumber ? ('Ondernemingsnr: ' + issuer.enterpriseNumber) : '');
+        } else {
+            $('#pvIssuerAddr').empty();
+            $('#pvIssuerEnterprise').empty();
+        }
 
+        // Klant / leverancier
+        const party = window.currentPartyDetails;
+        if (party) {
+            $('#pvPartyName').text(party.name || '');
+            const pAddrLines = buildAddressLines(party);
+            $('#pvPartyAddr').html(pAddrLines.map(l => esc(l)).join('<br>'));
+            $('#pvPartyVat').text(party.vatNumber ? ('BTW: ' + party.vatNumber) : '');
+        } else {
+            $('#pvPartyName, #pvPartyAddr, #pvPartyVat').empty();
+        }
+
+        // Datums
         const dt = readDateStr();
         const term = getSelectedTermOption();
         const dueDate = term ? calculateDueDate(dt, term.days, term.termType) : '—';
         const paymentNote = term && term.displayMode === 1 && term.displayText ? term.displayText : null;
-
         $('#pvIssueDate').text(dt || '—');
-        $('#pvPayTerm').text(term ? term.name : '—');
-        $('#pvDueDate').text(paymentNote || dueDate);
+        $('#pvDueDate').text(paymentNote || dueDate || '—');
 
-        const hdr = ($('#HeaderDescription').val() || '').trim();
-        $('#pvHeaderText').text(hdr);
+        // Omschrijvingen
+        $('#pvHeaderText').text(($('#HeaderDescription').val() || '').trim());
+        $('#pvDetailText').text(($('#DetailDescription').val() || '').trim());
 
-        const creditSuffix = getCreditSign() < 0 ? ' – Credit' : '';
-        $('#pvStartAs').text(`${readStartAsText()}${creditSuffix}`);
+        // Footer + betaalvoorwaarden
+        $('#pvFooterText').text(($('#FooterDescription').val() || '').trim());
+        $('#pvPayTermText').text(buildPaymentTermsText(term, dt));
     }
     function roundCurrency(value) {
         const n = Number(value) || 0;
@@ -67,12 +114,9 @@
         return roundCurrency((Number(a) || 0) + (Number(b) || 0));
     }
 
-    function sectionTable(title) {
+    function sectionTable() {
         const $wrap = $(`
       <div class="table-responsive mb-3">
-        <div class="d-flex justify-content-between align-items-center">
-          <h5 class="mb-2">${esc(title)}</h5>
-        </div>
         <table class="table table-striped mb-0" style="min-width:860px">
           <thead>
             <tr>
@@ -166,7 +210,7 @@
     }
 
     function gatherFreeLines(section, sign) {
-        if (!$('#freeLineBlock').is(':visible')) return { sub: 0, vat: 0, tot: 0, hadRows: false };
+        if (($('#Mode').val() ?? '1').toString() !== '1') return { sub: 0, vat: 0, tot: 0, hadRows: false };
         const dt = $.fn.dataTable.isDataTable('#freeLinesTable') ? $('#freeLinesTable').DataTable() : null;
         if (!dt) return { sub: 0, vat: 0, tot: 0, hadRows: false };
 
@@ -217,13 +261,13 @@
         let sub = 0, vat = 0, tot = 0, any = false;
         const sign = getCreditSign();
 
-        const secStages = sectionTable('Schijven');
+        const secStages = sectionTable();
         const st = gatherStages(secStages, sign);
         if (!st.hadRows) $tables.children().last().remove();
         sub = addCurrency(sub, st.sub); vat = addCurrency(vat, st.vat); tot = addCurrency(tot, st.tot);
         any = any || st.hadRows;
 
-        const secFree = sectionTable('Vrije lijnen');
+        const secFree = sectionTable();
         const fr = gatherFreeLines(secFree, sign);
         if (!fr.hadRows) $tables.children().last().remove();
         sub = addCurrency(sub, fr.sub); vat = addCurrency(vat, fr.vat); tot = addCurrency(tot, fr.tot);
@@ -241,19 +285,25 @@
         $vat.text(nf.format(roundedVat));
         $total.text(nf.format(roundedTotal));
 
-        const hdr = ($('#HeaderDescription').val() || '').trim();
-        $card.toggle(any || hdr.length > 0);
+        const hasText = !!($('#HeaderDescription').val() || $('#DetailDescription').val() || $('#FooterDescription').val() || '').trim();
+        const isSplitLayout = $('.invoice-compose-wrapper').length > 0;
+        if (isSplitLayout) {
+            $card.show().removeClass('d-none');
+            $('#pvEmpty').toggle(!any && !hasText);
+        } else {
+            $card.toggle(any || hasText);
+        }
     }
 
     // Triggers
     $(document).on('change input',
-        '#IssuerCompanyId, #InvoiceDate, #HeaderDescription, #PaymentTermId, #Mode, #StartAs, input[name="StartAs"]',
+        '#IssuerCompanyId, #InvoiceDate, #HeaderDescription, #DetailDescription, #FooterDescription, #PaymentTermId, #Mode, #StartAs, input[name="StartAs"]',
         rebuildPreview
     );
     $(document).on('change', '#stagesList .js-stage-row, #stagesList .js-co-row, #stagesList .js-utl-row', rebuildPreview);
     $(document).on('change input', '#coList .js-co-master, #coList .js-co-pct, #coList .js-co-group-pct, #coList .js-co-override', rebuildPreview);
     $(document).on('change input', '#freeLineBlock input, #freeLineBlock select', rebuildPreview);
-    $(document).on('change', '#IsCreditNote', rebuildPreview);
+    $(document).on('change', '#IsCreditNote, #IsPrepaid', rebuildPreview);
 
 
     // Init + export

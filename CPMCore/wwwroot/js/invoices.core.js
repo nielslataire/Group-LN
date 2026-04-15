@@ -115,6 +115,34 @@ $(async function () {
         await loadIssuerBankAccounts(issuerId);
     }
 
+    async function fetchAndStoreIssuerAddress(issuerId) {
+        if (!issuerId || !window.InvoicesEndpoints.issuerAddress) return;
+        try {
+            window.currentIssuerDetails = await $.getJSON(
+                window.InvoicesEndpoints.issuerAddress + '?issuerId=' + encodeURIComponent(issuerId)
+            );
+        } catch {
+            window.currentIssuerDetails = null;
+        }
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    }
+
+    async function fetchAndStorePartyDetails(partyId) {
+        if (!partyId || !window.InvoicesEndpoints.partyDetails) {
+            window.currentPartyDetails = null;
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+            return;
+        }
+        try {
+            window.currentPartyDetails = await $.getJSON(
+                window.InvoicesEndpoints.partyDetails + '?id=' + encodeURIComponent(partyId)
+            );
+        } catch {
+            window.currentPartyDetails = null;
+        }
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    }
+
     function anyFreeLinesFilled() {
         if (!window.freeLines || !window.freeLines.dt) return false;
         let has = false;
@@ -426,7 +454,7 @@ $('#partySelect')
             language: 'nl',
             placeholder: 'Zoek de klant/leverancier ...',
             minimumInputLength: 1,
-            dropdownAutoWidth: true,
+            width: '100%',
             templateResult: function (item) {
                 if (!item.id) return item.text;
 
@@ -467,14 +495,15 @@ $('#partySelect')
             window.skipPartySelectOnce = false;
             return;
         }
-            const v = e.params.data.id || '';
-            const [p, idStr = ''] = v.split(':');
-            let typeVal = null;
-            if (p === 'ca') typeVal = 1;
-            if (p === 'cc') typeVal = 2;
-            if (p === 'su') typeVal = 3;
-            $('input[name="PartyId"]').val(idStr);
+        const v = e.params.data.id || '';
+        const [p, idStr = ''] = v.split(':');
+        let typeVal = null;
+        if (p === 'ca') typeVal = 1;
+        if (p === 'cc') typeVal = 2;
+        if (p === 'su') typeVal = 3;
+        $('input[name="PartyId"]').val(idStr);
         $('input[name="PartyType"]').val(typeVal || '');
+        fetchAndStorePartyDetails(v); // async, triggers rebuild when done
         if (window.skipPartySelectOnce) {
             window.skipPartySelectOnce = false;
             if (window.InvoiceIsEditing === true) {
@@ -494,10 +523,14 @@ $('#partySelect')
         }
         hardResetUI();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    })
+    .on('select2:clear', function () {
+        window.currentPartyDetails = null;
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
     });
 
     $('.js-datepicker').datepicker({
-        format: 'dd/MM/yyyy',
+        format: 'dd/mm/yyyy',
         todayHighlight: false,
         autoclose: true,
         language: 'nl-BE'
@@ -606,6 +639,7 @@ $('#partySelect')
     $(document).on('change', '#IssuerCompanyId', async function () {
         hardResetUI();
         await refreshIssuerDefaults();
+        await fetchAndStoreIssuerAddress($(this).val());
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
     });
 
@@ -688,7 +722,17 @@ $('#partySelect')
     // Init
     enforceModeByParty();
     await toggleProjectContract();
+    fetchAndStoreIssuerAddress($('#IssuerCompanyId').val()); // async, triggers rebuild when done
     if (isEditing) {
+        // herstel partij-adres bij bewerken
+        const initialPartyId = (function () {
+            const pt = $('input[name="PartyType"]').val();
+            const pid = $('input[name="PartyId"]').val();
+            if (!pid || !pt) return null;
+            const prefix = pt === '1' ? 'ca' : pt === '2' ? 'cc' : pt === '3' ? 'su' : null;
+            return prefix ? (prefix + ':' + pid) : null;
+        })();
+        if (initialPartyId) fetchAndStorePartyDetails(initialPartyId);
         toggleBlocks();
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
         if (window.updateSaveButtonState) window.updateSaveButtonState();

@@ -20,6 +20,12 @@
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
     <link href="https://cdn.datatables.net/v/bs5/jszip-3.10.1/dt-2.2.2/b-3.2.2/b-colvis-3.2.2/b-html5-3.2.2/b-print-3.2.2/datatables.min.css" rel="stylesheet" integrity="sha384-W8PzvGseaJlM52wTjdPHNrEA9WHp36V+XpQyv1gCKz+1sbFfDo5MlMDT7awB3rAs" crossorigin="anonymous">
     <link rel="stylesheet" href="~/css/klanten-custom.css" />
+    <style>
+        #datatable-suppliers_info,
+        #datatable-suppliers_paginate {
+            margin-top: 1rem;
+        }
+    </style>
 }
 
 <div class="row justify-content-between align-items-center pt-2 pe-0 mb-2">
@@ -88,7 +94,8 @@
                     <span class="input-group-text">
                         <i class="bx bx-filter"></i>
                     </span>
-                <select id="activity-filter" multiple data-plugin-selectTwo class="form-control form-control-modern populate">
+                <select id="activity-filter" multiple data-plugin-selectTwo data-placeholder="Alle activiteiten" class="form-control form-control-modern populate">
+                            <option value=""></option>
                             @foreach (var group in groupedActivities)
                             {
                                 <optgroup label="@group.Key">
@@ -127,12 +134,8 @@
                         var phone = supplier.PrimaryPhone;
                         var activityData = string.Join(",", supplier.ActivityIds);
                         var issuerData = string.Join(",", supplier.IssuerCompanyIds);
-                        <tr data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()">
-                            <td>
-                                <a href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })" class="text-decoration-none text-reset fw-semibold">
-                                    @supplier.Name
-                                </a>
-                            </td>
+                        <tr data-activities="@activityData" data-issuers="@issuerData" data-is-active="@supplier.IsActive.ToString().ToLowerInvariant()" data-href="@Url.Action("Details", "Leveranciers", new { id = supplier.Id })" style="cursor:pointer">
+                            <td>@supplier.Name</td>
                             <td>@supplier.EnterpriseNumberDisplay</td>
                             <td>@supplier.PrimaryPhoneDisplay</td>
                             <td>
@@ -286,6 +289,9 @@
                 lengthChange: false,
                 autoWidth: false,
                 stateSave: true,
+                stateLoadParams: function (settings, data) {
+                    data.search.search = '';
+                },
                 layout: {
                     topStart: {
                         buttons: [
@@ -304,6 +310,8 @@
                 }
             });
 
+
+            document.getElementById('search-term').value = '';
 
             $('#search-term').on('input', function () {
                 table.search($(this).val()).draw();
@@ -341,6 +349,12 @@
                 table.columns.adjust();
             });
 
+
+            $('#datatable-suppliers tbody').on('click', 'tr', function (e) {
+                if ($(e.target).closest('td.actions').length) return;
+                const href = $(this).data('href');
+                if (href) window.location.href = href;
+            });
 
             const deleteModalSelector = '#modaldeletesupplier';
             const deleteContainerSelector = '#delete-supplier-container';

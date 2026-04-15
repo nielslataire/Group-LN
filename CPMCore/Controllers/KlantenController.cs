@@ -425,6 +425,92 @@ namespace CPMCore.Controllers
 
         [HttpGet]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
+        public async Task<IActionResult> QuickCreateModal(int issuerCompanyId, CancellationToken ct)
+        {
+            var countries = await _db.Country
+                .AsNoTracking()
+                .Where(c => c.Selectable)
+                .OrderBy(c => c.LandNaam)
+                .Select(c => new CountryOptionViewModel
+                {
+                    Id = c.Id,
+                    Name = c.LandNaam,
+                    IsoCode = c.LandIsocode ?? string.Empty
+                })
+                .ToListAsync(ct);
+
+            var vm = new QuickCreateClientModalViewModel
+            {
+                IssuerCompanyId = issuerCompanyId,
+                Countries = countries,
+                DefaultCountryCode = "BE"
+            };
+
+            return PartialView("Partials/_QuickCreateModal", vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
+        public async Task<IActionResult> QuickCreate([FromForm] QuickCreateClientDto dto, CancellationToken ct)
+        {
+            var displayName = dto.IsCompany
+                ? (dto.CompanyName ?? "").Trim()
+                : string.Join(" ", new[] { dto.Salutation, dto.Name }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+            if (string.IsNullOrWhiteSpace(displayName))
+                return Json(new { success = false, error = "Naam is verplicht." });
+
+            var entity = new ClientAccount
+            {
+                Name = displayName,
+                CompanyName = dto.IsCompany ? dto.CompanyName : null,
+                Vatnumber = dto.IsCompany ? NormalizeEnterpriseNumber(dto.EnterpriseNumber) : null,
+                Email = dto.Email,
+                InvoiceEmail = dto.InvoiceEmail,
+                RequiresDigitalInvoice = dto.RequiresDigitalInvoice,
+                Street = dto.Street,
+                Housenumber = dto.HouseNumber,
+                Busnumber = dto.BusNumber,
+                PostalCodeId = dto.PostalCodeId > 0 ? dto.PostalCodeId : null,
+                InvoiceAddress = dto.UseInvoiceAddress,
+                InvoiceStreet = dto.UseInvoiceAddress ? dto.InvoiceStreet : null,
+                InvoiceHousenumber = dto.UseInvoiceAddress ? dto.InvoiceHouseNumber : null,
+                InvoiceBusnumber = dto.UseInvoiceAddress ? dto.InvoiceBusNumber : null,
+                InvoicePostalCodeId = dto.UseInvoiceAddress && dto.InvoicePostalCodeId > 0 ? dto.InvoicePostalCodeId : null,
+                OwnerPercentage = 100,
+                OwnerTypeId = 1
+            };
+
+            if (dto.IssuerCompanyId > 0)
+            {
+                var issuer = await _db.IssuerCompany.FindAsync(new object[] { dto.IssuerCompanyId }, ct);
+                if (issuer != null)
+                {
+                    entity.ClientAccountIssuerCompany.Add(new ClientAccountIssuerCompany
+                    {
+                        IssuerCompany = issuer,
+                        IssuerCompanyId = issuer.Id
+                    });
+                }
+            }
+
+            _db.ClientAccount.Add(entity);
+            await _db.SaveChangesAsync(ct);
+
+            return Json(new
+            {
+                success = true,
+                id = $"ca:{entity.Id}",
+                display = displayName,
+                text = displayName,
+                name = displayName,
+                type = "ClientAccount"
+            });
+        }
+
+        [HttpGet]
+        [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
             var scope = await ResolveCustomerIssuerScopeAsync(PermissionAccessType.Write, ct);

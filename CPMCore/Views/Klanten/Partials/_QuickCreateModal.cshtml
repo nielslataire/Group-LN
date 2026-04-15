@@ -1,0 +1,323 @@
+@model CPMCore.Models.Klanten.QuickCreateClientModalViewModel
+@{
+    var vatCountryOptions = Model.Countries.Where(c => !string.IsNullOrWhiteSpace(c.IsoCode)).ToList();
+    var postcodesUrl = Url.Action("GetPostcodesByCountry", "Shared");
+    var submitUrl = Url.Action("QuickCreate", "Klanten");
+}
+
+<div class="modal fade" id="quickCreateClientModal" tabindex="-1" aria-labelledby="quickCreateClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="quickCreateClientModalLabel">Nieuwe klant toevoegen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="qc-issuer-company-id" value="@Model.IssuerCompanyId" />
+                <input type="hidden" id="qc-postal-code-id" name="PostalCodeId" value="" />
+                <input type="hidden" id="qc-invoice-postal-code-id" name="InvoicePostalCodeId" value="" />
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Type</label>
+                        <select id="qc-is-company" class="form-control form-control-modern">
+                            <option value="true">Onderneming</option>
+                            <option value="false">Particulier</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="qc-company-fields">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label mb-1">Bedrijfsnaam</label>
+                            <input type="text" id="qc-company-name" class="form-control form-control-modern" placeholder="Bedrijfsnaam" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label mb-1">Ondernemingsnummer</label>
+                            <div class="input-group">
+                                <select id="qc-vat-country" class="form-control form-control-modern" style="max-width:130px">
+                                    @foreach (var option in vatCountryOptions)
+                                    {
+                                        <option value="@option.IsoCode" selected="@(option.IsoCode == Model.DefaultCountryCode ? "selected" : null)">@option.Name (@option.IsoCode)</option>
+                                    }
+                                </select>
+                                <input type="text" id="qc-enterprise-number" class="form-control form-control-modern" placeholder="0123 456 789" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="qc-person-fields" class="d-none">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Aanspreking</label>
+                            <select id="qc-salutation" class="form-control form-control-modern">
+                                <option value="">—</option>
+                                <option value="Dhr">Dhr.</option>
+                                <option value="Mevr">Mevr.</option>
+                            </select>
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label mb-1">Naam</label>
+                            <input type="text" id="qc-name" class="form-control form-control-modern" placeholder="Naam" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">E-mail</label>
+                        <input type="email" id="qc-email" class="form-control form-control-modern" placeholder="klant@bedrijf.be" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Facturatie e-mail</label>
+                        <input type="email" id="qc-invoice-email" class="form-control form-control-modern" placeholder="facturatie@bedrijf.be" />
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6 d-flex align-items-center gap-2 pt-2">
+                        <div class="switch switch-sm switch-primary">
+                            <input type="checkbox" id="qc-requires-digital-invoice" data-plugin-ios-switch />
+                        </div>
+                        <label class="form-check-label" for="qc-requires-digital-invoice">Digitale factuur vereist</label>
+                    </div>
+                </div>
+
+                <hr class="my-3" />
+
+                <h6 class="mb-3 text-muted">Adres</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Straat</label>
+                        <input type="text" id="qc-street" class="form-control form-control-modern" placeholder="Straat" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Huisnummer</label>
+                        <input type="text" id="qc-house-number" class="form-control form-control-modern" placeholder="1" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Busnummer</label>
+                        <input type="text" id="qc-bus-number" class="form-control form-control-modern" placeholder="A" />
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Postcode / Gemeente</label>
+                        <select id="qc-postal-code" class="form-control form-control-modern w-100">
+                            <option value=""></option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label mb-1">Land</label>
+                        <select id="qc-country" class="form-control form-control-modern">
+                            @foreach (var country in Model.Countries)
+                            {
+                                <option value="@country.Id" data-isocode="@country.IsoCode">@country.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12 d-flex align-items-center gap-2">
+                        <div class="switch switch-sm switch-primary">
+                            <input type="checkbox" id="qc-use-invoice-address" data-plugin-ios-switch />
+                        </div>
+                        <label class="form-check-label" for="qc-use-invoice-address">Afwijkend facturatieadres</label>
+                    </div>
+                </div>
+
+                <div id="qc-invoice-address-section" class="d-none">
+                    <h6 class="mb-3 text-muted">Facturatieadres</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label mb-1">Straat</label>
+                            <input type="text" id="qc-invoice-street" class="form-control form-control-modern" placeholder="Straat" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Huisnummer</label>
+                            <input type="text" id="qc-invoice-house-number" class="form-control form-control-modern" placeholder="1" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Busnummer</label>
+                            <input type="text" id="qc-invoice-bus-number" class="form-control form-control-modern" placeholder="A" />
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label mb-1">Postcode / Gemeente</label>
+                            <select id="qc-invoice-postal-code" class="form-control form-control-modern w-100">
+                                <option value=""></option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label mb-1">Land</label>
+                            <select id="qc-invoice-country" class="form-control form-control-modern">
+                                @foreach (var country in Model.Countries)
+                                {
+                                    <option value="@country.Id" data-isocode="@country.IsoCode">@country.Name</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="qc-error-message" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" class="btn btn-primary" id="qc-save-btn">
+                    <span id="qc-save-spinner" class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
+                    Opslaan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const postcodesUrl = '@postcodesUrl';
+    const submitUrl = '@submitUrl';
+    const token = document.querySelector('#quickCreateClientModal [name="__RequestVerificationToken"]')?.value ?? '';
+
+    function initSelect2(selectEl, countrySelectEl) {
+        $(selectEl).select2({
+            theme: 'bootstrap',
+            ajax: {
+                url: postcodesUrl,
+                dataType: 'json',
+                type: 'POST',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        term: params.term,
+                        CountryId: $(countrySelectEl).val() || 0
+                    };
+                },
+                processResults: function (data) {
+                    return { results: data };
+                }
+            },
+            placeholder: 'Zoek postcode',
+            minimumInputLength: 2,
+            dropdownParent: $('#quickCreateClientModal')
+        });
+
+        $(selectEl).on('select2:select', function (e) {
+            const hiddenId = selectEl === '#qc-postal-code' ? '#qc-postal-code-id' : '#qc-invoice-postal-code-id';
+            $(hiddenId).val(e.params.data.id);
+        });
+
+        $(selectEl).on('select2:clear', function () {
+            const hiddenId = selectEl === '#qc-postal-code' ? '#qc-postal-code-id' : '#qc-invoice-postal-code-id';
+            $(hiddenId).val('');
+        });
+
+        $(countrySelectEl).on('change', function () {
+            $(selectEl).val(null).trigger('change');
+            const hiddenId = selectEl === '#qc-postal-code' ? '#qc-postal-code-id' : '#qc-invoice-postal-code-id';
+            $(hiddenId).val('');
+        });
+    }
+
+    const modalEl = document.getElementById('quickCreateClientModal');
+    if (!modalEl) return;
+
+    modalEl.addEventListener('shown.bs.modal', function () {
+        if (!$('#qc-postal-code').data('select2')) {
+            initSelect2('#qc-postal-code', '#qc-country');
+        }
+        if (!$('#qc-invoice-postal-code').data('select2')) {
+            initSelect2('#qc-invoice-postal-code', '#qc-invoice-country');
+        }
+        if (typeof ios7Switch !== 'undefined') {
+            $(modalEl).find('[data-plugin-ios-switch]').each(function () {
+                if (!$(this).data('ios7-switch')) {
+                    new ios7Switch(this);
+                }
+            });
+        }
+    });
+
+    document.getElementById('qc-is-company')?.addEventListener('change', function () {
+        const isCompany = this.value === 'true';
+        document.getElementById('qc-company-fields').classList.toggle('d-none', !isCompany);
+        document.getElementById('qc-person-fields').classList.toggle('d-none', isCompany);
+    });
+
+    document.getElementById('qc-use-invoice-address')?.addEventListener('change', function () {
+        document.getElementById('qc-invoice-address-section').classList.toggle('d-none', !this.checked);
+    });
+
+    document.getElementById('qc-save-btn')?.addEventListener('click', function () {
+        const errorEl = document.getElementById('qc-error-message');
+        errorEl.classList.add('d-none');
+
+        const isCompany = document.getElementById('qc-is-company').value === 'true';
+        const useInvoiceAddress = document.getElementById('qc-use-invoice-address').checked;
+
+        const data = new FormData();
+        data.append('__RequestVerificationToken', token);
+        data.append('IssuerCompanyId', document.getElementById('qc-issuer-company-id').value);
+        data.append('IsCompany', isCompany);
+        if (isCompany) {
+            data.append('CompanyName', document.getElementById('qc-company-name').value);
+            data.append('EnterpriseNumber', document.getElementById('qc-enterprise-number').value);
+            data.append('EnterpriseNumberCountryCode', document.getElementById('qc-vat-country').value);
+        } else {
+            data.append('Salutation', document.getElementById('qc-salutation').value);
+            data.append('Name', document.getElementById('qc-name').value);
+        }
+        data.append('Email', document.getElementById('qc-email').value);
+        data.append('InvoiceEmail', document.getElementById('qc-invoice-email').value);
+        data.append('RequiresDigitalInvoice', document.getElementById('qc-requires-digital-invoice').checked);
+        data.append('Street', document.getElementById('qc-street').value);
+        data.append('HouseNumber', document.getElementById('qc-house-number').value);
+        data.append('BusNumber', document.getElementById('qc-bus-number').value);
+        data.append('PostalCodeId', document.getElementById('qc-postal-code-id').value || '0');
+        data.append('UseInvoiceAddress', useInvoiceAddress);
+        if (useInvoiceAddress) {
+            data.append('InvoiceStreet', document.getElementById('qc-invoice-street').value);
+            data.append('InvoiceHouseNumber', document.getElementById('qc-invoice-house-number').value);
+            data.append('InvoiceBusNumber', document.getElementById('qc-invoice-bus-number').value);
+            data.append('InvoicePostalCodeId', document.getElementById('qc-invoice-postal-code-id').value || '0');
+        }
+
+        const spinner = document.getElementById('qc-save-spinner');
+        const saveBtn = this;
+        spinner.classList.remove('d-none');
+        saveBtn.disabled = true;
+
+        $.ajax({
+            url: submitUrl,
+            method: 'POST',
+            data: data,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+                if (response.success) {
+                    if (window.onQuickCreateClientSuccess) {
+                        window.onQuickCreateClientSuccess(response);
+                    }
+                    bootstrap.Modal.getInstance(modalEl)?.hide();
+                } else {
+                    errorEl.textContent = response.error || 'Er is een fout opgetreden.';
+                    errorEl.classList.remove('d-none');
+                }
+            },
+            error: function () {
+                errorEl.textContent = 'Er is een fout opgetreden bij het opslaan.';
+                errorEl.classList.remove('d-none');
+            },
+            complete: function () {
+                spinner.classList.add('d-none');
+                saveBtn.disabled = false;
+            }
+        });
+    });
+})();
+</script>

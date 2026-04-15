@@ -171,3 +171,33 @@ public class IssuerCompanyOptionViewModel
     public int Id { get; init; }
     public string Name { get; init; } = string.Empty;
 }
+
+public class QuickCreateClientDto
+{
+    public bool IsCompany { get; set; } = true;
+    public string? CompanyName { get; set; }
+    public string? Name { get; set; }
+    public string? Salutation { get; set; }
+    public string? EnterpriseNumber { get; set; }
+    public string EnterpriseNumberCountryCode { get; set; } = "BE";
+    public string? Email { get; set; }
+    public string? InvoiceEmail { get; set; }
+    public bool RequiresDigitalInvoice { get; set; }
+    public string? Street { get; set; }
+    public string? HouseNumber { get; set; }
+    public string? BusNumber { get; set; }
+    public int? PostalCodeId { get; set; }
+    public bool UseInvoiceAddress { get; set; }
+    public string? InvoiceStreet { get; set; }
+    public string? InvoiceHouseNumber { get; set; }
+    public string? InvoiceBusNumber { get; set; }
+    public int? InvoicePostalCodeId { get; set; }
+    public int IssuerCompanyId { get; set; }
+}
+
+public class QuickCreateClientModalViewModel
+{
+    public int IssuerCompanyId { get; set; }
+    public List<CountryOptionViewModel> Countries { get; set; } = new();
+    public string DefaultCountryCode { get; set; } = "BE";
+}

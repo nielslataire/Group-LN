@@ -77,12 +77,8 @@
                     @foreach (var client in Model.Clients)
                     {
                         var issuerIds = string.Join(",", client.IssuerCompanyIds);
-                        <tr data-issuer-ids="@issuerIds">
-                            <td>
-                                <a href="@Url.Action("Details", "Klanten", new { id = client.Id })" class="text-decoration-none text-reset fw-semibold">
-                                    @client.DisplayName
-                                </a>
-                            </td>
+                        <tr data-issuer-ids="@issuerIds" data-href="@Url.Action("Details", "Klanten", new { id = client.Id })" style="cursor:pointer">
+                            <td>@client.DisplayName</td>
                             <td>@(EnterpriseNumberFormatter.Format(client.EnterpriseNumber) ?? "-")</td>
                             <td>@(string.IsNullOrWhiteSpace(client.City) ? "-" : client.City)</td>
                             <td>
@@ -187,6 +183,12 @@
                 addButton.classList.toggle('d-none', !canCreate);
                 addButton.href = selectedIssuer ? `${createBaseUrl}?issuerCompanyId=${encodeURIComponent(selectedIssuer)}` : createBaseUrl;
             });
+            $('#datatable-clients tbody').on('click', 'tr', function (e) {
+                if ($(e.target).closest('td.actions').length) return;
+                const href = $(this).data('href');
+                if (href) window.location.href = href;
+            });
+
             const deleteModalSelector = '#modaldeleteclient';
             const deleteContainerSelector = '#delete-client-container';
             const deleteUrl = '@Url.Action("PartialDeleteClientModal", "Klanten")';

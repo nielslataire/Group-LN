@@ -1271,7 +1271,97 @@ namespace CPMCore.Controllers
         }
 
 
-        // LIJNEN VOOR SCHIJVEN AANMAKEN 
+        // ISSUER ADDRESS (voor live preview)
+        [HttpGet]
+        public async Task<IActionResult> IssuerAddress(int issuerId, CancellationToken ct = default)
+        {
+            if (issuerId <= 0) return Json(null);
+            var issuer = await _ics.GetAsync(issuerId, ct);
+            if (issuer == null) return Json(null);
+            return Json(new
+            {
+                name = issuer.Name,
+                addressLine1 = issuer.AddressLine1,
+                addressLine2 = issuer.AddressLine2,
+                postalCode = issuer.PostalCode,
+                city = issuer.City,
+                countryCode = issuer.CountryCode,
+                enterpriseNumber = issuer.EnterpriseNumber
+            });
+        }
+
+        // PARTY ADDRESS (voor live preview)
+        [HttpGet]
+        public async Task<IActionResult> PartyDetails(string id, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(id)) return Json(null);
+            var parts = id.Split(':');
+            if (parts.Length != 2 || !int.TryParse(parts[1], out var numId)) return Json(null);
+            var prefix = parts[0].ToLowerInvariant();
+
+            if (prefix == "ca")
+            {
+                var ca = await _db.ClientAccount.AsNoTracking()
+                    .Where(x => x.Id == numId)
+                    .Select(x => new {
+                        name = !string.IsNullOrWhiteSpace(x.CompanyName) ? x.CompanyName : x.Name,
+                        street = x.InvoiceAddress == true ? x.InvoiceStreet : x.Street,
+                        houseNumber = x.InvoiceAddress == true ? x.InvoiceHousenumber : x.Housenumber,
+                        busNumber = x.InvoiceAddress == true ? x.InvoiceBusnumber : x.Busnumber,
+                        postalCode = x.InvoiceAddress == true
+                            ? (x.InvoicePostalCode != null ? x.InvoicePostalCode.Postcode : null)
+                            : (x.PostalCode != null ? x.PostalCode.Postcode : null),
+                        city = x.InvoiceAddress == true
+                            ? (x.InvoicePostalCode != null ? x.InvoicePostalCode.Gemeente : null)
+                            : (x.PostalCode != null ? x.PostalCode.Gemeente : null),
+                        vatNumber = x.Vatnumber
+                    })
+                    .FirstOrDefaultAsync(ct);
+                return Json(ca);
+            }
+
+            if (prefix == "cc")
+            {
+                var cc = await _db.ClientContacts.AsNoTracking()
+                    .Where(x => x.Id == numId)
+                    .Select(x => new {
+                        name = !string.IsNullOrWhiteSpace(x.CompanyName) ? x.CompanyName : (x.Forename + " " + x.Name).Trim(),
+                        street = x.InvoiceAddress == true ? x.InvoiceStreet : x.Street,
+                        houseNumber = x.InvoiceAddress == true ? x.InvoiceHousenumber : x.Housenumber,
+                        busNumber = x.InvoiceAddress == true ? x.InvoiceBusnumber : x.Busnumber,
+                        postalCode = x.InvoiceAddress == true
+                            ? (x.InvoicePostalCode != null ? x.InvoicePostalCode.Postcode : null)
+                            : (x.PostalCode != null ? x.PostalCode.Postcode : null),
+                        city = x.InvoiceAddress == true
+                            ? (x.InvoicePostalCode != null ? x.InvoicePostalCode.Gemeente : null)
+                            : (x.PostalCode != null ? x.PostalCode.Gemeente : null),
+                        vatNumber = x.Vatnumber
+                    })
+                    .FirstOrDefaultAsync(ct);
+                return Json(cc);
+            }
+
+            if (prefix == "su")
+            {
+                var su = await _db.CompanyInfo.AsNoTracking()
+                    .Where(x => x.CompanyId == numId)
+                    .Select(x => new {
+                        name = x.BedrijfsNaam,
+                        street = x.Straat,
+                        houseNumber = x.Huisnummer,
+                        busNumber = x.Busnummer,
+                        postalCode = x.PostCode != null ? x.PostCode.Postcode : x.Postcode,
+                        city = x.PostCode != null ? x.PostCode.Gemeente : x.Gemeente,
+                        vatNumber = x.VatNumber ?? x.Ondernemingsnummer
+                    })
+                    .FirstOrDefaultAsync(ct);
+                return Json(su);
+            }
+
+            return Json(null);
+        }
+
+        // LIJNEN VOOR SCHIJVEN AANMAKEN
         [HttpGet]
         public async Task<IActionResult> ComposeStageLines(int clientId, int? projectId, int? invoiceId, CancellationToken ct = default)
         {

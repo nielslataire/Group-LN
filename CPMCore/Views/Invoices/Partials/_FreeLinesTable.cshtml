@@ -1,11 +1,13 @@
 ﻿@model CPMCore.Models.Invoicing.InvoiceComposeVM
 
-<section class="card card-modern mt-4 d-none" id="freeLineBlock">
+<section class="card card-modern mt-4" id="freeLineBlock" style="display:none">
     <div class="card-body pb-2">
+        <div class="row">
         <div class="d-flex justify-content-between align-items-center">
-            <h3 class="fw-bold mb-0">Vrije lijnen</h3>
+            <h4 class="fw-bold mb-0">Vrije lijnen</h4>
         </div>
-
+        </div>
+        <div class="row">
         <div class="table-responsive mt-3 mb-0">
             <table id="freeLinesTable" class="table align-middle w-100">
                 <thead>
@@ -14,17 +16,19 @@
                         <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
                         <th>Omschrijving</th>
                         <th class="text-end gl-col-140">Bedrag</th>
-                        <th class="text-end gl-col-200">BTW&nbsp;%</th>
+                        <th class="text-end gl-col-140">BTW&nbsp;%</th>
                         <th class="text-end gl-col-sm">Acties</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
             </table>
         </div>
-
+        </div>
+        <div class="row text-end">
         <button type="button" class="btn btn-default mt-2 mb-0" id="addFreeLine">
             <i class="fas fa-plus me-1"></i> Regel toevoegen
         </button>
+        </div>
     </div>
 </section>
 
@@ -40,7 +44,7 @@
                 @foreach (var v in Model.VatTypes)
                 {
                     <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code">
-                        @v.Code - @v.Description (@v.BasePercentage%)
+                        @v.Code - @v.Description (@v.BasePercentage.ToString("0.##")%)
                     </option>
                 }
             </select>
@@ -55,7 +59,7 @@
     @foreach (var v in Model.VatTypes)
     {
         <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code">
-            @v.Code - @v.Description (@v.BasePercentage%)
+            @v.Code - @v.Description (@v.BasePercentage.ToString("0.##")%)
         </option>
     }
 </select>

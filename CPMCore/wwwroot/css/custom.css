@@ -327,6 +327,7 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     /* Licht neutraal */
     --light: #F9F9F9;
     --custom-accent: #8B6B4A;
+    --lightgreen: #d4f0e4
 }
 
 /*Badges*/
@@ -1117,3 +1118,25 @@ html.gl-modal-open .sidebar-left { display: none !important; }
 /* ── Shared layout utilities ─────────────────────────────── */
 .gl-header-search { width: 280px; }
 .gl-validation-active { margin-left: -17px; margin-right: -17px; margin-top: -40px; }
+
+
+/* Select2 alignment tekst */
+.select2-container--bootstrap .select2-selection--single {
+    height: calc(2.25rem + 2px);
+    display: flex;
+    align-items: center;
+}
+
+    .select2-container--bootstrap .select2-selection--single .select2-selection__rendered {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        line-height: normal;
+        padding-left: 0rem;
+        padding-right: 2rem;
+    }
+
+    .select2-container--bootstrap .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        top: 0;
+    }

@@ -4,7 +4,7 @@
     const dt = $tbl.DataTable({
         paging: false, searching: false, info: false,
         ordering: true, order: [[1, 'asc']],
-        rowReorder: { selector: 'td.reorder-handle', dataSrc: 1 },
+        rowReorder: { selector: 'td.gl-reorder-handle', dataSrc: 1 },
         columnDefs: [
             { targets: [0, 2, 3, 4, 5], orderable: false },
             { targets: 1, visible: false, searchable: false }
@@ -95,6 +95,24 @@
         if (window.updateSaveButtonState) window.updateSaveButtonState();
     }
 
+    function initVatSelect2($sel) {
+        if ($sel.data('select2')) return;
+        $sel.select2({
+            theme: 'bootstrap',
+            minimumResultsForSearch: Infinity,
+            width: '100%',
+            dropdownAutoWidth: true,
+            templateSelection: function (data) {
+                const code = $(data.element).data('code') || data.text;
+                return document.createTextNode(code);
+            },
+            templateResult: function (data) {
+                return document.createTextNode(data.text);
+            },
+            dropdownParent: $('body')
+        });
+    }
+
     function fillVatOptions($sel) {
         $sel.empty();
 
@@ -127,7 +145,7 @@
         const $sel = $row.find('.js-fl-vat-select');
         if ($sel.length) {
             if ($sel.children('option').length === 0) fillVatOptions($sel);
-            $sel.val(globalId);
+            $sel.val(globalId).trigger('change');
         }
     }
     function getNextOrder() {
@@ -268,10 +286,13 @@
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
         notifyStateChange();
     });
-    // Na elke draw: alle zichtbare bedragen netjes formatteren
+    // Na elke draw: bedragen formatteren + Select2 initialiseren op VAT-selects
     $tbl.on('draw.dt', function () {
         $tbl.find('tbody .js-fl-price').each(function () {
             formatPriceInput($(this));
+        });
+        $tbl.find('tbody .js-fl-vat-select').each(function () {
+            initVatSelect2($(this));
         });
     });
     // optioneel: alleen toegestane tekens tijdens input
@@ -301,6 +322,11 @@
     // wijzig je per-lijn btw → meteen preview heropbouwen
     $tbl.on('change', 'tbody .js-fl-vat', function () {
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
+
+    // Voorkom dat DataTables toetsenbord-events wegvangt terwijl Select2 actief is
+    $tbl.on('keydown', '.select2-container', function (e) {
+        e.stopPropagation();
     });
 
 
