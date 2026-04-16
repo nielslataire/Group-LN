@@ -1,4 +1,4 @@
-﻿@model CPMCore.Models.Invoicing.InvoiceDraftEditVM
+@model CPMCore.Models.Invoicing.InvoiceDraftEditVM
 @using System.Text.Json
 @using System.Linq
 @using BOCore;
@@ -6,396 +6,419 @@
 @{
     ViewData["Title"] ??= $"Factuur bewerken - {Model.DisplayId}";
     var lockStages = Model.Mode == InvoiceMode.Stages;
+    var hasIssuerBankAccounts = Model.IssuerBankAccounts?.Any() == true;
 }
 
 @section PageStyle {
     <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
     <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-datepicker/css/bootstrap-datepicker3.css">
-    <link rel="stylesheet"
-          href="https://cdn.datatables.net/v/bs5/dt-2.2.2/b-3.2.2/rr-1.5.0/datatables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/v/bs5/dt-2.2.2/b-3.2.2/rr-1.5.0/datatables.min.css" />
     <link rel="stylesheet" href="~/css/invoices-custom.css" />
 }
 
-<form id="invoiceForm" asp-action="UpdateDraft" asp-controller="Invoices" method="post" enctype="multipart/form-data" class="ecommerce-form action-buttons-fixed">
+<form id="invoiceForm" asp-action="UpdateDraft" asp-controller="Invoices" method="post" enctype="multipart/form-data">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="InvoiceId" />
     <input type="hidden" asp-for="ReturnUrl" />
 
-    <div class="row">
-        <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-            <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                <div class="row align-items-center">
-                    <div class="col-sm-auto">
-                        <h1 class="fw-bold mb-0">@Model.DisplayId</h1>
-                        <h5 class="mb-4 mt-0">Werk deze conceptfactuur af of pas de gegevens aan voordat je ze definitief maakt.</h5>
-                    </div>
+    <div class="invoice-compose-wrapper">
+
+        @* ═══ LINKER PANEEL ═══ *@
+        <aside class="invoice-panel-left">
+
+            <div class="invoice-panel-header">
+                <h5 class="mb-0 fw-bold">@Model.DisplayId</h5>
+                <p class="text-muted mb-0 small">Werk deze conceptfactuur af of pas de gegevens aan voordat je ze definitief maakt.</p>
+            </div>
+
+            <div class="invoice-step-indicator">
+                <div class="d-flex align-items-center">
+                    <div class="invoice-step-dot active" data-step="1" title="Partijen"><span>1</span></div>
+                    <div class="invoice-step-line"></div>
+                    <div class="invoice-step-dot" data-step="2" title="Instellingen"><span>2</span></div>
+                    <div class="invoice-step-line"></div>
+                    <div class="invoice-step-dot" data-step="3" title="Lijnen"><span>3</span></div>
+                    <div class="invoice-step-line"></div>
+                    <div class="invoice-step-dot" data-step="4" title="Tekst &amp; bijlage"><span>4</span></div>
+                </div>
+                <div class="invoice-step-labels">
+                    <span class="invoice-step-label active" data-step="1">Partijen</span>
+                    <span class="invoice-step-label" data-step="2">Instellingen</span>
+                    <span class="invoice-step-label" data-step="3">Lijnen</span>
+                    <span class="invoice-step-label" data-step="4">Tekst</span>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="row mt-2">
-        <div class="col">
-            <section class="card card-modern">
-                <div class="card-body">
-                    <h2 class="card-title pb-5">Facturatiegegevens</h2>
-                    <div class="form-group pb-3">
-                        <div class="row align-items-center pb-3">
-                            <div class="col-lg-6">
-                                <label class="control-label text-lg-end pt-2 me-3" asp-for="IsCreditNote">Creditfactuur </label>
-                                <div class="switch switch-sm switch-primary">
-                                    @Html.CheckBoxFor(m => m.IsCreditNote, new { data_plugin_ios_switch = "" })
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <label class="control-label text-lg-end pt-2 me-3" asp-for="IsPrepaid">Factuur is al betaald </label>
-                                <div class="switch switch-sm switch-primary">
-                                    @Html.CheckBoxFor(m => m.IsPrepaid, new { data_plugin_ios_switch = "" })
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row pb-3">
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Facturatiebedrijf</label>
-                                @* Facturatiebedrijf *@
-                                <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control gl-form-control-modern" disabled="@lockStages">
-                                    @foreach (var i in Model.Issuers)
-                                    {
-                                        if (i.Id == Model.IssuerCompanyId)
-                                        {
-                                            <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")" selected="selected">
-                                                @i.Name
-                                            </option>
-                                        }
-                                        else
-                                        {
-                                            <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "" )" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")">
-                                                @i.Name
-                                            </option>
-                                        }
-                                    }
-                                </select>
-                                @if (lockStages)
-                                {
-                                    <input type="hidden" asp-for="IssuerCompanyId" />
-                                }
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Klant / Leverancier</label>
-                                <select id="partySelect" class="form-control gl-form-control-modern w-100" disabled="@lockStages"></select>
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Factuurdatum</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                    <input asp-for="InvoiceDate"
-                                           class="form-control gl-form-control-modern js-datepicker"
-                                           type="text"
-                                           asp-format="{0:dd/MM/yyyy}" />
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Start als</label>
-                                <select asp-for="StartAs" class="form-control gl-form-control-modern" disabled="@lockStages">
-                                    <option value="0">Draft (later afwerken)</option>
-                                    <option value="1">Factuur (meteen uitgeven)</option>
-                                </select>
-                                @if (lockStages)
-                                {
-                                    <input type="hidden" asp-for="StartAs" />
-                                }
-                            </div>
-                        </div>
-                        <div class="row pb-3">
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Factuurmodus</label>
-                                <select asp-for="Mode" class="form-control gl-form-control-modern" disabled="@lockStages">
-                                    <option value="1">Vrije lijnen</option>
-                                    <option value="2">Schijven</option>
-                                    <option value="3">Wijzigingsopdrachten</option>
-                                    <option value="4">Nutsaansluitingen</option>
-                                </select>
-                                @if (lockStages)
-                                {
-                                    <input type="hidden" asp-for="Mode" />
-                                }
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Betaaltermijn</label>
-                                @* Betaaltermijn *@
-                                <select asp-for="PaymentTermId" id="PaymentTermId" name="PaymentTermId" class="form-control gl-form-control-modern">
-                                    @foreach (var t in Model.PaymentTerms)
-                                    {
-                                        if (Model.PaymentTermId == t.Id)
-                                        {
-                                            <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" data-type="@((int)t.TermType)" data-display-mode="@((int)t.DisplayMode)" data-display-text="@t.DisplayText" selected="selected">
-                                                @t.Name
-                                            </option>
-                                        }
-                                        else
-                                        {
-                                            <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" data-type="@((int)t.TermType)" data-display-mode="@((int)t.DisplayMode)" data-display-text="@t.DisplayText">
-                                                @t.Name
-                                            </option>
-                                        }
-                                    }
-                                </select>
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">BTW-tarief (standaard)</label>
-                                <select asp-for="VatTypeId" id="VatTypeId" name="VatTypeId" class="form-control gl-form-control-modern" disabled="@lockStages">
-                                    @foreach (var v in Model.VatTypes)
-                                    {
-                                        var isSelected = Model.VatTypeId == v.Id;
-                                        if (isSelected)
-                                        {
-                                            <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code" selected="selected">
-                                                @v.Code - @v.Description (@v.BasePercentage%)
-                                            </option>
-                                        }
-                                        else
-                                        {
-                                            <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code">
-                                                @v.Code - @v.Description (@v.BasePercentage%)
-                                            </option>
-                                        }
 
-                                    }
-                                </select>
-                                @if (lockStages)
-                                {
-                                    <input type="hidden" asp-for="VatTypeId" />
-                                }
-                            </div>
-                            <div class="col-md-6 col-lg-3">
-                                <label class="form-label">Rekeningnummer</label>
-                                @{
-                                    var hasIssuerBankAccounts = Model.IssuerBankAccounts?.Any() == true;
-                                }
+            <div class="invoice-panel-body">
 
-                                <select asp-for="IssuerBankAccountId"
-                                        id="IssuerBankAccountId"
-                                        class="form-control gl-form-control-modern"
-                                        asp-items="Model.IssuerBankAccounts"
-                                        disabled="@(Model.IssuerBankAccounts is null || !Model.IssuerBankAccounts.Any())">
-                                    <option value="">-- Kies een rekening --</option>
-                                </select>
-                                <span asp-validation-for="IssuerBankAccountId" class="text-danger"></span>
-                            </div>
-                        </div>
+                @* ─── STAP 1: Partijen ─── *@
+                <div id="step-1" class="invoice-step-panel">
 
-                        <div class="row align-items-center pb-3">
-                            <div id="projectRow" class="col-md-6 mt-3">
-                                <label class="form-label">Project (optioneel indien geen contract)</label>
-                                <select id="projectSelect" class="form-control gl-form-control-modern w-100" disabled="@lockStages"></select>
-                                <input type="hidden" asp-for="ProjectId" />
+                    <div class="d-flex gap-4 mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="switch switch-sm switch-primary">
+                                @Html.CheckBoxFor(m => m.IsCreditNote, new { data_plugin_ios_switch = "" })
                             </div>
+                            <label class="mb-0 small" asp-for="IsCreditNote">Creditfactuur</label>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="switch switch-sm switch-primary">
+                                @Html.CheckBoxFor(m => m.IsPrepaid, new { data_plugin_ios_switch = "" })
+                            </div>
+                            <label class="mb-0 small" asp-for="IsPrepaid">Al betaald</label>
+                        </div>
+                    </div>
 
-                            <div id="contractRow" class="col-md-6 mt-3">
-                                <label class="form-label">Leverancierscontract (optioneel)</label>
-                                <select id="contractSelect" class="form-control gl-form-control-modern w-100" disabled="@lockStages"></select>
-                                <input type="hidden" asp-for="SupplierContractId" />
-                            </div>
-                        </div>
-                        <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label mb-0" for="HeaderDescription">Omschrijving (optioneel)</label>
-                            <div class="col-md-9">
-                                <textarea asp-for="HeaderDescription" class="form-control gl-form-control-modern gl-desc-textarea col-md-9" rows="5"></textarea>
-                                <span asp-validation-for="HeaderDescription" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label mb-0" for="HeaderDescription">Detailomschrijving </label>
-                            <div class="col-md-9">
-                                <textarea asp-for="DetailDescription" class="form-control gl-form-control-modern gl-desc-textarea" rows="5"></textarea>
-                                <span asp-validation-for="DetailDescription" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label mb-0" for="HeaderDescription">Footer</label>
-                            <div class="col-md-9">
-                                <textarea asp-for="FooterDescription" class="form-control gl-form-control-modern gl-desc-textarea" rows="4"></textarea>
-                                <span asp-validation-for="FooterDescription" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label mb-0" asp-for="PdfAppendix">PDF bijlage</label>
-                            <div class="col-md-9">
-                                @if (!string.IsNullOrWhiteSpace(Model.CurrentPdfAppendixFileName))
-                                {
-                                    <div class="mb-2">
-                                        <span class="badge bg-light text-dark border">Huidige bijlage: @Model.CurrentPdfAppendixFileName</span>
-                                    </div>
-                                    <div class="form-check mb-2">
-                                        <input asp-for="RemovePdfAppendix" class="form-check-input" />
-                                        <label asp-for="RemovePdfAppendix" class="form-check-label">Verwijder huidige bijlage</label>
-                                    </div>
-                                }
-                                <input asp-for="PdfAppendix" type="file" class="form-control gl-form-control-modern" accept="application/pdf,.pdf" />
-                                <small class="text-muted">Upload een nieuwe PDF om de huidige bijlage te vervangen.</small>
-                                <span asp-validation-for="PdfAppendix" class="text-danger"></span>
-                            </div>
-                        </div>
-                        <!-- hidden voor party -->
-                        <input type="hidden" asp-for="PartyId" />
-                        <input type="hidden" asp-for="PartyType" />
-                        @if (lockStages && Model.StageIds != null)
-                        {
-                            foreach (var stageId in Model.StageIds)
+                    <div class="invoice-section-label">Van</div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Facturatiebedrijf</label>
+                        <select asp-for="IssuerCompanyId" id="IssuerCompanyId" name="IssuerCompanyId" class="form-control gl-form-control-modern" disabled="@lockStages">
+                            @foreach (var i in Model.Issuers)
                             {
-                                <input type="hidden" name="StageIds" value="@stageId" />
+                                if (i.Id == Model.IssuerCompanyId)
+                                {
+                                    <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")" selected="selected">@i.Name</option>
+                                }
+                                else
+                                {
+                                    <option value="@i.Id" data-defaultterm="@(i.DefaultPaymentTermId?.ToString() ?? "")" data-defaultvattype="@(i.DefaultVatTypeId?.ToString() ?? "")">@i.Name</option>
+                                }
                             }
+                        </select>
+                        @if (lockStages)
+                        {
+                            <input type="hidden" asp-for="IssuerCompanyId" />
                         }
                     </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Rekeningnummer</label>
+                        <select asp-for="IssuerBankAccountId"
+                                id="IssuerBankAccountId"
+                                class="form-control gl-form-control-modern"
+                                asp-items="Model.IssuerBankAccounts"
+                                disabled="@(!hasIssuerBankAccounts)">
+                            <option value="">-- Kies een rekening --</option>
+                        </select>
+                        <span asp-validation-for="IssuerBankAccountId" class="text-danger"></span>
+                    </div>
+
+                    <div class="invoice-section-label">Aan</div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Klant / Leverancier</label>
+                        <select id="partySelect" class="form-control gl-form-control-modern w-100" disabled="@lockStages"></select>
+                    </div>
+
+                    <div id="projectRow" class="mb-3" style="display:none">
+                        <label class="form-label">Project (optioneel)</label>
+                        <select id="projectSelect" class="form-control gl-form-control-modern w-100" disabled="@lockStages"></select>
+                        <input type="hidden" asp-for="ProjectId" />
+                    </div>
+
+                    <div id="contractRow" class="mb-3" style="display:none">
+                        <label class="form-label">Leverancierscontract (optioneel)</label>
+                        <select id="contractSelect" class="form-control gl-form-control-modern w-100" disabled="@lockStages"></select>
+                        <input type="hidden" asp-for="SupplierContractId" />
+                    </div>
+
+                    <input type="hidden" asp-for="PartyId" />
+                    <input type="hidden" asp-for="PartyType" />
+
                 </div>
-            </section>
-        </div>
-    </div>
-    <!-- HOOFDRIJ 1 -->
-    <div class="row mt-2 mb-4">
-        <div class="col">
-            <!-- SCHIJVEN BLOCK -->
-            <section class="card card-modern mb-4 d-none" id="stagesBlock">
-                <div class="card-body">
+
+                @* ─── STAP 2: Instellingen ─── *@
+                <div id="step-2" class="invoice-step-panel d-none">
+
                     <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Factuurdatum</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input asp-for="InvoiceDate"
+                                       class="form-control gl-form-control-modern js-datepicker"
+                                       type="text"
+                                       asp-format="{0:dd/MM/yyyy}" />
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Betaaltermijn</label>
+                            <select asp-for="PaymentTermId" id="PaymentTermId" name="PaymentTermId" class="form-control gl-form-control-modern">
+                                @foreach (var t in Model.PaymentTerms)
+                                {
+                                    if (Model.PaymentTermId == t.Id)
+                                    {
+                                        <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" data-type="@((int)t.TermType)" data-display-mode="@((int)t.DisplayMode)" data-display-text="@t.DisplayText" selected="selected">@t.Name</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@t.Id" data-days="@t.Days" data-name="@t.Name" data-type="@((int)t.TermType)" data-display-mode="@((int)t.DisplayMode)" data-display-text="@t.DisplayText">@t.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Start als</label>
+                            <select asp-for="StartAs" class="form-control gl-form-control-modern" disabled="@lockStages">
+                                <option value="0">Draft (later afwerken)</option>
+                                <option value="1">Factuur (meteen uitgeven)</option>
+                            </select>
+                            @if (lockStages)
+                            {
+                                <input type="hidden" asp-for="StartAs" />
+                            }
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Factuurmodus</label>
+                            <select asp-for="Mode" class="form-control gl-form-control-modern" disabled="@lockStages">
+                                <option value="1">Vrije lijnen</option>
+                                <option value="2">Schijven</option>
+                                <option value="3">Wijzigingsopdrachten</option>
+                                <option value="4">Nutsaansluitingen</option>
+                            </select>
+                            @if (lockStages)
+                            {
+                                <input type="hidden" asp-for="Mode" />
+                            }
+                        </div>
                         <div class="col-12">
-                            <div id="stagesList">
-                                <!-- wordt via JS gevuld met checkboxen -->
-                                <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Schijven”.</div>
-                            </div>
+                            <label class="form-label">BTW-tarief (standaard)</label>
+                            <select asp-for="VatTypeId" id="VatTypeId" name="VatTypeId" class="form-control gl-form-control-modern" disabled="@lockStages">
+                                @foreach (var v in Model.VatTypes)
+                                {
+                                    if (Model.VatTypeId == v.Id)
+                                    {
+                                        <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code" selected="selected">@v.Code - @v.Description (@v.BasePercentage%)</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@v.Id" data-pct="@v.BasePercentage" data-code="@v.Code">@v.Code - @v.Description (@v.BasePercentage%)</option>
+                                    }
+                                }
+                            </select>
+                            @if (lockStages)
+                            {
+                                <input type="hidden" asp-for="VatTypeId" />
+                            }
                         </div>
                     </div>
+
                 </div>
-            </section>
 
-            <!-- WIJZIGINGSOPDRACHTEN BLOCK -->
-            <section class="card card-modern mb-4 d-none" id="coBlock">
-                <div class="card-body">
-                    <div id="coList">
-                        <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Wijzigingsopdrachten”.</div>
-                    </div>
-                </div>
-            </section>
+                @* ─── STAP 3: Lijnen ─── *@
+                <div id="step-3" class="invoice-step-panel d-none">
 
-            <!-- NUTSAANSLUITINGEN BLOCK -->
-            <section class="card card-modern mb-4 d-none" id="utlBlock">
-                <div class="card-body">
-                    <div id="utlList">
-                        <div class="text-muted">Kies eerst een klant en zet “Factuurmodus” op “Nutsaansluitingen”.</div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- VRIJE LIJNEN BLOCK -->
-            @await Html.PartialAsync("Partials/_FreeLinesTable", Model)
-        </div>
-    </div>
-
-    <!-- HOOFDRIJ 2 -->
-    <div class="row mt-5">
-        <div class="col">
-            <!-- VOORBEELDFACTUUR BLOCK -->
-            <section class="card card-modern mb-4 d-none" id="previewCard">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h3 class="fw-bold mb-0">Voorbeeld factuur</h3>
-                        <button type="button" class="btn btn-default btn-sm" disabled>
-                            <i class="fas fa-file-download me-1"></i> Download PDF
-                        </button>
-                    </div>
-
-                    <div class="border rounded p-3 bg-white">
-                        <div class="d-flex justify-content-between">
-                            <div>
-                                <h3 class="mb-0" id="pvStartAs">Factuur (nog niet opgeslagen)</h3>
-                                <h4 class="text-muted" id="pvIssuer">—</h4>
-                            </div>
-                            <div class="text-end small">
-                                <div><span class="text-muted">Uitgiftedatum:</span> <span id="pvIssueDate">—</span></div>
-                                <div><span class="text-muted">Vervaldatum:</span> <span id="pvDueDate">—</span></div>
-                                <div><span class="text-muted">Betalingstermijn:</span> <span id="pvPayTerm">-</span></div>
-                            </div>
+                    <section id="stagesBlock" style="display:none">
+                        <div id="stagesList">
+                            <div class="text-muted small">Kies eerst een klant en zet "Factuurmodus" op "Schijven".</div>
                         </div>
+                    </section>
 
-                        <!-- Omschrijving boven de tabellen -->
-                        <p id="pvHeaderText" class="mt-3 mb-2 text-muted gl-ws-prewrap"></p>
+                    <section id="coBlock" style="display:none">
+                        <div id="coList">
+                            <div class="text-muted small">Kies eerst een klant en zet "Factuurmodus" op "Wijzigingsopdrachten".</div>
+                        </div>
+                    </section>
 
-                        <!-- Container voor meerdere tabellen -->
-                        <div id="pvTables" class="preview-tables"></div>
+                    <section id="utlBlock" style="display:none">
+                        <div id="utlList">
+                            <div class="text-muted small">Kies eerst een klant en zet "Factuurmodus" op "Nutsaansluitingen".</div>
+                        </div>
+                    </section>
 
-                        <!-- Globale totalen -->
-                        <table class="table mb-0 table-borderless gl-min-w-680">
-                            <tbody>
-                                <tr>
-                                    <td class="text-end fw-semibold">Subtotaal</td>
-                                    <td class="text-end fw-semibold gl-col-160" id="pvSub">0,00</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-end fw-semibold">BTW</td>
-                                    <td class="text-end fw-semibold" id="pvVat">0,00</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-end fw-bold">Te betalen</td>
-                                    <td class="text-end fw-bold" id="pvTotal">0,00</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                    @await Html.PartialAsync("Partials/_FreeLinesTable", Model)
+
+                    @if (lockStages && Model.StageIds != null)
+                    {
+                        foreach (var stageId in Model.StageIds)
+                        {
+                            <input type="hidden" name="StageIds" value="@stageId" />
+                        }
+                    }
+
                 </div>
-            </section>
 
-            <!-- ACTIEKNOPPEN -->
-            <div class="row action-buttons">
-                <div class="col-12 col-md-auto">
-                    <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden..." id="saveInvoiceBtn" disabled>
-                        <i class="bx bx-save text-4 me-2"></i> Opslaan
+                @* ─── STAP 4: Tekst & bijlage ─── *@
+                <div id="step-4" class="invoice-step-panel d-none">
+
+                    <div class="mb-3">
+                        <label class="form-label">Omschrijving <span class="text-muted">(optioneel)</span></label>
+                        <textarea asp-for="HeaderDescription" class="form-control gl-desc-textarea" rows="4"></textarea>
+                        <span asp-validation-for="HeaderDescription" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Detailomschrijving</label>
+                        <textarea asp-for="DetailDescription" class="form-control gl-desc-textarea" rows="4"></textarea>
+                        <span asp-validation-for="DetailDescription" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Footer</label>
+                        <textarea asp-for="FooterDescription" class="form-control gl-desc-textarea" rows="3"></textarea>
+                        <span asp-validation-for="FooterDescription" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="PdfAppendix">PDF bijlage</label>
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentPdfAppendixFileName))
+                        {
+                            <div class="mb-2">
+                                <span class="badge bg-light text-dark border">Huidige bijlage: @Model.CurrentPdfAppendixFileName</span>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input asp-for="RemovePdfAppendix" class="form-check-input" />
+                                <label asp-for="RemovePdfAppendix" class="form-check-label">Verwijder huidige bijlage</label>
+                            </div>
+                        }
+                        <input asp-for="PdfAppendix" type="file" class="form-control" accept="application/pdf,.pdf" />
+                        <small class="text-muted">
+                            @(string.IsNullOrWhiteSpace(Model.CurrentPdfAppendixFileName)
+                                ? "Deze PDF wordt als extra pagina('s) achter de factuur toegevoegd."
+                                : "Upload een nieuwe PDF om de huidige bijlage te vervangen.")
+                        </small>
+                        <span asp-validation-for="PdfAppendix" class="text-danger"></span>
+                    </div>
+
+                </div>
+
+            </div>@* /invoice-panel-body *@
+
+            <div class="invoice-panel-footer">
+                @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
+                {
+                    <a href="@Model.ReturnUrl" class="btn btn-light border text-muted invoice-cancel-link">Annuleren</a>
+                }
+                else
+                {
+                    <a href="@Url.Action("Detail", "Invoices", new { id = Model.InvoiceId, issuerCompanyId = Model.IssuerCompanyId })"
+                       class="btn btn-light border text-muted invoice-cancel-link">Annuleren</a>
+                }
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-default" id="stepPrev" disabled>
+                        <i class="bx bx-left-arrow-alt me-1"></i>Vorige
+                    </button>
+                    <span class="text-muted small text-nowrap">Stap <strong id="stepCurrent">1</strong> van 4</span>
+                    <button type="button" class="btn btn-primary stepNext" id="stepNext">
+                        Volgende<i class="bx bx-right-arrow-alt ms-1"></i>
                     </button>
                 </div>
-                <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-                    @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
-                    {
-                        <a href="@Model.ReturnUrl" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
-                    }
-                    else
-                    {
-                        <a href="@Url.Action("Detail", "Invoices", new { id = Model.InvoiceId, issuerCompanyId = Model.IssuerCompanyId })" class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
-                    }
+            </div>
+
+        </aside>
+
+        @* ═══ VERSLEEPBARE DIVIDER ═══ *@
+        <div class="invoice-panel-divider" id="panelDivider">
+            <div class="invoice-panel-divider-handle">
+                <i class="bx bx-chevron-left"></i>
+                <div class="invoice-divider-bars">
+                    <span></span>
+                    <span></span>
                 </div>
+                <i class="bx bx-chevron-right"></i>
             </div>
         </div>
-    </div>
 
-    @*     <button type="submit" class="btn btn-primary">
-        <i class="fas fa-save me-1"></i> Opslaan
-    </button> *@
+        @* ═══ RECHTER PANEEL – Live preview ═══ *@
+        <main class="invoice-panel-right" id="invoicePreviewPanel">
+
+            <div id="previewCard" class="invoice-preview-sheet">
+
+                @* Titel *@
+                <div class="mb-4">
+                    <h4 class="mb-0 fw-bold" id="pvStartAs">Proforma factuur</h4>
+                </div>
+
+                @* Partijen: facturatiebedrijf links, klant/leverancier rechts *@
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="fw-semibold" id="pvIssuerName">—</div>
+                        <div class="small" id="pvIssuerAddr"></div>
+                        <div class="small text-muted" id="pvIssuerEnterprise"></div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="fw-semibold" id="pvPartyName"></div>
+                        <div class="small" id="pvPartyAddr"></div>
+                        <div class="small text-muted" id="pvPartyVat"></div>
+                    </div>
+                </div>
+
+                @* Datums *@
+                <div class="d-flex gap-4 mb-4 pb-3 border-bottom small">
+                    <div><span class="text-muted">Factuurdatum:</span> <strong id="pvIssueDate">—</strong></div>
+                    <div><span class="text-muted">Vervaldatum:</span> <strong id="pvDueDate">—</strong></div>
+                </div>
+
+                @* Omschrijving + detailomschrijving *@
+                <p id="pvHeaderText" class="gl-ws-prewrap mb-2"></p>
+                <p id="pvDetailText" class="gl-ws-prewrap small text-muted mb-3"></p>
+
+                @* Lijnen *@
+                <div id="pvTables" class="gl-preview-tables"></div>
+
+                @* Totalen *@
+                <table class="table mb-0 table-borderless gl-min-w-400">
+                    <tbody>
+                        <tr>
+                            <td class="text-end fw-semibold">Subtotaal</td>
+                            <td class="text-end fw-semibold gl-col-160" id="pvSub">0,00</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end fw-semibold">BTW</td>
+                            <td class="text-end fw-semibold" id="pvVat">0,00</td>
+                        </tr>
+                        <tr class="border-top">
+                            <td class="text-end fw-bold pt-2">Te betalen</td>
+                            <td class="text-end fw-bold pt-2" id="pvTotal">0,00</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                @* Footer + betaalvoorwaarden *@
+                <div class="mt-4 pt-3 border-top">
+                    <p id="pvFooterText" class="gl-ws-prewrap small text-muted mb-1"></p>
+                    <p id="pvPayTermText" class="small text-muted mb-0"></p>
+                </div>
+
+            </div>
+
+            <div id="pvEmpty" class="invoice-preview-empty">
+                <i class="bx bx-file-blank"></i>
+                <p class="mb-0">Vul het formulier in om de preview te zien.</p>
+            </div>
+
+        </main>
+
+    </div>@* /invoice-compose-wrapper *@
+
+    <button type="submit" id="saveInvoiceBtn" class="d-none" disabled></button>
+
 </form>
-
 
 @{
     var initialLines = Model.Lines?.Select(line =>
-     {
-         var matchedVatType = Model.VatTypes?.FirstOrDefault(v => v.Id == line.VatTypeId)
-             ?? Model.VatTypes?.FirstOrDefault(v => string.Equals(v.Code, line.VatCode, StringComparison.OrdinalIgnoreCase))
-             ?? Model.VatTypes?.FirstOrDefault(v => System.Math.Abs(v.BasePercentage - line.VatPercentage) < 0.001m);
+    {
+        var matchedVatType = Model.VatTypes?.FirstOrDefault(v => v.Id == line.VatTypeId)
+            ?? Model.VatTypes?.FirstOrDefault(v => string.Equals(v.Code, line.VatCode, StringComparison.OrdinalIgnoreCase))
+            ?? Model.VatTypes?.FirstOrDefault(v => System.Math.Abs(v.BasePercentage - line.VatPercentage) < 0.001m);
 
-         return new
-         {
-             text = line.Text,
-             price = line.Price,
-             vatPercentage = line.VatPercentage,
-             vatTypeId = matchedVatType?.Id ?? line.VatTypeId,
-             vatCode = line.VatCode ?? matchedVatType?.Code,
-             discountPercent = line.DiscountPercent,
-             discountAmount = line.DiscountAmount,
-             paymentStageId = line.PaymentStageId,
-             lineType = line.LineType,
-             groupName = line.GroupName,
-             utilityCost = line.UtilityCost,
-             changeOrderDetailId = line.ChangeOrderDetailId,
-             isSelected = line.IsSelected,
-             stagePercentage = line.StagePercentage
-         };
-     });
+        return new
+        {
+            text = line.Text,
+            price = line.Price,
+            vatPercentage = line.VatPercentage,
+            vatTypeId = matchedVatType?.Id ?? line.VatTypeId,
+            vatCode = line.VatCode ?? matchedVatType?.Code,
+            discountPercent = line.DiscountPercent,
+            discountAmount = line.DiscountAmount,
+            paymentStageId = line.PaymentStageId,
+            lineType = line.LineType,
+            groupName = line.GroupName,
+            utilityCost = line.UtilityCost,
+            changeOrderDetailId = line.ChangeOrderDetailId,
+            isSelected = line.IsSelected,
+            stagePercentage = line.StagePercentage
+        };
+    });
     var initialData = new
     {
         invoiceId = Model.InvoiceId,
@@ -417,8 +440,8 @@
     };
     var initialJson = JsonSerializer.Serialize(initialData, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
 }
-@section PageScripts {
 
+@section PageScripts {
     <script>
         window.InvoiceIsEditing = true;
         window.InitialInvoice = @Html.Raw(initialJson);
@@ -432,14 +455,16 @@
     <script src="~/lib/ios7-switch/ios7-switch.js"></script>
     <script>
         window.InvoicesEndpoints = {
-          partyLookup: '@Url.Action("PartyLookup", "Invoices")',
-          projectLookup: '@Url.Action("ProjectLookup", "Invoices")',
-          supplierContractLookup: '@Url.Action("SupplierContractLookup", "Invoices")',
-          composeStageLines: '@Url.Action("ComposeStageLines", "Invoices")',
-          composeChangeOrderLines: '@Url.Action("ComposeChangeOrderLines", "Invoices")',
-          composeUtilityLines: '@Url.Action("ComposeUtilityLines", "Invoices")',
-          issuerDefaults: '@Url.Action("IssuerDefaults", "Invoices")',
-          issuerBankAccounts: '@Url.Action("IssuerBankAccounts", "Invoices")'
+            partyLookup:               '@Url.Action("PartyLookup",               "Invoices")',
+            projectLookup:             '@Url.Action("ProjectLookup",             "Invoices")',
+            supplierContractLookup:    '@Url.Action("SupplierContractLookup",    "Invoices")',
+            composeStageLines:         '@Url.Action("ComposeStageLines",         "Invoices")',
+            composeChangeOrderLines:   '@Url.Action("ComposeChangeOrderLines",   "Invoices")',
+            composeUtilityLines:       '@Url.Action("ComposeUtilityLines",       "Invoices")',
+            issuerDefaults:            '@Url.Action("IssuerDefaults",            "Invoices")',
+            issuerBankAccounts:        '@Url.Action("IssuerBankAccounts",        "Invoices")',
+            issuerAddress:             '@Url.Action("IssuerAddress",             "Invoices")',
+            partyDetails:              '@Url.Action("PartyDetails",              "Invoices")'
         };
     </script>
 
@@ -450,5 +475,155 @@
     <script src="~/js/invoices.edit-draft.js"></script>
     <script src="~/js/invoices.core.js"></script>
 
+    <script>
+    (function () {
+        // ── Preview: override toggle-gedrag voor split layout ────────
+        const _origRebuild = window.rebuildInvoicePreview;
+        window.rebuildInvoicePreview = function () {
+            _origRebuild && _origRebuild();
+            const $card = $('#previewCard');
+            $card.show().removeClass('d-none');
+            const hasContent = $('#pvTables').children().length > 0;
+            $('#pvEmpty').toggle(!hasContent);
+        };
+        window.rebuildInvoicePreview();
 
+        // ── Stap-navigatie ────────────────────────────────────────────
+        const TOTAL_STEPS = 4;
+        let currentStep = 1;
+
+        function showStep(n) {
+            currentStep = Math.max(1, Math.min(TOTAL_STEPS, n));
+
+            for (let i = 1; i <= TOTAL_STEPS; i++) {
+                const el = document.getElementById('step-' + i);
+                if (el) el.classList.toggle('d-none', i !== currentStep);
+            }
+
+            document.querySelectorAll('.invoice-step-dot').forEach(function (dot) {
+                const s = parseInt(dot.dataset.step, 10);
+                const isCompleted = s < currentStep;
+                dot.classList.toggle('active', s === currentStep);
+                dot.classList.toggle('completed', isCompleted);
+                const span = dot.querySelector('span');
+                if (span) {
+                    span.innerHTML = isCompleted ? '<i class="bx bx-check mt-2"></i>' : s;
+                }
+            });
+            document.querySelectorAll('.invoice-step-label').forEach(function (lbl) {
+                lbl.classList.toggle('active', parseInt(lbl.dataset.step, 10) === currentStep);
+            });
+
+            document.getElementById('stepCurrent').textContent = currentStep;
+            document.getElementById('stepPrev').disabled = (currentStep === 1);
+
+            const nextBtn = document.getElementById('stepNext');
+            if (currentStep === TOTAL_STEPS) {
+                nextBtn.innerHTML = '<i class="bx bx-save me-1"></i>Opslaan';
+            } else {
+                nextBtn.innerHTML = 'Volgende<i class="bx bx-right-arrow-alt ms-1"></i>';
+            }
+
+            const body = document.querySelector('.invoice-panel-body');
+            if (body) body.scrollTop = 0;
+        }
+
+        document.getElementById('stepPrev')?.addEventListener('click', function () {
+            showStep(currentStep - 1);
+        });
+
+        document.getElementById('stepNext')?.addEventListener('click', function () {
+            if (currentStep === TOTAL_STEPS) {
+                const saveBtn = document.getElementById('saveInvoiceBtn');
+                if (saveBtn && !saveBtn.disabled) {
+                    saveBtn.click();
+                } else {
+                    saveBtn?.closest('form')?.reportValidity();
+                }
+            } else {
+                showStep(currentStep + 1);
+            }
+        });
+
+        document.querySelectorAll('.invoice-step-dot').forEach(function (dot) {
+            dot.addEventListener('click', function () {
+                showStep(parseInt(this.dataset.step, 10));
+            });
+        });
+
+        // ── Mobile preview toggle ─────────────────────────────────────
+        const previewPanel = document.getElementById('invoicePreviewPanel');
+        document.getElementById('btnTogglePreview')?.addEventListener('click', function () {
+            const hidden = previewPanel.classList.toggle('preview-hidden');
+            this.innerHTML = hidden
+                ? '<i class="bx bx-show me-1"></i> Toon voorbeeld'
+                : '<i class="bx bx-hide me-1"></i> Verberg';
+        });
+
+        showStep(1);
+
+        $('#IsCreditNote, #IsPrepaid').on('change', function () {
+            if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        });
+
+        // ── Versleepbare paneel-divider met cookie-persistentie ───────
+        (function () {
+            const COOKIE_KEY = 'invoice_panel_left_width';
+            const MIN_LEFT   = 280;
+            const MIN_RIGHT  = 300;
+            const DIVIDER_W  = 6;
+
+            function getCookie(name) {
+                const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+
+            function setCookie(name, value, days) {
+                const exp = new Date(Date.now() + days * 864e5).toUTCString();
+                document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + exp + '; path=/; SameSite=Lax';
+            }
+
+            const wrapper   = document.querySelector('.invoice-compose-wrapper');
+            const leftPanel = document.querySelector('.invoice-panel-left');
+            const divider   = document.getElementById('panelDivider');
+
+            if (!wrapper || !leftPanel || !divider) return;
+
+            const saved = parseInt(getCookie(COOKIE_KEY), 10);
+            if (saved >= MIN_LEFT) {
+                leftPanel.style.width = saved + 'px';
+            }
+
+            let dragging = false;
+            let startX   = 0;
+            let startW   = 0;
+
+            divider.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                dragging = true;
+                startX   = e.clientX;
+                startW   = leftPanel.offsetWidth;
+                divider.classList.add('dragging');
+                document.body.style.cursor     = 'col-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!dragging) return;
+                const maxW = wrapper.offsetWidth - MIN_RIGHT - DIVIDER_W;
+                const newW = Math.max(MIN_LEFT, Math.min(startW + (e.clientX - startX), maxW));
+                leftPanel.style.width = newW + 'px';
+            });
+
+            document.addEventListener('mouseup', function () {
+                if (!dragging) return;
+                dragging = false;
+                divider.classList.remove('dragging');
+                document.body.style.cursor     = '';
+                document.body.style.userSelect = '';
+                setCookie(COOKIE_KEY, leftPanel.offsetWidth, 365);
+            });
+        })();
+    })();
+    </script>
 }

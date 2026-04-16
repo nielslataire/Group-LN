@@ -38,15 +38,57 @@ public static class CoachmarkRegistry
 
         new CoachmarkDefinition
         {
-            FeatureKey     = "Invoices.Create.QuickCreateClient",       // unieke sleutel
+            FeatureKey     = "Invoices.Create.CreateRestyling.Step1",       // unieke sleutel
+            PageKey        = "Invoices.Create",               // pagina-sleutel
+            TargetSelector = ".invoice-step-dot.active",                   // CSS-selector
+            Title          = "Stappen factuur opmaken",
+            Message        = "Vanaf nu kan je hier je stappen doorlopen voor het opmaken van een factuur",
+            Placement      = CoachmarkPlacement.Bottom,
+            SequenceKey     = "Invoices.Create.CreateRestyling",
+            StepIndex       = 0,
+            ReleaseDate    = new DateTime(2026, 4, 16, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays    = 30
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey     = "Invoices.Create.CreateRestyling.Step2",       // unieke sleutel
+            PageKey        = "Invoices.Create",               // pagina-sleutel
+            TargetSelector = "#stepNext",                   // CSS-selector
+            Title          = "Volgende - Vorige",
+            Message        = "Ook hier kan je de stappen doorlopen en op het einde de factuur opslaan",
+            Placement      = CoachmarkPlacement.Right,
+            SequenceKey     = "Invoices.Create.CreateRestyling",
+            StepIndex       = 1,
+            ReleaseDate    = new DateTime(2026, 4, 16, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays    = 30
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey     = "Invoices.Create.CreateRestyling.Step3",       // unieke sleutel
+            PageKey        = "Invoices.Create",               // pagina-sleutel
+            TargetSelector = "#previewCard",                   // CSS-selector
+            Title          = "Preview",
+            Message        = "Je krrijgt een preview van de factuur terwijl je deze opmaakt!",
+            Placement      = CoachmarkPlacement.Left,
+            SequenceKey     = "Invoices.Create.CreateRestyling",
+            StepIndex       = 2,
+            ReleaseDate    = new DateTime(2026, 4, 16, 0, 0, 0, DateTimeKind.Utc),
+            MaxShowDays    = 30
+        },
+        new CoachmarkDefinition
+        {
+            FeatureKey     = "Invoices.Create.CreateRestyling.Step4",       // unieke sleutel
             PageKey        = "Invoices.Create",               // pagina-sleutel
             TargetSelector = "#btn-quick-create-client",                   // CSS-selector
             Title          = "Nieuwe knop klant toevoegen",
             Message        = "Hier kan je een nieuwe klant of leverancier snel aanmaken",
             Placement      = CoachmarkPlacement.Right,
+            SequenceKey     = "Invoices.Create.CreateRestyling",
+            StepIndex       = 3,
             ReleaseDate    = new DateTime(2026, 4, 16, 0, 0, 0, DateTimeKind.Utc),
             MaxShowDays    = 30
         },
+
 
         // ── Voorbeeld 2: multi-step sequence (2 stappen) ──────────────────────
         new CoachmarkDefinition

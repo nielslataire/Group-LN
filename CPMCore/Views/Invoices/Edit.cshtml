@@ -1,4 +1,4 @@
-﻿@model CPMCore.Models.Invoicing.InvoiceEditVM
+@model CPMCore.Models.Invoicing.InvoiceEditVM
 @using System.Globalization
 @using CPMCore.Models.Invoicing
 @{
@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="~/css/invoices-custom.css" />
 }
 
-<form asp-action="Edit" method="post" class="ecommerce-form action-buttons-fixed">
+<form asp-action="Edit" method="post" id="invoiceEditForm">
     @Html.AntiForgeryToken()
     <input type="hidden" asp-for="InvoiceId" />
     <input type="hidden" asp-for="IssuerCompanyId" />
@@ -32,116 +32,69 @@
         <input type="hidden" asp-for="BankAccount" />
     }
 
-    <div class="row">
-        <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-            <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                <div class="row align-items-center">
-                    <div class="col-sm-auto">
-                        <h1 class="fw-bold mb-0">@ViewData["Title"]</h1>
-                        <h5 class="mb-4 mt-0">
-                            @(isDraft
-                                                        ? "Werk de conceptfactuur af voordat je ze definitief maakt."
-                                                        : "Pas de omschrijvingen van deze uitgegeven factuur aan.")
-                        </h5>
+    <div class="invoice-compose-wrapper">
+
+        @* ═══ LINKER PANEEL ═══ *@
+        <aside class="invoice-panel-left">
+
+            <div class="invoice-panel-header">
+                <h5 class="mb-0 fw-bold">@ViewData["Title"]</h5>
+                <p class="text-muted mb-0 small">
+                    @(isDraft
+                        ? "Werk de conceptfactuur af voordat je ze definitief maakt."
+                        : "Pas de omschrijvingen van deze uitgegeven factuur aan.")
+                </p>
+            </div>
+
+            @if (limitedEdit)
+            {
+                <div class="alert alert-warning d-flex align-items-center mx-3 mt-3 mb-0" role="alert">
+                    <i class="bx bx-info-circle text-4 me-2"></i>
+                    <div class="small">
+                        Deze factuur is definitief. Enkel de algemene omschrijvingen en lijnomschrijvingen kunnen nog aangepast worden.
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
+            }
 
-    @if (limitedEdit)
-    {
-        <div class="alert alert-warning d-flex align-items-center" role="alert">
-            <i class="bx bx-info-circle text-4 me-2"></i>
-            <div>
-                Deze factuur is definitief. Enkel de algemene omschrijvingen en lijnomschrijvingen kunnen nog aangepast worden. 
-            </div>
-        </div>
-    }
-
-    <div class="row mt-2">
-        <div class="col">
-            <section class="card card-modern mb-4">
-                <div class="card-body">
-                    <div class="row g-4">
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Documenttype</span>
-                            <div class="fw-semibold">@Model.DocumentType</div>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Klant</span>
-                            <div class="fw-semibold">@Model.ClientName</div>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Status</span>
-                            <div class="fw-semibold">@Model.StatusLabel</div>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Factuurdatum</span>
-                            <div class="fw-semibold">@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</div>
-                        </div>
-                    </div>
-                    <div class="row g-4 mt-1">
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Totaal excl. btw</span>
-                            <div class="fw-semibold">@Model.TotalExclVat.ToString("N2", culture)</div>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">BTW</span>
-                            <div class="fw-semibold">@Model.TotalVat.ToString("N2", culture)</div>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Te betalen</span>
-                            <div class="fw-bold">@Model.TotalInclVat.ToString("N2", culture)</div>
-                        </div>
-                        <div class="col-md-3 col-6">
-                            <span class="gl-summary-label">Vervaldatum</span>
-                            <div class="fw-semibold">@(Model.ExpirationDate.HasValue? Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture) : "—")</div>
-                        </div>
-                    </div>
+            <div class="invoice-step-indicator">
+                <div class="d-flex align-items-center">
+                    <div class="invoice-step-dot active" data-step="1" title="Omschrijvingen"><span>1</span></div>
+                    <div class="invoice-step-line"></div>
+                    <div class="invoice-step-dot" data-step="2" title="Lijnen"><span>2</span></div>
                 </div>
-            </section>
-        </div>
-    </div>
+                <div class="invoice-step-labels">
+                    <span class="invoice-step-label active" data-step="1">Omschrijvingen</span>
+                    <span class="invoice-step-label" data-step="2">Lijnen</span>
+                </div>
+            </div>
 
-    <div class="row mt-2">
-        <div class="col">
-            <section class="card card-modern">
-                <div class="card-body">
+            <div class="invoice-panel-body">
+
+                @* ─── STAP 1: Omschrijvingen ─── *@
+                <div id="step-1" class="invoice-step-panel">
                     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label" asp-for="HeaderDescription"></label>
-                            <textarea asp-for="HeaderDescription" class="form-control form-control-modern gl-desc-textarea gl-desc-textarea--tall" rows="4"></textarea>
-                            <span asp-validation-for="HeaderDescription" class="text-danger"> </span>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" asp-for="DetailDescription"></label>
-                            <textarea asp-for="DetailDescription" class="form-control form-control-modern gl-desc-textarea gl-desc-textarea--tall" rows="5"></textarea>
-                            <span asp-validation-for="DetailDescription" class="text-danger"></span>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label" asp-for="FooterDescription"></label>
-                            <textarea asp-for="FooterDescription" class="form-control form-control-modern gl-desc-textarea gl-desc-textarea--tall" rows="4"></textarea>
-                            <span asp-validation-for="FooterDescription" class="text-danger"></span>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="HeaderDescription"></label>
+                        <textarea asp-for="HeaderDescription" class="form-control gl-desc-textarea" rows="4"></textarea>
+                        <span asp-validation-for="HeaderDescription" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="DetailDescription"></label>
+                        <textarea asp-for="DetailDescription" class="form-control gl-desc-textarea" rows="4"></textarea>
+                        <span asp-validation-for="DetailDescription" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" asp-for="FooterDescription"></label>
+                        <textarea asp-for="FooterDescription" class="form-control gl-desc-textarea" rows="3"></textarea>
+                        <span asp-validation-for="FooterDescription" class="text-danger"></span>
                     </div>
                 </div>
-            </section>
-        </div>
-    </div>
 
-    <div class="row mt-4">
-        <div class="col">
-            <section class="card card-modern mt-4">
-                <div class="card-body pb-2">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="fw-bold mb-0">Detaillijnen</h3>
-                    </div>
-
+                @* ─── STAP 2: Lijnen ─── *@
+                <div id="step-2" class="invoice-step-panel d-none">
                     @if (Model.Lines != null && Model.Lines.Count > 0)
                     {
-                        <div class="table-responsive mt-3 mb-0">
+                        <div class="table-responsive mb-3">
                             <table class="table gl-table-lines align-middle mb-0 w-100">
                                 <thead>
                                     <tr>
@@ -177,34 +130,122 @@
                     }
                     else
                     {
-                        <div class="mt-3 text-muted">Geen lijnen gevonden voor deze factuur.</div>
+                        <div class="text-muted small mb-3">Geen lijnen gevonden voor deze factuur.</div>
+                    }
+                    @await Html.PartialAsync("Partials/_FreeLinesTable", new InvoiceComposeVM { VatTypes = vatTypes })
+                </div>
+
+            </div>@* /invoice-panel-body *@
+
+            <div class="invoice-panel-footer">
+                @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
+                {
+                    <a href="@Model.ReturnUrl" class="btn btn-light border text-muted invoice-cancel-link">Annuleren</a>
+                }
+                else
+                {
+                    <a asp-action="Detail"
+                       asp-route-id="@Model.InvoiceId"
+                       asp-route-issuerCompanyId="@(ViewBag.CompanyId ?? Model.IssuerCompanyId)"
+                       class="btn btn-light border text-muted invoice-cancel-link">Annuleren</a>
+                }
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" class="btn btn-default" id="stepPrev" disabled>
+                        <i class="bx bx-left-arrow-alt me-1"></i>Vorige
+                    </button>
+                    <span class="text-muted small text-nowrap">Stap <strong id="stepCurrent">1</strong> van 2</span>
+                    <button type="button" class="btn btn-primary" id="stepNext">
+                        Volgende<i class="bx bx-right-arrow-alt ms-1"></i>
+                    </button>
+                </div>
+            </div>
+
+        </aside>
+
+        @* ═══ VERSLEEPBARE DIVIDER ═══ *@
+        <div class="invoice-panel-divider" id="panelDivider">
+            <div class="invoice-panel-divider-handle">
+                <i class="bx bx-chevron-left"></i>
+                <div class="invoice-divider-bars">
+                    <span></span>
+                    <span></span>
+                </div>
+                <i class="bx bx-chevron-right"></i>
+            </div>
+        </div>
+
+        @* ═══ RECHTER PANEEL – Factuuroverzicht ═══ *@
+        <main class="invoice-panel-right" id="invoicePreviewPanel">
+
+            <div id="previewCard" class="invoice-preview-sheet">
+
+                @* Titel *@
+                <div class="mb-4">
+                    <h4 class="mb-0 fw-bold">@Model.DocumentType</h4>
+                    @if (isDraft)
+                    {
+                        <span class="badge bg-warning text-dark mt-1">Concept</span>
                     }
                 </div>
-            </section>
-        </div>
-    </div>
-    @await Html.PartialAsync("Partials/_FreeLinesTable", new InvoiceComposeVM { VatTypes = vatTypes })
-    <div class="row action-buttons mt-4">
-        <div class="col-12 col-md-auto">
-            <button type="submit" class="submit-button btn btn-primary btn-px-4 py-3 d-flex align-items-center font-weight-semibold line-height-1" data-loading-text="Laden...">
-                <i class="bx bx-save text-4 me-2"></i> Opslaan
-            </button>
-        </div>
-        <div class="col-12 col-md-auto px-md-0 mt-3 mt-md-0">
-            @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl))
-            {
-                <a href="@Model.ReturnUrl"
-                   class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
-            }
-            else
-            {
-                <a asp-action="Detail"
-                   asp-route-id="@Model.InvoiceId"
-                   asp-route-issuerCompanyId="@(ViewBag.CompanyId ?? Model.IssuerCompanyId)"
-                   class="cancel-button btn btn-light btn-px-4 py-3 border font-weight-semibold text-color-dark text-3">Annuleren</a>
-            }
-        </div>
-    </div>
+
+                @* Partijen *@
+                <div class="row mb-3">
+                    <div class="col-6">
+                        <div class="text-muted small">Van</div>
+                        <div class="fw-semibold">@issuerName</div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="text-muted small">Aan</div>
+                        <div class="fw-semibold">@Model.ClientName</div>
+                    </div>
+                </div>
+
+                @* Datums *@
+                <div class="d-flex gap-4 mb-4 pb-3 border-bottom small">
+                    <div>
+                        <span class="text-muted">Factuurdatum:</span>
+                        <strong>@Model.InvoiceDate.ToString("dd/MM/yyyy", culture)</strong>
+                    </div>
+                    @if (Model.ExpirationDate.HasValue)
+                    {
+                        <div>
+                            <span class="text-muted">Vervaldatum:</span>
+                            <strong>@Model.ExpirationDate.Value.ToString("dd/MM/yyyy", culture)</strong>
+                        </div>
+                    }
+                </div>
+
+                @* Totalen *@
+                <table class="table mb-0 table-borderless gl-min-w-400">
+                    <tbody>
+                        <tr>
+                            <td class="text-end fw-semibold">Subtotaal</td>
+                            <td class="text-end fw-semibold gl-col-160">@Model.TotalExclVat.ToString("N2", culture)</td>
+                        </tr>
+                        <tr>
+                            <td class="text-end fw-semibold">BTW</td>
+                            <td class="text-end fw-semibold">@Model.TotalVat.ToString("N2", culture)</td>
+                        </tr>
+                        <tr class="border-top">
+                            <td class="text-end fw-bold pt-2">Te betalen</td>
+                            <td class="text-end fw-bold pt-2">@Model.TotalInclVat.ToString("N2", culture)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                @* Status *@
+                <div class="mt-4 pt-3 border-top small text-muted">
+                    Status: <strong class="text-dark">@Model.StatusLabel</strong>
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>@* /invoice-compose-wrapper *@
+
+    <button type="submit" id="saveInvoiceBtn" class="d-none"></button>
+
 </form>
 
 @section PageScripts {
@@ -222,4 +263,125 @@
             })(jQuery);
         </script>
     }
+    <script>
+    (function () {
+        const TOTAL_STEPS = 2;
+        let currentStep = 1;
+
+        function showStep(n) {
+            currentStep = Math.max(1, Math.min(TOTAL_STEPS, n));
+
+            for (let i = 1; i <= TOTAL_STEPS; i++) {
+                const el = document.getElementById('step-' + i);
+                if (el) el.classList.toggle('d-none', i !== currentStep);
+            }
+
+            document.querySelectorAll('.invoice-step-dot').forEach(function (dot) {
+                const s = parseInt(dot.dataset.step, 10);
+                const isCompleted = s < currentStep;
+                dot.classList.toggle('active', s === currentStep);
+                dot.classList.toggle('completed', isCompleted);
+                const span = dot.querySelector('span');
+                if (span) {
+                    span.innerHTML = isCompleted ? '<i class="bx bx-check mt-2"></i>' : s;
+                }
+            });
+            document.querySelectorAll('.invoice-step-label').forEach(function (lbl) {
+                lbl.classList.toggle('active', parseInt(lbl.dataset.step, 10) === currentStep);
+            });
+
+            document.getElementById('stepCurrent').textContent = currentStep;
+            document.getElementById('stepPrev').disabled = (currentStep === 1);
+
+            const nextBtn = document.getElementById('stepNext');
+            if (currentStep === TOTAL_STEPS) {
+                nextBtn.innerHTML = '<i class="bx bx-save me-1"></i>Opslaan';
+            } else {
+                nextBtn.innerHTML = 'Volgende<i class="bx bx-right-arrow-alt ms-1"></i>';
+            }
+
+            const body = document.querySelector('.invoice-panel-body');
+            if (body) body.scrollTop = 0;
+        }
+
+        document.getElementById('stepPrev')?.addEventListener('click', function () {
+            showStep(currentStep - 1);
+        });
+
+        document.getElementById('stepNext')?.addEventListener('click', function () {
+            if (currentStep === TOTAL_STEPS) {
+                document.getElementById('saveInvoiceBtn')?.click();
+            } else {
+                showStep(currentStep + 1);
+            }
+        });
+
+        document.querySelectorAll('.invoice-step-dot').forEach(function (dot) {
+            dot.addEventListener('click', function () {
+                showStep(parseInt(this.dataset.step, 10));
+            });
+        });
+
+        // ── Versleepbare paneel-divider met cookie-persistentie ───────
+        (function () {
+            const COOKIE_KEY = 'invoice_panel_left_width';
+            const MIN_LEFT   = 280;
+            const MIN_RIGHT  = 300;
+            const DIVIDER_W  = 6;
+
+            function getCookie(name) {
+                const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+
+            function setCookie(name, value, days) {
+                const exp = new Date(Date.now() + days * 864e5).toUTCString();
+                document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + exp + '; path=/; SameSite=Lax';
+            }
+
+            const wrapper   = document.querySelector('.invoice-compose-wrapper');
+            const leftPanel = document.querySelector('.invoice-panel-left');
+            const divider   = document.getElementById('panelDivider');
+
+            if (!wrapper || !leftPanel || !divider) return;
+
+            const saved = parseInt(getCookie(COOKIE_KEY), 10);
+            if (saved >= MIN_LEFT) {
+                leftPanel.style.width = saved + 'px';
+            }
+
+            let dragging = false;
+            let startX   = 0;
+            let startW   = 0;
+
+            divider.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                dragging = true;
+                startX   = e.clientX;
+                startW   = leftPanel.offsetWidth;
+                divider.classList.add('dragging');
+                document.body.style.cursor     = 'col-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!dragging) return;
+                const maxW = wrapper.offsetWidth - MIN_RIGHT - DIVIDER_W;
+                const newW = Math.max(MIN_LEFT, Math.min(startW + (e.clientX - startX), maxW));
+                leftPanel.style.width = newW + 'px';
+            });
+
+            document.addEventListener('mouseup', function () {
+                if (!dragging) return;
+                dragging = false;
+                divider.classList.remove('dragging');
+                document.body.style.cursor     = '';
+                document.body.style.userSelect = '';
+                setCookie(COOKIE_KEY, leftPanel.offsetWidth, 365);
+            });
+        })();
+
+        showStep(1);
+    })();
+    </script>
 }

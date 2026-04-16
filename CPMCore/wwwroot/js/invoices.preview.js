@@ -35,17 +35,34 @@
         return { days, name, termType, displayMode, displayText };
     }
 
+    const COUNTRY_NAMES = {
+        'BE': 'België', 'NL': 'Nederland', 'FR': 'Frankrijk', 'DE': 'Duitsland',
+        'LU': 'Luxemburg', 'GB': 'Verenigd Koninkrijk', 'UK': 'Verenigd Koninkrijk',
+        'IT': 'Italië', 'ES': 'Spanje', 'PT': 'Portugal', 'AT': 'Oostenrijk',
+        'CH': 'Zwitserland', 'PL': 'Polen', 'DK': 'Denemarken', 'SE': 'Zweden',
+        'NO': 'Noorwegen', 'FI': 'Finland', 'IE': 'Ierland', 'US': 'Verenigde Staten'
+    };
+
     function buildAddressLines(d) {
         if (!d) return [];
         const lines = [];
-        // Straat + huisnummer + busnummer
-        const streetParts = [d.street, d.houseNumber, d.busNumber ? ('bus ' + d.busNumber) : null].filter(Boolean);
-        if (streetParts.length) lines.push(streetParts.join(' '));
+        // Issuer-formaat: addressLine1 / addressLine2 (voorgeformateerde regels)
+        if (d.addressLine1) {
+            lines.push(d.addressLine1);
+            if (d.addressLine2) lines.push(d.addressLine2);
+        } else {
+            // Party-formaat: aparte velden
+            const streetParts = [d.street, d.houseNumber, d.busNumber ? ('bus ' + d.busNumber) : null].filter(Boolean);
+            if (streetParts.length) lines.push(streetParts.join(' '));
+        }
         // Postcode + gemeente
         const cityParts = [d.postalCode, d.city].filter(Boolean);
         if (cityParts.length) lines.push(cityParts.join(' '));
-        // Land
-        if (d.countryCode) lines.push(d.countryCode);
+        // Land: ISO-code omzetten naar volledige naam
+        if (d.countryCode) {
+            const code = d.countryCode.toUpperCase();
+            lines.push(COUNTRY_NAMES[code] || d.countryCode);
+        }
         return lines;
     }
 
