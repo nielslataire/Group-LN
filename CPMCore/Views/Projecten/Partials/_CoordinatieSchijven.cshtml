@@ -1,8 +1,29 @@
 @model CPMCore.Models.Projecten.ProjectCoordinatieModel
 @{
-    var totalPct = Model.ContractSlices.Sum(s => s.Percentage);
     var canInvoice = Model.CoordinationIssuerCompanyId.HasValue && Model.ContractPrice.HasValue && Model.ContractPrice > 0;
 }
+
+@* ── Groene selectiekaart (verborgen; zichtbaar via JS wanneer checkboxes geselecteerd zijn) ── *@
+@if (canInvoice)
+{
+    <div id="sliceSelectionCard" class="d-none rounded px-3 py-2 mb-3 flex-wrap align-items-center gap-2"
+         style="background-color:#d1f0dc; border:1px solid #a3d9b5;">
+        <span class="fw-semibold text-success">Geselecteerde schijven</span>
+        <span class="badge bg-success rounded-pill" id="selectionCount">0</span>
+        <span class="text-success fw-semibold">—</span>
+        <span class="text-success fw-semibold" id="selectionTotal">€ 0</span>
+        <div class="ms-auto d-flex gap-2">
+            <button type="button" id="btnWisSelectie" class="btn btn-sm btn-outline-secondary">Wis selectie</button>
+            <button type="submit" form="coordInvoiceForm"
+                    class="btn btn-sm btn-success"
+                    id="btnCoordInvoiceCard">
+                <i class="fa fa-euro-sign me-1"></i>Factureer geselecteerde
+            </button>
+        </div>
+    </div>
+}
+
+@* ── Tabel ── *@
 <div class="card card-modern">
     <div class="card-header">
         <h5 class="card-title mb-0">Contractschijven</h5>
@@ -17,13 +38,16 @@
             <table id="dt-schijven" class="table table-bordered table-striped mb-0 w-100">
                 <thead>
                     <tr>
-                        <th>#</th>
-                        <th>Omschrijving</th>
-                        <th class="text-end">Percentage</th>
                         @if (canInvoice)
                         {
-                            <th class="text-end text-nowrap">Selectie</th>
+                            <th class="text-center" style="width:40px;">
+                                <input type="checkbox" id="chkSelectAll" title="Selecteer alles" />
+                            </th>
                         }
+                        <th class="text-nowrap">SCHIJF</th>
+                        <th>OMSCHRIJVING</th>
+                        <th class="text-end text-nowrap">BEDRAG</th>
+                        <th class="text-end text-nowrap">ACTIE</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -31,31 +55,32 @@
                     {
                         var slice = Model.ContractSlices[i];
                         <tr>
-                            <td>@(i + 1)</td>
-                            <td>@slice.Description</td>
-                            <td class="text-end">@slice.Percentage.ToString("0.##") %</td>
                             @if (canInvoice)
                             {
-                                <td class="text-end">
-                                    <div class="checkbox-custom checkbox-default d-inline-block">
-                                        <input type="checkbox" class="chkCoordSlice"
-                                               id="coord-slice-@slice.Id"
-                                               name="sliceIds"
-                                               value="@slice.Id"
-                                               form="coordInvoiceForm" />
-                                        <label for="coord-slice-@slice.Id"></label>
-                                    </div>
+                                <td class="text-center align-middle">
+                                    <input type="checkbox"
+                                           class="chkCoordSlice"
+                                           id="coord-slice-@slice.Id"
+                                           name="sliceIds"
+                                           value="@slice.Id"
+                                           data-amount="@slice.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                           form="coordInvoiceForm" />
                                 </td>
                             }
+                            <td class="align-middle text-nowrap fw-semibold">Schijf @(i + 1)</td>
+                            <td class="align-middle">@slice.Description</td>
+                            <td class="align-middle text-end text-nowrap">€ @slice.Amount.ToString("N2")</td>
+                            <td class="align-middle text-end text-nowrap">
+                                @if (canInvoice)
+                                {
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary btn-factureer-slice"
+                                            data-slice-id="@slice.Id">Factureer</button>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
-                <tfoot>
-                    <tr class="fw-bold">
-                        <td colspan="@(canInvoice ? 3 : 2)" class="text-end">Totaal</td>
-                        <td class="text-end @(totalPct != 100 ? "text-danger" : "")">@totalPct.ToString("0.##") %</td>
-                    </tr>
-                </tfoot>
             </table>
         }
     </div>

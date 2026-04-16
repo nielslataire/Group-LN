@@ -1,0 +1,33 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@{
+    var totalContract = Model.ContractPrice ?? 0m;
+    var invoiced      = Model.InvoicedAmount;
+    var openstaand    = totalContract - invoiced;
+    var voortgangPct  = totalContract > 0 ? (int)Math.Round(invoiced / totalContract * 100) : 0;
+}
+<div class="row g-3 mt-2 mb-3">
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Totaal contract</div>
+            <div class="fw-bold fs-5">€ @totalContract.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Gefactureerd</div>
+            <div class="fw-bold fs-5 text-success">€ @invoiced.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Openstaand</div>
+            <div class="fw-bold fs-5">€ @openstaand.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Voortgang</div>
+            <div class="fw-bold fs-5">@voortgangPct%</div>
+        </div>
+    </div>
+</div>

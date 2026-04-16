@@ -11,6 +11,32 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <style>
+        .coord-tabs {
+            display: flex;
+            border-bottom: 0.5px solid #dee2e6;
+            margin-top: 1rem;
+        }
+        .coord-tab {
+            padding: 10px 20px;
+            border: none;
+            border-bottom: 4px solid transparent;
+            background: none;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: -1px;
+            line-height: 1.5;
+        }
+        .coord-tab:hover {
+            color: var(--bs-primary);
+        }
+        .coord-tab.active {
+            color: var(--bs-primary);
+            border-bottom: 4px solid var(--bs-primary);
+        }
+    </style>
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -23,15 +49,22 @@
                         <h5 class="mb-4 mt-0">Overzicht van schijven en/of regie voor dit coördinatieproject</h5>
                     </div>
                     <div class="col-sm-auto px-0">
-                        <div class="btn-group" role="group" aria-label="Coördinatie acties">
-                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportExcel" data-toggle="tooltip" title="Exporteren naar excel"><i class="fas fa-file-excel"></i></button>
-                            <button type="button" class="btn btn-primary btn-md px-3 me-1" id="btnExportPdf" data-toggle="tooltip" title="PDF"><i class="fas fa-file-pdf"></i></button>
-                            <a href="@settingsUrl" class="btn btn-primary btn-md px-3 me-1" data-toggle="tooltip" title="Instellingen"><i class="fas fa-cog"></i></a>
+                        <div class="d-flex gap-2 align-items-center">
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-secondary btn-md dropdown-toggle px-3" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-upload me-2"></i>Exporteer
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" id="btnExportExcel" href="#"><i class="fas fa-file-excel me-2 text-success"></i>Excel</a></li>
+                                    <li><a class="dropdown-item" id="btnExportPdf" href="#"><i class="fas fa-file-pdf me-2 text-danger"></i>PDF</a></li>
+                                </ul>
+                            </div>
+                            <a href="@settingsUrl" class="btn btn-outline-secondary btn-md px-3" title="Instellingen"><i class="fas fa-cog"></i></a>
                             @if (canInvoiceSlices)
                             {
                                 <button type="submit"
                                         form="coordInvoiceForm"
-                                        class="btn btn-primary btn-md px-3"
+                                        class="btn btn-success btn-md px-3"
                                         id="btnCoordInvoice"
                                         disabled
                                         title="Factuur opmaken">
@@ -53,14 +86,17 @@
                     @if (showSchijven && showRegie)
                     {
                         <!-- Gemengd: twee tabbladen -->
-                        <ul class="nav nav-tabs mt-3" id="coordTabs" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="tab-schijven" data-bs-toggle="tab" data-bs-target="#pane-schijven" type="button" role="tab">Schijven</button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="tab-regie" data-bs-toggle="tab" data-bs-target="#pane-regie" type="button" role="tab">Regie</button>
-                            </li>
-                        </ul>
+                        <div class="coord-tabs" id="coordTabs" role="tablist">
+                            <button class="coord-tab active" id="tab-schijven" data-bs-toggle="tab" data-bs-target="#pane-schijven" type="button" role="tab" aria-selected="true">Contractschijven</button>
+                            <button class="coord-tab" id="tab-regie" data-bs-toggle="tab" data-bs-target="#pane-regie" type="button" role="tab" aria-selected="false">Regie-uren</button>
+                        </div>
+                    }
+                    @if (showSchijven && canInvoiceSlices)
+                    {
+                        @await Html.PartialAsync("Partials/_CoordinatieStatCards", Model)
+                    }
+                    @if (showSchijven && showRegie)
+                    {
                         <div class="tab-content mt-3" id="coordTabContent">
                             <div class="tab-pane fade show active" id="pane-schijven" role="tabpanel">
                                 @await Html.PartialAsync("Partials/_CoordinatieSchijven", Model)
@@ -151,6 +187,14 @@
         }
         $("#btnExportExcel").on('click', function () { $(".buttons-excel").first().trigger("click"); });
         $("#btnExportPdf").on('click', function ()   { $(".buttons-pdf").first().trigger("click");   });
+
+        // Sync active class op custom coord-tab knoppen bij tab-wissel
+        document.querySelectorAll('.coord-tab').forEach(function (btn) {
+            btn.addEventListener('shown.bs.tab', function () {
+                document.querySelectorAll('.coord-tab').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+            });
+        });
     </script>
     <script src="~/js/detail-coordinatie.js"></script>
 }

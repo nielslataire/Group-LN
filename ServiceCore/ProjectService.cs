@@ -2742,25 +2742,43 @@ namespace ServiceCore
         {
             var response = new Response();
 
-            // Verwijder bestaande schijven voor dit project
             var existing = _uow.ProjectContractSlices.GetNormal()
                 .Where(s => s.ProjectId == projectId)
                 .ToList();
-            foreach (var e in existing)
+
+            var incomingIds = slices.Where(s => s.Id > 0).Select(s => s.Id).ToHashSet();
+
+            // Verwijder schijven die niet langer in de lijst staan
+            foreach (var e in existing.Where(e => !incomingIds.Contains(e.Id)))
                 _uow.ProjectContractSlices.DeleteObject(e);
 
-            // Voeg nieuwe schijven toe
             int order = 0;
             foreach (var bo in slices)
             {
-                var entity = new ProjectContractSlice
+                if (bo.Id > 0)
                 {
-                    ProjectId = projectId,
-                    Description = bo.Description,
-                    Percentage = bo.Percentage,
-                    SortOrder = order++
-                };
-                _uow.ProjectContractSlices.Add(entity);
+                    // Update bestaande schijf – Progress blijft behouden
+                    var entity = existing.FirstOrDefault(e => e.Id == bo.Id);
+                    if (entity != null)
+                    {
+                        entity.Description = bo.Description;
+                        entity.Percentage  = bo.Percentage;
+                        entity.SortOrder   = order;
+                    }
+                }
+                else
+                {
+                    // Nieuwe schijf
+                    _uow.ProjectContractSlices.Add(new ProjectContractSlice
+                    {
+                        ProjectId   = projectId,
+                        Description = bo.Description,
+                        Percentage  = bo.Percentage,
+                        SortOrder   = order
+                        
+                    });
+                }
+                order++;
             }
 
             var result = _uow.SaveChanges();

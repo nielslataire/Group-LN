@@ -4882,14 +4882,36 @@ namespace CPMCore.Controllers
                 CoordinationIssuerCompanyId = proj.CoordinationIssuerCompanyId,
             };
 
+            model.ContractPrice = _db.Contract
+                .AsNoTracking()
+                .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
+                .SelectMany(c => c.ContractActivity.Where(a => a.ActivityId == 277).Select(a => a.Price))
+                .FirstOrDefault();
+
             var slicesResp = _projectService.GetContractSlices(projectid);
             if (slicesResp.Success)
+            {
+                var contractPrice = model.ContractPrice ?? 0m;
                 model.ContractSlices = slicesResp.Values.Select(s => new Models.Projecten.ProjectContractSliceVM
                 {
                     Id          = s.Id,
                     Description = s.Description,
-                    Percentage  = s.Percentage
+                    Percentage  = s.Percentage,
+                    Amount      = Math.Round(contractPrice * s.Percentage / 100m, 2, MidpointRounding.AwayFromZero)
                 }).ToList();
+            }
+
+            // Gefactureerd bedrag: som van alle niet-geannuleerde coördinatiefacturen voor dit project
+            if (model.CoordinationIssuerCompanyId.HasValue)
+            {
+                model.InvoicedAmount = _db.Invoices
+                    .Where(i => i.ProjectId == projectid
+                             && i.IssuerCompanyId == model.CoordinationIssuerCompanyId.Value
+                             && i.StatusId != 7) // 7 = Cancelled
+                    .SelectMany(i => i.InvoicesDetails)
+                    .Where(d => d.LineType == "detail")
+                    .Sum(d => (decimal?)d.Price) ?? 0m;
+            }
 
             var ratesResp = _projectService.GetProjectHourlyRates(projectid);
             if (ratesResp.Success)
@@ -4899,12 +4921,6 @@ namespace CPMCore.Controllers
                     UserFullName = r.UserFullName,
                     HourlyRate   = r.HourlyRate
                 }).ToList();
-
-            model.ContractPrice = _db.Contract
-                .AsNoTracking()
-                .Where(c => c.ProjectId == projectid && c.ContractActivity.Any(a => a.ActivityId == 277))
-                .SelectMany(c => c.ContractActivity.Where(a => a.ActivityId == 277).Select(a => a.Price))
-                .FirstOrDefault();
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };

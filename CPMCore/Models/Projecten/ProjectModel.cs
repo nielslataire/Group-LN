@@ -3934,6 +3934,8 @@ namespace CPMCore.Models.Projecten
         [Display(Name = "Percentage (%)")]
         [Range(0.01, 100, ErrorMessage = "Percentage moet tussen 0,01 en 100 liggen.")]
         public decimal Percentage { get; set; }
+
+        public decimal Amount { get; set; }
     }
 
     public class ProjectHourlyRateVM
@@ -3957,6 +3959,7 @@ namespace CPMCore.Models.Projecten
         public decimal? KmAllowance { get; set; }
         public int? CoordinationIssuerCompanyId { get; set; }
         public decimal? ContractPrice { get; set; }
+        public decimal InvoicedAmount { get; set; }
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
         public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
     }
