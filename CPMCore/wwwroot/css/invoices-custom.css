@@ -180,17 +180,20 @@
     min-height: 0;
     gap: 0;
     overflow: hidden;
+    background: #f4f5f7;
 }
 
-/* Left panel */
+/* Left panel — floats as a card inside the gray wrapper */
 .invoice-panel-left {
     width: 1000px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     background: #fff;
-    border-right: 1px solid #e9ecef;
     overflow: hidden;
+    margin: 1rem;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .08);
 }
 
 .invoice-panel-header {
@@ -291,6 +294,78 @@
     margin-top: 0.25rem;
 }
 
+/* Resizable divider */
+.invoice-panel-divider {
+    width: 28px;
+    flex-shrink: 0;
+    align-self: stretch;
+    cursor: col-resize;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.invoice-panel-divider::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #dee2e6;
+    transform: translateX(-50%);
+    transition: background 0.18s;
+}
+
+.invoice-panel-divider:hover::before,
+.invoice-panel-divider.dragging::before {
+    background: var(--primary, #0d6efd);
+    width: 2px;
+}
+
+.invoice-panel-divider-handle {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1px;
+    color: #ced4da;
+    transition: color 0.18s;
+    pointer-events: none;
+    line-height: 1;
+    position: relative;
+    z-index: 1;
+    background: #f4f5f7;
+    padding: 6px 0;
+}
+
+.invoice-panel-divider:hover .invoice-panel-divider-handle,
+.invoice-panel-divider.dragging .invoice-panel-divider-handle {
+    color: var(--primary, #0d6efd);
+}
+
+.invoice-panel-divider-handle .bx {
+    font-size: 0.85rem;
+}
+
+.invoice-divider-bars {
+    display: flex;
+    flex-direction: row;
+    gap: 3px;
+    align-items: center;
+    margin: 0 2px;
+}
+
+.invoice-divider-bars span {
+    display: block;
+    width: 2px;
+    min-width: 2px;
+    height: 22px;
+    background: currentColor;
+    border-radius: 2px;
+}
+
 /* Right panel */
 .invoice-panel-right {
     flex: 1 1 0;
@@ -367,10 +442,14 @@
     }
 
     .invoice-panel-left {
-        width: 100%;
+        width: 100% !important;
         height: auto;
-        border-right: none;
-        border-bottom: 1px solid #e9ecef;
+        margin: 0.75rem !important;
+        border-radius: 6px;
+    }
+
+    .invoice-panel-divider {
+        display: none;
     }
 
     .invoice-panel-body {

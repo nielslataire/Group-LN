@@ -262,6 +262,18 @@
 
         </aside>
 
+        @* ═══ VERSLEEPBARE DIVIDER ═══ *@
+        <div class="invoice-panel-divider" id="panelDivider">
+            <div class="invoice-panel-divider-handle">
+                <i class="bx bx-chevron-left"></i>
+                <div class="invoice-divider-bars">
+                    <span></span>
+                    <span></span>
+                </div>
+                <i class="bx bx-chevron-right"></i>
+            </div>
+        </div>
+
         @* ═══ RECHTER PANEEL – Live preview ═══ *@
         <main class="invoice-panel-right" id="invoicePreviewPanel">
 
@@ -501,6 +513,66 @@
         $('#IsCreditNote, #IsPrepaid').on('change', function () {
             if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
         });
+
+        // ── Versleepbare paneel-divider met cookie-persistentie ───────
+        (function () {
+            const COOKIE_KEY = 'invoice_panel_left_width';
+            const MIN_LEFT   = 280;
+            const MIN_RIGHT  = 300;
+            const DIVIDER_W  = 6;
+
+            function getCookie(name) {
+                const m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.*+?^${}()|[\]\\])/g, '\\$1') + '=([^;]*)'));
+                return m ? decodeURIComponent(m[1]) : null;
+            }
+
+            function setCookie(name, value, days) {
+                const exp = new Date(Date.now() + days * 864e5).toUTCString();
+                document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + exp + '; path=/; SameSite=Lax';
+            }
+
+            const wrapper   = document.querySelector('.invoice-compose-wrapper');
+            const leftPanel = document.querySelector('.invoice-panel-left');
+            const divider   = document.getElementById('panelDivider');
+
+            if (!wrapper || !leftPanel || !divider) return;
+
+            // Herstel breedte uit cookie
+            const saved = parseInt(getCookie(COOKIE_KEY), 10);
+            if (saved >= MIN_LEFT) {
+                leftPanel.style.width = saved + 'px';
+            }
+
+            let dragging  = false;
+            let startX    = 0;
+            let startW    = 0;
+
+            divider.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                dragging = true;
+                startX   = e.clientX;
+                startW   = leftPanel.offsetWidth;
+                divider.classList.add('dragging');
+                document.body.style.cursor     = 'col-resize';
+                document.body.style.userSelect = 'none';
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!dragging) return;
+                const maxW  = wrapper.offsetWidth - MIN_RIGHT - DIVIDER_W;
+                const newW  = Math.max(MIN_LEFT, Math.min(startW + (e.clientX - startX), maxW));
+                leftPanel.style.width = newW + 'px';
+            });
+
+            document.addEventListener('mouseup', function () {
+                if (!dragging) return;
+                dragging = false;
+                divider.classList.remove('dragging');
+                document.body.style.cursor     = '';
+                document.body.style.userSelect = '';
+                setCookie(COOKIE_KEY, leftPanel.offsetWidth, 365);
+            });
+        })();
     })();
     </script>
 }
