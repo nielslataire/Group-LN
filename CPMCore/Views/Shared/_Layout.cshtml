@@ -50,6 +50,9 @@
 
 	<!-- Page specific css -->
 	@RenderSection("PageStyle", required: false)
+
+	<!-- Coachmarks -->
+	<link rel="stylesheet" href="~/css/coachmarks.css" />
 	
 	<!-- GROUP LN CSS -->
 @* 	<link rel="stylesheet" href="css/groupln.css" />
@@ -404,6 +407,10 @@
 
 	<!-- Theme Custom -->
 	<script src="~/js/custom.js"></script>
+
+	<!-- Coachmarks -->
+	@await Html.PartialAsync("_Coachmarks")
+	<script src="~/js/coachmarks.js"></script>
 	<script src="~/js/notificaties.js"></script>
 
 	<!-- Theme Initialization Files -->

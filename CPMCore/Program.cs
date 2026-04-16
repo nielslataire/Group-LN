@@ -134,6 +134,8 @@ ServiceFactory.Configure(domainDbOptions);
 
 // ⬇️ UnitOfWork + Services via DI (scoped per request)
 builder.Services.AddScoped<DALCore.UnitOfWorkCore, DALCore.UnitOfWorkCore>();
+builder.Services.AddSingleton<FacadeCore.ICoachmarkDefinitionProvider, CPMCore.Services.CoachmarkDefinitionProvider>();
+builder.Services.AddScoped<FacadeCore.ICoachmarkService, ServiceCore.CoachmarkService>();
 builder.Services.AddScoped<FacadeCore.IProjectService, ServiceCore.ProjectService>();
 builder.Services.AddScoped<FacadeCore.IUnitService, ServiceCore.UnitService>();
 builder.Services.AddScoped<FacadeCore.IAuthenticationService, ServiceCore.AuthenticationService>();

@@ -936,6 +936,8 @@ namespace CPMCore.Controllers
                     AddMessage("error", "Factuur niet gevonden om te dupliceren.", "Factuur");
                 }
             }
+            //coachmarks
+            ViewData["CoachmarkPageKey"] = "Invoices.Create";
 
             // haal actieve issuers op, gefilterd op schrijfrechten
             var allIssuersBo = await _ics.ListActiveIssuersAsync(ct);

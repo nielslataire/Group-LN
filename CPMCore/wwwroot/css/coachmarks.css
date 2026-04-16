@@ -1,0 +1,202 @@
+/* ============================================================
+   Coachmarks — feature discovery popovers
+   Prefix: gl-cm
+   ============================================================ */
+
+/* ── Popover container ──────────────────────────────────────── */
+
+.gl-cm {
+    position: absolute;
+    z-index: 9050;
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.14);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    transform: translateY(4px);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.gl-cm--visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+/* ── Arrow ──────────────────────────────────────────────────── */
+
+.gl-cm__arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* Bottom placement → arrow points up (top of popover) */
+.gl-cm[data-placement="bottom"] .gl-cm__arrow {
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid #fff;
+}
+
+/* Top placement → arrow points down (bottom of popover) */
+.gl-cm[data-placement="top"] .gl-cm__arrow {
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #fff;
+}
+
+/* Right placement → arrow points left (left side of popover) */
+.gl-cm[data-placement="right"] .gl-cm__arrow {
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-right: 8px solid #fff;
+}
+
+/* Left placement → arrow points right (right side of popover) */
+.gl-cm[data-placement="left"] .gl-cm__arrow {
+    right: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    border-left: 8px solid #fff;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+
+.gl-cm__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.gl-cm__title {
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.875rem;
+}
+
+.gl-cm__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 3px;
+    cursor: pointer;
+    color: #9aa3af;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+}
+
+.gl-cm__close:hover {
+    color: #495057;
+    background: #f0f2f5;
+}
+
+/* ── Body ───────────────────────────────────────────────────── */
+
+.gl-cm__body {
+    padding: 10px 14px;
+    color: #495057;
+}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+
+.gl-cm__footer {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px 12px;
+    gap: 8px;
+}
+
+.gl-cm__counter {
+    font-size: 0.75rem;
+    color: #9aa3af;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.gl-cm__actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+/* ── Buttons ────────────────────────────────────────────────── */
+
+.gl-cm__btn {
+    display: inline-flex;
+    align-items: center;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 13px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: filter 0.15s, background 0.15s;
+}
+
+.gl-cm__btn--prev {
+    background: #f0f2f5;
+    color: #495057;
+}
+
+.gl-cm__btn--prev:hover {
+    background: #e2e6ea;
+}
+
+.gl-cm__btn--next,
+.gl-cm__btn--done {
+    background: var(--primary, #0d6efd);
+    color: #fff;
+}
+
+.gl-cm__btn--next:hover,
+.gl-cm__btn--done:hover {
+    filter: brightness(0.9);
+}
+
+/* ── Target highlight ───────────────────────────────────────── */
+
+.gl-cm-target {
+    outline: 2px solid var(--primary, #0d6efd) !important;
+    outline-offset: 3px;
+    border-radius: 4px;
+    position: relative;
+    z-index: 1;
+    transition: outline 0.2s;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────── */
+
+@media (max-width: 575px) {
+    .gl-cm {
+        width: calc(100vw - 24px);
+    }
+
+    /* On mobile the arrow is hidden to avoid visual glitches
+       when the popover is clamped to the side */
+    .gl-cm__arrow {
+        display: none;
+    }
+}
