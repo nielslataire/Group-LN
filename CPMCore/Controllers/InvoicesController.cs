@@ -255,6 +255,19 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(Index), new { issuerCompanyId });
             }
 
+            // Voorkom dat facturen uit verschillende boekjaren of dagboeken tegelijk doorgeboeked worden.
+            // Octopus boekt per boekjaar+dagboek; cross-boekjaar selecties zouden facturen stilzwijgend negeren.
+            var distinctBookyearJournals = eligibleInvoices
+                .Select(i => new { i.OctopusBookyearId, i.OctopusJournalKey })
+                .Distinct()
+                .ToList();
+
+            if (distinctBookyearJournals.Count > 1)
+            {
+                AddMessage("error", "De geselecteerde facturen vallen in verschillende boekjaren of dagboeken. Boek per boekjaar afzonderlijk.", "Factuur");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+
             var targetInvoice = eligibleInvoices
                 .OrderByDescending(i => i.OctopusDocumentSequenceNr)
                 .First();
@@ -300,10 +313,10 @@ namespace CPMCore.Controllers
                 var response = await _octopusClient.BookInvoiceAsync(
                     dossierToken.Token,
                     issuer.OctopusDossierNumber,
-                   targetInvoice.OctopusBookyearId.Value,
+                    targetInvoice.OctopusBookyearId.Value,
                     targetInvoice.OctopusJournalKey!,
                     targetInvoice.OctopusDocumentSequenceNr.Value,
-                    ct);
+                    ct: ct);
 
                 var bookingStatus = response?.BookingStatusList?.FirstOrDefault();
                 if (response is null || !response.Success || bookingStatus is null || !bookingStatus.Success)
@@ -3027,35 +3040,71 @@ namespace CPMCore.Controllers
 
             if (sequence == null)
             {
+                // Enkel legacy-sequenties zonder gekoppeld boekjaar ophalen via kalenderjaar.
+                // Sequenties met BookyearId != null worden uitsluitend via de datumrange (pad 1) gevonden.
                 var calendarYear = finalDate.Year;
                 sequence = await sequencesQuery
-                    .FirstOrDefaultAsync(s => s.FiscalYear == calendarYear, ct);
+                    .FirstOrDefaultAsync(s => s.BookyearId == null && s.FiscalYear == calendarYear, ct);
             }
 
             if (sequence == null)
-                throw new InvalidOperationException("Geen sequentie gevonden voor deze factuurdatum. Maak een nieuwe sequentie aan voor het juiste boekjaar.");
+            {
+                // Onderscheid: bestaat het boekjaar al lokaal (na sync) maar ontbreekt de sequentie,
+                // of is het boekjaar nog niet bekend (nooit gesynchroniseerd of niet in Octopus aangemaakt)?
+                var bookyearExists = await _db.OctopusBookyears
+                    .AnyAsync(b => b.IssuerCompanyId == issuer.Id
+                               && b.StartDate <= finalDate.ToDateTime(TimeOnly.MinValue)
+                               && b.EndDate >= finalDate.ToDateTime(TimeOnly.MinValue), ct);
+
+                if (bookyearExists)
+                    throw new InvalidOperationException(
+                        $"Er is een boekjaar voor {finalDate:dd/MM/yyyy} maar er ontbreekt een nummerreeks. " +
+                        "Synchroniseer het Octopus-dossier opnieuw zodat de nummerreeks automatisch aangemaakt wordt.");
+
+                throw new InvalidOperationException(
+                    $"Geen boekjaar gevonden voor {finalDate:dd/MM/yyyy}. " +
+                    "Laat uw boekhouder eerst een nieuw boekjaar aanmaken in Octopus en synchroniseer daarna het dossier.");
+            }
 
             if (sequence.Bookyear == null || sequence.Journal == null)
                 throw new InvalidOperationException("Koppel een Octopus-boekjaar en dagboek aan de nummerreeks voor dit boekjaar.");
 
-            var fiscalYear = sequence.FiscalYear;
+            // Voor de OGM-gestructureerde mededeling gebruiken we het jaar van de factuurdatum,
+            // zodat facturen in een meerjarig boekjaar (bv. okt 2024 – sep 2025) het correcte
+            // kalenderjaar in de OGM krijgen in plaats van het startjaar van het boekjaar.
+            var fiscalYear = finalDate.Year;
 
-
-            var nextNumber = (sequence.CurrentNumber == 0 ? 0 : sequence.CurrentNumber) + 1;
+            // Bepaal het hoogste al gebruikte documentnummer voor dit boekjaar + dagboek om dubbels te vermijden.
+            // CurrentNumber wordt pas bijgewerkt bij doorboeken, dus ontvangen facturen in hetzelfde boekjaar
+            // kunnen een hoger nummer hebben dan CurrentNumber.
+            var highestSentNr = await _db.Invoices
+                .Where(i => i.IssuerCompanyId == issuer.Id
+                         && i.OctopusBookyearId == sequence.Bookyear.BookyearKeyId
+                         && i.OctopusJournalKey == sequence.Journal.JournalKey
+                         && i.OctopusDocumentSequenceNr != null)
+                .MaxAsync(i => (int?)i.OctopusDocumentSequenceNr, ct) ?? 0;
+            var lastBookedNr = sequence.Journal.LastBookedDocumentNr ?? 0;
+            var nextNumber = Math.Max(Math.Max(sequence.CurrentNumber, highestSentNr), lastBookedNr) + 1;
             var documentSequenceNr = invoice.OctopusDocumentSequenceNr ?? nextNumber;
             var bookyearId = invoice.OctopusBookyearId ?? sequence.Bookyear.BookyearKeyId;
             var journalKey = string.IsNullOrWhiteSpace(invoice.OctopusJournalKey)
                 ? sequence.Journal.JournalKey
                 : invoice.OctopusJournalKey;
 
-            var periodNumber = sequence.Bookyear.OctopusBookyearPeriods
+            var matchingPeriod = sequence.Bookyear.OctopusBookyearPeriods
                 .FirstOrDefault(p =>
                 {
                     var start = DateOnly.FromDateTime(p.StartDate);
                     var end = DateOnly.FromDateTime(p.EndDate);
                     return finalDate >= start && finalDate <= end;
-                })?.BookyearPeriodNr
-                ?? 0;
+                });
+
+            if (matchingPeriod == null)
+                throw new InvalidOperationException(
+                    $"Geen boekhoudperiode gevonden voor {finalDate:dd/MM/yyyy}. " +
+                    "Synchroniseer het Octopus-dossier om de periodes bij te werken.");
+
+            var periodNumber = matchingPeriod.BookyearPeriodNr;
 
             var structuredOgm = BuildStructuredOgm(invoice, fiscalYear, documentSequenceNr);
 

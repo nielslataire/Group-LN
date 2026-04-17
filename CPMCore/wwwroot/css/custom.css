@@ -1,5 +1,34 @@
 /* Add here all your CSS customizations */
 
+/* ── Coord-tabs (herbruikbare tabbalk stijl) ─────────────────────────── */
+.coord-tabs {
+    display: flex;
+    border-bottom: 0.5px solid #dee2e6;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+    padding-left: 0;
+    padding-right: 0;
+}
+.coord-tab {
+    padding: 10px 20px;
+    border: none;
+    border-bottom: 4px solid transparent;
+    background: none;
+    color: #6c757d;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: -1px;
+    line-height: 1.5;
+}
+.coord-tab:hover {
+    color: var(--bs-primary);
+}
+.coord-tab.active {
+    color: var(--bs-primary);
+    border-bottom: 4px solid var(--bs-primary);
+}
+
 /* ── Voortgang progress bars ────────────────────────────────────────
    Gebruik: .gl-pg-bar-laag / .gl-pg-bar-midden / .gl-pg-bar-hoog
    op het .progress-bar element.

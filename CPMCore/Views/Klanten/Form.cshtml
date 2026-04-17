@@ -51,14 +51,10 @@
         </div>
     </div>
 
-    <ul class="nav nav-pills gl-tab-nav mb-4" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link active" href="#" data-section-toggle="algemeen">Algemeen</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="#" data-section-toggle="facturen">Facturen</a>
-        </li>
-    </ul>
+    <div class="coord-tabs" role="tablist">
+        <button class="coord-tab active" type="button" data-section-toggle="algemeen">Algemeen</button>
+        <button class="coord-tab" type="button" data-section-toggle="facturen">Facturen</button>
+    </div>
 
     <div id="client-general-section" class="client-section">
         <div class="row">
@@ -265,11 +261,10 @@ else
                 };
 
                 document.querySelectorAll('[data-section-toggle]').forEach((button) => {
-                    button.addEventListener('click', function (e) {
-                        e.preventDefault();
+                    button.addEventListener('click', function () {
                         const target = this.getAttribute('data-section-toggle');
 
-                        document.querySelectorAll('.gl-tab-nav .nav-link').forEach((link) => link.classList.remove('active'));
+                        document.querySelectorAll('.coord-tab').forEach((btn) => btn.classList.remove('active'));
                         this.classList.add('active');
 
                         Object.values(sections).forEach((section) => section?.classList.add('d-none'));

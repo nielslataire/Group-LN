@@ -1,6 +1,7 @@
 @model CPMCore.Models.Projecten.ProjectCoordinatieModel
 @{
     var canInvoice = Model.CoordinationIssuerCompanyId.HasValue && Model.ContractPrice.HasValue && Model.ContractPrice > 0;
+    var showPercentage = Model.ContractPrice.HasValue && Model.ContractPrice > 0;
 }
 
 @* ── Groene selectiekaart (verborgen; zichtbaar via JS wanneer checkboxes geselecteerd zijn) ── *@
@@ -25,63 +26,80 @@
 
 @* ── Tabel ── *@
 <div class="card card-modern">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Contractschijven</h5>
-    </div>
-    <div class="card-body p-0">
+    <div class="card-body pt-2">
         @if (!Model.ContractSlices.Any())
         {
             <p class="text-muted p-3 mb-0">Geen schijven geconfigureerd. Stel ze in via de instellingen.</p>
         }
         else
         {
-            <table id="dt-schijven" class="table table-bordered table-striped mb-0 w-100">
-                <thead>
-                    <tr>
-                        @if (canInvoice)
-                        {
-                            <th class="text-center" style="width:40px;">
-                                <input type="checkbox" id="chkSelectAll" title="Selecteer alles" />
-                            </th>
-                        }
-                        <th class="text-nowrap">SCHIJF</th>
-                        <th>OMSCHRIJVING</th>
-                        <th class="text-end text-nowrap">BEDRAG</th>
-                        <th class="text-end text-nowrap">ACTIE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (int i = 0; i < Model.ContractSlices.Count; i++)
-                    {
-                        var slice = Model.ContractSlices[i];
+            <div class="pt-3">
+                <table id="dt-schijven" class="table table-hover align-middle mb-0 w-100">
+                    <thead>
                         <tr>
                             @if (canInvoice)
                             {
-                                <td class="text-center align-middle">
-                                    <input type="checkbox"
-                                           class="chkCoordSlice"
-                                           id="coord-slice-@slice.Id"
-                                           name="sliceIds"
-                                           value="@slice.Id"
-                                           data-amount="@slice.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
-                                           form="coordInvoiceForm" />
-                                </td>
+                                <th style="width:40px;">
+                                    <div class="checkbox-custom checkbox-default d-inline-block">
+                                        <input type="checkbox" id="chkSelectAll" title="Selecteer alles" />
+                                        <label for="chkSelectAll"></label>
+                                    </div>
+                                </th>
                             }
-                            <td class="align-middle text-nowrap fw-semibold">Schijf @(i + 1)</td>
-                            <td class="align-middle">@slice.Description</td>
-                            <td class="align-middle text-end text-nowrap">€ @slice.Amount.ToString("N2")</td>
-                            <td class="align-middle text-end text-nowrap">
+                            <th>Omschrijving</th>
+                            <th class="text-end text-nowrap">%</th>
+                            <th class="text-end text-nowrap">Bedrag</th>
+                            <th class="text-end text-nowrap">Actie</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.ContractSlices.Count; i++)
+                        {
+                            var slice = Model.ContractSlices[i];
+                            <tr>
                                 @if (canInvoice)
                                 {
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-primary btn-factureer-slice"
-                                            data-slice-id="@slice.Id">Factureer</button>
+                                    <td>
+                                        <div class="checkbox-custom checkbox-default d-inline-block">
+                                            <input type="checkbox"
+                                                   class="chkCoordSlice"
+                                                   id="coord-slice-@slice.Id"
+                                                   name="sliceIds"
+                                                   value="@slice.Id"
+                                                   data-amount="@slice.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                   form="coordInvoiceForm" />
+                                            <label for="coord-slice-@slice.Id"></label>
+                                        </div>
+                                    </td>
                                 }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                                <td class="align-middle">@slice.Description</td>
+                                <td class="align-middle text-end text-nowrap">
+                                    @if (showPercentage)
+                                    {
+                                        @((slice.Amount / Model.ContractPrice!.Value * 100).ToString("N2"))@:&nbsp;%
+                                    }
+                                    else
+                                    {
+                                        <text>-</text>
+                                    }
+                                </td>
+                                <td class="align-middle text-end text-nowrap">€ @slice.Amount.ToString("N2")</td>
+                                <td class="actions align-middle text-end text-nowrap">
+                                    @if (canInvoice)
+                                    {
+                                        <a class="ms-1 me-1 btn-factureer-slice"
+                                           href="#"
+                                           title="Factureer"
+                                           data-slice-id="@slice.Id">
+                                            <i class="bx bx-receipt fs-5"></i>
+                                        </a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>

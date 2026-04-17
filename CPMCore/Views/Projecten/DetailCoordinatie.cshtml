@@ -11,32 +11,6 @@
 @section PageStyle
 {
     <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
-    <style>
-        .coord-tabs {
-            display: flex;
-            border-bottom: 0.5px solid #dee2e6;
-            margin-top: 1rem;
-        }
-        .coord-tab {
-            padding: 10px 20px;
-            border: none;
-            border-bottom: 4px solid transparent;
-            background: none;
-            color: #6c757d;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: -1px;
-            line-height: 1.5;
-        }
-        .coord-tab:hover {
-            color: var(--bs-primary);
-        }
-        .coord-tab.active {
-            color: var(--bs-primary);
-            border-bottom: 4px solid var(--bs-primary);
-        }
-    </style>
 }
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -49,9 +23,9 @@
                         <h5 class="mb-4 mt-0">Overzicht van schijven en/of regie voor dit coördinatieproject</h5>
                     </div>
                     <div class="col-sm-auto px-0">
-                        <div class="d-flex gap-2 align-items-center">
+                        <div class="btn-group" role="group" aria-label="Project acties">
                             <div class="btn-group">
-                                <button type="button" class="btn btn-outline-secondary btn-md dropdown-toggle px-3" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button type="button" class="btn btn-primary btn-md px-3 me-1 dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-upload me-2"></i>Exporteer
                                 </button>
                                 <ul class="dropdown-menu">
@@ -59,12 +33,12 @@
                                     <li><a class="dropdown-item" id="btnExportPdf" href="#"><i class="fas fa-file-pdf me-2 text-danger"></i>PDF</a></li>
                                 </ul>
                             </div>
-                            <a href="@settingsUrl" class="btn btn-outline-secondary btn-md px-3" title="Instellingen"><i class="fas fa-cog"></i></a>
+                            <a href="@settingsUrl" class="btn btn-primary btn-md px-3 me-1" title="Instellingen"><i class="fas fa-cog"></i></a>
                             @if (canInvoiceSlices)
                             {
                                 <button type="submit"
                                         form="coordInvoiceForm"
-                                        class="btn btn-success btn-md px-3"
+                                        class="btn btn-primary btn-md px-3"
                                         id="btnCoordInvoice"
                                         disabled
                                         title="Factuur opmaken">
@@ -97,7 +71,7 @@
                     }
                     @if (showSchijven && showRegie)
                     {
-                        <div class="tab-content mt-3" id="coordTabContent">
+                        <div class="tab-content " id="coordTabContent">
                             <div class="tab-pane fade show active" id="pane-schijven" role="tabpanel">
                                 @await Html.PartialAsync("Partials/_CoordinatieSchijven", Model)
                             </div>
@@ -157,6 +131,8 @@
     <script>
         const dtSchijven = document.getElementById('dt-schijven');
         if (dtSchijven) {
+            const rowCount = dtSchijven.querySelectorAll('tbody tr').length;
+            const usePaging = rowCount > 20;
             const dt = new DataTable('#dt-schijven', {
                 layout: {
                     topStart: {
@@ -166,7 +142,7 @@
                         ]
                     }
                 },
-                paging: false, info: false, searching: false
+                paging: usePaging, info: usePaging, searching: false
             });
             $(".buttons-excel").hide();
             $(".buttons-pdf").hide();

@@ -1210,8 +1210,89 @@ public class InstellingenController : BaseController
             }
 
             var syncResult = await _octopusTokens.SyncDossierAsync(issuerId, issuer.OctopusDossierNumber, ct);
-            TempData["OctopusMessage"] = $"Dossier gesynchroniseerd: {syncResult.BookyearCount} boekjaren, {syncResult.VatCodeCount} verkoop-btw-codes en {syncResult.CustomFieldCount} customvelden.";
-            TempData["OctopusMessageType"] = "success";
+
+            // Na de sync: voor elk niet-afgesloten boekjaar zonder sequentie automatisch een sequentie aanmaken.
+            var bookyears = await _octopusBookyears.ListByIssuerAsync(issuerId, ct);
+            var openBookyears = bookyears.Where(b => !b.Closed).ToList();
+
+            var activeSeries = await _series.ListByIssuerAsync(issuerId, ct);
+            var activeSeriesList = activeSeries.Where(s => s.IsActive).ToList();
+
+            // Bouw een map journalId → journalKey over alle bekende boekjaren voor dagboek-continuïteit.
+            var journalKeyById = bookyears
+                .SelectMany(b => b.Journals)
+                .Where(j => j.Id > 0 && !string.IsNullOrWhiteSpace(j.JournalKey))
+                .GroupBy(j => j.Id)
+                .ToDictionary(g => g.Key, g => g.First().JournalKey);
+
+            // Bepaal per serie welke boekjaren al gedekt zijn en wat het laatste gebruikte dagboek was.
+            var autoCreated = new List<string>();
+            var needsManual = new List<string>();
+
+            foreach (var series in activeSeriesList)
+            {
+                var sequences = await _series.ListSequencesAsync(series.Id, ct);
+
+                var coveredBookyearIds = sequences
+                    .Where(s => s.BookyearId.HasValue)
+                    .Select(s => s.BookyearId!.Value)
+                    .ToHashSet();
+
+                // Zoek het JournalKey van de meest recente sequentie voor dagboek-continuïteit.
+                string? preferredJournalKey = sequences
+                    .Where(s => s.JournalId.HasValue && journalKeyById.ContainsKey(s.JournalId.Value))
+                    .OrderByDescending(s => s.Id)
+                    .Select(s => journalKeyById[s.JournalId!.Value])
+                    .FirstOrDefault();
+
+                foreach (var bookyear in openBookyears.Where(b => !coveredBookyearIds.Contains(b.Id)))
+                {
+                    // Kies het dagboek: voorkeur voor hetzelfde JournalKey als vorige sequentie.
+                    var journal = (!string.IsNullOrWhiteSpace(preferredJournalKey)
+                        ? bookyear.Journals.FirstOrDefault(j => j.JournalKey == preferredJournalKey && !j.Closed)
+                        : null)
+                        ?? bookyear.Journals.FirstOrDefault(j => !j.Closed);
+
+                    if (journal == null)
+                    {
+                        needsManual.Add(bookyear.BookyearDescription);
+                        continue;
+                    }
+
+                    // startAt = 0: CurrentNumber = 0, zodat nextNumber = max(0, highestSentNr, lastBookedNr) + 1 = 1 voor een nieuw boekjaar.
+                    // fiscalYear = EndDate.Year: meerjarig boekjaar (bv. okt 2024 – sep 2025) → eindejaar is bepalend.
+                    var fiscalYearForSeq = bookyear.EndDate.Year;
+                    await _series.CreateSequenceAsync(
+                        series.Id,
+                        fiscalYearForSeq,
+                        startAt: 0,
+                        bookyearId: bookyear.Id,
+                        journalId: journal.Id,
+                        ct: ct);
+
+                    autoCreated.Add($"{bookyear.BookyearDescription} – {series.Code} (dagboek: {journal.Name ?? journal.JournalKey})");
+                }
+            }
+
+            var baseMessage = $"Dossier gesynchroniseerd: {syncResult.BookyearCount} boekjaren, {syncResult.VatCodeCount} verkoop-btw-codes en {syncResult.CustomFieldCount} customvelden.";
+
+            if (autoCreated.Count > 0)
+            {
+                var createdList = string.Join(", ", autoCreated);
+                baseMessage += $" Nummerreeks automatisch aangemaakt voor: {createdList}. Controleer de instellingen en pas het startnummer aan indien nodig.";
+            }
+
+            if (needsManual.Count > 0)
+            {
+                var manualList = string.Join(", ", needsManual.Distinct());
+                TempData["OctopusMessage"] = $"{baseMessage} Let op: voor de volgende boekjaren kon geen dagboek gevonden worden, maak de sequentie handmatig aan: {manualList}.";
+                TempData["OctopusMessageType"] = "warning";
+            }
+            else
+            {
+                TempData["OctopusMessage"] = baseMessage;
+                TempData["OctopusMessageType"] = autoCreated.Count > 0 ? "info" : "success";
+            }
         }
         catch (Exception ex)
         {
@@ -1474,7 +1555,9 @@ public class InstellingenController : BaseController
             var bookyear = await _octopusBookyears.GetAsync(bookyearId.Value, CancellationToken.None);
             if (bookyear != null)
             {
-                fiscalYear = bookyear.StartDate.Year;
+                // Meerjarig boekjaar (bv. okt 2024 – sep 2025): gebruik eindejaar als fiscaal jaar,
+                // conform de Belgische boekhoudconventie waarbij het afsluitjaar bepalend is.
+                fiscalYear = bookyear.EndDate.Year;
             }
         }
 

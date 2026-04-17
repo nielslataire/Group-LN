@@ -131,12 +131,15 @@ namespace CPMCore.Services.Octopus
 
         public int DocumentSequenceNumber { get; set; }
 
+        // InvoiceNumber en AttachmentType bestaan niet in de Octopus API — worden niet verstuurd.
+        // Behouden voor lokaal gebruik (bv. logging, PDF-opmaak).
         public string InvoiceNumber { get; set; } = string.Empty;
 
         public string AttachmentType { get; set; } = "Invoice";
 
         public string FileName { get; set; } = string.Empty;
 
+        // ContentType wordt genegeerd: de API verwacht altijd application/octet-stream.
         public string ContentType { get; set; } = "application/pdf";
 
         public byte[] Content { get; set; } = Array.Empty<byte>();

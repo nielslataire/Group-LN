@@ -28,14 +28,10 @@
     <div class="alert alert-danger">@TempData["Error"]</div>
 }
 
-<ul class="nav nav-pills gl-settings-tab-nav mb-4" role="tablist">
-    <li class="nav-item">
-        <a class="nav-link active" href="#" data-gl-settings-section="activiteiten">Activiteiten</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="#" data-gl-settings-section="groepen">Activiteitgroepen</a>
-    </li>
-</ul>
+<div class="coord-tabs" role="tablist">
+    <button class="coord-tab active" type="button" data-gl-settings-section="activiteiten">Activiteiten</button>
+    <button class="coord-tab" type="button" data-gl-settings-section="groepen">Activiteitgroepen</button>
+</div>
 
 <div id="activiteiten-section" class="gl-settings-section">
 
@@ -267,9 +263,8 @@
             }
 
             sectionLinks.forEach(link => {
-                link.addEventListener('click', event => {
-                    event.preventDefault();
-                    showSection(link.dataset.settingsSection);
+                link.addEventListener('click', () => {
+                    showSection(link.dataset.glSettingsSection);
                 });
             });
 

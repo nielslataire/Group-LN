@@ -47,23 +47,15 @@
                 </div>
             </div>
 
-            <ul class="nav nav-pills gl-supplier-tab-nav mb-4 bg-light" role="tablist">
+            <div class="coord-tabs" role="tablist">
                 @if (Model.HasContract)
                 {
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#" data-section-toggle="contract">Contract (@contractCount)</a>
-                    </li>
+                    <button class="coord-tab active" type="button" data-section-toggle="contract">Contract (@contractCount)</button>
                 }
-                <li class="nav-item">
-                    <a class="nav-link @(Model.HasContract ? string.Empty : "active")" href="#" data-section-toggle="facturen">Facturen (@invoiceCount)</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-section-toggle="leverancier">Leverancier</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-section-toggle="portaal">Portaaltoegang</a>
-                </li>
-            </ul>
+                <button class="coord-tab @(Model.HasContract ? string.Empty : "active")" type="button" data-section-toggle="facturen">Facturen (@invoiceCount)</button>
+                <button class="coord-tab" type="button" data-section-toggle="leverancier">Leverancier</button>
+                <button class="coord-tab" type="button" data-section-toggle="portaal">Portaaltoegang</button>
+            </div>
 
             @if (Model.HasContract)
             {
@@ -345,8 +337,6 @@
 
             sectionButtons.forEach((button) => {
                 button.addEventListener('click', (event) => {
-                    event.preventDefault();
-
                     const target = button.getAttribute('data-section-toggle');
 
                     sectionButtons.forEach((btn) => btn.classList.remove('active'));

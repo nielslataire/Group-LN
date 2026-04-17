@@ -57,17 +57,11 @@
                 </div>
             </div>
 
-            <ul class="nav nav-pills gl-invoice-tab-nav mb-4 bg-light" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" href="#" data-invoice-section="schijven">Schijven</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-invoice-section="meerwerken">Meerwerken</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-invoice-section="nutsaansluitingen">Nutsaansluitingen</a>
-                </li>
-            </ul>
+            <div class="coord-tabs" role="tablist">
+                <button class="coord-tab active" type="button" data-invoice-section="schijven">Schijven</button>
+                <button class="coord-tab" type="button" data-invoice-section="meerwerken">Meerwerken</button>
+                <button class="coord-tab" type="button" data-invoice-section="nutsaansluitingen">Nutsaansluitingen</button>
+            </div>
 
             <div id="invoice-stages-section" class="invoice-section">
                 <div class="card card-modern mb-4">
@@ -377,8 +371,6 @@
 
             sectionButtons.forEach((button) => {
                 button.addEventListener('click', (event) => {
-                    event.preventDefault();
-
                     const target = button.getAttribute('data-invoice-section');
 
                     sectionButtons.forEach((btn) => btn.classList.remove('active'));

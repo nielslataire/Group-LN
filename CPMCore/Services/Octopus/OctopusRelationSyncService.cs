@@ -51,6 +51,9 @@ namespace CPMCore.Services.Octopus
             }
 
             var dossierToken = await _tokens.RefreshDossierTokenAsync(issuerId, issuer.OctopusDossierNumber, ct);
+
+            // ⚠️ Octopus rate limit: GET /relations zonder zoekparameters = max 2 calls per dag.
+            // Gebruik deze sync dus spaarzaam. Voor frequente opzoekingen: gebruik FindRelationAsync met vatNr/name.
             var relations = await _octopusClient.GetRelationsAsync(dossierToken.Token, issuer.OctopusDossierNumber, ct);
 
             var suppliersCreated = 0;
@@ -403,12 +406,22 @@ namespace CPMCore.Services.Octopus
 
         private static string ResolveSupplierVatStatus(int? vatType)
         {
-            if (vatType == 10)
-            {
-                return SupplierFormViewModel.VatStatusNietBtwPlichtig;
-            }
+            // Octopus vatType waarden:
+            // 0  = Onbekend              → btw-plichtig (veilige default)
+            // 1  = Belgische btw-plichtige
+            // 4  = Intracommunautair     → btw-plichtig (verlegging bij aankoop)
+            // 6  = Buiten EU             → btw-plichtig (geen btw op factuur)
+            // 7  = Particulier België
+            // 8  = Particulier EU
+            // 9  = Particulier niet-EU
+            // 10 = Niet btw-plichtig
 
-            return SupplierFormViewModel.VatStatusBtwPlichtig;
+            return vatType switch
+            {
+                10 => SupplierFormViewModel.VatStatusNietBtwPlichtig,
+                7 or 8 or 9 => SupplierFormViewModel.VatStatusParticulier,
+                _ => SupplierFormViewModel.VatStatusBtwPlichtig
+            };
         }
 
         private static string NormalizeVat(string? vat)

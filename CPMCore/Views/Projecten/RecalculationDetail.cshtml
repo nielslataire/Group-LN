@@ -53,7 +53,7 @@
             </div>
             @Html.HiddenFor(m => m.ProjectId, new { id = "txtProjectId" })
             <div class="tabs pt-5">
-                <ul class="nav nav-tabs" role="tablist">
+                <div class="coord-tabs" role="tablist">
 
                     @{
                         var group2 = Model.ActivityGroups.SingleOrDefault(m => m.ID == Model.GroupID);
@@ -72,18 +72,17 @@
                             ? activity == filteredActivities.First()
                             : activity.ID == Model.ActivityID;
 
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link @(isActive ? "active" : "")"
-                                   href="#act-@activity.ID"
-                                   data-bs-toggle="tab"
-                                   role="tab"
-                                   aria-selected="@(isActive ? "true" : "false")">
-                                    @activity.Name
-                                </a>
-                            </li>
+                            <button class="coord-tab @(isActive ? "active" : "")"
+                                    type="button"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#act-@activity.ID"
+                                    role="tab"
+                                    aria-selected="@(isActive ? "true" : "false")">
+                                @activity.Name
+                            </button>
                         }
                     }
-                </ul>
+                </div>
                 <div class="tab-content">
                     @if (filteredActivities != null)
                     {

@@ -37,6 +37,7 @@ namespace CPMCore.Services.Octopus
           int bookyearId,
           string journalKey,
           int toDocumentSequenceNr,
+          bool attachUbl = false,
           CancellationToken ct = default);
 
         Task<OctopusInvoiceSendResponse> SendInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceSendRequest payload, CancellationToken ct = default);
@@ -312,6 +313,7 @@ namespace CPMCore.Services.Octopus
                    int bookyearId,
                    string journalKey,
                    int toDocumentSequenceNr,
+                   bool attachUbl = false,
                    CancellationToken ct = default)
         {
             var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/book");
@@ -321,7 +323,8 @@ namespace CPMCore.Services.Octopus
             {
                 ["bookyearId"] = bookyearId.ToString(CultureInfo.InvariantCulture),
                 ["journalKey"] = journalKey,
-                ["toDocumentSeqNr"] = toDocumentSequenceNr.ToString(CultureInfo.InvariantCulture)
+                ["toDocumentSeqNr"] = toDocumentSequenceNr.ToString(CultureInfo.InvariantCulture),
+                ["attachUbl"] = attachUbl ? "true" : "false"
             };
 
             url = QueryHelpers.AddQueryString(url, query);
@@ -357,45 +360,41 @@ namespace CPMCore.Services.Octopus
         }
         public async Task<bool> UploadInvoiceAttachmentAsync(string dossierToken, string dossierNumber, OctopusInvoiceAttachmentUploadRequest payload, CancellationToken ct = default)
         {
-        ArgumentNullException.ThrowIfNull(payload);
+            ArgumentNullException.ThrowIfNull(payload);
 
-        if (string.IsNullOrWhiteSpace(payload.JournalKey))
-            throw new ArgumentException("JournalKey is verplicht voor het uploaden van een factuurbijlage.", nameof(payload));
+            if (string.IsNullOrWhiteSpace(payload.JournalKey))
+                throw new ArgumentException("JournalKey is verplicht voor het uploaden van een factuurbijlage.", nameof(payload));
 
-        if (payload.BookyearId <= 0)
-            throw new ArgumentException("BookyearId is verplicht voor het uploaden van een factuurbijlage.", nameof(payload));
+            if (payload.BookyearId <= 0)
+                throw new ArgumentException("BookyearId is verplicht voor het uploaden van een factuurbijlage.", nameof(payload));
 
-        var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/attachments/upload");
-        EnsureUrl(url, "Factuur bijlage uploaden");
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/invoices/attachments/upload");
+            EnsureUrl(url, "Factuur bijlage uploaden");
 
-        var query = new Dictionary<string, string?>
-        {
-            ["bookyearId"] = payload.BookyearId.ToString(CultureInfo.InvariantCulture),
-            ["journal"] = payload.JournalKey,
-            ["documentSeqNr"] = payload.DocumentSequenceNumber.ToString(CultureInfo.InvariantCulture)
-        };
+            var query = new Dictionary<string, string?>
+            {
+                ["bookyearId"] = payload.BookyearId.ToString(CultureInfo.InvariantCulture),
+                ["journal"] = payload.JournalKey,
+                ["documentSeqNr"] = payload.DocumentSequenceNumber.ToString(CultureInfo.InvariantCulture)
+            };
 
-        url = QueryHelpers.AddQueryString(url, query);
+            url = QueryHelpers.AddQueryString(url, query);
 
-        using var form = new MultipartFormDataContent();
-        form.Add(new StringContent(payload.InvoiceNumber ?? string.Empty), "invoiceNumber");
-        form.Add(new StringContent(string.IsNullOrWhiteSpace(payload.AttachmentType) ? "Invoice" : payload.AttachmentType), "attachmentType");
+            // Octopus verwacht raw binary als application/octet-stream (geen multipart form).
+            var fileContent = new ByteArrayContent(payload.Content ?? Array.Empty<byte>());
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
 
-        var fileContent = new ByteArrayContent(payload.Content ?? Array.Empty<byte>());
-        fileContent.Headers.ContentType = new MediaTypeHeaderValue(string.IsNullOrWhiteSpace(payload.ContentType) ? "application/pdf" : payload.ContentType);
-        form.Add(fileContent, "file", string.IsNullOrWhiteSpace(payload.FileName) ? "invoice.pdf" : payload.FileName);
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = fileContent
+            };
+            request.Headers.Add("dossierToken", dossierToken);
+            request.Headers.Add("fileName", string.IsNullOrWhiteSpace(payload.FileName) ? "invoice.pdf" : payload.FileName);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = form
-        };
-        request.Headers.Add("dossierToken", dossierToken);
-        request.Headers.Add("fileName", string.IsNullOrWhiteSpace(payload.FileName) ? "invoice.pdf" : payload.FileName);
-
-        using var response = await _httpClient.SendAsync(request, ct);
-        await EnsureSuccessAsync(response, url);
+            using var response = await _httpClient.SendAsync(request, ct);
+            await EnsureSuccessAsync(response, url);
             return response.StatusCode == HttpStatusCode.NoContent
-            || response.StatusCode == HttpStatusCode.OK;
+                || response.StatusCode == HttpStatusCode.OK;
         }
 
         public async Task<OctopusInvoiceSendResponse> SendInvoiceAsync(string dossierToken, string dossierNumber, OctopusInvoiceSendRequest payload, CancellationToken ct = default)
@@ -456,29 +455,23 @@ namespace CPMCore.Services.Octopus
         private static async Task EnsureBookingSuccessAsync(HttpResponseMessage response, string url)
         {
             if (response.IsSuccessStatusCode)
-            {
                 return;
-            }
 
-            var message = response.StatusCode switch
+            var apiMessage = await TryReadErrorMessageAsync(response);
+
+            var contextMessage = response.StatusCode switch
             {
-                HttpStatusCode.BadRequest => "Invalid or missing parameters passed",
-                HttpStatusCode.Unauthorized => "Invalid or expired token presented, unauthorized",
-                HttpStatusCode.Forbidden => "System right Book Sell Invoice not granted",
+                HttpStatusCode.BadRequest => "Ongeldige of ontbrekende parameters bij het doorboeken.",
+                HttpStatusCode.Unauthorized => "Ongeldig of verlopen token. Meld u opnieuw aan bij Octopus.",
+                HttpStatusCode.Forbidden => "U hebt geen recht om verkoopfacturen door te boeken in Octopus.",
                 _ => null
             };
 
-            var body = await response.Content.ReadAsStringAsync();
-            if (!string.IsNullOrWhiteSpace(body))
-            {
-                message = string.IsNullOrWhiteSpace(message)
-                    ? body
-                    : $"{message}: {body}";
-            }
-            else if (string.IsNullOrWhiteSpace(message))
-            {
-                message = $"Octopus request naar {url} mislukt met status {response.StatusCode}.";
-            }
+            string message;
+            if (apiMessage != null && contextMessage != null)
+                message = $"{contextMessage} Details: {apiMessage}";
+            else
+                message = apiMessage ?? contextMessage ?? $"Octopus doorboeken mislukt met status {(int)response.StatusCode}.";
 
             throw new HttpRequestException(message, null, response.StatusCode);
         }
@@ -486,15 +479,45 @@ namespace CPMCore.Services.Octopus
         private static async Task EnsureSuccessAsync(HttpResponseMessage response, string url)
         {
             if (response.IsSuccessStatusCode)
-            {
                 return;
+
+            var message = await TryReadErrorMessageAsync(response)
+                ?? $"Octopus request mislukt met status {(int)response.StatusCode}.";
+
+            throw new HttpRequestException(message, null, response.StatusCode);
+        }
+
+        // Octopus geeft bij fouten een ErrorResult JSON terug: { errorCode, errorMessage, technicalInfo }
+        private static async Task<string?> TryReadErrorMessageAsync(HttpResponseMessage response)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(body))
+                return null;
+
+            try
+            {
+                var error = System.Text.Json.JsonSerializer.Deserialize<OctopusErrorResult>(body);
+                if (!string.IsNullOrWhiteSpace(error?.ErrorMessage))
+                    return error.ErrorMessage;
+            }
+            catch
+            {
+                // Geen geldige JSON — geef ruwe body terug
             }
 
-            var body = await response.Content.ReadAsStringAsync();
-            var message = string.IsNullOrWhiteSpace(body)
-                ? $"Octopus request naar {url} mislukt met status {response.StatusCode}."
-                : body;
-            throw new HttpRequestException(message, null, response.StatusCode);
+            return body;
+        }
+
+        private class OctopusErrorResult
+        {
+            [JsonPropertyName("errorCode")]
+            public int? ErrorCode { get; set; }
+
+            [JsonPropertyName("errorMessage")]
+            public string? ErrorMessage { get; set; }
+
+            [JsonPropertyName("technicalInfo")]
+            public string? TechnicalInfo { get; set; }
         }
     }
 
@@ -701,7 +724,7 @@ namespace CPMCore.Services.Octopus
 
         [JsonPropertyName("streetAndNr")]
         public string? StreetAndNr { get; set; }
-        [JsonPropertyName("firstname")]
+        [JsonPropertyName("firstName")]
         public string? Firstname { get; set; }
         [JsonPropertyName("defaultBookingAccountClient")]
         public int? DefaultBookingAccountClient { get; set; }
@@ -739,7 +762,7 @@ namespace CPMCore.Services.Octopus
         [JsonPropertyName("currencyCode")]
         public string? CurrencyCode { get; set; }
 
-        [JsonPropertyName("contactperson")]
+        [JsonPropertyName("contactPerson")]
         public string? Contactperson { get; set; }
 
         [JsonPropertyName("client")]
@@ -835,6 +858,8 @@ namespace CPMCore.Services.Octopus
         [JsonPropertyName("Dossiertoken")]
         public string? Dossiertoken { get; set; }
 
+        // validUntil staat niet in de Octopus swagger spec — wordt nooit gevuld door de API.
+        // De caller gebruikt DateTime.UtcNow.AddSeconds(590) als fallback.
         [JsonPropertyName("validUntil")]
         public DateTime? ValidUntil { get; set; }
     }
