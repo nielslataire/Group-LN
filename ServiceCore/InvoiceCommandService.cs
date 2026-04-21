@@ -164,6 +164,8 @@ namespace ServiceCore
                         LineType = string.IsNullOrWhiteSpace(l.LineType) ? null : l.LineType.Trim(),
                         GroupName = string.IsNullOrWhiteSpace(l.GroupName) ? null : l.GroupName.Trim(),
                         UtilityCost = l.UtilityCost,
+                        Quantity  = l.UnitPrice.HasValue ? l.Quantity : (decimal?)null,
+                        UnitPrice = l.UnitPrice,
                         // ConstructionValued / ChangeOrderDetailId blijven null
                     });
                 }

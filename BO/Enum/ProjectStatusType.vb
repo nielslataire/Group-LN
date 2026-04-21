@@ -6,6 +6,7 @@ Public Enum ProjectStatusType As Integer
     Ontwerp = 3
     Bouwaanvraag = 4
     Voorverkoop = 5
+    Stopgezet = 6
 
 End Enum
 

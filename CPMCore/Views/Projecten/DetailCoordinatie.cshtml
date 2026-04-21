@@ -65,10 +65,26 @@
                             <button class="coord-tab" id="tab-regie" data-bs-toggle="tab" data-bs-target="#pane-regie" type="button" role="tab" aria-selected="false">Regie-uren</button>
                         </div>
                     }
-                    @if (showSchijven && canInvoiceSlices)
+                    @* ── Stat-kaarten (boven de tab-content) ── *@
+                    @if (showSchijven && showRegie)
+                    {
+                        @* Gemengd: beide blokken aanwezig, JS schakelt op tab-wissel *@
+                        <div id="statCards-schijven" class="@(canInvoiceSlices ? "" : "d-none")">
+                            @await Html.PartialAsync("Partials/_CoordinatieStatCards", Model)
+                        </div>
+                        <div id="statCards-regie" class="d-none">
+                            @await Html.PartialAsync("Partials/_CoordinatieRegieStatCards", Model)
+                        </div>
+                    }
+                    else if (showSchijven && canInvoiceSlices)
                     {
                         @await Html.PartialAsync("Partials/_CoordinatieStatCards", Model)
                     }
+                    else if (showRegie)
+                    {
+                        @await Html.PartialAsync("Partials/_CoordinatieRegieStatCards", Model)
+                    }
+
                     @if (showSchijven && showRegie)
                     {
                         <div class="tab-content " id="coordTabContent">
@@ -116,9 +132,9 @@
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title" id="coordInvoiceBusyModalLabel">Facturen worden opgemaakt</h5>
                 </div>
-                <div class="modal-body d-flex align-items-center gap-3 pt-2">
-                    <div class="spinner-border text-primary flex-shrink-0" role="status" aria-hidden="true"></div>
-                    <span>Even geduld. De pagina wordt vernieuwd zodra de verwerking klaar is.</span>
+                <div class="modal-body d-flex flex-column align-items-center gap-3 py-4">
+                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                    <span class="text-center">Even geduld. De pagina wordt vernieuwd zodra de verwerking klaar is.</span>
                 </div>
             </div>
         </div>
@@ -147,28 +163,23 @@
             $(".buttons-excel").hide();
             $(".buttons-pdf").hide();
         }
-        const dtRegie = document.getElementById('dt-regie');
-        if (dtRegie) {
-            const dt2 = new DataTable('#dt-regie', {
-                layout: {
-                    topStart: {
-                        buttons: [
-                            { extend: 'excel', text: '<i class="fa fa-file-excel"></i>', className: 'btn btn-primary btn-md', titleAttr: 'Exporteer naar excel', exportOptions: { columns: ':visible' } },
-                            { extend: 'pdf',   text: '<i class="fa fa-file-pdf"></i>',   className: 'btn btn-primary btn-md', titleAttr: 'Exporteer naar pdf',   exportOptions: { columns: ':visible' } }
-                        ]
-                    }
-                },
-                paging: false, info: false, searching: false
-            });
-        }
-        $("#btnExportExcel").on('click', function () { $(".buttons-excel").first().trigger("click"); });
+$("#btnExportExcel").on('click', function () { $(".buttons-excel").first().trigger("click"); });
         $("#btnExportPdf").on('click', function ()   { $(".buttons-pdf").first().trigger("click");   });
 
-        // Sync active class op custom coord-tab knoppen bij tab-wissel
+        // Sync active class op custom coord-tab knoppen bij tab-wissel + stat-kaarten wisselen
         document.querySelectorAll('.coord-tab').forEach(function (btn) {
             btn.addEventListener('shown.bs.tab', function () {
                 document.querySelectorAll('.coord-tab').forEach(function (b) { b.classList.remove('active'); });
                 btn.classList.add('active');
+
+                var target          = btn.getAttribute('data-bs-target');
+                var schijvenCards   = document.getElementById('statCards-schijven');
+                var regieCards      = document.getElementById('statCards-regie');
+                if (schijvenCards && regieCards) {
+                    var isRegie = target === '#pane-regie';
+                    schijvenCards.classList.toggle('d-none',  isRegie);
+                    regieCards.classList.toggle('d-none',    !isRegie);
+                }
             });
         });
     </script>

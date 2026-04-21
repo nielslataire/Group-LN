@@ -1169,3 +1169,12 @@ html.gl-modal-open .sidebar-left { display: none !important; }
         height: 100%;
         top: 0;
     }
+.checkbox-custom {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+    .checkbox-custom + label,
+    .checkbox-custom label {
+        margin-bottom: 0;
+    }

@@ -82,6 +82,7 @@ namespace DALCore
         public GenericRepository<PlanningTaak>     PlanningTasks     { get; }
         public GenericRepository<ProjectContractSlice> ProjectContractSlices { get; }
         public GenericRepository<ProjectHourlyRate>    ProjectHourlyRates    { get; }
+        public GenericRepository<ProjectRegieUur>      ProjectRegieUren      { get; }
         public GenericRepository<IssuerCompanyUserRate> IssuerCompanyUserRates { get; }
 
 
@@ -164,6 +165,7 @@ namespace DALCore
             PlanningTasks     = new GenericRepository<PlanningTaak>(_context);
             ProjectContractSlices  = new GenericRepository<ProjectContractSlice>(_context);
             ProjectHourlyRates     = new GenericRepository<ProjectHourlyRate>(_context);
+            ProjectRegieUren       = new GenericRepository<ProjectRegieUur>(_context);
             IssuerCompanyUserRates = new GenericRepository<IssuerCompanyUserRate>(_context);
         }
 

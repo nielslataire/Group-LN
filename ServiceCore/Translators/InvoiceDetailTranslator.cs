@@ -25,6 +25,8 @@ namespace ServiceCore.Translators
             bo.VatTypeId = entity.VatTypeId;
             bo.VatCode = entity.VatCode;
             bo.Price = entity.Price ?? 0m;
+            if (entity.Quantity.HasValue)  bo.Quantity  = entity.Quantity.Value;
+            bo.UnitPrice = entity.UnitPrice;
             bo.DiscountPercent = entity.DiscountPercent;
             bo.DiscountAmount = entity.DiscountAmount;
             bo.LineType = entity.LineType;
@@ -52,6 +54,8 @@ namespace ServiceCore.Translators
             //if (bo.ConstructionValueId is int cvId && cvId != 0) entity.ConstructionValueId = cvId;
 
             entity.Text = bo.Text;
+            entity.Quantity  = bo.UnitPrice.HasValue ? bo.Quantity : (decimal?)null;
+            entity.UnitPrice = bo.UnitPrice;
             entity.VatPercentage = bo.VatPercentage;
             entity.VatTypeId = bo.VatTypeId;
             entity.VatCode = bo.VatCode;

@@ -47,6 +47,7 @@ Partial Public Class Project
     Public Property DocDelivery As Nullable(Of Boolean)
     Public Property DocDefDelivery As Nullable(Of Boolean)
     Public Property ProjectType As Integer
+    Public Property IsPublished As Boolean
 
     Public Overridable Property Developer As CompanyInfo
     Public Overridable Property PostalCode As PostalCode

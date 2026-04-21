@@ -224,6 +224,15 @@
                             </div>
 
                             <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" asp-for="Project.IsPublished">@Html.LabelFor(m => m.Project.IsPublished)</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    <div class="switch switch-sm switch-primary">
+                                        @Html.CheckBoxFor(m => m.Project.IsPublished, new { data_plugin_ios_switch = "" })
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_ProjectType">@Html.LabelFor(m => m.Project.ProjectType)</label>
                                 <div class="col-lg-3 col-xl-3">
                                     @Html.DropDownListFor(m => m.Project.ProjectType, Html.GetEnumSelectList<ProjectType>(), new { @class = "form-control form-control-modern" })

@@ -2838,6 +2838,117 @@ namespace ServiceCore
             return response;
         }
 
+        // ── Coordinatieproject: regie-uren (tijdregistratie) ──────────────────
+
+        public GetResponse<ProjectRegieUurBO> GetRegieUren(int projectId)
+        {
+            var response = new GetResponse<ProjectRegieUurBO>();
+            var entries = _uow.ProjectRegieUren.GetNoTracking()
+                .Where(r => r.ProjectId == projectId)
+                .Include(r => r.User)
+                .Include(r => r.Invoice)
+                .OrderByDescending(r => r.Date)
+                .ThenByDescending(r => r.Id)
+                .ToList();
+
+            foreach (var r in entries)
+            {
+                response.AddValue(new ProjectRegieUurBO
+                {
+                    Id              = r.Id,
+                    ProjectId       = r.ProjectId,
+                    UserId          = r.UserId,
+                    UserFullName    = r.User != null ? $"{r.User.Voornaam} {r.User.Familienaam}".Trim() : r.UserId,
+                    Date            = r.Date,
+                    Hours           = r.Hours,
+                    WithTravel      = r.WithTravel || (r.TravelKm.HasValue && r.TravelKm > 0),
+                    TravelKm        = r.TravelKm,
+                    Description     = r.Description,
+                    InvoiceId       = r.InvoiceId,
+                    InvoicePublicId = r.Invoice?.PublicId
+                });
+            }
+            return response;
+        }
+
+        public GetResponse<ProjectRegieUurBO> AddRegieUur(ProjectRegieUurBO bo)
+        {
+            var response = new GetResponse<ProjectRegieUurBO>();
+
+            var entity = new DALCore.Models.ProjectRegieUur
+            {
+                ProjectId   = bo.ProjectId,
+                UserId      = bo.UserId,
+                Date        = bo.Date,
+                Hours       = bo.Hours,
+                TravelKm    = bo.TravelKm,
+                WithTravel  = bo.TravelKm.HasValue && bo.TravelKm > 0,
+                Description = bo.Description,
+                CreatedAt   = DateTime.UtcNow
+            };
+            _uow.ProjectRegieUren.Add(entity);
+            var result = _uow.SaveChanges();
+
+            if (result > 0)
+            {
+                var user = _uow.Users.GetNoTracking().FirstOrDefault(u => u.UserId == bo.UserId);
+                response.AddValue(new ProjectRegieUurBO
+                {
+                    Id           = entity.Id,
+                    ProjectId    = entity.ProjectId,
+                    UserId       = entity.UserId,
+                    UserFullName = user != null ? $"{user.Voornaam} {user.Familienaam}".Trim() : entity.UserId,
+                    Date         = entity.Date,
+                    Hours        = entity.Hours,
+                    WithTravel   = entity.WithTravel,
+                    TravelKm     = entity.TravelKm,
+                    Description  = entity.Description,
+                    InvoiceId    = null
+                });
+                response.AddSuccess("Regie-uur opgeslagen");
+            }
+            else
+            {
+                response.AddError("Regie-uur niet opgeslagen");
+            }
+            return response;
+        }
+
+        public Response DeleteRegieUur(int id)
+        {
+            var response = new Response();
+            var entity = _uow.ProjectRegieUren.GetById(id);
+            if (entity == null)
+            {
+                response.AddError("Regie-uur niet gevonden");
+                return response;
+            }
+            if (entity.InvoiceId.HasValue)
+            {
+                response.AddError("Dit regie-uur is al gefactureerd en kan niet worden verwijderd");
+                return response;
+            }
+            _uow.ProjectRegieUren.DeleteObject(entity);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Regie-uur verwijderd", "Regie-uur niet verwijderd");
+            return response;
+        }
+
+        public Response MarkRegieUrenAsInvoiced(List<int> regieUurIds, int invoiceId)
+        {
+            var response = new Response();
+            var entities = _uow.ProjectRegieUren.GetNormal()
+                .Where(r => regieUurIds.Contains(r.Id) && r.InvoiceId == null)
+                .ToList();
+
+            foreach (var e in entities)
+                e.InvoiceId = invoiceId;
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Regie-uren gemarkeerd als gefactureerd", "Markeren mislukt");
+            return response;
+        }
+
         // ── Afstandsberekening ────────────────────────────────────────────────
 
         public async Task<(decimal? distanceKm, int? durationSeconds)> CalculateRouteAsync(int issuerCompanyId, int postalCodeId)

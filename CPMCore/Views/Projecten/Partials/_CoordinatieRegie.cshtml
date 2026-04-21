@@ -1,32 +1,322 @@
 @model CPMCore.Models.Projecten.ProjectCoordinatieModel
-<div class="card card-modern">
-    <div class="card-header">
-        <h5 class="card-title mb-0">Regie – Uurtarieven</h5>
+@using System.Globalization
+@{
+    var roundTripKm     = (Model.ProjectDistanceKm ?? 0) * 2;
+    var kmAllowance     = Model.KmAllowance ?? 0;
+    var openEntries     = Model.RegieUren.Where(e => !e.IsInvoiced).ToList();
+    var invoicedEntries = Model.RegieUren.Where(e =>  e.IsInvoiced).ToList();
+    var canInvoiceRegie = Model.CoordinationIssuerCompanyId.HasValue;
+
+    decimal SumHours(IEnumerable<CPMCore.Models.Projecten.ProjectRegieUurVM> list)
+        => list.Sum(e => e.Hours);
+    decimal ActualKm(CPMCore.Models.Projecten.ProjectRegieUurVM e)
+        => e.TravelKm.HasValue && e.TravelKm > 0 ? e.TravelKm.Value : (e.WithTravel ? roundTripKm : 0m);
+    decimal SumKm(IEnumerable<CPMCore.Models.Projecten.ProjectRegieUurVM> list)
+        => list.Sum(e => ActualKm(e));
+    decimal SumAmount(IEnumerable<CPMCore.Models.Projecten.ProjectRegieUurVM> list)
+        => list.Sum(e => e.Hours * e.HourlyRate + ActualKm(e) * kmAllowance);
+
+    string FmtNum(decimal v, int dec) => v.ToString("N" + dec, CultureInfo.CurrentCulture);
+    string FmtKm(decimal km) => km > 0 ? km.ToString("N0", CultureInfo.CurrentCulture) + "\u00a0km" : "—";
+    string FmtAmt(decimal v) => "€\u00a0" + v.ToString("N2", CultureInfo.CurrentCulture);
+}
+
+@* ── Snelrij ── *@
+<div class="card card-modern mb-3">
+    <div class="card-body py-2 bg-body-tertiary">
+        <div class="row g-3 align-items-end mb-2">
+            <div class="col-xl-2 col-lg-2">
+                <div class="form-group">
+                    <label class="col-form-label" for="regieWorker">Medewerker</label>
+                    <select id="regieWorker" class="form-select form-select-sm">
+                        <option value="">Kies</option>
+                        @foreach (var rate in Model.HourlyRates)
+                        {
+                            <option value="@rate.UserId"
+                                    data-name="@rate.UserFullName"
+                                    data-rate="@rate.HourlyRate.ToString("F2", CultureInfo.InvariantCulture)">
+                                @rate.UserFullName
+                            </option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-2">
+                <div class="form-group">
+                    <label class="col-form-label" for="regieDate">Datum</label>
+                    <input type="date" id="regieDate" class="form-control form-control-sm"
+                           value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+            <div class="col-xl-1 col-lg-1">
+                <div class="form-group">
+                    <label class="col-form-label" for="regieHours">Uren</label>
+                    <input type="number" id="regieHours" class="form-control form-control-sm"
+                           value="0" min="0" step="0.5"/>
+                </div>
+            </div>
+            <div class="col-xl-1 col-lg-2">
+                <div class="form-group">
+                    <label class="col-form-label" for="regieTravelChk">Verplaatsing</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">
+                            <input type="checkbox" id="regieTravelChk" />
+                        </span>
+                        <input type="number" id="regieTravelKm" class="form-control form-control-sm"
+                               value="@((int)Math.Ceiling(roundTripKm))"
+                               min="0" step="1" disabled />
+                        <span class="input-group-text">km</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-4 col-lg-5">
+                <div class="form-group">
+                    <label class="col-form-label" for="regieDescription">Omschrijving</label>
+                    <input type="text" id="regieDescription" class="form-control form-control-sm"
+                           placeholder="Optionele omschrijving van het regiewerk" maxlength="500" />
+                </div>
+            </div>
+            <div class="col-xl-2 col-lg-12">
+                <div class="form-group">
+                    <label class="col-form-label d-block">&nbsp;</label>
+                    <button type="button" id="btnRegieAdd" class="btn btn-primary btn-sm w-100">
+                        <i class="bx bx-plus me-1"></i> Toevoegen
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </div>
-    <div class="card-body p-0">
-        @if (!Model.HourlyRates.Any())
-        {
-            <p class="text-muted p-3 mb-0">Geen uurtarieven geconfigureerd. Stel ze in via de instellingen.</p>
-        }
-        else
-        {
-            <table id="dt-regie" class="table table-bordered table-striped mb-0 w-100">
+</div>
+
+@* ── Factuurperiode-balk ── *@
+@if (canInvoiceRegie)
+{
+    <div id="regieInvoiceBar" class="card card-modern mb-3"
+         style="background-color:#e8f4fd; border:1px solid #bee5eb;">
+        <div class="card-body py-3">
+            <div class="row">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bx bx-info-circle fs-5 text-primary"></i>
+                    <span class="text-primary">Kies een periode om regie-uren te factureren:</span>
+                </div>
+            </div>
+            <div class="row align-items-center ">
+                <div class="col-lg-2">
+                    <button type="button" id="btnRegieUntilToday" class="btn btn-outline-primary btn-sm w-100">
+                    Tot vandaag
+                    </button>
+                </div>
+                <div class="col-lg-2">
+                    of kies een datum:
+                </div>
+                <div class="col-lg-2">
+                    <input type="date" id="regieCutoffDate" class="form-control form-control-sm"/>
+                </div>
+                <div class="col-lg-2">
+                    <button type="button" id="btnRegieClearPeriod" class="btn btn-sm btn-outline-secondary d-none">
+                    <i class="bx bx-x me-1"></i>Wis
+                </button>
+                </div>
+            </div>
+        <div class="row">
+            <div id="regieSummaryRow" class="d-none mt-3 pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <span id="regieSummaryText" class="fw-semibold"></span>
+                <button type="submit" form="regieInvoiceForm" class="btn btn-primary btn-sm">
+                    <i class="bx bx-receipt me-1"></i>Factureer geselecteerde
+                </button>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="regieInvoiceForm" method="post" action="@Url.Action("MakeCoordRegieInvoice", "Projecten")">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="projectId" value="@Model.ProjectId" />
+        <div id="regieInvoiceIds"></div>
+    </form>
+
+    <div class="modal fade" id="regieInvoiceBusyModal"
+         data-bs-backdrop="static" data-bs-keyboard="false"
+         tabindex="-1" aria-labelledby="regieInvoiceBusyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title" id="regieInvoiceBusyModalLabel">Factuur wordt opgemaakt</h5>
+                </div>
+                <div class="modal-body d-flex flex-column align-items-center gap-3 py-4">
+                    <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+                    <span class="text-center">Even geduld. De pagina wordt vernieuwd zodra de verwerking klaar is.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Verwijder bevestiging (Magnific Popup) ── *@
+<div id="regieDeleteModal" class="modal-block modal-block-sm modal-block-danger mfp-hide">
+    <section class="card">
+        <div class="card-body text-center">
+            <div class="modal-wrapper">
+                <div class="modal-icon center">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="modal-text">
+                    <h4>Regie-uur verwijderen</h4>
+                    <p>Ben je zeker dat je dit regie-uur wil verwijderen?</p>
+                </div>
+            </div>
+        </div>
+        <footer class="card-footer">
+            <div class="col-md-12 text-end">
+                <button type="button" id="btnRegieDeleteConfirm" class="btn btn-danger">Verwijderen</button>
+                <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+            </div>
+        </footer>
+    </section>
+</div>
+
+@* ── Tabel ── *@
+<div class="card card-modern">
+    <div class="card-body pt-2">
+        <div class="pt-3">
+            <table class="table table-hover align-middle mb-0 w-100">
                 <thead>
                     <tr>
+                        <th>Datum</th>
                         <th>Medewerker</th>
-                        <th class="text-end">Uurtarief (€)</th>
+                        <th>Omschrijving</th>
+                        <th class="text-end text-nowrap">Uren</th>
+                        <th class="text-end text-nowrap">Verplaatsing (km)</th>
+                        <th class="text-end text-nowrap">Totaal</th>
+                        <th style="width:40px;"></th>
                     </tr>
                 </thead>
+
+                @* ── Sectie header: Nog niet gefactureerd ── *@
                 <tbody>
-                    @foreach (var rate in Model.HourlyRates)
+                    <tr class="table-light">
+                        <td colspan="7" class="fw-semibold py-2">
+                            <i class="bx bx-time-five me-1 text-primary"></i>Nog niet gefactureerd
+                        </td>
+                    </tr>
+                    <tr id="regieEmptyRow" class="@(openEntries.Any() ? "d-none" : "")">
+                        <td colspan="7" class="text-muted text-center py-3 fst-italic">Nog geen openstaande regie-uren.</td>
+                    </tr>
+                </tbody>
+
+                @* ── Rijen: open prestaties ── *@
+                <tbody id="regieBodyOpen">
+                    @foreach (var entry in openEntries)
                     {
-                        <tr>
-                            <td>@rate.UserFullName</td>
-                            <td class="text-end">€ @rate.HourlyRate.ToString("0.00")</td>
+                        var km     = ActualKm(entry);
+                        var totaal = entry.Hours * entry.HourlyRate + km * kmAllowance;
+                        <tr data-regie-row="@entry.Id"
+                            data-invoiced="false"
+                            data-date="@entry.Date.ToString("yyyy-MM-dd")"
+                            data-hours="@entry.Hours.ToString("F2", CultureInfo.InvariantCulture)"
+                            data-km="@km.ToString("F2", CultureInfo.InvariantCulture)"
+                            data-amount="@totaal.ToString("F2", CultureInfo.InvariantCulture)">
+                            <td class="align-middle">@entry.Date.ToString("dd/MM/yyyy")</td>
+                            <td class="align-middle">@entry.UserFullName</td>
+                            <td class="align-middle text-muted small">@entry.Description</td>
+                            <td class="align-middle text-end text-nowrap">@FmtNum(entry.Hours, 2)</td>
+                            <td class="align-middle text-end text-nowrap">@FmtKm(km)</td>
+                            <td class="align-middle text-end text-nowrap fw-semibold">@FmtAmt(totaal)</td>
+                            <td class="align-middle text-end">
+                                <a href="#" class="btn-regie-delete text-danger" data-id="@entry.Id" title="Verwijder">
+                                    <i class="bx bx-trash fs-5"></i>
+                                </a>
+                            </td>
                         </tr>
                     }
                 </tbody>
+
+                @* ── Subtotaal: open ── *@
+                <tbody>
+                    <tr id="regieSubtotalOpen" class="border-top @(!openEntries.Any() ? "d-none" : "")">
+                        <td colspan="3" class="text-end text-muted fst-italic small">Subtotaal</td>
+                        <td class="text-end fw-semibold" id="regieOpenTotalHours">@FmtNum(SumHours(openEntries), 2)</td>
+                        <td class="text-end fw-semibold" id="regieOpenTotalKm">@FmtKm(SumKm(openEntries))</td>
+                        <td class="text-end fw-semibold" id="regieOpenTotalAmount">@FmtAmt(SumAmount(openEntries))</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+
+                @if (invoicedEntries.Any())
+                {
+                    @* ── Sectie header: Gefactureerd ── *@
+                    <tbody>
+                        <tr class="table-light">
+                            <td colspan="7" class="fw-semibold py-2 pt-3">
+                                <i class="bx bx-receipt me-1 text-primary"></i>Gefactureerd
+                            </td>
+                        </tr>
+                    </tbody>
+
+                    @* ── Rijen: gefactureerde prestaties ── *@
+                    <tbody id="regieBodyInvoiced">
+                        @foreach (var entry in invoicedEntries)
+                        {
+                            var km     = ActualKm(entry);
+                            var totaal = entry.Hours * entry.HourlyRate + km * kmAllowance;
+                            <tr data-regie-row="@entry.Id"
+                                data-invoiced="true"
+                                data-hours="@entry.Hours.ToString("F2", CultureInfo.InvariantCulture)"
+                                data-km="@km.ToString("F2", CultureInfo.InvariantCulture)"
+                                data-amount="@totaal.ToString("F2", CultureInfo.InvariantCulture)"
+                                class="text-muted">
+                                <td class="align-middle">@entry.Date.ToString("dd/MM/yyyy")</td>
+                                <td class="align-middle">
+                                    @entry.UserFullName
+                                    <span class="badge bg-primary ms-1" title="Factuur @entry.InvoicePublicId">
+                                        <i class="bx bx-receipt me-1"></i>@entry.InvoicePublicId
+                                    </span>
+                                </td>
+                                <td class="align-middle text-muted small">@entry.Description</td>
+                                <td class="align-middle text-end text-nowrap">@FmtNum(entry.Hours, 2)</td>
+                                <td class="align-middle text-end text-nowrap">@FmtKm(km)</td>
+                                <td class="align-middle text-end text-nowrap fw-semibold">@FmtAmt(totaal)</td>
+                                <td></td>
+                            </tr>
+                        }
+                    </tbody>
+
+                    @* ── Subtotaal: gefactureerd ── *@
+                    <tbody>
+                        <tr class="border-top">
+                            <td colspan="3" class="text-end text-muted fst-italic small">Subtotaal</td>
+                            <td class="text-end fw-semibold">@FmtNum(SumHours(invoicedEntries), 2)</td>
+                            <td class="text-end fw-semibold">@FmtKm(SumKm(invoicedEntries))</td>
+                            <td class="text-end fw-semibold">@FmtAmt(SumAmount(invoicedEntries))</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                }
+
+                @* ── Totaal ── *@
+                <tfoot id="regieTfoot" class="@(!Model.RegieUren.Any() ? "d-none" : "")">
+                    <tr class="fw-bold border-top">
+                        <td colspan="3">Totaal</td>
+                        <td class="text-end" id="regieTotalHours">@FmtNum(SumHours(Model.RegieUren), 2)</td>
+                        <td class="text-end" id="regieTotalKm">@FmtKm(SumKm(Model.RegieUren))</td>
+                        <td class="text-end" id="regieTotalAmount">@FmtAmt(SumAmount(Model.RegieUren))</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
-        }
+        </div>
     </div>
 </div>
+
+@* Configuratie voor JS *@
+<script id="regie-config" type="application/json">
+{
+    "projectId":        @Model.ProjectId,
+    "roundTripKm":      @roundTripKm.ToString("F2", CultureInfo.InvariantCulture),
+    "kmAllowance":      @kmAllowance.ToString("F2", CultureInfo.InvariantCulture),
+    "addUrl":           "@Url.Action("AddRegieUur", "Projecten")",
+    "deleteUrl":        "@Url.Action("DeleteRegieUur", "Projecten")",
+    "defaultUserId":    "@(Model.ProjectManagerUserId ?? "")"
+}
+</script>

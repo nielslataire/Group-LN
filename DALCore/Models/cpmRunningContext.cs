@@ -189,6 +189,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ProjectHourlyRate> ProjectHourlyRate { get; set; }
 
+    public virtual DbSet<ProjectRegieUur> ProjectRegieUur { get; set; }
+
     public virtual DbSet<ProjectLevels> ProjectLevels { get; set; }
 
     public virtual DbSet<ProjectNews> ProjectNews { get; set; }
@@ -2264,6 +2266,29 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ProjectHourlyRate_Users");
+        });
+
+        modelBuilder.Entity<ProjectRegieUur>(entity =>
+        {
+            entity.Property(e => e.Hours).HasColumnType("decimal(6, 2)");
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasMaxLength(128);
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectRegieUur)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_ProjectRegieUur_Project");
+
+            entity.HasOne(d => d.User).WithMany(p => p.ProjectRegieUur)
+                .HasPrincipalKey(p => p.UserId)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ProjectRegieUur_Users");
+
+            entity.HasOne(d => d.Invoice).WithMany(p => p.ProjectRegieUur)
+                .HasForeignKey(d => d.InvoiceId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ProjectRegieUur_Invoice");
         });
 
         modelBuilder.Entity<ProjectLevels>(entity =>

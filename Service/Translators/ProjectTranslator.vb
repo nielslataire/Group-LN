@@ -34,6 +34,7 @@ Public Class ProjectTranslator
         bo.DocSewerInspection = _entity.DocSewerInspection
         bo.DocWaterInspection = _entity.DocWaterInspection
         'bo.UploadToFacebook = _entity.UploadToFacebook
+        bo.IsPublished = _entity.IsPublished
 
         'Gemeente en postcode van het project
         If (_entity.PostalCode IsNot Nothing) Then

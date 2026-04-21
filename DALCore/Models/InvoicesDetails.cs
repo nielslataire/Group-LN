@@ -41,6 +41,10 @@ public partial class InvoicesDetails
 
     public string VatCode { get; set; }
 
+    public decimal? Quantity { get; set; }
+
+    public decimal? UnitPrice { get; set; }
+
     public virtual ICollection<ConnectionAdvanceApplication> ConnectionAdvanceApplication { get; set; } = new List<ConnectionAdvanceApplication>();
 
     public virtual Invoices Invoice { get; set; }

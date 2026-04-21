@@ -47,6 +47,8 @@ public partial class Users
 
     public virtual ICollection<ProjectHourlyRate> ProjectHourlyRate { get; set; } = new List<ProjectHourlyRate>();
 
+    public virtual ICollection<ProjectRegieUur> ProjectRegieUur { get; set; } = new List<ProjectRegieUur>();
+
     public virtual ICollection<ProjectUserAccess> ProjectUserAccess { get; set; } = new List<ProjectUserAccess>();
 
     public virtual ICollection<SecurityUserPermissionOverride> SecurityUserPermissionOverride { get; set; } = new List<SecurityUserPermissionOverride>();

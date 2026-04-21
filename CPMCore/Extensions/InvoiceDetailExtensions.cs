@@ -98,8 +98,8 @@ public static class InvoiceDetailExtensions
             UnitId = line.UnitId,
             PaymentStageId = line.PaymentStageId,
             ChangeOrderDetailId = line.ChangeOrderDetailId,
-            Quantity = 1,
-            UnitPrice = RoundCurrency(net),
+            Quantity = line.UnitPrice.HasValue ? line.Quantity : 1m,
+            UnitPrice = line.UnitPrice.HasValue ? RoundCurrency(line.UnitPrice.Value) : RoundCurrency(net),
             Vat = line.VatPercentage,
             Total = RoundCurrency(total),
             VatTypeId = line.VatTypeId

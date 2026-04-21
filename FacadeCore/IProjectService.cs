@@ -187,6 +187,12 @@ namespace FacadeCore
         GetResponse<ProjectHourlyRateBO> GetProjectHourlyRates(int projectId);
         Response SaveProjectHourlyRates(int projectId, List<ProjectHourlyRateBO> rates);
 
+        // Coordinatieproject - regie-uren (tijdregistratie)
+        GetResponse<ProjectRegieUurBO> GetRegieUren(int projectId);
+        GetResponse<ProjectRegieUurBO> AddRegieUur(ProjectRegieUurBO bo);
+        Response DeleteRegieUur(int id);
+        Response MarkRegieUrenAsInvoiced(List<int> regieUurIds, int invoiceId);
+
         // Route-berekening (Google Maps Routes API)
         Task<(decimal? distanceKm, int? durationSeconds)> CalculateRouteAsync(int issuerCompanyId, int postalCodeId);
     }

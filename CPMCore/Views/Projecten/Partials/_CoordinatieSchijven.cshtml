@@ -4,22 +4,33 @@
     var showPercentage = Model.ContractPrice.HasValue && Model.ContractPrice > 0;
 }
 
-@* ── Groene selectiekaart (verborgen; zichtbaar via JS wanneer checkboxes geselecteerd zijn) ── *@
+@* ── Selectiebalk (informatie of selectiekaart, boven de tabelkaart) ── *@
 @if (canInvoice)
 {
-    <div id="sliceSelectionCard" class="d-none rounded px-3 py-2 mb-3 flex-wrap align-items-center gap-2"
-         style="background-color:#d1f0dc; border:1px solid #a3d9b5;">
-        <span class="fw-semibold text-success">Geselecteerde schijven</span>
-        <span class="badge bg-success rounded-pill" id="selectionCount">0</span>
-        <span class="text-success fw-semibold">—</span>
-        <span class="text-success fw-semibold" id="selectionTotal">€ 0</span>
-        <div class="ms-auto d-flex gap-2">
-            <button type="button" id="btnWisSelectie" class="btn btn-sm btn-outline-secondary">Wis selectie</button>
-            <button type="submit" form="coordInvoiceForm"
-                    class="btn btn-sm btn-success"
-                    id="btnCoordInvoiceCard">
-                <i class="fa fa-euro-sign me-1"></i>Factureer geselecteerde
-            </button>
+    <div class="row mb-3">
+        <div class="col-12">
+            @* Informatiebalk: zichtbaar wanneer geen selectie *@
+            <div id="sliceInfoBar" class="d-flex align-items-center gap-2 rounded px-3 py-2"
+                 style="background-color:#e8f4fd; border:1px solid #bee5eb;">
+                <i class="bx bx-info-circle fs-5 text-primary"></i>
+                <span class="text-primary">Vink één of meerdere rijen aan om een factuur op te maken.</span>
+            </div>
+            @* Selectiekaart: verborgen; zichtbaar via JS wanneer checkboxes geselecteerd zijn *@
+            <div id="sliceSelectionCard" class="d-none rounded px-3 py-2 flex-wrap align-items-center gap-2"
+                 style="background-color:#d1f0dc; border:1px solid #a3d9b5;">
+                <span class="fw-semibold text-success">Geselecteerde schijven</span>
+                <span class="badge bg-primary rounded-pill" id="selectionCount">0</span>
+                <span class="text-success fw-semibold">—</span>
+                <span class="text-success fw-semibold" id="selectionTotal">€ 0</span>
+                <div class="ms-auto d-flex gap-2">
+                    <button type="button" id="btnWisSelectie" class="btn btn-sm btn-outline-secondary">Wis selectie</button>
+                    <button type="submit" form="coordInvoiceForm"
+                            class="btn btn-sm btn-primary"
+                            id="btnCoordInvoiceCard">
+                        <i class="fa fa-euro-sign me-1"></i>Factureer geselecteerde
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 }

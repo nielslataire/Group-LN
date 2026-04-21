@@ -146,4 +146,6 @@ public partial class Invoices
     public virtual InvoiceStatusLookup Status { get; set; }
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
+
+    public virtual ICollection<ProjectRegieUur> ProjectRegieUur { get; set; } = new List<ProjectRegieUur>();
 }

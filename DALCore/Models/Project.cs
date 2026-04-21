@@ -87,6 +87,8 @@ public partial class Project
 
     public int? CoordinationIssuerCompanyId { get; set; }
 
+    public string CoordinationReference { get; set; }
+
     public int? ContractType { get; set; }
 
     public decimal? ProjectDistanceKm { get; set; }
@@ -94,6 +96,8 @@ public partial class Project
     public int? RouteDurationSeconds { get; set; }
 
     public decimal? KmAllowance { get; set; }
+
+    public bool IsPublished { get; set; }
 
     public virtual CompanyInfo Architect { get; set; }
 
@@ -142,6 +146,8 @@ public partial class Project
     public virtual ICollection<ProjectDocs> ProjectDocs { get; set; } = new List<ProjectDocs>();
 
     public virtual ICollection<ProjectHourlyRate> ProjectHourlyRate { get; set; } = new List<ProjectHourlyRate>();
+
+    public virtual ICollection<ProjectRegieUur> ProjectRegieUur { get; set; } = new List<ProjectRegieUur>();
 
     public virtual ICollection<ProjectLevels> ProjectLevels { get; set; } = new List<ProjectLevels>();
 

@@ -2,7 +2,9 @@
 
     Public Property Id As Integer
     Public Property Text As String = ""
-    Public Property Price As Decimal              ' lijnbedrag
+    Public Property Price As Decimal              ' lijnbedrag (= Quantity × UnitPrice, afgerond)
+    Public Property Quantity As Decimal = 1       ' aantal eenheden
+    Public Property UnitPrice As Decimal?         ' eenheidsprijs (Nothing = niet expliciet opgegeven)
     Public Property VatPercentage As Decimal      ' 0 / 6 / 12 / 21 …
 
     Public Property DiscountPercent As Decimal?   ' 0..100

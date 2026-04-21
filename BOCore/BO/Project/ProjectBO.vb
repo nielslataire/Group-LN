@@ -436,6 +436,9 @@ Public Class ProjectBO
         End Set
     End Property
 
+    <Display(Name:="Referentie")>
+    Public Property CoordinationReference As String
+
     Private _contractType As CoordinationContractType?
     <Display(Name:="Contracttype")>
     Public Property ContractType() As CoordinationContractType?
@@ -488,6 +491,17 @@ Public Class ProjectBO
         End Get
         Set(ByVal value As List(Of ProjectContractSliceBO))
             _contractSlices = value
+        End Set
+    End Property
+
+    Private _isPublished As Boolean
+    <Display(Name:="Gepubliceerd")>
+    Public Property IsPublished() As Boolean
+        Get
+            Return _isPublished
+        End Get
+        Set(ByVal value As Boolean)
+            _isPublished = value
         End Set
     End Property
 

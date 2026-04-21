@@ -4874,12 +4874,13 @@ namespace CPMCore.Controllers
             var proj = projResp.Value;
             var model = new Models.Projecten.ProjectCoordinatieModel
             {
-                ProjectId                  = projectid,
-                ProjectName                = proj.Name,
-                ContractType               = proj.ContractType,
-                ProjectDistanceKm          = proj.ProjectDistanceKm,
-                KmAllowance                = proj.KmAllowance,
+                ProjectId                   = projectid,
+                ProjectName                 = proj.Name,
+                ContractType                = proj.ContractType,
+                ProjectDistanceKm           = proj.ProjectDistanceKm,
+                KmAllowance                 = proj.KmAllowance,
                 CoordinationIssuerCompanyId = proj.CoordinationIssuerCompanyId,
+                ProjectManagerUserId        = proj.AspNetUserID,
             };
 
             model.ContractPrice = _db.Contract
@@ -4922,6 +4923,26 @@ namespace CPMCore.Controllers
                     HourlyRate   = r.HourlyRate
                 }).ToList();
 
+            var regieResp = _projectService.GetRegieUren(projectid);
+            if (regieResp.Success)
+            {
+                var rateMap = model.HourlyRates.ToDictionary(r => r.UserId, r => r.HourlyRate);
+                model.RegieUren = regieResp.Values.Select(r => new Models.Projecten.ProjectRegieUurVM
+                {
+                    Id              = r.Id,
+                    UserId          = r.UserId,
+                    UserFullName    = r.UserFullName,
+                    HourlyRate      = rateMap.TryGetValue(r.UserId, out var rate) ? rate : 0m,
+                    Date            = r.Date,
+                    Hours           = r.Hours,
+                    WithTravel      = r.WithTravel,
+                    TravelKm        = r.TravelKm,
+                    Description     = r.Description,
+                    InvoiceId       = r.InvoiceId,
+                    InvoicePublicId = r.InvoicePublicId
+                }).ToList();
+            }
+
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
             var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", proj.Name)
@@ -4952,14 +4973,15 @@ namespace CPMCore.Controllers
             var proj = projResp.Value;
             var model = new Models.Projecten.CoordinatieInstellingenVM
             {
-                ProjectId                  = projectid,
-                ProjectName                = proj.Name,
+                ProjectId                   = projectid,
+                ProjectName                 = proj.Name,
                 CoordinationIssuerCompanyId = proj.CoordinationIssuerCompanyId,
-                ContractType               = proj.ContractType,
-                KmAllowance                = proj.KmAllowance,
-                ProjectDistanceKm          = proj.ProjectDistanceKm,
-                RouteDurationSeconds       = proj.RouteDurationSeconds,
-                IssuerCompanies            = GetIssuerCompanies(),
+                ContractType                = proj.ContractType,
+                KmAllowance                 = proj.KmAllowance,
+                CoordinationReference       = proj.CoordinationReference,
+                ProjectDistanceKm           = proj.ProjectDistanceKm,
+                RouteDurationSeconds        = proj.RouteDurationSeconds,
+                IssuerCompanies             = GetIssuerCompanies(),
             };
 
             FillInAvailableUsersForCoord(model);
@@ -5010,7 +5032,8 @@ namespace CPMCore.Controllers
             proj.IsCoordinationProject      = true;
             proj.CoordinationIssuerCompanyId = vm.CoordinationIssuerCompanyId;
             proj.ContractType               = vm.ContractType;
-            proj.KmAllowance               = vm.KmAllowance;
+            proj.KmAllowance                = vm.KmAllowance;
+            proj.CoordinationReference      = string.IsNullOrWhiteSpace(vm.CoordinationReference) ? null : vm.CoordinationReference.Trim();
 
             // Route herberekenen indien coördinatiebedrijf en postcode beschikbaar
             if (proj.CoordinationIssuerCompanyId.HasValue && proj.Postalcode?.PostcodeId > 0)
@@ -5041,10 +5064,16 @@ namespace CPMCore.Controllers
             // Coördinatiecontract aanmaken/bijwerken indien facturatiebedrijf geselecteerd
             if (vm.CoordinationIssuerCompanyId.HasValue)
             {
-                var linkedCompanyId = _db.CompanyIssuerCompany
-                    .Where(c => c.IssuerCompanyId == vm.CoordinationIssuerCompanyId.Value)
-                    .Select(c => (int?)c.CompanyId)
-                    .FirstOrDefault();
+                // Gebruik LegacyCompanyInfoId als directe link; anders fallback via CompanyIssuerCompany
+                var linkedCompanyId = _db.IssuerCompany
+                    .AsNoTracking()
+                    .Where(ic => ic.Id == vm.CoordinationIssuerCompanyId.Value)
+                    .Select(ic => ic.LegacyCompanyInfoId)
+                    .FirstOrDefault()
+                    ?? _db.CompanyIssuerCompany
+                           .Where(c => c.IssuerCompanyId == vm.CoordinationIssuerCompanyId.Value)
+                           .Select(c => (int?)c.CompanyId)
+                           .FirstOrDefault();
 
                 if (linkedCompanyId.HasValue)
                 {
@@ -6351,7 +6380,7 @@ namespace CPMCore.Controllers
             var proj = _db.Project
                 .AsNoTracking()
                 .Where(p => p.ProjectId == projectId)
-                .Select(p => new { p.ProjectId, p.CoordinationIssuerCompanyId })
+                .Select(p => new { p.ProjectId, p.CoordinationIssuerCompanyId, p.BuilderId })
                 .FirstOrDefault();
 
             if (proj == null || !proj.CoordinationIssuerCompanyId.HasValue)
@@ -6360,13 +6389,16 @@ namespace CPMCore.Controllers
                 return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
             }
 
+            if (!proj.BuilderId.HasValue)
+            {
+                AddMessage("error", "Geen bouwheer ingesteld voor dit project.", "Fout!");
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+            }
+
             var issuerCompanyId = proj.CoordinationIssuerCompanyId.Value;
 
-            // Ontvanger: externe company gekoppeld aan het facturatiebedrijf
-            var linkedCompanyId = _db.CompanyIssuerCompany
-                .Where(c => c.IssuerCompanyId == issuerCompanyId)
-                .Select(c => (int?)c.CompanyId)
-                .FirstOrDefault();
+            // Ontvanger: bouwheer van het project
+            var linkedCompanyId = proj.BuilderId;
 
             // Contractprijs ophalen
             var contractPrice = _db.Contract
@@ -6420,6 +6452,394 @@ namespace CPMCore.Controllers
             }
 
             return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+        }
+
+        // ── Regie-uren factureren ─────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MakeCoordRegieInvoice(int projectId, List<int> regieUurIds)
+        {
+            if (regieUurIds == null || regieUurIds.Count == 0)
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+
+            var proj = _db.Project
+                .AsNoTracking()
+                .Where(p => p.ProjectId == projectId)
+                .Select(p => new {
+                    p.CoordinationIssuerCompanyId, p.KmAllowance, p.ProjectDistanceKm,
+                    p.BuilderId, p.CoordinationReference, p.ProjectName
+                })
+                .FirstOrDefault();
+
+            if (proj == null || !proj.CoordinationIssuerCompanyId.HasValue)
+            {
+                AddMessage("error", "Geen coördinatiebedrijf ingesteld.", "Fout!");
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+            }
+
+            if (!proj.BuilderId.HasValue)
+            {
+                AddMessage("error", "Geen bouwheer ingesteld voor dit project.", "Fout!");
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+            }
+
+            var issuerCompanyId = proj.CoordinationIssuerCompanyId.Value;
+            var kmAllowance     = proj.KmAllowance ?? 0m;
+            var roundTripKm     = (proj.ProjectDistanceKm ?? 0m) * 2m;
+
+            // Niet-gefactureerde regie-uren ophalen
+            var entries = _db.ProjectRegieUur
+                .Include(r => r.User)
+                .Where(r => r.ProjectId == projectId && regieUurIds.Contains(r.Id) && r.InvoiceId == null)
+                .OrderBy(r => r.Date).ThenBy(r => r.UserId)
+                .ToList();
+
+            if (!entries.Any())
+                return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+
+            // Uurtarieven ophalen
+            var ratesResp = _projectService.GetProjectHourlyRates(projectId);
+            var rateMap   = ratesResp.Success
+                ? ratesResp.Values.ToDictionary(r => r.UserId, r => r.HourlyRate)
+                : new Dictionary<string, decimal>();
+
+            // Cutoff datum = meest recente datum in de selectie
+            var cutoffDate = entries.Max(e => e.Date);
+            var cutoffStr  = cutoffDate.ToString("dd/MM/yyyy");
+
+            // Groepeer per medewerker
+            var perUser = entries
+                .GroupBy(e => e.UserId)
+                .Select(g =>
+                {
+                    var hourlyRate = rateMap.TryGetValue(g.Key, out var r) ? r : 0m;
+                    var fullName   = $"{g.First().User?.Voornaam} {g.First().User?.Familienaam}".Trim();
+                    return new
+                    {
+                        FullName   = fullName,
+                        HourlyRate = hourlyRate,
+                        TotalHours = g.Sum(e => e.Hours),
+                        Entries    = g.OrderBy(e => e.Date).ToList()
+                    };
+                })
+                .ToList();
+
+            // Verplaatsingen — gebruik TravelKm per rij; fallback op roundTripKm voor oude rijen
+            var travelEntries = entries.Where(e => e.WithTravel || (e.TravelKm.HasValue && e.TravelKm > 0)).ToList();
+            var tripCount    = travelEntries.Count;
+            var totalKm      = travelEntries.Sum(e => e.TravelKm.HasValue && e.TravelKm > 0 ? e.TravelKm.Value : roundTripKm);
+            var totalKmCost  = Math.Round(totalKm * kmAllowance, 2, MidpointRounding.AwayFromZero);
+
+            using var uow = _uow;
+            var cmd = new InvoiceCommandService(uow, new InvoiceNumberingService(uow));
+
+            var draft = new InvoiceDraftBO
+            {
+                IssuerCompanyId   = issuerCompanyId,
+                InvoiceDate       = DateOnly.FromDateTime(DateTime.Today),
+                Mode              = InvoiceMode.Free,
+                ProjectId         = projectId,
+                CompanyId         = proj.BuilderId,
+                HeaderDescription = $"Prestaties voor het project {proj.ProjectName} tot {cutoffStr}",
+                DetailDescription = string.IsNullOrWhiteSpace(proj.CoordinationReference) ? null : proj.CoordinationReference.Trim()
+            };
+
+            // Één lijn per medewerker
+            foreach (var u in perUser)
+            {
+                draft.Lines.Add(new InvoiceLineBO
+                {
+                    Text          = $"Prestaties {u.FullName}",
+                    Quantity      = u.TotalHours,
+                    UnitPrice     = u.HourlyRate,
+                    Price         = Math.Round(u.TotalHours * u.HourlyRate, 2, MidpointRounding.AwayFromZero),
+                    VatPercentage = 21m,
+                    LineType      = "detail"
+                });
+            }
+
+            // Km-lijn (enkel indien er verplaatsingen zijn)
+            if (tripCount > 0 && totalKm > 0)
+            {
+                draft.Lines.Add(new InvoiceLineBO
+                {
+                    Text          = $"{tripCount} verplaatsing{(tripCount == 1 ? "" : "en")} \u2013 {totalKm:0}\u00a0km totaal aan {kmAllowance.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}\u20ac/km",
+                    Quantity      = totalKm,
+                    UnitPrice     = kmAllowance,
+                    Price         = totalKmCost,
+                    VatPercentage = 21m,
+                    LineType      = "detail"
+                });
+            }
+
+            try
+            {
+                var (invoiceId, _) = await cmd.CreateWithLinesAsync(draft, issueNow: false);
+                _projectService.MarkRegieUrenAsInvoiced(entries.Select(e => e.Id).ToList(), invoiceId);
+
+                // Detailbijlage genereren en opslaan
+                var appendixBytes = BuildRegieAppendix(
+                    proj.ProjectName, cutoffStr, perUser.Select(u => new RegieAppendixUser
+                    {
+                        FullName   = u.FullName,
+                        HourlyRate = u.HourlyRate,
+                        TotalHours = u.TotalHours,
+                        Entries    = u.Entries.Select(e => new RegieAppendixEntry
+                        {
+                            Date        = e.Date,
+                            Hours       = e.Hours,
+                            EntryKm     = e.TravelKm.HasValue && e.TravelKm > 0 ? e.TravelKm.Value : (e.WithTravel ? roundTripKm : 0m),
+                            HourAmount  = e.Hours * (rateMap.TryGetValue(e.UserId, out var hr) ? hr : 0m)
+                        }).ToList()
+                    }).ToList(),
+                    tripCount, kmAllowance, totalKmCost);
+
+                var invoice = await _db.Invoices.FindAsync(invoiceId);
+                if (invoice != null && appendixBytes.Length > 0)
+                {
+                    invoice.PdfAppendixFileName = $"Prestatielijst_{cutoffDate:yyyyMMdd}.pdf";
+                    invoice.PdfAppendixContent  = appendixBytes;
+                    await _db.SaveChangesAsync();
+                }
+
+                AddMessage("success", $"Conceptfactuur aangemaakt voor {entries.Count} prestaties.", "Gelukt!");
+            }
+            catch (Exception ex)
+            {
+                AddMessage("error", $"Factuur kon niet worden aangemaakt: {ex.Message}", "Fout!");
+            }
+
+            return RedirectToAction(nameof(DetailCoordinatie), new { projectid = projectId });
+        }
+
+        // ── Regie-factuur bijlage (QuestPDF) ─────────────────────────────────
+
+        private sealed class RegieAppendixUser
+        {
+            public string  FullName   { get; set; }
+            public decimal HourlyRate { get; set; }
+            public decimal TotalHours { get; set; }
+            public List<RegieAppendixEntry> Entries { get; set; } = new();
+        }
+
+        private sealed class RegieAppendixEntry
+        {
+            public DateOnly Date       { get; set; }
+            public decimal  Hours      { get; set; }
+            public decimal  EntryKm    { get; set; }   // 0 = geen verplaatsing
+            public decimal  HourAmount { get; set; }
+        }
+
+        private static byte[] BuildRegieAppendix(
+            string projectName, string cutoffStr,
+            List<RegieAppendixUser> users,
+            int tripCount, decimal kmAllowance, decimal totalKmCost)
+        {
+            var culture = new System.Globalization.CultureInfo("nl-BE");
+            string Eur(decimal v)  => "\u20ac\u00a0" + v.ToString("N2", culture);
+            string Num(decimal v)  => v.ToString("N2", culture);
+
+            var headerColor = QuestPDF.Helpers.Colors.Grey.Lighten3;
+            var borderColor = QuestPDF.Helpers.Colors.Grey.Medium;
+
+            return QuestPDF.Fluent.Document.Create(container =>
+            {
+                container.Page(page =>
+                {
+                    page.Size(PageSizes.A4);
+                    page.Margin(1.5f, Unit.Centimetre);
+                    page.DefaultTextStyle(t => t.FontSize(9).FontFamily("Arial"));
+
+                    page.Header().Column(col =>
+                    {
+                        col.Item().Text($"Prestatielijst \u2013 {projectName}")
+                            .Bold().FontSize(13);
+                        col.Item().Text($"Periode tot en met {cutoffStr}")
+                            .FontSize(9).FontColor(QuestPDF.Helpers.Colors.Grey.Darken2);
+                        col.Item().PaddingTop(4).LineHorizontal(1).LineColor(borderColor);
+                    });
+
+                    page.Content().PaddingTop(12).Column(main =>
+                    {
+                        // ── Per medewerker ─────────────────────────────────
+                        foreach (var user in users)
+                        {
+                            main.Item().PaddingBottom(12).Column(userCol =>
+                            {
+                                // Sectieheader medewerker
+                                userCol.Item().Background(headerColor).Padding(4)
+                                    .Text(user.FullName).Bold().FontSize(10);
+
+                                // Tabel
+                                userCol.Item().Table(table =>
+                                {
+                                    table.ColumnsDefinition(c =>
+                                    {
+                                        c.RelativeColumn(2);  // Datum
+                                        c.RelativeColumn(1);  // Uren
+                                        c.RelativeColumn(2);  // Verplaatsing
+                                        c.RelativeColumn(2);  // Bedrag uren
+                                        c.RelativeColumn(2);  // Totaal
+                                    });
+
+                                    // Header rij
+                                    void HeaderCell(string text, bool right = false)
+                                    {
+                                        var cell = table.Cell().Background(headerColor).Padding(3);
+                                        if (right) cell.AlignRight().Text(text).Bold().FontSize(8);
+                                        else       cell.Text(text).Bold().FontSize(8);
+                                    }
+
+                                    HeaderCell("Datum");
+                                    HeaderCell("Uren");
+                                    HeaderCell("Verplaatsing");
+                                    HeaderCell("Bedrag uren", right: true);
+                                    HeaderCell("Totaal",      right: true);
+
+                                    // Datarijen
+                                    foreach (var e in user.Entries)
+                                    {
+                                        void DataCell(string text, bool right = false)
+                                        {
+                                            var cell = table.Cell().BorderBottom(0.5f).BorderColor(borderColor).Padding(3);
+                                            if (right) cell.AlignRight().Text(text);
+                                            else       cell.Text(text);
+                                        }
+
+                                        DataCell(e.Date.ToString("dd/MM/yyyy"));
+                                        DataCell(Num(e.Hours));         // Uren: links uitgelijnd
+                                        DataCell(e.EntryKm > 0 ? $"{e.EntryKm:0}\u00a0km" : "\u2014");
+                                        DataCell(Eur(e.HourAmount), right: true);
+                                        DataCell(Eur(e.HourAmount), right: true);  // Totaal = alleen uursbedrag
+                                    }
+
+                                    // Subtotaalrij (totaal = som uursbedragen)
+                                    var subTotal = user.Entries.Sum(e => e.HourAmount);
+                                    table.Cell().ColumnSpan(4).Padding(3).AlignRight()
+                                         .Text($"Subtotaal {user.FullName}:").Bold();
+                                    table.Cell().Padding(3).AlignRight()
+                                         .Text(Eur(subTotal)).Bold();
+                                });
+                            });
+                        }
+
+                        // ── Verplaatsingen ─────────────────────────────────
+                        if (tripCount > 0 && totalKmCost > 0)
+                        {
+                            main.Item().PaddingBottom(12).Column(kmCol =>
+                            {
+                                kmCol.Item().Background(headerColor).Padding(4)
+                                    .Text("Verplaatsingen").Bold().FontSize(10);
+                                kmCol.Item().Table(kmTable =>
+                                {
+                                    kmTable.ColumnsDefinition(c =>
+                                    {
+                                        c.RelativeColumn(3);
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(2);
+                                        c.RelativeColumn(2);
+                                    });
+
+                                    void KH(string t, bool right = false)
+                                    {
+                                        var cell = kmTable.Cell().Background(headerColor).Padding(3);
+                                        if (right) cell.AlignRight().Text(t).Bold().FontSize(8);
+                                        else       cell.Text(t).Bold().FontSize(8);
+                                    }
+                                    KH("Omschrijving"); KH("Aantal", right: true); KH("Prijs/eenheid", right: true); KH("Totaal", right: true);
+
+                                    var totalKmAll = users.SelectMany(u => u.Entries).Sum(e => e.EntryKm);
+                                    kmTable.Cell().Padding(3).Text($"{totalKmAll:0}\u00a0km totaal");
+                                    kmTable.Cell().Padding(3).AlignRight().Text($"{tripCount}\u00d7");
+                                    kmTable.Cell().Padding(3).AlignRight().Text($"{Eur(kmAllowance)}/km");
+                                    kmTable.Cell().Padding(3).AlignRight().Text(Eur(totalKmCost)).Bold();
+                                });
+                            });
+                        }
+
+                        // ── Eindtotaal ─────────────────────────────────────
+                        var grandTotal = users.Sum(u => u.Entries.Sum(e => e.HourAmount)) + totalKmCost;
+                        main.Item().PaddingTop(4).LineHorizontal(1).LineColor(borderColor);
+                        main.Item().PaddingTop(6).AlignRight()
+                            .Text($"Totaal excl. btw: {Eur(grandTotal)}").Bold().FontSize(11);
+                    });
+
+                    page.Footer().AlignRight()
+                        .Text(t =>
+                        {
+                            t.Span("Pagina ").FontSize(8).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                            t.CurrentPageNumber().FontSize(8).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                            t.Span(" van ").FontSize(8).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                            t.TotalPages().FontSize(8).FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                        });
+                });
+            }).GeneratePdf();
+        }
+
+        // ── Regie-uren AJAX endpoints ─────────────────────────────────────────
+
+        public class AddRegieUurRequest
+        {
+            public int ProjectId { get; set; }
+            public string UserId { get; set; }
+            public string Date { get; set; }
+            public decimal Hours { get; set; }
+            public decimal? TravelKm { get; set; }
+            public string Description { get; set; }
+        }
+
+        [HttpPost]
+        public IActionResult AddRegieUur([FromBody] AddRegieUurRequest req)
+        {
+            if (req == null || string.IsNullOrWhiteSpace(req.UserId) || req.Hours <= 0)
+                return BadRequest(new { error = "Ongeldige invoer" });
+
+            if (!DateOnly.TryParse(req.Date, out var date))
+                return BadRequest(new { error = "Ongeldige datum" });
+
+            var ratesResp = _projectService.GetProjectHourlyRates(req.ProjectId);
+            var hourlyRate = ratesResp.Success
+                ? ratesResp.Values.FirstOrDefault(r => r.UserId == req.UserId)?.HourlyRate ?? 0m
+                : 0m;
+
+            var bo = new BOCore.ProjectRegieUurBO
+            {
+                ProjectId   = req.ProjectId,
+                UserId      = req.UserId,
+                Date        = date,
+                Hours       = req.Hours,
+                TravelKm    = req.TravelKm.HasValue && req.TravelKm > 0 ? req.TravelKm : null,
+                Description = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim()
+            };
+
+            var resp = _projectService.AddRegieUur(bo);
+            if (!resp.Success || !resp.Values.Any())
+                return StatusCode(500, new { error = "Opslaan mislukt" });
+
+            var saved = resp.Values.First();
+            return Ok(new
+            {
+                id           = saved.Id,
+                userId       = saved.UserId,
+                userFullName = saved.UserFullName,
+                date         = saved.Date.ToString("yyyy-MM-dd"),
+                hours        = saved.Hours,
+                travelKm     = saved.TravelKm,
+                description  = saved.Description,
+                hourlyRate   = hourlyRate
+            });
+        }
+
+        [HttpPost]
+        public IActionResult DeleteRegieUur(int id)
+        {
+            var resp = _projectService.DeleteRegieUur(id);
+            if (resp.Success)
+                return Ok();
+            var msg = resp.Messages?.FirstOrDefault()?.Message ?? "Verwijderen mislukt";
+            return StatusCode(resp.Messages?.Any(m => m.Message?.Contains("gefactureerd") == true) == true ? 409 : 500,
+                new { error = msg });
         }
 
         private static InvoiceDraftBO? BuildStageInvoiceDraft(

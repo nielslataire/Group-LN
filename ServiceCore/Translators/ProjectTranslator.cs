@@ -51,13 +51,15 @@ namespace ServiceCore.Translators
             // bo.UploadToFacebook = _entity.UploadToFacebook
 
             // Coordinatieproject
-            bo.IsCoordinationProject = _entity.IsCoordinationProject;
+            bo.IsCoordinationProject    = _entity.IsCoordinationProject;
             bo.CoordinationIssuerCompanyId = _entity.CoordinationIssuerCompanyId;
+            bo.CoordinationReference    = _entity.CoordinationReference;
             if (_entity.ContractType.HasValue)
                 bo.ContractType = (CoordinationContractType)_entity.ContractType.Value;
             bo.ProjectDistanceKm    = _entity.ProjectDistanceKm;
             bo.RouteDurationSeconds = _entity.RouteDurationSeconds;
             bo.KmAllowance          = _entity.KmAllowance;
+            bo.IsPublished          = _entity.IsPublished;
 
             // Gemeente en postcode van het project
             if ((_entity.PostalCode != null))
@@ -164,13 +166,14 @@ namespace ServiceCore.Translators
             _entity.ProjectType = (int)bo.ProjectType;
 
             // Coordinatieproject
-            _entity.IsCoordinationProject = bo.IsCoordinationProject;
+            _entity.IsCoordinationProject      = bo.IsCoordinationProject;
             _entity.CoordinationIssuerCompanyId = bo.IsCoordinationProject ? bo.CoordinationIssuerCompanyId : null;
+            _entity.CoordinationReference       = bo.IsCoordinationProject ? bo.CoordinationReference : null;
             _entity.ContractType = bo.IsCoordinationProject && bo.ContractType.HasValue ? (int?)bo.ContractType.Value : null;
             _entity.ProjectDistanceKm    = bo.ProjectDistanceKm;
             _entity.RouteDurationSeconds = bo.RouteDurationSeconds;
             _entity.KmAllowance          = bo.KmAllowance;
-
+            _entity.IsPublished          = bo.IsPublished;
 
             if ((bo.Postalcode != null && bo.Postalcode.PostcodeId != 0))
                 _entity.PostalCodeId = bo.Postalcode.PostcodeId;
@@ -190,7 +193,7 @@ namespace ServiceCore.Translators
                 _entity.StatusId = bo.Status.Id;
             if ((bo.WheaterStation != null && bo.WheaterStation.Id != 0))
                 _entity.WheaterStationId = bo.WheaterStation.Id;
-            if ((bo.DefaultPicture != null && bo.DefaultPicture.Id != 0))
+            if ((bo.DefaultPicture != null && bo.DefaultPicture.Id != 0) && _entity.DefaultPicture != null)
                 _entity.DefaultPicture.Id = bo.DefaultPicture.Id;
             var err = HandlePictures(_entity, bo.Pictures);
             if ((err != ErrorCode.Success))

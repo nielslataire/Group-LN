@@ -3960,8 +3960,26 @@ namespace CPMCore.Models.Projecten
         public int? CoordinationIssuerCompanyId { get; set; }
         public decimal? ContractPrice { get; set; }
         public decimal InvoicedAmount { get; set; }
+        public string ProjectManagerUserId { get; set; }
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();
         public List<ProjectHourlyRateVM> HourlyRates { get; set; } = new();
+        public List<ProjectRegieUurVM> RegieUren { get; set; } = new();
+    }
+
+    public class ProjectRegieUurVM
+    {
+        public int Id { get; set; }
+        public string UserId { get; set; }
+        public string UserFullName { get; set; }
+        public decimal HourlyRate { get; set; }
+        public DateOnly Date { get; set; }
+        public decimal Hours { get; set; }
+        public bool WithTravel { get; set; }
+        public decimal? TravelKm { get; set; }
+        public string Description { get; set; }
+        public int? InvoiceId { get; set; }
+        public string InvoicePublicId { get; set; }
+        public bool IsInvoiced => InvoiceId.HasValue;
     }
 
     public class CoordinatieInstellingenVM
@@ -3974,6 +3992,9 @@ namespace CPMCore.Models.Projecten
         public BOCore.CoordinationContractType? ContractType { get; set; }
         [Display(Name = "Prijs per km")]
         public decimal? KmAllowance { get; set; }
+        [Display(Name = "Referentie")]
+        [MaxLength(200)]
+        public string CoordinationReference { get; set; }
         [Display(Name = "Contractprijs")]
         public decimal? ContractPrice { get; set; }
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new();

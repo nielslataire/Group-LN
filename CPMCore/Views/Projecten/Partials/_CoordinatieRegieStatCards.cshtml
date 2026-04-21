@@ -1,0 +1,45 @@
+@model CPMCore.Models.Projecten.ProjectCoordinatieModel
+@using System.Globalization
+@{
+    var roundTripKm  = (Model.ProjectDistanceKm ?? 0) * 2;
+    var kmAllowance  = Model.KmAllowance ?? 0m;
+    var allEntries   = Model.RegieUren;
+    var openEntries  = allEntries.Where(e => !e.IsInvoiced).ToList();
+    var invEntries   = allEntries.Where(e =>  e.IsInvoiced).ToList();
+
+    decimal TotalHours(IEnumerable<CPMCore.Models.Projecten.ProjectRegieUurVM> list) => list.Sum(e => e.Hours);
+    decimal OpenAmount() => openEntries.Sum(e =>
+    {
+        var km = e.TravelKm.HasValue && e.TravelKm > 0 ? e.TravelKm.Value : (e.WithTravel ? roundTripKm : 0m);
+        return e.Hours * e.HourlyRate + km * kmAllowance;
+    });
+
+    string FmtH(decimal v) => v.ToString("N2", CultureInfo.CurrentCulture) + "\u00a0u";
+    string FmtAmt(decimal v) => "€\u00a0" + v.ToString("N2", CultureInfo.CurrentCulture);
+}
+<div class="row p-0 pb-4">
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Totaal gepresteerd</div>
+            <div class="fw-bold fs-5" id="regieStatTotal">@FmtH(TotalHours(allEntries))</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Gefactureerd</div>
+            <div class="fw-bold fs-5 text-success" id="regieStatInvoiced">@FmtH(TotalHours(invEntries))</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-3">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Openstaand</div>
+            <div class="fw-bold fs-5" id="regieStatOpen">@FmtH(TotalHours(openEntries))</div>
+        </div>
+    </div>
+    <div class="col-6 col-sm-3 pe-0">
+        <div class="p-3 rounded bg-white border">
+            <div class="text-muted small mb-1">Bedrag te factureren</div>
+            <div class="fw-bold fs-5" id="regieStatAmount">@FmtAmt(OpenAmount())</div>
+        </div>
+    </div>
+</div>

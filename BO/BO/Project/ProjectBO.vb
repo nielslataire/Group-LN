@@ -383,4 +383,14 @@ Public Class ProjectBO
             _projecttype = value
         End Set
     End Property
+    Private _isPublished As Boolean
+    <Display(Name:="Gepubliceerd")>
+    Public Property IsPublished() As Boolean
+        Get
+            Return _isPublished
+        End Get
+        Set(ByVal value As Boolean)
+            _isPublished = value
+        End Set
+    End Property
 End Class
