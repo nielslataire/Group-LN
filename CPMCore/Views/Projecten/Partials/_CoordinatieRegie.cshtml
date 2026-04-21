@@ -260,6 +260,7 @@
                         {
                             var km     = ActualKm(entry);
                             var totaal = entry.Hours * entry.HourlyRate + km * kmAllowance;
+                            var invoiceLabel = !string.IsNullOrEmpty(entry.InvoicePublicId) ? entry.InvoicePublicId : "Concept";
                             <tr data-regie-row="@entry.Id"
                                 data-invoiced="true"
                                 data-hours="@entry.Hours.ToString("F2", CultureInfo.InvariantCulture)"
@@ -267,17 +268,21 @@
                                 data-amount="@totaal.ToString("F2", CultureInfo.InvariantCulture)"
                                 class="text-muted">
                                 <td class="align-middle">@entry.Date.ToString("dd/MM/yyyy")</td>
-                                <td class="align-middle">
-                                    @entry.UserFullName
-                                    <span class="badge bg-primary ms-1" title="Factuur @entry.InvoicePublicId">
-                                        <i class="bx bx-receipt me-1"></i>@entry.InvoicePublicId
-                                    </span>
-                                </td>
+                                <td class="align-middle">@entry.UserFullName</td>
                                 <td class="align-middle text-muted small">@entry.Description</td>
                                 <td class="align-middle text-end text-nowrap">@FmtNum(entry.Hours, 2)</td>
                                 <td class="align-middle text-end text-nowrap">@FmtKm(km)</td>
                                 <td class="align-middle text-end text-nowrap fw-semibold">@FmtAmt(totaal)</td>
-                                <td></td>
+                                <td class="align-middle text-end">
+                                    @if (entry.InvoiceId.HasValue)
+                                    {
+                                        <a href="@Url.Action("Detail", "Invoices", new { id = entry.InvoiceId })"
+                                           class="badge badge-primary text-decoration-none"
+                                           title="Bekijk factuur @invoiceLabel">
+                                            <i class="bx bx-receipt me-1"></i>@invoiceLabel
+                                        </a>
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>

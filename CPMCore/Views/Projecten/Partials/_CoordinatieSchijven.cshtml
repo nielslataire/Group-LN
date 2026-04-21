@@ -60,6 +60,7 @@
                             <th>Omschrijving</th>
                             <th class="text-end text-nowrap">%</th>
                             <th class="text-end text-nowrap">Bedrag</th>
+                            <th class="text-end text-nowrap">Factuur</th>
                             <th class="text-end text-nowrap">Actie</th>
                         </tr>
                     </thead>
@@ -71,16 +72,19 @@
                                 @if (canInvoice)
                                 {
                                     <td>
-                                        <div class="checkbox-custom checkbox-default d-inline-block">
-                                            <input type="checkbox"
-                                                   class="chkCoordSlice"
-                                                   id="coord-slice-@slice.Id"
-                                                   name="sliceIds"
-                                                   value="@slice.Id"
-                                                   data-amount="@slice.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
-                                                   form="coordInvoiceForm" />
-                                            <label for="coord-slice-@slice.Id"></label>
-                                        </div>
+                                        @if (!slice.IsInvoiced)
+                                        {
+                                            <div class="checkbox-custom checkbox-default d-inline-block">
+                                                <input type="checkbox"
+                                                       class="chkCoordSlice"
+                                                       id="coord-slice-@slice.Id"
+                                                       name="sliceIds"
+                                                       value="@slice.Id"
+                                                       data-amount="@slice.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                                       form="coordInvoiceForm" />
+                                                <label for="coord-slice-@slice.Id"></label>
+                                            </div>
+                                        }
                                     </td>
                                 }
                                 <td class="align-middle">@slice.Description</td>
@@ -95,8 +99,22 @@
                                     }
                                 </td>
                                 <td class="align-middle text-end text-nowrap">€ @slice.Amount.ToString("N2")</td>
+                                <td class="align-middle text-end text-nowrap">
+                                    @if (slice.IsInvoiced)
+                                    {
+                                        <a href="@Url.Action("Detail", "Invoices", new { id = slice.InvoiceId })"
+                                           class="badge badge-primary text-decoration-none"
+                                           title="Bekijk factuur">
+                                            <i class="fa fa-file-invoice me-1"></i>@(slice.InvoicePublicId ?? slice.InvoiceId?.ToString())
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
                                 <td class="actions align-middle text-end text-nowrap">
-                                    @if (canInvoice)
+                                    @if (canInvoice && !slice.IsInvoiced)
                                     {
                                         <a class="ms-1 me-1 btn-factureer-slice"
                                            href="#"

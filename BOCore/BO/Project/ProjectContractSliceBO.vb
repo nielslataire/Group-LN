@@ -13,4 +13,8 @@ Public Class ProjectContractSliceBO
 
     Public Property SortOrder As Integer
 
+    Public Property InvoiceId As Integer?
+
+    Public Property InvoicePublicId As String
+
 End Class

@@ -478,6 +478,7 @@
           <Property Name="DocDelivery" Type="bit" />
           <Property Name="DocDefDelivery" Type="bit" />
           <Property Name="ProjectType" Type="int" Nullable="false" />
+          <Property Name="IsPublished" Type="bit" Nullable="false" />
         </EntityType>
         <EntityType Name="ProjectBudget">
           <Key>
@@ -2956,6 +2957,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="DocDefDelivery" Type="Boolean" />
           <NavigationProperty Name="IncommingInvoices" Relationship="copropmModel.FK_IncommingInvoices_Project" FromRole="Project" ToRole="IncommingInvoices" />
           <Property Name="ProjectType" Type="Int32" Nullable="false" />
+          <Property Name="IsPublished" Type="Boolean" Nullable="false" />
         </EntityType>
         <EntityType Name="ProjectStatus">
           <Key>
@@ -4629,6 +4631,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
             <EntityTypeMapping TypeName="copropmModel.Project">
               <MappingFragment StoreEntitySet="Project">
                 <ScalarProperty Name="ProjectType" ColumnName="ProjectType" />
+                <ScalarProperty Name="IsPublished" ColumnName="IsPublished" />
                 <ScalarProperty Name="DocDefDelivery" ColumnName="DocDefDelivery" />
                 <ScalarProperty Name="DocDelivery" ColumnName="DocDelivery" />
                 <ScalarProperty Name="DocFireInspection" ColumnName="DocFireInspection" />

@@ -3936,6 +3936,12 @@ namespace CPMCore.Models.Projecten
         public decimal Percentage { get; set; }
 
         public decimal Amount { get; set; }
+
+        public int? InvoiceId { get; set; }
+
+        public string InvoicePublicId { get; set; }
+
+        public bool IsInvoiced => InvoiceId.HasValue;
     }
 
     public class ProjectHourlyRateVM

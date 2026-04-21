@@ -2719,6 +2719,7 @@ namespace ServiceCore
         {
             var response = new GetResponse<ProjectContractSliceBO>();
             var slices = _uow.ProjectContractSlices.GetNoTracking()
+                .Include(s => s.Invoice)
                 .Where(s => s.ProjectId == projectId)
                 .OrderBy(s => s.SortOrder)
                 .ThenBy(s => s.Id)
@@ -2732,7 +2733,9 @@ namespace ServiceCore
                     ProjectId = s.ProjectId,
                     Description = s.Description,
                     Percentage = s.Percentage,
-                    SortOrder = s.SortOrder
+                    SortOrder = s.SortOrder,
+                    InvoiceId = s.InvoiceId,
+                    InvoicePublicId = s.Invoice?.PublicId
                 });
             }
             return response;

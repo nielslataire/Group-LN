@@ -17,5 +17,9 @@ public partial class ProjectContractSlice
 
     public int SortOrder { get; set; }
 
+    public int? InvoiceId { get; set; }
+
     public virtual Project Project { get; set; }
+
+    public virtual Invoices Invoice { get; set; }
 }

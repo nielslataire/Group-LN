@@ -4895,20 +4895,38 @@ namespace CPMCore.Controllers
                 var contractPrice = model.ContractPrice ?? 0m;
                 model.ContractSlices = slicesResp.Values.Select(s => new Models.Projecten.ProjectContractSliceVM
                 {
-                    Id          = s.Id,
-                    Description = s.Description,
-                    Percentage  = s.Percentage,
-                    Amount      = Math.Round(contractPrice * s.Percentage / 100m, 2, MidpointRounding.AwayFromZero)
+                    Id               = s.Id,
+                    Description      = s.Description,
+                    Percentage       = s.Percentage,
+                    Amount           = Math.Round(contractPrice * s.Percentage / 100m, 2, MidpointRounding.AwayFromZero),
+                    InvoiceId        = s.InvoiceId,
+                    InvoicePublicId  = s.InvoicePublicId
                 }).ToList();
             }
 
-            // Gefactureerd bedrag: som van alle niet-geannuleerde coördinatiefacturen voor dit project
+            // Gefactureerd bedrag:
+            // 1) Directe schijf-factuurkoppeling (InvoiceId op schijf) — meest nauwkeurig
+            var linkedInvoiceIds = model.ContractSlices
+                .Where(s => s.InvoiceId.HasValue)
+                .Select(s => s.InvoiceId!.Value)
+                .ToList();
+
+            model.InvoicedAmount = model.ContractSlices
+                .Where(s => s.IsInvoiced)
+                .Sum(s => s.Amount);
+
+            // 2) Fallback voor bestaande facturen zonder directe schijfkoppeling
             if (model.CoordinationIssuerCompanyId.HasValue)
             {
-                model.InvoicedAmount = _db.Invoices
+                var fallbackQuery = _db.Invoices
                     .Where(i => i.ProjectId == projectid
                              && i.IssuerCompanyId == model.CoordinationIssuerCompanyId.Value
-                             && i.StatusId != 7) // 7 = Cancelled
+                             && i.StatusId != 7); // 7 = Cancelled
+
+                if (linkedInvoiceIds.Count > 0)
+                    fallbackQuery = fallbackQuery.Where(i => !linkedInvoiceIds.Contains(i.Id));
+
+                model.InvoicedAmount += fallbackQuery
                     .SelectMany(i => i.InvoicesDetails)
                     .Where(d => d.LineType == "detail")
                     .Sum(d => (decimal?)d.Price) ?? 0m;
@@ -6443,7 +6461,16 @@ namespace CPMCore.Controllers
 
             try
             {
-                await cmd.CreateWithLinesAsync(draft, issueNow: false);
+                var (invoiceId, _) = await cmd.CreateWithLinesAsync(draft, issueNow: false);
+
+                // Koppel de nieuwe factuur aan de geselecteerde schijven
+                var sliceEntities = _db.ProjectContractSlice
+                    .Where(s => s.ProjectId == projectId && sliceIds.Contains(s.Id))
+                    .ToList();
+                foreach (var s in sliceEntities)
+                    s.InvoiceId = invoiceId;
+                await _db.SaveChangesAsync();
+
                 AddMessage("success", "Het conceptfactuur is aangemaakt.", "Gelukt!");
             }
             catch (Exception ex)
