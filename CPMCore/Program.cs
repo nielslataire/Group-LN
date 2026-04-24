@@ -163,6 +163,13 @@ builder.Services.AddScoped<IInvoiceUblBuilder, InvoiceUblBuilder>();
 builder.Services.AddScoped<IInvoiceLayoutTemplateService, InvoiceLayoutTemplateService>();
 builder.Services.AddScoped<IOctopusBookyearService, OctopusBookyearService>();
 builder.Services.AddScoped<IOctopusRelationSyncService, OctopusRelationSyncService>();
+// Documentencentrum
+builder.Services.Configure<CPMCore.Services.InvoiceExtraction.InvoiceExtractionOptions>(
+    builder.Configuration.GetSection("InvoiceExtraction"));
+builder.Services.AddScoped<CPMCore.Services.InvoiceExtraction.IAzureInvoiceAnalysisService,
+                            CPMCore.Services.InvoiceExtraction.AzureInvoiceAnalysisService>();
+builder.Services.AddScoped<ServiceCore.IncomingInvoices.IOctopusIncomingInvoiceSyncService, CPMCore.Services.Octopus.OctopusIncomingInvoiceSyncService>();
+builder.Services.AddScoped<FacadeCore.IIncomingInvoiceService, ServiceCore.IncomingInvoices.IncomingInvoiceService>();
 builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(client =>
 {
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

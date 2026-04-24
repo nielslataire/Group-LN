@@ -5,6 +5,7 @@ Public Class UnitBO
         _type = New UnitTypeBO
         _linkedunits = New List(Of UnitBO)
         _constructionvalues = New List(Of UnitConstructionValueBO)
+        _finishingoptions = New List(Of UnitFinishingOptionBO)
     End Sub
     Private _id As Integer
     Public Property Id() As Integer
@@ -320,6 +321,17 @@ Public Class UnitBO
         End Get
         Set(ByVal value As List(Of UnitConstructionValueBO))
             _constructionvalues = value
+        End Set
+    End Property
+
+    Private _finishingoptions As List(Of UnitFinishingOptionBO)
+
+    Public Property FinishingOptions() As List(Of UnitFinishingOptionBO)
+        Get
+            Return _finishingoptions
+        End Get
+        Set(ByVal value As List(Of UnitFinishingOptionBO))
+            _finishingoptions = value
         End Set
     End Property
 

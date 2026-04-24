@@ -119,6 +119,8 @@ public partial class IssuerCompany
 
     public decimal? RatePerKm { get; set; }
 
+    public string OctopusPurchaseJournalKeyPrefix { get; set; }
+
     public virtual ICollection<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; } = new List<ClientAccountIssuerCompany>();
 
     public virtual ICollection<ClientContactIssuerCompany> ClientContactIssuerCompany { get; set; } = new List<ClientContactIssuerCompany>();
@@ -130,6 +132,8 @@ public partial class IssuerCompany
     public virtual PaymentTerms DefaultPaymentTerm { get; set; }
 
     public virtual Vattype DefaultVatType { get; set; }
+
+    public virtual ICollection<IncommingInvoices> IncommingInvoices { get; set; } = new List<IncommingInvoices>();
 
     public virtual ICollection<InvoiceSeries> InvoiceSeries { get; set; } = new List<InvoiceSeries>();
 

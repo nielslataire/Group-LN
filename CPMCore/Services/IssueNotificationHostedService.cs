@@ -13,6 +13,8 @@ namespace CPMCore.Services;
 public class IssueNotificationHostedService : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(10);
+    // Prevents double execution when the internal scheduler and the external HTTP trigger fire simultaneously.
+    private readonly SemaphoreSlim _runLock = new(1, 1);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<IssueNotificationHostedService> _logger;
@@ -43,26 +45,39 @@ public class IssueNotificationHostedService : BackgroundService
 
     internal async Task RunJobsAsync(string triggeredBy = "scheduler")
     {
-        try
+        if (!await _runLock.WaitAsync(TimeSpan.Zero))
         {
-            using var scope = _scopeFactory.CreateScope();
-            var scheduler = scope.ServiceProvider.GetRequiredService<IIssueNotificationSchedulerService>();
-            await scheduler.RunDueJobsAsync(triggeredBy);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Fout tijdens uitvoering van IssueNotificationScheduler.");
+            _logger.LogWarning("RunJobsAsync ({TriggeredBy}) overgeslagen: vorige run is nog actief.", triggeredBy);
+            return;
         }
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var digest = scope.ServiceProvider.GetRequiredService<IContractorPortalDigestService>();
-            await digest.RunAsync();
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var scheduler = scope.ServiceProvider.GetRequiredService<IIssueNotificationSchedulerService>();
+                await scheduler.RunDueJobsAsync(triggeredBy);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fout tijdens uitvoering van IssueNotificationScheduler.");
+            }
+
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var digest = scope.ServiceProvider.GetRequiredService<IContractorPortalDigestService>();
+                await digest.RunAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fout tijdens uitvoering van ContractorPortalDigest.");
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            _logger.LogError(ex, "Fout tijdens uitvoering van ContractorPortalDigest.");
+            _runLock.Release();
         }
     }
 }

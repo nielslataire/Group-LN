@@ -974,7 +974,7 @@ public class LeveranciersController : BaseController
               InvoiceDate = i.Date,
               ExternalInvoiceId = i.ExternalId,
               Amount = i.Price,
-              ProjectId = i.ProjectId,
+              ProjectId = (int)i.ProjectId,
               ProjectName = i.Project != null ? i.Project.ProjectName : string.Empty
           })
           .ToListAsync(ct);

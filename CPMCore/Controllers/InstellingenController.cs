@@ -462,6 +462,7 @@ public class InstellingenController : BaseController
             OctopusCustomFieldsJson = vm.OctopusCustomFieldsJson,
             OctopusCustomFieldMappingsJson = BuildCustomFieldMappingJson(vm.CustomFieldMappings),
             OctopusDownloadLinkCustomFieldKeyId = vm.OctopusDownloadLinkCustomFieldKeyId,
+            OctopusPurchaseJournalKeyPrefix = vm.OctopusPurchaseJournalKeyPrefix,
         };
         await _issuers.CreateAsync(bo);
         AddMessage("success", "Mijn bedrijf " + vm.Name + " toegevoegd.", "Geslaagd!");
@@ -747,6 +748,7 @@ public class InstellingenController : BaseController
             OctopusCustomFieldsJson = vm.OctopusCustomFieldsJson,
             OctopusCustomFieldMappingsJson = BuildCustomFieldMappingJson(vm.CustomFieldMappings),
             OctopusDownloadLinkCustomFieldKeyId = vm.OctopusDownloadLinkCustomFieldKeyId,
+            OctopusPurchaseJournalKeyPrefix = vm.OctopusPurchaseJournalKeyPrefix,
         };
         await _issuers.UpdateAsync(bo, ct);
 

@@ -8,14 +8,6 @@
 @{
 	ViewData["Title"] = Model.ProjectName;
 }
-@{
-	ViewBag.Breadcrumbs = new List<Breadcrumb>()
-	{
-		new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),
-		new Breadcrumb("Projecten", nameof(ProjectenController.Index), "Projecten", true),
-		new Breadcrumb("Detail", nameof(ProjectenController.Detail), "Projecten", false)
-	};
-}
 @section PageStyle
 {
 <link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
@@ -259,15 +251,12 @@
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5 ">
 							<div class="form-group row align-items-center pb-3">
-								<label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Eenheid toevoegen</label>
-								<div class="col-lg-5 col-xl-6">
-
-									@Html.ListBoxFor(m => m.SelectedUnits, new SelectList(Model.AvailableUnits, "ID", "Display", Model.SelectedUnits, "Group"), new { @class = "form-control populate", data_plugin_selecttwo = "", id = "lstUnits" })
-
+								<label class="col-12 col-lg-4 col-xl-3 control-label text-lg-end mb-2 mb-lg-0">Eenheid toevoegen</label>
+								<div class="col-12 col-lg-5 col-xl-6 mb-2 mb-lg-0">
+									@Html.ListBoxFor(m => m.SelectedUnits, new SelectList(Model.AvailableUnits, "ID", "Display", Model.SelectedUnits, "Group"), new { @class = "form-control populate", data_plugin_selecttwo = "", id = "lstUnits", style = "width: 100%" })
 								</div>
-								<div class="col-lg-3 col-xl-3">
-									<button class="btn btn-default btn-block btn-md" type="button" id="btnAddUnits"><i class="fa fa-plus me-3"></i>Entiteiten Toevoegen</button>
-@* 									<a href="@Url.Action("BlankContactRow", "Klanten", null)" class="btn btn-default btn-md" id="btnAddUnits"><i class="fa fa-plus me-3"></i>Entiteiten Toevoegen</a> *@
+								<div class="col-12 col-lg-3 col-xl-3">
+									<button class="btn btn-default btn-block btn-md w-100" type="button" id="btnAddUnits"><i class="fa fa-plus me-3"></i>Entiteiten Toevoegen</button>
 								</div>
 							</div>
 							<div class="row mt-4">
@@ -351,15 +340,19 @@
 			}
 
 			function toggleInvoiceAddress(checkboxId, containerClass) {
-				$(containerClass).toggleClass('d-none', !$(checkboxId).is(":checked"));
+				if ($(checkboxId).is(":checked")) {
+					$(containerClass).removeAttr('hidden').removeClass('d-none');
+				} else {
+					$(containerClass).attr('hidden', 'hidden');
+				}
 			}
 
 			// ==============================
 			// Select2 postcode helper
 			// ==============================
-			function initSelect2(id, countryId, placeholder) {
+			function initSelect2(id, countrySelector, placeholder) {
 				$(id).select2({
-					minimumInputLength: 3,
+					minimumInputLength: 2,
 					theme: 'bootstrap',
 					dropdownAutoWidth: true,
 					placeholder: placeholder,
@@ -367,9 +360,10 @@
 						url: '@Url.Action("GetPostcodesByCountry", "Shared")',
 						cache: false,
 						type: 'POST',
+						delay: 250,
 						data: params => ({
 							term: params.term,
-							CountryId: countryId
+							CountryId: $(countrySelector).val() || 0
 						}),
 						processResults: data => ({
 							results: $.map(data, item => ({ id: item.id, text: item.text }))
@@ -377,10 +371,21 @@
 					}
 				});
 
-				$('#select2-' + id.replace('#','') + '-container')
+				$('#select2-' + id.replace('#', '') + '-container')
 					.parent()
 					.on('focus', () => $(id).select2('open'));
 			}
+
+			initSelect2('#txtPostalcode', '#lstCompanyCountries', 'Zoek postcode...');
+			initSelect2('#txtInvoicePostalcode', '#lstClientInvoiceCountries', 'Zoek postcode...');
+
+			$('#lstCompanyCountries').on('change', function () {
+				$('#txtPostalcode').val(null).trigger('change');
+			});
+
+			$('#lstClientInvoiceCountries').on('change', function () {
+				$('#txtInvoicePostalcode').val(null).trigger('change');
+			});
 
 			// ==============================
 			// Checkbox handlers
@@ -438,6 +443,27 @@
 				$("#lstUnits").val(null).trigger("change");
 			});
 
+			// Wissel van afwerkingsoptie → herladen unit row met nieuwe CVs
+			$(document).on('change', '.gl-finishing-option-select', function () {
+				const $select = $(this);
+				const unitId = $select.data('unit-id');
+				const unitName = $select.data('unit-name');
+				const unitGroup = $select.data('unit-group');
+				const finishingOptionId = $select.val();
+				const $unitRow = $select.closest('.unitRow');
+
+				$.ajax({
+					url: '@Url.Action("AddSelectedUnits", "Klanten")',
+					data: { UnitId: unitId, UnitName: unitName, UnitGroup: unitGroup, finishingOptionId: finishingOptionId },
+					type: 'POST',
+					success: function (html) {
+						const $newRow = $(html);
+						$unitRow.replaceWith($newRow);
+						applyCurrencyMasks($newRow.find('.Currencymask'));
+					}
+				});
+			});
+
 			$(document).on('click', 'a.deleterow', function () {
 				const $row = $(this).closest('tr');
 				const id = $row.find('td').eq(0).text();
@@ -461,6 +487,14 @@
 			$(document).on('click', 'a.deleteCoOwnerRow', function () {
 				$(this).closest('.coOwnerRow').remove();
 				return false;
+			});
+
+			$(document).on('change', '.toggle-CoOwnerInvoice', function () {
+				$(this).closest('.coOwnerRow').find('.CoOwnerInvoiceAddress').toggleClass('d-none', !$(this).is(':checked'));
+			});
+
+			$(document).on('change', '.toggle-CoOwnerCompany', function () {
+				$(this).closest('.coOwnerRow').find('.CoOwnerBedrijfsgegevens').toggleClass('d-none', !$(this).is(':checked'));
 			});
 
 			// ==============================

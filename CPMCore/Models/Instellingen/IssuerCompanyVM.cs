@@ -140,6 +140,10 @@ namespace CPMCore.Models.Instellingen
 
         [Display(Name = "Octopus dossiernummer")]
         public string? OctopusDossierNumber { get; set; }
+
+        [Display(Name = "Aankoopdagboek prefix")]
+        public string? OctopusPurchaseJournalKeyPrefix { get; set; }
+
         public string? OctopusCustomFieldsJson { get; set; }
 
         public string? OctopusCustomFieldMappingsJson { get; set; }

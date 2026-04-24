@@ -142,8 +142,15 @@
                         <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
                         <div class="col-lg-7 col-xl-6">
                             <div class="checkbox-custom checkbox-default">
-                            <i class="bx bx-location-plus"></i> @Html.CheckBox("InvoiceAddress", Model.InvoiceAddress ?? false, new { @class = "toggle-CoOwnerInvoice" })
-                                <label for="checkboxInvoiceAddress">Afwijkend facturatieadres</label>
+                                <i class="bx bx-location-plus"></i>
+                                <input type="checkbox"
+                                       id="@Html.IdFor(m => m.InvoiceAddress)"
+                                       name="@Html.NameFor(m => m.InvoiceAddress)"
+                                       value="true"
+                                       class="toggle-CoOwnerInvoice"
+                                       @(Model.InvoiceAddress == true ? "checked=\"checked\"" : "") />
+                                <label for="@Html.IdFor(m => m.InvoiceAddress)">Afwijkend facturatieadres</label>
+                                <input type="hidden" name="@Html.NameFor(m => m.InvoiceAddress)" value="false" />
                             </div>
                         </div>
                     </div>

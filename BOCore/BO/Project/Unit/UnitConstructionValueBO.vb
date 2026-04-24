@@ -67,6 +67,15 @@ Public Class UnitConstructionValueBO
             _unitId = value
         End Set
     End Property
+    Private _finishingOptionId As Integer?
+    Public Property FinishingOptionId() As Integer?
+        Get
+            Return _finishingOptionId
+        End Get
+        Set(ByVal value As Integer?)
+            _finishingOptionId = value
+        End Set
+    End Property
     Private _reduction As Decimal
     '<DisplayFormat(DataFormatString:="{0:0,00}")>
     <DisplayFormat(ApplyFormatInEditMode:=True, DataFormatString:="{0:C}")>

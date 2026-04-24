@@ -43,8 +43,6 @@ public partial class Units
 
     public bool IsLink { get; set; }
 
-    public bool IsOption { get; set; }
-
     public decimal? Surface { get; set; }
 
     public int? Level { get; set; }
@@ -58,6 +56,8 @@ public partial class Units
     public int? ConstructionValueId { get; set; }
 
     public int? LandValueInvoiceId { get; set; }
+
+    public bool IsOption { get; set; }
 
     public virtual Units AttachedUnit { get; set; }
 
@@ -88,6 +88,8 @@ public partial class Units
     public virtual UnitTypes Type { get; set; }
 
     public virtual ICollection<UnitConstructionValue> UnitConstructionValue { get; set; } = new List<UnitConstructionValue>();
+
+    public virtual ICollection<UnitFinishingOption> UnitFinishingOptions { get; set; } = new List<UnitFinishingOption>();
 
     public virtual ICollection<UnitExecutionPlan> UnitExecutionPlan { get; set; } = new List<UnitExecutionPlan>();
 

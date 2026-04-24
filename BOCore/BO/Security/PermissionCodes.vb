@@ -33,4 +33,8 @@
     Public Const SettingsActivities As String = "Settings.Activities"
     Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"
 
+    ' Documentencentrum — inkomende facturen / aankoopfacturen
+    Public Const DocumentCenter As String = "DocumentCenter"
+    Public Const DocumentCenterByBillingCompany As String = "DocumentCenter.ByBillingCompany"
+
 End Class

@@ -139,6 +139,10 @@ public partial class Invoices
 
     public virtual PostalCode PostalCode { get; set; }
 
+    public virtual ICollection<ProjectContractSlice> ProjectContractSlice { get; set; } = new List<ProjectContractSlice>();
+
+    public virtual ICollection<ProjectRegieUur> ProjectRegieUur { get; set; } = new List<ProjectRegieUur>();
+
     public virtual Invoices ReplacementOf { get; set; }
 
     public virtual InvoiceSeries Series { get; set; }
@@ -146,6 +150,4 @@ public partial class Invoices
     public virtual InvoiceStatusLookup Status { get; set; }
 
     public virtual ICollection<Units> Units { get; set; } = new List<Units>();
-
-    public virtual ICollection<ProjectRegieUur> ProjectRegieUur { get; set; } = new List<ProjectRegieUur>();
 }

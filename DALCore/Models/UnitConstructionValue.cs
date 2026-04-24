@@ -19,6 +19,10 @@ public partial class UnitConstructionValue
 
     public int UnitId { get; set; }
 
+    public int? FinishingOptionId { get; set; }
+
+    public virtual UnitFinishingOption FinishingOption { get; set; }
+
     public virtual InvoicingPaymentGroup PaymentGroup { get; set; }
 
     public virtual Units Unit { get; set; }

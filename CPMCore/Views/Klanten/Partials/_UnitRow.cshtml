@@ -13,13 +13,46 @@
                 </div>
                 @Html.HiddenFor(m => m.Id)
                 <div class="form-group">
+                    @if (Model.FinishingOptions != null && Model.FinishingOptions.Any())
+                    {
+                        <!-- Dropdown voor afwerkingsoptie -->
+                        <div class="row align-items-center pb-2">
+                            <div class="col-lg-2 col-xl-2">Afwerking</div>
+                            <div class="col-lg-10 col-xl-10">
+                                <select class="form-control form-control-sm gl-finishing-option-select"
+                                        data-unit-id="@Model.Id"
+                                        data-unit-name="@Model.Name"
+                                        data-unit-group="@Model.Type.Name">
+                                    @{
+                                        var selectedOptId = Model.ConstructionValues.Any()
+                                            ? Model.ConstructionValues.First().FinishingOptionId
+                                            : (int?)null;
+                                    }
+                                    @Html.DropDownList(
+                                        "gl-option-dummy",
+                                        Model.FinishingOptions.Select(opt => new SelectListItem
+                                        {
+                                            Value = opt.Id.ToString(),
+                                            Text = opt.Name,
+                                            Selected = opt.Id == selectedOptId
+                                        }),
+                                        new { @class = "form-control form-control-sm gl-finishing-option-select",
+                                              data_unit_id = Model.Id,
+                                              data_unit_name = Model.Name,
+                                              data_unit_group = Model.Type.Name }
+                                    )
+                                </select>
+                            </div>
+                        </div>
+                    }
+
                     <!-- Eerste rij: grondwaarde + eerste constructionvalue -->
                     <div class="row align-items-center pb-2">
                         <div class="col-lg-2 col-xl-2">
                             Grondwaarde
                         </div>
                         <div class="col-lg-4 col-xl-4">
-                            @Html.EditorFor(m => m.LandValueSold)
+                            @Html.EditorFor(m => m.LandValueSold, "Currency")
                         </div>
 
                         @if (Model.ConstructionValues.Count > 0)
@@ -29,7 +62,7 @@
                                 @Html.DisplayFor(m => m.ConstructionValues[0].Description)
                             </div>
                             <div class="col-lg-4 col-xl-4">
-                                @Html.EditorFor(m => m.ConstructionValues[0].ValueSold)
+                                @Html.EditorFor(m => m.ConstructionValues[0].ValueSold, "Currency")
                             </div>
                         }
                     </div>
@@ -46,14 +79,14 @@
                                 @Html.DisplayFor(m => m.ConstructionValues[j].Description)
                             </div>
                             <div class="col-lg-4 col-xl-4">
-                                @Html.EditorFor(m => m.ConstructionValues[j].ValueSold)
+                                @Html.EditorFor(m => m.ConstructionValues[j].ValueSold, "Currency")
                             </div>
                         </div>
                     }
                 </div>
             </div>
         </section>
-        
+
     }
 </div>
 

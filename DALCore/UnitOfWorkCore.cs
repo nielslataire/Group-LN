@@ -45,6 +45,7 @@ namespace DALCore
         public GenericRepository<UnitTypes> UnitTypes { get; }
         public GenericRepository<UnitGroupTypes> UnitGroupTypes { get; }
         public GenericRepository<UnitConstructionValue> UnitConstructionValues { get; }
+        public GenericRepository<UnitFinishingOption> UnitFinishingOptions { get; }
         public GenericRepository<ClientAccount> ClientAccounts { get; }
         public GenericRepository<ClientContacts> ClientContacts { get; }
         public GenericRepository<ContactRequests> ContactRequests { get; }
@@ -128,6 +129,7 @@ namespace DALCore
             UnitTypes = new GenericRepository<UnitTypes>(_context);
             UnitGroupTypes = new GenericRepository<UnitGroupTypes>(_context);
             UnitConstructionValues = new GenericRepository<UnitConstructionValue>(_context);
+            UnitFinishingOptions = new GenericRepository<UnitFinishingOption>(_context);
             ClientAccounts = new GenericRepository<ClientAccount>(_context);
             ClientContacts = new GenericRepository<ClientContacts>(_context);
             ContactRequests = new GenericRepository<ContactRequests>(_context);

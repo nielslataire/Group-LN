@@ -919,6 +919,137 @@ namespace ServiceCore
             return response;
         }
 
+        // UNIT FINISHING OPTIONS
+
+        public GetResponse<UnitFinishingOptionBO> GetFinishingOptions(int unitId)
+        {
+            var response = new GetResponse<UnitFinishingOptionBO>();
+
+            var options = _uow.UnitFinishingOptions.GetNoTracking()
+                .Where(o => o.UnitId == unitId)
+                .OrderBy(o => o.SortOrder)
+                .ThenBy(o => o.Id)
+                .ToList();
+
+            foreach (var option in options)
+            {
+                var bo = new UnitFinishingOptionBO();
+                var err = UnitFinishingOptionTranslator.TranslateEntityToBO(option, bo);
+                if (err != ErrorCode.Success) { response.AddError(err.ToString()); continue; }
+
+                var cvs = _uow.UnitConstructionValues.GetNoTracking()
+                    .Where(cv => cv.FinishingOptionId == option.Id)
+                    .Include(cv => cv.PaymentGroup)
+                    .ToList();
+
+                foreach (var cv in cvs)
+                {
+                    var cvBo = new UnitConstructionValueBO();
+                    UnitConstructionValueTranslator.TranslateEntityToBO(cv, cvBo);
+                    bo.ConstructionValues.Add(cvBo);
+                }
+
+                response.AddValue(bo);
+            }
+
+            return response;
+        }
+
+        public GetResponse<UnitFinishingOptionBO> GetFinishingOptionById(int id)
+        {
+            var response = new GetResponse<UnitFinishingOptionBO>();
+
+            var option = _uow.UnitFinishingOptions.GetNoTracking()
+                .Where(o => o.Id == id)
+                .FirstOrDefault();
+
+            if (option == null) { response.AddError("FinishingOption not found"); return response; }
+
+            var bo = new UnitFinishingOptionBO();
+            UnitFinishingOptionTranslator.TranslateEntityToBO(option, bo);
+
+            var cvs = _uow.UnitConstructionValues.GetNoTracking()
+                .Where(cv => cv.FinishingOptionId == id)
+                .Include(cv => cv.PaymentGroup)
+                .ToList();
+
+            foreach (var cv in cvs)
+            {
+                var cvBo = new UnitConstructionValueBO();
+                UnitConstructionValueTranslator.TranslateEntityToBO(cv, cvBo);
+                bo.ConstructionValues.Add(cvBo);
+            }
+
+            response.Value = bo;
+            return response;
+        }
+
+        public Response InsertUpdateFinishingOption(UnitFinishingOptionBO bo)
+        {
+            var response = new Response();
+
+            var entity = bo.Id == 0
+                ? _uow.UnitFinishingOptions.GetNew()
+                : _uow.UnitFinishingOptions.GetById(bo.Id);
+
+            if (entity == null) { response.AddError("FinishingOption not found"); return response; }
+
+            var err = UnitFinishingOptionTranslator.TranslateBOToEntity(entity, bo);
+            if (err != ErrorCode.Success) { response.AddError(err.ToString()); return response; }
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Afwerkingsoptie opgeslagen", "Geen wijzigingen", treatZeroAsInfo: true);
+            response.InsertedId = entity.Id;
+            return response;
+        }
+
+        public Response DeleteFinishingOption(int id)
+        {
+            var response = new Response();
+
+            // Ontkoppel CVs eerst (NO ACTION FK vereist handmatige null-set)
+            var cvs = _uow.UnitConstructionValues.GetNormal()
+                .Where(cv => cv.FinishingOptionId == id)
+                .ToList();
+            foreach (var cv in cvs)
+                cv.FinishingOptionId = null;
+
+            _uow.UnitFinishingOptions.DeleteObject(id);
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Afwerkingsoptie verwijderd", "Geen records verwijderd");
+            return response;
+        }
+
+        public Response EnsureDefaultFinishingOption(int unitId)
+        {
+            var response = new Response();
+
+            var hasOptions = _uow.UnitFinishingOptions.GetNormal().Any(o => o.UnitId == unitId);
+            if (hasOptions) { response.AddSaveChangesResult(1, "Al opties aanwezig", ""); return response; }
+
+            var legacyCvs = _uow.UnitConstructionValues.GetNormal()
+                .Where(cv => cv.UnitId == unitId && cv.FinishingOptionId == null)
+                .ToList();
+
+            if (!legacyCvs.Any()) { response.AddSaveChangesResult(1, "Geen bouwwaardes om te migreren", ""); return response; }
+
+            var defaultOption = _uow.UnitFinishingOptions.GetNew();
+            defaultOption.UnitId = unitId;
+            defaultOption.Name = "Standaard";
+            defaultOption.SortOrder = 0;
+            defaultOption.IsDefault = true;
+
+            _uow.SaveChanges();
+
+            foreach (var cv in legacyCvs)
+                cv.FinishingOptionId = defaultOption.Id;
+
+            var result = _uow.SaveChanges();
+            response.AddSaveChangesResult(result, "Bestaande bouwwaardes gemigreerd naar standaard afwerkingsoptie", "Geen wijzigingen");
+            response.InsertedId = defaultOption.Id;
+            return response;
+        }
+
         // UNIT CONSTRUCTION VALUES
         public GetResponse<UnitConstructionValueBO> GetConstructionValues(int unitId)
         {

@@ -44,6 +44,35 @@ namespace CPMCore.Services.Octopus
 
         Task<IReadOnlyList<OctopusDocumentDeliveryState>> GetInvoiceDeliveryStatesAsync(string dossierToken, string dossierNumber, OctopusDocumentSelectionData payload, CancellationToken ct = default);
 
+        // ─── Aankoopfacturen via buysellbookings/modified ─────────────────────────
+        // GET /dossiers/{dossierId}/buysellbookings/modified
+        // bookyearId = -1 haalt alle boekjaren op. modifiedSince = 1980-01-01 voor initiële sync.
+        // Max 48 calls/dag — gebruik incrementele sync via modifiedSince.
+        Task<IReadOnlyList<OctopusBuySellBookingItem>> GetPurchaseInvoicesAsync(
+            string dossierToken,
+            string dossierNumber,
+            int bookyearId,
+            string journalKey,
+            DateTime modifiedSince,
+            CancellationToken ct = default);
+
+        // ─── Booking File Sync API (https://service.inaras.be/octopus-filesync-api/v1) ──
+        // GET /dossiers/{dossierId}/bookingfiles  — gewijzigde bestandslijst
+        Task<IReadOnlyList<OctopusBookingFileItem>> GetBookingFilesAsync(
+            string dossierToken,
+            string dossierNumber,
+            DateTime modifiedSince,
+            int? bookyearId = null,
+            string journal = null,
+            int? documentSequenceNr = null,
+            CancellationToken ct = default);
+
+        // POST /dossiers/{dossierId}/bookingfiles  — download bijlage (octet-stream)
+        Task<OctopusPurchaseInvoiceAttachment> DownloadBookingFileAsync(
+            string dossierToken,
+            string dossierNumber,
+            OctopusBookingFileItem fileItem,
+            CancellationToken ct = default);
     }
 
     public class OctopusApiClient : IOctopusApiClient
@@ -437,6 +466,156 @@ namespace CPMCore.Services.Octopus
             return result;
         }
 
+        // ─── Aankoopfacturen ──────────────────────────────────────────────────────
+
+        public async Task<IReadOnlyList<OctopusBuySellBookingItem>> GetPurchaseInvoicesAsync(
+            string dossierToken,
+            string dossierNumber,
+            int bookyearId,
+            string journalKey,
+            DateTime modifiedSince,
+            CancellationToken ct = default)
+        {
+            // GET /dossiers/{dossierId}/buysellbookings/modified
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/buysellbookings/modified");
+            EnsureUrl(url, "Aankoopfacturen ophalen");
+
+            var query = new Dictionary<string, string?>
+            {
+                ["bookyearId"] = bookyearId.ToString(CultureInfo.InvariantCulture),
+                ["modifiedTimeStamp"] = modifiedSince.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
+            };
+
+            if (!string.IsNullOrWhiteSpace(journalKey))
+                query["journalKey"] = journalKey;
+
+            url = QueryHelpers.AddQueryString(url, query);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return Array.Empty<OctopusBuySellBookingItem>();
+
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusBuySellBookingItem>>(cancellationToken: ct)
+                         ?? new List<OctopusBuySellBookingItem>();
+            return result;
+        }
+
+        public async Task<OctopusPurchaseInvoiceAttachment> GetPurchaseInvoiceAttachmentAsync(
+            string dossierToken,
+            string dossierNumber,
+            int documentSequenceNr,
+            CancellationToken ct = default)
+        {
+            // TODO: Vervang het endpoint-pad door het juiste Octopus REST-pad voor bijlagen bij aankoopfacturen.
+            //       Vermoedelijk: dossiers/{dossierNumber}/purchaseinvoices/{documentSequenceNr}/attachment
+            var url = BuildUrl(_options.ApiBaseUrl, $"dossiers/{dossierNumber}/purchaseinvoices/{documentSequenceNr}/attachment");
+            EnsureUrl(url, "Aankoopfactuur bijlage ophalen");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
+
+            await EnsureSuccessAsync(response, url);
+
+            var content = await response.Content.ReadAsByteArrayAsync(ct);
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            var fileName = response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ?? $"invoice_{documentSequenceNr}.pdf";
+
+            return new OctopusPurchaseInvoiceAttachment
+            {
+                FileName = fileName,
+                ContentType = contentType,
+                Content = content
+            };
+        }
+
+        // ─── Booking File Sync API ────────────────────────────────────────────────
+
+        public async Task<IReadOnlyList<OctopusBookingFileItem>> GetBookingFilesAsync(
+            string dossierToken,
+            string dossierNumber,
+            DateTime modifiedSince,
+            int? bookyearId = null,
+            string journal = null,
+            int? documentSequenceNr = null,
+            CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.FileSyncApiBaseUrl, $"dossiers/{dossierNumber}/bookingfiles");
+            EnsureUrl(url, "Booking bestandslijst ophalen");
+
+            var query = new Dictionary<string, string?>
+            {
+                ["modifiedTimeStamp"] = modifiedSince.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)
+            };
+            if (bookyearId.HasValue)
+                query["bookyearId"] = bookyearId.Value.ToString(CultureInfo.InvariantCulture);
+            if (!string.IsNullOrWhiteSpace(journal))
+                query["journal"] = journal;
+            if (documentSequenceNr.HasValue)
+                query["documentSequenceNr"] = documentSequenceNr.Value.ToString(CultureInfo.InvariantCulture);
+
+            url = QueryHelpers.AddQueryString(url, query);
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return Array.Empty<OctopusBookingFileItem>();
+
+            await EnsureSuccessAsync(response, url);
+
+            var result = await response.Content.ReadFromJsonAsync<List<OctopusBookingFileItem>>(cancellationToken: ct)
+                         ?? new List<OctopusBookingFileItem>();
+            return result;
+        }
+
+        public async Task<OctopusPurchaseInvoiceAttachment> DownloadBookingFileAsync(
+            string dossierToken,
+            string dossierNumber,
+            OctopusBookingFileItem fileItem,
+            CancellationToken ct = default)
+        {
+            var url = BuildUrl(_options.FileSyncApiBaseUrl, $"dossiers/{dossierNumber}/bookingfiles");
+            EnsureUrl(url, "Booking bestand downloaden");
+
+            // POST met het exacte SyncFileKeyBooking object dat de GET teruggaf
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = JsonContent.Create(fileItem)
+            };
+            request.Headers.Add("dossierToken", dossierToken);
+
+            using var response = await _httpClient.SendAsync(request, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                return null;
+
+            await EnsureSuccessAsync(response, url);
+
+            var content = await response.Content.ReadAsByteArrayAsync(ct);
+            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            var fileName = fileItem.FileName ?? "bijlage.pdf";
+
+            return new OctopusPurchaseInvoiceAttachment
+            {
+                FileName = fileName,
+                ContentType = contentType,
+                Content = content
+            };
+        }
+
         private static string BuildUrl(string baseUrl, string path)
         {
             baseUrl ??= string.Empty;
@@ -507,6 +686,9 @@ namespace CPMCore.Services.Octopus
 
             return body;
         }
+
+        // ─── Purchase invoice response models (inkomende facturen) ───────────────
+        // TODO: Pas deze klassen aan zodra het exacte Octopus-responseschema bekend is.
 
         private class OctopusErrorResult
         {
@@ -862,5 +1044,149 @@ namespace CPMCore.Services.Octopus
         // De caller gebruikt DateTime.UtcNow.AddSeconds(590) als fallback.
         [JsonPropertyName("validUntil")]
         public DateTime? ValidUntil { get; set; }
+    }
+
+    // ─── BuySellBookings response models (GET /buysellbookings/modified) ────────
+
+    /// <summary>
+    /// Octopus BuySellBookingServiceData — response van GET /dossiers/{id}/buysellbookings/modified.
+    /// Bevat zowel aankoop- als verkoopboekingen; filter op journalKey om enkel aankopen te bewaren.
+    /// </summary>
+    public class OctopusBuySellBookingItem
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKey? BookyearKey { get; set; }
+
+        [JsonPropertyName("journalKey")]
+        public string? JournalKey { get; set; }
+
+        /// <summary>Document number identification — deel van de unieke sleutel.</summary>
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
+
+        [JsonPropertyName("relationIdentificationServiceData")]
+        public OctopusRelationIdentificationData? RelationIdentificationServiceData { get; set; }
+
+        [JsonPropertyName("bookyearPeriodeNr")]
+        public int BookyearPeriodeNr { get; set; }
+
+        [JsonPropertyName("documentDate")]
+        public DateOnly DocumentDate { get; set; }
+
+        [JsonPropertyName("expiryDate")]
+        public DateOnly ExpiryDate { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+
+        [JsonPropertyName("orderReference")]
+        public string? OrderReference { get; set; }
+
+        /// <summary>Factuurnummer van de leverancier.</summary>
+        [JsonPropertyName("reference")]
+        public string? Reference { get; set; }
+
+        /// <summary>Totaal boekingsbedrag (incl. BTW).</summary>
+        [JsonPropertyName("amount")]
+        public double Amount { get; set; }
+
+        [JsonPropertyName("currencyCode")]
+        public string? CurrencyCode { get; set; }
+
+        [JsonPropertyName("exchangeRate")]
+        public double ExchangeRate { get; set; }
+
+        [JsonPropertyName("bookingLines")]
+        public List<OctopusBuySellBookingLineItem>? BookingLines { get; set; }
+
+        /// <summary>0=Unknown,1=Bank Transfer,2=Cash,3=Creditcard,4=Domiciliëring,11=For approval,12=Blocked…</summary>
+        [JsonPropertyName("paymentMethod")]
+        public int PaymentMethod { get; set; }
+
+        // ── Computed helpers ──────────────────────────────────────────────────
+        [JsonIgnore]
+        public string ExternalId => $"{BookyearKey?.Id}_{JournalKey}_{DocumentSequenceNr}";
+
+        [JsonIgnore]
+        public int? SupplierRelationKey => RelationIdentificationServiceData?.RelationKey?.Id;
+
+        [JsonIgnore]
+        public decimal TotalAmountDecimal => (decimal)Amount;
+
+        [JsonIgnore]
+        public decimal VatAmountDecimal =>
+            (decimal)(BookingLines?.Sum(l => l.VatAmount) ?? 0);
+
+        [JsonIgnore]
+        public decimal NetAmountDecimal =>
+            (decimal)(BookingLines?.Sum(l => l.BaseAmount) ?? 0);
+
+        /// <summary>Leveranciersfactuurnummer: Reference indien gevuld, anders OrderReference.</summary>
+        [JsonIgnore]
+        public string InvoiceNumber =>
+            !string.IsNullOrWhiteSpace(Reference) ? Reference :
+            !string.IsNullOrWhiteSpace(OrderReference) ? OrderReference :
+            DocumentSequenceNr.ToString(CultureInfo.InvariantCulture);
+    }
+
+    public class OctopusBuySellBookingLineItem
+    {
+        [JsonPropertyName("accountKey")]
+        public int AccountKey { get; set; }
+
+        [JsonPropertyName("baseAmount")]
+        public double BaseAmount { get; set; }
+
+        [JsonPropertyName("vatCodeKey")]
+        public string? VatCodeKey { get; set; }
+
+        [JsonPropertyName("vatAmount")]
+        public double VatAmount { get; set; }
+
+        [JsonPropertyName("comment")]
+        public string? Comment { get; set; }
+    }
+
+    public class OctopusPurchaseInvoiceAttachment
+    {
+        public string FileName { get; set; }
+        public string ContentType { get; set; }
+        public byte[] Content { get; set; }
+    }
+
+    // ─── Booking File Sync API models ─────────────────────────────────────────
+
+    /// <summary>
+    /// Bestandsverwijzing vanuit GET /bookingfiles of als request body voor POST /bookingfiles.
+    /// Gebruik het object exact zoals je het van de GET ontvangen hebt als POST body voor download.
+    /// </summary>
+    public class OctopusBookingFileItem
+    {
+        [JsonPropertyName("documentKey")]
+        public OctopusBookingDocumentKey? DocumentKey { get; set; }
+
+        [JsonPropertyName("fileName")]
+        public string? FileName { get; set; }
+
+        /// <summary>Submap-pad binnen het Octopus-archief (meesturen bij POST download).</summary>
+        [JsonPropertyName("fileSubDirectoryList")]
+        public List<string>? FileSubDirectoryList { get; set; }
+    }
+
+    public class OctopusBookingDocumentKey
+    {
+        [JsonPropertyName("bookyearKey")]
+        public OctopusBookyearKey? BookyearKey { get; set; }
+
+        /// <summary>Journaaltype (integer, intern Octopus-veld).</summary>
+        [JsonPropertyName("journalType")]
+        public int JournalType { get; set; }
+
+        /// <summary>Interne journaalvolgnummer (niet hetzelfde als journalKey string).</summary>
+        [JsonPropertyName("journalSequenceNr")]
+        public int JournalSequenceNr { get; set; }
+
+        [JsonPropertyName("documentSequenceNr")]
+        public int DocumentSequenceNr { get; set; }
     }
 }

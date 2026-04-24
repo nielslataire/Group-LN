@@ -43,13 +43,10 @@ public class ContractorPortalController : BaseController
         var today = DateOnly.FromDateTime(DateTime.Today);
         var weekEnd = today.AddDays(7);
 
-        // Volledig: alle punten van het bedrijf.
-        // Beperkt: enkel punten van de projecten waarvoor deze contactpersoon SiteManager is.
         var issueQuery = _db.ConstructionIssue
             .AsNoTracking()
-            .Where(i => projectIds.Contains(i.ProjectId));
-        if (!isFullAdmin)
-            issueQuery = issueQuery.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+            .Where(i => projectIds.Contains(i.ProjectId))
+            .Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
 
         var issues = await issueQuery
             .Include(i => i.Project)
@@ -149,11 +146,10 @@ public class ContractorPortalController : BaseController
         }
         else
         {
-            var q = _db.ConstructionIssue.AsNoTracking()
-                .Where(i => projectIds.Contains(i.ProjectId));
-            if (!isFullAdmin)
-                q = q.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
-            issues = await q.ToListAsync(ct);
+            issues = await _db.ConstructionIssue.AsNoTracking()
+                .Where(i => projectIds.Contains(i.ProjectId))
+                .Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0))
+                .ToListAsync(ct);
         }
 
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -229,9 +225,8 @@ public class ContractorPortalController : BaseController
 
         var issueQuery = _db.ConstructionIssue
             .AsNoTracking()
-            .Where(i => i.ProjectId == projectId);
-        if (!isFullAdmin)
-            issueQuery = issueQuery.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
+            .Where(i => i.ProjectId == projectId)
+            .Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
 
         var allIssues = await issueQuery
             .Include(i => i.Category)
@@ -399,12 +394,11 @@ public class ContractorPortalController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> ResolveIssue(int projectId, int issueId, CancellationToken ct)
     {
-        var (companyIds, _, isFullAdmin, limitToContactIds) = await GetContractorContextAsync(ct);
-        var issueQ = _db.ConstructionIssue
-            .Where(i => i.Id == issueId && i.ProjectId == projectId);
-        if (!isFullAdmin)
-            issueQ = issueQ.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
-        var issue = await issueQ.FirstOrDefaultAsync(ct);
+        var (companyIds, _, _, _) = await GetContractorContextAsync(ct);
+        var issue = await _db.ConstructionIssue
+            .Where(i => i.Id == issueId && i.ProjectId == projectId)
+            .Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0))
+            .FirstOrDefaultAsync(ct);
 
         if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
 
@@ -425,11 +419,11 @@ public class ContractorPortalController : BaseController
         if (string.IsNullOrWhiteSpace(req?.Comment) && !hasPhotos)
             return Json(new { ok = false, error = "Opmerking of foto vereist." });
 
-        var (companyIds, _, isFullAdmin, _) = await GetContractorContextAsync(ct);
-        var issueQ = _db.ConstructionIssue.Where(i => i.Id == issueId && i.ProjectId == projectId);
-        if (!isFullAdmin)
-            issueQ = issueQ.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
-        var issue = await issueQ.FirstOrDefaultAsync(ct);
+        var (companyIds, _, _, _) = await GetContractorContextAsync(ct);
+        var issue = await _db.ConstructionIssue
+            .Where(i => i.Id == issueId && i.ProjectId == projectId)
+            .Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0))
+            .FirstOrDefaultAsync(ct);
         if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
 
         var cleanUrls = req?.PhotoUrls?.Where(u => !string.IsNullOrWhiteSpace(u)).ToList() ?? new List<string>();
@@ -452,11 +446,11 @@ public class ContractorPortalController : BaseController
         if (file == null || file.Length == 0)
             return Json(new { ok = false, error = "Geen bestand geselecteerd." });
 
-        var (companyIds, _, isFullAdmin, _) = await GetContractorContextAsync(ct);
-        var issueQ = _db.ConstructionIssue.Where(i => i.Id == issueId && i.ProjectId == projectId);
-        if (!isFullAdmin)
-            issueQ = issueQ.Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0));
-        var issue = await issueQ.FirstOrDefaultAsync(ct);
+        var (companyIds, _, _, _) = await GetContractorContextAsync(ct);
+        var issue = await _db.ConstructionIssue
+            .Where(i => i.Id == issueId && i.ProjectId == projectId)
+            .Where(i => companyIds.Contains(i.ResponsiblePartyId ?? 0))
+            .FirstOrDefaultAsync(ct);
         if (issue == null) return Json(new { ok = false, error = "Punt niet gevonden." });
 
         var fileId = await UploadToStorageAsync(file, "pictures", ct);

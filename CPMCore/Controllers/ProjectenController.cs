@@ -1362,6 +1362,11 @@ namespace CPMCore.Controllers
             if ((responseconstructionvalues.Success))
                 model.ConstructionValues = responseconstructionvalues.Values;
 
+            // Get FinishingOptions (auto-migrate legacy CVs on first open)
+            service.EnsureDefaultFinishingOption(unitid);
+            var responseFinishing = service.GetFinishingOptions(unitid);
+            model.FinishingOptions = responseFinishing.Success ? responseFinishing.Values : new List<UnitFinishingOptionBO>();
+
             // Get Subtypes
             var responsetypes = service.GetUnitTypesByGroupId(model.Unit.Type.GroupId);
             if ((responsetypes.Success))
@@ -1635,15 +1640,55 @@ namespace CPMCore.Controllers
             return model;
         }
         [HttpPost]
-        public PartialViewResult BlankConstructionValueRow(int unitid, int projectid)
+        public PartialViewResult BlankConstructionValueRow(int unitid, int projectid, int? finishingOptionId = null)
         {
             UnitConstructionValueBO bo = new UnitConstructionValueBO();
             bo.UnitId = unitid;
             bo.PaymentGroupId = 0;
+            bo.FinishingOptionId = finishingOptionId;
             var service2 = _projectService;
             var responsepaymentgroups = service2.GetProjectPaymentGroupsForSelect(projectid);
             ViewBag.paymentgroups = responsepaymentgroups.Values;
             return PartialView("_ConstructionValueRow", bo);
+        }
+
+        [HttpPost]
+        public JsonResult AddFinishingOption(int unitId, string name)
+        {
+            var bo = new UnitFinishingOptionBO { UnitId = unitId, Name = name, SortOrder = 0 };
+            var resp = _unitService.InsertUpdateFinishingOption(bo);
+            if (!resp.Success)
+                return Json(new { error = "Kon optie niet opslaan" });
+            return Json(new { id = resp.InsertedId, name });
+        }
+
+        [HttpPost]
+        public JsonResult RenameFinishingOption(int id, string name)
+        {
+            var resp = _unitService.GetFinishingOptionById(id);
+            if (!resp.Success) return Json(new { error = "Niet gevonden" });
+            resp.Value.Name = name;
+            _unitService.InsertUpdateFinishingOption(resp.Value);
+            return Json(new { ok = true });
+        }
+
+        [HttpPost]
+        public JsonResult RemoveFinishingOption(int id)
+        {
+            _unitService.DeleteFinishingOption(id);
+            return Json(new { ok = true });
+        }
+
+        [HttpPost]
+        public PartialViewResult BlankFinishingOptionSection(int optionId, int unitId, int projectId)
+        {
+            var resp = _unitService.GetFinishingOptionById(optionId);
+            var bo = resp.Success ? resp.Value : new UnitFinishingOptionBO { Id = optionId, UnitId = unitId };
+            var pgResp = _projectService.GetProjectPaymentGroupsForSelect(projectId);
+            ViewBag.PaymentGroups = pgResp.Values.Select(pg => new SelectListItem { Value = pg.ID.ToString(), Text = pg.Display }).ToList();
+            ViewBag.UnitId = unitId;
+            ViewBag.ProjectId = projectId;
+            return PartialView("_FinishingOptionSection", bo);
         }
         [HttpPost]
         public PartialViewResult BlankRoomRow(int unitid)

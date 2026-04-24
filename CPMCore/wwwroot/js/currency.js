@@ -28,6 +28,8 @@ window.CurrencyMask = (function () {
             elements = [target];
         } else if (target instanceof NodeList || Array.isArray(target)) {
             elements = target;
+        } else if (target && typeof target === 'object' && typeof target.toArray === 'function') {
+            elements = target.toArray();
         }
 
         elements.forEach(el => {

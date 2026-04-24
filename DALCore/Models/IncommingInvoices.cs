@@ -19,13 +19,63 @@ public partial class IncommingInvoices
 
     public int? CompanyId { get; set; }
 
-    public int ProjectId { get; set; }
+    public int? ProjectId { get; set; }
+
+    public int? IssuerCompanyId { get; set; }
+
+    public string SupplierName { get; set; }
+
+    public string SupplierVatNumber { get; set; }
+
+    public int? OctopusSupplierRelationKey { get; set; }
+
+    public DateOnly? DueDate { get; set; }
+
+    public decimal? VatAmount { get; set; }
+
+    public decimal? NetAmount { get; set; }
+
+    public string CurrencyCode { get; set; }
+
+    public byte StatusId { get; set; }
+
+    public string DocumentType { get; set; }
+
+    public string Source { get; set; }
+
+    public string Notes { get; set; }
+
+    public string OctopusExternalId { get; set; }
+
+    public DateTime? SyncedAt { get; set; }
+
+    public string SyncError { get; set; }
+
+    public int? OctopusBookyearId { get; set; }
+
+    public string OctopusJournalKey { get; set; }
+
+    public int? OctopusDocumentSequenceNr { get; set; }
+
+    public DateTime? OctopusBookedAt { get; set; }
+
+    public string OctopusBookedBy { get; set; }
+
+    public string OctopusBookingStatus { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
 
     public virtual CompanyInfo Company { get; set; }
 
     public virtual Contract Contract { get; set; }
 
+    public virtual ICollection<IncomingInvoiceAttachments> IncomingInvoiceAttachments { get; set; } = new List<IncomingInvoiceAttachments>();
+
     public virtual ICollection<IncommingInvoiceDetail> IncommingInvoiceDetail { get; set; } = new List<IncommingInvoiceDetail>();
+
+    public virtual IssuerCompany IssuerCompany { get; set; }
 
     public virtual Project Project { get; set; }
 }

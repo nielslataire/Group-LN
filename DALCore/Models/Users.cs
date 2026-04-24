@@ -55,6 +55,8 @@ public partial class Users
 
     public virtual ICollection<SecurityUserRole> SecurityUserRole { get; set; } = new List<SecurityUserRole>();
 
+    public virtual ICollection<UserCoachmarkState> UserCoachmarkState { get; set; } = new List<UserCoachmarkState>();
+
     public virtual ICollection<UserCompanyAccess> UserCompanyAccess { get; set; } = new List<UserCompanyAccess>();
 
     public virtual ICollection<UserGuestInvitation> UserGuestInvitationInvitedByUser { get; set; } = new List<UserGuestInvitation>();

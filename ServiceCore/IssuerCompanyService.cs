@@ -73,6 +73,7 @@ namespace ServiceCore
                     OctopusDossierToken = x.company.OctopusDossierToken,
                     OctopusDossierTokenValidUntil = x.company.OctopusDossierTokenValidUntil,
                     OctopusDossierNumber = x.company.OctopusDossierNumber,
+                    OctopusPurchaseJournalKeyPrefix = x.company.OctopusPurchaseJournalKeyPrefix,
                     OctopusCustomFieldsJson = x.company.OctopusCustomFieldsJson,
                     OctopusCustomFieldMappingsJson = x.company.OctopusCustomFieldMappingsJson,
                     OctopusDownloadLinkCustomFieldKeyId = x.company.OctopusDownloadLinkCustomFieldKeyId
@@ -458,6 +459,7 @@ namespace ServiceCore
                 OctopusDossierToken = x.OctopusDossierToken,
                 OctopusDossierTokenValidUntil = x.OctopusDossierTokenValidUntil,
                 OctopusDossierNumber = x.OctopusDossierNumber,
+                OctopusPurchaseJournalKeyPrefix = x.OctopusPurchaseJournalKeyPrefix,
                 OctopusCustomFieldsJson = x.OctopusCustomFieldsJson,
                 OctopusCustomFieldMappingsJson = x.OctopusCustomFieldMappingsJson,
                 OctopusDownloadLinkCustomFieldKeyId = x.OctopusDownloadLinkCustomFieldKeyId,
@@ -517,6 +519,7 @@ namespace ServiceCore
             e.OctopusDossierToken = bo.OctopusDossierToken;
             e.OctopusDossierTokenValidUntil = bo.OctopusDossierTokenValidUntil;
             e.OctopusDossierNumber = bo.OctopusDossierNumber;
+            e.OctopusPurchaseJournalKeyPrefix = bo.OctopusPurchaseJournalKeyPrefix;
             e.OctopusCustomFieldsJson = bo.OctopusCustomFieldsJson;
             e.OctopusCustomFieldMappingsJson = bo.OctopusCustomFieldMappingsJson;
             e.OctopusDownloadLinkCustomFieldKeyId = bo.OctopusDownloadLinkCustomFieldKeyId;

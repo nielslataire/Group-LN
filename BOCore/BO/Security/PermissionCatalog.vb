@@ -33,7 +33,9 @@
             New PermissionDefinition(PermissionCodes.SettingsUsers, "Gebruikers", PermissionCodes.Settings, 73),
             New PermissionDefinition(PermissionCodes.SettingsInvoiceTemplates, "Factuurtemplates", PermissionCodes.Settings, 74),
             New PermissionDefinition(PermissionCodes.SettingsActivities, "Activiteiten", PermissionCodes.Settings, 75),
-            New PermissionDefinition(PermissionCodes.SettingsIssueNotifications, "Puntmeldingen", PermissionCodes.Settings, 76)
+            New PermissionDefinition(PermissionCodes.SettingsIssueNotifications, "Puntmeldingen", PermissionCodes.Settings, 76),
+            New PermissionDefinition(PermissionCodes.DocumentCenter, "Documentencentrum", Nothing, 80),
+            New PermissionDefinition(PermissionCodes.DocumentCenterByBillingCompany, "Per facturatiebedrijf", PermissionCodes.DocumentCenter, 81)
         }
 
 End Class

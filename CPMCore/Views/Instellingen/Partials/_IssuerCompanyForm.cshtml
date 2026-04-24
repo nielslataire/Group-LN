@@ -425,6 +425,19 @@
                             </div>
                         </div>
                         <div class="row align-items-start pb-3">
+                            <label class="col-md-3 control-label text-lg-end mb-0" asp-for="OctopusPurchaseJournalKeyPrefix">Aankoopdagboek prefix</label>
+                            <div class="col-md-9">
+                                <input asp-for="OctopusPurchaseJournalKeyPrefix" class="form-control form-control-modern"
+                                       placeholder="bv. A" maxlength="20" style="max-width:160px" />
+                                <small class="text-muted">
+                                    Enkel boekingen waarvan de dagboeksleutel begint met deze prefix worden geïmporteerd als inkomende factuur
+                                    (bv. <code>A</code> voor A1, A2 … = aankoopjournalen).
+                                    Leeg = alle boekingen importeren (niet aanbevolen).
+                                    Laat leeg om de globale instelling te gebruiken (<code>appsettings.json → Octopus:PurchaseJournalKeyPrefix</code>).
+                                </small>
+                            </div>
+                        </div>
+                        <div class="row align-items-start pb-3">
                             <label class="col-md-3 control-label text-lg-end mb-0">Boekjaren &amp; dagboeken</label>
                             <div class="col-md-9">
                                 <div class="d-flex gap-2 mb-2">

@@ -26,6 +26,7 @@ namespace ServiceCore.Translators
                 bo.PaymentGroupId = _entity.PaymentGroup.Id;
             if (_entity.Unit is not null)
                 bo.UnitId = _entity.Unit.Id;
+            bo.FinishingOptionId = _entity.FinishingOptionId;
             return ErrorCode.Success;
         }
 
@@ -43,6 +44,7 @@ namespace ServiceCore.Translators
             _entity.PaymentGroupId = bo.PaymentGroupId;
             if ((bo.UnitId != 0))
                 _entity.UnitId = bo.UnitId;
+            _entity.FinishingOptionId = bo.FinishingOptionId;
             return ErrorCode.Success;
         }
     }

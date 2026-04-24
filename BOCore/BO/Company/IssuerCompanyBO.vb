@@ -61,6 +61,7 @@
     Public Property OctopusDossierToken As String
     Public Property OctopusDossierTokenValidUntil As Date?
     Public Property OctopusDossierNumber As String
+    Public Property OctopusPurchaseJournalKeyPrefix As String
     Public Property OctopusCustomFieldsJson As String
     Public Property OctopusCustomFieldMappingsJson As String
     Public Property OctopusDownloadLinkCustomFieldKeyId As Integer?

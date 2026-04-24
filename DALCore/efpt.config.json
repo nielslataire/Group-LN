@@ -223,6 +223,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[IncomingInvoiceAttachments]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[IncommingInvoiceDetail]",
          "ObjectType": 0
       },
@@ -395,6 +399,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ProjectRegieUur]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ProjectSalesSettings]",
          "ObjectType": 0
       },
@@ -460,6 +468,10 @@
       },
       {
          "Name": "[dbo].[UnitTypes]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UserCoachmarkState]",
          "ObjectType": 0
       },
       {

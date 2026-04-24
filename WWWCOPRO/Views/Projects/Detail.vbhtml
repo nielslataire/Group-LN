@@ -275,9 +275,9 @@ End Section
                                             </thead>
                                             <tbody>
                                                 @For Each unit In aptUnits
-                                                    Dim isInOption = unit.IsOption
-                                                    Dim isSold = (unit.ClientAccountId <> 0 AndAlso Not isInOption)
-                                                    Dim isAvailable = (Not isInOption AndAlso Not isSold)
+                                                    Dim isSold = (unit.ClientAccountId <> 0)
+                                                    Dim isInOption = (Not isSold AndAlso unit.IsOption)
+                                                    Dim isAvailable = (Not isSold AndAlso Not isInOption)
                                                     Dim terras = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Sum(Function(i) i.Surface)
                                                     Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
@@ -398,9 +398,9 @@ End Section
                                             </thead>
                                             <tbody>
                                                 @For Each unit In wonUnits
-                                                    Dim isInOption = unit.IsOption
-                                                    Dim isSold = (unit.ClientAccountId <> 0 AndAlso Not isInOption)
-                                                    Dim isAvailable = (Not isInOption AndAlso Not isSold)
+                                                    Dim isSold = (unit.ClientAccountId <> 0)
+                                                    Dim isInOption = (Not isSold AndAlso unit.IsOption)
+                                                    Dim isAvailable = (Not isSold AndAlso Not isInOption)
                                                     Dim surface = unit.Surface
                                                     Dim ground = unit.GroundSurface
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
@@ -518,9 +518,9 @@ End Section
                                             </thead>
                                             <tbody>
                                                 @For Each unit In handUnits
-                                                    Dim isInOption = unit.IsOption
-                                                    Dim isSold = (unit.ClientAccountId <> 0 AndAlso Not isInOption)
-                                                    Dim isAvailable = (Not isInOption AndAlso Not isSold)
+                                                    Dim isSold = (unit.ClientAccountId <> 0)
+                                                    Dim isInOption = (Not isSold AndAlso unit.IsOption)
+                                                    Dim isAvailable = (Not isSold AndAlso Not isInOption)
                                                     Dim surface = unit.Surface
                                                     @<tr class="@(If(isSold, "rij-verkocht", ""))">
                                                         <td>

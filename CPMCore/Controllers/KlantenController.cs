@@ -883,6 +883,13 @@ namespace CPMCore.Controllers
                 }
             }
 
+            var bcIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+            var bcProjecten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = bcIndex };
+            var bcProject = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName) { Parent = bcProjecten, RouteValues = new { projectid = id } };
+            var bcKlanten = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailClients", "Projecten", "Klanten") { Parent = bcProject, RouteValues = new { projectid = id } };
+            var bcAdd = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddClientAccount", "Klanten", "Klant toevoegen") { Parent = bcKlanten };
+            ViewData["BreadcrumbNode"] = bcAdd;
+
             return View(model);
         }
         [HttpPost]
@@ -950,6 +957,7 @@ namespace CPMCore.Controllers
 
                 var bo = unitResponse.Value;
                 bo.ClientAccountId = model.ClientAccount.Id;
+                bo.IsOption = false;
                 bo.ConstructionValueSold = item.ConstructionValueSold;
                 bo.LandValueSold = item.LandValueSold;
 
@@ -1638,24 +1646,36 @@ namespace CPMCore.Controllers
             };
         }
         [HttpPost]
-        public PartialViewResult AddSelectedUnits(int unitId, string unitName, string unitGroup)
+        public PartialViewResult AddSelectedUnits(int unitId, string unitName, string unitGroup, int? finishingOptionId = null)
         {
             var unitService = _unitService;
             var response = unitService.GetUnitById(unitId);
 
             if (!response.Success)
-            {
-                // Optioneel: behandel fout of geef lege partial terug
                 return PartialView("_UnitRow", new UnitBO());
-            }
 
             var unit = response.Value;
-
             unit.LandValueSold = unit.LandValue;
 
-            foreach (var item in unit.ConstructionValues)
+            // Laad finishing options
+            var optResp = unitService.GetFinishingOptions(unitId);
+            unit.FinishingOptions = optResp.Success ? optResp.Values : new List<UnitFinishingOptionBO>();
+
+            if (unit.FinishingOptions.Any())
             {
-                item.ValueSold = item.Value;
+                // Gebruik geselecteerde optie, of standaard/eerste
+                var selectedOption = unit.FinishingOptions.FirstOrDefault(o => o.Id == finishingOptionId)
+                    ?? unit.FinishingOptions.FirstOrDefault(o => o.IsDefault)
+                    ?? unit.FinishingOptions.First();
+
+                unit.ConstructionValues = selectedOption.ConstructionValues;
+                foreach (var cv in unit.ConstructionValues)
+                    cv.ValueSold = cv.Value;
+            }
+            else
+            {
+                foreach (var cv in unit.ConstructionValues)
+                    cv.ValueSold = cv.Value;
             }
 
             ViewData["mode"] = "add";

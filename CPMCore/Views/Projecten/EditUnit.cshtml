@@ -135,23 +135,25 @@
 										</div>
 									</div>
 									<div class="form-group">
-										<div class="row align-items-center pb-3">
-											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bouwwaardes</label>
-											<div class="col-lg-7 col-xl-6">
-												<table>
-													<tbody id="ConstructionValueRows">
-														@foreach (var item in Model.ConstructionValues)
-														{
-															@await Html.PartialAsync("_ConstructionValueRow", item)
-														}
-													</tbody>
-												</table>
+										<div class="row pb-1">
+											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Afwerkingsopties</label>
+											<div class="col-lg-7 col-xl-8" id="FinishingOptionSections">
+												@{
+													ViewBag.UnitId = Model.Unit.Id;
+													ViewBag.ProjectId = Model.ProjectId;
+												}
+												@foreach (var option in Model.FinishingOptions ?? new List<UnitFinishingOptionBO>())
+												{
+													@await Html.PartialAsync("_FinishingOptionSection", option)
+												}
 											</div>
 										</div>
 										<div class="row align-items-center pb-3">
 											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
-											<div class="col-md-3">
-												<button class="btn btn-default btn-block " type="button" id="btnAddConstructionValue"><i class="fa fa-plus mr-md"></i> Bouwwaarde toevoegen</button>
+											<div class="col-md-4">
+												<button class="btn btn-default btn-sm" type="button" id="btnAddFinishingOption">
+													<i class="fa fa-plus me-1"></i> Afwerkingsoptie toevoegen
+												</button>
 											</div>
 										</div>
 									</div>
@@ -369,24 +371,58 @@
 		});
 
 		// ==============================
-		// Nieuwe rij met bouwwaardes toevoegen
+		// Afwerkingsopties beheren (AJAX)
 		// ==============================
-		$("#btnAddConstructionValue").click(function () {
+		$('#btnAddFinishingOption').click(function () {
+			const name = prompt('Naam van de afwerkingsoptie:', 'Nieuwe optie');
+			if (!name) return;
+			$.post('@Url.Action("AddFinishingOption", "Projecten")', { unitId: @Model.Unit.Id, name: name }, function (data) {
+				if (data.error) { alert(data.error); return; }
+				$.ajax({
+					url: 'BlankFinishingOptionSection',
+					data: { optionId: data.id, unitId: @Model.Unit.Id, projectId: @Model.ProjectId },
+					type: 'POST',
+					success: function (html) {
+						$('#FinishingOptionSections').append(html);
+						CurrencyMask.init($('#FinishingOptionSections').find('.Currencymask'));
+					}
+				});
+			});
+		});
+
+		$(document).on('blur', '.gl-option-name', function () {
+			const $input = $(this);
+			const optionId = $input.data('option-id');
+			const name = $input.val().trim();
+			if (!name) return;
+			$.post('@Url.Action("RenameFinishingOption", "Projecten")', { id: optionId, name: name });
+		});
+
+		$(document).on('click', '.gl-remove-finishing-option', function () {
+			const optionId = $(this).data('option-id');
+			if (!confirm('Afwerkingsoptie en alle bijhorende bouwwaardes verwijderen?')) return;
+			const $section = $(this).closest('.gl-finishing-option-section');
+			$.post('@Url.Action("RemoveFinishingOption", "Projecten")', { id: optionId }, function (data) {
+				$section.remove();
+			});
+		});
+
+		$(document).on('click', '.gl-add-cv-for-option', function () {
+			const $btn = $(this);
+			const optionId = $btn.data('option-id');
+			const unitId = $btn.data('unit-id');
+			const projectId = $btn.data('project-id');
 			$.ajax({
-				url: "BlankConstructionValueRow",
-				data: { unitid: @Model.Unit.Id, projectid: @Model.ProjectId },
+				url: 'BlankConstructionValueRow',
+				data: { unitid: unitId, projectid: projectId, finishingOptionId: optionId },
 				cache: false,
-				traditional: true,
 				type: 'POST',
 				success: function (html) {
 					const $row = $(html);
-					$("#ConstructionValueRows").append($row);
-
-					// 🔑 CurrencyMask op nieuwe inputs
-					CurrencyMask.init($row.find('.Currencymask, .Surfacemask'));
+					$btn.closest('.card-body').find('.gl-cv-rows').append($row);
+					CurrencyMask.init($row.find('.Currencymask'));
 				}
 			});
-			return false;
 		});
 
 		// ==============================

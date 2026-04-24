@@ -63,5 +63,12 @@ namespace FacadeCore
         Response UpdateLandValueSold(UnitBO bo);
 
         Response DeleteConstructionValues(List<int> ids);
+
+        // UNIT FINISHING OPTIONS
+        GetResponse<UnitFinishingOptionBO> GetFinishingOptions(int unitId);
+        GetResponse<UnitFinishingOptionBO> GetFinishingOptionById(int id);
+        Response InsertUpdateFinishingOption(UnitFinishingOptionBO bo);
+        Response DeleteFinishingOption(int id);
+        Response EnsureDefaultFinishingOption(int unitId);
     }
 }

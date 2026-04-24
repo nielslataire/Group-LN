@@ -1603,6 +1603,13 @@ namespace CPMCore.Models.Projecten
                 _constructionvalues = value;
             }
         }
+
+        private List<UnitFinishingOptionBO>? _finishingoptions;
+        public List<UnitFinishingOptionBO>? FinishingOptions
+        {
+            get { return _finishingoptions; }
+            set { _finishingoptions = value; }
+        }
     }
 
     public class UnitExecutionPlanVm
