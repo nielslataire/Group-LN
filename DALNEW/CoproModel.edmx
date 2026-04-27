@@ -582,6 +582,17 @@
           <Property Name="Description" Type="nvarchar" MaxLength="250" />
           <Property Name="PaymentGroupId" Type="int" />
           <Property Name="UnitId" Type="int" Nullable="false" />
+          <Property Name="FinishingOptionId" Type="int" />
+        </EntityType>
+        <EntityType Name="UnitFinishingOption">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="UnitId" Type="int" Nullable="false" />
+          <Property Name="Name" Type="nvarchar" MaxLength="250" Nullable="false" />
+          <Property Name="SortOrder" Type="int" Nullable="false" />
+          <Property Name="IsDefault" Type="bit" Nullable="false" />
         </EntityType>
         <EntityType Name="UnitGroupTypes">
           <Key>
@@ -1634,6 +1645,32 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
             </Dependent>
           </ReferentialConstraint>
         </Association>
+        <Association Name="FK_UnitFinishingOption_Units">
+          <End Role="Units" Type="Self.Units" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="UnitFinishingOption" Type="Self.UnitFinishingOption" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Units">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UnitFinishingOption">
+              <PropertyRef Name="UnitId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_UnitConstructionValue_UnitFinishingOption">
+          <End Role="UnitFinishingOption" Type="Self.UnitFinishingOption" Multiplicity="0..1" />
+          <End Role="UnitConstructionValue" Type="Self.UnitConstructionValue" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="UnitFinishingOption">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UnitConstructionValue">
+              <PropertyRef Name="FinishingOptionId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
         <Association Name="FK_Units_ClientAccount">
           <End Role="ClientAccount" Type="Self.ClientAccount" Multiplicity="0..1" />
           <End Role="Units" Type="Self.Units" Multiplicity="*" />
@@ -2149,6 +2186,15 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
             <End Role="Units" EntitySet="Units" />
             <End Role="UnitConstructionValue" EntitySet="UnitConstructionValue" />
           </AssociationSet>
+          <EntitySet Name="UnitFinishingOption" EntityType="Self.UnitFinishingOption" Schema="dbo" store:Type="Tables" />
+          <AssociationSet Name="FK_UnitFinishingOption_Units" Association="Self.FK_UnitFinishingOption_Units">
+            <End Role="Units" EntitySet="Units" />
+            <End Role="UnitFinishingOption" EntitySet="UnitFinishingOption" />
+          </AssociationSet>
+          <AssociationSet Name="FK_UnitConstructionValue_UnitFinishingOption" Association="Self.FK_UnitConstructionValue_UnitFinishingOption">
+            <End Role="UnitFinishingOption" EntitySet="UnitFinishingOption" />
+            <End Role="UnitConstructionValue" EntitySet="UnitConstructionValue" />
+          </AssociationSet>
           <AssociationSet Name="FK_UnitRooms_Units" Association="Self.FK_UnitRooms_Units">
             <End Role="Units" EntitySet="Units" />
             <End Role="UnitRooms" EntitySet="UnitRooms" />
@@ -2608,6 +2654,15 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           </AssociationSet>
           <AssociationSet Name="FK_UnitConstructionValue_Units" Association="copropmModel.FK_UnitConstructionValue_Units">
             <End Role="Units" EntitySet="Units" />
+            <End Role="UnitConstructionValue" EntitySet="UnitConstructionValue" />
+          </AssociationSet>
+          <EntitySet Name="UnitFinishingOption" EntityType="copropmModel.UnitFinishingOption" />
+          <AssociationSet Name="FK_UnitFinishingOption_Units" Association="copropmModel.FK_UnitFinishingOption_Units">
+            <End Role="Units" EntitySet="Units" />
+            <End Role="UnitFinishingOption" EntitySet="UnitFinishingOption" />
+          </AssociationSet>
+          <AssociationSet Name="FK_UnitConstructionValue_UnitFinishingOption" Association="copropmModel.FK_UnitConstructionValue_UnitFinishingOption">
+            <End Role="UnitFinishingOption" EntitySet="UnitFinishingOption" />
             <End Role="UnitConstructionValue" EntitySet="UnitConstructionValue" />
           </AssociationSet>
           <AssociationSet Name="FK_Invoices_PostalCode" Association="copropmModel.FK_Invoices_PostalCode">
@@ -3252,6 +3307,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="LandValueInvoiceId" Type="Int32" />
           <NavigationProperty Name="Invoices" Relationship="copropmModel.FK_Units_Invoices" FromRole="Units" ToRole="Invoices" />
           <Property Name="IsOption" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="UnitFinishingOptions" Relationship="copropmModel.FK_UnitFinishingOption_Units" FromRole="Units" ToRole="UnitFinishingOption" />
         </EntityType>
         <EntityType Name="UnitTypes">
           <Key>
@@ -4230,8 +4286,10 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="Description" Type="String" MaxLength="250" FixedLength="false" Unicode="true" />
           <Property Name="PaymentGroupId" Type="Int32" />
           <Property Name="UnitId" Type="Int32" Nullable="false" />
+          <Property Name="FinishingOptionId" Type="Int32" />
           <NavigationProperty Name="InvoicingPaymentGroup" Relationship="copropmModel.FK_UnitConstructionValue_InvoicingPaymentGroup" FromRole="UnitConstructionValue" ToRole="InvoicingPaymentGroup" />
           <NavigationProperty Name="Units" Relationship="copropmModel.FK_UnitConstructionValue_Units" FromRole="UnitConstructionValue" ToRole="Units" />
+          <NavigationProperty Name="UnitFinishingOption" Relationship="copropmModel.FK_UnitConstructionValue_UnitFinishingOption" FromRole="UnitConstructionValue" ToRole="UnitFinishingOption" />
         </EntityType>
         <Association Name="FK_UnitConstructionValue_InvoicingPaymentGroup">
           <End Type="copropmModel.InvoicingPaymentGroup" Role="InvoicingPaymentGroup" Multiplicity="0..1" />
@@ -4254,6 +4312,42 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
             </Principal>
             <Dependent Role="UnitConstructionValue">
               <PropertyRef Name="UnitId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityType Name="UnitFinishingOption">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="UnitId" Type="Int32" Nullable="false" />
+          <Property Name="Name" Type="String" Nullable="false" MaxLength="250" FixedLength="false" Unicode="true" />
+          <Property Name="SortOrder" Type="Int32" Nullable="false" />
+          <Property Name="IsDefault" Type="Boolean" Nullable="false" />
+          <NavigationProperty Name="Units" Relationship="copropmModel.FK_UnitFinishingOption_Units" FromRole="UnitFinishingOption" ToRole="Units" />
+          <NavigationProperty Name="UnitConstructionValues" Relationship="copropmModel.FK_UnitConstructionValue_UnitFinishingOption" FromRole="UnitFinishingOption" ToRole="UnitConstructionValue" />
+        </EntityType>
+        <Association Name="FK_UnitFinishingOption_Units">
+          <End Type="copropmModel.Units" Role="Units" Multiplicity="1" />
+          <End Type="copropmModel.UnitFinishingOption" Role="UnitFinishingOption" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Units">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UnitFinishingOption">
+              <PropertyRef Name="UnitId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK_UnitConstructionValue_UnitFinishingOption">
+          <End Type="copropmModel.UnitFinishingOption" Role="UnitFinishingOption" Multiplicity="0..1" />
+          <End Type="copropmModel.UnitConstructionValue" Role="UnitConstructionValue" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="UnitFinishingOption">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="UnitConstructionValue">
+              <PropertyRef Name="FinishingOptionId" />
             </Dependent>
           </ReferentialConstraint>
         </Association>
@@ -5137,11 +5231,23 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
             <EntityTypeMapping TypeName="copropmModel.UnitConstructionValue">
               <MappingFragment StoreEntitySet="UnitConstructionValue">
                 <ScalarProperty Name="UnitId" ColumnName="UnitId" />
+                <ScalarProperty Name="FinishingOptionId" ColumnName="FinishingOptionId" />
                 <ScalarProperty Name="PaymentGroupId" ColumnName="PaymentGroupId" />
                 <ScalarProperty Name="Description" ColumnName="Description" />
                 <ScalarProperty Name="ValueSold" ColumnName="ValueSold" />
                 <ScalarProperty Name="Value" ColumnName="Value" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="UnitFinishingOption">
+            <EntityTypeMapping TypeName="copropmModel.UnitFinishingOption">
+              <MappingFragment StoreEntitySet="UnitFinishingOption">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="UnitId" ColumnName="UnitId" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="SortOrder" ColumnName="SortOrder" />
+                <ScalarProperty Name="IsDefault" ColumnName="IsDefault" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>

@@ -23,11 +23,11 @@
         @Html.HiddenFor(m => m.ValueSold)
 
         <td class="gl-cv-col-30">
-            @Html.EditorFor(m => m.Value, new { htmlAttributes = new { @class = "form-control form-control-modern", placeholder = "Bouwwaarde" } })
+            @Html.EditorFor(m => m.Value, new { htmlAttributes = new { @class = "form-control me-2", placeholder = "Bouwwaarde" } })
         </td>
 
         <td class="gl-cv-col-30">
-            @Html.TextBoxFor(m => m.Description, new { @class = "form-control form-control-modern", placeholder = "Omschrijving" })
+            @Html.TextBoxFor(m => m.Description, new { @class = "form-control me-2", placeholder = "Omschrijving" })
         </td>
 
         <td class="gl-cv-col-35">
@@ -35,13 +35,13 @@
             m => m.PaymentGroupId,
                 paymentGroups,
                 "Selecteer betalingsgroep ...",
-                new { @class = "form-control form-control-modern" }   // GEEN custom id nodig in een collectie
+                new { @class = "form-control" }   // GEEN custom id nodig in een collectie
                 )
     </td>
 
     <td class="gl-cv-col-5">
         <a href="#" class="deleteConstructionRow ms-2" data-toggle="tooltip" title="Verwijderen">
-            <i class="fa fa-trash"></i>
+            <i class="bx bx-x"></i>
         </a>
     </td>
         }

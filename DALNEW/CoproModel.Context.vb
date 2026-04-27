@@ -66,6 +66,7 @@ Partial Public Class copropmEntities
     Public Overridable Property ClientPOA() As DbSet(Of ClientPOA)
     Public Overridable Property InvoicingPaymentStages() As DbSet(Of InvoicingPaymentStages)
     Public Overridable Property UnitConstructionValue() As DbSet(Of UnitConstructionValue)
+    Public Overridable Property UnitFinishingOption() As DbSet(Of UnitFinishingOption)
     Public Overridable Property IncommingInvoiceDetail() As DbSet(Of IncommingInvoiceDetail)
     Public Overridable Property IncommingInvoices() As DbSet(Of IncommingInvoices)
     Public Overridable Property UtilityPercentage() As DbSet(Of UtilityPercentage)

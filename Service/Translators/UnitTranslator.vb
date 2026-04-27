@@ -41,10 +41,17 @@ Public Class UnitTranslator
             bo.LinkedUnits.Add(bou)
         Next
         bo.LinkedUnits = bo.LinkedUnits.OrderBy(Function(m) m.Name).ToList
-        For Each x In _entity.UnitConstructionValue
+        For Each x In _entity.UnitConstructionValue.Where(Function(cv) cv.FinishingOptionId Is Nothing)
             Dim bou As New UnitConstructionValueBO
             Dim err = UnitConstructionValueTranslator.TranslateEntityToBO(x, bou)
             bo.ConstructionValues.Add(bou)
+        Next
+        For Each opt In _entity.UnitFinishingOptions.OrderBy(Function(o) o.SortOrder)
+            Dim boopt As New UnitFinishingOptionBO
+            Dim err = UnitFinishingOptionTranslator.TranslateEntityToBO(opt, boopt)
+            If err = ErrorCode.Success Then
+                bo.FinishingOptions.Add(boopt)
+            End If
         Next
         Return ErrorCode.Success
     End Function

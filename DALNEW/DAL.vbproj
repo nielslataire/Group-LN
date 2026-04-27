@@ -292,6 +292,9 @@
     <Compile Include="UnitConstructionValue.vb">
       <DependentUpon>CoproModel.tt</DependentUpon>
     </Compile>
+    <Compile Include="UnitFinishingOption.vb">
+      <DependentUpon>CoproModel.tt</DependentUpon>
+    </Compile>
     <Compile Include="UnitGroupTypes.vb">
       <DependentUpon>CoproModel.tt</DependentUpon>
     </Compile>

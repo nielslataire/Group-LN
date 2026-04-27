@@ -9,23 +9,7 @@
     <link rel="stylesheet" href="~/css/instellingen-custom.css" />
 }
 <div class="gl-body-padding">
-<div class="row">
-    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-            <div class="row align-items-center">
-                <div class="col-sm-auto d-flex align-items-center">
-                    <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="text-decoration-none text-reset d-flex align-items-center">
-                        <i class="bx bx-chevron-left fs-1"></i>
-                    </a>
-                </div>
-                <div class="col-sm-auto">
-                    <h1 class="fw-bold mb-0">Bedrijf bewerken</h1>
-                    <h5 class="mb-4 mt-0">De gegevens van mijn bedrijf @Model.Name bewerken</h5>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
     <form asp-route="Instellingen_IssuerCompanies_Edit" method="post" class="ecommerce-form action-buttons-fixed" asp-route-id="@Model.Id" enctype="multipart/form-data">
     @Html.AntiForgeryToken()

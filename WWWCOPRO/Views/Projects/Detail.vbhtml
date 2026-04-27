@@ -247,8 +247,9 @@ End Section
                                 @Code
                                     Dim aptUnits = Model.Units.Where(Function(m) m.Type.Id = 1).ToList()
                                     Dim aptAvail = aptUnits.Where(Function(m) m.ClientAccountId = 0 AndAlso Not m.IsOption).ToList()
-                                    Dim aptMinPrice = If(aptAvail.Any(), aptAvail.Min(Function(m) m.TotalValue), 0)
-                                    Dim aptMaxPrice = If(aptAvail.Any(), aptAvail.Max(Function(m) m.TotalValue), 0)
+                                    Dim aptAllPrices = aptAvail.SelectMany(Function(u) If(u.FinishingOptions.Count > 0, u.FinishingOptions.Select(Function(fo) u.LandValue + fo.TotalValue), New List(Of Decimal) From {u.TotalValue})).Where(Function(p) p > 0).ToList()
+                                    Dim aptMinPrice = If(aptAllPrices.Any(), aptAllPrices.Min(), 0)
+                                    Dim aptMaxPrice = If(aptAllPrices.Any(), aptAllPrices.Max(), 0)
                                     Dim aptMinSurf = If(aptAvail.Any(), aptAvail.Min(Function(m) m.Surface), 0)
                                     Dim aptMaxSurf = If(aptAvail.Any(), aptAvail.Max(Function(m) m.Surface), 0)
                                     Dim aptSlpkList = aptAvail.Select(Function(m) If(m.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault() IsNot Nothing, m.Rooms.Where(Function(r) r.Type = BO.RoomType.Slaapkamer).FirstOrDefault().Number, 0)).ToList()
@@ -282,11 +283,17 @@ End Section
                                                     Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
                                                     Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-                                                    @<tr class="@(If(isSold, "rij-verkocht", ""))">
+                                                    Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                                                    @<tr class="@(If(isSold, "rij-verkocht", "")) @(If(heeftOpties, "heeft-opties", ""))" data-unit-id="@unit.Id">
                                                         <td>
-                                                            <div class="lot-badge">
-                                                                <div class="lot-nr">@unit.Name</div>
-                                                                @unit.Name
+                                                            <div class="lot-badge-wrap">
+                                                                <div class="lot-badge">
+                                                                    <div class="lot-nr">@unit.Name</div>
+                                                                    @unit.Name
+                                                                </div>
+                                                                @If heeftOpties Then
+                                                                    @<span class="opties-badge">@unit.FinishingOptions.Count opties</span>
+                                                                End If
                                                             </div>
                                                         </td>
                                                         <td class="num hidden-xs">@unit.Level</td>
@@ -317,19 +324,53 @@ End Section
                                                         </td>
                                                         <td class="num">
                                                             @If Not isSold Then
-                                                                @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                                @If heeftOpties Then
+                                                                    Dim aptMinOptPrice = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
+                                                                    @<text>
+                                                                        <span class="prijs-vanaf-label">Vanaf</span>
+                                                                        <span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(aptMinOptPrice)</span>
+                                                                    </text>
+                                                                Else
+                                                                    @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                                End If
                                                             Else
                                                                 @<span class="prijs-verkocht">—</span>
                                                             End If
                                                         </td>
-                                                        <td class="center">
+                                                        <td class="center opties-plan-cel">
                                                             @If isAvailable AndAlso unit.Plan IsNot Nothing Then
                                                                 @<a href="#modalsendplan" class="eenheid-dl-btn modal-with-form btnsendplan" title="Plan downloaden" data-id="@unit.Id">
                                                                     <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                                                 </a>
                                                             End If
+                                                            @If heeftOpties Then
+                                                                @<button type="button" class="opties-toggle-btn" data-unit-id="@unit.Id" aria-expanded="false" title="Afwerkingsopties bekijken">
+                                                                    <svg class="toggle-ico toggle-ico-open" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                                                    <svg class="toggle-ico toggle-ico-close" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="18 15 12 9 6 15"/></svg>
+                                                                </button>
+                                                            End If
                                                         </td>
                                                     </tr>
+                                                    @If heeftOpties Then
+                                                        @<tr class="opties-expand-rij" id="opties-apt-@unit.Id" style="display:none;">
+                                                            <td colspan="9" class="opties-expand-cel">
+                                                                <div class="opties-expand-inner">
+                                                                    @For Each opt In unit.FinishingOptions.OrderBy(Function(o) o.SortOrder)
+                                                                        Dim optPrijs = unit.LandValue + opt.TotalValue
+                                                                        @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
+                                                                            <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
+                                                                            <div class="optie-kaart-prijs">@WWWCOPRO.Extensions.ToEuroCurrency(optPrijs)</div>
+                                                                            @If isInOption Then
+                                                                                @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
+                                                                            Else
+                                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
+                                                                            End If
+                                                                        </div>
+                                                                    Next
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    End If
                                                 Next
                                             </tbody>
                                             @*<tfoot>
@@ -370,8 +411,9 @@ End Section
                                 @Code
                                     Dim wonUnits = Model.Units.Where(Function(m) m.Type.Id = 2).ToList()
                                     Dim wonAvail = wonUnits.Where(Function(m) m.ClientAccountId = 0 AndAlso Not m.IsOption).ToList()
-                                    Dim wonMinPrice = If(wonAvail.Any(), wonAvail.Min(Function(m) m.TotalValue), 0)
-                                    Dim wonMaxPrice = If(wonAvail.Any(), wonAvail.Max(Function(m) m.TotalValue), 0)
+                                    Dim wonAllPrices = wonAvail.SelectMany(Function(u) If(u.FinishingOptions.Count > 0, u.FinishingOptions.Select(Function(fo) u.LandValue + fo.TotalValue), New List(Of Decimal) From {u.TotalValue})).Where(Function(p) p > 0).ToList()
+                                    Dim wonMinPrice = If(wonAllPrices.Any(), wonAllPrices.Min(), 0)
+                                    Dim wonMaxPrice = If(wonAllPrices.Any(), wonAllPrices.Max(), 0)
                                     Dim wonMinSurf = If(wonAvail.Any(), wonAvail.Min(Function(m) m.Surface), 0)
                                     Dim wonMaxSurf = If(wonAvail.Any(), wonAvail.Max(Function(m) m.Surface), 0)
                                     Dim wonMinGround = If(wonAvail.Any(), wonAvail.Min(Function(m) m.GroundSurface), 0)
@@ -405,11 +447,17 @@ End Section
                                                     Dim ground = unit.GroundSurface
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
                                                     Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-                                                    @<tr class="@(If(isSold, "rij-verkocht", ""))">
+                                                    Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                                                    @<tr class="@(If(isSold, "rij-verkocht", "")) @(If(heeftOpties, "heeft-opties", ""))" data-unit-id="@unit.Id">
                                                         <td>
-                                                            <div class="lot-badge">
-                                                                @*<div class="lot-nr">@unit.Name</div>*@
-                                                                @unit.Name
+                                                            <div class="lot-badge-wrap">
+                                                                <div class="lot-badge">
+                                                                    @*<div class="lot-nr">@unit.Name</div>*@
+                                                                    @unit.Name
+                                                                </div>
+                                                                @If heeftOpties Then
+                                                                    @<span class="opties-badge">@unit.FinishingOptions.Count opties</span>
+                                                                End If
                                                             </div>
                                                         </td>
                                                         <td class="num hidden-xs">@(If(surface > 0, String.Format("{0:n0}", surface) & " m²", "-"))</td>
@@ -438,19 +486,53 @@ End Section
                                                         </td>
                                                         <td class="num">
                                                             @If Not isSold Then
-                                                                @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                                @If heeftOpties Then
+                                                                    Dim wonMinOptPrice = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
+                                                                    @<text>
+                                                                        <span class="prijs-vanaf-label">Vanaf</span>
+                                                                        <span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(wonMinOptPrice)</span>
+                                                                    </text>
+                                                                Else
+                                                                    @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
+                                                                End If
                                                             Else
                                                                 @<span class="prijs-verkocht">—</span>
                                                             End If
                                                         </td>
-                                                        <td class="center">
+                                                        <td class="center opties-plan-cel">
                                                             @If isAvailable AndAlso unit.Plan IsNot Nothing Then
                                                                 @<a href="#modalsendplan" class="eenheid-dl-btn modal-with-form btnsendplan" title="Plan downloaden" data-id="@unit.Id">
                                                                     <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                                                 </a>
                                                             End If
+                                                            @If heeftOpties Then
+                                                                @<button type="button" class="opties-toggle-btn" data-unit-id="@unit.Id" aria-expanded="false" title="Afwerkingsopties bekijken">
+                                                                    <svg class="toggle-ico toggle-ico-open" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                                                                    <svg class="toggle-ico toggle-ico-close" viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="18 15 12 9 6 15"/></svg>
+                                                                </button>
+                                                            End If
                                                         </td>
                                                     </tr>
+                                                    @If heeftOpties Then
+                                                        @<tr class="opties-expand-rij" id="opties-won-@unit.Id" style="display:none;">
+                                                            <td colspan="7" class="opties-expand-cel">
+                                                                <div class="opties-expand-inner">
+                                                                    @For Each opt In unit.FinishingOptions.OrderBy(Function(o) o.SortOrder)
+                                                                        Dim optPrijs = unit.LandValue + opt.TotalValue
+                                                                        @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
+                                                                            <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
+                                                                            <div class="optie-kaart-prijs">@WWWCOPRO.Extensions.ToEuroCurrency(optPrijs)</div>
+                                                                            @If isInOption Then
+                                                                                @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
+                                                                            Else
+                                                                                @<span class="eenheid-status-pill status-beschikbaar"><span class="status-dot"></span>Beschikbaar</span>
+                                                                            End If
+                                                                        </div>
+                                                                    Next
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    End If
                                                 Next
                                             </tbody>
                                             @*<tfoot>
@@ -709,6 +791,26 @@ End Section
     <script src="~/vendor/rs-plugin/js/jquery.themepunch.tools.min.js"></script>
     <script src="~/vendor/rs-plugin/js/jquery.themepunch.revolution.min.js"></script>
     <script src="~/Scripts/examples.mediagallery.js"></script>
+    <script>
+    $(function () {
+        $(document).on('click', '.opties-toggle-btn', function () {
+            var unitId = $(this).data('unit-id');
+            var $expandRow = $('#opties-won-' + unitId + ', #opties-apt-' + unitId);
+            var isOpen = $(this).attr('aria-expanded') === 'true';
+            if (isOpen) {
+                $expandRow.hide();
+                $(this).attr('aria-expanded', 'false');
+                $(this).find('.toggle-ico-open').show();
+                $(this).find('.toggle-ico-close').hide();
+            } else {
+                $expandRow.show();
+                $(this).attr('aria-expanded', 'true');
+                $(this).find('.toggle-ico-open').hide();
+                $(this).find('.toggle-ico-close').show();
+            }
+        });
+    });
+    </script>
     <script>
     var bcoContactCookieName = 'bco_contact_info';
 

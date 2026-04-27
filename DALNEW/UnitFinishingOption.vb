@@ -10,18 +10,14 @@
 Imports System
 Imports System.Collections.Generic
 
-Partial Public Class UnitConstructionValue
+Partial Public Class UnitFinishingOption
     Public Property Id As Integer
-    Public Property Value As Nullable(Of Decimal)
-    Public Property ValueSold As Nullable(Of Decimal)
-    Public Property Description As String
-    Public Property PaymentGroupId As Nullable(Of Integer)
     Public Property UnitId As Integer
+    Public Property Name As String
+    Public Property SortOrder As Integer
+    Public Property IsDefault As Boolean
 
-    Public Property FinishingOptionId As Nullable(Of Integer)
-
-    Public Overridable Property InvoicingPaymentGroup As InvoicingPaymentGroup
     Public Overridable Property Units As Units
-    Public Overridable Property UnitFinishingOption As UnitFinishingOption
+    Public Overridable Property UnitConstructionValues As ICollection(Of UnitConstructionValue) = New HashSet(Of UnitConstructionValue)
 
 End Class

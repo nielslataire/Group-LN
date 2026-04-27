@@ -318,6 +318,127 @@ div.dt-buttons .dropdown.show .btn.buttons-colvis::after {
 }
 
 /* ----------------------------------------------------------
+   Magnific Popup – bevestigingsmodal
+   ---------------------------------------------------------- */
+.gl-confirm-popup {
+    background: #fff;
+    border-radius: 8px;
+    padding: 28px 32px;
+    max-width: 420px;
+    margin: 0 auto;
+}
+
+.gl-confirm-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #212529;
+}
+
+.gl-confirm-body {
+    font-size: .9rem;
+    color: #6c757d;
+    margin-bottom: 20px;
+}
+
+.gl-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* ----------------------------------------------------------
+   EditUnit – grondwaarde blok
+   ---------------------------------------------------------- */
+.gl-grond-block {
+    background-color: var(--lightgreen);
+    border: 1px solid var(--primary);
+    border-radius: 6px;
+    padding: 12px 16px;
+    display: block;
+}
+
+.gl-grond-label {
+    display: block;
+    color: var(--primary);
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.gl-grond-block .input-group {
+    flex-wrap: nowrap;
+    width: auto;
+}
+
+.gl-grond-block .input-group .form-control {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid var(--primary) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-size: 22px !important;
+    color: var(--primary) !important;
+    width: 200px !important;
+    max-width: 200px !important;
+    padding-left: 0 !important;
+}
+
+.gl-grond-block .input-group .form-control:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.gl-grond-block .input-group-text {
+    order: -1;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 2px solid var(--primary) !important;
+    border-radius: 0 !important;
+    color: var(--primary) !important;
+    font-size: 22px !important;
+    padding-left: 0 !important;
+    padding-right: 4px !important;
+}
+
+/* ----------------------------------------------------------
+   EditUnit – afwerkingsgroep sectie
+   ---------------------------------------------------------- */
+.gl-finishing-option-section .card-header {
+    background-color: var(--lightgray) !important;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.gl-option-name {
+    border: none !important;
+    border-bottom: 2px solid var(--primary) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    max-width: 260px;
+}
+
+.gl-option-name:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.gl-option-subtotal-row {
+    background-color: var(--lightgray);
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 4px 4px;
+}
+
+.gl-option-subtotal {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+/* ----------------------------------------------------------
    EditUnit – uitvoeringsplan tegels
    ---------------------------------------------------------- */
 .gl-execution-plan-add-tile {

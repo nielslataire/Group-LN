@@ -2,6 +2,7 @@
 Imports Facade
 Imports DAL
 Imports System.Text.RegularExpressions
+Imports System.Data.Entity
 Public Class UnitService
     Implements IUnitService
     Public Function GetUnitById(Id As Integer) As GetResponse(Of UnitBO) Implements IUnitService.GetUnitById
@@ -55,7 +56,12 @@ Public Class UnitService
         Dim response As New GetResponse(Of UnitWithDetailsBO)
         Dim uow As New UnitOfWork(False)
         Dim dao = uow.GetUnitsDAO()
-        Dim entities = dao.GetNoTracking().Where(Function(m) m.ProjectId = ProjectId)
+        Dim entities = dao.GetNoTracking() _
+            .Include("UnitFinishingOptions") _
+            .Include("UnitFinishingOptions.UnitConstructionValues") _
+            .Include("UnitConstructionValue") _
+            .Include("UnitRooms") _
+            .Where(Function(m) m.ProjectId = ProjectId)
         For Each _entity In entities
             Dim bo As New UnitWithDetailsBO()
             Dim err = UnitTranslator.TranslateEntityToBO(_entity, bo)

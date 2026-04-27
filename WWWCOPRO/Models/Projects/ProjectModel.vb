@@ -480,6 +480,85 @@ Public Class ProjectSendBrochureModel
         End Set
     End Property
 End Class
+Public Class ProjectInschrijvingFormModel
+    Public Sub New()
+    End Sub
+    Private _projectslug As String
+    Public Property ProjectSlug() As String
+        Get
+            Return _projectslug
+        End Get
+        Set(ByVal value As String)
+            _projectslug = value
+        End Set
+    End Property
+    Private _firstname As String
+    <Display(Name:="Voornaam")>
+    <Required(ErrorMessage:="Uw voornaam is verplicht")>
+    Public Property Firstname() As String
+        Get
+            Return _firstname
+        End Get
+        Set(ByVal value As String)
+            _firstname = value
+        End Set
+    End Property
+    Private _name As String
+    <Display(Name:="Naam")>
+    <Required(ErrorMessage:="Uw naam is verplicht")>
+    Public Property Name() As String
+        Get
+            Return _name
+        End Get
+        Set(ByVal value As String)
+            _name = value
+        End Set
+    End Property
+    Private _email As String
+    <EmailAddress(ErrorMessage:="Emailadres is niet geldig")>
+    <UIHint("Email")>
+    <Display(Name:="E-mailadres")>
+    <Required(ErrorMessage:="Uw emailadres is verplicht")>
+    Public Property Email() As String
+        Get
+            Return _email
+        End Get
+        Set(ByVal value As String)
+            _email = value
+        End Set
+    End Property
+    Private _phone As String
+    <Display(Name:="Telefoonnummer")>
+    <Required(ErrorMessage:="Uw telefoonnummer is verplicht")>
+    Public Property Phone() As String
+        Get
+            Return _phone
+        End Get
+        Set(ByVal value As String)
+            _phone = value
+        End Set
+    End Property
+    Private _interest As String
+    <Display(Name:="Interesse in")>
+    Public Property Interest() As String
+        Get
+            Return _interest
+        End Get
+        Set(ByVal value As String)
+            _interest = value
+        End Set
+    End Property
+    Private _remarks As String
+    <Display(Name:="Opmerkingen")>
+    Public Property Remarks() As String
+        Get
+            Return _remarks
+        End Get
+        Set(ByVal value As String)
+            _remarks = value
+        End Set
+    End Property
+End Class
 Public Class ProjectSendMailModel
     Public Sub New()
 

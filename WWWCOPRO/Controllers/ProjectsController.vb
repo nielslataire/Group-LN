@@ -85,8 +85,9 @@ Namespace Controllers
 
                 Dim model As New ProjectModel
                 Dim service = ServiceFactory.GetProjectService
-                Dim response = service.GetProjectsForList(Type, 2,, TrimCommercialText:=True)
+                Dim response = service.GetProjectsForList(Type,, TrimCommercialText:=True)
                 If (response.Success) Then model.Projects = response.Values
+                model.Projects = model.Projects.Where(Function(m) m.Status.Id <> CInt(ProjectStatusType.Opgeleverd) AndAlso m.Status.Id <> CInt(ProjectStatusType.Stopgezet)).ToList
                 model.Projects = model.Projects.OrderByDescending(Function(m) m.Id).ToList
                 Dim response2 = service.GetProjectSalesData(model.Projects.Select(Function(m) m.Id).ToList())
                 If (response2.Success) Then model.SalesData = response2.Values
@@ -1056,6 +1057,77 @@ Namespace Controllers
             If response.Success Then Return response.Values.FirstOrDefault
             Return New CompanyBO
         End Function
+
+        <Route("Projects/Inschrijving/{slug}", Name:="ProjectInschrijvingBySlug")>
+        <HttpGet>
+        Function Inschrijving(slug As String) As ActionResult
+            ViewData("LatestNews") = GetLatestNews(4)
+            Dim model As New ProjectDetailModel
+            Dim service = ServiceFactory.GetProjectService
+            Dim response = service.GetProjectBySlug(slug)
+            If response.Success Then model.Data = response.Values.FirstOrDefault
+            model.Data.Pictures = model.Data.Pictures.Where(Function(m) Not m.Type = PictureType.Nieuws).ToList
+
+            Dim ids As New List(Of Integer)
+            ids.Add(model.Data.Id)
+            model.SalesData = service.GetProjectSalesData(ids).Values.FirstOrDefault
+            model.SalesSetttings = service.GetSalesSettings(model.Data.Id).Value
+            If model.SalesSetttings Is Nothing Then
+                model.SalesSetttings = New ProjectSalesSettingsBO
+                model.SalesSetttings.SaleVisible = False
+            End If
+
+            ViewData("title") = "Group LN - Inschrijving - " & model.Data.Name
+            ViewBag.Metatitle = "Group LN - Inschrijvingspagina - " & model.Data.Name
+            ViewBag.MetaDescription = "Schrijf u in voor " & model.Data.Name & " in " & model.Data.Postalcode.Gemeente
+            Return View("Inschrijving", model)
+        End Function
+
+        <Route("Projects/Inschrijving/{slug}")>
+        <HttpPost>
+        Function Inschrijving(slug As String, model As ProjectInschrijvingFormModel) As ActionResult
+            If Not ModelState.IsValid Then
+                Return PartialView("ModalFailMail")
+            End If
+            Try
+                Dim service = ServiceFactory.GetProjectService()
+                Dim projectResp = service.GetProjectBySlug(slug)
+                If Not projectResp.Success Then Return PartialView("ModalFailMail")
+                Dim project As ProjectBO = projectResp.Values.FirstOrDefault
+
+                Dim interestText As String = If(Not String.IsNullOrEmpty(model.Interest), model.Interest, "/")
+                Dim questionText As String = "Interesse: " & interestText & If(Not String.IsNullOrEmpty(model.Remarks), " | Opmerkingen: " & model.Remarks, "")
+
+                Dim internalMail As Object = New Email("ProjectInternalMail")
+                internalMail.[To] = "niels.lataire@groupln.be"
+                internalMail.[From] = "niels.lataire@groupln.be"
+                internalMail.Project = project.Name
+                internalMail.Phone = model.Phone
+                internalMail.Name = model.Name
+                internalMail.Firstname = model.Firstname
+                internalMail.Question = questionText
+                internalMail.Send()
+
+                Dim mailRequest As New ContactRequestBO With {
+                    .ProjectId = project.Id,
+                    .Firstname = model.Firstname,
+                    .Lastname = model.Name,
+                    .Email = model.Email,
+                    .Phone = model.Phone,
+                    .RequestType = "ProjectInschrijving",
+                    .Question = questionText,
+                    .Subject = "Inschrijving - " & project.Name,
+                    .Origin = ResolveOrigin("ProjectsController.Inschrijving"),
+                    .SourceSite = "Group LN"
+                }
+                SaveContactRequest(mailRequest)
+                Return PartialView("ModalSuccesMail")
+            Catch ex As Exception
+                LogError("INSCHRIJVING FAILED", ex)
+                Return PartialView("ModalFailMail")
+            End Try
+        End Function
+
     End Class
 
 

@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="~/lib/select2/css/select2.css" />
 <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.min.css" />
 <link rel="stylesheet" href="~/lib/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+<link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
 <link rel="stylesheet" href="~/css/projecten-custom.css" />
 }
 
@@ -44,42 +45,41 @@
 							<p class="card-big-info-desc">Voeg hier de algemene info van de eenheid in.</p>
 						</div>
 						<div class="col-lg-3-5 col-xl-4-5">
-							<div class="form-group row align-items-center pb-3">
+							<div class="row align-items-center pb-3">
 								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
 								<div class="col-lg-7 col-xl-6">
-									@Html.TextBoxFor(m => m.Unit.Name, new { @class = "form-control form-control-modern", id = "txtNaam", placeholder = "naam van de eenheid" })
+									@Html.TextBoxFor(m => m.Unit.Name, new { @class = "form-control", id = "txtNaam", placeholder = "naam van de eenheid" })
 								</div>
 							</div>
-							<div class="form-group">
 								<div class="row align-items-center pb-3">
 									<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2 mt-1 mb-0">Adres</label>
 									<div class="col-lg-5 col-xl-4">
-										@Html.TextBoxFor(m => m.Unit.Street, new { @class = "form-control form-control-modern", id = "txtStraat", placeholder = "straat" })
+									@Html.TextBoxFor(m => m.Unit.Street, new { @class = "form-control", id = "txtStraat", placeholder = "straat" })
 									</div>
 									<div class="col-lg-1 col-xl-1">
-										@Html.TextBoxFor(m => m.Unit.HouseNumber, new { @class = "form-control form-control-modern", id = "txtHuisnr", placeholder = "nr" })
+										@Html.TextBoxFor(m => m.Unit.HouseNumber, new { @class = "form-control", id = "txtHuisnr", placeholder = "nr" })
 									</div>
 									<div class="col-lg-1 col-xl-1">
-										@Html.TextBoxFor(m => m.Unit.BusNumber, new { @class = "form-control form-control-modern", id = "txtBusnr", placeholder = "bus" })
+									@Html.TextBoxFor(m => m.Unit.BusNumber, new { @class = "form-control", id = "txtBusnr", placeholder = "bus" })
 									</div>
 								</div>
-							</div>
-							<div class="form-group row align-items-center pb-3">
+
+							<div class="row align-items-center pb-3">
 								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Kadaster</label>
 								<div class="col-lg-7 col-xl-6">
-									@Html.TextBoxFor(m => m.Unit.PreKad, new { @class = "form-control form-control-modern", id = "txtKadaster", placeholder = "kadastraal nummer" })
+									@Html.TextBoxFor(m => m.Unit.PreKad, new { @class = "form-control", id = "txtKadaster", placeholder = "kadastraal nummer" })
 								</div>
 							</div>
-							<div class="form-group row align-items-center pb-3">
+							<div class="row align-items-center pb-3">
 								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Aandeel in de basisakte</label>
 								<div class="col-lg-7 col-xl-6">
-									@Html.TextBoxFor(m => m.Unit.Landshare, new { @class = "form-control form-control-modern", id = "txtTienduizend", placeholder = "geef het aantal aandelen in de basisakte in", type = "number" })
+									@Html.TextBoxFor(m => m.Unit.Landshare, new { @class = "form-control", id = "txtTienduizend", placeholder = "geef het aantal aandelen in de basisakte in", type = "number" })
 								</div>
 							</div>
-							<div class="form-group row align-items-center pb-3">
+							<div class="row align-items-center pb-3">
 								<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Verdieping</label>
 								<div class="col-lg-7 col-xl-6">
-									@Html.TextBoxFor(m => m.Unit.Level, new { @class = "form-control form-control-modern", id = "txtVerdieping", placeholder = "Geef het nummer van de verdieping in", type = "number" })
+									@Html.TextBoxFor(m => m.Unit.Level, new { @class = "form-control", id = "txtVerdieping", placeholder = "Geef het nummer van de verdieping in", type = "number" })
 								</div>
 							</div>
 						</div>
@@ -95,7 +95,7 @@
 					<div class="tabs-modern row gl-tabs-min-h">
 						<div class="col-lg-2-5 col-xl-1-5">
 							<div class="nav flex-column" id="tab" role="tablist" aria-orientation="vertical">
-								<a class="nav-link active" id="types-tab" data-bs-toggle="pill" data-bs-target="#types" role="tab" aria-controls="types" aria-selected="false"><i class="bx bxs-building-house me-2"></i> Types</a>
+								<a class="nav-link active" id="types-tab" data-bs-toggle="pill" data-bs-target="#types" role="tab" aria-controls="types" aria-selected="false"><i class="bx bx-building-house me-2"></i> Types</a>
 								<a class="nav-link" id="bedragen-tab" data-bs-toggle="pill" data-bs-target="#bedragen" role="tab" aria-controls="bedragen" aria-selected="false"><i class="bx bx-euro me-2"></i> Bedragen</a>
 								<a class="nav-link" id="oppervlaktes-tab" data-bs-toggle="pill" data-bs-target="#oppervlaktes" role="tab" aria-controls="oppervlaktes" aria-selected="false"><i class="fa fa-ruler me-2"></i> Oppervlaktes</a>
 								<a class="nav-link" id="indeling-tab" data-bs-toggle="pill" data-bs-target="#indeling" role="tab" aria-controls="indeling" aria-selected="false"><i class="bx bx-cabinet me-2"></i> Indeling</a>
@@ -106,67 +106,72 @@
 							<div class="tab-content" id="tabContent">
 								<!-- TYPES-->
 								<div class="tab-pane fade show active" id="types" role="tabpanel" aria-labelledby="types-tab">
-									<div class="form-group row align-items-center pb-3">
+									<div class="row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Naam</label>
 										<div class="col-lg-7 col-xl-6">
-											@Html.DropDownListFor(m => m.SelectedGroupType, new SelectList(Model.GroupTypes, "Id", "Name", Model.SelectedGroupType), "Selecteer...", new { @class = "form-control form-control-modern populate", id = "lstGroupTypes" })
+											@Html.DropDownListFor(m => m.SelectedGroupType, new SelectList(Model.GroupTypes, "Id", "Name", Model.SelectedGroupType), "Selecteer...", new { @class = "form-control populate", id = "lstGroupTypes" })
 										</div>
 									</div>
 
-									<div class="form-group row align-items-center pb-3">
+									<div class="row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Subtype</label>
 										<div class="col-lg-7 col-xl-6">
-											@Html.DropDownListFor(m => m.SelectedType, new SelectList(Model.Types, "Id", "Name", Model.SelectedType), "Selecteer...", new { @class = "form-control form-control-modern populate", id = "lstTypes" })
+											@Html.DropDownListFor(m => m.SelectedType, new SelectList(Model.Types, "Id", "Name", Model.SelectedType), "Selecteer...", new { @class = "form-control populate", id = "lstTypes" })
 										</div>
 									</div>
-									<div class="form-group row align-items-center pb-3">
+									<div class="row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Koppelen aan hoofdeenheid</label>
 										<div class="col-lg-7 col-xl-6">
-											@Html.DropDownListFor(m => m.Unit.AttachedUnitsId, new SelectList(Model.AttachableUnits, "ID", "Display", Model.Unit.AttachedUnitsId, "Group"), "Selecteer...", new { @class = "form-control form-control-modern populate", data_plugin_selecttwo = "", id = "lstAttachableUnits" })
+											@Html.DropDownListFor(m => m.Unit.AttachedUnitsId, new SelectList(Model.AttachableUnits, "ID", "Display", Model.Unit.AttachedUnitsId, "Group"), "Selecteer...", new { @class = "form-control w-100 populate", data_plugin_selecttwo = "", id = "lstAttachableUnits" })
 										</div>
 									</div>
 								</div>
 								<!-- BEDRAGEN-->
 								<div class="tab-pane fade show" id="bedragen" role="tabpanel" aria-labelledby="bedragen-tab">
-									<div class="form-group row align-items-center pb-3">
-										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondwaarde</label>
-										<div class="col-lg-7 col-xl-6">
-											@Html.EditorFor(m => m.Unit.LandValue)
-										</div>
+
+									<!-- Grondwaarde -->
+									<div class="gl-grond-block mb-3">
+										<small class="gl-grond-label">Grondwaarde</small>
+										@Html.EditorFor(m => m.Unit.LandValue)
 									</div>
-									<div class="form-group">
-										<div class="row pb-1">
-											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Afwerkingsopties</label>
-											<div class="col-lg-7 col-xl-8" id="FinishingOptionSections">
-												@{
-													ViewBag.UnitId = Model.Unit.Id;
-													ViewBag.ProjectId = Model.ProjectId;
-												}
-												@foreach (var option in Model.FinishingOptions ?? new List<UnitFinishingOptionBO>())
-												{
-													@await Html.PartialAsync("_FinishingOptionSection", option)
-												}
-											</div>
-										</div>
-										<div class="row align-items-center pb-3">
-											<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0"></label>
-											<div class="col-md-4">
-												<button class="btn btn-default btn-sm" type="button" id="btnAddFinishingOption">
-													<i class="fa fa-plus me-1"></i> Afwerkingsoptie toevoegen
-												</button>
-											</div>
-										</div>
+
+									<!-- Bouwwaardes per afwerkingsgroep -->
+									<div class="d-flex justify-content-between align-items-center mb-2 border-bottom border-1 pb-2 mb-2">
+										<strong class="text-uppercase small" style="letter-spacing:.05em">Bouwwaardes per afwerkingsgroep</strong>
+										<span class="text-muted small">Totaal: <span id="gl-bouw-totaal">€ –</span></span>
 									</div>
+									<div id="FinishingOptionSections">
+										@{
+											ViewBag.UnitId = Model.Unit.Id;
+											ViewBag.ProjectId = Model.ProjectId;
+										}
+										@foreach (var option in Model.FinishingOptions ?? new List<UnitFinishingOptionBO>())
+										{
+											@await Html.PartialAsync("_FinishingOptionSection", option)
+										}
+									</div>
+									<div class="mb-3 mt-3">
+										<button class="btn btn-dashed w-100" type="button" id="btnAddFinishingOption">
+											<i class="fa fa-plus me-1"></i> Afwerkingsoptie toevoegen
+										</button>
+									</div>
+
+									<!-- Totaalprijs eenheid per afwerkingsgroep -->
+									<div class="border-top pt-3 mt-1">
+										<strong class="d-block mb-2">Totaalprijs eenheid</strong>
+										<div id="gl-totaalprijs-rows"></div>
+									</div>
+
 								</div>
 								<!-- OPPERVLAKTES-->
 								<div class="tab-pane fade show" id="oppervlaktes" role="tabpanel" aria-labelledby="oppervlaktes-tab">
-									<div class="form-group row align-items-center pb-3">
+									<div class="row align-items-center pb-3">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Grondoppervlakte</label>
 										<div class="col-lg-7 col-xl-6">
 											@Html.EditorFor(m => m.Unit.GroundSurface)
 										</div>
 									</div>
-									<div class="form-group row align-items-center pb-3 form-control-sm">
+									<div class="row align-items-center pb-3 form-control-sm">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Bewoonbare oppervlakte</label>
 										<div class="col-lg-7 col-xl-6">
 											@Html.EditorFor(m => m.Unit.Surface)
@@ -228,7 +233,7 @@
 										</div>
 									</div>
 
-									<div class="form-group row pb-4">
+									<div class="row pb-4">
 										<label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2">Uitvoeringsplannen</label>
 										<div class="col-lg-7 col-xl-6">
 											<div id="executionPlanPreview" class="d-flex flex-wrap gap-2 align-items-start">
@@ -293,11 +298,24 @@
 </div>
 
 
+<!-- Magnific Popup – bevestiging verwijderen afwerkingsgroep -->
+<div id="gl-confirm-remove-option" class="mfp-hide">
+	<div class="gl-confirm-popup">
+		<h5 class="gl-confirm-title"><i class="fa fa-trash me-2 text-danger"></i>Afwerkingsgroep verwijderen</h5>
+		<p class="gl-confirm-body">Ben je zeker dat je deze afwerkingsgroep en alle bijhorende bouwwaardes wilt verwijderen?</p>
+		<div class="gl-confirm-actions">
+			<button type="button" class="btn btn-default btn-sm" id="gl-confirm-cancel">Annuleren</button>
+			<button type="button" class="btn btn-danger btn-sm" id="gl-confirm-delete">Verwijderen</button>
+		</div>
+	</div>
+</div>
+
 @section PageScripts
 {
 	<script src="~/lib/select2/js/select2.js"></script>
 	<script src="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.js"></script>
 	<script src="~/lib/jquery-mask/jquery.mask.js"></script>
+	<script src="~/lib/magnific-popup/jquery.magnific-popup.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/autonumeric@4.6.0/dist/autoNumeric.min.js"></script>
 	<script src="~/js/currency.js"></script>
 	<script>
@@ -347,7 +365,68 @@
 		$(document).ready(function () {
 			CurrencyMask.init('.Currencymask');
 			CurrencyMask.init('.Surfacemask');
+			glRecalcBedragen();
 		});
+
+		// ==============================
+		// Auto-herberekening bedragen
+		// ==============================
+		function glGetAN(el) {
+			const an = AutoNumeric.getAutoNumericElement(el);
+			return an ? (an.getNumber() || 0) : 0;
+		}
+
+		function glFormatEuro(val) {
+			if (!val) return '€ –';
+			return '€ ' + val.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+		}
+
+		function glRecalcBedragen() {
+			const grondInput = document.getElementById('Unit_LandValue');
+			const grond = grondInput ? glGetAN(grondInput) : 0;
+
+			let totalBouw = 0;
+			const groepRows = [];
+
+			document.querySelectorAll('.gl-finishing-option-section').forEach(function (section) {
+				let sectionTotal = 0;
+				section.querySelectorAll('.gl-cv-rows .Currencymask').forEach(function (inp) {
+					sectionTotal += glGetAN(inp);
+				});
+				totalBouw += sectionTotal;
+
+				const subtotaalEl = section.querySelector('.gl-option-subtotal');
+				if (subtotaalEl) subtotaalEl.textContent = glFormatEuro(sectionTotal);
+
+				const nameInput = section.querySelector('.gl-option-name');
+				const name = nameInput ? (nameInput.value.trim() || 'Optie') : 'Optie';
+				groepRows.push({ name: name, grond: grond, bouw: sectionTotal });
+			});
+
+			const totalBouwEl = document.getElementById('gl-bouw-totaal');
+			if (totalBouwEl) totalBouwEl.textContent = glFormatEuro(totalBouw);
+
+			const totaalprijsContainer = document.getElementById('gl-totaalprijs-rows');
+			if (totaalprijsContainer) {
+				if (groepRows.length === 0) {
+					totaalprijsContainer.innerHTML = '<span class="text-muted small">Voeg een afwerkingsoptie toe.</span>';
+				} else {
+					totaalprijsContainer.innerHTML = groepRows.map(function (r) {
+						const total = r.grond + r.bouw;
+						return '<div class="d-flex justify-content-between align-items-center py-2 border-bottom">' +
+							'<span class="text-muted small">' + r.name + ': Grond ' + glFormatEuro(r.grond) + ' + Bouw ' + glFormatEuro(r.bouw) + ' =' + '</span>' +
+							'<strong>' + glFormatEuro(total) + '</strong>' +
+							'</div>';
+					}).join('');
+				}
+			}
+		}
+
+		$(document).on('change autoNumeric:rawValueModified', '#bedragen .Currencymask', function () {
+			glRecalcBedragen();
+		});
+
+		document.querySelector('#bedragen-tab')?.addEventListener('shown.bs.tab', glRecalcBedragen);
 
 		// ==============================
 		// Nieuwe rij bij indeling
@@ -374,8 +453,7 @@
 		// Afwerkingsopties beheren (AJAX)
 		// ==============================
 		$('#btnAddFinishingOption').click(function () {
-			const name = prompt('Naam van de afwerkingsoptie:', 'Nieuwe optie');
-			if (!name) return;
+			const name = 'Afwerkingsgroep';
 			$.post('@Url.Action("AddFinishingOption", "Projecten")', { unitId: @Model.Unit.Id, name: name }, function (data) {
 				if (data.error) { alert(data.error); return; }
 				$.ajax({
@@ -385,6 +463,7 @@
 					success: function (html) {
 						$('#FinishingOptionSections').append(html);
 						CurrencyMask.init($('#FinishingOptionSections').find('.Currencymask'));
+						glRecalcBedragen();
 					}
 				});
 			});
@@ -398,13 +477,33 @@
 			$.post('@Url.Action("RenameFinishingOption", "Projecten")', { id: optionId, name: name });
 		});
 
+		let _glRemoveOptionId = null;
+		let _glRemoveSection  = null;
+
 		$(document).on('click', '.gl-remove-finishing-option', function () {
-			const optionId = $(this).data('option-id');
-			if (!confirm('Afwerkingsoptie en alle bijhorende bouwwaardes verwijderen?')) return;
-			const $section = $(this).closest('.gl-finishing-option-section');
-			$.post('@Url.Action("RemoveFinishingOption", "Projecten")', { id: optionId }, function (data) {
-				$section.remove();
+			_glRemoveOptionId = $(this).data('option-id');
+			_glRemoveSection  = $(this).closest('.gl-finishing-option-section');
+			$.magnificPopup.open({
+				items: { src: '#gl-confirm-remove-option', type: 'inline' },
+				modal: true
 			});
+		});
+
+		$(document).on('click', '#gl-confirm-cancel', function () {
+			$.magnificPopup.close();
+			_glRemoveOptionId = null;
+			_glRemoveSection  = null;
+		});
+
+		$(document).on('click', '#gl-confirm-delete', function () {
+			if (!_glRemoveOptionId) return;
+			$.post('@Url.Action("RemoveFinishingOption", "Projecten")', { id: _glRemoveOptionId }, function () {
+				_glRemoveSection.remove();
+				glRecalcBedragen();
+			});
+			$.magnificPopup.close();
+			_glRemoveOptionId = null;
+			_glRemoveSection  = null;
 		});
 
 		$(document).on('click', '.gl-add-cv-for-option', function () {
@@ -421,6 +520,7 @@
 					const $row = $(html);
 					$btn.closest('.card-body').find('.gl-cv-rows').append($row);
 					CurrencyMask.init($row.find('.Currencymask'));
+					glRecalcBedragen();
 				}
 			});
 		});
@@ -438,6 +538,7 @@
 		// ==============================
 		$(document).on('click', 'a.deleteConstructionRow', function () {
 			$(this).closest('tr').remove();
+			glRecalcBedragen();
 			return false;
 		});
 

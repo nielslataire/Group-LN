@@ -4,9 +4,103 @@
 End Code
 @Imports wwwbco.extensions
 @Imports System.Text.RegularExpressions
+@Imports System.Globalization
 @section PageStyle
     <link rel="stylesheet" href="~/Content/real-estate.css" />
     <link rel="stylesheet" href="~/vendor/magnific-popup/magnific-popup.css" />
+    <style>
+        /* Afwerkingsopties */
+        .opties-badge {
+            display: inline-block;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #3D7A4E;
+            border: 1px solid #3D7A4E;
+            border-radius: 2px;
+            padding: 2px 6px;
+            margin-left: 6px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .prijs-vanaf-label {
+            display: block;
+            font-size: 9.5px;
+            font-weight: 500;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            color: #888;
+            margin-bottom: 1px;
+        }
+        .opties-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            border-radius: 3px;
+            background: transparent;
+            border: 1px solid #cde5c7;
+            color: #3D7A4E;
+            cursor: pointer;
+            transition: background .2s, color .2s;
+            vertical-align: middle;
+        }
+        .opties-toggle-btn:hover,
+        .opties-toggle-btn[aria-expanded="true"] {
+            background: #3D7A4E;
+            border-color: #3D7A4E;
+            color: #fff;
+        }
+        .opties-expand-rij > td {
+            padding: 0 !important;
+            background: #f5f8f4;
+        }
+        .opties-expand-inner {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding: 16px 20px 20px;
+        }
+        .optie-kaart {
+            flex: 1;
+            min-width: 180px;
+            background: #fff;
+            border: 1px solid #d8e8d4;
+            border-radius: 4px;
+            padding: 14px 18px;
+        }
+        .optie-kaart-default { border-color: #3D7A4E; background: #f4faf0; }
+        .optie-kaart-naam {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            color: #2C3B2A;
+            margin-bottom: 6px;
+        }
+        .optie-kaart-prijs {
+            font-size: 18px;
+            font-weight: 600;
+            color: #00532D;
+            margin-bottom: 8px;
+        }
+        .optie-status {
+            display: inline-block;
+            font-size: 9.5px;
+            font-weight: 600;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+        .optie-status-beschikbaar { background: #eaf3e4; color: #3B6D11; border: 1px solid #C0DD97; }
+        .optie-status-optie { background: #fef3e2; color: #7a4a00; border: 1px solid #f5cc80; }
+        @@media (max-width: 768px) {
+            .opties-expand-inner { flex-direction: column; }
+        }
+    </style>
 end section
 
 
@@ -323,38 +417,71 @@ end section
 
                                     </thead>
                                     <tbody>
-                        @for Each unit In Model.Units.Where(Function(m) m.Type.Id = 1)
-                            If unit.ClientAccountId = 0 Then
-                        @<text>
-                            <tr>
-                                <td Class="text-center">@unit.Name</td>
+                        @For Each unit In Model.Units.Where(Function(m) m.Type.Id = 1)
+                            Dim isSold = (unit.ClientAccountId <> 0)
+                            Dim isInOption = (Not isSold AndAlso unit.IsOption)
+                            Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                            Dim terras = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Sum(Function(i) i.Surface)
+                            Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
+                            Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
+                            Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
+                            @<tr style="@(If(isSold, "color:lightgray", ""))">
+                                <td Class="text-center">
+                                    @unit.Name
+                                    @If heeftOpties Then
+                                        @<span class="opties-badge">@unit.FinishingOptions.Count opties</span>
+                                    End If
+                                </td>
                                 <td class="hidden-xs text-center">@unit.Level</td>
-                                <td class="text-center hidden-xs">@If unit.ClientAccountId = 0 Then @<text>@String.Format("{0:n0}", unit.Surface) m²</text> Else @<text>-</text> end if</td>
-                                <td Class="text-center hidden-xs">@If unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Count > 0 AndAlso unit.ClientAccountId = 0 Then @<text> @String.Format("{0:n0}", unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Terras Or m.Type = BO.RoomType.Dakterras).Sum(Function(i) i.Surface)) m² </text>else @<text>-</text> end If</td>
-                                <td class="text-center hidden-xs">@If unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Count > 0 AndAlso unit.ClientAccountId = 0 Then @<text>@String.Format("{0:n0}", unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)) m² </text>else @<text>-</text>    End If</td>
-                                <td class="text-center hidden-xs">@If unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).Count > 0 AndAlso unit.ClientAccountId = 0 Then @unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault.Number end If</td>
-                                @If unit.ClientAccountId = 0 Then @<text>
-                                                            <td Class="text-center"> @Html.DisplayFor(Function(m) unit.TotalValue)</td></text> Else @<text>
-                                                            <td Class="text-center"> Verkocht</td></text>end if
-                                <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then @<text><a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
+                                <td class="text-center hidden-xs">@If Not isSold Then @<text>@String.Format("{0:n0}", unit.Surface) m²</text> Else @<text>-</text> End If</td>
+                                <td Class="text-center hidden-xs">@If terras > 0 AndAlso Not isSold Then @<text>@String.Format("{0:n0}", terras) m²</text> Else @<text>-</text> End If</td>
+                                <td class="text-center hidden-xs">@If tuin > 0 AndAlso Not isSold Then @<text>@String.Format("{0:n0}", tuin) m²</text> Else @<text>-</text> End If</td>
+                                <td class="text-center hidden-xs">@If slpk > 0 AndAlso Not isSold Then @<text>@slpk</text> Else @<text>-</text> End If</td>
+                                <td Class="text-center">
+                                    @If isSold Then
+                                        @<text>Verkocht</text>
+                                    ElseIf heeftOpties Then
+                                        Dim aptMinOpt = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
+                                        @<text>
+                                            <span class="prijs-vanaf-label">Vanaf</span>
+                                            @String.Format(New CultureInfo("nl-BE"), "{0:C}", aptMinOpt)
+                                        </text>
+                                    Else
+                                        @Html.DisplayFor(Function(m) unit.TotalValue)
+                                    End If
+                                </td>
+                                <td class="text-center">
+                                    @If Not isSold AndAlso unit.Plan IsNot Nothing Then
+                                        @<a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a>
+                                    End If
+                                    @If heeftOpties Then
+                                        @<button type="button" class="opties-toggle-btn" data-unit-id="@unit.Id" aria-expanded="false" title="Afwerkingsopties">
+                                            <svg class="toggle-ico-open" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                            <svg class="toggle-ico-close" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:none"><polyline points="18 15 12 9 6 15"/></svg>
+                                        </button>
+                                    End If
+                                </td>
                             </tr>
-                        </text>
-                                                                        Else
-                                                                        @<text>
-                                                                            <tr style="color:lightgray">
-                                                                                <td Class="text-center">@unit.Name</td>
-                                                                                <td class="hidden-xs text-center">@unit.Level</td>
-                                                                                <td class="text-center hidden-xs">-</td>
-                                                                                <td Class="text-center hidden-xs">-</td>
-                                                                                <td class="text-center hidden-xs">-</td>
-                                                                                <td class="text-center hidden-xs">-</td>
-                                                                                <td Class="text-center">Verkocht</td>
-                                                                                <td class="text-center"></td>
-
-                                                                            </tr>
-                                                                        </text>
+                            @If heeftOpties Then
+                                @<tr class="opties-expand-rij" id="opties-apt-@unit.Id" style="display:none;">
+                                    <td colspan="8" class="opties-expand-cel">
+                                        <div class="opties-expand-inner">
+                                            @For Each opt In unit.FinishingOptions.OrderBy(Function(o) o.SortOrder)
+                                                Dim optPrijs = unit.LandValue + opt.TotalValue
+                                                @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
+                                                    <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
+                                                    <div class="optie-kaart-prijs">@String.Format(New CultureInfo("nl-BE"), "{0:C}", optPrijs)</div>
+                                                    @If isInOption Then
+                                                        @<span class="optie-status optie-status-optie">In optie</span>
+                                                    Else
+                                                        @<span class="optie-status optie-status-beschikbaar">Beschikbaar</span>
+                                                    End If
+                                                </div>
+                                            Next
+                                        </div>
+                                    </td>
+                                </tr>
                             End If
-
                         Next
                                         </tbody>
                                     </table>
@@ -377,34 +504,66 @@ end section
                 </thead>
                 <tbody>
                     @For Each unit In Model.Units.Where(Function(m) m.Type.Id = 2)
-                        If unit.ClientAccountId = 0 Then
-                            @<text>
-                                <tr>
-                                    <td Class="text-center">@unit.Name</td>
-                                    <td class="text-center hidden-xs">@If unit.ClientAccountId = 0 Then @<text>@String.Format("{0:n0}", unit.Surface) m²</text> Else @<text>-</text> end if</td>
-                                    <td Class="text-center hidden-xs">@If unit.ClientAccountId = 0 AndAlso unit.GroundSurface > 0 Then @<text> @String.Format("{0:n0}", unit.GroundSurface) m²</text>else @<text>-</text> end If</td>
-                                    <td class="text-center hidden-xs">@if unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).Count > 0 AndAlso unit.ClientAccountId = 0 Then @unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault.Number end If</td>
-                                    @If unit.ClientAccountId = 0 Then @<text>
-                                        <td Class="text-center"> @Html.DisplayFor(Function(m) unit.TotalValue)</td></text> Else @<text>
-                                        <td Class="text-center"> Verkocht</td></text>end if
-                                <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then@<text><a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
-
-                                </tr>
-                            </text>
-                        Else
-                            @<text>
-                                <tr style="color:lightgray">
-                                    <td Class="text-center">@unit.Name</td>
-                                    <td class="text-center hidden-xs">-</td>
-                                    <td Class="text-center hidden-xs">-</td>
-                                    <td class="text-center hidden-xs">-</td>
-                                    <td Class="text-center">Verkocht</td>
-                                    <td class="text-center"></td>
-
-                                </tr>
-                            </text>
+                        Dim isSold = (unit.ClientAccountId <> 0)
+                        Dim isInOption = (Not isSold AndAlso unit.IsOption)
+                        Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                        Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
+                        Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
+                        @<tr style="@(If(isSold, "color:lightgray", ""))">
+                            <td Class="text-center">
+                                @unit.Name
+                                @If heeftOpties Then
+                                    @<span class="opties-badge">@unit.FinishingOptions.Count opties</span>
+                                End If
+                            </td>
+                            <td class="text-center hidden-xs">@If Not isSold Then @<text>@String.Format("{0:n0}", unit.Surface) m²</text> Else @<text>-</text> End If</td>
+                            <td Class="text-center hidden-xs">@If Not isSold AndAlso unit.GroundSurface > 0 Then @<text>@String.Format("{0:n0}", unit.GroundSurface) m²</text> Else @<text>-</text> End If</td>
+                            <td class="text-center hidden-xs">@If slpk > 0 AndAlso Not isSold Then @<text>@slpk</text> Else @<text>-</text> End If</td>
+                            <td Class="text-center">
+                                @If isSold Then
+                                    @<text>Verkocht</text>
+                                ElseIf heeftOpties Then
+                                    Dim wonMinOpt = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
+                                    @<text>
+                                        <span class="prijs-vanaf-label">Vanaf</span>
+                                        @String.Format(New CultureInfo("nl-BE"), "{0:C}", wonMinOpt)
+                                    </text>
+                                Else
+                                    @Html.DisplayFor(Function(m) unit.TotalValue)
+                                End If
+                            </td>
+                            <td class="text-center">
+                                @If Not isSold AndAlso unit.Plan IsNot Nothing Then
+                                    @<a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a>
+                                End If
+                                @If heeftOpties Then
+                                    @<button type="button" class="opties-toggle-btn" data-unit-id="@unit.Id" aria-expanded="false" title="Afwerkingsopties">
+                                        <svg class="toggle-ico-open" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                        <svg class="toggle-ico-close" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:none"><polyline points="18 15 12 9 6 15"/></svg>
+                                    </button>
+                                End If
+                            </td>
+                        </tr>
+                        @If heeftOpties Then
+                            @<tr class="opties-expand-rij" id="opties-won-@unit.Id" style="display:none;">
+                                <td colspan="6" class="opties-expand-cel">
+                                    <div class="opties-expand-inner">
+                                        @For Each opt In unit.FinishingOptions.OrderBy(Function(o) o.SortOrder)
+                                            Dim optPrijs = unit.LandValue + opt.TotalValue
+                                            @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
+                                                <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
+                                                <div class="optie-kaart-prijs">@String.Format(New CultureInfo("nl-BE"), "{0:C}", optPrijs)</div>
+                                                @If isInOption Then
+                                                    @<span class="optie-status optie-status-optie">In optie</span>
+                                                Else
+                                                    @<span class="optie-status optie-status-beschikbaar">Beschikbaar</span>
+                                                End If
+                                            </div>
+                                        Next
+                                    </div>
+                                </td>
+                            </tr>
                         End If
-
                     Next
                 </tbody>
             </Table>
@@ -426,32 +585,63 @@ end section
                         </thead>
                         <tbody>
                             @For Each unit In Model.Units.Where(Function(m) m.Type.Id = 10)
-                        If unit.ClientAccountId = 0 Then
-                                    @<text>
-                                        <tr>
-                                            <td Class="text-center">@unit.Name</td>
-                                            <td class="hidden-xs text-center">@unit.Level</td>
-                                            <td class="text-center hidden-xs">@If unit.ClientAccountId = 0 Then @<text>@String.Format("{0:n0}", unit.Surface) m²</text> Else @<text>-</text> end if</td>
-                                            @If unit.ClientAccountId = 0 Then @<text>
-                                        <td Class="text-center"> @Html.DisplayFor(Function(m) unit.TotalValue)</td></text> Else @<text>
-                                        <td Class="text-center"> Verkocht</td></text>end if
-                                        <td class="text-center">@If unit.Plan IsNot Nothing AndAlso unit.ClientAccountId = 0 Then@<text><a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a></text>Else @<text></text>End if </td>
-
-                                        </tr>
-                                    </text>
-                                Else
-                                    @<text>
-                                        <tr style="color:lightgray">
-                                            <td Class="text-center">@unit.Name</td>
-                                            <td class="hidden-xs text-center">@unit.Level</td>
-                                            <td class="text-center hidden-xs">-</td>
-                                            <td Class="text-center">Verkocht</td>
-                                            <td class="text-center"></td>
-
-                                        </tr>
-                                    </text>
+                                Dim isSold = (unit.ClientAccountId <> 0)
+                                Dim isInOption = (Not isSold AndAlso unit.IsOption)
+                                Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                                @<tr style="@(If(isSold, "color:lightgray", ""))">
+                                    <td Class="text-center">
+                                        @unit.Name
+                                        @If heeftOpties Then
+                                            @<span class="opties-badge">@unit.FinishingOptions.Count opties</span>
+                                        End If
+                                    </td>
+                                    <td class="hidden-xs text-center">@unit.Level</td>
+                                    <td class="text-center hidden-xs">@If Not isSold Then @<text>@String.Format("{0:n0}", unit.Surface) m²</text> Else @<text>-</text> End If</td>
+                                    <td Class="text-center">
+                                        @If isSold Then
+                                            @<text>Verkocht</text>
+                                        ElseIf heeftOpties Then
+                                            Dim handMinOpt = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
+                                            @<text>
+                                                <span class="prijs-vanaf-label">Vanaf</span>
+                                                @String.Format(New CultureInfo("nl-BE"), "{0:C}", handMinOpt)
+                                            </text>
+                                        Else
+                                            @Html.DisplayFor(Function(m) unit.TotalValue)
+                                        End If
+                                    </td>
+                                    <td class="text-center">
+                                        @If Not isSold AndAlso unit.Plan IsNot Nothing Then
+                                            @<a href="#modalsendplan" class="fa fa-download modal-with-form btnsendplan" data-toggle="tooltip" data-placement="top" title="downloaden" data-original-title="downloaden" type="button" data-id="@unit.Id"></a>
+                                        End If
+                                        @If heeftOpties Then
+                                            @<button type="button" class="opties-toggle-btn" data-unit-id="@unit.Id" aria-expanded="false" title="Afwerkingsopties">
+                                                <svg class="toggle-ico-open" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                                <svg class="toggle-ico-close" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2" style="display:none"><polyline points="18 15 12 9 6 15"/></svg>
+                                            </button>
+                                        End If
+                                    </td>
+                                </tr>
+                                @If heeftOpties Then
+                                    @<tr class="opties-expand-rij" id="opties-hand-@unit.Id" style="display:none;">
+                                        <td colspan="5" class="opties-expand-cel">
+                                            <div class="opties-expand-inner">
+                                                @For Each opt In unit.FinishingOptions.OrderBy(Function(o) o.SortOrder)
+                                                    Dim optPrijs = unit.LandValue + opt.TotalValue
+                                                    @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
+                                                        <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
+                                                        <div class="optie-kaart-prijs">@String.Format(New CultureInfo("nl-BE"), "{0:C}", optPrijs)</div>
+                                                        @If isInOption Then
+                                                            @<span class="optie-status optie-status-optie">In optie</span>
+                                                        Else
+                                                            @<span class="optie-status optie-status-beschikbaar">Beschikbaar</span>
+                                                        End If
+                                                    </div>
+                                                Next
+                                            </div>
+                                        </td>
+                                    </tr>
                                 End If
-
                             Next
                         </tbody>
                     </Table>
@@ -593,6 +783,23 @@ end section
     }
 
 
+
+    $(document).on('click', '.opties-toggle-btn', function () {
+        var unitId = $(this).data('unit-id');
+        var $row = $('#opties-apt-' + unitId + ', #opties-won-' + unitId + ', #opties-hand-' + unitId);
+        var isOpen = $(this).attr('aria-expanded') === 'true';
+        if (isOpen) {
+            $row.hide();
+            $(this).attr('aria-expanded', 'false');
+            $(this).find('.toggle-ico-open').show();
+            $(this).find('.toggle-ico-close').hide();
+        } else {
+            $row.show();
+            $(this).attr('aria-expanded', 'true');
+            $(this).find('.toggle-ico-open').hide();
+            $(this).find('.toggle-ico-close').show();
+        }
+    });
 
     $('.btnsendplan').click(function () {
         var url = "/Projects/SendPlan"; // the url to the controller

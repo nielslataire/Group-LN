@@ -50,6 +50,7 @@ Partial Public Class Units
     Public Overridable Property InvoicingPaymentGroup As InvoicingPaymentGroup
     Public Overridable Property InvoicesDetails As ICollection(Of InvoicesDetails) = New HashSet(Of InvoicesDetails)
     Public Overridable Property UnitConstructionValue As ICollection(Of UnitConstructionValue) = New HashSet(Of UnitConstructionValue)
+    Public Overridable Property UnitFinishingOptions As ICollection(Of UnitFinishingOption) = New HashSet(Of UnitFinishingOption)
     Public Overridable Property Invoices As Invoices
 
 End Class

@@ -35,6 +35,7 @@ namespace CPMCore.Models.Instellingen
         public string? CountryCode { get; set; }
 
         [EmailAddress(ErrorMessage = "Geen geldig e-mailadres.")]
+        [Display(Name = "E-mailadres")]
         public string? Email { get; set; }
         [Display(Name = "Telefoon")]
         public string? Phone { get; set; }
@@ -43,7 +44,7 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Website")]
         public string? Website { get; set; }
 
-        [Display(Name = "Vennootschapsvorm")]
+        [Display(Name = "Rechtsvorm")]
         public int? CompanyLegalFormId { get; set; }
         public string? CompanyLegalFormAbbreviation { get; set; }
 
@@ -91,7 +92,7 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Email body template (betaald)")]
         public string? EmailPaidBodyTemplate { get; set; }
 
-        [Display(Name = "Afzender e-mailadres facturen")]
+        [Display(Name = "Factuurverzend e-mail")]
         [EmailAddress]
         public string? InvoiceSendEmail { get; set; }
 
@@ -123,13 +124,13 @@ namespace CPMCore.Models.Instellingen
         [Display(Name = "Overschrijving Template")]
         public string? EpcRemittanceTemplate { get; set; }   // "Factuur {PublicId}"
 
-        [Display(Name = "Octopus gebruikersnaam")]
+        [Display(Name = "Gebruikersnaam")]
         public string? OctopusUsername { get; set; }
 
-        [Display(Name = "Octopus wachtwoord")]
+        [Display(Name = "Wachtwoord")]
         [DataType(DataType.Password)]
         public string? OctopusPassword { get; set; }
-
+        [Display(Name = "Authenticatietoken")]
         public string? OctopusAuthenticateToken { get; set; }
 
         public DateTime? OctopusAuthenticateTokenValidUntil { get; set; }

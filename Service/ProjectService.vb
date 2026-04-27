@@ -112,7 +112,7 @@ Public Class ProjectService
             If Not _entity.isPublished Then Continue For
             Dim bo As New ProjectBO()
             bo.Id = _entity.id
-            If TrimCommercialText = True And _entity.CommercialTextNL.ToString.Length > 150 Then bo.CommercialTextNL = _entity.CommercialTextNL.ToString.Substring(0, 150) & " ..." Else bo.CommercialTextNL = _entity.CommercialTextNL
+            If TrimCommercialText = True AndAlso Not String.IsNullOrEmpty(_entity.CommercialTextNL) AndAlso _entity.CommercialTextNL.Length > 150 Then bo.CommercialTextNL = _entity.CommercialTextNL.Substring(0, 150) & " ..." Else bo.CommercialTextNL = _entity.CommercialTextNL
             bo.CommercialTitleNL = _entity.CommercialTitleNL
             bo.Name = _entity.Name
             bo.Slug = _entity.slug

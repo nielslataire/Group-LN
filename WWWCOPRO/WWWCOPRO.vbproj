@@ -310,6 +310,7 @@
     <Content Include="Content\img\team\ignace.jpg" />
     <Content Include="Content\PATTERN-dark.png" />
     <Content Include="Content\project-detail.css" />
+    <Content Include="Content\project-inschrijving.css" />
     <Content Include="Content\projects-index.css" />
     <Content Include="Content\skins\PATTERN-dark.png" />
     <Content Include="Content\PATTERN.png" />
@@ -528,6 +529,7 @@
     <Content Include="Views\Emails\PlanMail.vbhtml" />
     <Content Include="Views\Emails\ProjectMail.vbhtml" />
     <Content Include="Views\Emails\ProjectInternalMail.vbhtml" />
+    <Content Include="Views\Projects\Inschrijving.vbhtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\custom.css" />

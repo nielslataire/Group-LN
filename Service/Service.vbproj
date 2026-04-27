@@ -148,6 +148,7 @@
     <Compile Include="Translators\UtilityPercentageTranslator.vb" />
     <Compile Include="Translators\UnitRoomTranslator.vb" />
     <Compile Include="Translators\UnitConstructionValueTranslator.vb" />
+    <Compile Include="Translators\UnitFinishingOptionTranslator.vb" />
     <Compile Include="Translators\VacationDayTranslator.vb" />
     <Compile Include="Translators\ClientGiftTranslator.vb" />
     <Compile Include="Translators\ClientOwnerTypeTranslator.vb" />

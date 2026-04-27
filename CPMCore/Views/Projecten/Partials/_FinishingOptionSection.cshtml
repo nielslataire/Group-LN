@@ -10,22 +10,21 @@
     int projectId = (int)ViewBag.ProjectId;
 }
 
-<div class="gl-finishing-option-section card border mb-3" data-option-id="@Model.Id">
+<div class="gl-finishing-option-section card border mt-3" data-option-id="@Model.Id">
     <div class="card-header d-flex align-items-center gap-2 py-2">
         <input type="text"
                class="form-control form-control-sm gl-option-name"
                value="@Model.Name"
                placeholder="Naam afwerkingsoptie"
-               data-option-id="@Model.Id"
-               style="max-width:260px" />
+               data-option-id="@Model.Id" />
         <button type="button"
-                class="btn btn-danger btn-sm ms-auto gl-remove-finishing-option"
+                class="btn btn-gl-remove btn-sm ms-auto gl-remove-finishing-option"
                 data-option-id="@Model.Id"
                 title="Optie verwijderen">
             <i class="fa fa-trash"></i>
         </button>
     </div>
-    <div class="card-body p-2">
+    <div class="card-body p-3">
         <table class="w-100">
             <tbody class="gl-cv-rows" data-option-id="@Model.Id">
                 @foreach (var cv in Model.ConstructionValues)
@@ -36,12 +35,16 @@
         </table>
         <div class="mt-2">
             <button type="button"
-                    class="btn btn-default btn-sm gl-add-cv-for-option"
+                    class="btn btn-dashed gl-add-cv-for-option"
                     data-unit-id="@unitId"
                     data-project-id="@projectId"
                     data-option-id="@Model.Id">
                 <i class="fa fa-plus me-1"></i> Bouwwaarde toevoegen
             </button>
         </div>
+    </div>
+    <div class="gl-option-subtotal-row d-flex justify-content-between align-items-center px-3 py-2">
+        <span class="text-muted small">Subtotaal @Model.Name</span>
+        <strong class="gl-option-subtotal">€ –</strong>
     </div>
 </div>

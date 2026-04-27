@@ -132,6 +132,7 @@
     <Compile Include="BO\Project\IncommingInvoice\IncommingInvoiceDetailBO.vb" />
     <Compile Include="BO\Project\IncommingInvoice\IncommingInvoiceBO.vb" />
     <Compile Include="BO\Project\Unit\UnitConstructionValueBO.vb" />
+    <Compile Include="BO\Project\Unit\UnitFinishingOptionBO.vb" />
     <Compile Include="BO\Project\UtilityCost\ClientUtilityCostBO.vb" />
     <Compile Include="BO\Project\UtilityCost\UtilityPercentageBO.vb" />
     <Compile Include="BO\Project\UtilityCost\UtilityCostBO.vb" />

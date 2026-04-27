@@ -25,28 +25,37 @@
 				<div class="row">
 					<div class="col-lg-2-5 col-xl-1-5">
 						<i class="card-big-info-icon bx bx-box"></i>
-						<h2 class="card-big-info-title">Algemene info</h2>
-						<p class="card-big-info-desc">Voeg hier de algemene info van het bedrijf in.</p>
+						<h2 class="card-big-info-title">Identiteit</h2>
+						<p class="card-big-info-desc">Naam, rechtsvorm, BTW-nummer en ondernemingsnummer van het bedrijf.</p>
 					</div>
 					<div class="col-lg-3-5 col-xl-4-5">
+                      <div class="form-group row align-items-center pb-3">
+                            <label class="col-lg-2 control-label text-lg-end pt-2" asp-for="IsActive"></label>
+                            <div class="col-lg-9">
+                                <div class="switch switch-sm switch-primary">
+                                    @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
+                                </div>
+
+                            </div>
+                        </div>
                         <div class="form-group">
 						<div class="row align-items-center pb-3">
-							<label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Name)</label>
+							<label class="col-md-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.Name)</label>
 							<div class="col-md-9">
-								@Html.TextBoxFor(m => m.Name, new {@class = "form-control form-control-modern", placeholder = "Weergavenaam"})
+								@Html.TextBoxFor(m => m.Name, new {@class = "form-control", placeholder = "Weergave naam"})
                                 <span asp-validation-for="Name" class="text-danger"></span>
 							</div>
 						</div>
                         <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.LegalName)</label>
+                            <label class="col-md-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.LegalName)</label>
                             <div class="col-md-9">
-                                @Html.TextBoxFor(m => m.LegalName, new { @class = "form-control form-control-modern", placeholder = "Wettelijke naam" })
+                                @Html.TextBoxFor(m => m.LegalName, new { @class = "form-control", placeholder = "Wettelijke naam" })
                             </div>
                         </div>
                             <div class="row align-items-center pb-3">
-                                <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.CompanyLegalFormId)</label>
+                                <label class="col-md-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.CompanyLegalFormId)</label>
                                 <div class="col-md-9">
-                                    <select asp-for="CompanyLegalFormId" class="form-control form-control-modern">
+                                    <select asp-for="CompanyLegalFormId" class="form-control">
                                         <option value="">— kies —</option>
                                         @foreach (var form in legalForms)
                                         {
@@ -56,61 +65,20 @@
                                 </div>
                             </div>
                         <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.VatNumber)</label>
+                            <label class="col-md-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.VatNumber)</label>
                             <div class="col-md-9">
-                                @Html.TextBoxFor(m => m.VatNumber, new { @class = "form-control form-control-modern", placeholder = "BTW-nummer" })
+                                @Html.TextBoxFor(m => m.VatNumber, new { @class = "form-control", placeholder = "BTW-nummer" })
                             </div>
                         </div>
                         <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0">@Html.LabelFor(m => m.EnterpriseNumber)</label>
+                            <label class="col-md-2 control-label text-lg-end mb-0">@Html.LabelFor(m => m.EnterpriseNumber)</label>
                             <div class="col-md-9">
-                                @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control form-control-modern", placeholder = "Ondernemingsnummer" })
+                                @Html.TextBoxFor(m => m.EnterpriseNumber, new { @class = "form-control", placeholder = "Ondernemingsnummer" })
                             </div>
                         </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="DefaultPaymentTermId" class="col-md-3 control-label text-lg-end mb-0"></label>
-                            <div class="col-md-9">
-                                <select asp-for="DefaultPaymentTermId" class="form-control form-control-modern">
-                                    <option value="">— kies —</option>
-                                    @foreach (var t in terms)
-                                    {
-                                        <option value="@t.Id">@t.Label</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="DefaultVatTypeId" class="col-md-3 control-label text-lg-end mb-0"></label>
-                            <div class="col-md-9">
-                                @if (octopusVatCodes.Any())
-                                {
-                                    <select asp-for="DefaultVatTypeId" class="form-control form-control-modern">
-                                        <option value="">— kies —</option>
-                                        @foreach (var vat in octopusVatCodes)
-                                        {
-                                            <option value="@vat.Id">@vat.Code - @vat.Description (@vat.BasePercentage.ToString("0.##")%)</option>
-                                        }
-                                    </select>
-                                }
-                                else
-                                {
-                                    <select asp-for="DefaultVatTypeId" class="form-control form-control-modern" disabled="disabled">
-                                        <option value="">— kies —</option>
-                                    </select>
-                                    <small class="text-muted">Synchroniseer het dossier om btw-codes op te halen.</small>
-                                }
-                            </div>
-                        </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label class="col-lg-3 control-label text-lg-end pt-2 col-lg-3" asp-for="IsActive"></label>
-                            <div class="col-lg-9">
-                                <div class="switch switch-sm switch-primary">
-                                    @Html.CheckBoxFor(m => m.IsActive, new { data_plugin_ios_switch = "" })
-                                </div>
-
-                            </div>
-                        </div>
+                       
+                      
 					</div>
                   
 				</div>
@@ -125,60 +93,63 @@
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
                         <i class="card-big-info-icon bx bx-location-plus"></i>
-                        <h2 class="card-big-info-title">Adres</h2>
-                        <p class="card-big-info-desc">Voeg hier de adres gegevens van het bedrijf in.</p>
+                        <h2 class="card-big-info-title">Contact & Adres</h2>
+                        <p class="card-big-info-desc">Adresgegevens, contactinfo en website van het bedrijf.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="form-group">
-                            <div class="row align-items-center pb-3">
-                                <label asp-for="AddressLine1" class="col-md-3 control-label text-lg-end mb-0"></label>
+                    <div class="form-group">
+                             <h5 class="fw-semibold text-muted letter-spacing-md" style="">ADRES</h5>
+                           <div class="row align-items-center pb-3">
+                                <label asp-for="AddressLine1" class="col-md-2 control-label text-lg-end mb-0"></label>
                                 <div class="col-md-9">
-                                    <input asp-for="AddressLine1" class="form-control form-control-modern" placeholder="Adres" />
+                                    <input asp-for="AddressLine1" class="form-control" placeholder="Adres" />
                                 </div>
                             </div>
                             <div class="row align-items-center pb-3">
-                                <label class="col-md-3 control-label text-lg-end mb-0"></label>
+                                <label class="col-md-2 control-label text-lg-end mb-0">Postcode / Gemeente</label>
                                 <div class="col-md-2">
-                                    <input asp-for="PostalCode" class="form-control form-control-modern" placeholder="Postcode" />
+                                    <input asp-for="PostalCode" class="form-control" placeholder="Postcode" />
                                 </div>
                                 <div class="col-md-6">
-                                    <input asp-for="City" class="form-control form-control-modern" placeholder="Gemeente" />
+                                    <input asp-for="City" class="form-control" placeholder="Gemeente" />
                                 </div>
                                 <div class="col-md-1">
-                                    <input asp-for="CountryCode" class="form-control form-control-modern" placeholder="BE" />
+                                    <input asp-for="CountryCode" class="form-control" placeholder="BE" />
                                 </div>
                             </div>
-                        </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="Email" class="col-md-3 control-label text-lg-end mb-0"></label>
+                     </div>
+                    <div class="form-group">
+                    <h5 class="fw-semibold text-muted letter-spacing-md" style="">CONTACTGEGEVENS</h5>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="Email" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="Email" class="form-control form-control-modern" placeholder="Email" />
+                                <input asp-for="Email" class="form-control" placeholder="Email" />
                             </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="InvoiceSendEmail" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="InvoiceSendEmail" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="InvoiceSendEmail" class="form-control form-control-modern" placeholder="Verzend e-mail adres" />
-                                <small class="text-muted">Wordt gebruikt als afzender voor Octopus factuurverzending.</small>
+                                <input asp-for="InvoiceSendEmail" class="form-control" placeholder="Verzend e-mail adres" />
                             </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="Phone" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="Phone" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="Phone" class="form-control form-control-modern" placeholder="Telefoon" />
+                                <input asp-for="Phone" class="form-control" placeholder="Telefoon" />
                             </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="Phone2" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="Phone2" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="Phone2" class="form-control form-control-modern" placeholder="Tweede telefoon" />
+                                <input asp-for="Phone2" class="form-control" placeholder="Tweede telefoon" />
                             </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="Website" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="Website" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="Website" class="form-control form-control-modern" placeholder="Website" />
+                                <input asp-for="Website" class="form-control" placeholder="Website" />
                             </div>
+                        </div>
                         </div>
 
                     </div>
@@ -195,28 +166,34 @@
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
                         <i class="card-big-info-icon bx bx-image"></i>
-                        <h2 class="card-big-info-title">Logo</h2>
-                        <p class="card-big-info-desc">Voeg hier het logo van het bedrijf in.</p>
+                        <h2 class="card-big-info-title">Logo & Huisstijl</h2>
+                        <p class="card-big-info-desc">Het logo verschijnt op facturen en documenten van dit bedrijf.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
 
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="LogoUpload" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="form-group row align-items-top pb-3">
+                            <label asp-for="LogoUpload" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="LogoUpload" class="form-control form-control-modern" type="file" accept="image/*" />
+                                <div class="mb-3">
+                                    <div class="issuer-logo-box">
+                                        @if (Model.LogoBytes != null && Model.LogoBytes.Length > 0)
+                                        {
+                                            var base64 = System.Convert.ToBase64String(Model.LogoBytes);
+                                            <img src="data:image/png;base64,@base64"
+                                                 alt="Huidig logo"
+                                                 class="issuer-logo-preview" />
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Geen logo</span>
+                                        }
+                                    </div>
+                                </div>
+                                <input asp-for="LogoUpload" class="form-control" type="file" accept="image/*" />
                                 @Html.HiddenFor(m => m.LogoPath)
                                 @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
                                 {
                                     <small class="text-muted d-block mt-1">Huidig bestand: @Model.LogoPath</small>
-                                }
-                                @if (Model.LogoBytes != null && Model.LogoBytes.Length > 0)
-                                {
-                                    var base64 = System.Convert.ToBase64String(Model.LogoBytes);
-                                    <div class="mt-2">
-                                        <div class="issuer-logo-box">
-                                            <img src="data:image/png;base64,@base64" alt="Huidig logo" class="issuer-logo-preview" />
-                                        </div>
-                                    </div>
                                 }
                             </div>
                         </div>
@@ -233,6 +210,59 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-location-plus"></i>
+                        <h2 class="card-big-info-title">Facturatie-instellingen</h2>
+                        <p class="card-big-info-desc">Standaard betaaltermijn en BTW-type voor nieuwe facturen.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                    <div class="form-group">
+                         <div class="row align-items-center pb-3">
+                            <label asp-for="DefaultPaymentTermId" class="col-md-2 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                <select asp-for="DefaultPaymentTermId" class="form-control">
+                                    <option value="">— kies —</option>
+                                    @foreach (var t in terms)
+                                    {
+                                        <option value="@t.Id">@t.Label</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="DefaultVatTypeId" class="col-md-2 control-label text-lg-end mb-0"></label>
+                            <div class="col-md-9">
+                                @if (octopusVatCodes.Any())
+                                {
+                                    <select asp-for="DefaultVatTypeId" class="form-control">
+                                        <option value="">— kies —</option>
+                                        @foreach (var vat in octopusVatCodes)
+                                        {
+                                            <option value="@vat.Id">@vat.Code - @vat.Description (@vat.BasePercentage.ToString("0.##")%)</option>
+                                        }
+                                    </select>
+                                }
+                                else
+                                {
+                                    <select asp-for="DefaultVatTypeId" class="form-control" disabled="disabled">
+                                        <option value="">— kies —</option>
+                                    </select>
+                                    <small class="text-muted">Synchroniseer het dossier om btw-codes op te halen.</small>
+                                }
+                            </div>
+                        </div>
+                     </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
                         <i class="card-big-info-icon bx bx-bank"></i>
                         <h2 class="card-big-info-title">Bankrekeningen</h2>
                         <p class="card-big-info-desc">Beheer IBAN/BIC per bedrijf. Eén rekening kan standaard zijn.</p>
@@ -240,7 +270,7 @@
                     <div class="col-lg-3-5 col-xl-4-5">
 
                         <div class="d-flex justify-content-end mb-3">
-                            <a class="btn btn-primary"
+                            <a class="btn btn-primary btn-sm"
                                href="@Url.Action("BankAccountCreate", "Instellingen", new { issuerId = Model.Id })">
                                 <i class="fas fa-plus me-1"></i> Nieuwe rekening
                             </a>
@@ -248,7 +278,7 @@
 
                         <table class="table table align-middle">
                             <thead>
-                                <tr>
+                                <tr class="background">
                                     <th>Omschrijving</th>
                                     <th>IBAN</th>
                                     <th>BIC</th>
@@ -279,7 +309,7 @@
                                             }
                                         </td>
                                         <td class="text-end">
-                                            <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("BankAccountEdit", "Instellingen", new { issuerId = Model.Id, id = x.Id })"><i class="fa fa-edit"></i></a>
+                                            <a data-toggle="tooltip" data-placement="top" class="btn btn-link p-0 d-inline" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("BankAccountEdit", "Instellingen", new { issuerId = Model.Id, id = x.Id })"><i class="bx bx-edit"></i></a>
                                             <button type="button"
                                                     class="btn btn-link p-0 d-inline js-bank-account-action"
                                                     data-toggle="tooltip"
@@ -288,7 +318,7 @@
                                                     data-action="set-default"
                                                     data-url="@Url.Action("BankAccountSetDefault", "Instellingen", new { issuerId = Model.Id, id = x.Id })"
                                                     @(x.IsDefault ? "disabled" : "")>
-                                                <i class="fa fa-circle-check"></i>
+                                                <i class="bx bx-check-circle"></i>
                                             </button>
                                             <button type="button"
                                                     class="btn btn-link p-0 d-inline js-bank-account-action"
@@ -298,7 +328,7 @@
                                                     data-action="delete"
                                                     data-confirm="Deze bankrekening verwijderen?"
                                                     data-url="@Url.Action("BankAccountDelete", "Instellingen", new { issuerId = Model.Id, id = x.Id })">
-                                                <i class="fa fa-trash"></i>
+                                                <i class="bx bx-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -328,41 +358,49 @@
                             var alertType = string.IsNullOrWhiteSpace(octopusMessageType) ? "info" : octopusMessageType;
                             <div class="alert alert-@alertType" role="alert">@octopusMessage</div>
                         }
-
+                        <div class="form-group">
+                         <h5 class="fw-semibold text-muted letter-spacing-md" style="">AUTHENTICATIE</h5>
                         <div class="row align-items-center pb-3">
-                            <label asp-for="OctopusUsername" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <label asp-for="OctopusUsername" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="OctopusUsername" class="form-control form-control-modern" placeholder="Gebruikersnaam" autocomplete="off" />
+                                <input asp-for="OctopusUsername" class="form-control" placeholder="Gebruikersnaam" autocomplete="off" />
                             </div>
                         </div>
                         <div class="row align-items-center pb-3">
-                            <label asp-for="OctopusPassword" class="col-md-3 control-label text-lg-end mb-0"></label>
+                            <label asp-for="OctopusPassword" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
-                                <input asp-for="OctopusPassword" value="@Model.OctopusPassword" type="password" class="form-control form-control-modern" placeholder="Wachtwoord" autocomplete="current-password" />
+                                <input asp-for="OctopusPassword" value="@Model.OctopusPassword" type="password" class="form-control" placeholder="Wachtwoord" autocomplete="current-password" />
                             </div>
                         </div>
                         <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0">Authenticatietoken</label>
+                            <label asp-for="OctopusAuthenticateToken" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
                                 <div class="d-flex align-items-center gap-2">
                                     <button type="submit"
-                                            class="btn btn-primary"
+                                            class="btn btn-default btn-sm"
                                             formaction='@Url.Action("IssuerCompanyOctopusAuthenticate", "Instellingen", new { issuerId = Model.Id })'
                                             formmethod="post"
                                             formnovalidate
                                             @(Model.Id <= 0 ? "disabled" : null)>
-                                        <i class="bx bx-key"></i>
+                                        <i class="bx bx-key"></i> Token ophalen
                                     </button>
-                                    <small class="text-muted">
+
                                         @if (!string.IsNullOrWhiteSpace(Model.OctopusAuthenticateToken))
                                         {
+                                            <small class="status-badge-sm status-badge-sm-success">
+                                            <i class="fas fa-check-circle"></i>
                                             <text>Huidig tot @(Model.OctopusAuthenticateTokenValidUntil?.ToString("g") ?? "onbekend")</text>
+                                            </small>
                                         }
                                         else
                                         {
+                                            <small class="status-badge-sm status-badge-sm-warning">
+                                            <i class="fas fa-check-circle"></i>
                                             <text>Nog geen token</text>
+                                            </small>
+                                            
                                         }
-                                    </small>
+                                    
                                 </div>
                                 <input type="hidden" asp-for="OctopusAuthenticateToken" />
                                 <input type="hidden" asp-for="OctopusAuthenticateTokenValidUntil" />
@@ -370,13 +408,15 @@
                                 <input type="hidden" asp-for="OctopusCustomFieldMappingsJson" />
                             </div>
                         </div>
-
+                        </div>
+                                                <div class="form-group">
+                                                                         <h5 class="fw-semibold text-muted letter-spacing-md" style="">DOSSIER</h5>
                         <div class="row align-items-center pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0">Dossier kiezen</label>
+                            <label class="col-md-2 control-label text-lg-end mb-0">Dossier kiezen</label>
                             <div class="col-md-9">
                                 <div class="d-flex flex-column gap-2">
                                     <div class="d-flex gap-2">
-                                        <select class="form-control form-control-modern" name="DossierNumber" @(Model.Id <= 0 ? "disabled" : null)>
+                                        <select class="form-control" name="DossierNumber" @(Model.Id <= 0 ? "disabled" : null)>
                                             <option value="">— kies dossier —</option>
                                             @if (!string.IsNullOrWhiteSpace(Model.OctopusDossierNumber) && !(octopusDossiers?.Any(d => d.Number == Model.OctopusDossierNumber) ?? false))
                                             {
@@ -392,76 +432,97 @@
                                             }
                                         </select>
                                         <button type="submit"
-                                                class="btn btn-secondary"
+                                                class="btn btn-default btn-sm"
                                                 formaction='@Url.Action("IssuerCompanyOctopusDossiers", "Instellingen", new { issuerId = Model.Id })'
                                                 formmethod="post"
                                                 formnovalidate
                                                 @(Model.Id <= 0 ? "disabled" : null)>
-                                            <i class="bx bx-refresh"></i>
+                                            <i class="bx bx-refresh-cw"></i>
                                         </button>
                                         <button type="submit"
-                                                class="btn btn-success"
+                                                class="btn btn-primary btn-sm"
                                                 formaction='@Url.Action("IssuerCompanyOctopusConnect", "Instellingen", new { issuerId = Model.Id })'
                                                 formmethod="post"
                                                 formnovalidate
                                                 @(Model.Id <= 0 ? "disabled" : null)>
-                                            <i class="bx bx-link-alt"></i>
+                                            <i class="bx bx-link-alt"></i> Koppelen
                                         </button>
                                     </div>
-                                    <small class="text-muted">
                                         @if (!string.IsNullOrWhiteSpace(Model.OctopusDossierNumber))
                                         {
-                                            <text>Dossier gekoppeld: @Model.OctopusDossierNumber (token geldig tot @(Model.OctopusDossierTokenValidUntil?.ToString("g") ?? "onbekend"))</text>
+                                            <small class="status-badge-sm status-badge-sm-success">
+                                            <i class="fas fa-check-circle"></i>
+                                             <text>Dossier gekoppeld: @Model.OctopusDossierNumber (token geldig tot @(Model.OctopusDossierTokenValidUntil?.ToString("g") ?? "onbekend"))</text>
+                                            </small>
+                                           
                                         }
                                         else
                                         {
-                                            <text>Geen dossier gekoppeld</text>
+                                            
+                                            <small class="status-badge-sm status-badge-sm-warning">
+                                            <i class="fas fa-check-circle"></i>
+                                             <text>Geen dossier gekoppeld</text>
+                                            </small>
+                                           
                                         }
-                                    </small>
                                 </div>
                                 <input type="hidden" asp-for="OctopusDossierToken" />
                                 <input type="hidden" asp-for="OctopusDossierTokenValidUntil" />
                                 <input type="hidden" asp-for="OctopusDossierNumber" />
                             </div>
                         </div>
-                        <div class="row align-items-start pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0" asp-for="OctopusPurchaseJournalKeyPrefix">Aankoopdagboek prefix</label>
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-2 control-label text-lg-end mb-0" asp-for="OctopusPurchaseJournalKeyPrefix">Aankoopdagboek prefix</label>
                             <div class="col-md-9">
-                                <input asp-for="OctopusPurchaseJournalKeyPrefix" class="form-control form-control-modern"
+                                <input asp-for="OctopusPurchaseJournalKeyPrefix" class="form-control"
                                        placeholder="bv. A" maxlength="20" style="max-width:160px" />
                                 <small class="text-muted">
-                                    Enkel boekingen waarvan de dagboeksleutel begint met deze prefix worden geïmporteerd als inkomende factuur
-                                    (bv. <code>A</code> voor A1, A2 … = aankoopjournalen).
-                                    Leeg = alle boekingen importeren (niet aanbevolen).
-                                    Laat leeg om de globale instelling te gebruiken (<code>appsettings.json → Octopus:PurchaseJournalKeyPrefix</code>).
+                                  Enkel boekingen waarvan de dagboeksleutel begint met deze prefix worden geïmporteerd als inkomende factuur (bv. A voor A1, A2 ...). Leeg = alle boekingen.
                                 </small>
                             </div>
                         </div>
-                        <div class="row align-items-start pb-3">
-                            <label class="col-md-3 control-label text-lg-end mb-0">Boekjaren &amp; dagboeken</label>
-                            <div class="col-md-9">
-                                <div class="d-flex gap-2 mb-2">
-                                    <button type="submit"
-                                            class="btn btn-secondary"
+                                                </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-calendar"></i>
+                        <h2 class="card-big-info-title">Boekjaren & BTW-codes</h2>
+                        <p class="card-big-info-desc">Gesynchroniseerde gegevens vanuit het Octopus-dossier.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+
+                                     <button type="submit"
+                                            class="btn btn-default btn-sm mb-3"
                                             formaction='@Url.Action("IssuerCompanyOctopusSync", "Instellingen", new { issuerId = Model.Id })'
                                             formmethod="post"
                                             formnovalidate
                                             @(Model.Id <= 0 ? "disabled" : null)>
-                                        <i class="bx bx-refresh"></i> Dossier synchroniseren
+                                        <i class="bx bx-refresh-cw"></i> Dossier synchroniseren
                                     </button>
                                     <button type="submit"
-                                            class="btn btn-outline-primary"
+                                            class="btn btn-default btn-sm mb-3"
                                             formaction='@Url.Action("IssuerCompanyOctopusRelations", "Instellingen", new { issuerId = Model.Id })'
                                             formmethod="post"
                                             formnovalidate
                                             @(Model.Id <= 0 ? "disabled" : null)>
                                         <i class="bx bx-user-voice"></i> Relaties ophalen
                                     </button>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-3">
+
+                    <div class="row">
+                        <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">BOEKJAREN & DAGBOEKEN</h5>
+                          <table class="table table-sm mb-3 m-2">
                                         <thead>
-                                            <tr><th>Boekjaar</th><th>Periodes</th><th>Dagboeken</th></tr>
+                                            <tr><th>Boekjaar</th><th>Periodes</th><th>Dagboeken</th><th>Status</th></tr>
                                         </thead>
                                         <tbody>
                                             @foreach (var bookyear in octopusBookyears)
@@ -470,8 +531,9 @@
                                                     <td>
                                                         <div>@bookyear.BookyearDescription</div>
                                                         <div class="d-flex align-items-center gap-2">
-                                                            <small class="text-muted">@bookyear.StartDate:dd/MM/yyyy - @bookyear.EndDate:dd/MM/yyyy</small>
-                                                            <span class="badge @(bookyear.Closed ? "bg-danger" : "bg-success")">@(bookyear.Closed ? "Afgesloten" : "Open")</span>
+                                                           <small class="text-muted">
+                                                                @($"{bookyear.StartDate:dd/MM/yyyy} - {bookyear.EndDate:dd/MM/yyyy}")
+                                                            </small>   
                                                         </div>
                                                     </td>
                                                     <td class="align-middle">@(bookyear.Periods?.Count ?? 0)</td>
@@ -480,15 +542,18 @@
                                                                                                             ? string.Join(", ", bookyear.Journals.Select(j => j.JournalKey))
                                                                                                             : "—")
                                                 </td>
+                                                <td><span class="badge @(bookyear.Closed ? "badge-danger" : "badge-success")">@(bookyear.Closed ? "Afgesloten" : "Open")</span></td>
                                             </tr>
                                                                                         }
                                         </tbody>
                                     </table>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0">
+                    </div>
+                                        <div class="row">
+                        <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">VERKOOP-BTW-CODES</h5>
+                        <div class="table-responsive mt-3">
+                                    <table class="table table-sm mb-3 m-2">
                                         <thead>
-                                            <tr><th>BTW-code</th><th>Omschrijving</th><th>Type</th><th>Basis %</th><th>Standaard rekening</th><th>Factuurvermelding</th></tr>
+                                            <tr><th>Code</th><th>Omschrijving</th><th>Type</th><th>Basis %</th><th>Standaard rekening</th><th>Factuurvermelding</th></tr>
                                         </thead>
                                         <tbody>
                                             @if (vatTypes.Any())
@@ -523,7 +588,7 @@
                                                     <input type="hidden" name="VatTypes[@i].DefaultSellBookingAccountNr" value="@code.DefaultSellBookingAccountNr" />
                                                 </td>
                                                 <td class="align-middle">
-                                                    <input class="form-control form-control-modern" name="VatTypes[@i].InvoiceMention" value="@code.InvoiceMention" placeholder="Vermelding op factuur" />
+                                                    <input class="form-control form-control-sm mt-2 mb-2" name="VatTypes[@i].InvoiceMention" value="@code.InvoiceMention" placeholder="Vermelding op factuur" />
                                                 </td>
                                             </tr>
                                                                                         }
@@ -535,73 +600,8 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="d-flex align-items-center justify-content-between pt-4">
-                                    <h5 class="mb-0">Betaaltermijnen</h5>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" id="addPaymentTermRow">
-                                        <i class="bx bx-plus"></i> Betaaltermijn toevoegen
-                                    </button>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm mb-0" id="paymentTermsTable">
-                                        <thead>
-                                            <tr>
-                                                <th>Naam</th>
-                                                <th>Type</th>
-                                                <th>Dagen</th>
-                                                <th>Weergave</th>
-                                                <th>Extra tekst</th>
-                                                <th>Omschrijving</th>
-                                                <th>Verwijderen</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @if (paymentTerms.Any())
-                                            {
-                                                for (var i = 0; i < paymentTerms.Count; i++)
-                                                {
-                                                    var term = paymentTerms[i];
-                                                    <tr data-row="@i">
-                                                        <td>
-                                                            <input type="hidden" name="PaymentTerms[@i].Id" value="@term.Id" />
-                                                            <input class="form-control form-control-modern" name="PaymentTerms[@i].Name" value="@term.Name" placeholder="Naam" />
-                                                        </td>
-                                                        <td>
-                                                            <select class="form-control form-control-modern" name="PaymentTerms[@i].TermType">
-                                                                <option value="0" selected="@(term.TermType == BOCore.PaymentTermType.Days ? "selected" : null)">Dagen</option>
-                                                                <option value="1" selected="@(term.TermType == BOCore.PaymentTermType.DaysAfterEndOfMonth ? "selected" : null)">Dagen na einde maand</option>
-                                                                <option value="2" selected="@(term.TermType == BOCore.PaymentTermType.Text ? "selected" : null)">Tekst</option>
-                                                            </select>
-                                                        </td>
-                                                        <td>
-                                                            <input class="form-control form-control-modern" name="PaymentTerms[@i].Days" value="@term.Days" type="number" min="0" />
-                                                        </td>
-                                                        <td>
-                                                            <select class="form-control form-control-modern" name="PaymentTerms[@i].DisplayMode">
-                                                                <option value="0" selected="@(term.DisplayMode == BOCore.PaymentTermDisplayMode.DueDate ? "selected" : null)">Vervaldatum</option>
-                                                                <option value="1" selected="@(term.DisplayMode == BOCore.PaymentTermDisplayMode.Text ? "selected" : null)">Extra tekst</option>
-                                                            </select>
-                                                        </td>
-                                                        <td>
-                                                            <input class="form-control form-control-modern" name="PaymentTerms[@i].DisplayText" value="@term.DisplayText" placeholder="Tekst op factuur" />
-                                                        </td>
-                                                        <td>
-                                                            <input class="form-control form-control-modern" name="PaymentTerms[@i].Description" value="@term.Description" placeholder="Omschrijving" />
-                                                        </td>
-                                                        <td class="text-center">
-                                                            <input type="hidden" name="PaymentTerms[@i].IsDeleted" value="false" />
-                                                            <input class="form-check-input js-paymentterm-delete" type="checkbox" data-index="@i" />
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            }
-                                            else
-                                            {
-                                                <tr class="text-muted"><td colspan="7">Nog geen betaaltermijnen toegevoegd.</td></tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="form-group row align-items-start pt-3">
+                    </div>
+                      <div class="form-group row align-items-start pt-3">
                                     <label class="col-md-3 control-label text-lg-end mb-0">Custom fields</label>
                                     <div class="col-md-9">
                                         @if (octopusCustomFields.Any())
@@ -657,8 +657,87 @@
                                         }
                                     </div>
                                 </div>
-                            </div>
-                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div class="row mt-4">
+    <div class="col">
+        <section class="card card-modern card-big-info">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-2-5 col-xl-1-5">
+                        <i class="card-big-info-icon bx bx-clock"></i>
+                        <h2 class="card-big-info-title">Betaaltermijnen</h2>
+                        <p class="card-big-info-desc">Definieer de betaaltermijnen die beschikbaar zijn voor facturen van dit bedrijf.</p>
+                    </div>
+                    <div class="col-lg-3-5 col-xl-4-5">
+                                    <button type="button" class="btn btn-sm btn-primary" id="addPaymentTermRow">
+                                        <i class="bx bx-plus"></i> Betaaltermijn toevoegen
+                                    </button>
+                                <div class="table-responsive mt-3">
+                                    <table class="table table-sm mb-0" id="paymentTermsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Naam</th>
+                                                <th>Type</th>
+                                                <th>Dagen</th>
+                                                <th>Weergave</th>
+                                                <th>Tekst op factuur</th>
+                                                <th>Omschrijving</th>
+                                                <th>Verwijder</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (paymentTerms.Any())
+                                            {
+                                                for (var i = 0; i < paymentTerms.Count; i++)
+                                                {
+                                                    var term = paymentTerms[i];
+                                                    <tr data-row="@i">
+                                                        <td>
+                                                            <input type="hidden" name="PaymentTerms[@i].Id" value="@term.Id" />
+                                                            <input class="form-control form-control-sm mt-2 mb-2" name="PaymentTerms[@i].Name" value="@term.Name" placeholder="Naam" />
+                                                        </td>
+                                                        <td>
+                                                            <select class="form-control form-control-sm mt-2 mb-2" name="PaymentTerms[@i].TermType">
+                                                                <option value="0" selected="@(term.TermType == BOCore.PaymentTermType.Days ? "selected" : null)">Dagen</option>
+                                                                <option value="1" selected="@(term.TermType == BOCore.PaymentTermType.DaysAfterEndOfMonth ? "selected" : null)">Dagen na einde maand</option>
+                                                                <option value="2" selected="@(term.TermType == BOCore.PaymentTermType.Text ? "selected" : null)">Tekst</option>
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input class="form-control form-control-sm mt-2 mb-2" name="PaymentTerms[@i].Days" value="@term.Days" type="number" min="0" />
+                                                        </td>
+                                                        <td>
+                                                            <select class="form-control form-control-sm mt-2 mb-2" name="PaymentTerms[@i].DisplayMode">
+                                                                <option value="0" selected="@(term.DisplayMode == BOCore.PaymentTermDisplayMode.DueDate ? "selected" : null)">Vervaldatum</option>
+                                                                <option value="1" selected="@(term.DisplayMode == BOCore.PaymentTermDisplayMode.Text ? "selected" : null)">Extra tekst</option>
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input class="form-control form-control-sm mt-2 mb-2" name="PaymentTerms[@i].DisplayText" value="@term.DisplayText" placeholder="Tekst op factuur" />
+                                                        </td>
+                                                        <td>
+                                                            <input class="form-control form-control-sm mt-2 mb-2" name="PaymentTerms[@i].Description" value="@term.Description" placeholder="Omschrijving" />
+                                                        </td>
+                                                        <td class="text-center">
+                                                            <input type="hidden" name="PaymentTerms[@i].IsDeleted" value="false" />
+                                                            <input class="form-check-input js-paymentterm-delete" type="checkbox" data-index="@i" />
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr class="text-muted"><td colspan="7">Nog geen betaaltermijnen toegevoegd.</td></tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
                     </div>
                 </div>
             </div>

@@ -228,133 +228,196 @@ end section
         Dim cardImgAlt As String = If(project.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrEmpty(project.DefaultPicture.Caption), project.DefaultPicture.Caption, project.Name)
         Dim cardTitel As String = If(Not String.IsNullOrEmpty(project.CommercialTitleNL), project.CommercialTitleNL, project.Name)
 
-        @<text>
-            <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
-                <div class="kaart-foto">
-                    <img src="@cardImgSrc" alt="@cardImgAlt">
-                    <div class="kaart-foto-overlay"></div>
-                    @If isUitverkocht Then
-                        @<text>
-                            <div class="kaart-verkocht-overlay">
-                                <span class="kaart-verkocht-label">Uitverkocht</span>
-                            </div>
-                        </text>
-                    End If
-                    @If isNieuw Then
-                        @<text><span class="kaart-foto-badge kaart-foto-badge-nieuw">Nieuw</span></text>
-                    ElseIf isBinnenkort Then
-                        @<text><span class="kaart-foto-badge kaart-foto-badge-binnenkort">Binnenkort</span></text>
-                    ElseIf isLancering Then
-                        @<text><span class="kaart-foto-badge kaart-foto-badge-lancering">Lancering</span></text>
-                    End If
-                    @If startingPrice > 0 AndAlso Not isUitverkocht Then
-                        @<text>
-                            <div class="kaart-prijs">
-                                <span class="kaart-prijs-label">Vanaf</span>
-                                @WWWCOPRO.Extensions.ToEuroCurrency(startingPrice)
-                            </div>
-                        </text>
-                    End If
-                    <div class="kaart-pijl">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        @If isBinnenkort Then
+            @<text>
+                <a href="@(Url.Action("Inschrijving", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
+                    <div class="kaart-foto">
+                        <img src="@cardImgSrc" alt="@cardImgAlt">
+                        <div class="kaart-foto-overlay"></div>
+                        <div class="kaart-verkocht-overlay">
+                            <span class="kaart-verkocht-label">Binnenkort</span>
+                        </div>
+                        <div class="kaart-pijl">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </div>
                     </div>
-                </div>
-                <div class="kaart-body">
-                    <div class="kaart-type">@typeLabel</div>
-                    <div class="kaart-naam">@cardTitel</div>
-                    <div class="kaart-locatie">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                        @If Not String.IsNullOrEmpty(project.Street) Then @<text>@project.Street @project.HouseNumber, </text> End If
-                        @project.Postalcode.Gemeente.ToUpper()
+                    <div class="kaart-body">
+                        <div class="kaart-type">@typeLabel</div>
+                        <div class="kaart-naam">@cardTitel</div>
+                        <div class="kaart-specs">
+                            @If numberAppartments = 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                                        Appartement
+                                    </span>
+                                </text>
+                            ElseIf numberAppartments > 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                                        @numberAppartments appartementen
+                                    </span>
+                                </text>
+                            End If
+                            @If numberHouses = 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                        Woning
+                                    </span>
+                                </text>
+                            ElseIf numberHouses > 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                        @numberHouses woningen
+                                    </span>
+                                </text>
+                            End If
+                            @If numberCommercial = 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                                        Handelspand
+                                    </span>
+                                </text>
+                            ElseIf numberCommercial > 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                                        @numberCommercial handelspanden
+                                    </span>
+                                </text>
+                            End If
+                        </div>
                     </div>
-                    <div class="kaart-specs">
-                        @If numberAppartments = 1 Then
+                    <div class="kaart-footer">
+                        <span style="color:var(--tekst-sub)">Schrijf mij in</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--tekst-sub);opacity:0.35"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </div>
+                </a>
+            </text>
+        Else
+            @<text>
+                <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
+                    <div class="kaart-foto">
+                        <img src="@cardImgSrc" alt="@cardImgAlt">
+                        <div class="kaart-foto-overlay"></div>
+                        @If isUitverkocht Then
                             @<text>
-                                <span class="kaart-spec">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                                    Appartement
+                                <div class="kaart-verkocht-overlay">
+                                    <span class="kaart-verkocht-label">Uitverkocht</span>
+                                </div>
+                            </text>
+                        End If
+                        @If isNieuw Then
+                            @<text><span class="kaart-foto-badge kaart-foto-badge-nieuw">Nieuw</span></text>
+                        ElseIf isLancering Then
+                            @<text><span class="kaart-foto-badge kaart-foto-badge-lancering">Lancering</span></text>
+                        End If
+                        @If startingPrice > 0 AndAlso Not isUitverkocht Then
+                            @<text>
+                                <div class="kaart-prijs">
+                                    <span class="kaart-prijs-label">Vanaf</span>
+                                    @WWWCOPRO.Extensions.ToEuroCurrency(startingPrice)
+                                </div>
+                            </text>
+                        End If
+                        <div class="kaart-pijl">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                        </div>
+                    </div>
+                    <div class="kaart-body">
+                        <div class="kaart-type">@typeLabel</div>
+                        <div class="kaart-naam">@cardTitel</div>
+                        <div class="kaart-locatie">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            @If Not String.IsNullOrEmpty(project.Street) Then @<text>@project.Street @project.HouseNumber, </text> End If
+                            @project.Postalcode.Gemeente.ToUpper()
+                        </div>
+                        <div class="kaart-specs">
+                            @If numberAppartments = 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                                        Appartement
+                                    </span>
+                                </text>
+                            ElseIf numberAppartments > 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+                                        @numberAppartments appartementen
+                                    </span>
+                                </text>
+                            End If
+                            @If numberHouses = 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                        Woning
+                                    </span>
+                                </text>
+                            ElseIf numberHouses > 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                        @numberHouses woningen
+                                    </span>
+                                </text>
+                            End If
+                            @If numberCommercial = 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                                        Handelspand
+                                    </span>
+                                </text>
+                            ElseIf numberCommercial > 1 Then
+                                @<text>
+                                    <span class="kaart-spec">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                                        @numberCommercial handelspanden
+                                    </span>
+                                </text>
+                            End If
+                        </div>
+                    </div>
+                    <div class="kaart-footer">
+                        @If isUitverkocht Then
+                            @<text>
+                                <span class="status-badge status-badge-uitverkocht">
+                                    <span class="status-dot status-dot-uitverkocht"></span>
+                                    Uitverkocht
                                 </span>
                             </text>
-                        ElseIf numberAppartments > 1 Then
+                        ElseIf isNieuw Then
                             @<text>
-                                <span class="kaart-spec">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-                                    @numberAppartments appartementen
+                                <span class="status-badge status-badge-nieuw">
+                                    <span class="status-dot status-dot-nieuw"></span>
+                                    Nieuw
+                                </span>
+                            </text>
+                        ElseIf isLancering Then
+                            @<text>
+                                <span class="status-badge status-badge-lancering">
+                                    <span class="status-dot status-dot-lancering"></span>
+                                    Lancering
+                                </span>
+                            </text>
+                        Else
+                            @<text>
+                                <span style="color:var(--tekst-sub)">
+                                    Meer Info
                                 </span>
                             </text>
                         End If
-                        @If numberHouses = 1 Then
-                            @<text>
-                                <span class="kaart-spec">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                    Woning
-                                </span>
-                            </text>
-                        ElseIf numberHouses > 1 Then
-                            @<text>
-                                <span class="kaart-spec">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-                                    @numberHouses woningen
-                                </span>
-                            </text>
-                        End If
-                        @If numberCommercial = 1 Then
-                            @<text>
-                                <span class="kaart-spec">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                                    Handelspand
-                                </span>
-                            </text>
-                        ElseIf numberCommercial > 1 Then
-                            @<text>
-                                <span class="kaart-spec">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                                    @numberCommercial handelspanden
-                                </span>
-                            </text>
-                        End If
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--tekst-sub);opacity:0.35"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                     </div>
-                </div>
-                <div class="kaart-footer">
-                    @If isUitverkocht Then
-                        @<text>
-                            <span class="status-badge status-badge-uitverkocht">
-                                <span class="status-dot status-dot-uitverkocht"></span>
-                                Uitverkocht
-                            </span>
-                        </text>
-                    ElseIf isNieuw Then
-                        @<text>
-                            <span class="status-badge status-badge-nieuw">
-                                <span class="status-dot status-dot-nieuw"></span>
-                                Nieuw
-                            </span>
-                        </text>
-                    ElseIf isBinnenkort Then
-                        @<text>
-                            <span class="status-badge status-badge-binnenkort">
-                                <span class="status-dot status-dot-binnenkort"></span>
-                                Binnenkort
-                            </span>
-                        </text>
-                    ElseIf isLancering Then
-                        @<text>
-                            <span class="status-badge status-badge-lancering">
-                                <span class="status-dot status-dot-lancering"></span>
-                                Lancering
-                            </span>
-                        </text>
-                    Else
-                        @<text>
-                                            <span style="color:var(--tekst-sub)">
-                                                Meer Info
-                                            </span>
-                        </text>
-                    End If
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--tekst-sub);opacity:0.35"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
-                </div>
-            </a>
-        </text>
+                </a>
+            </text>
+        End If
 
     Next
 
