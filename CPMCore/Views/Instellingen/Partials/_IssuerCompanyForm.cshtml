@@ -601,9 +601,8 @@
                                     </table>
                                 </div>
                     </div>
-                      <div class="form-group row align-items-start pt-3">
-                                    <label class="col-md-3 control-label text-lg-end mb-0">Custom fields</label>
-                                    <div class="col-md-9">
+                        <div class="row">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">VERKOOP-BTW-CODES</h5>
                                         @if (octopusCustomFields.Any())
                                         {
                                             <table class="table table-sm">
@@ -653,11 +652,13 @@
                                         }
                                         else
                                         {
-                                            <p class="text-muted mb-0">Geen custom fields geladen. Synchroniseer het dossier om ze op te halen.</p>
+                                        <small class="status-badge-sm status-badge-sm-warning">
+                                            <i class="fas fa-check-circle"></i>
+                                            <text>Geen custom fields geladen. Synchroniseer het dossier om ze op te halen.</text>
+                                        </small>
                                         }
-                                    </div>
-                                </div>
-
+                                    
+                        </div>
                     </div>
                 </div>
             </div>
@@ -752,30 +753,29 @@
                     <div class="col-lg-2-5 col-xl-1-5">
                         <i class="card-big-info-icon bx bx-share-alt"></i>
                         <h2 class="card-big-info-title">Peppol / e-invoicing</h2>
-                        <p class="card-big-info-desc">Activeer e-facturen en stel je Peppol Participant ID in.</p>
+                        <p class="card-big-info-desc">Activeer e-facturen en stel het Peppol Participant ID in voor elektronische facturatie.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="EInvoiceEnabled" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="EInvoiceEnabled" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
                                 <div class="switch switch-sm switch-primary">
                                     @Html.CheckBoxFor(m => m.EInvoiceEnabled, new { data_plugin_ios_switch = "" })
                                 </div>
                             </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="PeppolParticipantId" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="PeppolParticipantId" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
                                 <input asp-for="PeppolParticipantId" class="form-control form-control-modern" placeholder="0088:..." />
                             </div>
                         </div>
-                        <div class="form-group row align-items-center pb-3">
-                            <label asp-for="UblAttachPdf" class="col-md-3 control-label text-lg-end mb-0"></label>
+                        <div class="row align-items-center pb-3">
+                            <label asp-for="UblAttachPdf" class="col-md-2 control-label text-lg-end mb-0"></label>
                             <div class="col-md-9">
                                 <div class="switch switch-sm switch-primary">
                                     @Html.CheckBoxFor(m => m.UblAttachPdf, new { data_plugin_ios_switch = "" })
                                 </div>
-                                <small class="text-muted d-block mt-1">Voeg de PDF toe als bijlage in de UBL (indien ondersteund).</small>
                             </div>
                         </div>
                     </div>
@@ -1056,33 +1056,32 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
-                        <i class="card-big-info-icon bx bx-time-five"></i>
-                        <h2 class="card-big-info-title">Tarieven coördinatie</h2>
-                        <p class="card-big-info-desc">Standaard uurtarieven en km-vergoeding voor coördinatieprojecten.</p>
+                        <i class="card-big-info-icon bx bx-user-circle"></i>
+                        <h2 class="card-big-info-title">Uurtarieven</h2>
+                        <p class="card-big-info-desc">Stel een uurprijs in per medewerker voor tijdsregistratie en facturatie.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-
+                    <div class="form-group">
+                        <h5 class="fw-semibold text-muted letter-spacing-md" style="">KILOMETER</h5>
                         <div class="row align-items-center pb-3">
-                            <label asp-for="RatePerKm" class="col-md-3 control-label text-lg-end mb-0"></label>
                             <div class="col-md-4">
                                 <div class="input-group">
                                     <span class="input-group-text">€</span>
-                                    <input asp-for="RatePerKm" class="form-control form-control-modern" type="number" step="0.01" min="0" placeholder="0,00" />
+                                    <input asp-for="RatePerKm" class="form-control" type="number" step="0.01" min="0" placeholder="0,00" />
                                     <span class="input-group-text">/km</span>
                                 </div>
-                                <small class="text-muted">Verplaatsingsvergoeding per kilometer.</small>
                             </div>
                         </div>
-
-                        <hr />
-                        <h6 class="fw-bold mb-3">Standaard uurtarieven per persoon</h6>
+                        </div>
+                        <div class="form-group">
+                        <h5 class="fw-semibold text-muted letter-spacing-md" style="">MEDEWERKER</h5>
 
                         <div id="userRatesContainer">
                             @for (int i = 0; i < Model.UserRates.Count; i++)
                             {
-                                <div class="row user-rate-row mb-2">
-                                    <div class="col-md-6">
-                                        <select name="UserRates[@i].UserId" class="form-control form-control-modern user-rate-user">
+                                <div class="row user-rate-row mb-2 align-items-center">
+                                    <div class="col-md-8">
+                                        <select name="UserRates[@i].UserId" class="form-control user-rate-user">
                                             <option value="">-- Selecteer persoon --</option>
                                             @foreach (var u in Model.AvailableUsers)
                                             {
@@ -1103,7 +1102,7 @@
                                             <span class="input-group-text">€</span>
                                             <input type="number" name="UserRates[@i].HourlyRate"
                                                    value="@Model.UserRates[i].HourlyRate.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)"
-                                                   class="form-control form-control-modern" step="0.01" min="0" placeholder="0,00" />
+                                                   class="form-control" step="0.01" min="0" placeholder="0,00" />
                                             <span class="input-group-text">/u</span>
                                         </div>
                                     </div>
@@ -1113,12 +1112,12 @@
                                 </div>
                             }
                         </div>
-                        <div class="mt-2">
-                            <button type="button" id="addUserRate" class="btn btn-outline-secondary btn-sm">
+                        <div class="mt-4">
+                            <button type="button" id="addUserRate" class="btn btn-primary">
                                 <i class="bx bx-plus"></i> Tarief toevoegen
                             </button>
                         </div>
-
+                        </div>
                     </div>
                 </div>
             </div>

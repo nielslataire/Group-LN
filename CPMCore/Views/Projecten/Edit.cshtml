@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
     <link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
     <link rel="stylesheet" href="~/css/admin/skins/extension.css" />
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
 }
 
 <div class="row">
@@ -69,45 +70,13 @@
                             {
                                 @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
                             }
-                            <div class="form-group">
-                                <div class="row align-items-center pb-3">
-                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end pt-2" id="IsCoordinationProject" asp-for="Project.IsCoordinationProject">Zuiver coördinatieproject</label>
-                                    <div class="col-lg-7 col-xl-8">
-                                        <div class="switch switch-sm switch-primary">
-                                            @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { data_plugin_ios_switch = "", id = "IsCoordinationProject" })
-                                        </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Coördinatieproject</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    <div class="switch switch-sm switch-primary">
+                                        @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { data_plugin_ios_switch = "", id = "IsCoordinationProject" })
                                     </div>
                                 </div>
-                                <div class="row align-items-center pb-3">
-                                    <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
-                                        @Html.LabelFor(m => m.Project.CoordinationIssuerCompanyId)
-                                    </label>
-                                    <div class="col-lg-3 col-xl-3">
-                                        @Html.DropDownListFor(m => m.Project.CoordinationIssuerCompanyId,
-                                        new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.CoordinationIssuerCompanyId),
-                                                                        "-- Selecteer coördinatiebedrijf --",
-                                                                        new { @class = "form-control form-control-modern", id = "CoordinationIssuerCompanyId" })
-                                </div>
-                                <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project.ContractType">
-                                    @Html.LabelFor(m => m.Project.ContractType)
-                                </label>
-                                <div class="col-lg-3 col-xl-3">
-                                    <select asp-for="Project.ContractType"
-                                            asp-items="Html.GetEnumSelectList<BOCore.CoordinationContractType>()"
-                                            class="form-control form-control-modern">
-                                        <option value="">-- Selecteer type --</option>
-                                    </select>
-                                </div>
-                            </div>
-                            @if (Model.Project.ProjectDistanceKm.HasValue)
-                                {
-                                    <div class="row align-items-center pb-3">
-                                        <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Afstand</label>
-                                        <div class="col-lg-4 col-xl-4">
-                                            <span class="form-control-plaintext">@Model.Project.ProjectDistanceKm?.ToString("0.##") km</span>
-                                        </div>
-                                    </div>
-                                }
                             </div>
                             <div class="form-group row align-items-center pb-3">
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_Name">
@@ -164,7 +133,7 @@
                                     @Html.LabelFor(m => m.Project.CommercialTextNL)
                                 </label>
                                 <div class="col-lg-8 col-xl-8">
-                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", placeholder = "Beschrijving van het project" })
+                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", id = "commercialTextEditor" })
                                 </div>
                             </div>
                         </div>
@@ -247,17 +216,6 @@
                                 <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_TotalLandShare">@Html.LabelFor(m => m.Project.TotalLandShare)</label>
                                 <div class="col-lg-3 col-xl-3">
                                     @Html.TextBoxFor(m => m.Project.TotalLandShare, new { @class = "form-control form-control-modern", type = "number", step = "0.01", min = "0" })
-                                </div>
-                                <label class="col-lg-3 col-xl-2 control-label text-lg-end mb-0" for="Project_ProjectFolder">@Html.LabelFor(m => m.Project.ProjectFolder)</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.TextBoxFor(m => m.Project.ProjectFolder, new { @class = "form-control form-control-modern", placeholder = "Projectmap" })
-                                </div>
-                            </div>
-
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_FacebookPlaceId">Facebook plaats</label>
-                                <div class="col-lg-3 col-xl-3">
-                                    @Html.TextBoxFor(m => m.Project.FacebookPlaceId, new { @class = "form-control form-control-modern", placeholder = "Facebook plaats ID" })
                                 </div>
                             </div>
                         </div>
@@ -413,6 +371,7 @@
     </div>
 
     @* ── Coördinatieproject ───────────────────────────────────────────────── *@
+    <div id="coordinationCard">
     <div class="row mt-4">
         <div class="col">
             <section class="card card-modern card-big-info">
@@ -425,19 +384,7 @@
                         </div>
                         <div class="col-lg-3-5 col-xl-4-5">
 
-                            <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
-                                    Zuiver coördinatieproject
-                                </label>
-                                <div class="col-lg-8 col-xl-8">
-                                    <div class="form-check form-switch">
-                                        @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { @class = "form-check-input", id = "IsCoordinationProject", role = "switch" })
-                                        <label class="form-check-label" for="IsCoordinationProject">Zuiver coördinatieproject</label>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="coordinationFields">
+                            <div>
                                 <div class="form-group row align-items-center pb-3">
                                     <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">
                                         @Html.LabelFor(m => m.Project.CoordinationIssuerCompanyId)
@@ -565,6 +512,7 @@
             </section>
         </div>
     </div>
+    </div>@* /coordinationCard *@
 
     <div class="row action-buttons">
         <div class="col-12 col-md-auto">
@@ -702,12 +650,12 @@
 
                 function updateCoordinationVisibility() {
                     var isCoord = $('#IsCoordinationProject').is(':checked');
-                    $('#coordinationFields').toggle(isCoord);
+                    $('#coordinationCard').toggle(isCoord);
                     if (isCoord) updateContractTypeVisibility();
                 }
 
                 function updateContractTypeVisibility() {
-                    var type = $('#ContractType').val();
+                    var type = $('#Project_ContractType').val();
                     var showSlices = (type === '1' || type === '3');
                     var showRegie = (type === '2' || type === '3');
                     $('#slicesSection').toggle(showSlices);
@@ -716,7 +664,7 @@
                 }
 
                 $('#IsCoordinationProject').on('change', updateCoordinationVisibility);
-                $('#ContractType').on('change', updateContractTypeVisibility);
+                $('#Project_ContractType').on('change', updateContractTypeVisibility);
                 updateCoordinationVisibility();
 
                 // ── Schijven ──────────────────────────────────────────────────────
@@ -794,6 +742,19 @@
                     rateIndex = $('#ratesContainer .rate-row').length;
                 });
 
+        });
+
+        tinymce.init({
+            selector: '#commercialTextEditor',
+            language: 'nl',
+            plugins: 'lists link image table code',
+            toolbar: 'undo redo | bold italic underline | bullist numlist | link | code',
+            menubar: false,
+            branding: false,
+            height: 300,
+            setup: function (editor) {
+                editor.on('change', function () { editor.save(); });
+            }
         });
     </script>
 }

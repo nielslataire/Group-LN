@@ -45,7 +45,8 @@
       "Bash(find /e/TFS/CPMCore/Controllers -type f -name *Issue*.cs)",
       "Bash(xargs grep:*)",
       "Bash(grep -r Reopened /e/TFS/BOCore --include=*.cs)",
-      "Bash(grep -rn \"SendReminder\\\\|SendEveningUpdate\\\\|dailyUpdate\\\\|evening\\\\|activeStatuses\\\\|openStatuses\\\\|InProgress\\\\|InUitvoering\\\\|Gepland\\\\|status.*issue\\\\|issue.*status\" e:/TFS/ServiceCore/ --include=*.cs -l)"
+      "Bash(grep -rn \"SendReminder\\\\|SendEveningUpdate\\\\|dailyUpdate\\\\|evening\\\\|activeStatuses\\\\|openStatuses\\\\|InProgress\\\\|InUitvoering\\\\|Gepland\\\\|status.*issue\\\\|issue.*status\" e:/TFS/ServiceCore/ --include=*.cs -l)",
+      "Bash(find /c/Users/niels/source/repos/nielslataire/Group-LN/BOCore -name \"*.cs\" -exec grep -l \"CoordinationContractType\" {} \\\\;)"
     ]
   }
 }

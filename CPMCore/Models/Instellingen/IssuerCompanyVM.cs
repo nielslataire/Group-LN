@@ -78,11 +78,11 @@ namespace CPMCore.Models.Instellingen
 
         [Display(Name = "Actief")]
         public bool IsActive { get; set; } = true;
-        [Display(Name = "E-invoicing")]
+        [Display(Name = "E-invoicing actief")]
         public bool EInvoiceEnabled { get; set; }
-        [Display(Name = "Peppol ID")]
+        [Display(Name = "Peppol Participant ID")]
         public string? PeppolParticipantId { get; set; }
-        [Display(Name = "UBL - PDF als bijlage")]
+        [Display(Name = "PDF bijvoegen (UBL)")]
         public bool UblAttachPdf { get; set; } = true;
 
         [Display(Name = "Email onderwerp template")]

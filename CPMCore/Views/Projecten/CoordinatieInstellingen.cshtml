@@ -22,7 +22,7 @@
                 <input type="hidden" asp-for="ProjectId" />
                 <input type="hidden" asp-for="ProjectName" />
 
-                <div class="row">
+                <div>
                     <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
                         <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
                             <h1 class="font-weight-bold mb-0 mt-0">Coördinatie-instellingen</h1>
@@ -120,8 +120,8 @@
                                 </div>
                             </div>
                         </section>
-                        </<div>
                         </div>
+                    </div>
 
                         <div id="slicesSection" style="display:none">
                             <div class="row mt-4">
@@ -177,12 +177,13 @@
                                 </div>
                             </div>
                         </section>
-                    </div>
-                                    </<div>
-                                    </div>
-                                    <div class="row mt-4">
-                                        <div class="col">
+                                </div>
+                            </div>
+                        </div>
+
                         <div id="regieSection" style="display:none">
+                            <div class="row mt-4">
+                                <div class="col">
                         <section class="card card-modern card-big-info">
                             <div class="card-body">
                                 <div class="row">
@@ -218,9 +219,9 @@
                                 </div>
                             </div>
                         </section>
-                    </div>
-                                            </<div>
-                                            </div>
+                                </div>
+                            </div>
+                        </div>
 
                     <div class="row action-buttons" style="padding-left: 299px;">
                         <div class="col-12 col-md-auto">
@@ -396,6 +397,17 @@
         }
         if (initType === '2' || initType === '3') {
             refreshAllUserDropdowns();
+        }
+
+        // Bij laden: als KmAllowance leeg is en bedrijf al geselecteerd, vul standaard km-tarief in
+        var initCompanyId = $('#CoordinationIssuerCompanyId').val();
+        if (initCompanyId) {
+            var $kmField = $('[name="KmAllowance"]');
+            if (!$kmField.val()) {
+                loadIssuerDefaults(initCompanyId, function (defaults) {
+                    if (defaults.ratePerKm != null) $kmField.val(defaults.ratePerKm);
+                });
+            }
         }
     });
     </script>

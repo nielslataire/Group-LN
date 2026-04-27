@@ -321,13 +321,16 @@ namespace CPMCore.Controllers
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
             // Routeberekening voor coördinatieproject
-            if (model.Project.IsCoordinationProject && model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
+            if (model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
             {
                 var (distKm, durSec) = await _projectService.CalculateRouteAsync(
                     model.Project.CoordinationIssuerCompanyId.Value,
                     model.SelectedPostalcode);
-                model.Project.ProjectDistanceKm    = distKm;
-                model.Project.RouteDurationSeconds = durSec;
+                if (distKm.HasValue)
+                {
+                    model.Project.ProjectDistanceKm    = distKm;
+                    model.Project.RouteDurationSeconds = durSec;
+                }
             }
 
             var service = _projectService;
@@ -522,7 +525,7 @@ namespace CPMCore.Controllers
             model.Users = GetOrderedUsers();
 
             // Laad schijven en uurtarieven
-            if (model.Project.IsCoordinationProject)
+            if (model.Project.CoordinationIssuerCompanyId.HasValue)
             {
                 var slicesResp = _projectService.GetContractSlices(projectid);
                 if (slicesResp.Success)
@@ -567,13 +570,16 @@ namespace CPMCore.Controllers
             model.Project.Slug = GetSlugForPostcodeId(model.SelectedPostalcode, model.Project.Name ?? string.Empty);
 
             // Routeberekening bij wijziging coördinatieproject-instellingen
-            if (model.Project.IsCoordinationProject && model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
+            if (model.Project.CoordinationIssuerCompanyId.HasValue && model.SelectedPostalcode > 0)
             {
                 var (distKm, durSec) = await _projectService.CalculateRouteAsync(
                     model.Project.CoordinationIssuerCompanyId.Value,
                     model.SelectedPostalcode);
-                model.Project.ProjectDistanceKm    = distKm;
-                model.Project.RouteDurationSeconds = durSec;
+                if (distKm.HasValue)
+                {
+                    model.Project.ProjectDistanceKm    = distKm;
+                    model.Project.RouteDurationSeconds = durSec;
+                }
             }
 
             var service = _projectService;
@@ -610,8 +616,10 @@ namespace CPMCore.Controllers
         }
         private IEnumerable<CpmUserOption> GetOrderedUsers()
         {
+            var internalUserIds = _db.PermissionPerUser.Select(p => p.UserId).Distinct();
             var users = _db.Users
                 .AsNoTracking()
+                .Where(u => u.IsActive && internalUserIds.Contains(u.Id))
                 .OrderBy(user => user.Familienaam)
                 .ThenBy(user => user.Voornaam)
                 .Select(user => new
@@ -5103,8 +5111,11 @@ namespace CPMCore.Controllers
             {
                 var (distKm, durSec) = await _projectService.CalculateRouteAsync(
                     proj.CoordinationIssuerCompanyId.Value, (int)proj.Postalcode.PostcodeId.Value);
-                proj.ProjectDistanceKm    = distKm;
-                proj.RouteDurationSeconds = durSec;
+                if (distKm.HasValue)
+                {
+                    proj.ProjectDistanceKm    = distKm;
+                    proj.RouteDurationSeconds = durSec;
+                }
             }
 
             _projectService.InsertUpdate(proj);

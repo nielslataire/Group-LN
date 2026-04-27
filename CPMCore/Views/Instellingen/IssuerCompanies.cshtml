@@ -49,21 +49,21 @@
                                 <td>
                                     @if (x.IsActive)
                                     {
-                                        <span class="badge bg-success">Actief</span>
+                                        <span class="badge badge-primary">Actief</span>
                                     }
                                     else
                                     {
 
-                                        <span class="badge bg-secondary">Inactief</span>
+                                        <span class="badge badge-warning">Inactief</span>
                                     }
                                 </td>
                                 <td class="text-end">
-                                    <a data-toggle="tooltip" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = x.Id })"><i class="fa fa-edit"></i></a>
+                                    <a data-toggle="tooltip" class="btn p-0" data-placement="top" title="Bewerken" data-original-title="Bewerken" href="@Url.Action("IssuerCompaniesEdit", "Instellingen", new { id = x.Id })"><i class="fa fa-edit"></i></a>
                                     @if (x.IsActive)
                                     {
                                         <form method="post" action="@Url.Action("IssuerCompaniesDisable","Instellingen", new { id = x.Id })" class="d-inline">
                                             @Html.AntiForgeryToken()
-                                            <button type="submit" class="btn btn-link p-0 text-danger"
+                                            <button type="submit" class="btn p-0 text-danger"
                                                     onclick="return confirm('Dit bedrijf inactief zetten?');"
                                                     data-toggle="tooltip" data-placement="top" title="Deactiveren">
                                                 <i class="fa fa-times"></i>
