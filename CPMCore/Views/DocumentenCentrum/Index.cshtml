@@ -74,44 +74,68 @@
         <div class="row g-3 mb-4">
             <div class="col-sm-6 col-xl-3">
                 <a href="@TabUrl(IncomingInvoiceStatus.New)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Te verwerken</p>
-                            <h2 class="fw-bold mb-1 text-white">@countNew</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Wachten op administratie</p>
+                <section class="card issue-status-widget mb-0">
+                    <div class="card-body bg-primary">
+                        <div class="widget-summary widget-summary-sm">
+                            <div class="widget-summary-col">
+                                <div class="summary align-content-center">
+                                        <p class="text-uppercase small fw-semibold mb-0" style="color:#8fbc9f;letter-spacing:.06em;">Te verwerken</p>
+                                        <h2 class="fw-bold mt-0 mb-0 text-white">@countNew</h2>
+                                        <p class="small mb-0" style="color:#8fbc9f;">Wachten op administratie</p>
+                                </div>
+                            </div>
                         </div>
-                    </section>
+                    </div>
+                </section>
                 </a>
             </div>
             <div class="col-sm-6 col-xl-3">
-                <a href="@TabUrl(null, true)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Vraagt aandacht</p>
-                            <h2 class="fw-bold mb-1 text-white">@countAttn</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Actie vereist</p>
+                <a href="@TabUrl(null,true)" class="text-decoration-none">
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <p class="text-uppercase small fw-semibold mb-0" style="color:#8fbc9f;letter-spacing:.06em;">Vraagt aandacht</p>
+                                        <h2 class="fw-bold mb-0 mt-0 text-white">@countAttn</h2>
+                                        <p class="small mb-0" style="color:#8fbc9f;">Actie vereist</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </a>
             </div>
             <div class="col-sm-6 col-xl-3">
                 <a href="@TabUrl(IncomingInvoiceStatus.PendingApproval)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Toegewezen</p>
-                            <h2 class="fw-bold mb-1 text-white">@countPending</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Bij projectverantwoordelijke</p>
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <p class="text-uppercase small fw-semibold mb-0" style="color:#8fbc9f;letter-spacing:.06em;">Toegewezen</p>
+                                        <h2 class="fw-bold mb-0 mt-0 text-white">@countPending</h2>
+                                        <p class="small mb-0" style="color:#8fbc9f;">Bij projectverantwoordelijke</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </a>
             </div>
             <div class="col-sm-6 col-xl-3">
                 <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Goedgekeurd</p>
-                            <h2 class="fw-bold mb-1 text-white">@countApproved</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Deze maand</p>
+                    <section class="card issue-status-widget mb-0">
+                        <div class="card-body bg-primary">
+                            <div class="widget-summary widget-summary-sm">
+                                <div class="widget-summary-col">
+                                    <div class="summary align-content-center">
+                                        <p class="text-uppercase small fw-semibold mb-0" style="color:#8fbc9f;letter-spacing:.06em;">Goedgekeurd</p>
+                                        <h2 class="fw-bold mb-0 mt-0 text-white">@countApproved</h2>
+                                        <p class="small mb-0" style="color:#8fbc9f;">Deze maand</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </a>
