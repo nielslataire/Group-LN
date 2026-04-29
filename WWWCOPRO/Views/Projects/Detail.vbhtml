@@ -235,7 +235,7 @@ End Section
     <div class="commercial-sectie">
         <p class="commercial-titel">@Model.Data.CommercialTitleNL</p>
         <div class="commercial-accent"></div>
-        <div class="project-tekst">@Model.Data.CommercialTextNL</div>
+        <div class="project-tekst">@Html.Raw(Model.Data.CommercialTextNL)</div>
     </div>
 
     @If Model.SalesSetttings.SaleVisible = True Then

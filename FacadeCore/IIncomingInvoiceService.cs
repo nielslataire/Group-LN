@@ -17,6 +17,8 @@ namespace FacadeCore
         public DateOnly? DateFrom { get; set; }
         public DateOnly? DateTo { get; set; }
         public int? ProjectId { get; set; }
+        /// <summary>Wanneer true: enkel documenten met onopgeloste waarschuwingen.</summary>
+        public bool? HasWarnings { get; set; }
         /// <summary>Paginering — 1-based.</summary>
         public int Page { get; set; } = 1;
         public int PageSize { get; set; } = 50;
@@ -39,10 +41,22 @@ namespace FacadeCore
         public string StatusBadgeClass { get; set; }
         public string DocumentType { get; set; }
         public string Source { get; set; }
+        /// <summary>Bevestigde projectkoppeling op de factuur zelf.</summary>
         public string ProjectName { get; set; }
+        /// <summary>Voorstel van de verrijkingspipeline (nog niet bevestigd).</summary>
+        public string SuggestedProjectName { get; set; }
+        /// <summary>True als de verrijkingspipeline al eens gelopen heeft voor dit document.</summary>
+        public bool IsEnriched { get; set; }
+        /// <summary>Naam van de persoon die de verrijking bevestigd heeft (UserReviewedBy).</summary>
+        public string AssignedToName { get; set; }
         public bool HasAttachments { get; set; }
+        /// <summary>Id van de eerste PDF-bijlage (niet UBL), null als geen PDF aanwezig.</summary>
+        public int? FirstPdfAttachmentId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? SyncedAt { get; set; }
+        /// <summary>Reason-flags van de laatste verrijkingsrun (bitmask van InvoiceReasonFlags).</summary>
+        public long ReasonFlags { get; set; }
+        public bool HasWarnings { get; set; }
     }
 
     public class IncomingInvoicePagedResultVm
@@ -76,6 +90,7 @@ namespace FacadeCore
         public string Source { get; set; }
         public int? ProjectId { get; set; }
         public string ProjectName { get; set; }
+        public int? ContractId { get; set; }
         public string Notes { get; set; }
         public string OctopusExternalId { get; set; }
         public DateTime? SyncedAt { get; set; }
@@ -94,6 +109,9 @@ namespace FacadeCore
 
         public IReadOnlyList<IncomingInvoiceAttachmentVm> Attachments { get; set; } = new List<IncomingInvoiceAttachmentVm>();
         public IReadOnlyList<IncomingInvoiceLineVm> Lines { get; set; } = new List<IncomingInvoiceLineVm>();
+
+        /// <summary>Verrijkingsresultaat van de pipeline (null als de pipeline nog niet gedraaid heeft).</summary>
+        public InvoiceEnrichmentVm Enrichment { get; set; }
     }
 
     public class IncomingInvoiceLineVm
@@ -135,11 +153,18 @@ namespace FacadeCore
         public int ErrorCount { get; set; }
         public int AttachmentCount { get; set; }
         public int AttachmentErrorCount { get; set; }
+        public int EnrichedCount { get; set; }
         public string ErrorMessage { get; set; }
         public DateTime SyncedAt { get; set; } = DateTime.UtcNow;
     }
 
     // ─── Service interface ────────────────────────────────────────────────────
+
+    public class IncomingInvoiceLinkContractRequest
+    {
+        public int IncomingInvoiceId { get; set; }
+        public int? ContractId { get; set; }
+    }
 
     public interface IIncomingInvoiceService
     {
@@ -148,6 +173,8 @@ namespace FacadeCore
         Task<IncomingInvoiceDetailVm> GetByIdAsync(int id, CancellationToken ct = default);
 
         Task LinkToProjectAsync(IncomingInvoiceLinkProjectRequest request, CancellationToken ct = default);
+
+        Task LinkToContractAsync(IncomingInvoiceLinkContractRequest request, CancellationToken ct = default);
 
         Task UpdateStatusAsync(IncomingInvoiceUpdateStatusRequest request, CancellationToken ct = default);
 

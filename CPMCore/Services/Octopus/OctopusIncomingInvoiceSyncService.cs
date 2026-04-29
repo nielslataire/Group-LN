@@ -1,4 +1,5 @@
 using BOCore;
+using CPMCore.Services.InvoiceEnrichment;
 using CPMCore.Services.InvoiceExtraction;
 using CPMCore.Services.Octopus;
 using DALCore.Models;
@@ -41,6 +42,7 @@ namespace CPMCore.Services.Octopus
         private readonly OctopusOptions _options;
         private readonly InvoiceExtractionOptions _extractionOptions;
         private readonly IAzureInvoiceAnalysisService _azureService;
+        private readonly IInvoiceEnrichmentPipelineService _enrichmentPipeline;
         private readonly ILogger<OctopusIncomingInvoiceSyncService> _logger;
 
         public OctopusIncomingInvoiceSyncService(
@@ -51,6 +53,7 @@ namespace CPMCore.Services.Octopus
             IOptions<OctopusOptions> options,
             IOptions<InvoiceExtractionOptions> extractionOptions,
             IAzureInvoiceAnalysisService azureService,
+            IInvoiceEnrichmentPipelineService enrichmentPipeline,
             ILogger<OctopusIncomingInvoiceSyncService> logger)
         {
             _db = db;
@@ -60,6 +63,7 @@ namespace CPMCore.Services.Octopus
             _options = options.Value;
             _extractionOptions = extractionOptions.Value;
             _azureService = azureService;
+            _enrichmentPipeline = enrichmentPipeline;
             _logger = logger;
         }
 
@@ -140,6 +144,25 @@ namespace CPMCore.Services.Octopus
                             .Where(b => b.JournalKey?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == true)
                             .ToList();
 
+                    // ── 4b. Extra documentdatumfilter bij expliciete gebruikersdatum ────────
+                    // Het Octopus-endpoint filtert op modifiedTimeStamp (= wanneer de boeking
+                    // voor het laastst werd gewijzigd), NIET op de factuurdatum.
+                    // Een oude factuur die onlangs in Octopus werd aangepast (bijv. betaald of
+                    // gecorrigeerd) heeft een recente modifiedTimeStamp en zou anders mee komen.
+                    // Wanneer de gebruiker expliciet een "vanaf datum" invult, filteren we ook
+                    // op DocumentDate zodat enkel facturen met die datum of later worden opgehaald.
+                    if (modifiedSinceOverride.HasValue)
+                    {
+                        var minDocDate = DateOnly.FromDateTime(modifiedSinceOverride.Value);
+                        var beforeFilter = filtered.Count;
+                        filtered = filtered.Where(b => b.DocumentDate >= minDocDate).ToList();
+                        var excluded = beforeFilter - filtered.Count;
+                        if (excluded > 0)
+                            _logger.LogInformation(
+                                "{Excluded} boeking(en) uitgesloten omdat factuurdatum vóór {MinDate:dd/MM/yyyy} valt (modifiedTimeStamp was recent).",
+                                excluded, minDocDate);
+                    }
+
                     _logger.LogInformation(
                         "Octopus leverde {Total} boekingen, {Filtered} na journaalfilter '{Prefix}*'.",
                         bookings.Count, filtered.Count, prefix);
@@ -171,10 +194,45 @@ namespace CPMCore.Services.Octopus
                 result.AttachmentCount = attachCount;
                 result.AttachmentErrorCount = attachErrors;
 
+                // ── 7. Verrijking voor alle nieuwe facturen zonder enrichment ────────────
+                // Facturen zonder UBL-bijlage doorlopen nooit EnrichInvoiceFromUblAsync.
+                // Dit blok zorgt dat élke factuur (ook zonder bijlagen) verrijkt wordt
+                // zodat leverancier-, project- en rekeningmatching altijd plaatsvinden.
+                var unenrichedIds = await _db.IncommingInvoices
+                    .Where(i => i.IssuerCompanyId == issuerCompanyId
+                             && i.StatusId == IncomingInvoiceStatus.New
+                             && i.Source == "Octopus"
+                             && !_db.IncomingInvoiceEnrichment.Any(e => e.IncomingInvoiceId == i.Id))
+                    .Select(i => i.Id)
+                    .ToListAsync(ct);
+
+                if (unenrichedIds.Count > 0)
+                {
+                    _logger.LogInformation(
+                        "{Count} factuur/facturen gevonden zonder verrijking — verrijkingspipeline starten.",
+                        unenrichedIds.Count);
+
+                    foreach (var invoiceId in unenrichedIds)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        try
+                        {
+                            await _enrichmentPipeline.EnrichAsync(invoiceId, ct);
+                            result.EnrichedCount++;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex,
+                                "Verrijkingspipeline mislukt voor factuur {Id}.", invoiceId);
+                        }
+                    }
+                }
+
                 result.Success = true;
                 _logger.LogInformation(
-                    "Octopus sync klaar voor '{Company}': {New} nieuw, {Updated} bijgewerkt, {Skip} overgeslagen, {Att} bijlagen, {Err} fouten.",
-                    company.Name, result.NewCount, result.UpdatedCount, result.SkippedDuplicates, result.AttachmentCount, result.ErrorCount);
+                    "Octopus sync klaar voor '{Company}': {New} nieuw, {Updated} bijgewerkt, {Skip} overgeslagen, {Att} bijlagen, {Enriched} verrijkt, {Err} fouten.",
+                    company.Name, result.NewCount, result.UpdatedCount, result.SkippedDuplicates,
+                    result.AttachmentCount, result.EnrichedCount, result.ErrorCount);
             }
             catch (Exception ex)
             {
@@ -663,6 +721,18 @@ namespace CPMCore.Services.Octopus
             {
                 invoice.UpdatedAt = DateTime.UtcNow;
                 await _db.SaveChangesAsync(ct);
+            }
+
+            // ── Stap 7: verrijkingspipeline (scoring + opslaan) ───────────────────────
+            // Fouten in de pipeline mogen de import nooit blokkeren.
+            try
+            {
+                await _enrichmentPipeline.EnrichAsync(invoiceId, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "Verrijkingspipeline mislukt voor factuur {Id} — import zelf is wel geslaagd.", invoiceId);
             }
         }
 

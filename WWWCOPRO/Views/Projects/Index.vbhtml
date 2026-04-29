@@ -113,7 +113,7 @@ end section
                         @fp.Postalcode.Gemeente.ToUpper()
                     </div>
                     @If Not String.IsNullOrEmpty(fp.CommercialTextNL) Then
-                        @<text><p class="uitgelicht-tekst">@fp.CommercialTextNL</p></text>
+                        @<text><div class="uitgelicht-tekst">@Html.Raw(fp.CommercialTextNL)</div></text>
                     End If
                     @If fpAppts > 0 OrElse fpHouses > 0 OrElse fpComm > 0 Then
                         @<text>

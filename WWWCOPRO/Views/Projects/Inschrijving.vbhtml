@@ -204,7 +204,7 @@ end section
                 End If
                 <div class="commercial-accent"></div>
                 @If Not String.IsNullOrEmpty(tekst) Then
-                    @<text><div class="project-tekst">@tekst</div></text>
+                    @<text><div class="project-tekst">@Html.Raw(tekst)</div></text>
                 End If
             </div>
         </text>

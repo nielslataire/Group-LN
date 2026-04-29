@@ -170,6 +170,11 @@ builder.Services.AddScoped<CPMCore.Services.InvoiceExtraction.IAzureInvoiceAnaly
                             CPMCore.Services.InvoiceExtraction.AzureInvoiceAnalysisService>();
 builder.Services.AddScoped<ServiceCore.IncomingInvoices.IOctopusIncomingInvoiceSyncService, CPMCore.Services.Octopus.OctopusIncomingInvoiceSyncService>();
 builder.Services.AddScoped<FacadeCore.IIncomingInvoiceService, ServiceCore.IncomingInvoices.IncomingInvoiceService>();
+// Verrijkingspipeline
+builder.Services.AddScoped<FacadeCore.IProjectMatchingService, ServiceCore.IncomingInvoices.ProjectMatchingService>();
+builder.Services.AddScoped<FacadeCore.IContractMatchingService, ServiceCore.IncomingInvoices.ContractMatchingService>();
+builder.Services.AddScoped<FacadeCore.IAccountingSuggestionService, ServiceCore.IncomingInvoices.AccountingSuggestionService>();
+builder.Services.AddScoped<FacadeCore.IInvoiceEnrichmentPipelineService, CPMCore.Services.InvoiceEnrichment.InvoiceEnrichmentPipelineService>();
 builder.Services.AddHttpClient<IPeppolDirectoryClient, PeppolDirectoryClient>(client =>
 {
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

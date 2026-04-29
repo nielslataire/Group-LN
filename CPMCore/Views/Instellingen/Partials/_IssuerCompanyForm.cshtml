@@ -795,62 +795,91 @@
                         <p class="card-big-info-desc">Beheer de JSON-gestuurde QuestPDF lay-out per bedrijf.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label asp-for="TemplateKey" class="form-label"></label>
-                                <select asp-for="TemplateKey" class="form-control form-control-modern js-template-key">
-                                    @foreach (var template in Model.InvoiceTemplates)
-                                    {
-                                        <option value="@template.Key">@template.Name</option>
-                                    }
-                                </select>
-                                <small class="text-muted d-block mt-1">
-                                    Beheer templates in <a href="@Url.Action("InvoiceTemplates", "Instellingen")">de templatemanager</a>.
-                                </small>
-                            </div>
-                            <div class="col-md-4">
-                            <div class="form-group">
-                                <label asp-for="BrandPrimaryColor" class="form-label"></label><br />
+
+                    <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">KLEUREN</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="BrandPrimaryColor" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
                                 <input type="color"
                                        id="BrandPrimaryColor"
                                        name="BrandPrimaryColor"
-                                           class="border-0 mt-1 js-brand-primary" pattern="^#+([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$"
+                                       class="border-0 mt-1 js-brand-primary" pattern="^#+([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$"
                                        value="@(string.IsNullOrWhiteSpace(Model?.BrandPrimaryColor) ? "#01532d" : Model.BrandPrimaryColor)" />
                                 </div>
-                                       </div>
-
-                            <div class="col-md-4">
-                                <label asp-for="BrandSecondaryColor" class="form-label"></label><br />
-                                <input type="color"
-                                       id="BrandSecondaryColor"
-                                       name="BrandSecondaryColor"
-                                       class="border-0 mt-1 js-brand-secondary" pattern="^#+([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$"
-                                       value="@(string.IsNullOrWhiteSpace(Model?.BrandSecondaryColor) ? "#6b7280" : Model.BrandSecondaryColor)" />
                             </div>
-                            <div class="col-md-4">
-                                <label asp-for="FontFamily" class="form-label"></label>
-                                <input asp-for="FontFamily" class="form-control form-control-modern" placeholder="Inter" />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="BrandSecondaryColor" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input type="color"
+                                           id="BrandSecondaryColor"
+                                           name="BrandSecondaryColor"
+                                           class="border-0 mt-1 js-brand-secondary" pattern="^#+([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$"
+                                           value="@(string.IsNullOrWhiteSpace(Model?.BrandSecondaryColor) ? "#6b7280" : Model.BrandSecondaryColor)" />
+                                </div>
                             </div>
-                            <div class="col-12">
-                                <label asp-for="FooterLegalText" class="form-label"></label>
-                                <textarea asp-for="FooterLegalText" rows="3" class="form-control form-control-modern"></textarea>
+                    </div>
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">SJABLOON</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="TemplateKey" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <select asp-for="TemplateKey" class="form-control js-template-key">
+                                        @foreach (var template in Model.InvoiceTemplates)
+                                        {
+                                            <option value="@template.Key">@template.Name</option>
+                                        }
+                                    </select>
+                                    <small class="text-muted d-block mt-1">
+                                        Beheer templates in <a href="@Url.Action("InvoiceTemplates", "Instellingen")">de templatemanager</a>.
+                                    </small>
+                                </div>
                             </div>
-                            <div class="col-12">
-                                <label asp-for="TemplateJson" class="form-label"></label>
-                                <textarea asp-for="TemplateJson" rows="16" class="form-control form-control-modern font-monospace js-template-json" placeholder="{&#x0a;  &quot;version&quot;: 1&#x0a;}"></textarea>
-                                <small class="text-muted">Wijzig de JSON en valideer lokaal met het schema. Voorbeeld: {{Invoice.PublicId}}.</small>
-                                <span asp-validation-for="TemplateJson" class="text-danger"></span>
-                            </div>
-                            <div class="col-md-4">
-                                <label for="invoice-layout-preview-id" class="form-label">Factuur voor preview</label>
-                                <input type="number" min="1" id="invoice-layout-preview-id" class="form-control form-control-modern js-preview-invoice" placeholder="Factuur ID" />
-                                <small class="text-muted">Gebruik een bestaande factuur-id om een voorbeeld te genereren.</small>
-                            </div>
-                            <div class="col-md-8 d-flex align-items-end justify-content-end gap-2">
-                                <button type="button" class="btn btn-secondary js-layout-preview" data-preview-url="@Url.Content("~/Admin/InvoiceLayout/Preview")">Preview PDF</button>
-                                <button type="button" class="btn btn-light border js-layout-reset">Reset naar standaard</button>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="TemplateJson" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <textarea asp-for="TemplateJson" rows="16" class="form-control form-control-modern font-monospace js-template-json" placeholder="{&#x0a;  &quot;version&quot;: 1&#x0a;}"></textarea>
+                                    <small class="text-muted">Wijzig de JSON en valideer lokaal met het schema. Voorbeeld: {{Invoice.PublicId}}.</small>
+                                    <span asp-validation-for="TemplateJson" class="text-danger"></span>
+                                </div>
                             </div>
                         </div>
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">FONT</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="FontFamily" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="FontFamily" class="form-control" placeholder="Inter" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">FOOTER</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="FooterLegalText" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <textarea asp-for="FooterLegalText" rows="3" class="form-control"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">PREVIEW</h5>
+                            <div class="row align-items-center pb-3">
+                                <label for="invoice-layout-preview-id" class="col-md-2 control-label text-lg-end mb-0">Factuur voor preview</label>
+                                <div class="col-md-9">
+                                    <input type="number" min="1" id="invoice-layout-preview-id" class="form-control js-preview-invoice" placeholder="Factuur ID" />
+                                    <small class="text-muted">Gebruik een bestaande factuur-id om een voorbeeld te genereren.</small>
+                                </div>
+                            </div>
+                            <div class="row align-items-center pb-3">
+                                <label for="invoice-layout-preview-id" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <button type="button" class="btn btn-secondary js-layout-preview" data-preview-url="@Url.Content("~/Admin/InvoiceLayout/Preview")">Preview PDF</button>
+                                    <button type="button" class="btn btn-light border js-layout-reset">Reset naar standaard</button>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="invoice-layout-error" class="alert alert-danger d-none mt-3"></div>
                     </div>
                 </div>
@@ -865,36 +894,48 @@
                 <div class="row">
                     <div class="col-lg-2-5 col-xl-1-5">
                         <i class="card-big-info-icon bx bx-palette"></i>
-                        <h2 class="card-big-info-title">Documentstijl & e-mail</h2>
+                        <h2 class="card-big-info-title">Sjablonen & e-mail</h2>
                         <p class="card-big-info-desc">Stel sjablonen en defaults in voor layout en e-mails.</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label asp-for="DefaultLanguage" class="form-label"></label>
-                                <input asp-for="DefaultLanguage" class="form-control form-control-modern" placeholder="nl-BE" />
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">INSTELLINGEN</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="DefaultLanguage" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="DefaultLanguage" class="form-control" placeholder="nl-BE" />
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label asp-for="DefaultCurrency" class="form-label"></label>
-                                <input asp-for="DefaultCurrency" class="form-control form-control-modern" placeholder="EUR" />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="DefaultCurrency" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="DefaultCurrency" class="form-control" placeholder="EUR" />
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label asp-for="InvoiceNumberPattern" class="form-label"></label>
-                                <input asp-for="InvoiceNumberPattern" class="form-control form-control-modern" placeholder="{num:0000}-{date:MM-yyyy}" />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="InvoiceNumberPattern" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="InvoiceNumberPattern" class="form-control" placeholder="{num:0000}-{date:MM-yyyy}" />
+                                </div>
                             </div>
-
-                            <div class="col-12">
-                                <label asp-for="EmailSubjectTemplate" class="form-label"></label>
-                                <input asp-for="EmailSubjectTemplate" class="form-control form-control-modern" placeholder="Factuur {PublicId} van {IssuerName}" />
+                        </div>
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">EMAIL</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EmailSubjectTemplate" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="EmailSubjectTemplate" class="form-control" placeholder="Factuur {PublicId} van {IssuerName}" />
+                                </div>
                             </div>
-                            <div class="col-12">
-                                <label asp-for="EmailBodyTemplate" class="form-label"></label>
-                                <textarea asp-for="EmailBodyTemplate"
-                                          rows="5"
-                                          class="form-control form-control-modern"
-                                          placeholder="Beste {ClientName}, ..."
-                                          data-plugin-summernote
-                                          data-plugin-options='{
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EmailBodyTemplate" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <textarea asp-for="EmailBodyTemplate"
+                                              rows="5"
+                                              class="form-control"
+                                              placeholder="Beste {ClientName}, ..."
+                                              data-plugin-summernote
+                                              data-plugin-options='{
                                             "height":220,
                                             "toolbar":[
                                               ["font", ["bold","italic","underline","clear"]],
@@ -905,16 +946,18 @@
                                             ],
                                             "dialogsInBody": true
                                           }'></textarea>
-                                <small class="text-muted">Gebruik opmaak en links om een aantrekkelijk e-mailbericht te maken. Laat leeg om de standaardtekst te gebruiken.</small>
+                                    <small class="text-muted">Gebruik opmaak en links om een aantrekkelijk e-mailbericht te maken. Laat leeg om de standaardtekst te gebruiken.</small>
+                                </div>
                             </div>
-                            <div class="col-12">
-                                <label asp-for="EmailPaidBodyTemplate" class="form-label"></label>
-                                <textarea asp-for="EmailPaidBodyTemplate"
-                                          rows="5"
-                                          class="form-control form-control-modern"
-                                          placeholder="Beste {ClientName}, ..."
-                                          data-plugin-summernote
-                                          data-plugin-options='{
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EmailPaidBodyTemplate" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <textarea asp-for="EmailPaidBodyTemplate"
+                                              rows="5"
+                                              class="form-control"
+                                              placeholder="Beste {ClientName}, ..."
+                                              data-plugin-summernote
+                                              data-plugin-options='{
                                             "height":220,
                                             "toolbar":[
                                               ["font", ["bold","italic","underline","clear"]],
@@ -925,11 +968,14 @@
                                             ],
                                             "dialogsInBody": true
                                           }'></textarea>
-                                <small class="text-muted">Gebruik dit sjabloon voor reeds betaalde facturen. Laat leeg om het standaard e-mailsjabloon te gebruiken.</small>
+                                    <small class="text-muted">Gebruik dit sjabloon voor reeds betaalde facturen. Laat leeg om het standaard e-mailsjabloon te gebruiken.</small>
+                                </div>
                             </div>
-                            <div class="col-12 pt-5">
-                                <label asp-for="InvoiceFooterHtml" class="form-label"></label>
-                                <textarea asp-for="InvoiceFooterHtml" rows="5" class="form-control form-control-modern" placeholder="<small>…</small>"></textarea>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="InvoiceFooterHtml" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <textarea asp-for="InvoiceFooterHtml" rows="5" class="form-control" placeholder=""></textarea>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1009,41 +1055,50 @@
                         <p class="card-big-info-desc">Defaults voor betaal-QR (SEPA/EPC).</p>
                     </div>
                     <div class="col-lg-3-5 col-xl-4-5">
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label asp-for="EpcQrEnabled" class="form-label pe-3"></label>
-                                <div class="switch switch-sm switch-primary">
-                                    @Html.CheckBoxFor(m => m.EpcQrEnabled, new { data_plugin_ios_switch = "" })
+                        <div class="form-group">
+                            <h5 class="fw-semibold text-muted letter-spacing-md mt-3" style="">INSTELLINGEN</h5>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EpcQrEnabled" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <div class="switch switch-sm switch-primary">
+                                        @Html.CheckBoxFor(m => m.EpcQrEnabled, new { data_plugin_ios_switch = "" })
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-9">
-                                <small class="text-muted">Als leeg, neem IBAN/BIC van je standaard bankrekening.</small>
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EpcBeneficiaryName" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="EpcBeneficiaryName" class="form-control" placeholder="Begunstigde (juridische naam)" />
+                                </div>
                             </div>
-
-                            <div class="col-md-6">
-                                <label asp-for="EpcBeneficiaryName" class="form-label"></label>
-                                <input asp-for="EpcBeneficiaryName" class="form-control form-control-modern" placeholder="Begunstigde (juridische naam)" />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EpcIban" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="EpcIban" class="form-control" placeholder="BE..." />
+                                    <small class="text-muted">Als leeg, neem IBAN/BIC van je standaard bankrekening.</small>
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label asp-for="EpcIban" class="form-label"></label>
-                                <input asp-for="EpcIban" class="form-control form-control-modern" placeholder="BE..." />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EpcBic" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="EpcBic" class="form-control" placeholder="BIC (optioneel)" />
+                                </div>
                             </div>
-                            <div class="col-md-3">
-                                <label asp-for="EpcBic" class="form-label"></label>
-                                <input asp-for="EpcBic" class="form-control form-control-modern" placeholder="BIC (optioneel)" />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EpcRemittanceType" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <select asp-for="EpcRemittanceType" class="form-control">
+                                        <option value="">— kies —</option>
+                                        <option>CHAR</option>
+                                        <option>SCOR</option>
+                                    </select>
+                                </div>
                             </div>
-
-                            <div class="col-md-3">
-                                <label asp-for="EpcRemittanceType" class="form-label"></label>
-                                <select asp-for="EpcRemittanceType" class="form-control form-control-modern">
-                                    <option value="">— kies —</option>
-                                    <option>CHAR</option>
-                                    <option>SCOR</option>
-                                </select>
-                            </div>
-                            <div class="col-md-9">
-                                <label asp-for="EpcRemittanceTemplate" class="form-label"></label>
-                                <input asp-for="EpcRemittanceTemplate" class="form-control form-control-modern" placeholder="bv. Factuur {PublicId}" />
+                            <div class="row align-items-center pb-3">
+                                <label asp-for="EpcRemittanceTemplate" class="col-md-2 control-label text-lg-end mb-0"></label>
+                                <div class="col-md-9">
+                                    <input asp-for="EpcRemittanceTemplate" class="form-control" placeholder="bv. Factuur {PublicId}" />
+                                </div>
                             </div>
                         </div>
                     </div>

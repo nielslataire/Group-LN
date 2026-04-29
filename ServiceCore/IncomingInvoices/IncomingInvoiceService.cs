@@ -61,6 +61,9 @@ namespace ServiceCore.IncomingInvoices
             if (filter.ProjectId.HasValue)
                 query = query.Where(i => i.ProjectId == filter.ProjectId.Value);
 
+            if (filter.HasWarnings == true)
+                query = query.Where(i => i.Warnings.Any(w => !w.IsResolved));
+
             var totalCount = await query.CountAsync(ct);
 
             var items = await query
@@ -86,9 +89,20 @@ namespace ServiceCore.IncomingInvoices
                     DocumentType = i.DocumentType,
                     Source = i.Source,
                     ProjectName = i.Project != null ? i.Project.ProjectName : null,
-                    HasAttachments = i.IncomingInvoiceAttachments.Any(),
+                    SuggestedProjectName = i.Enrichment != null && i.ProjectId == null
+                        ? i.Enrichment.SuggestedProjectName
+                        : null,
+                    IsEnriched = i.Enrichment != null,
+                    AssignedToName = i.Enrichment != null ? i.Enrichment.UserReviewedBy : null,
+                    HasAttachments = i.IncomingInvoiceAttachments.Any(a => a.AttachmentType == "PDF"),
+                    FirstPdfAttachmentId = i.IncomingInvoiceAttachments
+                        .Where(a => a.AttachmentType == "PDF")
+                        .Select(a => (int?)a.Id)
+                        .FirstOrDefault(),
                     CreatedAt = i.CreatedAt ?? DateTime.UtcNow,
-                    SyncedAt = i.SyncedAt
+                    SyncedAt = i.SyncedAt,
+                    ReasonFlags = i.Enrichment != null ? i.Enrichment.ReasonFlags : 0,
+                    HasWarnings = i.Warnings.Any(w => !w.IsResolved)
                 })
                 .ToListAsync(ct);
 
@@ -114,7 +128,49 @@ namespace ServiceCore.IncomingInvoices
             if (entity == null)
                 return null;
 
-            return MapToDetail(entity);
+            var vm = MapToDetail(entity);
+
+            // Laad verrijkingsresultaat
+            var enrichment = await _db.IncomingInvoiceEnrichment
+                .Include(e => e.SuggestedProject)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(e => e.IncomingInvoiceId == id, ct);
+
+            if (enrichment != null)
+            {
+                var warnings = await _db.IncomingInvoiceWarning
+                    .AsNoTracking()
+                    .Where(w => w.IncomingInvoiceId == id && !w.IsResolved)
+                    .Select(w => new InvoiceWarningVm
+                    {
+                        Id = w.Id,
+                        Code = w.WarningCode,
+                        Message = w.WarningMessage,
+                        Severity = w.Severity,
+                        Source = w.Source,
+                        IsResolved = w.IsResolved
+                    })
+                    .ToListAsync(ct);
+
+                var ublLines = entity.IncommingInvoiceDetail
+                    .Select(d => (d.Description, d.Price))
+                    .ToList();
+
+                vm.Enrichment = MapEnrichmentToVm(enrichment, warnings, ublLines);
+            }
+
+            return vm;
+        }
+
+        public async Task LinkToContractAsync(IncomingInvoiceLinkContractRequest request, CancellationToken ct = default)
+        {
+            var entity = await _db.IncommingInvoices.FindAsync(new object[] { request.IncomingInvoiceId }, ct)
+                ?? throw new InvalidOperationException($"IncomingInvoice {request.IncomingInvoiceId} niet gevonden.");
+
+            entity.ContractId = request.ContractId;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
         }
 
         public async Task LinkToProjectAsync(IncomingInvoiceLinkProjectRequest request, CancellationToken ct = default)
@@ -173,6 +229,141 @@ namespace ServiceCore.IncomingInvoices
             }
         }
 
+        private static InvoiceEnrichmentVm MapEnrichmentToVm(
+            IncomingInvoiceEnrichment e,
+            List<InvoiceWarningVm> warnings,
+            List<(string Description, decimal? Price)> ublLines = null)
+        {
+            List<ProjectMatchResult> altProjects = null;
+            if (!string.IsNullOrWhiteSpace(e.AltProjectCandidatesJson))
+            {
+                try { altProjects = System.Text.Json.JsonSerializer.Deserialize<List<ProjectMatchResult>>(e.AltProjectCandidatesJson); }
+                catch { /* ignore */ }
+            }
+
+            List<ContractMatchResult> altContracts = null;
+            if (!string.IsNullOrWhiteSpace(e.AltContractCandidatesJson))
+            {
+                try { altContracts = System.Text.Json.JsonSerializer.Deserialize<List<ContractMatchResult>>(e.AltContractCandidatesJson); }
+                catch { /* ignore */ }
+            }
+
+            // Lees HasWeakUblLines en ProposedPdfLines uit opgeslagen ExtractionResultJson
+            bool hasWeakUblLines = false;
+            List<ProposedInvoiceLine> proposedPdfLines = null;
+            if (!string.IsNullOrWhiteSpace(e.ExtractionResultJson))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(e.ExtractionResultJson);
+                    if (doc.RootElement.TryGetProperty("HasWeakUblLines", out var wkProp))
+                        hasWeakUblLines = wkProp.GetBoolean();
+                    if (doc.RootElement.TryGetProperty("ProposedPdfLines", out var linesProp)
+                        && linesProp.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        proposedPdfLines = System.Text.Json.JsonSerializer
+                            .Deserialize<List<ProposedInvoiceLine>>(linesProp.GetRawText());
+                }
+                catch { /* defensive */ }
+            }
+
+            // Bouw DisplayLines: UBL als bruikbaar, anders PDF-voorstel
+            var (displayLines, displayFromPdf) = BuildDisplayLines(
+                ublLines ?? new List<(string, decimal?)>(),
+                hasWeakUblLines,
+                proposedPdfLines);
+
+            return new InvoiceEnrichmentVm
+            {
+                IncomingInvoiceId = e.IncomingInvoiceId,
+                EnrichedAt = e.EnrichedAt,
+                DocumentClassification = e.DocumentClassification,
+                SupplierMatch = new SupplierMatchInfo
+                {
+                    Iban = e.SupplierIban,
+                    Confidence = e.SupplierMatchConfidence,
+                    MatchReason = e.SupplierMatchReason
+                },
+                SuggestedProject = e.SuggestedProjectId.HasValue ? new ProjectMatchResult
+                {
+                    ProjectId = e.SuggestedProjectId.Value,
+                    ProjectName = e.SuggestedProjectName,
+                    Score = e.SuggestedProjectScore,
+                    ConfidenceLevel = e.SuggestedProjectConfidence,
+                    MatchReason = e.SuggestedProjectMatchReason,
+                    MatchedFields = e.SuggestedProjectMatchedFields
+                } : null,
+                AlternativeProjects = altProjects ?? new List<ProjectMatchResult>(),
+                SuggestedContract = e.SuggestedContractId.HasValue ? new ContractMatchResult
+                {
+                    ContractId = e.SuggestedContractId.Value,
+                    ContractName = e.SuggestedContractName,
+                    Score = e.SuggestedContractScore,
+                    ConfidenceLevel = e.SuggestedContractConfidence
+                } : null,
+                AlternativeContracts = altContracts ?? new List<ContractMatchResult>(),
+                AccountingSuggestion = !string.IsNullOrWhiteSpace(e.SuggestedAccountingCode) ? new AccountingSuggestion
+                {
+                    AccountingCode = e.SuggestedAccountingCode,
+                    Description = e.SuggestedAccountingDescription,
+                    Source = e.SuggestedAccountingSource,
+                    IsGeneralCost = e.IsGeneralCostSuggested,
+                    Confidence = "Medium"
+                } : null,
+                ReasonFlags = e.ReasonFlags,
+                IsDuplicateSuspected = e.IsDuplicateSuspected,
+                DuplicateSuspectInvoiceId = e.DuplicateSuspectInvoiceId,
+                Warnings = warnings,
+                UserReviewedAt = e.UserReviewedAt,
+                UserReviewedBy = e.UserReviewedBy,
+                UserConfirmedProjectId = e.UserConfirmedProjectId,
+                UserConfirmedContractId = e.UserConfirmedContractId,
+                UserConfirmedAccountingCode = e.UserConfirmedAccountingCode,
+                UserNotes = e.UserNotes,
+                HasWeakUblLines     = hasWeakUblLines,
+                ProposedPdfLines    = proposedPdfLines ?? new List<ProposedInvoiceLine>(),
+                DisplayLines        = displayLines,
+                DisplayLinesFromPdf = displayFromPdf
+            };
+        }
+
+        private static (IReadOnlyList<DisplayInvoiceLine> lines, bool fromPdf) BuildDisplayLines(
+            List<(string Description, decimal? Price)> ublLines,
+            bool hasWeakUbl,
+            List<ProposedInvoiceLine> proposedPdf)
+        {
+            if (!hasWeakUbl && ublLines.Any())
+            {
+                var display = ublLines
+                    .Select(l => new DisplayInvoiceLine
+                    {
+                        Description = l.Description,
+                        LineTotal   = l.Price,
+                        Source      = "UBL"
+                    })
+                    .ToList();
+                return (display, false);
+            }
+
+            if (proposedPdf != null && proposedPdf.Any())
+            {
+                var display = proposedPdf
+                    .Select(l => new DisplayInvoiceLine
+                    {
+                        Description = l.Description,
+                        Quantity    = l.Quantity,
+                        Unit        = l.Unit,
+                        UnitPrice   = l.UnitPrice,
+                        VatRate     = l.VatRate,
+                        LineTotal   = l.LineTotal,
+                        Source      = "PDF"
+                    })
+                    .ToList();
+                return (display, true);
+            }
+
+            return (Array.Empty<DisplayInvoiceLine>(), false);
+        }
+
         private static IncomingInvoiceDetailVm MapToDetail(IncommingInvoices entity) => new()
         {
             Id = entity.Id,
@@ -195,6 +386,7 @@ namespace ServiceCore.IncomingInvoices
             Source = entity.Source,
             ProjectId = entity.ProjectId,
             ProjectName = entity.Project?.ProjectName,
+            ContractId = entity.ContractId,
             Notes = entity.Notes,
             OctopusExternalId = entity.OctopusExternalId,
             SyncedAt = entity.SyncedAt,

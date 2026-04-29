@@ -1,10 +1,14 @@
 @model FacadeCore.IncomingInvoiceDetailVm
 @using DALCore.Models
 @using BOCore
+@using FacadeCore
 @{
     ViewData["Title"] = $"Document — {Model.InvoiceNumber}";
     var projects = ViewBag.Projects as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
                    ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var contracts = ViewBag.Contracts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                    ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var hasEnrichment = Model.Enrichment != null;
 }
 
 <section class="content-header">
@@ -112,7 +116,7 @@
                 @if (Model.Attachments.Any())
                 {
                     var pdfAtt = Model.Attachments.FirstOrDefault(a => a.AttachmentType == "PDF");
-                    var otherAtts = Model.Attachments.Where(a => a.AttachmentType != "PDF").ToList();
+                    var otherAtts = Model.Attachments.Where(a => a.AttachmentType != "PDF" && a.AttachmentType != "UBL").ToList();
 
                     @* Inline PDF preview *@
                     @if (pdfAtt != null)
@@ -273,8 +277,30 @@
 
             </div>
 
-            @* ── Rechterkolom: acties ── *@
+            @* ── Rechterkolom: verrijking + acties ── *@
             <div class="col-lg-4">
+
+                @* Verrijkingspanel (als beschikbaar) *@
+                @if (hasEnrichment)
+                {
+                    @await Html.PartialAsync("_EnrichmentPanel", Model.Enrichment)
+                }
+                else
+                {
+                    <div class="card mb-3">
+                        <div class="card-body text-center text-muted py-4">
+                            <i class="bx bx-analyse" style="font-size:2rem"></i>
+                            <p class="mt-2 mb-2 small">Nog niet verrijkt.</p>
+                            <form method="post" asp-action="TriggerEnrichment" asp-controller="DocumentenCentrum">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="bx bx-refresh"></i> Verrijking starten
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
 
                 @* Koppelen aan werf *@
                 <div class="card mb-3">
@@ -301,11 +327,48 @@
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="bx bx-link"></i> Koppelen
+                                <i class="bx bx-link"></i> Project koppelen
                             </button>
                         </form>
                     </div>
                 </div>
+
+                @* Koppelen aan contract *@
+                @if (contracts.Any())
+                {
+                    <div class="card mb-3">
+                        <div class="card-header fw-semibold">
+                            <i class="bx bx-file-find me-1"></i> Contract
+                        </div>
+                        <div class="card-body">
+                            @if (Model.ContractId.HasValue)
+                            {
+                                <div class="mb-2">
+                                    <span class="badge bg-success">Contract #@Model.ContractId</span>
+                                </div>
+                            }
+                            <form method="post" asp-action="LinkToContract" asp-controller="DocumentenCentrum">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+                                <div class="mb-2">
+                                    <select name="contractId" class="form-select form-select-sm">
+                                        <option value="">— Geen contract —</option>
+                                        @foreach (var c in contracts)
+                                        {
+                                            <option value="@c.Value"
+                                                    selected="@(c.Value == Model.ContractId?.ToString() ? "selected" : null)">
+                                                @c.Text
+                                            </option>
+                                        }
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">
+                                    <i class="bx bx-link"></i> Contract koppelen
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
 
                 @* Status aanpassen *@
                 <div class="card mb-3">
@@ -324,20 +387,21 @@
                                     @{
                                         var statuses = new[]
                                         {
-                                                                        (IncomingInvoiceStatus.New, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.New)),
-                                                                        (IncomingInvoiceStatus.PendingApproval, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.PendingApproval)),
-                                                                        (IncomingInvoiceStatus.Approved, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Approved)),
-                                                                        (IncomingInvoiceStatus.Rejected, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Rejected)),
-                                                                        (IncomingInvoiceStatus.Booked, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Booked)),
-                                                                        (IncomingInvoiceStatus.Paid, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Paid)),
-                                                                        (IncomingInvoiceStatus.Duplicate, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Duplicate)),
-                                                                        };
+                                            (IncomingInvoiceStatus.New, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.New)),
+                                            (IncomingInvoiceStatus.Enriched, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Enriched)),
+                                            (IncomingInvoiceStatus.NeedsReview, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.NeedsReview)),
+                                            (IncomingInvoiceStatus.PendingApproval, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.PendingApproval)),
+                                            (IncomingInvoiceStatus.Approved, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Approved)),
+                                            (IncomingInvoiceStatus.Rejected, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Rejected)),
+                                            (IncomingInvoiceStatus.Booked, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Booked)),
+                                            (IncomingInvoiceStatus.Paid, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Paid)),
+                                            (IncomingInvoiceStatus.ManualProcessing, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.ManualProcessing)),
+                                            (IncomingInvoiceStatus.Duplicate, IncomingInvoiceStatus.Label(IncomingInvoiceStatus.Duplicate)),
+                                        };
                                     }
-
                                     @foreach (var (val, label) in statuses)
                                     {
-                                        <option value="@val"
-                                                selected="@(val == Model.StatusId ? "selected" : null)">
+                                        <option value="@val" selected="@(val == Model.StatusId ? "selected" : null)">
                                             @label
                                         </option>
                                     }

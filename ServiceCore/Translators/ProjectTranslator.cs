@@ -51,7 +51,8 @@ namespace ServiceCore.Translators
             // bo.UploadToFacebook = _entity.UploadToFacebook
 
             // Coordinatieproject
-            bo.IsCoordinationProject    = _entity.IsCoordinationProject;
+            bo.IsCoordinationProject         = _entity.IsCoordinationProject;
+            bo.IsOnlyCoordinationProject     = _entity.IsOnlyCoordinationProject;
             bo.CoordinationIssuerCompanyId = _entity.CoordinationIssuerCompanyId;
             bo.CoordinationReference    = _entity.CoordinationReference;
             if (_entity.ContractType.HasValue)
@@ -166,7 +167,8 @@ namespace ServiceCore.Translators
             _entity.ProjectType = (int)bo.ProjectType;
 
             // Coordinatieproject
-            _entity.IsCoordinationProject      = bo.IsCoordinationProject;
+            _entity.IsCoordinationProject        = bo.IsCoordinationProject;
+            _entity.IsOnlyCoordinationProject    = bo.IsOnlyCoordinationProject;
             _entity.CoordinationIssuerCompanyId = bo.IsCoordinationProject ? bo.CoordinationIssuerCompanyId : null;
             _entity.CoordinationReference       = bo.IsCoordinationProject ? bo.CoordinationReference : null;
             _entity.ContractType = bo.IsCoordinationProject && bo.ContractType.HasValue ? (int?)bo.ContractType.Value : null;

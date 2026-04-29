@@ -385,7 +385,7 @@ end section
                 </div>
             </div>
             <h4 Class="mt-md mb-md">@Model.Data.CommercialTitleNL</h4>
-            @Model.Data.CommercialTextNL
+            @Html.Raw(Model.Data.CommercialTextNL)
         
         
  

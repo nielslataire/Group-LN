@@ -1,0 +1,478 @@
+@model FacadeCore.InvoiceEnrichmentVm
+@using BOCore
+@using FacadeCore
+@{
+    if (Model == null) { return; }
+
+    var flags = (InvoiceReasonFlags)Model.ReasonFlags;
+    bool HasFlag(InvoiceReasonFlags f) => (flags & f) != 0;
+
+    var projects = ViewBag.Projects as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                   ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var contracts = ViewBag.Contracts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                    ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+
+    string ConfBadge(string conf) => conf switch
+    {
+        "High"   => "bg-success",
+        "Medium" => "bg-warning text-dark",
+        "Low"    => "bg-danger",
+        _        => "bg-secondary"
+    };
+
+    string ConfLabel(string conf) => conf switch
+    {
+        "High"   => "Zeker",
+        "Medium" => "Onzeker",
+        "Low"    => "Laag",
+        _        => conf ?? "—"
+    };
+
+    // Effectief voorstel: user-bevestiging wint, anders suggestie
+    var effectiveProjectId  = Model.UserConfirmedProjectId ?? Model.SuggestedProject?.ProjectId;
+    var effectiveContractId = Model.UserConfirmedContractId ?? Model.SuggestedContract?.ContractId;
+    var effectiveAccCode    = Model.UserConfirmedAccountingCode ?? Model.AccountingSuggestion?.AccountingCode;
+    bool autoFilled = Model.SuggestedProject?.Score >= 80;
+}
+
+@* ── Waarschuwingen ──────────────────────────────────────────────────────── *@
+@if (Model.Warnings.Any())
+{
+    <div class="card mb-3 border-warning">
+        <div class="card-header bg-warning bg-opacity-10 d-flex align-items-center gap-2 fw-semibold">
+            <i class="bx bx-error text-warning"></i> Waarschuwingen (@Model.Warnings.Count)
+        </div>
+        <div class="card-body p-0">
+            <ul class="list-group list-group-flush">
+                @foreach (var w in Model.Warnings)
+                {
+                    var iconClass = w.Severity == "Error" ? "bx-x-circle text-danger"
+                                  : w.Severity == "Warning" ? "bx-error-circle text-warning"
+                                  : "bx-info-circle text-info";
+                    <li class="list-group-item py-2">
+                        <i class="bx @iconClass me-2"></i>
+                        <span class="small">@w.Message</span>
+                        @if (!string.IsNullOrEmpty(w.Source))
+                        {
+                            <span class="badge bg-light text-muted ms-2 fw-normal small">@w.Source</span>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+@* ── Duplicaat ───────────────────────────────────────────────────────────── *@
+@if (Model.IsDuplicateSuspected)
+{
+    <div class="alert alert-danger py-2 mb-3 d-flex align-items-center gap-2">
+        <i class="bx bx-copy-alt fs-5"></i>
+        <span>
+            Mogelijke <strong>dubbele factuur</strong> — zie
+            <a href="@Url.Action("Detail", "DocumentenCentrum", new { id = Model.DuplicateSuspectInvoiceId })"
+               target="_blank">factuur #@Model.DuplicateSuspectInvoiceId</a>.
+        </span>
+    </div>
+}
+
+@* ── Verrijkingspanel ────────────────────────────────────────────────────── *@
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between fw-semibold">
+        <span><i class="bx bx-analyse me-1"></i> Verrijkingsvoorstel</span>
+        @if (Model.EnrichedAt.HasValue)
+        {
+            <small class="text-muted fw-normal">@Model.EnrichedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</small>
+        }
+    </div>
+    <div class="card-body">
+
+        @* ── Documentclassificatie ──────────────────────────────────────── *@
+        @if (!string.IsNullOrWhiteSpace(Model.DocumentClassification))
+        {
+            <div class="mb-3">
+                <label class="form-label text-muted small">Documenttype (gedetecteerd)</label>
+                <div>
+                    @{
+                        var classLabel = Model.DocumentClassification switch
+                        {
+                            "Invoice"         => "Factuur",
+                            "CreditNote"      => "Creditnota",
+                            "AdvanceInvoice"  => "Voorschotfactuur",
+                            "FinalInvoice"    => "Eindfactuur",
+                            "PaymentReminder" => "Betalingsherinnering",
+                            _                 => Model.DocumentClassification
+                        };
+                    }
+                    <span class="badge bg-secondary">@classLabel</span>
+                </div>
+            </div>
+        }
+
+        @* ── Projectvoorstel ─────────────────────────────────────────────── *@
+        <div class="mb-3">
+            <label class="form-label text-muted small d-flex align-items-center gap-1">
+                <i class="bx bx-building-house"></i> Projectvoorstel
+            </label>
+
+            @if (Model.SuggestedProject != null)
+            {
+                <div class="d-flex align-items-start gap-2 flex-wrap mb-1">
+                    <span class="fw-semibold">@Model.SuggestedProject.ProjectName</span>
+                    <span class="badge @ConfBadge(Model.SuggestedProject.ConfidenceLevel)">
+                        @ConfLabel(Model.SuggestedProject.ConfidenceLevel) — score @Model.SuggestedProject.Score
+                    </span>
+                    @if (autoFilled)
+                    {
+                        <span class="badge bg-info text-dark" title="Automatisch ingevuld op basis van hoge confidence">
+                            <i class="bx bx-check-circle me-1"></i>Automatisch ingevuld
+                        </span>
+                    }
+                </div>
+                @if (!string.IsNullOrWhiteSpace(Model.SuggestedProject.MatchReason))
+                {
+                    <div class="small text-muted">
+                        <i class="bx bx-info-circle me-1"></i>@Model.SuggestedProject.MatchReason
+                    </div>
+                }
+                @if (HasFlag(InvoiceReasonFlags.MultipleProjectCandidates) && Model.AlternativeProjects.Any())
+                {
+                    <div class="mt-2">
+                        <div class="small text-muted mb-1">Alternatieve kandidaten:</div>
+                        <ul class="list-unstyled ps-2 mb-0">
+                            @foreach (var alt in Model.AlternativeProjects.Take(4))
+                            {
+                                <li class="small">
+                                    <span class="badge @ConfBadge(alt.ConfidenceLevel) me-1">@alt.Score</span>
+                                    @alt.ProjectName
+                                    <span class="text-muted">— @alt.MatchReason</span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+            }
+            else if (HasFlag(InvoiceReasonFlags.GeneralCostSuggested))
+            {
+                <span class="badge bg-secondary">Algemene kost</span>
+                <div class="small text-muted mt-1">Geen projectmatch gevonden.</div>
+            }
+            else
+            {
+                <span class="text-muted small">Geen voorstel beschikbaar.</span>
+            }
+        </div>
+
+        @* ── Contractvoorstel ────────────────────────────────────────────── *@
+        @if (Model.SuggestedContract != null)
+        {
+            <div class="mb-3">
+                <label class="form-label text-muted small d-flex align-items-center gap-1">
+                    <i class="bx bx-file-find"></i> Contractvoorstel
+                </label>
+                <div class="d-flex align-items-start gap-2 flex-wrap">
+                    <span class="fw-semibold">@Model.SuggestedContract.ContractName</span>
+                    <span class="badge @ConfBadge(Model.SuggestedContract.ConfidenceLevel)">
+                        @ConfLabel(Model.SuggestedContract.ConfidenceLevel) — score @Model.SuggestedContract.Score
+                    </span>
+                </div>
+                @if (HasFlag(InvoiceReasonFlags.MultipleContractCandidates) && Model.AlternativeContracts.Any())
+                {
+                    <div class="small text-muted mt-1">
+                        @Model.AlternativeContracts.Count alternatieve contracten beschikbaar.
+                    </div>
+                }
+            </div>
+        }
+
+        @* ── Kostenrekening ──────────────────────────────────────────────── *@
+        @if (Model.AccountingSuggestion != null)
+        {
+            <div class="mb-3">
+                <label class="form-label text-muted small d-flex align-items-center gap-1">
+                    <i class="bx bx-calculator"></i> Kostenrekening
+                </label>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="font-monospace fw-semibold">@Model.AccountingSuggestion.AccountingCode</span>
+                    <span class="text-muted">@Model.AccountingSuggestion.Description</span>
+                    @if (Model.AccountingSuggestion.IsGeneralCost)
+                    {
+                        <span class="badge bg-secondary">Algemene kost</span>
+                    }
+                    <span class="badge @ConfBadge(Model.AccountingSuggestion.Confidence) small">
+                        @ConfLabel(Model.AccountingSuggestion.Confidence)
+                    </span>
+                </div>
+                <div class="small text-muted mt-1">Bron: @Model.AccountingSuggestion.Source</div>
+            </div>
+        }
+
+        @* ── Gebruikersbevestiging ───────────────────────────────────────── *@
+        @if (Model.UserReviewedAt.HasValue)
+        {
+            <div class="alert alert-success py-2 mb-0 d-flex align-items-center gap-2">
+                <i class="bx bx-check-circle fs-5"></i>
+                <span>
+                    Bevestigd door <strong>@(Model.UserReviewedBy ?? "—")</strong>
+                    op @Model.UserReviewedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm").
+                </span>
+            </div>
+        }
+    </div>
+</div>
+
+@* ── Factuurlijnen (UBL of PDF fallback) ─────────────────────────────────── *@
+@if (Model.DisplayLines.Any())
+{
+    var linesFromPdf = Model.DisplayLinesFromPdf;
+    var cardBorder   = linesFromPdf ? "border-info" : "";
+    var headerBg     = linesFromPdf ? "bg-info bg-opacity-10" : "bg-light";
+    var lineCount    = Model.DisplayLines.Count;
+    var lineSum      = Model.DisplayLines.Where(l => l.LineTotal.HasValue).Sum(l => l.LineTotal!.Value);
+
+    <div class="card mb-3 @cardBorder">
+        <div class="card-header @headerBg d-flex align-items-center justify-content-between fw-semibold">
+            <span>
+                <i class="bx bx-list-ul me-1 @(linesFromPdf ? "text-info" : "")"></i>
+                Factuurlijnen (@lineCount)
+            </span>
+            <span class="badge @(linesFromPdf ? "bg-warning text-dark" : "bg-success") fw-normal small">
+                @(linesFromPdf ? "PDF — automatisch gedetecteerd" : "UBL")
+            </span>
+        </div>
+
+        @if (linesFromPdf)
+        {
+            <div class="alert alert-info alert-sm mx-3 mt-2 mb-0 py-2 small d-flex align-items-center gap-2">
+                <i class="bx bx-info-circle"></i>
+                Factuurlijnen automatisch gedetecteerd uit document (UBL onvoldoende detail).
+                Controleer de lijnen en neem ze over als ze correct zijn.
+            </div>
+        }
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0 align-middle small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Beschrijving</th>
+                            <th class="text-end">Aantal</th>
+                            <th>Eenheid</th>
+                            <th class="text-end">Prijs/E</th>
+                            <th class="text-end">BTW</th>
+                            <th class="text-end fw-semibold">Totaal</th>
+                            <th class="text-center">Bron</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in Model.DisplayLines)
+                        {
+                            <tr>
+                                <td>@line.Description</td>
+                                <td class="text-end text-nowrap text-muted">
+                                    @(line.Quantity.HasValue ? line.Quantity.Value.ToString("N2") : "—")
+                                </td>
+                                <td class="text-muted">@(line.Unit ?? "—")</td>
+                                <td class="text-end text-nowrap text-muted">
+                                    @(line.UnitPrice.HasValue ? line.UnitPrice.Value.ToString("N2") : "—")
+                                </td>
+                                <td class="text-end text-muted">
+                                    @(line.VatRate.HasValue ? line.VatRate.Value.ToString("N1") + "%" : "—")
+                                </td>
+                                <td class="text-end fw-semibold text-nowrap">
+                                    @(line.LineTotal.HasValue ? line.LineTotal.Value.ToString("N2") : "—")
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge @(line.Source == "PDF" ? "bg-warning text-dark" : "bg-success") small">
+                                        @line.Source
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="5" class="text-end fw-semibold">Som:</td>
+                            <td class="text-end fw-semibold">@lineSum.ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            @if (linesFromPdf)
+            {
+                <div class="px-3 pb-3 pt-2">
+                    <form method="post" asp-action="AcceptPdfLines" asp-controller="DocumentenCentrum">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="incomingInvoiceId" value="@Model.IncomingInvoiceId" />
+                        <button type="submit" class="btn btn-info btn-sm">
+                            <i class="bx bx-check-double"></i> Lijnen overnemen als factuurlijnen
+                        </button>
+                        <span class="text-muted small ms-2">Vervangt de huidige generieke UBL-lijn.</span>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Model.HasWeakUblLines)
+{
+    <div class="alert alert-warning py-2 mb-3 small">
+        <i class="bx bx-info-circle me-1"></i>
+        UBL-lijnen zijn generiek maar er konden geen specifieke lijnen uit de PDF worden gehaald.
+        Voer de verrijking opnieuw uit of voeg lijnen manueel toe.
+    </div>
+}
+
+@* ── Bevestigingsformulier ───────────────────────────────────────────────── *@
+<div class="card mb-3">
+    <div class="card-header fw-semibold">
+        <i class="bx bx-check-square me-1"></i> Voorstel bevestigen
+    </div>
+    <div class="card-body">
+        <form method="post" asp-action="ConfirmEnrichment" asp-controller="DocumentenCentrum">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="incomingInvoiceId" value="@Model.IncomingInvoiceId" />
+
+            @* Project — dropdown met bouwheer-gefilterde projecten *@
+            <div class="mb-2">
+                <label class="form-label form-label-sm fw-semibold">Project</label>
+                <select name="projectId" class="form-select form-select-sm">
+                    <option value="">— Geen project (algemene kost) —</option>
+                    @foreach (var p in projects)
+                    {
+                        var isSelected = effectiveProjectId.HasValue
+                            && p.Value == effectiveProjectId.Value.ToString();
+                        <option value="@p.Value" selected="@(isSelected ? "selected" : null)">@p.Text</option>
+                    }
+                </select>
+                @if (autoFilled)
+                {
+                    <div class="form-text text-info">
+                        <i class="bx bx-info-circle me-1"></i>
+                        Project automatisch ingevuld (score @Model.SuggestedProject.Score). Controleer en bevestig of pas aan.
+                    </div>
+                }
+            </div>
+
+            @* Contract — dropdown (enkel zichtbaar als er contracten zijn) *@
+            @if (contracts.Any())
+            {
+                <div class="mb-2">
+                    <label class="form-label form-label-sm fw-semibold">Contract</label>
+                    <select name="contractId" class="form-select form-select-sm">
+                        <option value="">— Geen contract —</option>
+                        @foreach (var c in contracts)
+                        {
+                            var isSelected = effectiveContractId.HasValue
+                                && c.Value == effectiveContractId.Value.ToString();
+                            <option value="@c.Value" selected="@(isSelected ? "selected" : null)">@c.Text</option>
+                        }
+                    </select>
+                </div>
+            }
+            else
+            {
+                <input type="hidden" name="contractId" value="@effectiveContractId" />
+            }
+
+            @* Kostenrekening *@
+            <div class="mb-2">
+                <label class="form-label form-label-sm fw-semibold">Kostenrekening</label>
+                <input type="text" name="accountingCode" class="form-control form-control-sm"
+                       value="@effectiveAccCode" placeholder="Kostenrekening..." />
+            </div>
+
+            @* Notities *@
+            <div class="mb-3">
+                <label class="form-label form-label-sm fw-semibold">Notitie <span class="fw-normal text-muted">(optioneel)</span></label>
+                <input type="text" name="notes" class="form-control form-control-sm"
+                       value="@Model.UserNotes" placeholder="Opmerking bij de beslissing..." />
+            </div>
+
+            <button type="submit" class="btn btn-success btn-sm w-100">
+                <i class="bx bx-check"></i> Bevestigen en doorzetten naar goedkeuring
+            </button>
+        </form>
+    </div>
+</div>
+
+@* ── Overige acties ──────────────────────────────────────────────────────── *@
+<div class="card mb-3">
+    <div class="card-header fw-semibold">
+        <i class="bx bx-cog me-1"></i> Overige acties
+    </div>
+    <div class="card-body d-grid gap-2">
+
+        @* Verrijking opnieuw uitvoeren *@
+        <form method="post" asp-action="TriggerEnrichment" asp-controller="DocumentenCentrum">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="incomingInvoiceId" value="@Model.IncomingInvoiceId" />
+            <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                <i class="bx bx-refresh"></i> Verrijking opnieuw uitvoeren
+            </button>
+        </form>
+
+        @* Alias opslaan als er een project is *@
+        @if (effectiveProjectId.HasValue)
+        {
+            <button type="button" class="btn btn-outline-info btn-sm"
+                    data-bs-toggle="collapse" data-bs-target="#aliasForm">
+                <i class="bx bx-bookmark-plus"></i> Alias onthouden voor dit project
+            </button>
+            <div class="collapse" id="aliasForm">
+                <form method="post" asp-action="LearnProjectAlias" asp-controller="DocumentenCentrum"
+                      class="border rounded p-2 bg-light">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="incomingInvoiceId" value="@Model.IncomingInvoiceId" />
+                    <input type="hidden" name="projectId" value="@effectiveProjectId" />
+                    <div class="input-group input-group-sm mb-1">
+                        <input type="text" name="alias" class="form-control" placeholder="Alias tekst..." required />
+                        <select name="aliasType" class="form-select" style="max-width:130px">
+                            <option value="Name">Naam</option>
+                            <option value="Street">Straat</option>
+                            <option value="Reference">Referentie</option>
+                            <option value="Code">Code</option>
+                            <option value="City">Gemeente</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info btn-sm w-100">
+                        <i class="bx bx-save"></i> Alias opslaan
+                    </button>
+                </form>
+            </div>
+        }
+
+        @* Leverancierregel opslaan *@
+        <button type="button" class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="collapse" data-bs-target="#supplierRuleForm">
+            <i class="bx bx-user-check"></i> Regel onthouden voor leverancier
+        </button>
+        <div class="collapse" id="supplierRuleForm">
+            <form method="post" asp-action="LearnSupplierRule" asp-controller="DocumentenCentrum"
+                  class="border rounded p-2 bg-light">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="incomingInvoiceId" value="@Model.IncomingInvoiceId" />
+                <input type="hidden" name="supplierVatNumber" value="" />
+                <div class="mb-2">
+                    <select name="ruleType" class="form-select form-select-sm">
+                        <option value="DefaultProject">Standaard project</option>
+                        <option value="DefaultAccount">Standaard rekening</option>
+                        <option value="AlwaysManualReview">Altijd manueel controleren</option>
+                        <option value="AlwaysGeneralCost">Altijd algemene kost</option>
+                        <option value="RequiresProject">Project is verplicht</option>
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <input type="text" name="notes" class="form-control form-control-sm"
+                           placeholder="Opmerking (optioneel)" />
+                </div>
+                <button type="submit" class="btn btn-secondary btn-sm w-100">
+                    <i class="bx bx-save"></i> Regel opslaan
+                </button>
+            </form>
+        </div>
+
+    </div>
+</div>

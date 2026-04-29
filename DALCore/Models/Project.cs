@@ -85,6 +85,8 @@ public partial class Project
 
     public bool IsCoordinationProject { get; set; }
 
+    public bool IsOnlyCoordinationProject { get; set; }
+
     public int? CoordinationIssuerCompanyId { get; set; }
 
     public int? ContractType { get; set; }

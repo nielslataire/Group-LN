@@ -97,7 +97,7 @@ end section
                                                 <span Class="custom-thumb-info-title b-normal p-md">
                                                     <span Class="thumb-info-inner text-md text-uppercase">@project.CommercialTitleNL</span>
                                                     <span Class="thumb-info-inner text-md text-uppercase font-weight-bold">@project.Postalcode.Gemeente </span><br />
-                                                    <span class="text-color-dark"><p>@project.CommercialTextNL</p></span>
+                                                    <span class="text-color-dark">@Html.Raw(project.CommercialTextNL)</span>
                                                     <ul Class="accommodations text-uppercase p-none font-weight-bold text-sm">
                                                         @If numberAppartments > 0 Then
                                                             @<text>

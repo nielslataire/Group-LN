@@ -425,6 +425,17 @@ Public Class ProjectBO
         End Set
     End Property
 
+    Private _isOnlyCoordinationProject As Boolean
+    <Display(Name:="Puur coördinatieproject (geen eigen ontwikkeling)")>
+    Public Property IsOnlyCoordinationProject() As Boolean
+        Get
+            Return _isOnlyCoordinationProject
+        End Get
+        Set(ByVal value As Boolean)
+            _isOnlyCoordinationProject = value
+        End Set
+    End Property
+
     Private _coordinationIssuerCompanyId As Integer?
     <Display(Name:="Coördinatiebedrijf")>
     Public Property CoordinationIssuerCompanyId() As Integer?

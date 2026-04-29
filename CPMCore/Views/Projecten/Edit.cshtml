@@ -14,7 +14,11 @@
     <link rel="stylesheet" href="~/lib/select2-bootstrap-theme/select2-bootstrap.css" />
     <link rel="stylesheet" href="~/css/admin/theme-admin-extension.css" />
     <link rel="stylesheet" href="~/css/admin/skins/extension.css" />
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+    <link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+    <style>
+        #commercialTextEditorContainer .ql-editor { min-height: 220px; }
+    </style>
 }
 
 <div class="row">
@@ -71,11 +75,21 @@
                                 @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
                             }
                             <div class="form-group row align-items-center pb-3">
-                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Coördinatieproject</label>
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Puur coördinatieproject</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    <div class="switch switch-sm switch-primary">
+                                        @Html.CheckBoxFor(m => m.Project.IsOnlyCoordinationProject, new { data_plugin_ios_switch = "", id = "IsOnlyCoordinationProject" })
+                                    </div>
+                                    <small class="text-muted">Enkel coördinatie, geen eigen ontwikkeling</small>
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Heeft coördinatie</label>
                                 <div class="col-lg-8 col-xl-8">
                                     <div class="switch switch-sm switch-primary">
                                         @Html.CheckBoxFor(m => m.Project.IsCoordinationProject, new { data_plugin_ios_switch = "", id = "IsCoordinationProject" })
                                     </div>
+                                    <small class="text-muted">Toont coördinatiegegevens (ook voor ontwikkelingsprojecten)</small>
                                 </div>
                             </div>
                             <div class="form-group row align-items-center pb-3">
@@ -133,7 +147,8 @@
                                     @Html.LabelFor(m => m.Project.CommercialTextNL)
                                 </label>
                                 <div class="col-lg-8 col-xl-8">
-                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "form-control form-control-modern", id = "commercialTextEditor" })
+                                    <div id="commercialTextEditorContainer"></div>
+                                    @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "d-none", id = "commercialTextEditor" })
                                 </div>
                             </div>
                         </div>
@@ -744,17 +759,25 @@
 
         });
 
-        tinymce.init({
-            selector: '#commercialTextEditor',
-            language: 'nl',
-            plugins: 'lists link image table code',
-            toolbar: 'undo redo | bold italic underline | bullist numlist | link | code',
-            menubar: false,
-            branding: false,
-            height: 300,
-            setup: function (editor) {
-                editor.on('change', function () { editor.save(); });
+        var quill = new Quill('#commercialTextEditorContainer', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link'],
+                    ['clean']
+                ]
             }
+        });
+
+        var commercialTextArea = document.getElementById('commercialTextEditor');
+        if (commercialTextArea.value) {
+            quill.root.innerHTML = commercialTextArea.value;
+        }
+
+        quill.on('text-change', function () {
+            commercialTextArea.value = quill.root.innerHTML;
         });
     </script>
 }
