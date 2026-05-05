@@ -3353,10 +3353,7 @@ namespace CPMCore.Controllers
                 ct);
 
             var relationId = relation?.RelationIdentificationServiceData?.RelationKey?.Id
-                ?? issuerRelationId
-                ?? context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
-                ?? context.Invoice.ClientIdClientContactsNavigation?.OctopusRelationId
-                ?? context.Company?.OctopusRelationId;
+                ?? issuerRelationId;
 
             if (relationId is null or <= 0)
             {
@@ -3374,53 +3371,19 @@ namespace CPMCore.Controllers
             context.VatTypes.AddRange(vatTypes);
         }
 
-        // Stap 3b: sla relationId ook lokaal op, zodat volgende calls sneller zijn.
+        // Stap 3b: sla relationId per issuer op in de junction table.
         private async Task UpdateLocalRelationIdsAsync(OctopusInvoiceContext context, int? relationId, CancellationToken ct)
         {
             if (!relationId.HasValue || relationId.Value <= 0)
-            {
                 return;
-            }
-
-            var issuerRelationId = relationId.Value;
 
             await SetIssuerSpecificRelationIdAsync(
                 context.Issuer.Id,
                 context.Invoice.ClientIdClientAccountNavigation,
                 context.Invoice.ClientIdClientContactsNavigation,
                 context.Company,
-                issuerRelationId,
+                relationId.Value,
                 ct);
-
-            var saveRequired = false;
-
-            if (context.Invoice.ClientIdClientAccountNavigation is ClientAccount clientAccount
-                && (clientAccount.OctopusRelationId is null or <= 0))
-            {
-                clientAccount.OctopusRelationId = issuerRelationId;
-                saveRequired = true;
-            }
-            else if (context.Invoice.ClientIdClientContactsNavigation is ClientContacts clientContact
-                && (clientContact.OctopusRelationId is null or <= 0))
-            {
-                clientContact.OctopusRelationId = issuerRelationId;
-                saveRequired = true;
-            }
-            else if (context.Company != null && (context.Company.OctopusRelationId is null or <= 0))
-            {
-                var trackedCompany = await _db.CompanyInfo.FirstOrDefaultAsync(c => c.CompanyId == context.Company.CompanyId, ct);
-
-                if (trackedCompany != null && (trackedCompany.OctopusRelationId is null or <= 0))
-                {
-                    trackedCompany.OctopusRelationId = issuerRelationId;
-                    saveRequired = true;
-                }
-            }
-
-            if (saveRequired)
-            {
-                await _db.SaveChangesAsync(ct);
-            }
         }
 
         // Stap 4: maak factuur aan in Octopus (booking + lijnen).
@@ -3433,10 +3396,7 @@ namespace CPMCore.Controllers
             if (progress.CreationCompleted)
                 return;
 
-            var relationId = context.OctopusRelationId
-                ?? context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
-                ?? context.Invoice.ClientIdClientContactsNavigation?.OctopusRelationId
-                ?? context.Company?.OctopusRelationId;
+            var relationId = context.OctopusRelationId;
 
             if (relationId is null or <= 0)
             {
@@ -3458,10 +3418,9 @@ namespace CPMCore.Controllers
                 RelationIdentificationServiceData = new OctopusRelationIdentificationServiceData
                 {
                     RelationKey = new OctopusRelationKeyRef { Id = relationId ?? 0 },
-                    ExternalRelationId = context.Invoice.ClientIdClientAccountNavigation?.OctopusRelationId
+                    ExternalRelationId = context.Invoice.ClientIdClientAccountNavigation?.Id
                         ?? context.Invoice.ClientId
                         ?? context.Invoice.CompanyId
-                        ?? relationId
                         ?? 0
                 },
                 Comment = context.Invoice.Text,
@@ -4220,21 +4179,6 @@ END";
             {
                 lookups.Add(new OctopusRelationLookup { RelationId = issuerSpecificRelationId });
             }
-            else
-            {
-                if (clientAccount?.OctopusRelationId is int relationId and > 0)
-                {
-                    lookups.Add(new OctopusRelationLookup { RelationId = relationId });
-                }
-                else if (clientContact?.OctopusRelationId is int contactRelationId and > 0)
-                {
-                    lookups.Add(new OctopusRelationLookup { RelationId = contactRelationId });
-                }
-                else if (company?.OctopusRelationId is int companyRelationId and > 0)
-                {
-                    lookups.Add(new OctopusRelationLookup { RelationId = companyRelationId });
-                }
-            }
 
             var vatNumber = FormatVatNumberForOctopus(
                 invoice.VatNumber ?? clientAccount?.Vatnumber ?? clientContact?.Vatnumber ?? company?.VatNumber ?? company?.Ondernemingsnummer,
@@ -4313,13 +4257,7 @@ END";
                 {
                     RelationKey = issuerRelationId.HasValue && issuerRelationId.Value > 0
                         ? new OctopusRelationKey { Id = issuerRelationId.Value }
-                        : clientAccount?.OctopusRelationId is int relationId && relationId > 0
-                            ? new OctopusRelationKey { Id = relationId }
-                            : clientContact?.OctopusRelationId is int contactRelationId && contactRelationId > 0
-                                ? new OctopusRelationKey { Id = contactRelationId }
-                                : company?.OctopusRelationId is int companyRelationId && companyRelationId > 0
-                                    ? new OctopusRelationKey { Id = companyRelationId }
-                                    : null,
+                        : null,
                     ExternalRelationId = invoice.ClientId ?? invoice.CompanyId
                 },
                 Name = clientName,

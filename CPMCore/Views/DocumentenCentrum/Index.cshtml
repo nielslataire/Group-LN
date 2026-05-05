@@ -38,6 +38,11 @@
     int lastItem  = Math.Min(filter.Page * filter.PageSize, Model.TotalCount);
 }
 
+<style>
+    #documentsTable tbody td { padding-top: 13px !important; padding-bottom: 13px !important; }
+    #documentsTable tbody tr.js-doc-row { cursor: pointer; }
+</style>
+
 @* ── Page header ──────────────────────────────────────────────────────────── *@
 <section class="content-header">
     <div class="container-fluid">
@@ -70,53 +75,53 @@
             </div>
         }
 
-        @* ── Summary-kaarten ─────────────────────────────────────────────────── *@
-        <div class="row g-3 mb-4">
-            <div class="col-sm-6 col-xl-3">
-                <a href="@TabUrl(IncomingInvoiceStatus.New)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Te verwerken</p>
-                            <h2 class="fw-bold mb-1 text-white">@countNew</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Wachten op administratie</p>
-                        </div>
-                    </section>
-                </a>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-                <a href="@TabUrl(null, true)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Vraagt aandacht</p>
-                            <h2 class="fw-bold mb-1 text-white">@countAttn</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Actie vereist</p>
-                        </div>
-                    </section>
-                </a>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-                <a href="@TabUrl(IncomingInvoiceStatus.PendingApproval)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Toegewezen</p>
-                            <h2 class="fw-bold mb-1 text-white">@countPending</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Bij projectverantwoordelijke</p>
-                        </div>
-                    </section>
-                </a>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-                <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="text-decoration-none">
-                    <section class="card mb-0 border-0" style="background:#1a3a2a;">
-                        <div class="card-body py-3 px-4">
-                            <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Goedgekeurd</p>
-                            <h2 class="fw-bold mb-1 text-white">@countApproved</h2>
-                            <p class="small mb-0" style="color:#8fbc9f;">Deze maand</p>
-                        </div>
-                    </section>
-                </a>
-            </div>
-        </div>
+        // @* ── Summary-kaarten ─────────────────────────────────────────────────── *@
+        // <div class="row g-3 mb-4">
+        //     <div class="col-sm-6 col-xl-3">
+        //         <a href="@TabUrl(IncomingInvoiceStatus.New)" class="text-decoration-none">
+        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
+        //                 <div class="card-body py-3 px-4">
+        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Te verwerken</p>
+        //                     <h2 class="fw-bold mb-1 text-white">@countNew</h2>
+        //                     <p class="small mb-0" style="color:#8fbc9f;">Wachten op administratie</p>
+        //                 </div>
+        //             </section>
+        //         </a>
+        //     </div>
+        //     <div class="col-sm-6 col-xl-3">
+        //         <a href="@TabUrl(null, true)" class="text-decoration-none">
+        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
+        //                 <div class="card-body py-3 px-4">
+        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Vraagt aandacht</p>
+        //                     <h2 class="fw-bold mb-1 text-white">@countAttn</h2>
+        //                     <p class="small mb-0" style="color:#8fbc9f;">Actie vereist</p>
+        //                 </div>
+        //             </section>
+        //         </a>
+        //     </div>
+        //     <div class="col-sm-6 col-xl-3">
+        //         <a href="@TabUrl(IncomingInvoiceStatus.PendingApproval)" class="text-decoration-none">
+        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
+        //                 <div class="card-body py-3 px-4">
+        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Toegewezen</p>
+        //                     <h2 class="fw-bold mb-1 text-white">@countPending</h2>
+        //                     <p class="small mb-0" style="color:#8fbc9f;">Bij projectverantwoordelijke</p>
+        //                 </div>
+        //             </section>
+        //         </a>
+        //     </div>
+        //     <div class="col-sm-6 col-xl-3">
+        //         <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="text-decoration-none">
+        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
+        //                 <div class="card-body py-3 px-4">
+        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Goedgekeurd</p>
+        //                     <h2 class="fw-bold mb-1 text-white">@countApproved</h2>
+        //                     <p class="small mb-0" style="color:#8fbc9f;">Deze maand</p>
+        //                 </div>
+        //             </section>
+        //         </a>
+        //     </div>
+        // </div>
 
         @* ── Filters ──────────────────────────────────────────────────────────── *@
         <div class="card mb-3">
@@ -251,7 +256,7 @@
                             <tbody>
                                 @foreach (var item in Model.Items)
                                 {
-                                    <tr class="js-doc-row" data-id="@item.Id">
+                                    <tr class="js-doc-row" data-id="@item.Id" data-href="@Url.Action("Detail","DocumentenCentrum",new{id=item.Id})">
                                         <td class="ps-3">
                                             <input type="checkbox" class="form-check-input js-row-check" value="@item.Id" />
                                         </td>
@@ -384,9 +389,16 @@
                                         </td>
 
                                         @* Acties *@
-                                        <td class="text-end pe-3 text-nowrap">
+                                        <td class="text-end pe-3 text-nowrap js-no-row-click">
+                                            @if (item.FirstPdfAttachmentId.HasValue)
+                                            {
+                                                <a href="@Url.Action("ViewAttachment","DocumentenCentrum",new{attachmentId=item.FirstPdfAttachmentId.Value})"
+                                                   target="_blank" class="btn btn-sm btn-outline-danger" title="PDF bekijken">
+                                                    <i class="bx bxs-file-pdf"></i>
+                                                </a>
+                                            }
                                             <a href="@Url.Action("Detail","DocumentenCentrum",new{id=item.Id})"
-                                               class="btn btn-sm btn-outline-secondary" title="Bekijken">
+                                               class="btn btn-sm btn-outline-secondary ms-1" title="Bekijken">
                                                 <i class="bx bx-show"></i>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Toewijzen">
@@ -520,5 +532,14 @@
         document.querySelectorAll('.js-row-check').forEach(c =>
             c.addEventListener('change', updateBar));
     })();
+
+    // Klikbare rijen — volledige rij navigeert naar detailpagina
+    document.querySelectorAll('.js-doc-row').forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('.js-no-row-click')) return;
+            var href = row.dataset.href;
+            if (href) window.location.href = href;
+        });
+    });
     </script>
 }

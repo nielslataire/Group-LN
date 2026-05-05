@@ -67,8 +67,6 @@ public partial class ClientAccount
 
     public bool AttachUblByDefault { get; set; }
 
-    public int? OctopusRelationId { get; set; }
-
     public virtual ICollection<ChangeOrder> ChangeOrder { get; set; } = new List<ChangeOrder>();
 
     public virtual ICollection<ClientAccountIssuerCompany> ClientAccountIssuerCompany { get; set; } = new List<ClientAccountIssuerCompany>();

@@ -75,6 +75,7 @@ namespace FacadeCore
         public string IssuerCompanyName { get; set; }
         public string SupplierName { get; set; }
         public string SupplierVatNumber { get; set; }
+        public int? SupplierCompanyInfoId { get; set; }
         public int? OctopusSupplierRelationKey { get; set; }
         public string InvoiceNumber { get; set; }
         public DateOnly InvoiceDate { get; set; }

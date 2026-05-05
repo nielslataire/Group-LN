@@ -974,7 +974,7 @@ public class LeveranciersController : BaseController
               InvoiceDate = i.Date,
               ExternalInvoiceId = i.ExternalId,
               Amount = i.Price,
-              ProjectId = (int)i.ProjectId,
+              ProjectId = i.ProjectId ?? 0,
               ProjectName = i.Project != null ? i.Project.ProjectName : string.Empty
           })
           .ToListAsync(ct);
@@ -1491,7 +1491,7 @@ public class LeveranciersController : BaseController
         await PopulateSelectionsAsync(model, ct);
         await EnsurePostalSelectionAsync(model, ct);
 
-        var requiresOctopusSync = (entity.OctopusRelationId ?? 0) > 0
+        var requiresOctopusSync = entity.CompanyIssuerCompany.Any(l => (l.OctopusRelationId ?? 0) > 0)
             && model.IsCustomer
             && HasSupplierDataChanged(entity, model);
 
@@ -1706,26 +1706,21 @@ public class LeveranciersController : BaseController
                     .ThenInclude(link => link.IssuerCompany)
             .FirstOrDefaultAsync(c => c.CompanyId == companyId, ct);
 
-        if (company?.OctopusRelationId is not int relationId || relationId <= 0 || !company.IsCustomer)
-        {
+        if (company == null || !company.IsCustomer)
             return;
-        }
 
-        var request = BuildOctopusRelationRequest(company);
-
-        var issuers = company.CompanyIssuerCompany
-            .Select(ci => ci.IssuerCompany)
-            .Where(i => i != null && !string.IsNullOrWhiteSpace(i.OctopusDossierNumber))
-            .Cast<IssuerCompany>();
-
-        foreach (var issuer in issuers)
+        foreach (var link in company.CompanyIssuerCompany
+            .Where(l => (l.OctopusRelationId ?? 0) > 0
+                        && l.IssuerCompany != null
+                        && !string.IsNullOrWhiteSpace(l.IssuerCompany.OctopusDossierNumber)))
         {
-            var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
-            await _octopusClient.UpsertRelationAsync(dossierToken.Token, issuer.OctopusDossierNumber, request, ct);
+            var request = BuildOctopusRelationRequest(company, link.OctopusRelationId!.Value);
+            var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(link.IssuerCompanyId, link.IssuerCompany.OctopusDossierNumber, ct);
+            await _octopusClient.UpsertRelationAsync(dossierToken.Token, link.IssuerCompany.OctopusDossierNumber, request, ct);
         }
     }
 
-    private static OctopusRelationRequest BuildOctopusRelationRequest(CompanyInfo company)
+    private static OctopusRelationRequest BuildOctopusRelationRequest(CompanyInfo company, int octopusRelationId)
     {
         var countryCode = company.PostCode?.Country?.LandIsocode ?? company.LandCode;
 
@@ -1735,7 +1730,7 @@ public class LeveranciersController : BaseController
         {
             RelationIdentificationServiceData = new OctopusRelationIdentificationData
             {
-                RelationKey = new OctopusRelationKey { Id = company.OctopusRelationId ?? 0 },
+                RelationKey = new OctopusRelationKey { Id = octopusRelationId },
                 ExternalRelationId = company.CompanyId
             },
             Name = name,

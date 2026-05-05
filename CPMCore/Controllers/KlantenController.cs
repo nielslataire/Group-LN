@@ -721,7 +721,7 @@ namespace CPMCore.Controllers
                 return View("Edit", model);
             }
 
-            var requiresOctopusSync = (client.OctopusRelationId ?? 0) > 0
+            var requiresOctopusSync = client.ClientAccountIssuerCompany.Any(l => (l.OctopusRelationId ?? 0) > 0)
                && HasClientDataChanged(client, model);
 
             MapToEntity(model, client);
@@ -1532,23 +1532,21 @@ namespace CPMCore.Controllers
                     .ThenInclude(link => link.IssuerCompany)
                 .FirstOrDefaultAsync(c => c.Id == clientId, ct);
 
-            if (client?.OctopusRelationId is not int relationId || relationId <= 0)
-            {
+            if (client == null)
                 return;
-            }
 
-            var request = BuildOctopusRelationRequest(client);
-
-            foreach (var issuer in client.ClientAccountIssuerCompany
-                           .Select(link => link.IssuerCompany)
-                           .Where(i => i != null && !string.IsNullOrWhiteSpace(i.OctopusDossierNumber))!)
+            foreach (var link in client.ClientAccountIssuerCompany
+                .Where(l => (l.OctopusRelationId ?? 0) > 0
+                            && l.IssuerCompany != null
+                            && !string.IsNullOrWhiteSpace(l.IssuerCompany.OctopusDossierNumber)))
             {
-                var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(issuer.Id, issuer.OctopusDossierNumber, ct);
-                await _octopusClient.UpsertRelationAsync(dossierToken.Token, issuer.OctopusDossierNumber, request, ct);
+                var request = BuildOctopusRelationRequest(client, link.OctopusRelationId!.Value);
+                var dossierToken = await _octopusTokens.RefreshDossierTokenAsync(link.IssuerCompanyId, link.IssuerCompany.OctopusDossierNumber, ct);
+                await _octopusClient.UpsertRelationAsync(dossierToken.Token, link.IssuerCompany.OctopusDossierNumber, request, ct);
             }
         }
 
-        private static OctopusRelationRequest BuildOctopusRelationRequest(ClientAccount client)
+        private static OctopusRelationRequest BuildOctopusRelationRequest(ClientAccount client, int octopusRelationId)
         {
             var countryCode = client.InvoicePostalCode?.Country?.LandIsocode
                 ?? client.PostalCode?.Country?.LandIsocode;
@@ -1561,7 +1559,7 @@ namespace CPMCore.Controllers
             {
                 RelationIdentificationServiceData = new OctopusRelationIdentificationData
                 {
-                    RelationKey = new OctopusRelationKey { Id = client.OctopusRelationId ?? 0 },
+                    RelationKey = new OctopusRelationKey { Id = octopusRelationId },
                     ExternalRelationId = client.Id
                 },
                 Name = name,

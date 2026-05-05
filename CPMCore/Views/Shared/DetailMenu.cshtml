@@ -30,7 +30,7 @@
 					var projectId = Model;
 					await PermissionService.EnsureLoadedAsync();
 					var _proj = ProjectService.GetProjectByID(projectId);
-					var isCoordinationProject = _proj.Success && _proj.Value?.IsCoordinationProject == true;
+					var isCoordinationProject = _proj.Success && _proj.Value?.IsOnlyCoordinationProject == true;
 					var canSeeDetail       = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
 					var canSeeClients      = PermissionService.HasRead(PermissionCodes.ProjectsCustomers);
 					var canSeeSuppliers    = PermissionService.HasRead(PermissionCodes.ProjectsSuppliers);

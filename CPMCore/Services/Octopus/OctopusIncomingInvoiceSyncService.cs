@@ -1,4 +1,5 @@
 using BOCore;
+using CPMCore.Models.Leveranciers;
 using CPMCore.Services.InvoiceEnrichment;
 using CPMCore.Services.InvoiceExtraction;
 using CPMCore.Services.Octopus;
@@ -283,11 +284,12 @@ namespace CPMCore.Services.Octopus
                 { existing.VatAmount = booking.VatAmountDecimal; changed = true; }
                 if (existing.NetAmount != booking.NetAmountDecimal)
                 { existing.NetAmount = booking.NetAmountDecimal; changed = true; }
-                // CompanyId invullen als het nog ontbreekt
+                // CompanyId invullen als het nog ontbreekt (zoeken via junction table per issuer)
                 if (existing.CompanyId == null && booking.SupplierRelationKey.HasValue)
                 {
                     var supplier = await _db.CompanyInfo
-                        .FirstOrDefaultAsync(c => c.OctopusRelationId == booking.SupplierRelationKey.Value, ct);
+                        .FirstOrDefaultAsync(c => c.CompanyIssuerCompany.Any(
+                            l => l.IssuerCompanyId == issuerCompanyId && l.OctopusRelationId == booking.SupplierRelationKey.Value), ct);
                     if (supplier != null)
                     { existing.CompanyId = supplier.CompanyId; changed = true; }
                 }
@@ -1241,9 +1243,10 @@ namespace CPMCore.Services.Octopus
             if (!relationKey.HasValue)
                 return ("Onbekende leverancier", null, null);
 
-            // 1. Directe hit op OctopusRelationId
+            // 1. Directe hit via junction table (per issuer)
             var existing = await _db.CompanyInfo
-                .FirstOrDefaultAsync(c => c.OctopusRelationId == relationKey.Value, ct);
+                .FirstOrDefaultAsync(c => c.CompanyIssuerCompany.Any(
+                    l => l.IssuerCompanyId == issuerCompanyId && l.OctopusRelationId == relationKey.Value), ct);
             if (existing != null)
                 return (existing.BedrijfsNaam ?? $"Relatie #{relationKey.Value}", existing.VatNumber, existing.CompanyId);
 
@@ -1268,14 +1271,16 @@ namespace CPMCore.Services.Octopus
                 return ($"Relatie #{relationKey.Value}", null, null);
 
             var vatNr = NormalizeVat(relation.VatNr);
-            var name = relation.Name ?? relation.Firstname ?? $"Relatie #{relationKey.Value}";
+            var name = BuildBedrijfsNaam(relation.Name, relation.Firstname) is { Length: > 0 } n
+                ? n
+                : $"Relatie #{relationKey.Value}";
 
-            // 3. Probeer te matchen op BTW-nr of naam in CompanyInfo
+            // 3. Probeer te matchen op BTW-nr of naam in CompanyInfo (enkel actieve relaties)
             CompanyInfo matched = null;
             if (!string.IsNullOrWhiteSpace(vatNr))
             {
                 var candidates = await _db.CompanyInfo
-                    .Where(c => !string.IsNullOrWhiteSpace(c.Ondernemingsnummer))
+                    .Where(c => c.IsActive && !string.IsNullOrWhiteSpace(c.Ondernemingsnummer))
                     .ToListAsync(ct);
                 matched = candidates.FirstOrDefault(c =>
                     string.Equals(NormalizeVat(c.Ondernemingsnummer), vatNr, StringComparison.OrdinalIgnoreCase));
@@ -1284,7 +1289,7 @@ namespace CPMCore.Services.Octopus
             if (matched == null && !string.IsNullOrWhiteSpace(name))
             {
                 var candidates = await _db.CompanyInfo
-                    .Where(c => !string.IsNullOrWhiteSpace(c.BedrijfsNaam))
+                    .Where(c => c.IsActive && !string.IsNullOrWhiteSpace(c.BedrijfsNaam))
                     .ToListAsync(ct);
                 matched = candidates.FirstOrDefault(c =>
                     string.Equals(c.BedrijfsNaam?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -1292,30 +1297,35 @@ namespace CPMCore.Services.Octopus
 
             if (matched != null)
             {
-                if (!matched.OctopusRelationId.HasValue)
-                    matched.OctopusRelationId = relationKey.Value;
-
                 await EnsureSupplierLinkAsync(matched, issuerCompanyId, relationKey.Value, ct);
                 await _db.SaveChangesAsync(ct);
                 return (matched.BedrijfsNaam ?? name, matched.VatNumber ?? vatNr, matched.CompanyId);
             }
 
             // 4. Nieuw: leverancier aanmaken in CompanyInfo
+            var (street, houseNr, busNr) = ParseStreetAndNr(relation.StreetAndNr);
+            var postCodeId = await ResolvePostalCodeIdAsync(relation.PostalCode, relation.City, ct);
+            var vatStatus = ResolveSupplierVatStatus(relation.VatType);
+
             var newSupplier = new CompanyInfo
             {
                 BedrijfsNaam = name,
                 Ondernemingsnummer = vatNr,
                 VatNumber = vatNr,
-                Straat = relation.StreetAndNr,
+                VatStatus = vatStatus,
+                Straat = street,
+                Huisnummer = houseNr,
+                Busnummer = busNr,
                 Postcode = relation.PostalCode,
                 Gemeente = relation.City,
+                PostCodeId = postCodeId,
                 LandCode = relation.Country,
                 Telefoon1 = relation.Telephone,
                 Gsm = relation.Mobile,
                 Email = relation.Email,
                 Bank = relation.IbanAccountNr,
                 IsCustomer = relation.Client,
-                OctopusRelationId = relationKey.Value
+                IsActive = relation.Active
             };
 
             _db.CompanyInfo.Add(newSupplier);
@@ -1355,7 +1365,62 @@ namespace CPMCore.Services.Octopus
         private static string NormalizeVat(string vat)
         {
             if (string.IsNullOrWhiteSpace(vat)) return null;
-            return Regex.Replace(vat.ToUpperInvariant(), @"[^A-Z0-9]", "");
+            return Regex.Replace(vat, @"\D", "");
+        }
+
+        private static string BuildBedrijfsNaam(string? lastName, string? firstName)
+        {
+            if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName))
+                return $"{lastName.Trim()} {firstName.Trim()}";
+            return (lastName ?? firstName ?? string.Empty).Trim();
+        }
+
+        private static (string Street, string? HouseNr, string? BusNr) ParseStreetAndNr(string? streetAndNr)
+        {
+            if (string.IsNullOrWhiteSpace(streetAndNr))
+                return (string.Empty, null, null);
+
+            var match = Regex.Match(streetAndNr.Trim(), @"^(.*?)\s+(\d+[a-zA-Z]?)(?:[/\s]+(\S+))?$");
+            if (match.Success)
+            {
+                return (
+                    match.Groups[1].Value.Trim(),
+                    match.Groups[2].Value.Trim(),
+                    match.Groups[3].Success ? match.Groups[3].Value.Trim() : null
+                );
+            }
+
+            return (streetAndNr.Trim(), null, null);
+        }
+
+        private static string ResolveSupplierVatStatus(int? vatType) => vatType switch
+        {
+            10 => SupplierFormViewModel.VatStatusNietBtwPlichtig,
+            7 or 8 or 9 => SupplierFormViewModel.VatStatusParticulier,
+            _ => SupplierFormViewModel.VatStatusBtwPlichtig
+        };
+
+        private async Task<int?> ResolvePostalCodeIdAsync(string? postalCode, string? city, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(postalCode))
+                return null;
+
+            var matches = await _db.PostalCode
+                .Where(p => p.Postcode == postalCode.Trim())
+                .ToListAsync(ct);
+
+            if (matches.Count == 1)
+                return matches[0].PostcodeId;
+
+            if (matches.Count > 1 && !string.IsNullOrWhiteSpace(city))
+            {
+                var normalizedCity = city.Trim().ToUpperInvariant();
+                var match = matches.FirstOrDefault(p => p.Gemeente?.Trim().ToUpperInvariant() == normalizedCity);
+                if (match != null)
+                    return match.PostcodeId;
+            }
+
+            return null;
         }
 
         private enum UpsertOutcome { Created, Updated, Skipped }

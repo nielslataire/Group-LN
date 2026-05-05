@@ -18,7 +18,6 @@ namespace ServiceCore.Translators
             if (bo == null)
                 return ErrorCode.BoNull;
             bo.Id = _entity.Id;
-            bo.OctopusRelationId = _entity.OctopusRelationId;
             bo.Name = _entity.Name;
             bo.Salutation = (Salutation)Enum.Parse(typeof(Salutation), _entity.Salutation);
             bo.Street = _entity.Street;
@@ -166,7 +165,6 @@ namespace ServiceCore.Translators
             entity.InvoiceExtra = bo.InvoiceExtra;
             entity.Email = bo.Email;
             entity.InvoiceEmail = bo.InvoiceEmail;
-            entity.OctopusRelationId = bo.OctopusRelationId;
             entity.RequiresDigitalInvoice = bo.RequiresDigitalInvoice;
             entity.AttachUblByDefault = bo.AttachUblByDefault;
 

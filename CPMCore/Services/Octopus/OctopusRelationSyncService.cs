@@ -212,6 +212,7 @@ namespace CPMCore.Services.Octopus
         {
             var supplierQuery = _db.CompanyInfo
                 .Include(c => c.CompanyIssuerCompany)
+                .Where(c => c.IsActive)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(normalizedVat))
@@ -245,7 +246,7 @@ namespace CPMCore.Services.Octopus
 
             var linkedSuppliers = await _db.CompanyInfo
                 .Include(c => c.CompanyIssuerCompany)
-                .Where(c => c.CompanyIssuerCompany.Any(link => link.IssuerCompanyId == issuerId))
+                .Where(c => c.IsActive && c.CompanyIssuerCompany.Any(link => link.IssuerCompanyId == issuerId))
                 .ToListAsync(ct);
 
             return linkedSuppliers.FirstOrDefault(c =>
@@ -301,7 +302,7 @@ namespace CPMCore.Services.Octopus
         private async Task<IReadOnlyList<OctopusRelationCandidate>> FindSimilarSuppliersAsync(string normalizedName, string normalizedVat, CancellationToken ct)
         {
             var supplierMatches = await _db.CompanyInfo
-                .Where(c => !string.IsNullOrEmpty(c.BedrijfsNaam))
+                .Where(c => c.IsActive && !string.IsNullOrEmpty(c.BedrijfsNaam))
                 .Select(c => new { c.CompanyId, c.BedrijfsNaam, c.Ondernemingsnummer })
                 .ToListAsync(ct);
 
@@ -328,14 +329,17 @@ namespace CPMCore.Services.Octopus
         {
             var postCodeId = await ResolvePostalCodeIdAsync(relation.PostalCode, relation.City, ct);
             var vatStatus = ResolveSupplierVatStatus(relation.VatType);
+            var (street, houseNr, busNr) = ParseStreetAndNr(relation.StreetAndNr);
 
             return new CompanyInfo
             {
-                BedrijfsNaam = relation.Name ?? relation.Firstname ?? string.Empty,
+                BedrijfsNaam = BuildBedrijfsNaam(relation.Name, relation.Firstname),
                 Ondernemingsnummer = normalizedVat,
                 VatNumber = normalizedVat,
                 VatStatus = vatStatus,
-                Straat = relation.StreetAndNr,
+                Straat = street,
+                Huisnummer = houseNr,
+                Busnummer = busNr,
                 Postcode = relation.PostalCode,
                 Gemeente = relation.City,
                 PostCodeId = postCodeId,
@@ -345,7 +349,7 @@ namespace CPMCore.Services.Octopus
                 Email = relation.Email,
                 Bank = relation.IbanAccountNr,
                 IsCustomer = relation.Client,
-                OctopusRelationId = relation.RelationIdentificationServiceData?.RelationKey?.Id
+                IsActive = relation.Active
             };
         }
 
@@ -366,9 +370,35 @@ namespace CPMCore.Services.Octopus
                 InvoicePostalCodeId = postCodeId,
                 InvoiceAddress = false,
                 Email = relation.Email,
-                InvoiceEmail = relation.Email,
-                OctopusRelationId = relation.RelationIdentificationServiceData?.RelationKey?.Id
+                InvoiceEmail = relation.Email
             };
+        }
+
+        // "Achternaam Voornaam" — geen komma, achternaam eerst
+        private static string BuildBedrijfsNaam(string? lastName, string? firstName)
+        {
+            if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName))
+                return $"{lastName.Trim()} {firstName.Trim()}";
+            return (lastName ?? firstName ?? string.Empty).Trim();
+        }
+
+        // "Tuinwijk 79/A" → ("Tuinwijk", "79", "A")  |  "Straat 12" → ("Straat", "12", null)
+        private static (string Street, string? HouseNr, string? BusNr) ParseStreetAndNr(string? streetAndNr)
+        {
+            if (string.IsNullOrWhiteSpace(streetAndNr))
+                return (string.Empty, null, null);
+
+            var match = Regex.Match(streetAndNr.Trim(), @"^(.*?)\s+(\d+[a-zA-Z]?)(?:[/\s]+(\S+))?$");
+            if (match.Success)
+            {
+                return (
+                    match.Groups[1].Value.Trim(),
+                    match.Groups[2].Value.Trim(),
+                    match.Groups[3].Success ? match.Groups[3].Value.Trim() : null
+                );
+            }
+
+            return (streetAndNr.Trim(), null, null);
         }
 
         private async Task<int?> ResolvePostalCodeIdAsync(string? postalCode, string? city, CancellationToken ct)

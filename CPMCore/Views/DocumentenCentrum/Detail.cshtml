@@ -65,10 +65,24 @@
                             </div>
                             <div class="col-sm-6">
                                 <label class="form-label text-muted small">Leverancier</label>
-                                <div class="fw-semibold">@Model.SupplierName</div>
+                                <div class="fw-semibold">
+                                    @if (Model.SupplierCompanyInfoId.HasValue)
+                                    {
+                                        <a href="@Url.Action("Details", "Leveranciers", new { id = Model.SupplierCompanyInfoId.Value })"
+                                           class="text-decoration-none">@Model.SupplierName</a>
+                                    }
+                                    else
+                                    {
+                                        @Model.SupplierName
+                                    }
+                                </div>
                                 @if (!string.IsNullOrEmpty(Model.SupplierVatNumber))
                                 {
                                     <small class="text-muted">@Model.SupplierVatNumber</small>
+                                }
+                                @if (Model.SupplierCompanyInfoId.HasValue)
+                                {
+                                    <small class="text-muted d-block">ID: @Model.SupplierCompanyInfoId.Value</small>
                                 }
                             </div>
                             <div class="col-sm-6">

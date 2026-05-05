@@ -692,8 +692,6 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientAccount>(entity =>
         {
-            entity.HasIndex(e => e.OctopusRelationId, "IX_ClientAccount_OctopusRelationId");
-
             entity.Property(e => e.BankAccountNumber).HasMaxLength(50);
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.CompanyName).HasMaxLength(100);
@@ -762,8 +760,6 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ClientContacts>(entity =>
         {
-            entity.HasIndex(e => e.OctopusRelationId, "IX_ClientContacts_OctopusRelationId");
-
             entity.Property(e => e.Busnumber).HasMaxLength(10);
             entity.Property(e => e.Cellphone).HasMaxLength(50);
             entity.Property(e => e.ClientAccountId).HasColumnName("ClientAccountID");
@@ -919,8 +915,6 @@ public partial class cpmRunningContext : DbContext
         modelBuilder.Entity<CompanyInfo>(entity =>
         {
             entity.HasKey(e => e.CompanyId);
-
-            entity.HasIndex(e => e.OctopusRelationId, "IX_CompanyInfo_OctopusRelationId");
 
             entity.HasIndex(e => e.Ondernemingsnummer, "UX_CompanyInfo_Ondernemingsnummer")
                 .IsUnique()

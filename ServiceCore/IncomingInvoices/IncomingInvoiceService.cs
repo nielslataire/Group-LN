@@ -371,6 +371,7 @@ namespace ServiceCore.IncomingInvoices
             IssuerCompanyName = entity.IssuerCompany?.Name ?? string.Empty,
             SupplierName = entity.SupplierName,
             SupplierVatNumber = entity.SupplierVatNumber,
+            SupplierCompanyInfoId = entity.CompanyId,
             OctopusSupplierRelationKey = entity.OctopusSupplierRelationKey,
             InvoiceNumber = entity.ExternalId,
             InvoiceDate = entity.Date,

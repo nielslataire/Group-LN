@@ -61,8 +61,6 @@ public partial class CompanyInfo
 
     public bool IsCustomer { get; set; }
 
-    public int? OctopusRelationId { get; set; }
-
     public string VatNumber { get; set; }
 
     public string VatStatus { get; set; }
