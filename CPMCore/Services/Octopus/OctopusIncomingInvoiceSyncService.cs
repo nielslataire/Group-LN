@@ -284,11 +284,11 @@ namespace CPMCore.Services.Octopus
                 { existing.VatAmount = booking.VatAmountDecimal; changed = true; }
                 if (existing.NetAmount != booking.NetAmountDecimal)
                 { existing.NetAmount = booking.NetAmountDecimal; changed = true; }
-                // CompanyId invullen als het nog ontbreekt (zoeken via junction table per issuer)
+                // CompanyId invullen als het nog ontbreekt (zoeken via junction table per issuer, enkel actieve bedrijven)
                 if (existing.CompanyId == null && booking.SupplierRelationKey.HasValue)
                 {
                     var supplier = await _db.CompanyInfo
-                        .FirstOrDefaultAsync(c => c.CompanyIssuerCompany.Any(
+                        .FirstOrDefaultAsync(c => c.IsActive && c.CompanyIssuerCompany.Any(
                             l => l.IssuerCompanyId == issuerCompanyId && l.OctopusRelationId == booking.SupplierRelationKey.Value), ct);
                     if (supplier != null)
                     { existing.CompanyId = supplier.CompanyId; changed = true; }
@@ -1243,9 +1243,9 @@ namespace CPMCore.Services.Octopus
             if (!relationKey.HasValue)
                 return ("Onbekende leverancier", null, null);
 
-            // 1. Directe hit via junction table (per issuer)
+            // 1. Directe hit via junction table (per issuer, enkel actieve bedrijven)
             var existing = await _db.CompanyInfo
-                .FirstOrDefaultAsync(c => c.CompanyIssuerCompany.Any(
+                .FirstOrDefaultAsync(c => c.IsActive && c.CompanyIssuerCompany.Any(
                     l => l.IssuerCompanyId == issuerCompanyId && l.OctopusRelationId == relationKey.Value), ct);
             if (existing != null)
                 return (existing.BedrijfsNaam ?? $"Relatie #{relationKey.Value}", existing.VatNumber, existing.CompanyId);
