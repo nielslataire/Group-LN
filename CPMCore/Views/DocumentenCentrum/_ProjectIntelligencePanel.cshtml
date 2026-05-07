@@ -1,0 +1,87 @@
+@model FacadeCore.IncomingInvoiceDetailVm
+@using BOCore
+@{
+    decimal pct = 0;
+    string fillClass = "fill-ok";
+    string insightText = null;
+
+    if (Model.ContractTotalAmount.HasValue && Model.ContractTotalAmount > 0 && Model.ContractInvoicedTotal.HasValue)
+    {
+        var totalUsed = Model.ContractInvoicedTotal.Value + Model.TotalAmountInclVat;
+        pct = Math.Min(100, Math.Round(totalUsed / Model.ContractTotalAmount.Value * 100, 1));
+        var remaining = Model.ContractTotalAmount.Value - totalUsed;
+
+        if (pct >= 100)
+        {
+            fillClass = "fill-danger";
+            insightText = $"Contract overschreden met €{Math.Abs(remaining):N2}";
+        }
+        else if (pct >= 90)
+        {
+            fillClass = "fill-warning";
+            insightText = $"Na deze factuur nog €{remaining:N2} resterend ({100 - pct:N1}%)";
+        }
+        else
+        {
+            insightText = $"Na deze factuur nog €{remaining:N2} resterend";
+        }
+    }
+}
+
+<div class="card mb-3 dc-intel-card @(fillClass == "fill-danger" ? "intel-danger" : fillClass == "fill-warning" ? "intel-warning" : "")">
+    <div class="card-body py-2 px-3">
+        <div class="dc-intel-title"><i class="bx bx-chart me-1"></i>Project intelligence</div>
+
+        @if (Model.ContractTotalAmount.HasValue)
+        {
+            <div class="dc-insight-row">
+                <span class="text-muted">Contractwaarde</span>
+                <span class="fw-semibold">€ @Model.ContractTotalAmount.Value.ToString("N2")</span>
+            </div>
+            <div class="dc-insight-row">
+                <span class="text-muted">Al gefactureerd</span>
+                <span class="fw-semibold">€ @(Model.ContractInvoicedTotal ?? 0).ToString("N2")</span>
+            </div>
+            <div class="dc-insight-row">
+                <span class="text-muted">Deze factuur</span>
+                <span class="fw-semibold">€ @Model.TotalAmountInclVat.ToString("N2")</span>
+            </div>
+
+            <div class="dc-budget-bar mt-2">
+                <div class="dc-budget-fill @fillClass" style="width:@pct%"></div>
+            </div>
+            <div class="d-flex justify-content-between mt-1">
+                <small class="text-muted">@pct% gebruikt</small>
+                @if (!string.IsNullOrEmpty(insightText))
+                {
+                    <small class="fw-semibold @(fillClass == "fill-danger" ? "text-danger" : fillClass == "fill-warning" ? "text-warning" : "text-success")">
+                        @insightText
+                    </small>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-muted small">Geen contract gekoppeld — budgetcontrole niet mogelijk.</div>
+        }
+
+        @if (Model.PreviousInvoicesOnProject > 0)
+        {
+            <div class="dc-insight-row mt-2">
+                <span class="text-muted">Eerdere projectfacturen</span>
+                <span class="badge bg-light text-dark border">@Model.PreviousInvoicesOnProject</span>
+            </div>
+        }
+
+        @if (Model.InvoiceDeviationPercent.HasValue)
+        {
+            var dev = Model.InvoiceDeviationPercent.Value;
+            var devClass = Math.Abs(dev) > 20 ? "text-danger" : Math.Abs(dev) > 10 ? "text-warning" : "text-muted";
+            var devSign = dev > 0 ? "+" : "";
+            <div class="dc-insight-row">
+                <span class="text-muted">Afwijking t.o.v. gemiddelde</span>
+                <span class="fw-semibold @devClass">@devSign@dev%</span>
+            </div>
+        }
+    </div>
+</div>

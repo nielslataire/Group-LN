@@ -7,41 +7,88 @@
     InvoiceReasonFlags Flags(long f) => (InvoiceReasonFlags)f;
     bool HasFlag(long f, InvoiceReasonFlags flag) => (Flags(f) & flag) != 0;
 
-    var filter        = ViewBag.Filter as IncomingInvoiceFilterVm ?? new IncomingInvoiceFilterVm();
-    int countNew      = (int)(ViewBag.CountNew      ?? 0);
-    int countAttn     = (int)(ViewBag.CountAttention ?? 0);
-    int countPending  = (int)(ViewBag.CountPending   ?? 0);
-    int countApproved = (int)(ViewBag.CountApproved  ?? 0);
+    var filter          = ViewBag.Filter as IncomingInvoiceFilterVm ?? new IncomingInvoiceFilterVm();
+    bool assignedToMe   = (bool)(ViewBag.AssignedToMe ?? false);
 
-    // Tab URL helper — hergebruikt alle actieve filters
-    string TabUrl(byte? sId, bool? warn = null) => Url.Action("Index", "DocumentenCentrum", new {
+    int countNew         = (int)(ViewBag.CountNew          ?? 0);
+    int countAttn        = (int)(ViewBag.CountAttention    ?? 0);
+    int countMine        = (int)(ViewBag.CountMine         ?? 0);
+    int countBudget      = (int)(ViewBag.CountBudgetImpact ?? 0);
+    int countPending     = (int)(ViewBag.CountPending      ?? 0);
+    int countApproved    = (int)(ViewBag.CountApproved     ?? 0);
+
+    bool isTabAll      = filter.StatusId == null && filter.HasWarnings != true && !assignedToMe;
+    bool isTabNew      = filter.StatusId == IncomingInvoiceStatus.New && filter.HasWarnings != true && !assignedToMe;
+    bool isTabAttn     = filter.HasWarnings == true;
+    bool isTabMine     = assignedToMe;
+    bool isTabPending  = filter.StatusId == IncomingInvoiceStatus.PendingApproval && !assignedToMe;
+    bool isTabApproved = filter.StatusId == IncomingInvoiceStatus.Approved && !assignedToMe;
+    bool isTabBooked   = filter.StatusId == IncomingInvoiceStatus.Booked && !assignedToMe;
+
+    bool hasAdvancedFilters = filter.DocumentType != null || filter.ProjectId.HasValue
+        || filter.DateFrom.HasValue || filter.DateTo.HasValue || !string.IsNullOrEmpty(filter.InvoiceNumber);
+
+    string TabUrl(byte? sId, bool? warn = null, bool? myTasks = null) => Url.Action("Index", "DocumentenCentrum", new {
+        issuerCompanyId = filter.IssuerCompanyId,
+        costContextType = filter.CostContextType,
+        statusId        = sId.HasValue ? (object)sId.Value : null,
+        hasWarnings     = warn.HasValue ? (object)warn.Value : null,
+        assignedToMe    = myTasks.HasValue && myTasks.Value ? (object)true : null,
+        page = 1
+    });
+
+    string CtxUrl(string ctx) => Url.Action("Index", "DocumentenCentrum", new {
         issuerCompanyId = filter.IssuerCompanyId,
         supplierName    = filter.SupplierName,
         invoiceNumber   = filter.InvoiceNumber,
         documentType    = filter.DocumentType,
         projectId       = filter.ProjectId,
+        statusId        = filter.StatusId,
+        hasWarnings     = filter.HasWarnings,
         dateFrom        = filter.DateFrom?.ToString("yyyy-MM-dd"),
         dateTo          = filter.DateTo?.ToString("yyyy-MM-dd"),
-        statusId        = sId.HasValue ? (object)sId.Value : null,
-        hasWarnings     = warn.HasValue ? (object)warn.Value : null,
-        page            = 1
+        assignedToMe    = assignedToMe ? (object)true : null,
+        costContextType = ctx,
+        page = 1
     });
 
-    bool isTabAll      = filter.StatusId == null && filter.HasWarnings != true;
-    bool isTabNew      = filter.StatusId == IncomingInvoiceStatus.New && filter.HasWarnings != true;
-    bool isTabAttention= filter.HasWarnings == true;
-    bool isTabPending  = filter.StatusId == IncomingInvoiceStatus.PendingApproval;
-    bool isTabApproved = filter.StatusId == IncomingInvoiceStatus.Approved;
+    string AssignUrl(bool? myTasks) => Url.Action("Index", "DocumentenCentrum", new {
+        issuerCompanyId = filter.IssuerCompanyId,
+        supplierName    = filter.SupplierName,
+        invoiceNumber   = filter.InvoiceNumber,
+        documentType    = filter.DocumentType,
+        projectId       = filter.ProjectId,
+        statusId        = filter.StatusId,
+        hasWarnings     = filter.HasWarnings,
+        dateFrom        = filter.DateFrom?.ToString("yyyy-MM-dd"),
+        dateTo          = filter.DateTo?.ToString("yyyy-MM-dd"),
+        costContextType = filter.CostContextType,
+        assignedToMe    = myTasks.HasValue && myTasks.Value ? (object)true : null,
+        page = 1
+    });
 
-    // Paginering
     int firstItem = Model.TotalCount == 0 ? 0 : (filter.Page - 1) * filter.PageSize + 1;
     int lastItem  = Math.Min(filter.Page * filter.PageSize, Model.TotalCount);
+
+    string PagUrl(int p) => Url.Action("Index", "DocumentenCentrum", new {
+        issuerCompanyId = filter.IssuerCompanyId,
+        supplierName    = filter.SupplierName,
+        invoiceNumber   = filter.InvoiceNumber,
+        statusId        = filter.StatusId,
+        documentType    = filter.DocumentType,
+        projectId       = filter.ProjectId,
+        hasWarnings     = filter.HasWarnings,
+        dateFrom        = filter.DateFrom?.ToString("yyyy-MM-dd"),
+        dateTo          = filter.DateTo?.ToString("yyyy-MM-dd"),
+        costContextType = filter.CostContextType,
+        assignedToMe    = assignedToMe ? (object)true : null,
+        page = p
+    });
 }
 
-<style>
-    #documentsTable tbody td { padding-top: 13px !important; padding-bottom: 13px !important; }
-    #documentsTable tbody tr.js-doc-row { cursor: pointer; }
-</style>
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/admin/document-center.css" />
+}
 
 @* ── Page header ──────────────────────────────────────────────────────────── *@
 <section class="content-header">
@@ -56,7 +103,8 @@
                         data-bs-toggle="modal" data-bs-target="#syncModal">
                     <i class="bx bx-refresh me-1"></i>Sync Octopus
                 </button>
-                <button type="button" class="btn btn-primary btn-sm">
+                <button type="button" class="btn btn-primary btn-sm"
+                        data-bs-toggle="modal" data-bs-target="#uploadModal">
                     <i class="bx bx-plus me-1"></i>Document uploaden
                 </button>
             </div>
@@ -75,154 +123,210 @@
             </div>
         }
 
-        // @* ── Summary-kaarten ─────────────────────────────────────────────────── *@
-        // <div class="row g-3 mb-4">
-        //     <div class="col-sm-6 col-xl-3">
-        //         <a href="@TabUrl(IncomingInvoiceStatus.New)" class="text-decoration-none">
-        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
-        //                 <div class="card-body py-3 px-4">
-        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Te verwerken</p>
-        //                     <h2 class="fw-bold mb-1 text-white">@countNew</h2>
-        //                     <p class="small mb-0" style="color:#8fbc9f;">Wachten op administratie</p>
-        //                 </div>
-        //             </section>
-        //         </a>
-        //     </div>
-        //     <div class="col-sm-6 col-xl-3">
-        //         <a href="@TabUrl(null, true)" class="text-decoration-none">
-        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
-        //                 <div class="card-body py-3 px-4">
-        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Vraagt aandacht</p>
-        //                     <h2 class="fw-bold mb-1 text-white">@countAttn</h2>
-        //                     <p class="small mb-0" style="color:#8fbc9f;">Actie vereist</p>
-        //                 </div>
-        //             </section>
-        //         </a>
-        //     </div>
-        //     <div class="col-sm-6 col-xl-3">
-        //         <a href="@TabUrl(IncomingInvoiceStatus.PendingApproval)" class="text-decoration-none">
-        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
-        //                 <div class="card-body py-3 px-4">
-        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Toegewezen</p>
-        //                     <h2 class="fw-bold mb-1 text-white">@countPending</h2>
-        //                     <p class="small mb-0" style="color:#8fbc9f;">Bij projectverantwoordelijke</p>
-        //                 </div>
-        //             </section>
-        //         </a>
-        //     </div>
-        //     <div class="col-sm-6 col-xl-3">
-        //         <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="text-decoration-none">
-        //             <section class="card mb-0 border-0" style="background:#1a3a2a;">
-        //                 <div class="card-body py-3 px-4">
-        //                     <p class="text-uppercase small fw-semibold mb-1" style="color:#8fbc9f;letter-spacing:.06em;">Goedgekeurd</p>
-        //                     <h2 class="fw-bold mb-1 text-white">@countApproved</h2>
-        //                     <p class="small mb-0" style="color:#8fbc9f;">Deze maand</p>
-        //                 </div>
-        //             </section>
-        //         </a>
-        //     </div>
-        // </div>
+        @* ── KPI stat kaarten ──────────────────────────────────────────────────── *@
+        <div class="stats-row mb-4">
+            <a href="@TabUrl(IncomingInvoiceStatus.New)" class="stat-card @(isTabNew ? "active" : "")">
+                <div class="stat-icon stat-new"><i class="bx bx-inbox"></i></div>
+                <div class="stat-num">@countNew</div>
+                <div class="stat-lbl">Te verwerken</div>
+            </a>
+            <a href="@TabUrl(null, true)" class="stat-card @(isTabAttn ? "active" : "")">
+                <div class="stat-icon stat-attn"><i class="bx bx-error-circle"></i></div>
+                <div class="stat-num">@countAttn</div>
+                <div class="stat-lbl">Vraagt aandacht</div>
+            </a>
+            <a href="@TabUrl(null, null, true)" class="stat-card @(isTabMine ? "active" : "")">
+                <div class="stat-icon stat-mine"><i class="bx bx-user-check"></i></div>
+                <div class="stat-num">@countMine</div>
+                <div class="stat-lbl">Mijn taken</div>
+            </a>
+            <a href="@TabUrl(IncomingInvoiceStatus.New)" class="stat-card">
+                <div class="stat-icon stat-budget"><i class="bx bx-trending-up"></i></div>
+                <div class="stat-num">@countBudget</div>
+                <div class="stat-lbl">Budgetimpact</div>
+            </a>
+            <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="stat-card @(isTabApproved ? "active" : "")">
+                <div class="stat-icon stat-appr"><i class="bx bx-check-circle"></i></div>
+                <div class="stat-num">@countApproved</div>
+                <div class="stat-lbl">Goedgekeurd</div>
+            </a>
+        </div>
 
-        @* ── Filters ──────────────────────────────────────────────────────────── *@
-        <div class="card mb-3">
-            <div class="card-body py-3">
+        @* ── Tabs ──────────────────────────────────────────────────────────────── *@
+        <div class="tabs-bar">
+            <a href="@TabUrl(null)" class="tab @(isTabAll ? "active" : "")">
+                Alle <span class="tab-count">@Model.TotalCount</span>
+            </a>
+            <a href="@TabUrl(IncomingInvoiceStatus.New)" class="tab @(isTabNew ? "active" : "")">
+                Nieuw <span class="tab-count">@countNew</span>
+            </a>
+            <a href="@TabUrl(null, true)" class="tab @(isTabAttn ? "active" : "")">
+                Vraagt aandacht <span class="tab-count">@countAttn</span>
+            </a>
+            <a href="@TabUrl(null, null, true)" class="tab @(isTabMine ? "active" : "")">
+                Mijn taken <span class="tab-count">@countMine</span>
+            </a>
+            <a href="@TabUrl(IncomingInvoiceStatus.PendingApproval)" class="tab @(isTabPending ? "active" : "")">
+                Toegewezen <span class="tab-count">@countPending</span>
+            </a>
+            <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="tab @(isTabApproved ? "active" : "")">Goedgekeurd</a>
+            <a href="@TabUrl(IncomingInvoiceStatus.Booked)" class="tab @(isTabBooked ? "active" : "")">Geboekt</a>
+        </div>
+
+        @* ── Toolbar ───────────────────────────────────────────────────────────── *@
+        <div class="dc-toolbar">
+            <form method="get" asp-action="Index" asp-controller="DocumentenCentrum" class="dc-search-form">
+                <input type="hidden" name="issuerCompanyId" value="@filter.IssuerCompanyId" />
+                <input type="hidden" name="statusId" value="@filter.StatusId" />
+                <input type="hidden" name="hasWarnings" value="@filter.HasWarnings" />
+                <input type="hidden" name="documentType" value="@filter.DocumentType" />
+                <input type="hidden" name="projectId" value="@filter.ProjectId" />
+                <input type="hidden" name="dateFrom" value="@filter.DateFrom?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="dateTo" value="@filter.DateTo?.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="costContextType" value="@filter.CostContextType" />
+                <input type="hidden" name="invoiceNumber" value="@filter.InvoiceNumber" />
+                @if (assignedToMe) { <input type="hidden" name="assignedToMe" value="true" /> }
+                <div class="dc-search-wrap">
+                    <i class="bx bx-search dc-search-icon"></i>
+                    <input type="text" name="supplierName" value="@filter.SupplierName"
+                           class="dc-search-input"
+                           placeholder="Zoek leverancier, factuurnummer, project, bedrag..." />
+                </div>
+            </form>
+
+            <div class="dc-toolbar-right">
+                @* Type toggle *@
+                <div class="dc-toggle-group">
+                    <a href="@CtxUrl(null)" class="dc-toggle-btn @(string.IsNullOrEmpty(filter.CostContextType) ? "active" : "")">Alle types</a>
+                    <a href="@CtxUrl(CostContextType.ProjectCost)" class="dc-toggle-btn @(filter.CostContextType == CostContextType.ProjectCost ? "active" : "")">
+                        <i class="bx bx-building-house me-1"></i>Projectkost
+                    </a>
+                    <a href="@CtxUrl(CostContextType.GeneralCompanyCost)" class="dc-toggle-btn @(filter.CostContextType == CostContextType.GeneralCompanyCost ? "active" : "")">
+                        <i class="bx bx-briefcase me-1"></i>Algemene kost
+                    </a>
+                    <a href="@CtxUrl(CostContextType.Unknown)" class="dc-toggle-btn @(filter.CostContextType == CostContextType.Unknown ? "active" : "")">
+                        <i class="bx bx-help-circle me-1"></i>Onzeker
+                    </a>
+                </div>
+
+                @* Assign toggle *@
+                <div class="dc-toggle-group">
+                    <a href="@AssignUrl(null)" class="dc-toggle-btn @(!assignedToMe ? "active" : "")">
+                        <i class="bx bx-group me-1"></i>Iedereen
+                    </a>
+                    <a href="@AssignUrl(true)" class="dc-toggle-btn @(assignedToMe ? "active" : "")">
+                        <i class="bx bx-user me-1"></i>Aan mij
+                    </a>
+                </div>
+
+                @* Meer filters *@
+                <button type="button" class="btn btn-light btn-sm dc-more-filters-btn"
+                        data-bs-toggle="collapse" data-bs-target="#advancedFilters"
+                        aria-expanded="@(hasAdvancedFilters ? "true" : "false")">
+                    Meer filters@if (hasAdvancedFilters) {<span class="dc-filter-dot ms-1"></span>}
+                </button>
+            </div>
+        </div>
+
+        @* ── Legend ────────────────────────────────────────────────────────────── *@
+        <div class="dc-legend">
+            <div class="dc-legend-items">
+                <span class="dc-legend-item">
+                    <span class="dc-legend-dot" style="background:#0a5a3b;"></span>Binnen budget
+                </span>
+                <span class="dc-legend-item">
+                    <span class="dc-legend-dot" style="background:#f59e0b;"></span>Bijna opgebruikt
+                </span>
+                <span class="dc-legend-item">
+                    <span class="dc-legend-dot" style="background:#ef4444;"></span>Overschrijding
+                </span>
+                <span class="dc-legend-item">
+                    <span class="dc-legend-dot dc-legend-dot-outline"></span>In goedkeuring
+                </span>
+            </div>
+            <span class="dc-legend-hint">Klik op een rij voor detail</span>
+        </div>
+
+        @* ── Geavanceerde filters (uitklapbaar) ────────────────────────────────── *@
+        <div class="collapse @(hasAdvancedFilters ? "show" : "")" id="advancedFilters">
+            <div class="card card-body py-3 mb-0 border-top-0 rounded-top-0" style="background:#f8f9fa;border-radius:0 0 .5rem .5rem;">
                 <form method="get" asp-action="Index" asp-controller="DocumentenCentrum">
+                    <input type="hidden" name="issuerCompanyId" value="@filter.IssuerCompanyId" />
+                    <input type="hidden" name="supplierName" value="@filter.SupplierName" />
+                    <input type="hidden" name="statusId" value="@filter.StatusId" />
+                    <input type="hidden" name="hasWarnings" value="@filter.HasWarnings" />
+                    <input type="hidden" name="costContextType" value="@filter.CostContextType" />
+                    @if (assignedToMe) { <input type="hidden" name="assignedToMe" value="true" /> }
                     <div class="row g-2 align-items-end">
-                        <div class="col-sm-6 col-md-4 col-xl-2">
-                            <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Facturatiebedrijf</label>
-                            @Html.DropDownList("issuerCompanyId", ViewBag.IssuerCompanies as SelectList,
-                                "Alle bedrijven", new { @class = "form-select form-select-sm form-control-modern" })
-                        </div>
-                        <div class="col-sm-6 col-md-4 col-xl-2">
-                            <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Leverancier</label>
-                            <input type="text" name="supplierName" value="@filter.SupplierName"
-                                   class="form-control form-control-sm form-control-modern"
-                                   placeholder="Naam leverancier..." />
-                        </div>
-                        <div class="col-sm-6 col-md-4 col-xl-2">
+                        <div class="col-sm-6 col-md-3">
                             <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Factuurnummer</label>
                             <input type="text" name="invoiceNumber" value="@filter.InvoiceNumber"
-                                   class="form-control form-control-sm form-control-modern"
-                                   placeholder="Nr..." />
+                                   class="form-control form-control-sm" placeholder="Nr..." />
                         </div>
-                        <div class="col-sm-6 col-md-4 col-xl-2">
-                            <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Status</label>
-                            @Html.DropDownList("statusId", ViewBag.StatusOptions as SelectList,
-                                null, new { @class = "form-select form-select-sm form-control-modern" })
-                        </div>
-                        <div class="col-sm-6 col-md-4 col-xl-2">
-                            <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Type</label>
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Documenttype</label>
                             @Html.DropDownList("documentType", ViewBag.DocumentTypeOptions as SelectList,
-                                null, new { @class = "form-select form-select-sm form-control-modern" })
+                                null, new { @class = "form-select form-select-sm" })
                         </div>
-                        <div class="col-sm-6 col-md-4 col-xl-2">
+                        <div class="col-sm-6 col-md-3">
                             <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Project</label>
                             @Html.DropDownList("projectId", ViewBag.Projects as SelectList,
-                                "Alle projecten", new { @class = "form-select form-select-sm form-control-modern" })
+                                "Alle projecten", new { @class = "form-select form-select-sm" })
                         </div>
-                        <div class="col-sm-6 col-md-3 col-xl-2">
+                        <div class="col-sm-6 col-md-3">
+                            <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Facturatiebedrijf</label>
+                            @Html.DropDownList("issuerCompanyId", ViewBag.IssuerCompanies as SelectList,
+                                "Alle bedrijven", new { @class = "form-select form-select-sm" })
+                        </div>
+                        <div class="col-sm-6 col-md-3">
                             <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Datum van</label>
-                            <input type="date" name="dateFrom"
-                                   value="@filter.DateFrom?.ToString("yyyy-MM-dd")"
-                                   class="form-control form-control-sm form-control-modern" />
+                            <input type="date" name="dateFrom" value="@filter.DateFrom?.ToString("yyyy-MM-dd")"
+                                   class="form-control form-control-sm" />
                         </div>
-                        <div class="col-sm-6 col-md-3 col-xl-2">
+                        <div class="col-sm-6 col-md-3">
                             <label class="form-label form-label-sm fw-semibold small text-muted text-uppercase" style="letter-spacing:.04em;">Datum t/m</label>
-                            <input type="date" name="dateTo"
-                                   value="@filter.DateTo?.ToString("yyyy-MM-dd")"
-                                   class="form-control form-control-sm form-control-modern" />
+                            <input type="date" name="dateTo" value="@filter.DateTo?.ToString("yyyy-MM-dd")"
+                                   class="form-control form-control-sm" />
                         </div>
                         <div class="col-auto d-flex gap-2 align-items-end">
                             <button type="submit" class="btn btn-primary btn-sm px-3">
                                 <i class="bx bx-search me-1"></i>Zoeken
                             </button>
-                            <a href="@Url.Action("Index", "DocumentenCentrum")" class="btn btn-outline-secondary btn-sm">
-                                <i class="bx bx-x"></i>
-                            </a>
+                            <a href="@Url.Action("Index", "DocumentenCentrum", new { issuerCompanyId = filter.IssuerCompanyId })"
+                               class="btn btn-outline-secondary btn-sm"><i class="bx bx-x"></i></a>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        @* ── Tabbladen ────────────────────────────────────────────────────────── *@
-        <div class="coord-tabs mb-3" role="tablist">
-            <a href="@TabUrl(null)" class="coord-tab @(isTabAll ? "active" : "")">
-                Alle documenten <span class="badge rounded-pill ms-1 @(isTabAll ? "bg-white text-dark" : "bg-secondary")">@Model.TotalCount</span>
-            </a>
-            <a href="@TabUrl(IncomingInvoiceStatus.New)" class="coord-tab @(isTabNew ? "active" : "")">
-                Nieuw <span class="badge rounded-pill ms-1 @(isTabNew ? "bg-white text-dark" : "bg-secondary")">@countNew</span>
-            </a>
-            <a href="@TabUrl(null, true)" class="coord-tab @(isTabAttention ? "active" : "")">
-                Vraagt aandacht <span class="badge rounded-pill ms-1 @(isTabAttention ? "bg-white text-dark" : "bg-secondary")">@countAttn</span>
-            </a>
-            <a href="@TabUrl(IncomingInvoiceStatus.PendingApproval)" class="coord-tab @(isTabPending ? "active" : "")">
-                Toegewezen <span class="badge rounded-pill ms-1 @(isTabPending ? "bg-white text-dark" : "bg-secondary")">@countPending</span>
-            </a>
-            <a href="@TabUrl(IncomingInvoiceStatus.Approved)" class="coord-tab @(isTabApproved ? "active" : "")">
-                Goedgekeurd
-            </a>
-        </div>
-
-        @* ── Bulk-actiebalk (JS-gestuurd) ─────────────────────────────────────── *@
-        <div id="bulkActionBar" class="d-none mb-3 px-4 py-2 rounded d-flex align-items-center justify-content-between gap-3"
-             style="background:#1a3a2a;color:#fff;">
-            <span id="bulkCountLabel" class="fw-semibold text-nowrap">0 geselecteerd</span>
-            <div class="d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-outline-light">
-                    <i class="bx bx-user me-1"></i>Toewijzen
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-light">
+        @* ── Bulk-actiebalk ───────────────────────────────────────────────────── *@
+        <input type="hidden" id="bulkIds" value="" />
+        <div id="bulkActionBar" class="bulk-bar d-none mb-2 mt-2">
+            <span class="count-pill" id="bulkCountLabel">0 geselecteerd</span>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" id="btnBulkApprove" class="btn btn-sm btn-outline-light">
                     <i class="bx bx-check me-1"></i>Goedkeuren
                 </button>
-                <button type="button" class="btn btn-sm" style="border-color:#f87171;color:#f87171;">
+                <button type="button" id="btnBulkReject" class="btn btn-sm" style="border-color:#f87171;color:#f87171;">
                     <i class="bx bx-x me-1"></i>Afwijzen
                 </button>
             </div>
         </div>
 
+        <form id="formBulkApprove" method="post" asp-action="BulkApprove" asp-controller="DocumentenCentrum" class="d-none">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ids" id="bulkApproveIdsInput" />
+            <input type="hidden" name="notes" id="bulkApproveNotesInput" />
+        </form>
+        <form id="formBulkReject" method="post" asp-action="BulkReject" asp-controller="DocumentenCentrum" class="d-none">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ids" id="bulkRejectIdsInput" />
+            <input type="hidden" name="notes" id="bulkRejectNotesInput" />
+        </form>
+
         @* ── Documententabel ──────────────────────────────────────────────────── *@
-        <div class="card card-modern">
+        <div class="card card-modern" style="border-top-left-radius:0;border-top-right-radius:0;border-top:none;">
             <div class="card-body p-0">
 
                 @if (!Model.Items.Any())
@@ -236,180 +340,286 @@
                 {
                     <div class="table-responsive">
                         <table class="table table-hover table-sm mb-0 align-middle" id="documentsTable">
-                            <thead class="table-light">
+                            <thead class="table-light" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#6b7280;">
                                 <tr>
                                     <th class="ps-3" style="width:36px;">
                                         <input type="checkbox" id="checkAll" class="form-check-input" />
                                     </th>
-                                    <th class="text-nowrap">Datum</th>
-                                    <th>Type</th>
-                                    <th>Leverancier</th>
-                                    <th>Factuurnummer / Omschrijving</th>
-                                    <th class="text-end text-nowrap">Totaal (incl. BTW)</th>
-                                    <th>Status</th>
-                                    <th>Project / Werf</th>
-                                    <th>Toegewezen aan</th>
-                                    <th>Bron</th>
+                                    <th>Leverancier / Factuur</th>
+                                    <th class="dc-col-hide-sm">Type</th>
+                                    <th class="text-end text-nowrap">Bedrag</th>
+                                    <th class="text-nowrap">Datum / Vervalt</th>
+                                    <th class="dc-col-hide-sm">Project / Contract / Categorie</th>
+                                    <th class="dc-col-hide-sm">Budget impact</th>
+                                    <th class="dc-col-hide-sm">Toegewezen</th>
                                     <th class="text-end pe-3">Acties</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var item in Model.Items)
                                 {
-                                    <tr class="js-doc-row" data-id="@item.Id" data-href="@Url.Action("Detail","DocumentenCentrum",new{id=item.Id})">
-                                        <td class="ps-3">
+                                    @* ── Type label / badge ── *@
+                                    var typeLabel = item.DocumentType switch {
+                                        "CreditNote" => "Creditnota",
+                                        "Invoice"    => "Factuur",
+                                        _            => item.DocumentType ?? "—"
+                                    };
+                                    var typeCls = item.DocumentType == "CreditNote"
+                                        ? "badge bg-danger bg-opacity-10 text-danger border border-danger-subtle"
+                                        : "badge bg-light text-dark border";
+
+                                    @* ── Kostcontext badge ── *@
+                                    var ctxBadgeCls = item.CostContextType switch {
+                                        CostContextType.ProjectCost        => "tbadge tbadge-project",
+                                        CostContextType.GeneralCompanyCost => "tbadge tbadge-company",
+                                        _                                  => "tbadge tbadge-unsure"
+                                    };
+                                    var ctxIcon = item.CostContextType switch {
+                                        CostContextType.ProjectCost        => "bx-building-house",
+                                        CostContextType.GeneralCompanyCost => "bx-briefcase",
+                                        _                                  => "bx-help-circle"
+                                    };
+
+                                    @* ── Budget impact berekening ── *@
+                                    decimal pctBefore = 0, pctAfter = 0;
+                                    string biLabel = null;
+                                    string biFillCls = "bi-fill-ok";
+                                    string biLabelCls = "text-success";
+
+                                    if (item.ContractTotalAmount.HasValue && item.ContractTotalAmount.Value > 0
+                                        && item.ContractInvoicedBefore.HasValue)
+                                    {
+                                        var before = item.ContractInvoicedBefore.Value;
+                                        var after  = before + item.TotalAmountInclVat;
+                                        var total  = item.ContractTotalAmount.Value;
+                                        pctBefore = Math.Round(Math.Min(100, before / total * 100), 0);
+                                        pctAfter  = Math.Round(after / total * 100, 0);
+
+                                        if (pctAfter >= 100)
+                                        {
+                                            biFillCls  = "bi-fill-danger";
+                                            biLabel    = "Budget overschreden";
+                                            biLabelCls = "text-danger";
+                                        }
+                                        else if (pctAfter >= 90)
+                                        {
+                                            biFillCls  = "bi-fill-warn";
+                                            biLabel    = "Contract bijna opgebruikt";
+                                            biLabelCls = "text-warning";
+                                        }
+                                        else
+                                        {
+                                            biLabel    = "Binnen budget";
+                                            biLabelCls = "text-success";
+                                        }
+                                    }
+
+                                    @* ── Insight chip vanuit budget ── *@
+                                    string budgetChipText  = null;
+                                    string budgetChipClass = "ic ic-ok";
+                                    if (item.ContractTotalAmount.HasValue && item.ContractInvoicedBefore.HasValue)
+                                    {
+                                        if (pctAfter >= 100)
+                                        {
+                                            var overshoot = (item.ContractInvoicedBefore.Value + item.TotalAmountInclVat) - item.ContractTotalAmount.Value;
+                                            budgetChipText  = $"Budget overschreden met €{overshoot:N0}";
+                                            budgetChipClass = "ic ic-danger";
+                                        }
+                                        else if (pctAfter >= 90)
+                                        {
+                                            budgetChipText  = $"Contract {pctAfter:N0}% na goedkeuring";
+                                            budgetChipClass = "ic ic-warn";
+                                        }
+                                        else if (pctAfter > 0)
+                                        {
+                                            budgetChipText  = $"Binnen budget ({pctAfter:N0}% gebruikt)";
+                                            budgetChipClass = "ic ic-ok";
+                                        }
+                                    }
+
+                                    <tr class="js-doc-row" data-id="@item.Id"
+                                        data-href="@Url.Action("Detail","DocumentenCentrum",new{id=item.Id})">
+
+                                        @* Checkbox *@
+                                        <td class="ps-3 js-no-row-click">
                                             <input type="checkbox" class="form-check-input js-row-check" value="@item.Id" />
                                         </td>
 
-                                        @* Datum *@
+                                        @* Leverancier / Factuur *@
+                                        <td>
+                                            <div class="fw-semibold text-align-center" style="font-size:.85rem;">@item.SupplierName <span class="@typeCls" style="font-size:.68rem;">@typeLabel</span></div>
+                                            <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
+                                                @if (!string.IsNullOrEmpty(item.InvoiceNumber))
+                                                {
+                                                    <span class="text-muted" style="font-size:.75rem;">@item.InvoiceNumber</span>
+                                                }
+                                                
+                                                @if (item.Source == "Octopus")
+                                                {
+                                                    <span class="badge" style="background:#0a5a3b;font-size:.65rem;">Octopus</span>
+                                                }
+                                            </div>
+                                            @* Insight chips *@
+                                            <div class="ic-row mt-1">
+                                                @if (!string.IsNullOrEmpty(budgetChipText))
+                                                {
+                                                    <span class="@budgetChipClass">@budgetChipText</span>
+                                                }
+                                                @foreach (var chip in item.WarningChips)
+                                                {
+                                                    var chipCls = chip == "Vervallen"
+                                                        ? "ic ic-danger"
+                                                        : chip.StartsWith("Vervalt") ? "ic ic-warn"
+                                                        : chip == "BTW afwijking" || chip == "Bedrag afwijkt" ? "ic ic-warn"
+                                                        : "ic ic-muted";
+                                                    <span class="@chipCls">@chip</span>
+                                                }
+                                            </div>
+                                            @if (item.FirstPdfAttachmentId.HasValue)
+                                            {
+                                                <div class="mt-1">
+                                                    <a href="@Url.Action("ViewAttachment","DocumentenCentrum",new{attachmentId=item.FirstPdfAttachmentId.Value})"
+                                                       target="_blank" class="text-muted text-decoration-none js-no-row-click" style="font-size:.75rem;">
+                                                        <i class="bx bxs-file-pdf text-danger me-1"></i>PDF
+                                                    </a>
+                                                </div>
+                                            }
+                                        </td>
+
+                                        @* Type (kostcontext) + status *@
+                                        <td class="dc-col-hide-sm">
+                                            <span class="@ctxBadgeCls"><i class="bx @ctxIcon"></i>@item.CostContextLabel</span>
+                                            <div class="mt-1">
+                                                <span class="badge @item.StatusBadgeClass" style="font-size:.65rem;">@item.StatusLabel</span>
+                                            </div>
+                                        </td>
+
+                                        @* Bedrag *@
+                                        <td class="text-end text-nowrap fw-semibold @(item.TotalAmountInclVat < 0 ? "text-danger" : "")"
+                                            style="font-size:.85rem;">
+                                            € @item.TotalAmountInclVat.ToString("N2")
+                                        </td>
+
+                                        @* Datum / Vervalt *@
                                         <td class="text-nowrap">
-                                            <span class="fw-semibold">@item.InvoiceDate.ToString("dd/MM/yyyy")</span>
+                                            <div style="font-size:.82rem;">@item.InvoiceDate.ToString("dd/MM/yyyy")</div>
                                             @if (item.DueDate.HasValue)
                                             {
                                                 var overdue = item.DueDate.Value < DateOnly.FromDateTime(DateTime.Today)
                                                            && item.StatusId < IncomingInvoiceStatus.Paid;
-                                                <br /><small class="@(overdue ? "text-danger" : "text-muted")">
+                                                <div class="@(overdue ? "text-danger" : "text-muted")" style="font-size:.75rem;">
                                                     @if (overdue) { <i class="bx bx-time-five"></i> }
-                                                    @item.DueDate.Value.ToString("dd/MM/yyyy")
-                                                </small>
+                                                    vervalt @item.DueDate.Value.ToString("dd/MM/yyyy")
+                                                </div>
                                             }
                                         </td>
 
-                                        @* Type *@
-                                        <td>
-                                            @{
-                                                var typeLabel = item.DocumentType switch {
-                                                    "CreditNote" => "Creditnota",
-                                                    "Invoice"    => "Factuur",
-                                                    _            => item.DocumentType ?? "—"
-                                                };
-                                                var typeCls = item.DocumentType == "CreditNote"
-                                                    ? "badge bg-danger bg-opacity-10 text-danger border border-danger-subtle"
-                                                    : "badge bg-light text-dark border";
-                                            }
-                                            <span class="@typeCls">@typeLabel</span>
-                                        </td>
-
-                                        @* Leverancier *@
-                                        <td>
-                                            <span class="fw-semibold">@item.SupplierName</span>
-                                            @if (!string.IsNullOrEmpty(item.SupplierVatNumber))
-                                            {
-                                                <br /><small class="text-muted">@item.SupplierVatNumber</small>
-                                            }
-                                        </td>
-
-                                        @* Factuurnummer / Omschrijving *@
-                                        <td>
-                                            @if (!string.IsNullOrEmpty(item.InvoiceNumber))
-                                            {
-                                                <span class="fw-semibold">@item.InvoiceNumber</span><br />
-                                            }
-                                            @if (item.FirstPdfAttachmentId.HasValue)
-                                            {
-                                                <small>
-                                                    <a href="@Url.Action("ViewAttachment","DocumentenCentrum",new{attachmentId=item.FirstPdfAttachmentId.Value})"
-                                                       target="_blank" class="text-muted text-decoration-none">
-                                                        <i class="bx bxs-file-pdf text-danger me-1"></i>Factuur bekijken
-                                                    </a>
-                                                </small>
-                                            }
-                                        </td>
-
-                                        @* Totaal *@
-                                        <td class="text-end text-nowrap fw-semibold @(item.TotalAmountInclVat < 0 ? "text-danger" : "")">
-                                            € @item.TotalAmountInclVat.ToString("N2")
-                                        </td>
-
-                                        @* Status *@
-                                        <td>
-                                            <span class="badge @item.StatusBadgeClass">@item.StatusLabel</span>
-                                            @if (item.StatusId == IncomingInvoiceStatus.New && item.IsEnriched)
-                                            {
-                                                <br />
-                                                @if (item.HasWarnings)
-                                                {
-                                                    <small class="text-warning fw-semibold">Vraagt aandacht</small>
-                                                }
-                                                else
-                                                {
-                                                    <small class="text-success fw-semibold">Verrijkt</small>
-                                                }
-                                            }
-                                        </td>
-
-                                        @* Project / Werf *@
-                                        <td>
+                                        @* Project / Contract / Categorie *@
+                                        <td class="dc-col-hide-sm">
                                             @if (!string.IsNullOrEmpty(item.ProjectName))
                                             {
-                                                <span class="badge bg-light text-dark border">@item.ProjectName</span>
+                                                <div class="fw-semibold" style="font-size:.82rem;">@item.ProjectName</div>
                                             }
                                             else if (!string.IsNullOrEmpty(item.SuggestedProjectName))
                                             {
-                                                <span class="badge bg-opacity-25 bg-info text-dark border border-info"
-                                                      title="Voorstel — nog niet bevestigd">
-                                                    <i class="bx bx-bulb me-1"></i>@item.SuggestedProjectName
-                                                </span>
+                                                <div style="font-size:.82rem;">
+                                                    <i class="bx bx-bulb text-warning me-1"></i>
+                                                    <span class="text-muted fst-italic">@item.SuggestedProjectName</span>
+                                                </div>
                                             }
-                                            else if (HasFlag(item.ReasonFlags, InvoiceReasonFlags.GeneralCostSuggested))
+                                            @if (!string.IsNullOrEmpty(item.ContractName))
                                             {
-                                                <span class="badge bg-secondary small">Algemene kost</span>
+                                                <div class="text-muted" style="font-size:.72rem;">
+                                                    <i class="bx bx-file-blank me-1"></i>@item.ContractName
+                                                    @if (item.ContractTotalAmount.HasValue)
+                                                    {
+                                                        <span>→ €@item.ContractTotalAmount.Value.ToString("N0")</span>
+                                                    }
+                                                </div>
                                             }
-                                            else
+                                            @if (string.IsNullOrEmpty(item.ProjectName) && string.IsNullOrEmpty(item.SuggestedProjectName))
                                             {
-                                                <span class="text-muted">—</span>
+                                                if (HasFlag(item.ReasonFlags, InvoiceReasonFlags.GeneralCostSuggested))
+                                                {
+                                                    <span class="badge bg-secondary" style="font-size:.7rem;">Alg. kost</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">—</span>
+                                                }
                                             }
                                         </td>
 
-                                        @* Toegewezen aan *@
-                                        <td>
+                                        @* Budget impact *@
+                                        <td class="dc-col-hide-sm">
+                                            @if (item.ContractTotalAmount.HasValue && item.ContractTotalAmount.Value > 0
+                                                 && item.ContractInvoicedBefore.HasValue)
+                                            {
+                                                <div class="bi-wrap">
+                                                    <div class="bi-header">
+                                                        <span class="bi-pcts">@pctBefore% → @pctAfter%</span>
+                                                        <span class="bi-amount">€ @((item.ContractTotalAmount.Value).ToString("N0"))</span>
+                                                    </div>
+                                                    <div class="bi-bar">
+                                                        <div class="bi-bar-bg">
+                                                            <div class="bi-bar-fill @biFillCls"
+                                                                 style="width:@(Math.Min(100, pctAfter))%"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="bi-lbl @biLabelCls">@biLabel</div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                        </td>
+
+                                        @* Toegewezen *@
+                                        <td class="dc-col-hide-sm">
                                             @if (!string.IsNullOrEmpty(item.AssignedToName))
                                             {
-                                                <span class="d-flex align-items-center gap-1">
-                                                    <span class="rounded-circle bg-warning d-inline-block" style="width:8px;height:8px;"></span>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="dc-user-avatar" style="width:28px;height:28px;font-size:.6rem;flex-shrink:0;">
+                                                        @string.Join("", (item.AssignedToName ?? "?").Split(' ').Take(2).Select(p => char.ToUpper(p[0])))
+                                                    </span>
                                                     <small class="text-nowrap">@item.AssignedToName</small>
-                                                </span>
+                                                </div>
                                             }
                                             else
                                             {
-                                                <span class="text-muted">—</span>
-                                            }
-                                        </td>
-
-                                        @* Bron *@
-                                        <td>
-                                            @if (item.Source == "Octopus")
-                                            {
-                                                <span class="badge" style="background:#1a3a2a;">Octopus</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-light text-dark border">Handmatig</span>
+                                                <span class="text-muted small">—</span>
                                             }
                                         </td>
 
                                         @* Acties *@
                                         <td class="text-end pe-3 text-nowrap js-no-row-click">
-                                            @if (item.FirstPdfAttachmentId.HasValue)
-                                            {
-                                                <a href="@Url.Action("ViewAttachment","DocumentenCentrum",new{attachmentId=item.FirstPdfAttachmentId.Value})"
-                                                   target="_blank" class="btn btn-sm btn-outline-danger" title="PDF bekijken">
-                                                    <i class="bx bxs-file-pdf"></i>
-                                                </a>
-                                            }
-                                            <a href="@Url.Action("Detail","DocumentenCentrum",new{id=item.Id})"
-                                               class="btn btn-sm btn-outline-secondary ms-1" title="Bekijken">
-                                                <i class="bx bx-show"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary ms-1" title="Toewijzen">
-                                                <i class="bx bx-user"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-success ms-1" title="Goedkeuren">
-                                                <i class="bx bx-check"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger ms-1" title="Afwijzen">
-                                                <i class="bx bx-x"></i>
-                                            </button>
+                                            <form method="post"
+                                                  asp-action="UpdateStatus"
+                                                  asp-controller="DocumentenCentrum"
+                                                  class="d-inline">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="incomingInvoiceId" value="@item.Id" />
+                                                <input type="hidden" name="statusId" value="@IncomingInvoiceStatus.Approved" />
+                                                <button type="submit" class="btn btn-sm btn-outline"
+                                                        title="Goedkeuren"
+                                                        onclick="return confirm('Document goedkeuren?')">
+                                                    <i class="bx bx-check"></i>
+                                                </button>
+                                            </form>
+                                            <form method="post"
+                                                  asp-action="UpdateStatus"
+                                                  asp-controller="DocumentenCentrum"
+                                                  class="d-inline ms-1">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="incomingInvoiceId" value="@item.Id" />
+                                                <input type="hidden" name="statusId" value="@IncomingInvoiceStatus.Rejected" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        title="Afwijzen"
+                                                        onclick="return confirm('Document afwijzen?')">
+                                                    <i class="bx bx-x"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 }
@@ -419,7 +629,7 @@
                 }
             </div>
 
-            @* ── Footer: telling + paginering ──────────────────────────────────── *@
+            @* ── Footer: telling + paginering ─────────────────────────────────── *@
             <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2 py-2 px-3">
                 <small class="text-muted">
                     @if (Model.TotalCount == 0)
@@ -428,32 +638,31 @@
                     }
                     else
                     {
-                        <span>Document @firstItem tot @lastItem van @Model.TotalCount documenten</span>
+                        <span>Document @firstItem tot @lastItem van @Model.TotalCount</span>
                     }
                 </small>
-
                 @if (Model.TotalPages > 1)
                 {
                     <nav>
                         <ul class="pagination pagination-sm mb-0">
                             <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
-                                <a class="page-link" href="@Url.Action("Index","DocumentenCentrum", new{ issuerCompanyId=filter.IssuerCompanyId, supplierName=filter.SupplierName, invoiceNumber=filter.InvoiceNumber, statusId=filter.StatusId, documentType=filter.DocumentType, projectId=filter.ProjectId, hasWarnings=filter.HasWarnings, dateFrom=filter.DateFrom?.ToString("yyyy-MM-dd"), dateTo=filter.DateTo?.ToString("yyyy-MM-dd"), page=1 })">«</a>
+                                <a class="page-link" href="@PagUrl(1)">«</a>
                             </li>
                             <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
-                                <a class="page-link" href="@Url.Action("Index","DocumentenCentrum", new{ issuerCompanyId=filter.IssuerCompanyId, supplierName=filter.SupplierName, invoiceNumber=filter.InvoiceNumber, statusId=filter.StatusId, documentType=filter.DocumentType, projectId=filter.ProjectId, hasWarnings=filter.HasWarnings, dateFrom=filter.DateFrom?.ToString("yyyy-MM-dd"), dateTo=filter.DateTo?.ToString("yyyy-MM-dd"), page=Model.Page-1 })">‹</a>
+                                <a class="page-link" href="@PagUrl(Model.Page - 1)">‹</a>
                             </li>
                             @for (int p = Math.Max(1, Model.Page - 2); p <= Math.Min(Model.TotalPages, Model.Page + 2); p++)
                             {
                                 var pageNum = p;
                                 <li class="page-item @(pageNum == Model.Page ? "active" : "")">
-                                    <a class="page-link" href="@Url.Action("Index","DocumentenCentrum", new{ issuerCompanyId=filter.IssuerCompanyId, supplierName=filter.SupplierName, invoiceNumber=filter.InvoiceNumber, statusId=filter.StatusId, documentType=filter.DocumentType, projectId=filter.ProjectId, hasWarnings=filter.HasWarnings, dateFrom=filter.DateFrom?.ToString("yyyy-MM-dd"), dateTo=filter.DateTo?.ToString("yyyy-MM-dd"), page=pageNum })">@pageNum</a>
+                                    <a class="page-link" href="@PagUrl(pageNum)">@pageNum</a>
                                 </li>
                             }
                             <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
-                                <a class="page-link" href="@Url.Action("Index","DocumentenCentrum", new{ issuerCompanyId=filter.IssuerCompanyId, supplierName=filter.SupplierName, invoiceNumber=filter.InvoiceNumber, statusId=filter.StatusId, documentType=filter.DocumentType, projectId=filter.ProjectId, hasWarnings=filter.HasWarnings, dateFrom=filter.DateFrom?.ToString("yyyy-MM-dd"), dateTo=filter.DateTo?.ToString("yyyy-MM-dd"), page=Model.Page+1 })">›</a>
+                                <a class="page-link" href="@PagUrl(Model.Page + 1)">›</a>
                             </li>
                             <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
-                                <a class="page-link" href="@Url.Action("Index","DocumentenCentrum", new{ issuerCompanyId=filter.IssuerCompanyId, supplierName=filter.SupplierName, invoiceNumber=filter.InvoiceNumber, statusId=filter.StatusId, documentType=filter.DocumentType, projectId=filter.ProjectId, hasWarnings=filter.HasWarnings, dateFrom=filter.DateFrom?.ToString("yyyy-MM-dd"), dateTo=filter.DateTo?.ToString("yyyy-MM-dd"), page=Model.TotalPages })">»</a>
+                                <a class="page-link" href="@PagUrl(Model.TotalPages)">»</a>
                             </li>
                         </ul>
                     </nav>
@@ -464,7 +673,10 @@
     </div>
 </section>
 
-@* ── Sync-modal ──────────────────────────────────────────────────────────────── *@
+@* ── Modals ────────────────────────────────────────────────────────────────── *@
+@await Html.PartialAsync("_AssignModal")
+@await Html.PartialAsync("_UploadModal")
+
 <div class="modal fade" id="syncModal" tabindex="-1" aria-labelledby="syncModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -480,12 +692,10 @@
                         <select name="issuerCompanyId" class="form-select form-control-modern" asp-items="ViewBag.IssuerCompanies" required>
                             <option value="">— Kies een bedrijf —</option>
                         </select>
-                        <div class="form-text">Enkel facturen van dit bedrijf worden gesynchroniseerd.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Vanaf datum <span class="text-muted fw-normal">(optioneel)</span></label>
                         <input type="date" name="dateFrom" class="form-control form-control-modern" />
-                        <div class="form-text">Laat leeg om automatisch verder te synchroniseren vanaf de laatste sync.</div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -498,48 +708,5 @@
 </div>
 
 @section PageScripts {
-    <script>
-    (function () {
-        const checkAll  = document.getElementById('checkAll');
-        const rowChecks = () => document.querySelectorAll('.js-row-check');
-        const bar       = document.getElementById('bulkActionBar');
-        const label     = document.getElementById('bulkCountLabel');
-
-        function updateBar() {
-            const checked = [...rowChecks()].filter(c => c.checked).length;
-            if (checked > 0) {
-                bar.classList.remove('d-none');
-                bar.classList.add('d-flex');
-                label.textContent = checked + ' geselecteerd';
-            } else {
-                bar.classList.add('d-none');
-                bar.classList.remove('d-flex');
-            }
-            if (checkAll) {
-                const total = rowChecks().length;
-                checkAll.indeterminate = checked > 0 && checked < total;
-                checkAll.checked       = checked === total && total > 0;
-            }
-        }
-
-        if (checkAll) {
-            checkAll.addEventListener('change', function () {
-                rowChecks().forEach(c => c.checked = this.checked);
-                updateBar();
-            });
-        }
-
-        document.querySelectorAll('.js-row-check').forEach(c =>
-            c.addEventListener('change', updateBar));
-    })();
-
-    // Klikbare rijen — volledige rij navigeert naar detailpagina
-    document.querySelectorAll('.js-doc-row').forEach(function (row) {
-        row.addEventListener('click', function (e) {
-            if (e.target.closest('.js-no-row-click')) return;
-            var href = row.dataset.href;
-            if (href) window.location.href = href;
-        });
-    });
-    </script>
+    <script src="~/js/document-center.js"></script>
 }

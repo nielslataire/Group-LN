@@ -1,0 +1,56 @@
+@{
+    var users = ViewBag.AssignableUsers as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
+                ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+}
+<div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <form method="post" asp-action="Assign" asp-controller="DocumentenCentrum">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="incomingInvoiceId" id="assignInvoiceId" value="" />
+                <input type="hidden" name="userId"   id="assignUserId"   value="" />
+                <input type="hidden" name="userName" id="assignUserName" value="" />
+
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="assignModalLabel">
+                        <i class="bx bx-user me-1"></i>Document toewijzen
+                    </h6>
+                    <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <input type="text" id="assignUserSearch" class="form-control form-control-sm"
+                               placeholder="Zoek gebruiker..." autocomplete="off" />
+                    </div>
+                    <div id="assignUserList" style="max-height:220px;overflow-y:auto;">
+                        @foreach (var u in users)
+                        {
+                            var initials = string.Join("",
+                                (u.Text ?? "?").Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                                               .Take(2)
+                                               .Select(p => char.ToUpper(p[0])));
+                            <div class="dc-user-item d-flex align-items-center gap-2 p-2 rounded mb-1"
+                                 data-id="@u.Value" data-name="@u.Text"
+                                 style="cursor:pointer;border:1px solid #e5e7eb;">
+                                <span class="dc-user-avatar">@initials</span>
+                                <span class="small fw-semibold">@u.Text</span>
+                            </div>
+                        }
+                        @if (!users.Any())
+                        {
+                            <p class="text-muted small text-center py-2">Geen gebruikers gevonden.</p>
+                        }
+                    </div>
+                    <div id="assignSelectedName" class="small text-muted mt-2 text-center"></div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary btn-sm"
+                            onclick="return !!document.getElementById('assignUserId').value || (alert('Kies een gebruiker.'), false)">
+                        <i class="bx bx-check me-1"></i>Toewijzen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

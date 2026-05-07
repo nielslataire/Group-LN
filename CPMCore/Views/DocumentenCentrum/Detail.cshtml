@@ -3,28 +3,56 @@
 @using BOCore
 @using FacadeCore
 @{
-    ViewData["Title"] = $"Document — {Model.InvoiceNumber}";
-    var projects = ViewBag.Projects as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
-                   ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
-    var contracts = ViewBag.Contracts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>
-                    ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    ViewData["Title"] = $"Document — {Model.InvoiceNumber ?? Model.SupplierName}";
+    var projects  = ViewBag.Projects  as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var contracts = ViewBag.Contracts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var hasEnrichment = Model.Enrichment != null;
+    var ctx = Model.CostContextType ?? CostContextType.Unknown;
+    var isProject = ctx == CostContextType.ProjectCost;
+    var isGeneral = ctx == CostContextType.GeneralCompanyCost;
+
+    var typeLabel = Model.DocumentType switch {
+        "CreditNote" => "Creditnota",
+        "Invoice"    => "Factuur",
+        _            => Model.DocumentType ?? "Document"
+    };
 }
 
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/admin/document-center.css" />
+}
+
+@* ── Page header ──────────────────────────────────────────────────────────── *@
 <section class="content-header">
     <div class="container-fluid">
         <div class="row mb-2 align-items-center">
-            <div class="col-sm-7">
+            <div class="col-sm-8">
                 <h1 class="m-0">
                     <i class="bx bx-file-blank me-2" aria-hidden="true"></i>
                     @Model.SupplierName
-                    <small class="text-muted fs-6">— @Model.InvoiceNumber</small>
+                    @if (!string.IsNullOrEmpty(Model.InvoiceNumber))
+                    {
+                        <small class="text-muted fs-6">— @Model.InvoiceNumber</small>
+                    }
                 </h1>
+                <div class="d-flex align-items-center gap-2 mt-1">
+                    <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                    <span class="@CostContextType.BadgeClass(ctx)">
+                        <i class="bx @CostContextType.Icon(ctx)"></i>
+                        @CostContextType.Label(ctx)
+                    </span>
+                    @if (!string.IsNullOrEmpty(Model.AssignedToName))
+                    {
+                        <span class="badge bg-light text-dark border">
+                            <i class="bx bx-user me-1"></i>@Model.AssignedToName
+                        </span>
+                    }
+                </div>
             </div>
-            <div class="col-sm-5 d-flex justify-content-end gap-2">
+            <div class="col-sm-4 d-flex justify-content-end gap-2">
                 <a href="@Url.Action("Index", "DocumentenCentrum", new { issuerCompanyId = Model.IssuerCompanyId })"
                    class="btn btn-secondary btn-sm">
-                    <i class="bx bx-arrow-back"></i> Terug
+                    <i class="bx bx-arrow-back"></i> Inbox
                 </a>
             </div>
         </div>
@@ -44,24 +72,25 @@
 
         <div class="row">
 
-            @* ── Linkerkolom: documentgegevens ── *@
+            @* ═══════════════════════════════════════════════════════
+               LINKERKOLOM: document + PDF viewer
+               ═════════════════════════════════════════════════════ *@
             <div class="col-lg-8">
 
                 @* Document metadata *@
                 <div class="card mb-3">
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <span class="fw-semibold"><i class="bx bx-info-circle me-1"></i> Documentgegevens</span>
-                        <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                        <div class="d-flex gap-1">
+                            <span class="badge bg-light text-dark border">@typeLabel</span>
+                            <span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-sm-6">
                                 <label class="form-label text-muted small">Facturatiebedrijf</label>
                                 <div class="fw-semibold">@Model.IssuerCompanyName</div>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label text-muted small">Type document</label>
-                                <div>@(Model.DocumentType == "Invoice" ? "Factuur" : Model.DocumentType == "CreditNote" ? "Creditnota" : Model.DocumentType)</div>
                             </div>
                             <div class="col-sm-6">
                                 <label class="form-label text-muted small">Leverancier</label>
@@ -71,23 +100,16 @@
                                         <a href="@Url.Action("Details", "Leveranciers", new { id = Model.SupplierCompanyInfoId.Value })"
                                            class="text-decoration-none">@Model.SupplierName</a>
                                     }
-                                    else
-                                    {
-                                        @Model.SupplierName
-                                    }
+                                    else { @Model.SupplierName }
                                 </div>
                                 @if (!string.IsNullOrEmpty(Model.SupplierVatNumber))
                                 {
                                     <small class="text-muted">@Model.SupplierVatNumber</small>
                                 }
-                                @if (Model.SupplierCompanyInfoId.HasValue)
-                                {
-                                    <small class="text-muted d-block">ID: @Model.SupplierCompanyInfoId.Value</small>
-                                }
                             </div>
-                            <div class="col-sm-6">
+                            <div class="col-sm-4">
                                 <label class="form-label text-muted small">Factuurnummer</label>
-                                <div class="fw-semibold">@Model.InvoiceNumber</div>
+                                <div class="fw-semibold">@(Model.InvoiceNumber ?? "—")</div>
                             </div>
                             <div class="col-sm-4">
                                 <label class="form-label text-muted small">Factuurdatum</label>
@@ -100,92 +122,111 @@
                                 </div>
                             </div>
                             <div class="col-sm-4">
-                                <label class="form-label text-muted small">Valuta</label>
-                                <div>@Model.CurrencyCode</div>
-                            </div>
-                            <div class="col-sm-4">
                                 <label class="form-label text-muted small">Netto</label>
-                                <div>@(Model.NetAmount.HasValue ? Model.NetAmount.Value.ToString("N2") : "—")</div>
+                                <div>@(Model.NetAmount.HasValue ? "€ " + Model.NetAmount.Value.ToString("N2") : "—")</div>
                             </div>
                             <div class="col-sm-4">
                                 <label class="form-label text-muted small">BTW</label>
-                                <div>@(Model.VatAmount.HasValue ? Model.VatAmount.Value.ToString("N2") : "—")</div>
+                                <div>@(Model.VatAmount.HasValue ? "€ " + Model.VatAmount.Value.ToString("N2") : "—")</div>
                             </div>
                             <div class="col-sm-4">
                                 <label class="form-label text-muted small">Totaal incl. BTW</label>
-                                <div class="fw-bold fs-5">@Model.TotalAmountInclVat.ToString("N2") @Model.CurrencyCode</div>
+                                <div class="fw-bold fs-5">€ @Model.TotalAmountInclVat.ToString("N2")</div>
                             </div>
                             @if (!string.IsNullOrEmpty(Model.Notes))
                             {
                                 <div class="col-12">
                                     <label class="form-label text-muted small">Notities</label>
-                                    <div class="text-break">@Model.Notes</div>
+                                    <div class="text-break small">@Model.Notes</div>
                                 </div>
                             }
                         </div>
                     </div>
                 </div>
 
-                @* Bijlagen — PDF bovenaan, UBL/XML onderaan *@
+                @* Bijlagen — attachment switcher + inline PDF *@
+                @{
+                    var pdfAtt   = Model.Attachments.FirstOrDefault(a => a.AttachmentType == "PDF");
+                    var otherAtts = Model.Attachments.Where(a => a.AttachmentType != "PDF" && a.AttachmentType != "UBL").ToList();
+                }
+
                 @if (Model.Attachments.Any())
                 {
-                    var pdfAtt = Model.Attachments.FirstOrDefault(a => a.AttachmentType == "PDF");
-                    var otherAtts = Model.Attachments.Where(a => a.AttachmentType != "PDF" && a.AttachmentType != "UBL").ToList();
+                    @* Attachment switcher (meerdere bijlagen) *@
+                    @if (Model.Attachments.Count > 1)
+                    {
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            @foreach (var att in Model.Attachments)
+                            {
+                                var icon = att.AttachmentType == "PDF" ? "bxs-file-pdf text-danger"
+                                         : att.AttachmentType == "UBL" ? "bxs-file-xml text-success"
+                                         : "bxs-file text-muted";
+                                <div class="dc-att-thumb @(att == pdfAtt ? "active" : "")"
+                                     data-url="@Url.Action("ViewAttachment","DocumentenCentrum",new{attachmentId=att.Id})">
+                                    <i class="bx @icon"></i>
+                                    <span>@att.FileName</span>
+                                    @if (att.FileSizeBytes.HasValue)
+                                    {
+                                        <small class="text-muted">(@FormatFileSize(att.FileSizeBytes.Value))</small>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
 
-                    @* Inline PDF preview *@
+                    @* Inline PDF *@
                     @if (pdfAtt != null)
                     {
-                        <div class="card mb-3">
-                            <div class="card-header d-flex align-items-center justify-content-between">
-                                <span class="fw-semibold">
-                                    <i class="bx bxs-file-pdf text-danger me-1"></i> @pdfAtt.FileName
+                        <div class="card mb-3" style="background:#1f2937;">
+                            <div class="card-header d-flex align-items-center justify-content-between py-2"
+                                 style="background:#111827;border-color:#374151;">
+                                <span class="fw-semibold text-white">
+                                    <i class="bx bxs-file-pdf text-danger me-1"></i>
+                                    @pdfAtt.FileName
                                     @if (pdfAtt.FileSizeBytes.HasValue)
                                     {
-                                        <small class="text-muted ms-2">@FormatFileSize(pdfAtt.FileSizeBytes.Value)</small>
+                                        <small class="text-secondary ms-2">@FormatFileSize(pdfAtt.FileSizeBytes.Value)</small>
                                     }
                                 </span>
-                                <a href="@Url.Action("DownloadAttachment", "DocumentenCentrum", new { attachmentId = pdfAtt.Id })"
-                                   class="btn btn-outline-secondary btn-sm">
-                                    <i class="bx bx-download"></i> Downloaden
+                                <a href="@Url.Action("DownloadAttachment","DocumentenCentrum",new{attachmentId=pdfAtt.Id})"
+                                   class="btn btn-outline-light btn-sm">
+                                    <i class="bx bx-download"></i> Download
                                 </a>
                             </div>
                             <div class="card-body p-0">
-                                <iframe src="@Url.Action("ViewAttachment", "DocumentenCentrum", new { attachmentId = pdfAtt.Id })"
-                                        style="width:100%;height:700px;border:none;" title="Factuur PDF"></iframe>
+                                <iframe id="mainAttachmentFrame"
+                                        src="@Url.Action("ViewAttachment","DocumentenCentrum",new{attachmentId=pdfAtt.Id})"
+                                        style="width:100%;height:700px;border:none;"
+                                        title="Factuur PDF"></iframe>
                             </div>
                         </div>
                     }
 
-                    @* Overige bijlagen (UBL/XML, Other) *@
                     @if (otherAtts.Any())
                     {
                         <div class="card mb-3">
-                            <div class="card-header fw-semibold">
+                            <div class="card-header fw-semibold py-2">
                                 <i class="bx bx-paperclip me-1"></i> Overige bijlagen (@otherAtts.Count)
                             </div>
                             <div class="card-body p-0">
                                 <ul class="list-group list-group-flush">
                                     @foreach (var att in otherAtts)
                                     {
-                                        <li class="list-group-item d-flex align-items-center justify-content-between">
+                                        <li class="list-group-item d-flex align-items-center justify-content-between py-2">
                                             <div class="d-flex align-items-center gap-2">
                                                 @if (att.AttachmentType == "UBL")
-                                                {
-                                                    <i class="bx bxs-file-xml text-success fs-5"></i>
-                                                }
+                                                { <i class="bx bxs-file-xml text-success fs-5"></i> }
                                                 else
-                                                {
-                                                    <i class="bx bxs-file text-muted fs-5"></i>
-                                                }
+                                                { <i class="bx bxs-file text-muted fs-5"></i> }
                                                 <div>
-                                                    <div class="fw-semibold">@att.FileName</div>
+                                                    <div class="fw-semibold small">@att.FileName</div>
                                                     @if (att.FileSizeBytes.HasValue)
                                                     {
                                                         <small class="text-muted">@FormatFileSize(att.FileSizeBytes.Value)</small>
                                                     }
                                                 </div>
                                             </div>
-                                            <a href="@Url.Action("DownloadAttachment", "DocumentenCentrum", new { attachmentId = att.Id })"
+                                            <a href="@Url.Action("DownloadAttachment","DocumentenCentrum",new{attachmentId=att.Id})"
                                                class="btn btn-outline-secondary btn-sm">
                                                 <i class="bx bx-download"></i>
                                             </a>
@@ -201,7 +242,7 @@
                 @if (Model.Lines.Any())
                 {
                     <div class="card mb-3">
-                        <div class="card-header fw-semibold">
+                        <div class="card-header fw-semibold py-2">
                             <i class="bx bx-list-ul me-1"></i> Detaillijnen
                         </div>
                         <div class="card-body p-0">
@@ -216,9 +257,9 @@
                                     @foreach (var line in Model.Lines)
                                     {
                                         <tr>
-                                            <td>@line.Description</td>
-                                            <td class="text-end text-nowrap">
-                                                @(line.Price.HasValue ? line.Price.Value.ToString("N2") : "—")
+                                            <td class="small">@line.Description</td>
+                                            <td class="text-end text-nowrap small">
+                                                @(line.Price.HasValue ? "€ " + line.Price.Value.ToString("N2") : "—")
                                             </td>
                                         </tr>
                                     }
@@ -227,7 +268,7 @@
                                     <tr>
                                         <td>Totaal lijnen</td>
                                         <td class="text-end text-nowrap">
-                                            @Model.Lines.Where(l => l.Price.HasValue).Sum(l => l.Price!.Value).ToString("N2")
+                                            € @Model.Lines.Where(l => l.Price.HasValue).Sum(l => l.Price!.Value).ToString("N2")
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -236,11 +277,11 @@
                     </div>
                 }
 
-                @* Octopus booking-info (fase 2 — tonen indien beschikbaar) *@
+                @* Octopus info *@
                 @if (!string.IsNullOrEmpty(Model.OctopusExternalId) || Model.OctopusBookedAt.HasValue)
                 {
                     <div class="card mb-3">
-                        <div class="card-header fw-semibold">
+                        <div class="card-header fw-semibold py-2">
                             <i class="bx bx-link-external me-1"></i> Octopus informatie
                         </div>
                         <div class="card-body">
@@ -256,18 +297,18 @@
                                 {
                                     <div class="col-sm-6">
                                         <label class="form-label text-muted small">Boekingstatus</label>
-                                        <div>@Model.OctopusBookingStatus</div>
+                                        <div class="small">@Model.OctopusBookingStatus</div>
                                     </div>
                                 }
                                 @if (Model.OctopusBookedAt.HasValue)
                                 {
                                     <div class="col-sm-6">
                                         <label class="form-label text-muted small">Geboekt op</label>
-                                        <div>@Model.OctopusBookedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                                        <div class="small">@Model.OctopusBookedAt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
                                     </div>
                                     <div class="col-sm-6">
                                         <label class="form-label text-muted small">Geboekt door</label>
-                                        <div>@(Model.OctopusBookedBy ?? "—")</div>
+                                        <div class="small">@(Model.OctopusBookedBy ?? "—")</div>
                                     </div>
                                 }
                                 @if (Model.SyncedAt.HasValue)
@@ -280,7 +321,6 @@
                                 @if (!string.IsNullOrEmpty(Model.SyncError))
                                 {
                                     <div class="col-12">
-                                        <label class="form-label text-muted small">Syncfout</label>
                                         <div class="alert alert-warning py-1 px-2 small mb-0">@Model.SyncError</div>
                                     </div>
                                 }
@@ -290,11 +330,117 @@
                 }
 
             </div>
+            @* Einde linkerkolom *@
 
-            @* ── Rechterkolom: verrijking + acties ── *@
+            @* ═══════════════════════════════════════════════════════
+               RECHTERKOLOM: intelligence + verwerking + acties
+               ═════════════════════════════════════════════════════ *@
             <div class="col-lg-4">
 
-                @* Verrijkingspanel (als beschikbaar) *@
+                @* ── Cost context selector ─────────────────────────── *@
+                <div class="card mb-3">
+                    <div class="card-header fw-semibold py-2">
+                        <i class="bx bx-category me-1"></i> Kostcontext
+                    </div>
+                    <div class="card-body pb-2">
+                        <input type="hidden" id="costContextCurrent" value="@ctx" />
+                        <div class="row g-2 dc-cost-context-toggle">
+                            <div class="col-4">
+                                <a class="dc-ctx-btn @(isProject ? "active" : "")"
+                                   data-ctx="@CostContextType.ProjectCost"
+                                   href="javascript:void(0)">
+                                    <i class="bx bx-building-house"></i>
+                                    <span>Projectkost</span>
+                                </a>
+                            </div>
+                            <div class="col-4">
+                                <a class="dc-ctx-btn @(isGeneral ? "active" : "")"
+                                   data-ctx="@CostContextType.GeneralCompanyCost"
+                                   href="javascript:void(0)">
+                                    <i class="bx bx-briefcase"></i>
+                                    <span>Alg. kost</span>
+                                </a>
+                            </div>
+                            <div class="col-4">
+                                <a class="dc-ctx-btn @(!isProject && !isGeneral ? "active" : "")"
+                                   data-ctx="@CostContextType.Unknown"
+                                   href="javascript:void(0)">
+                                    <i class="bx bx-question-mark"></i>
+                                    <span>Onzeker</span>
+                                </a>
+                            </div>
+                        </div>
+                        <form method="post" asp-action="SetCostContext" asp-controller="DocumentenCentrum" class="mt-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+                            <select name="costContextType" asp-items="ViewBag.CostContextOptions as SelectList"
+                                    class="form-select form-select-sm d-none" id="costContextSelect"></select>
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="bx bx-save me-1"></i>Kostcontext opslaan
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                @* ── Intelligence panel (context-afhankelijk) ──────── *@
+                @if (isProject)
+                {
+                    @await Html.PartialAsync("_ProjectIntelligencePanel", Model)
+                }
+                else if (isGeneral)
+                {
+                    @await Html.PartialAsync("_CompanyCostIntelligencePanel", Model)
+                }
+                else
+                {
+                    @* Unknown — AI voorstel / classificatieassistentie *@
+                    <div class="card mb-3 dc-intel-card" style="border-left-color:#6b7280;background:#f9fafb;">
+                        <div class="card-body py-2 px-3">
+                            <div class="dc-intel-title" style="color:#374151;">
+                                <i class="bx bx-brain me-1"></i>Classificatie
+                            </div>
+                            @if (Model.Enrichment?.SuggestedProject != null)
+                            {
+                                <div class="small mb-2">
+                                    <i class="bx bx-bulb text-info me-1"></i>
+                                    AI stelt voor: <strong>Projectkost</strong> — @Model.Enrichment.SuggestedProject.ProjectName
+                                    <span class="badge bg-success ms-1">@Model.Enrichment.SuggestedProject.ConfidenceLevel</span>
+                                </div>
+                            }
+                            else if (Model.Enrichment?.AccountingSuggestion?.IsGeneralCost == true)
+                            {
+                                <div class="small mb-2">
+                                    <i class="bx bx-bulb text-info me-1"></i>
+                                    AI stelt voor: <strong>Algemene kost</strong>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="small text-muted mb-2">Geen AI-voorstel beschikbaar. Kies manueel hierboven.</div>
+                            }
+                            <div class="d-grid gap-1">
+                                <form method="post" asp-action="SetCostContext" asp-controller="DocumentenCentrum">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+                                    <input type="hidden" name="costContextType" value="@CostContextType.ProjectCost" />
+                                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">
+                                        <i class="bx bx-building-house me-1"></i>Markeer als projectkost
+                                    </button>
+                                </form>
+                                <form method="post" asp-action="SetCostContext" asp-controller="DocumentenCentrum">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+                                    <input type="hidden" name="costContextType" value="@CostContextType.GeneralCompanyCost" />
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
+                                        <i class="bx bx-briefcase me-1"></i>Markeer als algemene kost
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @* ── Verrijkingspanel ──────────────────────────────── *@
                 @if (hasEnrichment)
                 {
                     @await Html.PartialAsync("_EnrichmentPanel", Model.Enrichment)
@@ -316,16 +462,16 @@
                     </div>
                 }
 
-                @* Koppelen aan werf *@
+                @* ── Werf / Project ────────────────────────────────── *@
                 <div class="card mb-3">
-                    <div class="card-header fw-semibold">
+                    <div class="card-header fw-semibold py-2">
                         <i class="bx bx-building-house me-1"></i> Werf / Project
                     </div>
                     <div class="card-body">
                         @if (!string.IsNullOrEmpty(Model.ProjectName))
                         {
                             <div class="mb-2">
-                                <span class="badge bg-success fs-6">@Model.ProjectName</span>
+                                <span class="badge bg-success">@Model.ProjectName</span>
                             </div>
                         }
                         else
@@ -341,18 +487,18 @@
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary btn-sm w-100">
-                                <i class="bx bx-link"></i> Project koppelen
+                                <i class="bx bx-link"></i> Koppelen
                             </button>
                         </form>
                     </div>
                 </div>
 
-                @* Koppelen aan contract *@
+                @* ── Contract ──────────────────────────────────────── *@
                 @if (contracts.Any())
                 {
                     <div class="card mb-3">
-                        <div class="card-header fw-semibold">
-                            <i class="bx bx-file-find me-1"></i> Contract
+                        <div class="card-header fw-semibold py-2">
+                            <i class="bx bx-file-find me-1"></i> Contract / Bestelbon
                         </div>
                         <div class="card-body">
                             @if (Model.ContractId.HasValue)
@@ -377,16 +523,42 @@
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-sm w-100">
-                                    <i class="bx bx-link"></i> Contract koppelen
+                                    <i class="bx bx-link"></i> Koppelen
                                 </button>
                             </form>
                         </div>
                     </div>
                 }
 
-                @* Status aanpassen *@
+                @* ── Toegewezen aan ────────────────────────────────── *@
                 <div class="card mb-3">
-                    <div class="card-header fw-semibold">
+                    <div class="card-header fw-semibold py-2 d-flex align-items-center justify-content-between">
+                        <span><i class="bx bx-user me-1"></i> Toegewezen aan</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm js-btn-assign"
+                                data-id="@Model.Id" data-bs-toggle="modal" data-bs-target="#assignModal">
+                            <i class="bx bx-edit-alt"></i>
+                        </button>
+                    </div>
+                    <div class="card-body py-2">
+                        @if (!string.IsNullOrEmpty(Model.AssignedToName))
+                        {
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="dc-user-avatar">
+                                    @string.Join("", (Model.AssignedToName ?? "?").Split(' ').Take(2).Select(p => char.ToUpper(p[0])))
+                                </span>
+                                <span class="fw-semibold small">@Model.AssignedToName</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted small mb-0">Nog niet toegewezen.</p>
+                        }
+                    </div>
+                </div>
+
+                @* ── Status ────────────────────────────────────────── *@
+                <div class="card mb-3">
+                    <div class="card-header fw-semibold py-2">
                         <i class="bx bx-flag me-1"></i> Status
                     </div>
                     <div class="card-body">
@@ -415,9 +587,7 @@
                                     }
                                     @foreach (var (val, label) in statuses)
                                     {
-                                        <option value="@val" selected="@(val == Model.StatusId ? "selected" : null)">
-                                            @label
-                                        </option>
+                                        <option value="@val" selected="@(val == Model.StatusId ? "selected" : null)">@label</option>
                                     }
                                 </select>
                             </div>
@@ -432,9 +602,9 @@
                     </div>
                 </div>
 
-                @* Audit info *@
+                @* ── Audit info ────────────────────────────────────── *@
                 <div class="card">
-                    <div class="card-body text-muted small">
+                    <div class="card-body text-muted small py-2">
                         <div class="mb-1">
                             @if (Model.Source == "Octopus")
                             {
@@ -459,9 +629,43 @@
                 </div>
 
             </div>
+            @* Einde rechterkolom *@
+
         </div>
     </div>
 </section>
+
+@* ── Sticky action bar ────────────────────────────────────────────────────── *@
+<div class="dc-sticky-bar">
+    <span class="text-muted small me-auto d-none d-md-inline">
+        @Model.SupplierName — @Model.InvoiceNumber — € @Model.TotalAmountInclVat.ToString("N2")
+    </span>
+    <button type="button" class="btn btn-outline-secondary btn-sm js-btn-assign" data-id="@Model.Id">
+        <i class="bx bx-user me-1"></i>Toewijzen
+    </button>
+    <form method="post" asp-action="UpdateStatus" asp-controller="DocumentenCentrum" class="d-inline">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+        <input type="hidden" name="statusId" value="@IncomingInvoiceStatus.Rejected" />
+        <button type="submit" class="btn btn-outline-danger btn-sm"
+                onclick="return confirm('Dit document afwijzen?')">
+            <i class="bx bx-x me-1"></i>Afwijzen
+        </button>
+    </form>
+    <form method="post" asp-action="UpdateStatus" asp-controller="DocumentenCentrum" class="d-inline">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="incomingInvoiceId" value="@Model.Id" />
+        <input type="hidden" name="statusId" value="@IncomingInvoiceStatus.Approved" />
+        <button type="submit" class="btn btn-approve btn-sm"
+                onclick="return confirm('Dit document goedkeuren?')">
+            <i class="bx bx-check me-1"></i>Goedkeuren
+        </button>
+    </form>
+</div>
+<div class="dc-sticky-bar-spacer"></div>
+
+@* ── Modals ────────────────────────────────────────────────────────────────── *@
+@await Html.PartialAsync("_AssignModal")
 
 @functions {
     private static string FormatFileSize(long bytes)
@@ -470,4 +674,18 @@
         if (bytes >= 1024) return $"{bytes / 1024.0:N1} KB";
         return $"{bytes} B";
     }
+}
+
+@section PageScripts {
+    <script src="~/js/document-center.js"></script>
+    <script>
+    // Sync cost context select met de toggle-knoppen
+    document.querySelectorAll('.dc-ctx-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var ctx = this.dataset.ctx;
+            var sel = document.querySelector('select[name="costContextType"]');
+            if (sel) sel.value = ctx;
+        });
+    });
+    </script>
 }

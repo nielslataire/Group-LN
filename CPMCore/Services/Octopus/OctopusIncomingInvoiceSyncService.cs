@@ -284,6 +284,9 @@ namespace CPMCore.Services.Octopus
                 { existing.VatAmount = booking.VatAmountDecimal; changed = true; }
                 if (existing.NetAmount != booking.NetAmountDecimal)
                 { existing.NetAmount = booking.NetAmountDecimal; changed = true; }
+                var expectedDocType = booking.TotalAmountDecimal < 0 ? "CreditNote" : "Invoice";
+                if (existing.DocumentType != expectedDocType)
+                { existing.DocumentType = expectedDocType; changed = true; }
                 // CompanyId invullen als het nog ontbreekt (zoeken via junction table per issuer, enkel actieve bedrijven)
                 if (existing.CompanyId == null && booking.SupplierRelationKey.HasValue)
                 {
@@ -321,7 +324,7 @@ namespace CPMCore.Services.Octopus
                 VatAmount = booking.VatAmountDecimal,
                 NetAmount = booking.NetAmountDecimal,
                 CurrencyCode = booking.CurrencyCode ?? "EUR",
-                DocumentType = "Invoice",
+                DocumentType = booking.TotalAmountDecimal < 0 ? "CreditNote" : "Invoice",
                 Source = "Octopus",
                 Notes = booking.Comment,
                 OctopusExternalId = externalId,
@@ -330,6 +333,7 @@ namespace CPMCore.Services.Octopus
                 OctopusDocumentSequenceNr = booking.DocumentSequenceNr,
                 OctopusBookingStatus = "BOOKED",
                 StatusId = IncomingInvoiceStatus.New,
+                CostContextType = BOCore.CostContextType.Unknown,
                 SyncedAt = now,
                 CreatedAt = now,
                 UpdatedAt = now

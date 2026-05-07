@@ -64,6 +64,12 @@ namespace ServiceCore.IncomingInvoices
             if (filter.HasWarnings == true)
                 query = query.Where(i => i.Warnings.Any(w => !w.IsResolved));
 
+            if (!string.IsNullOrWhiteSpace(filter.CostContextType))
+                query = query.Where(i => i.CostContextType == filter.CostContextType);
+
+            if (!string.IsNullOrWhiteSpace(filter.AssignedToUserId))
+                query = query.Where(i => i.AssignedToUserId == filter.AssignedToUserId);
+
             var totalCount = await query.CountAsync(ct);
 
             var items = await query
@@ -93,7 +99,11 @@ namespace ServiceCore.IncomingInvoices
                         ? i.Enrichment.SuggestedProjectName
                         : null,
                     IsEnriched = i.Enrichment != null,
-                    AssignedToName = i.Enrichment != null ? i.Enrichment.UserReviewedBy : null,
+                    AssignedToName = i.AssignedToName,
+                    AssignedToUserId = i.AssignedToUserId,
+                    CostContextType = i.CostContextType ?? BOCore.CostContextType.Unknown,
+                    CostContextLabel = BOCore.CostContextType.Label(i.CostContextType ?? BOCore.CostContextType.Unknown),
+                    CostContextBadgeClass = BOCore.CostContextType.BadgeClass(i.CostContextType ?? BOCore.CostContextType.Unknown),
                     HasAttachments = i.IncomingInvoiceAttachments.Any(a => a.AttachmentType == "PDF"),
                     FirstPdfAttachmentId = i.IncomingInvoiceAttachments
                         .Where(a => a.AttachmentType == "PDF")
@@ -102,9 +112,16 @@ namespace ServiceCore.IncomingInvoices
                     CreatedAt = i.CreatedAt ?? DateTime.UtcNow,
                     SyncedAt = i.SyncedAt,
                     ReasonFlags = i.Enrichment != null ? i.Enrichment.ReasonFlags : 0,
-                    HasWarnings = i.Warnings.Any(w => !w.IsResolved)
+                    HasWarnings = i.Warnings.Any(w => !w.IsResolved),
+                    WarningChips = BuildWarningChips(
+                        i.Enrichment != null ? i.Enrichment.ReasonFlags : 0,
+                        i.DueDate,
+                        i.Warnings.Any(w => !w.IsResolved)),
+                    ContractId = i.ContractId
                 })
                 .ToListAsync(ct);
+
+            await EnrichWithContractDataAsync(items, ct);
 
             return new IncomingInvoicePagedResultVm
             {
@@ -135,6 +152,47 @@ namespace ServiceCore.IncomingInvoices
                 .Include(e => e.SuggestedProject)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(e => e.IncomingInvoiceId == id, ct);
+
+            // Intelligence data laden
+            if (vm.ProjectId.HasValue)
+            {
+                var sibling = await _db.IncommingInvoices
+                    .Where(i => i.ProjectId == vm.ProjectId && i.Id != id && i.IssuerCompanyId != null)
+                    .CountAsync(ct);
+                vm.PreviousInvoicesOnProject = sibling;
+            }
+            if (vm.ContractId.HasValue)
+            {
+                var contractTotal = await _db.IncommingInvoices
+                    .Where(i => i.ContractId == vm.ContractId
+                             && i.Id != id
+                             && i.StatusId >= IncomingInvoiceStatus.PendingApproval)
+                    .SumAsync(i => (decimal?)i.Price, ct) ?? 0m;
+                vm.ContractInvoicedTotal = contractTotal;
+
+                var contractAmt = await _db.ContractActivity
+                    .Where(ca => ca.ContractId == vm.ContractId)
+                    .SumAsync(ca => (decimal?)ca.Price, ct);
+                vm.ContractTotalAmount = contractAmt;
+            }
+            if (!string.IsNullOrEmpty(vm.SupplierVatNumber))
+            {
+                var supplierInvoices = await _db.IncommingInvoices
+                    .Where(i => i.SupplierVatNumber == vm.SupplierVatNumber
+                             && i.Id != id
+                             && i.IssuerCompanyId != null
+                             && i.StatusId >= IncomingInvoiceStatus.Approved)
+                    .Select(i => i.Price)
+                    .ToListAsync(ct);
+                if (supplierInvoices.Count > 0)
+                {
+                    var avg = supplierInvoices.Average();
+                    vm.AverageInvoiceAmountSupplier = avg;
+                    if (avg > 0)
+                        vm.InvoiceDeviationPercent = Math.Round((vm.TotalAmountInclVat - avg) / avg * 100, 1);
+                }
+                vm.PreviousGeneralInvoicesSupplier = supplierInvoices.Count;
+            }
 
             if (enrichment != null)
             {
@@ -227,6 +285,171 @@ namespace ServiceCore.IncomingInvoices
                     SyncedAt = DateTime.UtcNow
                 };
             }
+        }
+
+        public async Task<BulkActionResult> BulkUpdateStatusAsync(BulkActionRequest request, CancellationToken ct = default)
+        {
+            int success = 0, errors = 0;
+            foreach (var id in request.Ids)
+            {
+                try
+                {
+                    await UpdateStatusAsync(new IncomingInvoiceUpdateStatusRequest
+                    {
+                        IncomingInvoiceId = id,
+                        StatusId = request.StatusId,
+                        Notes = request.Notes
+                    }, ct);
+                    success++;
+                }
+                catch (Exception ex)
+                {
+                    errors++;
+                    _logger.LogWarning(ex, "Bulk-statuswijziging mislukt voor invoice {Id}.", id);
+                }
+            }
+            return new BulkActionResult { SuccessCount = success, ErrorCount = errors };
+        }
+
+        public async Task AssignToUserAsync(AssignToUserRequest request, CancellationToken ct = default)
+        {
+            var entity = await _db.IncommingInvoices.FindAsync(new object[] { request.IncomingInvoiceId }, ct)
+                ?? throw new InvalidOperationException($"IncomingInvoice {request.IncomingInvoiceId} niet gevonden.");
+
+            entity.AssignedToUserId = request.UserId;
+            entity.AssignedToName = request.UserName;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("IncomingInvoice {Id} toegewezen aan {User}.", request.IncomingInvoiceId, request.UserName);
+        }
+
+        public async Task SetCostContextAsync(SetCostContextRequest request, CancellationToken ct = default)
+        {
+            var entity = await _db.IncommingInvoices.FindAsync(new object[] { request.IncomingInvoiceId }, ct)
+                ?? throw new InvalidOperationException($"IncomingInvoice {request.IncomingInvoiceId} niet gevonden.");
+
+            entity.CostContextType = request.CostContextType;
+            entity.UpdatedAt = DateTime.UtcNow;
+
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task<IncomingInvoiceDetailVm> UploadManualAsync(UploadManualRequest request, CancellationToken ct = default)
+        {
+            var entity = new IncommingInvoices
+            {
+                IssuerCompanyId = request.IssuerCompanyId,
+                SupplierName = request.SupplierName,
+                SupplierVatNumber = request.SupplierVatNumber,
+                DocumentType = request.DocumentType ?? "Invoice",
+                Date = request.InvoiceDate,
+                ExternalId = request.InvoiceNumber,
+                Price = request.TotalAmountInclVat,
+                CurrencyCode = "EUR",
+                Source = "Manual",
+                StatusId = IncomingInvoiceStatus.New,
+                CostContextType = BOCore.CostContextType.Unknown,
+                Notes = request.Notes,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.IncommingInvoices.Add(entity);
+            await _db.SaveChangesAsync(ct);
+
+            if (request.FileContent != null && request.FileContent.Length > 0)
+            {
+                var attachment = new IncomingInvoiceAttachments
+                {
+                    IncomingInvoiceId = entity.Id,
+                    FileName = request.FileName ?? "upload.pdf",
+                    ContentType = request.ContentType ?? "application/pdf",
+                    AttachmentType = "PDF",
+                    Content = request.FileContent,
+                    FileSizeBytes = request.FileContent.Length,
+                    CreatedAt = DateTime.UtcNow
+                };
+                _db.IncomingInvoiceAttachments.Add(attachment);
+                await _db.SaveChangesAsync(ct);
+            }
+
+            _logger.LogInformation("Handmatige upload: IncomingInvoice {Id} aangemaakt door {User}.", entity.Id, request.UploadedBy);
+
+            return await GetByIdAsync(entity.Id, ct);
+        }
+
+        private async Task EnrichWithContractDataAsync(List<IncomingInvoiceListItemVm> items, CancellationToken ct)
+        {
+            var contractIds = items
+                .Where(x => x.ContractId.HasValue)
+                .Select(x => x.ContractId.Value)
+                .Distinct()
+                .ToList();
+
+            if (!contractIds.Any()) return;
+
+            var contractTotals = await _db.ContractActivity
+                .Where(ca => contractIds.Contains(ca.ContractId))
+                .GroupBy(ca => ca.ContractId)
+                .Select(g => new { ContractId = g.Key, Total = g.Sum(ca => (decimal?)ca.Price) ?? 0m })
+                .ToDictionaryAsync(x => x.ContractId, x => x.Total, ct);
+
+            var contractNames = await _db.Contract
+                .Where(c => contractIds.Contains(c.Id))
+                .Select(c => new { c.Id, c.ContractName })
+                .ToDictionaryAsync(x => x.Id, x => x.ContractName, ct);
+
+            var contractInvoicedAll = await _db.IncommingInvoices
+                .Where(x => x.ContractId != null
+                         && contractIds.Contains(x.ContractId.Value)
+                         && x.IssuerCompanyId != null)
+                .GroupBy(x => x.ContractId.Value)
+                .Select(g => new { ContractId = g.Key, Total = g.Sum(x => (decimal?)x.Price) ?? 0m })
+                .ToDictionaryAsync(x => x.ContractId, x => x.Total, ct);
+
+            foreach (var item in items)
+            {
+                if (!item.ContractId.HasValue) continue;
+                var cid = item.ContractId.Value;
+                item.ContractName = contractNames.TryGetValue(cid, out var name) ? name : null;
+                item.ContractTotalAmount = contractTotals.TryGetValue(cid, out var total) ? total : (decimal?)null;
+                if (contractInvoicedAll.TryGetValue(cid, out var invoicedAll))
+                    item.ContractInvoicedBefore = invoicedAll - item.TotalAmountInclVat;
+            }
+        }
+
+        private static IReadOnlyList<string> BuildWarningChips(long reasonFlags, DateOnly? dueDate, bool hasWarnings)
+        {
+            var chips = new List<string>();
+            var flags = (BOCore.InvoiceReasonFlags)reasonFlags;
+
+            if ((flags & BOCore.InvoiceReasonFlags.DuplicateSuspected) != 0)
+                chips.Add("Mogelijk duplicaat");
+            if ((flags & BOCore.InvoiceReasonFlags.BtwnumberMismatch) != 0)
+                chips.Add("BTW afwijking");
+            if ((flags & BOCore.InvoiceReasonFlags.AmountMismatch) != 0)
+                chips.Add("Bedrag afwijkt");
+            if ((flags & BOCore.InvoiceReasonFlags.MissingInvoiceNumber) != 0)
+                chips.Add("Geen factuurnr.");
+            if ((flags & BOCore.InvoiceReasonFlags.ContractInactive) != 0)
+                chips.Add("Contract inactief");
+            if ((flags & BOCore.InvoiceReasonFlags.InvoiceDateOutsideProjectPeriod) != 0)
+                chips.Add("Datum buiten project");
+            if ((flags & BOCore.InvoiceReasonFlags.ProjectUncertain) != 0)
+                chips.Add("Project onzeker");
+
+            if (dueDate.HasValue)
+            {
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var daysLeft = dueDate.Value.DayNumber - today.DayNumber;
+                if (daysLeft < 0)
+                    chips.Add("Vervallen");
+                else if (daysLeft <= 7)
+                    chips.Add($"Vervalt over {daysLeft}d");
+            }
+
+            return chips;
         }
 
         private static InvoiceEnrichmentVm MapEnrichmentToVm(
@@ -398,6 +621,9 @@ namespace ServiceCore.IncomingInvoices
             OctopusBookedAt = entity.OctopusBookedAt,
             OctopusBookedBy = entity.OctopusBookedBy,
             OctopusBookingStatus = entity.OctopusBookingStatus,
+            CostContextType = entity.CostContextType ?? BOCore.CostContextType.Unknown,
+            AssignedToUserId = entity.AssignedToUserId,
+            AssignedToName = entity.AssignedToName,
             CreatedAt = entity.CreatedAt ?? DateTime.UtcNow,
             UpdatedAt = entity.UpdatedAt ?? DateTime.UtcNow,
             Attachments = entity.IncomingInvoiceAttachments.Select(a => new IncomingInvoiceAttachmentVm

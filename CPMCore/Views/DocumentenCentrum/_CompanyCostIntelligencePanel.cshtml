@@ -1,0 +1,62 @@
+@model FacadeCore.IncomingInvoiceDetailVm
+@{
+    string deviationClass = "text-muted";
+    string deviationText = null;
+    if (Model.InvoiceDeviationPercent.HasValue)
+    {
+        var dev = Model.InvoiceDeviationPercent.Value;
+        deviationClass = Math.Abs(dev) > 25 ? "text-danger" : Math.Abs(dev) > 10 ? "text-warning" : "text-success";
+        var sign = dev > 0 ? "+" : "";
+        deviationText = $"{sign}{dev:N1}% t.o.v. gemiddelde factuur";
+    }
+}
+
+<div class="card mb-3 dc-intel-card @(Model.InvoiceDeviationPercent.HasValue && Math.Abs(Model.InvoiceDeviationPercent.Value) > 25 ? "intel-warning" : "")">
+    <div class="card-body py-2 px-3">
+        <div class="dc-intel-title"><i class="bx bx-trending-up me-1"></i>Bedrijfskost analyse</div>
+
+        @if (Model.AverageInvoiceAmountSupplier.HasValue)
+        {
+            <div class="dc-insight-row">
+                <span class="text-muted">Gemiddelde factuur leverancier</span>
+                <span class="fw-semibold">€ @Model.AverageInvoiceAmountSupplier.Value.ToString("N2")</span>
+            </div>
+            <div class="dc-insight-row">
+                <span class="text-muted">Deze factuur</span>
+                <span class="fw-semibold">€ @Model.TotalAmountInclVat.ToString("N2")</span>
+            </div>
+            @if (!string.IsNullOrEmpty(deviationText))
+            {
+                <div class="dc-insight-row">
+                    <span class="text-muted">Afwijking</span>
+                    <span class="fw-semibold @deviationClass">@deviationText</span>
+                </div>
+            }
+        }
+
+        @if (Model.PreviousGeneralInvoicesSupplier > 0)
+        {
+            <div class="dc-insight-row">
+                <span class="text-muted">Vorige facturen leverancier</span>
+                <span class="badge bg-light text-dark border">@Model.PreviousGeneralInvoicesSupplier</span>
+            </div>
+            @if (Model.PreviousGeneralInvoicesSupplier >= 3 && Model.AverageInvoiceAmountSupplier.HasValue)
+            {
+                <div class="small mt-1" style="color:#065f46;">
+                    <i class="bx bx-refresh me-1"></i>Recurrente leverancier — @Model.PreviousGeneralInvoicesSupplier facturen in systeem
+                </div>
+            }
+        }
+        else
+        {
+            <div class="small text-muted mt-1">
+                <i class="bx bx-user-plus me-1"></i>Eerste factuur van deze leverancier in het systeem
+            </div>
+        }
+
+        @if (!Model.AverageInvoiceAmountSupplier.HasValue)
+        {
+            <div class="text-muted small">Geen historische data beschikbaar voor analyse.</div>
+        }
+    </div>
+</div>

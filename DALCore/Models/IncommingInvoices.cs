@@ -63,6 +63,12 @@ public partial class IncommingInvoices
 
     public string OctopusBookingStatus { get; set; }
 
+    public string CostContextType { get; set; }
+
+    public string AssignedToUserId { get; set; }
+
+    public string AssignedToName { get; set; }
+
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

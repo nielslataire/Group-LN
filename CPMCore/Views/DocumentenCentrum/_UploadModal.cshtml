@@ -1,0 +1,86 @@
+@using DALCore.Models
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-action="Upload" asp-controller="DocumentenCentrum"
+                  enctype="multipart/form-data">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadModalLabel">
+                        <i class="bx bx-upload me-2"></i>Document uploaden
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="dc-dropzone" id="uploadDropzone">
+                                <i class="bx bx-cloud-upload dc-dz-icon" style="font-size:2rem;color:#9ca3af;"></i>
+                                <p class="dc-dz-label mb-0 mt-1 small text-muted">
+                                    Sleep een PDF hier of klik om te kiezen
+                                </p>
+                                <small id="uploadFileName" class="text-primary fw-semibold mt-1 d-block"></small>
+                            </div>
+                            <input type="file" id="uploadFileInput" name="file"
+                                   accept=".pdf,.xml,.jpg,.jpeg,.png" class="d-none" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label form-label-sm fw-semibold">Facturatiebedrijf <span class="text-danger">*</span></label>
+                            <select name="issuerCompanyId" class="form-select form-select-sm" required
+                                    asp-items="ViewBag.IssuerCompanies">
+                                <option value="">— Kies bedrijf —</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label form-label-sm fw-semibold">Type document</label>
+                            <select name="documentType" class="form-select form-select-sm">
+                                <option value="Invoice">Factuur</option>
+                                <option value="CreditNote">Creditnota</option>
+                                <option value="Other">Overige</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label form-label-sm fw-semibold">Leverancier</label>
+                            <input type="text" name="supplierName" class="form-control form-control-sm"
+                                   placeholder="Naam leverancier..." />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label form-label-sm fw-semibold">BTW-nummer leverancier</label>
+                            <input type="text" name="supplierVatNumber" class="form-control form-control-sm"
+                                   placeholder="BE0123456789" />
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label form-label-sm fw-semibold">Factuurdatum <span class="text-danger">*</span></label>
+                            <input type="date" name="invoiceDate" class="form-control form-control-sm"
+                                   value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label form-label-sm fw-semibold">Factuurnummer</label>
+                            <input type="text" name="invoiceNumber" class="form-control form-control-sm"
+                                   placeholder="F2024-001" />
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label form-label-sm fw-semibold">Totaal incl. BTW <span class="text-danger">*</span></label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">€</span>
+                                <input type="number" name="totalAmountInclVat" step="0.01" min="0"
+                                       class="form-control form-control-sm" required placeholder="0,00" />
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label form-label-sm fw-semibold">Notitie</label>
+                            <textarea name="notes" rows="2" class="form-control form-control-sm"
+                                      placeholder="Optionele opmerking..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuleren</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bx bx-upload me-1"></i>Document uploaden
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

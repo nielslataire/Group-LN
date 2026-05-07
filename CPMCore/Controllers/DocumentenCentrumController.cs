@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using SmartBreadcrumbs.Attributes;
 using System;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,6 +39,20 @@ namespace CPMCore.Controllers
             _db = db;
         }
 
+        private async Task LoadAssignableUsersAsync(CancellationToken ct)
+        {
+            var users = await _db.Users
+                .Where(u => u.IsActive)
+                .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
+                .Select(u => new SelectListItem
+                {
+                    Value = u.UserId,
+                    Text = u.Voornaam + " " + u.Familienaam
+                })
+                .ToListAsync(ct);
+            ViewBag.AssignableUsers = users;
+        }
+
         // ─── Index ────────────────────────────────────────────────────────────────
 
         [Breadcrumb("Documentencentrum", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
@@ -51,6 +66,8 @@ namespace CPMCore.Controllers
             bool? hasWarnings,
             DateOnly? dateFrom,
             DateOnly? dateTo,
+            string costContextType,
+            bool? assignedToMe,
             int page = 1,
             CancellationToken ct = default)
         {
@@ -60,6 +77,15 @@ namespace CPMCore.Controllers
             {
                 return Forbid();
             }
+
+            // ── Huidige gebruiker opzoeken voor "Mijn taken" filter ────────────────
+            var loginEmail = User.FindFirstValue(ClaimTypes.Email);
+            string loggedInUserId = null;
+            if (!string.IsNullOrWhiteSpace(loginEmail))
+                loggedInUserId = await _db.Users
+                    .Where(u => u.Email == loginEmail && u.IsActive)
+                    .Select(u => u.UserId)
+                    .FirstOrDefaultAsync(ct);
 
             var issuerCompanies = (await _issuerCompanyService.GetAllAsync())
                 .OrderBy(i => i.Name)
@@ -76,6 +102,8 @@ namespace CPMCore.Controllers
                 HasWarnings = hasWarnings,
                 DateFrom = dateFrom,
                 DateTo = dateTo,
+                CostContextType = costContextType,
+                AssignedToUserId = assignedToMe == true ? loggedInUserId : null,
                 Page = page,
                 PageSize = 50
             };
@@ -94,6 +122,12 @@ namespace CPMCore.Controllers
             ViewBag.CountPending      = await baseQuery.CountAsync(i => i.StatusId == IncomingInvoiceStatus.PendingApproval, ct);
             ViewBag.CountApproved     = await baseQuery.CountAsync(i => i.StatusId == IncomingInvoiceStatus.Approved
                                                                       && i.UpdatedAt >= firstOfMonth, ct);
+            ViewBag.CountMine         = !string.IsNullOrWhiteSpace(loggedInUserId)
+                                          ? await baseQuery.CountAsync(i => i.AssignedToUserId == loggedInUserId, ct)
+                                          : 0;
+            ViewBag.CountBudgetImpact = await baseQuery.CountAsync(
+                                          i => i.ProjectId != null && i.StatusId == IncomingInvoiceStatus.New, ct);
+            ViewBag.AssignedToMe      = assignedToMe == true;
 
             // ── Projecten voor filter-dropdown ─────────────────────────────────────
             var projectQuery = _db.Project
@@ -109,8 +143,10 @@ namespace CPMCore.Controllers
             ViewBag.IssuerCompanies      = new SelectList(issuerCompanies, "Id", "Name", issuerCompanyId);
             ViewBag.StatusOptions        = BuildStatusSelectList(statusId);
             ViewBag.DocumentTypeOptions  = BuildDocumentTypeSelectList(documentType);
+            ViewBag.CostContextOptions   = BuildCostContextSelectList(null);
             ViewBag.Filter               = filter;
             ViewBag.SelectedIssuerCompanyId = issuerCompanyId;
+            await LoadAssignableUsersAsync(ct);
 
             return View(result);
         }
@@ -142,7 +178,6 @@ namespace CPMCore.Controllers
                 .Select(p => new SelectListItem { Value = p.ProjectId.ToString(), Text = p.ProjectName })
                 .ToListAsync(ct);
 
-            // Laad contracten voor het gekoppelde project (of het voorgestelde project)
             var resolvedProjectId = vm.ProjectId
                 ?? vm.Enrichment?.SuggestedProject?.ProjectId
                 ?? vm.Enrichment?.UserConfirmedProjectId;
@@ -159,6 +194,9 @@ namespace CPMCore.Controllers
             {
                 ViewBag.Contracts = new System.Collections.Generic.List<SelectListItem>();
             }
+
+            ViewBag.CostContextOptions = BuildCostContextSelectList(vm.CostContextType);
+            await LoadAssignableUsersAsync(ct);
 
             return View(vm);
         }
@@ -520,6 +558,204 @@ namespace CPMCore.Controllers
             return File(attachment.Content, contentType);
         }
 
+        // ─── Bulk Goedkeuren ─────────────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkApprove(
+            [FromForm] string ids,
+            string notes,
+            CancellationToken ct = default)
+        {
+            await _permissionService.EnsureLoadedAsync();
+            if (!_permissionService.HasWrite(PermissionCodes.DocumentCenter))
+                return Forbid();
+
+            var parsedIds = ParseIds(ids);
+            if (parsedIds.Count == 0)
+            {
+                AddMessage("warning", "Geen documenten geselecteerd.", "Bulk goedkeuren");
+                return RedirectToAction(nameof(Index));
+            }
+
+            var result = await _incomingInvoiceService.BulkUpdateStatusAsync(new BulkActionRequest
+            {
+                Ids = parsedIds,
+                StatusId = IncomingInvoiceStatus.Approved,
+                Notes = notes
+            }, ct);
+
+            AddMessage("success",
+                $"{result.SuccessCount} document(en) goedgekeurd." +
+                (result.ErrorCount > 0 ? $" {result.ErrorCount} mislukt." : ""),
+                "Bulk goedkeuren");
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ─── Bulk Afwijzen ────────────────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkReject(
+            [FromForm] string ids,
+            string notes,
+            CancellationToken ct = default)
+        {
+            await _permissionService.EnsureLoadedAsync();
+            if (!_permissionService.HasWrite(PermissionCodes.DocumentCenter))
+                return Forbid();
+
+            var parsedIds = ParseIds(ids);
+            if (parsedIds.Count == 0)
+            {
+                AddMessage("warning", "Geen documenten geselecteerd.", "Bulk afwijzen");
+                return RedirectToAction(nameof(Index));
+            }
+
+            var result = await _incomingInvoiceService.BulkUpdateStatusAsync(new BulkActionRequest
+            {
+                Ids = parsedIds,
+                StatusId = IncomingInvoiceStatus.Rejected,
+                Notes = notes
+            }, ct);
+
+            AddMessage("success",
+                $"{result.SuccessCount} document(en) afgekeurd." +
+                (result.ErrorCount > 0 ? $" {result.ErrorCount} mislukt." : ""),
+                "Bulk afwijzen");
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // ─── Toewijzen ────────────────────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Assign(
+            int incomingInvoiceId,
+            string userId,
+            string userName,
+            CancellationToken ct = default)
+        {
+            await _permissionService.EnsureLoadedAsync();
+            if (!_permissionService.HasWrite(PermissionCodes.DocumentCenter))
+                return Forbid();
+
+            try
+            {
+                await _incomingInvoiceService.AssignToUserAsync(new AssignToUserRequest
+                {
+                    IncomingInvoiceId = incomingInvoiceId,
+                    UserId = userId,
+                    UserName = userName
+                }, ct);
+
+                AddMessage("success", $"Document toegewezen aan {userName}.", "Toewijzen");
+            }
+            catch (Exception ex)
+            {
+                AddMessage("danger", ex.Message, "Fout");
+            }
+
+            return RedirectToAction(nameof(Detail), new { id = incomingInvoiceId });
+        }
+
+        // ─── Kostcontext instellen ────────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SetCostContext(
+            int incomingInvoiceId,
+            string costContextType,
+            CancellationToken ct = default)
+        {
+            await _permissionService.EnsureLoadedAsync();
+            if (!_permissionService.HasWrite(PermissionCodes.DocumentCenter))
+                return Forbid();
+
+            try
+            {
+                await _incomingInvoiceService.SetCostContextAsync(new SetCostContextRequest
+                {
+                    IncomingInvoiceId = incomingInvoiceId,
+                    CostContextType = costContextType
+                }, ct);
+
+                AddMessage("success", $"Kostcontext ingesteld op '{BOCore.CostContextType.Label(costContextType)}'.", "Kostcontext");
+            }
+            catch (Exception ex)
+            {
+                AddMessage("danger", ex.Message, "Fout");
+            }
+
+            return RedirectToAction(nameof(Detail), new { id = incomingInvoiceId });
+        }
+
+        // ─── Handmatige upload ────────────────────────────────────────────────────
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Upload(
+            int issuerCompanyId,
+            string supplierName,
+            string supplierVatNumber,
+            string documentType,
+            DateOnly invoiceDate,
+            string invoiceNumber,
+            decimal totalAmountInclVat,
+            string notes,
+            Microsoft.AspNetCore.Http.IFormFile file,
+            CancellationToken ct = default)
+        {
+            await _permissionService.EnsureLoadedAsync();
+            if (!_permissionService.HasWrite(PermissionCodes.DocumentCenter) &&
+                !_permissionService.HasWrite(PermissionCodes.DocumentCenterByBillingCompany))
+            {
+                return Forbid();
+            }
+
+            try
+            {
+                byte[] content = null;
+                string fileName = null;
+                string contentType = null;
+
+                if (file != null && file.Length > 0)
+                {
+                    using var ms = new System.IO.MemoryStream();
+                    await file.CopyToAsync(ms, ct);
+                    content = ms.ToArray();
+                    fileName = file.FileName;
+                    contentType = file.ContentType;
+                }
+
+                var vm = await _incomingInvoiceService.UploadManualAsync(new UploadManualRequest
+                {
+                    IssuerCompanyId = issuerCompanyId,
+                    SupplierName = supplierName,
+                    SupplierVatNumber = supplierVatNumber,
+                    DocumentType = documentType ?? "Invoice",
+                    InvoiceDate = invoiceDate,
+                    InvoiceNumber = invoiceNumber,
+                    TotalAmountInclVat = totalAmountInclVat,
+                    Notes = notes,
+                    FileName = fileName,
+                    ContentType = contentType,
+                    FileContent = content,
+                    UploadedBy = User.Identity?.Name
+                }, ct);
+
+                AddMessage("success", "Document geüpload en aangemaakt.", "Upload");
+                return RedirectToAction(nameof(Detail), new { id = vm.Id });
+            }
+            catch (Exception ex)
+            {
+                AddMessage("danger", ex.Message, "Upload mislukt");
+                return RedirectToAction(nameof(Index), new { issuerCompanyId });
+            }
+        }
+
         // ─── Helpers ──────────────────────────────────────────────────────────────
 
         private static SelectList BuildStatusSelectList(byte? selected)
@@ -551,6 +787,28 @@ namespace CPMCore.Controllers
                 new { Value = "Other", Text = "Overige" },
             };
             return new SelectList(items, "Value", "Text", selected);
+        }
+
+        private static SelectList BuildCostContextSelectList(string selected)
+        {
+            var items = new[]
+            {
+                new { Value = BOCore.CostContextType.Unknown, Text = "Onzeker" },
+                new { Value = BOCore.CostContextType.ProjectCost, Text = "Projectkost" },
+                new { Value = BOCore.CostContextType.GeneralCompanyCost, Text = "Algemene kost" },
+            };
+            return new SelectList(items, "Value", "Text", selected ?? BOCore.CostContextType.Unknown);
+        }
+
+        private static List<int> ParseIds(string ids)
+        {
+            if (string.IsNullOrWhiteSpace(ids)) return new List<int>();
+            return ids.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => int.TryParse(s.Trim(), out var v) ? (int?)v : null)
+                .Where(v => v.HasValue)
+                .Select(v => v.Value)
+                .Distinct()
+                .ToList();
         }
     }
 }
