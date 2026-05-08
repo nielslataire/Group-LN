@@ -244,7 +244,10 @@
         idx.forEach(i => {
             const $tr = $(dt.row(i).node());
             const text = ($tr.find('.js-fl-text').val() || '').trim();
-            const price = parseLocaleNumber($tr.find('.js-fl-price').val());
+            const unitPrice = parseLocaleNumber($tr.find('.js-fl-price').val());
+            const qtyRaw = parseLocaleNumber($tr.find('.js-fl-qty').val());
+            const qty = qtyRaw || 1;
+            const excl = roundCurrency(qty * unitPrice);
             let vatP;
 
             // 1) per-rij select (voorkeur)
@@ -262,9 +265,10 @@
                 vatP = parseFloat(String($('#VatTypeId option:selected').data('pct') || '0').replace(',', '.')) || 0;
             }
 
-            if (!text && price === 0) return;
-            const signedPrice = price * sign;
-            const r = section.pushRow(text, 1, signedPrice, signedPrice, vatP);
+            if (!text && unitPrice === 0) return;
+            const signedExcl = excl * sign;
+            const signedUnit = unitPrice * sign;
+            const r = section.pushRow(text, qty, signedUnit, signedExcl, vatP);
             sub = addCurrency(sub, r.excl); vat = addCurrency(vat, r.vatAmt); tot = addCurrency(tot, r.tot); had = true;
         });
 

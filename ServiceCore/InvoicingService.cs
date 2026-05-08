@@ -127,9 +127,11 @@ namespace ServiceCore
                 from bal in _db.VwInvoiceBalance
                              .AsNoTracking()
                              .Where(v => v.Id == i.Id)
-                             .DefaultIfEmpty()                   // <-- levert NULL als er geen row is
-                                                                 // LEFT JOIN op status lookup
-               
+                             .DefaultIfEmpty()
+                from tot in _db.VwInvoiceTotals
+                             .AsNoTracking()
+                             .Where(v => v.Id == i.Id)
+                             .DefaultIfEmpty()
                 join seriesLookup in _db.InvoiceSeries.AsNoTracking()
                 on i.SeriesId equals seriesLookup.Id into seriesJoin
                 from series in seriesJoin.DefaultIfEmpty()
@@ -143,6 +145,7 @@ namespace ServiceCore
                     StatusId = i.StatusId,
                     StatusName = null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
+                    NetTotal = (decimal?)tot.LinesNet,
                     Balance = (decimal?)bal.Balance ?? 0m,
                     IsCreditNote = series != null && series.IsCreditNote,
                     ProjectName = project != null ? project.ProjectName : null,
@@ -199,6 +202,7 @@ namespace ServiceCore
                 join p in _db.Project.AsNoTracking() on i.ProjectId equals p.ProjectId into pj
                 from project in pj.DefaultIfEmpty()
                 from bal in _db.VwInvoiceBalance.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
+                from tot in _db.VwInvoiceTotals.AsNoTracking().Where(v => v.Id == i.Id).DefaultIfEmpty()
                 join seriesLookup in _db.InvoiceSeries.AsNoTracking()
                     on i.SeriesId equals seriesLookup.Id into seriesJoin
                 from series in seriesJoin.DefaultIfEmpty()
@@ -214,6 +218,7 @@ namespace ServiceCore
                     IsCreditNote = series != null && series.IsCreditNote,
                     ProjectName = project != null ? project.ProjectName : null,
                     GrossTotal = (decimal?)bal.GrossTotal ?? 0m,
+                    NetTotal = (decimal?)tot.LinesNet,
                     Balance = (decimal?)bal.Balance ?? 0m,
                     OctopusDeliveryState = i.OctopusDeliveryState,
                     OctopusBookyearId = i.OctopusBookyearId,

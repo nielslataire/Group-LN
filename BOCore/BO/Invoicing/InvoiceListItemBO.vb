@@ -6,6 +6,7 @@
     Public Property StatusId As Integer?
     Public Property StatusName As String
     Public Property GrossTotal As Decimal?
+    Public Property NetTotal As Decimal?
     Public Property Paid As Decimal
     Public Property Balance As Decimal?
     Public Property IsCreditNote As Boolean

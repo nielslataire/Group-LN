@@ -805,7 +805,10 @@ function prepareFreeLinesForPost($form) {
     indexes.forEach(i => {
         const $tr = $(dt.row(i).node());
         const text = ($tr.find('.js-fl-text').val() || '').trim();
-        const priceVal = parseLocaleNumber($tr.find('.js-fl-price').val());
+        const unitPriceVal = parseLocaleNumber($tr.find('.js-fl-price').val());
+        const qtyRaw = parseLocaleNumber($tr.find('.js-fl-qty').val());
+        const qty = qtyRaw || 1;
+        const priceVal = Math.round((qty * unitPriceVal) * 100) / 100;
 
         const $globalOpt = $('#VatTypeId option:selected');
         const globalVatTypeId = $('#VatTypeId').val();
@@ -845,11 +848,13 @@ function prepareFreeLinesForPost($form) {
             vatCode = globalVatCode || codeFromText;
         }
 
-        if (!text && priceVal === 0) return;
+        if (!text && unitPriceVal === 0) return;
 
         const base = `Lines[${postIndex}]`;
         addIndexMarker(postIndex);
         addHidden(base, 'Text', text);
+        addHidden(base, 'Quantity', formatDecimal(qty));
+        addHidden(base, 'UnitPrice', formatDecimal(unitPriceVal));
         addHidden(base, 'Price', formatDecimal(priceVal));
         addHidden(base, 'VatPercentage', formatDecimal(isNaN(vatPct) ? 0 : vatPct));
         if (vatTypeId != null && vatTypeId !== '') addHidden(base, 'VatTypeId', vatTypeId);

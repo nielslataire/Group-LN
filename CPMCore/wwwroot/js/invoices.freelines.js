@@ -6,7 +6,7 @@
         ordering: true, order: [[1, 'asc']],
         rowReorder: { selector: 'td.gl-reorder-handle', dataSrc: 1 },
         columnDefs: [
-            { targets: [0, 2, 3, 4, 5], orderable: false },
+            { targets: [0, 2, 3, 4, 5, 6], orderable: false },
             { targets: 1, visible: false, searchable: false }
         ],
         autoWidth: false,
@@ -183,9 +183,11 @@
         if (!Array.isArray(rows)) return;
         dt.clear();
         rows.forEach((row, idx) => {
+            const unitPrice = row.unitPrice != null ? row.unitPrice : row.price;
             const node = cloneRow({
                 Text: row.text,
-                Price: row.price != null ? nf.format(row.price) : '',
+                Quantity: row.quantity != null ? nf.format(row.quantity) : '',
+                Price: unitPrice != null ? nf.format(unitPrice) : '',
                 VatTypeId: row.vatTypeId,
                 VatPercentage: row.vatPercentage,
                 VatCode: row.vatCode
@@ -278,6 +280,21 @@
         });
 
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+    });
+
+    // Aantal formatten wanneer gebruiker klaar is
+    $tbl.on('blur change', 'tbody .js-fl-qty', function () {
+        formatPriceInput($(this));
+        if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
+        notifyStateChange();
+    });
+    $tbl.on('input', 'tbody .js-fl-qty', function () {
+        let v = $(this).val();
+        v = v.replace(/[^\d.,]/g, '');
+        const parts = v.split(',');
+        if (parts.length > 2) v = parts.shift() + ',' + parts.join('');
+        $(this).val(v);
+        notifyStateChange();
     });
 
     // Bedrag formatten wanneer gebruiker klaar is

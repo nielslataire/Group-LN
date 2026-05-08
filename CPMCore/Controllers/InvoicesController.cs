@@ -171,6 +171,7 @@ namespace CPMCore.Controllers
                     InvoiceDate = x.InvoiceDate,
                     Status = TranslateStatus(x.StatusId, x.StatusName),
                     GrossTotal = x.GrossTotal,
+                    NetTotal = x.NetTotal,
                     Balance = x.Balance,
                     InvoiceNumber = parts.Number,
                     InvoiceMonth = parts.Month,
@@ -1601,6 +1602,8 @@ namespace CPMCore.Controllers
                 {
                     Text = l.Text,
                     Price = l.Price,
+                    Quantity = l.Quantity > 0 ? l.Quantity : 1m,
+                    UnitPrice = l.UnitPrice != 0 ? l.UnitPrice : (decimal?)null,
                     VatPercentage = l.VatPercentage,
                     VatTypeId = l.VatTypeId ?? vm.VatTypeId,
                     VatCode = l.VatCode,
@@ -2255,6 +2258,8 @@ namespace CPMCore.Controllers
                 {
                     text = line.Text,
                     price = line.Price,
+                    quantity = line.Quantity,
+                    unitPrice = line.UnitPrice,
                     vatPercentage = line.VatPercentage,
                     vatTypeId = matchedVatType?.Id ?? line.VatTypeId,
                     vatCode = line.VatCode ?? matchedVatType?.Code,

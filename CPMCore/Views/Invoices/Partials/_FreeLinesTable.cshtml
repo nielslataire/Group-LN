@@ -15,7 +15,8 @@
                         <th class="gl-col-drag"></th>   <!-- drag handle -->
                         <th>Volgorde</th>               <!-- WORDT VERBORGEN via DataTables -->
                         <th>Omschrijving</th>
-                        <th class="text-end gl-col-140">Bedrag</th>
+                        <th class="text-end gl-col-80">Aantal</th>
+                        <th class="text-end gl-col-140">Eenheidsprijs</th>
                         <th class="text-end gl-col-140">BTW&nbsp;%</th>
                         <th class="text-end gl-col-sm">Acties</th>
                     </tr>
@@ -38,6 +39,7 @@
         <td class="gl-reorder-handle" title="Sleep om te verplaatsen"><i class="fas fa-grip-vertical"></i></td>
         <td></td>
         <td><input class="form-control form-control-sm js-fl-text" data-col="Text" maxlength="200" /></td>
+        <td class="text-end"><input class="form-control form-control-sm text-end js-fl-qty" data-col="Quantity" type="text" placeholder="1" /></td>
         <td class="text-end"><input class="form-control form-control-sm text-end js-fl-price" data-col="Price" type="text" /></td>
         <td class="text-end">
             <select class="form-select form-select-sm js-fl-vat-select" data-col="VatPercentage">

@@ -9,6 +9,7 @@ namespace CPMCore.Models.Invoicing
         public DateOnly InvoiceDate { get; set; }
         public InvoiceStatus Status { get; set; } = InvoiceStatus.Unknown;
         public decimal? GrossTotal { get; set; }
+        public decimal? NetTotal { get; set; }
         public decimal? Balance { get; set; }
         public int? InvoiceNumber { get; set; }
         public int? InvoiceMonth { get; set; }

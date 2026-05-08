@@ -5,6 +5,7 @@
         public bool IsSelected { get; set; }
         public string Text { get; set; } = "";
         public decimal Number { get; set; }
+        public decimal Quantity { get; set; } = 1m;
         public decimal UnitPrice { get; set; }
         public decimal Price { get; set; }
         public decimal VatPercentage { get; set; }

@@ -119,6 +119,7 @@
                             <th class="gl-col-fit">Datum</th>
                             <th class="gl-col-grow">Klant</th>
                             <th class="gl-col-fit text-end">Totaal</th>
+                            <th class="gl-col-fit text-end">Excl.&nbsp;BTW</th>
                             <th class="gl-col-fit">Status</th>
                             <th class="gl-col-fit">Project</th>
                             <th class="gl-col-fit">Verzendwijze</th>
@@ -169,6 +170,10 @@
 
                             <td class="gl-col-fit text-end text-nowrap">
                                 @(r.GrossTotal.HasValue ? r.GrossTotal.Value.ToString("C", culture) : "-")
+                            </td>
+
+                            <td class="gl-col-fit text-end text-nowrap">
+                                @(r.NetTotal.HasValue ? r.NetTotal.Value.ToString("C", culture) : "-")
                             </td>
 
                             <td class="gl-col-fit gl-status-col" data-order="@r.StatusLabel">
@@ -597,14 +602,14 @@ else
 
             columnDefs: [
               // acties: niet sorteerbaar/zoekbaar
-              { targets: 9, orderable: false, searchable: false, width: "1%" },
-              { targets: 10, visible: false },
+              { targets: 10, orderable: false, searchable: false, width: “1%” },
+              { targets: 11, visible: false },
 
               // “fit” kolommen: forceer minimale breedte
-              { targets: [0,1,2,4,5,6,7,8,9], width: "1%" },
+              { targets: [0,1,2,4,5,6,7,8,9,10], width: “1%” },
 
               // klant = grow (rest)
-              { targets: 4, width: "100%" }
+              { targets: 4, width: “100%” }
             ]
           });
           table.on('draw', applyBookingRules);
@@ -632,7 +637,7 @@ else
           });
 
         const bookyearSelect = $('#bookyear-filter-select');
-              const bookyearColumnIndex = 10;
+              const bookyearColumnIndex = 11;
               const defaultBookyear = '@defaultBookYear';
 
               function applyBookyearFilter(value) {
