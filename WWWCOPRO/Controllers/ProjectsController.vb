@@ -258,7 +258,7 @@ Namespace Controllers
                     ' SMTP
                     Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
                     smtp.EnableSsl = True
-                    smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+                    smtp.Credentials = New Net.NetworkCredential(WebConfigurationManager.AppSettings("SmtpUser"), WebConfigurationManager.AppSettings("SmtpPassword"))
 
                     smtp.Send(msg)
                     externalMailStatus = "Verzonden"
@@ -299,7 +299,7 @@ Namespace Controllers
 
                     Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
                     smtp2.EnableSsl = True
-                    smtp2.Credentials = New NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+                    smtp2.Credentials = New NetworkCredential(WebConfigurationManager.AppSettings("SmtpUser"), WebConfigurationManager.AppSettings("SmtpPassword"))
 
                     smtp2.Send(msg2)
                     internalMailStatus = "Verzonden"
@@ -428,7 +428,7 @@ Namespace Controllers
                     ' SMTP
                     Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
                     smtp.EnableSsl = True
-                    smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+                    smtp.Credentials = New Net.NetworkCredential(WebConfigurationManager.AppSettings("SmtpUser"), WebConfigurationManager.AppSettings("SmtpPassword"))
 
                     smtp.Send(msg)
                     externalMailStatus = "Verzonden"
@@ -469,7 +469,7 @@ Namespace Controllers
 
                     Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
                     smtp2.EnableSsl = True
-                    smtp2.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+                    smtp2.Credentials = New Net.NetworkCredential(WebConfigurationManager.AppSettings("SmtpUser"), WebConfigurationManager.AppSettings("SmtpPassword"))
 
                     smtp2.Send(msg2)
                     internalMailStatus = "Verzonden"
@@ -744,7 +744,7 @@ Namespace Controllers
                     ' SMTP
                     Dim smtp As New Net.Mail.SmtpClient("smtp.office365.com", 587)
                     smtp.EnableSsl = True
-                    smtp.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+                    smtp.Credentials = New Net.NetworkCredential(WebConfigurationManager.AppSettings("SmtpUser"), WebConfigurationManager.AppSettings("SmtpPassword"))
 
                     smtp.Send(msg)
                     externalMailStatus = "Verzonden"
@@ -785,7 +785,7 @@ Namespace Controllers
 
                     Dim smtp2 As New Net.Mail.SmtpClient("smtp.office365.com", 587)
                     smtp2.EnableSsl = True
-                    smtp2.Credentials = New Net.NetworkCredential("niels.lataire@groupln.be", "840683P@s")
+                    smtp2.Credentials = New Net.NetworkCredential(WebConfigurationManager.AppSettings("SmtpUser"), WebConfigurationManager.AppSettings("SmtpPassword"))
 
                     smtp2.Send(msg2)
                     internalMailStatus = "Verzonden"
