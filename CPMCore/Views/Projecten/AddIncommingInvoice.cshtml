@@ -27,7 +27,7 @@
 
 <h2 class="font-weight-bold text-6">Factuur toevoegen</h2>
 
-@using (Html.BeginForm("IncommingInvoiceAdd", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", @action = "#" }))
+@using (Html.BeginForm("AddIncommingInvoice", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed" }))
 {
 	@Html.HiddenFor(m => m.ProjectId, new { id = "projectid" })
 	@Html.HiddenFor(m => m.Type, new { id = "type" })

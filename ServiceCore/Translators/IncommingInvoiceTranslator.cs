@@ -50,6 +50,8 @@ namespace ServiceCore.Translators
             _entity.Date = bo.IncommingInvoiceDate;
             _entity.ExternalId = bo.InvoiceExternalId;
             _entity.Price = bo.InvoicePrice;
+            if (string.IsNullOrEmpty(_entity.CostContextType))
+                _entity.CostContextType = "Unknown";
 
             var err = HandleRows(_entity, bo.Details);
             if ((err != ErrorCode.Success))

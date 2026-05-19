@@ -1749,6 +1749,10 @@ div.validation-message ul {
 	background: #FFEFEF;
 }
 
+div.validation-message.gl-validation-active ul {
+	display: block;
+}
+
 div.validation-message ul label.error {
 	display: block;
 	padding-left: 22px;
