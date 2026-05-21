@@ -172,7 +172,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 ? new List<string> { replyTo }
                 : new List<string>();
 
-            // 7. PDF for this project (WaitingInspection excluded)
+            // 7. PDF rapport entity (WaitingInspection excluded) — no longer attached, served via portal download link
             var attachments      = new List<(string FileName, byte[] Content)>();
             var reportIdsByIssue = new Dictionary<int, int>();
 
@@ -181,6 +181,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 .Select(x => x.Id)
                 .ToList();
 
+            string? pdfDownloadUrl = null;
             if (pdfIssueIds.Count > 0)
             {
                 var report = await _reportService.CreateReportEntity(
@@ -192,11 +193,12 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                     pdfIssueIds,
                     null);
 
-                var pdfBytes = await _reportService.GenerateReportPdf(group.Key.ProjectId, report.Id);
-                attachments.Add(($"Werfpunten_{SanitizeFileName(projectName)}_{sentDate:yyyyMMdd}.pdf", pdfBytes));
-
                 foreach (var id in pdfIssueIds)
                     reportIdsByIssue[id] = report.Id;
+
+                var portalBase = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
+                if (!string.IsNullOrWhiteSpace(portalBase))
+                    pdfDownloadUrl = $"{portalBase}/Werfportaal/Rapport/{report.Id}";
             }
 
             // 8. Subject + HTML
@@ -204,12 +206,13 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 ? $"Update werfpunten van vandaag – {projectName} – {sentDate:dd/MM/yyyy}"
                 : $"Herinnering openstaande werfpunten – {projectName} – {sentDate:dd/MM/yyyy}";
 
-            var intro = eveningOnly
+            // null → builder generates the standard herinnering intro from projectName
+            string? intro = eveningOnly
                 ? "Hieronder vindt u de werfpunten die <strong>vandaag</strong> werden aangemaakt of gewijzigd."
-                : "Hieronder vindt u een overzicht van uw <strong>openstaande werfpunten</strong>. Gelieve deze zo snel mogelijk te behandelen.";
+                : null;
 
             var portalBaseUrl = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
-            var portalLoginUrl = string.IsNullOrWhiteSpace(portalBaseUrl) ? null : $"{portalBaseUrl}/Portaal";
+            var portalLoginUrl = string.IsNullOrWhiteSpace(portalBaseUrl) ? null : $"{portalBaseUrl}/Werfportaal";
 
             var html = IssueEmailHtmlBuilder.BuildIssueTableEmail(
                 recipientName,
@@ -218,9 +221,11 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 unitNames,
                 intro,
                 sentDate,
-                portalLoginUrl: portalLoginUrl);
+                portalLoginUrl: portalLoginUrl,
+                pdfDownloadUrl: pdfDownloadUrl,
+                werfleiderEmail: replyTo);
 
-            // 9. Send
+            // 9. Send (no PDF attachment — download link is in the email body)
             await SendAsync(recipientEmail, subject, html, attachments, ccEmails, replyTo);
             emailsSent++;
 

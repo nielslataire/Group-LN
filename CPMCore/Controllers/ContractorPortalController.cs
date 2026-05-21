@@ -17,15 +17,18 @@ public class ContractorPortalController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IConstructionIssueService _issueService;
+    private readonly IConstructionIssueReportService _reportService;
     private readonly IConfiguration _configuration;
 
     public ContractorPortalController(
         cpmRunningContext db,
         IConstructionIssueService issueService,
+        IConstructionIssueReportService reportService,
         IConfiguration configuration)
     {
         _db = db;
         _issueService = issueService;
+        _reportService = reportService;
         _configuration = configuration;
     }
 
@@ -461,6 +464,26 @@ public class ContractorPortalController : BaseController
         var storageBase = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
         var url = $"{storageBase}/pictures/{Uri.EscapeDataString(System.IO.Path.GetFileName(fileId))}";
         return Json(new { ok = true, url, fileId });
+    }
+
+    // ── PDF rapport download ─────────────────────────────────────────────────
+
+    [HttpGet("Rapport/{reportId:int}")]
+    public async Task<IActionResult> DownloadRapport(int reportId, CancellationToken ct)
+    {
+        var (companyIds, _, _, _) = await GetContractorContextAsync(ct);
+        if (!companyIds.Any()) return Forbid();
+
+        var report = await _db.ConstructionIssueReport
+            .AsNoTracking()
+            .FirstOrDefaultAsync(r => r.Id == reportId
+                && r.ResponsiblePartyId.HasValue
+                && companyIds.Contains(r.ResponsiblePartyId.Value), ct);
+
+        if (report == null) return NotFound();
+
+        var bytes = await _reportService.GenerateReportPdf(report.ProjectId, reportId);
+        return File(bytes, "application/pdf", $"Openstaande_punten_{reportId}_{DateTime.UtcNow:yyyyMMdd}.pdf");
     }
 
     // ── Plan image proxy ─────────────────────────────────────────────────────

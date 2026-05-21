@@ -596,6 +596,7 @@ public class InstellingenController : BaseController
         var db = scope.ServiceProvider.GetRequiredService<DALCore.Models.cpmRunningContext>();
         vm.AvailableUsers = db.Users
             .AsNoTracking()
+            .Where(u => u.IsActive && !u.UserCompanyAccess.Any())
             .OrderBy(u => u.Familienaam).ThenBy(u => u.Voornaam)
             .Select(u => new Microsoft.AspNetCore.Mvc.Rendering.SelectListItem
             {

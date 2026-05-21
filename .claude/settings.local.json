@@ -46,7 +46,10 @@
       "Bash(xargs grep:*)",
       "Bash(grep -r Reopened /e/TFS/BOCore --include=*.cs)",
       "Bash(grep -rn \"SendReminder\\\\|SendEveningUpdate\\\\|dailyUpdate\\\\|evening\\\\|activeStatuses\\\\|openStatuses\\\\|InProgress\\\\|InUitvoering\\\\|Gepland\\\\|status.*issue\\\\|issue.*status\" e:/TFS/ServiceCore/ --include=*.cs -l)",
-      "Bash(find /c/Users/niels/source/repos/nielslataire/Group-LN/BOCore -name \"*.cs\" -exec grep -l \"CoordinationContractType\" {} \\\\;)"
+      "Bash(find /c/Users/niels/source/repos/nielslataire/Group-LN/BOCore -name \"*.cs\" -exec grep -l \"CoordinationContractType\" {} \\\\;)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\" -Directory)",
+      "Bash(Select-Object Name)",
+      "WebFetch(domain:api.anthropic.com)"
     ]
   }
 }
