@@ -146,6 +146,7 @@
                                         <td class="gl-col-fit text-center">
                                             <div class="checkbox-custom checkbox-default">
                                                 <input type="checkbox"
+                                                       id="cbBook_@r.Id"
                                                        class="form-check-input invoice-book-checkbox"
                                                        name="invoiceIds"
                                                        value="@r.Id"
@@ -154,7 +155,7 @@
                                                        data-bookable="@(isBookable.ToString().ToLowerInvariant())"
                                                        @((!canWriteInvoices || !isBookable || isBooked) ? "disabled" : null)
                                                        @(isBooked ? "checked" : null) />
-                                                <label for="checkboxExample1"></label>
+                                                <label for="cbBook_@r.Id"></label>
                                             </div>
                                            
                                         </td>
@@ -602,14 +603,14 @@ else
 
             columnDefs: [
               // acties: niet sorteerbaar/zoekbaar
-              { targets: 10, orderable: false, searchable: false, width: “1%” },
+              { targets: 10, orderable: false, searchable: false, width: "1%" },
               { targets: 11, visible: false },
 
-              // “fit” kolommen: forceer minimale breedte
-              { targets: [0,1,2,4,5,6,7,8,9,10], width: “1%” },
+              // "fit" kolommen: forceer minimale breedte
+              { targets: [0,1,2,4,5,6,7,8,9,10], width: "1%" },
 
               // klant = grow (rest)
-              { targets: 4, width: “100%” }
+              { targets: 4, width: "100%" }
             ]
           });
           table.on('draw', applyBookingRules);
