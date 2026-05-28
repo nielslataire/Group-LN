@@ -21,7 +21,7 @@ Subject: Website Group LN - informatieaanvraag
         <p>Project : @ViewBag.Project</p>
         <p>Naam : @ViewBag.Name</p>
         <p>Voornaam : @ViewBag.Fistname</p>
-        <p>Email : @ViewBag.To</p>
+        <p>Email : @ViewBag.Email</p>
         <p>Telefoon : @ViewBag.Phone</p>
         <p>Vraag : @ViewBag.Question</p>
 
