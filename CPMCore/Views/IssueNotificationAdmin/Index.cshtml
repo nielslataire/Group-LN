@@ -13,7 +13,13 @@
         <h1 class="font-weight-bold mb-0 mt-0">Automatische puntmeldingen</h1>
         <h5 class="mb-4 mt-0">Beheer de schema's voor automatische e-mailmeldingen naar aannemers</h5>
     </div>
-    <div class="col-sm-auto px-0">
+    <div class="col-sm-auto px-0 d-flex gap-2">
+        <button type="button" id="btnTestEmail" class="btn btn-outline-secondary btn-md">
+            <i class="bx bx-envelope me-1"></i>Testmail versturen
+        </button>
+        <button type="button" id="btnTestInvite" class="btn btn-outline-secondary btn-md">
+            <i class="bx bx-user-plus me-1"></i>Test uitnodigingsmail
+        </button>
         <a asp-action="Create" class="btn btn-primary btn-md">+ Nieuw schema</a>
     </div>
 </div>
@@ -271,6 +277,56 @@
                 .fail(function () {
                     $.magnificPopup.close();
                     showPNotify('Fout', 'Onverwachte fout bij het versturen.', 'error');
+                });
+            });
+
+            // ── TEST EMAIL ────────────────────────────────────────
+            $('#btnTestEmail').on('click', function () {
+                const $btn = $(this);
+                $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Versturen…');
+
+                $.ajax({
+                    url: '@Url.Action("SendTestEmail", "IssueNotificationAdmin")',
+                    type: 'POST',
+                    data: { __RequestVerificationToken: token }
+                })
+                .done(function (result) {
+                    if (result.success) {
+                        showPNotify('Testmail verstuurd', result.message, 'success');
+                    } else {
+                        showPNotify('Fout', result.message, 'error');
+                    }
+                })
+                .fail(function () {
+                    showPNotify('Fout', 'Onverwachte fout bij het versturen van de testmail.', 'error');
+                })
+                .always(function () {
+                    $btn.prop('disabled', false).html('<i class="bx bx-envelope me-1"></i>Testmail versturen');
+                });
+            });
+
+            // ── TEST UITNODIGINGSMAIL ──────────────────────────────
+            $('#btnTestInvite').on('click', function () {
+                const $btn = $(this);
+                $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i>Versturen…');
+
+                $.ajax({
+                    url: '@Url.Action("SendTestInviteEmail", "IssueNotificationAdmin")',
+                    type: 'POST',
+                    data: { __RequestVerificationToken: token }
+                })
+                .done(function (result) {
+                    if (result.success) {
+                        showPNotify('Uitnodigingsmail verstuurd', result.message, 'success');
+                    } else {
+                        showPNotify('Fout', result.message, 'error');
+                    }
+                })
+                .fail(function () {
+                    showPNotify('Fout', 'Onverwachte fout bij het versturen van de uitnodigingsmail.', 'error');
+                })
+                .always(function () {
+                    $btn.prop('disabled', false).html('<i class="bx bx-user-plus me-1"></i>Test uitnodigingsmail');
                 });
             });
 

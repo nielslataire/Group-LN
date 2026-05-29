@@ -1,5 +1,6 @@
 using CPMCore.Service;
 using DALCore.Models;
+using FacadeCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CPMCore.Services;
@@ -56,6 +57,17 @@ public interface IContractorInviteService
         int userId,
         string appBaseUrl,
         int? invitedByUserId,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Verstuurt de Entra-gastuitnodiging opnieuw op verzoek van de aannemer zelf,
+    /// ongeacht de huidige uitnodigingsstatus.
+    /// Geeft false terug als er geen gebruiker met toegang voor dit bedrijf gevonden wordt.
+    /// </summary>
+    Task<bool> ResendInviteByEmailAsync(
+        string email,
+        int companyId,
+        string appBaseUrl,
         CancellationToken ct = default);
 }
 
@@ -237,6 +249,36 @@ public class ContractorInviteService : IContractorInviteService
             _logger.LogWarning(
                 "Automatisch uitnodigen mislukt voor gebruiker {UserId}: {Error}",
                 userId, result.ErrorMessage);
+    }
+
+    public async Task<bool> ResendInviteByEmailAsync(
+        string email,
+        int companyId,
+        string appBaseUrl,
+        CancellationToken ct = default)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Email != null && u.Email.Trim().ToLower() == normalized, ct);
+
+        if (user == null) return false;
+
+        var hasAccess = await _db.UserCompanyAccess
+            .AnyAsync(a => a.UserId == user.Id && a.CompanyId == companyId, ct);
+
+        if (!hasAccess) return false;
+
+        var result = await _guestInviteService.InviteGuestAsync(
+            user.Id, null, appBaseUrl, ct, loginPath: "/Werfportaal");
+
+        if (!result.Success)
+            _logger.LogWarning(
+                "Heruitnodigen mislukt voor {Email} (bedrijf {CompanyId}): {Error}",
+                email, companyId, result.ErrorMessage);
+
+        return result.Success;
     }
 
     private async Task<string> GenerateUniqueUsernameAsync(string base_, CancellationToken ct)

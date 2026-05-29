@@ -1,0 +1,43 @@
+@model bool?
+@{
+    Layout = null;
+    var success = Model == true;
+    var expired = Model == null;
+}
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Uitnodiging aannemersportaal</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { margin:0; padding:0; background:#f4f6f8; font-family:'Segoe UI',Helvetica,Arial,sans-serif; }
+  .card { max-width:480px; margin:80px auto; background:#fff; border-radius:10px; padding:40px 36px; box-shadow:0 2px 12px rgba(0,0,0,.08); text-align:center; }
+  .icon { font-size:48px; margin-bottom:16px; }
+  h1 { font-size:20px; font-weight:700; color:#1f2937; margin:0 0 12px; }
+  p { font-size:14px; color:#4a5566; line-height:1.6; margin:0; }
+</style>
+</head>
+<body>
+<div class="card">
+@if (success)
+{
+    <div class="icon">✅</div>
+    <h1>Uitnodiging verstuurd</h1>
+    <p>U ontvangt binnen enkele minuten een nieuwe uitnodigingsmail op uw e-mailadres.<br>Controleer ook uw spammap indien nodig.</p>
+}
+else if (expired)
+{
+    <div class="icon">⏱️</div>
+    <h1>Link verlopen of ongeldig</h1>
+    <p>Deze link is niet meer geldig. Vraag een nieuwe puntenlijst aan uw werfleider om een verse uitnodigingslink te ontvangen.</p>
+}
+else
+{
+    <div class="icon">⚠️</div>
+    <h1>Uitnodiging kon niet worden verstuurd</h1>
+    <p>Neem contact op met uw werfleider om de uitnodiging opnieuw te laten versturen.</p>
+}
+</div>
+</body>
+</html>

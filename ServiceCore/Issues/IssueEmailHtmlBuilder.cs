@@ -34,7 +34,8 @@ public static class IssueEmailHtmlBuilder
         string? optionalComment = null,
         string? portalLoginUrl = null,
         string? pdfDownloadUrl = null,
-        string? werfleiderEmail = null)
+        string? werfleiderEmail = null,
+        string? resendInviteUrl = null)
     {
         var issuesForEmail = issues
             .OrderBy(x => x.Priority == 3 ? 0 : x.Priority == 2 ? 1 : 2)
@@ -76,7 +77,7 @@ public static class IssueEmailHtmlBuilder
         // ── Respond box ───────────────────────────────────────────────────────
         sb.Append($@"
 <!-- RESPOND BOX -->
-<table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:0;margin-bottom:30px;border-radius:8px;border-collapse:separate;border:1px solid {GreenBorder};mso-table-lspace:0pt;mso-table-rspace:0pt;"">
+<table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:0;margin-bottom:30px;border-radius:8px;border-collapse:separate;border-top:1px solid {GreenBorder};border-left:1px solid {GreenBorder};border-right:1px solid {GreenBorder};border-bottom:1px solid {GreenTint};mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr>
     <td bgcolor=""{GreenTint}"" style=""background:{GreenTint};padding:18px 18px 18px;border-radius:8px;"">
       <p style=""margin:0 0 12px;font-size:11.5px;font-weight:700;color:{GreenDark};text-transform:uppercase;letter-spacing:.7px;font-family:{Font};"">Twee manieren om te reageren</p>
@@ -85,8 +86,8 @@ public static class IssueEmailHtmlBuilder
           <td width=""49%"" style=""padding-right:6px;"">
             <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-radius:6px;border-collapse:separate;border:1px solid #dbe5df;"">
               <tr>
-            <td bgcolor=""#ffffff"" height=""138"" valign=""top""
-                style=""background:#ffffff;padding:18px 18px 16px;height:138px;border:1px solid #dbe5df;"">
+            <td bgcolor=""#ffffff"" height=""150"" valign=""top""
+                style=""background:#ffffff;padding:18px 18px 16px;height:150px;border:1px solid #dbe5df;"">
                   <table cellpadding=""0"" cellspacing=""0"" style=""margin-bottom:9px;"">
                     <tr valign=""middle"">
                       <td width=""26"" height=""26"" style=""width:26px;height:26px;line-height:26px;"">{BuildNumberCircleHtml(1)}</td>
@@ -101,8 +102,8 @@ public static class IssueEmailHtmlBuilder
           <td width=""49%"" style=""padding-left:6px;"">
             <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-radius:6px;border-collapse:separate;border:1px solid #dbe5df;"">
               <tr>
-            <td bgcolor=""#ffffff"" height=""138"" valign=""top""
-                style=""background:#ffffff;padding:18px 18px 16px;height:138px;border:1px solid #dbe5df;"">
+            <td bgcolor=""#ffffff"" height=""150"" valign=""top""
+                style=""background:#ffffff;padding:18px 18px 16px;height:150px;border:1px solid #dbe5df;"">
                   <table cellpadding=""0"" cellspacing=""0"" style=""margin-bottom:9px;"">
                     <tr valign=""middle"">
                       <td width=""26"" height=""26"" style=""width:26px;height:26px;line-height:26px;"">{BuildNumberCircleHtml(2)}</td>
@@ -125,7 +126,7 @@ public static class IssueEmailHtmlBuilder
         // ── Werf block — single merged table ──────────────────────────────────
         sb.Append($@"
 <!-- WERF BLOCK -->
-<table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:0;border:1px solid {Border};border-radius:8px;border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
+<table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:0;border-top:1px solid {Green};border-left:1px solid {Border};border-right:1px solid {Border};border-bottom:1px solid {Border};border-radius:8px;border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr bgcolor=""{Green}"">
     <td colspan=""5"" bgcolor=""{Green}"" style=""background:{Green};padding:12px 18px;border-radius:8px 8px 0 0;"">
       <table width=""100%"" cellpadding=""0"" cellspacing=""0"">
@@ -223,6 +224,11 @@ public static class IssueEmailHtmlBuilder
             // "Nog niet aangemeld?" callout
             if (hasPortal)
                 AppendSpacer(sb, 22);
+
+            var resendLine = !string.IsNullOrWhiteSpace(resendInviteUrl)
+                ? $@" Bent u uw uitnodigingsmail kwijt? <a href=""{HtmlEnc(resendInviteUrl)}"" style=""color:{Green};font-weight:600;"">Klik hier om een nieuwe uitnodiging te ontvangen.</a>"
+                : "";
+
             sb.Append($@"
 <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:18px;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr>
@@ -230,7 +236,7 @@ public static class IssueEmailHtmlBuilder
       <table cellpadding=""0"" cellspacing=""0"">
         <tr valign=""top"">
           <td style=""padding-right:8px;color:{GreenAcc};font-size:16px;line-height:1;"">&#8505;</td>
-          <td style=""font-size:12px;color:{TextSoft};line-height:1.6;font-family:{Font};""><strong style=""color:{TextMain};"">Nog niet aangemeld?</strong> Volg eerst de uitnodigingslink uit de afzonderlijke registratiemail om uw account te activeren &mdash; daarna kunt u op het portaal inloggen.</td>
+          <td style=""font-size:12px;color:{TextSoft};line-height:1.6;font-family:{Font};""><strong style=""color:{TextMain};"">Nog niet aangemeld?</strong> U ontving bij de eerste puntenlijst automatisch een uitnodigingsmail om uw account te activeren.{resendLine}</td>
         </tr>
       </table>
     </td>
@@ -344,7 +350,7 @@ public static class IssueEmailHtmlBuilder
     <td align=""center"" style=""padding:28px 16px 48px;"">
 
       <!-- CARD (fixed 700px width = centered card in all email clients) -->
-      <table role=""presentation"" width=""700"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""center"" style=""width:700px;border-radius:10px;border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
+      <table role=""presentation"" width=""700"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""center"" style=""width:700px;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
 
         <!-- BRAND BAR -->
         <tr>
@@ -370,6 +376,9 @@ public static class IssueEmailHtmlBuilder
       </table><!-- /CARD -->
 
       <!-- FOOTER -->
+    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" style=""border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
+      <tr><td height=""22"" style=""height:22px;font-size:0;line-height:22px;mso-line-height-rule:exactly;"">&nbsp;</td></tr>
+    </table>
       <table role=""presentation"" width=""700"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""center"" style=""width:700px;margin-top:16px;border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
         <tr>
           <td align=""center"" style=""font-size:11px;color:{Muted};line-height:1.6;font-family:{Font};"">
@@ -414,22 +423,20 @@ public static class IssueEmailHtmlBuilder
 
         return $@"
 <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0""
-       style=""border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
+       style=""border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr>
     <td bgcolor=""{bg}""
-        height=""24""
         style=""background:{bg};
-               height:24px;
-               padding:0 12px;
+               padding:5px 12px;
                font-size:10.5px;
                font-weight:500;
                color:{color};
                font-family:{Font};
-               line-height:24px;
-               mso-line-height-rule:exactly;
+               line-height:1;
+               vertical-align:middle;
                white-space:nowrap;
                border-radius:12px;"">
-      <span style=""color:{color};font-size:9px;line-height:9px;"">&#9679;</span>&nbsp;{label}
+      <span style=""color:{color};font-size:8px;"">&#9679;</span>&nbsp;{label}
     </td>
   </tr>
 </table>";
@@ -441,19 +448,17 @@ public static class IssueEmailHtmlBuilder
 
         return $@"
 <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""right""
-       style=""border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
+       style=""border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr>
     <td bgcolor=""#2f7655""
-        height=""28""
         style=""background:#2f7655;
-               height:28px;
-               padding:0 16px;
+               padding:7px 16px;
                font-size:11px;
                font-weight:600;
                color:#ffffff;
                font-family:{Font};
-               line-height:28px;
-               mso-line-height-rule:exactly;
+               line-height:1;
+               vertical-align:middle;
                white-space:nowrap;
                border-radius:14px;"">
       {safeLabel}

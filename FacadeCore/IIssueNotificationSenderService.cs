@@ -17,4 +17,7 @@ public interface IIssueNotificationSenderService
         bool eveningOnly = false,
         int? filterSupplierId = null,
         int? filterProjectId = null);
+
+    /// <summary>Sends a sample puntenlijst email to the given address for layout testing.</summary>
+    Task SendTestEmailAsync(string toEmail);
 }

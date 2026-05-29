@@ -1,9 +1,11 @@
 using CPMCore.Helpers;
 using CPMCore.Models.ContractorInvite;
 using CPMCore.Services;
+using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using DALCore.Models;
 
 namespace CPMCore.Controllers;
@@ -15,15 +17,21 @@ public class ContractorInviteController : BaseController
     private readonly cpmRunningContext _db;
     private readonly IContractorInviteService _inviteService;
     private readonly IEntraGuestInvitationService _guestInvitationService;
+    private readonly IResendInviteUrlBuilder _resendUrlBuilder;
+    private readonly IConfiguration _configuration;
 
     public ContractorInviteController(
         cpmRunningContext db,
         IContractorInviteService inviteService,
-        IEntraGuestInvitationService guestInvitationService)
+        IEntraGuestInvitationService guestInvitationService,
+        IResendInviteUrlBuilder resendUrlBuilder,
+        IConfiguration configuration)
     {
         _db = db;
         _inviteService = inviteService;
         _guestInvitationService = guestInvitationService;
+        _resendUrlBuilder = resendUrlBuilder;
+        _configuration = configuration;
     }
 
     // ── Uitnodigingsformulier ────────────────────────────────────────────────
@@ -180,6 +188,23 @@ public class ContractorInviteController : BaseController
         await _db.SaveChangesAsync(ct);
         TempData["Message"] = "Rol bijgewerkt.";
         return RedirectToAction(nameof(Overzicht), new { companyId });
+    }
+
+    // ── Resend uitnodiging (anoniem, via link in de puntenlijst-mail) ─────────
+
+    [HttpGet("Hernieuw")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResendInvite(string e, int c, long x, string s)
+    {
+        if (string.IsNullOrWhiteSpace(e) || string.IsNullOrWhiteSpace(s))
+            return View("ResendInviteResult", (bool?)null);
+
+        if (!_resendUrlBuilder.TryValidate(e, c, x, s))
+            return View("ResendInviteResult", (bool?)null);
+
+        var appBase = (_configuration["App:BaseUrl"] ?? $"{Request.Scheme}://{Request.Host}").TrimEnd('/');
+        var success = await _inviteService.ResendInviteByEmailAsync(e, c, appBase);
+        return View("ResendInviteResult", (bool?)success);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

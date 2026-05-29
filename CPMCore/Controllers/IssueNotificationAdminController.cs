@@ -16,13 +16,22 @@ public class IssueNotificationAdminController : Controller
 {
     private readonly cpmRunningContext _db;
     private readonly IIssueNotificationSchedulerService _scheduler;
+    private readonly IIssueNotificationSenderService _sender;
+    private readonly IEntraGuestInvitationService _inviteService;
+    private readonly IConfiguration _configuration;
 
     public IssueNotificationAdminController(
         cpmRunningContext db,
-        IIssueNotificationSchedulerService scheduler)
+        IIssueNotificationSchedulerService scheduler,
+        IIssueNotificationSenderService sender,
+        IEntraGuestInvitationService inviteService,
+        IConfiguration configuration)
     {
         _db = db;
         _scheduler = scheduler;
+        _sender = sender;
+        _inviteService = inviteService;
+        _configuration = configuration;
     }
 
     // ── BREADCRUMBS ───────────────────────────────────────────────
@@ -252,6 +261,45 @@ public class IssueNotificationAdminController : Controller
         {
             await _scheduler.RunManualAsync(id, "admin-ui");
             return Json(new { success = true, message = "Batch manueel verstuurd." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // ── TEST EMAIL ────────────────────────────────────────────────
+
+    [HttpPost("TestEmail")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendTestEmail()
+    {
+        const string testRecipient = "niels.lataire@groupln.be";
+        try
+        {
+            await _sender.SendTestEmailAsync(testRecipient);
+            return Json(new { success = true, message = $"Testmail verstuurd naar {testRecipient}." });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = ex.Message });
+        }
+    }
+
+    // ── TEST UITNODIGINGSMAIL ─────────────────────────────────────
+
+    [HttpPost("TestUitnodiging")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SendTestInviteEmail()
+    {
+        const string testRecipient = "niels.lataire@groupln.be";
+        var appBaseUrl = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
+        try
+        {
+            var result = await _inviteService.SendTestInviteEmailAsync(testRecipient, appBaseUrl);
+            if (result.Success)
+                return Json(new { success = true, message = $"Test uitnodigingsmail verstuurd naar {testRecipient}." });
+            return Json(new { success = false, message = result.ErrorMessage });
         }
         catch (Exception ex)
         {

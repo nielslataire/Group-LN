@@ -15,6 +15,7 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
     private readonly IConstructionIssueReportService _reportService;
     private readonly IConfiguration _configuration;
     private readonly IPortalInviteNotifier? _portalInviteNotifier;
+    private readonly IResendInviteUrlBuilder? _resendUrlBuilder;
 
     // Statuses always included in reminder emails (regardless of planned date)
     private static readonly int[] ReminderStatuses = { 0, 3, 7 };
@@ -33,12 +34,14 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
         cpmRunningContext db,
         IConstructionIssueReportService reportService,
         IConfiguration configuration,
-        IPortalInviteNotifier? portalInviteNotifier = null)
+        IPortalInviteNotifier? portalInviteNotifier = null,
+        IResendInviteUrlBuilder? resendUrlBuilder = null)
     {
         _db = db;
         _reportService = reportService;
         _configuration = configuration;
         _portalInviteNotifier = portalInviteNotifier;
+        _resendUrlBuilder = resendUrlBuilder;
     }
 
     public async Task<int> SendNotificationsAsync(
@@ -214,6 +217,11 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             var portalBaseUrl = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
             var portalLoginUrl = string.IsNullOrWhiteSpace(portalBaseUrl) ? null : $"{portalBaseUrl}/Werfportaal";
 
+            var resendInviteUrl = _resendUrlBuilder?.Build(
+                recipientEmail,
+                group.Key.ResponsiblePartyId!.Value,
+                portalBaseUrl);
+
             var html = IssueEmailHtmlBuilder.BuildIssueTableEmail(
                 recipientName,
                 projectName,
@@ -223,7 +231,8 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
                 sentDate,
                 portalLoginUrl: portalLoginUrl,
                 pdfDownloadUrl: pdfDownloadUrl,
-                werfleiderEmail: replyTo);
+                werfleiderEmail: replyTo,
+                resendInviteUrl: resendInviteUrl);
 
             // 9. Send (no PDF attachment — download link is in the email body)
             await SendAsync(recipientEmail, subject, html, attachments, ccEmails, replyTo);
@@ -276,6 +285,35 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
 
         await _db.SaveChangesAsync();
         return emailsSent;
+    }
+
+    public async Task SendTestEmailAsync(string toEmail)
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var fakeIssues = new List<ConstructionIssue>
+        {
+            new() { Id = 1, Title = "Buitendeur type B2 niet geplaatst",       Status = 0, Priority = 3, DueDate = today.AddDays(-3),  UnitId = null, RoomOrZone = "Inkomhal" },
+            new() { Id = 2, Title = "Afwerking vloer veranda onvolledig",       Status = 0, Priority = 2, DueDate = today.AddDays(2),   UnitId = 1,    RoomOrZone = "Veranda" },
+            new() { Id = 3, Title = "Stopcontacten achterkeuken ontbreken",     Status = 7, Priority = 1, DueDate = today.AddDays(5),   UnitId = 1,    RoomOrZone = "Keuken" },
+            new() { Id = 4, Title = "Dakgoot rechts los",                       Status = 3, Priority = 1, DueDate = today.AddDays(10),  UnitId = null, RoomOrZone = null },
+            new() { Id = 5, Title = "Schilderwerk garage: vlekken zichtbaar",   Status = 0, Priority = 1, DueDate = null,               UnitId = 2,    RoomOrZone = "Garage" },
+        };
+
+        var unitNames = new Dictionary<int, string> { { 1, "Lot 3A" }, { 2, "Lot 3B" } };
+
+        var html = IssueEmailHtmlBuilder.BuildIssueTableEmail(
+            recipientName: "Testgebruiker",
+            projectName: "Residentie De Linde – TEST",
+            issues: fakeIssues,
+            unitNames: unitNames,
+            intro: null,
+            sentDate: DateTime.UtcNow,
+            portalLoginUrl: null,
+            pdfDownloadUrl: null,
+            werfleiderEmail: null);
+
+        var subject = $"[TEST] Voorbeeld puntenlijst – {DateTime.UtcNow:dd/MM/yyyy HH:mm}";
+        await SendAsync(toEmail, subject, html, new List<(string, byte[])>(), new List<string>());
     }
 
     private static string SanitizeFileName(string name)

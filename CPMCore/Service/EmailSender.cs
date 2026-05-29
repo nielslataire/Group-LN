@@ -1,4 +1,5 @@
-﻿using System;
+using FacadeCore;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,20 +9,6 @@ using System.Threading.Tasks;
 
 namespace CPMCore.Service
 {
-    public interface IEmailSender
-    {
-        Task SendEmailAsync(
-            string toEmail,
-            string subject,
-            string htmlMessage,
-            IEnumerable<EmailAttachment>? attachments = null,
-            string? cc = null,
-            string? bcc = null,
-            string? fromEmail = null);
-    }
-
-    public sealed record EmailAttachment(string FileName, byte[] Content, string ContentType);
-
     public class SmtpEmailSender : IEmailSender
     {
         private readonly string _smtpServer = "smtp.office365.com";
