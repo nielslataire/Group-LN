@@ -1,82 +1,921 @@
-﻿@using CPMCore.Controllers
-@using BOCore
+@using CPMCore.Models.Projecten
 @inject IConfiguration Configuration
-@model CPMCore.Models.Projecten.DetailPhotosModel
-@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+@model DetailPhotosModel
 @{
-	ViewData["Title"] = Model.ProjectName + " - Foto's";
-	var canWriteProjectPhotos = ViewBag.CanWriteProjectPhotos as bool? ?? false;
-}
-@section PageStyle
-{
-    <link rel="stylesheet" href="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.css" />
-    <link rel="stylesheet" href="~/lib/magnific-popup/magnific-popup.css" />
+    ViewData["Title"] = Model.ProjectName + " - Media";
+    var canWrite  = ViewBag.CanWriteProjectPhotos  as bool? ?? false;
+    var canDelete = ViewBag.CanDeleteProjectPhotos as bool? ?? false;
+    var imgBase   = ((string)ViewBag.ImageWebURL  ?? "").TrimEnd('/');
+    var vidBase   = ((string)ViewBag.VideoWebURL  ?? imgBase).TrimEnd('/');
 
+    var hoofdMedia = Model.Photos.FirstOrDefault(p => p.Type == BOCore.PictureType.Hoofdfoto);
+    var allPhotos  = Model.Photos.Where(p => p.Type != BOCore.PictureType.Nieuws).ToList();
+    var totalPhotos = allPhotos.Count(p => p.MediaType == 0);
+    var totalVideos = allPhotos.Count(p => p.MediaType == 1);
 }
-@Html.HiddenFor(m => m.ProjectId)
+@section PageStyle {
+    <style>
+        :root {
+            --mg-green:      #0a5a3b;
+            --mg-green-dark: #083d28;
+            --mg-green-tint: #f3f8f5;
+            --mg-border:     #e3e7ee;
+            --mg-muted:      #8892a4;
+            --mg-text:       #1f2937;
+        }
+
+        /* ── Page layout ───────────────────────────────── */
+        .media-manager { padding: 0 0 120px; }
+
+        /* ── Header card ───────────────────────────────── */
+        .mm-header-card {
+            border: 1px solid var(--mg-border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .mm-hero-thumb {
+            background: #1e2a22;
+            position: relative;
+            min-height: 260px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .mm-hero-thumb img, .mm-hero-thumb video {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            position: absolute; inset: 0;
+        }
+        .mm-hero-badge {
+            position: absolute; top: 12px; left: 12px;
+            background: #d97706; color: #fff;
+            font-size: 10px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .6px;
+            padding: 4px 10px; border-radius: 4px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .mm-hero-placeholder {
+            color: rgba(255,255,255,.35);
+            font-size: 13px; font-weight: 600;
+            letter-spacing: .5px; text-transform: uppercase;
+        }
+        .mm-hero-preview-btn {
+            position: absolute; bottom: 12px; right: 12px;
+            background: rgba(255,255,255,.9); border: none;
+            border-radius: 6px; padding: 6px 14px;
+            font-size: 12px; font-weight: 600; color: var(--mg-text);
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+            text-decoration: none;
+        }
+        .mm-detail-panel { padding: 24px 28px; }
+        .mm-section-label {
+            font-size: 10px; font-weight: 700; color: var(--mg-green);
+            text-transform: uppercase; letter-spacing: .7px;
+            display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+        }
+        .mm-section-label i { font-size: 14px; }
+        .mm-detail-title { font-size: 22px; font-weight: 700; color: var(--mg-text); margin-bottom: 6px; }
+        .mm-detail-desc  { font-size: 13px; color: var(--mg-muted); margin-bottom: 18px; line-height: 1.5; }
+        .mm-meta-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 10px 24px; margin-bottom: 20px;
+        }
+        .mm-meta-item label {
+            font-size: 10px; font-weight: 700; color: var(--mg-muted);
+            text-transform: uppercase; letter-spacing: .5px;
+            display: flex; align-items: center; gap: 5px; margin-bottom: 3px;
+        }
+        .mm-meta-item .val {
+            font-size: 13px; color: var(--mg-text); font-weight: 500;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .mm-visibility-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 12px;
+        }
+        .mm-visibility-badge.public  { background: #dcfce7; color: #166534; }
+        .mm-visibility-badge.private { background: #f3f4f6; color: #374151; }
+        .mm-action-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+        .mm-action-btns .btn { font-size: 12.5px; padding: 7px 16px; }
+
+        /* ── Section tabs ──────────────────────────────── */
+        .mm-sections-bar {
+            border: 1px solid var(--mg-border);
+            border-radius: 10px; overflow: hidden; margin-bottom: 20px;
+        }
+        .mm-sections-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--mg-border);
+            background: #fafbfc;
+        }
+        .mm-sections-title {
+            font-size: 12px; font-weight: 700; color: var(--mg-text);
+            display: flex; align-items: center; gap: 6px;
+        }
+        .mm-sections-title i { color: var(--mg-green); }
+        .mm-sections-scroll { display: flex; gap: 10px; padding: 14px 16px; overflow-x: auto; }
+        .mm-section-tab {
+            flex-shrink: 0; min-width: 130px;
+            border: 1px solid var(--mg-border); border-radius: 8px;
+            padding: 12px 14px; cursor: pointer; transition: all .15s;
+            background: #fff;
+        }
+        .mm-section-tab:hover   { border-color: var(--mg-green); }
+        .mm-section-tab.active  { border-color: var(--mg-green); background: var(--mg-green-tint); }
+        .mm-section-tab .sect-label {
+            font-size: 9px; font-weight: 700; color: var(--mg-muted);
+            text-transform: uppercase; letter-spacing: .5px; margin-bottom: 3px;
+        }
+        .mm-section-tab .sect-name { font-size: 13px; font-weight: 600; color: var(--mg-text); }
+        .mm-section-tab .sect-count { font-size: 11px; color: var(--mg-green); margin-top: 2px; }
+        .mm-section-tab.active .sect-name  { color: var(--mg-green); }
+        .mm-section-tab.active .sect-count { color: var(--mg-green-dark); }
+
+        /* ── Filter bar ────────────────────────────────── */
+        .mm-filter-bar {
+            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+            padding: 12px 16px;
+            border: 1px solid var(--mg-border); border-radius: 10px;
+            background: #fff; margin-bottom: 20px;
+        }
+        .mm-search { position: relative; flex: 1; min-width: 200px; }
+        .mm-search input {
+            width: 100%; padding: 7px 12px 7px 34px;
+            border: 1px solid var(--mg-border); border-radius: 7px;
+            font-size: 12.5px; color: var(--mg-text); outline: none;
+        }
+        .mm-search input:focus { border-color: var(--mg-green); }
+        .mm-search i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--mg-muted); font-size: 14px; }
+        .mm-filter-label { font-size: 11px; font-weight: 600; color: var(--mg-muted); white-space: nowrap; }
+        .mm-filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .mm-chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px; cursor: pointer;
+            font-size: 11.5px; font-weight: 600; border: 1px solid transparent;
+            transition: all .12s;
+        }
+        .mm-chip.all     { background: var(--mg-green); color: #fff; border-color: var(--mg-green); }
+        .mm-chip.photos  { background: #fff; color: var(--mg-text); border-color: var(--mg-border); }
+        .mm-chip.videos  { background: #fff; color: var(--mg-text); border-color: var(--mg-border); }
+        .mm-chip.public  { background: #fff; color: var(--mg-text); border-color: var(--mg-border); }
+        .mm-chip.private { background: #fff; color: var(--mg-text); border-color: var(--mg-border); }
+        .mm-chip.active  { background: var(--mg-green-tint); color: var(--mg-green); border-color: var(--mg-green); }
+        .mm-chip i { font-size: 13px; }
+        .mm-sort-select {
+            margin-left: auto; padding: 6px 10px;
+            border: 1px solid var(--mg-border); border-radius: 7px;
+            font-size: 12px; color: var(--mg-text); background: #fff;
+        }
+
+        /* ── Section group header ──────────────────────── */
+        .mm-group-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin: 28px 0 12px;
+        }
+        .mm-group-title {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 700; color: var(--mg-text);
+        }
+        .mm-group-title i { color: var(--mg-green); }
+        .mm-group-count { font-size: 12px; color: var(--mg-muted); font-weight: 400; }
+        .mm-group-desc  { font-size: 11.5px; color: var(--mg-muted); }
+        .mm-group-actions { display: flex; align-items: center; gap: 10px; }
+        .mm-visibility-indicator {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 11px; font-weight: 600; color: var(--mg-green);
+        }
+
+        /* ── Media grid ────────────────────────────────── */
+        .mm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 14px;
+        }
+        .mm-card {
+            border-radius: 10px; overflow: hidden;
+            border: 2px solid transparent;
+            transition: all .15s; cursor: pointer; position: relative;
+            background: #fff;
+        }
+        .mm-card:hover       { border-color: var(--mg-green); box-shadow: 0 2px 12px rgba(10,90,59,.12); }
+        .mm-card.selected    { border-color: var(--mg-green); }
+        .mm-card.selected .mm-card-thumb::after {
+            content: ''; position: absolute; inset: 0;
+            background: rgba(10,90,59,.15); pointer-events: none;
+        }
+        .mm-card-thumb {
+            position: relative; width: 100%; padding-top: 75%;
+            background: #f0f0f0; overflow: hidden;
+        }
+        .mm-card-thumb img, .mm-card-thumb video {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%; object-fit: cover;
+        }
+        .mm-card-thumb .mm-play-icon {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none;
+        }
+        .mm-card-thumb .mm-play-icon i {
+            font-size: 36px; color: #fff;
+            text-shadow: 0 2px 8px rgba(0,0,0,.5);
+        }
+        .mm-card-thumb .mm-duration {
+            position: absolute; bottom: 6px; left: 8px;
+            background: rgba(0,0,0,.65); color: #fff;
+            font-size: 10px; font-weight: 600;
+            padding: 2px 6px; border-radius: 4px;
+        }
+        .mm-type-badge {
+            position: absolute; top: 8px; left: 8px;
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .mm-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 9px; font-weight: 700; text-transform: uppercase;
+            padding: 2px 7px; border-radius: 4px; letter-spacing: .4px;
+        }
+        .mm-badge.photo   { background: rgba(255,255,255,.92); color: #1f2937; }
+        .mm-badge.video   { background: #dc2626; color: #fff; }
+        .mm-badge.pub     { background: var(--mg-green); color: #fff; }
+        .mm-badge.priv    { background: #6b7280; color: #fff; }
+        .mm-card-check {
+            position: absolute; top: 8px; right: 8px; z-index: 5;
+        }
+        .mm-card-check input[type=checkbox] {
+            width: 18px; height: 18px; cursor: pointer;
+            accent-color: var(--mg-green);
+        }
+        .mm-card-hover-actions {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,.55);
+            display: flex; justify-content: center; gap: 4px;
+            padding: 8px 6px;
+            opacity: 0; transition: opacity .15s;
+        }
+        .mm-card-thumb:hover .mm-card-hover-actions { opacity: 1; }
+        .mm-card-hover-actions a,
+        .mm-card-hover-actions button {
+            width: 30px; height: 30px; border-radius: 6px;
+            background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+            color: #fff; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; cursor: pointer; transition: background .1s;
+            text-decoration: none;
+        }
+        .mm-card-hover-actions a:hover,
+        .mm-card-hover-actions button:hover { background: rgba(255,255,255,.35); color: #fff; }
+        .mm-card-hover-actions .del-btn { color: #fca5a5; }
+        .mm-card-hover-actions .del-btn:hover { background: rgba(220,38,38,.5); color: #fff; }
+        .mm-card-body { padding: 10px 12px 12px; }
+        .mm-card-caption { font-size: 12.5px; font-weight: 600; color: var(--mg-text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mm-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+        .mm-card-type { font-size: 11px; color: var(--mg-muted); }
+        .mm-card-date { font-size: 10.5px; color: var(--mg-muted); white-space: nowrap; }
+        .mm-card-section-select {
+            width: 100%; margin-top: 6px;
+            padding: 4px 8px; font-size: 11px;
+            border: 1px solid var(--mg-border); border-radius: 5px;
+            color: var(--mg-text); background: #fafbfc;
+        }
+
+        /* ── Add placeholder card ──────────────────────── */
+        .mm-add-card {
+            border: 2px dashed var(--mg-border); border-radius: 10px;
+            min-height: 180px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer; color: var(--mg-green); gap: 6px;
+            transition: border-color .15s, background .15s;
+        }
+        .mm-add-card:hover { border-color: var(--mg-green); background: var(--mg-green-tint); }
+        .mm-add-card i { font-size: 24px; }
+        .mm-add-card span { font-size: 12px; font-weight: 600; }
+
+        /* ── Bulk action bar ───────────────────────────── */
+        .mm-bulk-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1050;
+            background: var(--mg-green);
+            padding: 12px 24px;
+            display: flex; align-items: center; gap: 14px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,.2);
+            transform: translateY(100%);
+            transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+        }
+        .mm-bulk-bar.visible { transform: translateY(0); }
+        .mm-bulk-count {
+            font-size: 13px; font-weight: 700; color: #fff;
+            white-space: nowrap;
+        }
+        .mm-bulk-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .mm-bulk-btn {
+            padding: 7px 16px; border-radius: 7px; font-size: 12.5px; font-weight: 600;
+            border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.15);
+            color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: background .12s;
+        }
+        .mm-bulk-btn:hover    { background: rgba(255,255,255,.28); }
+        .mm-bulk-btn.danger   { background: rgba(220,38,38,.35); border-color: rgba(220,38,38,.5); }
+        .mm-bulk-btn.danger:hover { background: rgba(220,38,38,.55); }
+        .mm-bulk-section-select {
+            padding: 7px 10px; border-radius: 7px; font-size: 12px;
+            border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1);
+            color: #fff; min-width: 160px;
+        }
+        .mm-bulk-section-select option { color: #1f2937; }
+        .mm-bulk-close {
+            margin-left: auto; background: transparent; border: none;
+            color: rgba(255,255,255,.7); font-size: 20px; cursor: pointer;
+        }
+
+        /* ── Upload modal ──────────────────────────────── */
+        .mm-upload-modal .modal-dialog { max-width: 540px; }
+        .mm-upload-modal .modal-header { border-bottom: 1px solid var(--mg-border); }
+        .mm-upload-modal .modal-title  { font-size: 16px; font-weight: 700; }
+        .mm-drop-zone {
+            border: 2px dashed var(--mg-border); border-radius: 10px;
+            padding: 36px 24px; text-align: center;
+            cursor: pointer; transition: border-color .15s, background .15s;
+            margin-bottom: 14px;
+        }
+        .mm-drop-zone:hover, .mm-drop-zone.drag-over {
+            border-color: var(--mg-green); background: var(--mg-green-tint);
+        }
+        .mm-drop-zone i    { font-size: 32px; color: var(--mg-green); margin-bottom: 8px; }
+        .mm-drop-zone p    { margin: 0; font-size: 13px; color: var(--mg-muted); }
+        .mm-drop-zone strong { color: var(--mg-green); }
+
+        /* ── Misc ──────────────────────────────────────── */
+        .mm-empty { text-align: center; padding: 40px 20px; color: var(--mg-muted); }
+        .mm-empty i { font-size: 40px; margin-bottom: 10px; display: block; }
+    </style>
+}
+
 <section class="content-with-menu">
-    <div class="content-with-menu-container">
-        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
-        <div class="inner-body">
-            <div class="row">
-            <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
-                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
-                    <h1 class="font-weight-bold mb-0 mt-0">Foto's</h1>
-                    <h5 class="mb-4 mt-0">Beheer de foto's van het project</h5>
-                </div>
-                <div class="col-sm-auto px-0">
-                        @if (canWriteProjectPhotos)
-                        {
-                            <a href="#ModalAddPhoto" class="btn btn-primary btn-md addPhoto" data-id="@Model.ProjectId" id="btnAddPhoto"><i class="fas fa-upload me-1"></i> Foto uploaden</a>
-                        }
-@*                         <a href="#modaladdphoto" class="btn btn-primary btn-md modal-with-form" type="button" id="btnAddPhoto"><i class="fas fa-upload me-1"></i> Foto uploaden</a> *@
-                </div>
-            </div>
-            @await Html.PartialAsync("Photos", Model)
-@*             @await Html.PartialAsync("_ModalAddPhoto", new ProjectPictureBO { @ProjectId = Model.ProjectId, @Type = PictureType.Werffoto }) *@
-            </div>
+  <div class="content-with-menu-container">
+    @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+    <div class="inner-body">
+      <div class="media-manager">
+
+        <!-- Page header -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+          <div>
+            <h1 class="font-weight-bold mb-0 mt-0">Media</h1>
+            <p class="text-muted mb-0" style="font-size:13px;">Foto's en video's die op de publieke projectpagina getoond worden</p>
+          </div>
+          <div class="d-flex gap-2">
+            @if (canWrite)
+            {
+              <button class="btn btn-outline-secondary btn-sm" type="button" onclick="window.open('@Url.Action("Detail","Projecten",new{projectid=Model.ProjectId})','_blank')">
+                <i class="bx bx-link-external me-1"></i> Bekijk publieke pagina
+              </button>
+              <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bx bx-upload me-1"></i> Media uploaden
+              </button>
+            }
+          </div>
         </div>
+
+        @if (hoofdMedia != null)
+        {
+          <!-- Hoofdmedia hero card -->
+          <div class="mm-header-card">
+            <div class="row g-0">
+              <div class="col-md-5">
+                <div class="mm-hero-thumb">
+                  <div class="mm-hero-badge"><i class="bx bx-crown"></i> Hoofdmedia</div>
+                  @if (hoofdMedia.MediaType == 1)
+                  {
+                    <video src="@vidBase/videos/@hoofdMedia.Name" muted loop autoplay playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+                  }
+                  else
+                  {
+                    <img src="@imgBase/pictures/800/@hoofdMedia.Name" alt="@hoofdMedia.Caption" />
+                  }
+                  <a href="@(hoofdMedia.MediaType == 1 ? $"{vidBase}/videos/{hoofdMedia.Name}" : $"{imgBase}/pictures/{hoofdMedia.Name}")"
+                     target="_blank" class="mm-hero-preview-btn">
+                    <i class="bx bx-show"></i> Voorbeeld
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-7">
+                <div class="mm-detail-panel">
+                  <div class="mm-section-label"><i class="bx bx-image-alt"></i> Toont bovenaan op de publieke projectpagina</div>
+                  <div class="mm-detail-title">@(string.IsNullOrWhiteSpace(hoofdMedia.Caption) ? "(geen caption)" : hoofdMedia.Caption)</div>
+                  <div class="mm-detail-desc">Dit beeld verschijnt als header bovenaan de publieke projectpagina. Bezoekers zien dit als allereerste.</div>
+                  <div class="mm-meta-grid">
+                    <div class="mm-meta-item">
+                      <label><i class="bx bx-category"></i> Type</label>
+                      <div class="val">@(hoofdMedia.MediaType == 1 ? "Video" : "Foto")</div>
+                    </div>
+                    <div class="mm-meta-item">
+                      <label><i class="bx bx-file"></i> Formaat</label>
+                      <div class="val">@(Path.GetExtension(hoofdMedia.Name).TrimStart('.').ToUpper())@(hoofdMedia.WidthPx.HasValue ? $" · {hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : "")</div>
+                    </div>
+                    <div class="mm-meta-item">
+                      <label><i class="bx bx-data"></i> Grootte</label>
+                      <div class="val">@(hoofdMedia.FileSizeBytes.HasValue ? $"{hoofdMedia.FileSizeBytes.Value / 1024.0 / 1024.0:F1} MB" : "—")</div>
+                    </div>
+                    <div class="mm-meta-item">
+                      <label><i class="bx bx-show"></i> Zichtbaarheid</label>
+                      <div class="val">
+                        <span class="mm-visibility-badge @(hoofdMedia.IsPublic ? "public" : "private")">
+                          <i class="bx @(hoofdMedia.IsPublic ? "bx-globe" : "bx-lock")"></i>
+                          @(hoofdMedia.IsPublic ? "Publiek" : "Intern")
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  @if (canWrite)
+                  {
+                    <div class="mm-action-btns">
+                      <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal" data-type="Hoofdfoto">
+                        <i class="bx bx-refresh me-1"></i> Vervangen
+                      </button>
+                      <a href="#" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal" data-id="@hoofdMedia.Id" data-caption="@hoofdMedia.Caption">
+                        <i class="bx bx-edit me-1"></i> Bewerken
+                      </a>
+                      <a href="@(hoofdMedia.MediaType == 1 ? $"{vidBase}/videos/{hoofdMedia.Name}" : $"{imgBase}/pictures/{hoofdMedia.Name}")" download class="btn btn-outline-secondary btn-sm">
+                        <i class="bx bx-download me-1"></i> Download
+                      </a>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Sections bar -->
+        @if (Model.Sections.Any())
+        {
+          <div class="mm-sections-bar">
+            <div class="mm-sections-header">
+              <div class="mm-sections-title"><i class="bx bx-table"></i> Plaatsing op de publieke website <span class="text-muted fw-normal ms-1" style="font-size:11px;">Kies waar elke foto of video getoond wordt</span></div>
+              @if (canWrite)
+              {
+                <button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="modal" data-bs-target="#sectionSettingsModal">
+                  <i class="bx bx-cog me-1"></i> Sectie-instellingen
+                </button>
+              }
+            </div>
+            <div class="mm-sections-scroll">
+              <div class="mm-section-tab active" data-section="all">
+                <div class="sect-label">Alle secties</div>
+                <div class="sect-name">Alles</div>
+                <div class="sect-count">@allPhotos.Count items</div>
+              </div>
+              @{ int sIdx = 1; }
+              @foreach (var section in Model.Sections)
+              {
+                <div class="mm-section-tab" data-section="@section.Id">
+                  <div class="sect-label">Sectie @sIdx</div>
+                  <div class="sect-name">@section.Name</div>
+                  <div class="sect-count">@section.MediaCount items</div>
+                </div>
+                sIdx++;
+              }
+              <!-- Items zonder sectie -->
+              @{ var noSectionCount = allPhotos.Count(p => p.SectionId == null); }
+              @if (noSectionCount > 0)
+              {
+                <div class="mm-section-tab" data-section="none">
+                  <div class="sect-label">Geen sectie</div>
+                  <div class="sect-name">Overig</div>
+                  <div class="sect-count">@noSectionCount items</div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Filter bar -->
+        <div class="mm-filter-bar">
+          <div class="mm-search">
+            <i class="bx bx-search"></i>
+            <input type="text" id="mmSearch" placeholder="Zoek op caption, tag of bestandsnaam..." />
+          </div>
+          <span class="mm-filter-label">TOON:</span>
+          <div class="mm-filter-chips">
+            <span class="mm-chip all active" data-filter="all"><i class="bx bx-grid-alt"></i> Alles <strong>@allPhotos.Count</strong></span>
+            <span class="mm-chip photos" data-filter="photo"><i class="bx bx-image"></i> Foto's <strong>@totalPhotos</strong></span>
+            <span class="mm-chip videos" data-filter="video"><i class="bx bx-video"></i> Video's <strong>@totalVideos</strong></span>
+            <span class="mm-chip public" data-filter="public"><i class="bx bx-globe"></i> Publiek</span>
+            <span class="mm-chip private" data-filter="private"><i class="bx bx-lock"></i> Intern</span>
+          </div>
+          <select class="mm-sort-select" id="mmSort">
+            <option value="newest">Nieuwste eerst</option>
+            <option value="oldest">Oudste eerst</option>
+            <option value="name">Naam A–Z</option>
+          </select>
+        </div>
+
+        <!-- Media content -->
+        <div id="mmContent">
+          @if (!allPhotos.Any())
+          {
+            <div class="mm-empty">
+              <i class="bx bx-images"></i>
+              <p>Nog geen media geüpload voor dit project.</p>
+              @if (canWrite)
+              {
+                <button class="btn btn-primary btn-sm mt-2" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                  <i class="bx bx-upload me-1"></i> Eerste media uploaden
+                </button>
+              }
+            </div>
+          }
+          else
+          {
+            @* Grouped by section *@
+            @foreach (var section in Model.Sections)
+            {
+              var sectionMedia = allPhotos.Where(p => p.SectionId == section.Id).ToList();
+              <div class="mm-section-group" data-section-id="@section.Id">
+                <div class="mm-group-header">
+                  <div>
+                    <div class="mm-group-title">
+                      <i class="bx bx-folder-open"></i>
+                      @section.Name <span class="mm-group-count">@sectionMedia.Count items</span>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(section.Description))
+                    {
+                      <div class="mm-group-desc">@section.Description</div>
+                    }
+                  </div>
+                  <div class="mm-group-actions">
+                    <span class="mm-visibility-indicator">
+                      <i class="bx @(section.IsPublic ? "bx-globe" : "bx-lock")"></i>
+                      @(section.IsPublic ? "Publiek zichtbaar" : "Intern")
+                    </span>
+                    @if (canWrite)
+                    {
+                      <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal" data-section="@section.Id">
+                        <i class="bx bx-plus me-1"></i> Toevoegen
+                      </button>
+                    }
+                  </div>
+                </div>
+                <div class="mm-grid" data-section-grid="@section.Id">
+                  @foreach (var item in sectionMedia)
+                  {
+                    @await Html.PartialAsync("Partials/_MediaCard", item, new ViewDataDictionary(ViewData)
+                    {
+                        { "ImgBase", imgBase }, { "VidBase", vidBase },
+                        { "CanDelete", canDelete }, { "CanWrite", canWrite },
+                        { "Sections", Model.Sections }
+                    })
+                  }
+                  @if (canWrite)
+                  {
+                    <div class="mm-add-card" data-bs-toggle="modal" data-bs-target="#uploadModal" data-section="@section.Id">
+                      <i class="bx bx-plus"></i>
+                      <span>Foto of video toevoegen aan @section.Name</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+
+            @* Items zonder sectie *@
+            @{ var noSection = allPhotos.Where(p => p.SectionId == null).ToList(); }
+            @if (noSection.Any())
+            {
+              <div class="mm-section-group" data-section-id="none">
+                <div class="mm-group-header">
+                  <div class="mm-group-title"><i class="bx bx-folder"></i> Niet ingedeeld <span class="mm-group-count">@noSection.Count items</span></div>
+                </div>
+                <div class="mm-grid">
+                  @foreach (var item in noSection)
+                  {
+                    @await Html.PartialAsync("Partials/_MediaCard", item, new ViewDataDictionary(ViewData)
+                    {
+                        { "ImgBase", imgBase }, { "VidBase", vidBase },
+                        { "CanDelete", canDelete }, { "CanWrite", canWrite },
+                        { "Sections", Model.Sections }
+                    })
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+      </div><!-- /media-manager -->
     </div>
+  </div>
 </section>
 
-<div id="ModalDeletePhoto" class="modal-block modal-block-warning mfp-hide">
-    <div id="delete-photo-container"></div>
-</div>
-<div id="ModalAddPhoto" class="modal-block modal-block-warning mfp-hide">
-    <div id="add-photo-container"></div>
+<!-- ── Bulk action bar ─────────────────────────────────────────────── -->
+<div class="mm-bulk-bar" id="bulkBar">
+  <span class="mm-bulk-count"><span id="bulkCount">0</span> geselecteerd</span>
+  <div class="mm-bulk-actions">
+    <select class="mm-bulk-section-select" id="bulkSectionSelect">
+      <option value="">Verplaats naar sectie…</option>
+      @foreach (var s in Model.Sections)
+      {
+        <option value="@s.Id">@s.Name</option>
+      }
+    </select>
+    <button class="mm-bulk-btn" type="button" id="bulkMoveBtn"><i class="bx bx-transfer"></i> Verplaats</button>
+    <button class="mm-bulk-btn" type="button" id="bulkPublicBtn"><i class="bx bx-globe"></i> Publiek</button>
+    <button class="mm-bulk-btn" type="button" id="bulkPrivateBtn"><i class="bx bx-lock"></i> Intern</button>
+    <button class="mm-bulk-btn danger" type="button" id="bulkDeleteBtn"><i class="bx bx-trash"></i> Verwijder</button>
+  </div>
+  <button class="mm-bulk-close" type="button" id="bulkClose"><i class="bx bx-x"></i></button>
 </div>
 
-@section PageScripts
-{
-    <script src="~/lib/isotope/jquery.isotope.js"></script>
-    <script src="~/lib/bootstrap-fileupload/bootstrap-fileupload.min.js"></script>
-    <script src="~/js/examples/examples.mediagallery.js"></script>
-    <script>
-        $('.deletePhoto').click(function () {
-            var url = "/Projecten/ModalDeletePhoto"; // the url to the controller
-            var id = $(this).attr('data-id'); // the id that's given to each button in the list
-            $.get(url + '/' + id, function (data) {
-                $('#delete-photo-container').html(data);
+<!-- ── Upload modal ────────────────────────────────────────────────── -->
+<div class="modal fade mm-upload-modal" id="uploadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bx bx-upload me-2 text-success"></i> Media uploaden</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form asp-action="UploadImage" asp-controller="Projecten" method="post" enctype="multipart/form-data" id="uploadForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="UploadedBO.ProjectId" value="@Model.ProjectId" />
+        <input type="hidden" name="UploadedBO.Type" value="1" />
+        <input type="hidden" name="UploadedBO.SectionId" id="uploadSectionId" />
+        <input type="hidden" name="UploadedBO.IsPublic" value="true" />
+
+        <div class="modal-body">
+          <div class="mm-drop-zone" id="dropZone">
+            <i class="bx bx-cloud-upload"></i>
+            <p><strong>Sleep bestanden hierheen</strong> of klik om te selecteren</p>
+            <p style="font-size:11px;">JPG, PNG, WebP, GIF, MP4, WebM · Max 500MB</p>
+            <input type="file" name="file" id="fileInput" accept="image/*,video/mp4,video/webm" style="display:none;" />
+          </div>
+          <div id="filePreview" style="display:none;" class="mb-3">
+            <div class="d-flex align-items-center gap-3 p-2 border rounded">
+              <img id="fileThumb" src="" alt="" style="width:60px;height:60px;object-fit:cover;border-radius:6px;display:none;" />
+              <i class="bx bx-video" id="videoIcon" style="font-size:36px;color:var(--mg-green);display:none;"></i>
+              <div>
+                <div id="fileName" style="font-size:13px;font-weight:600;"></div>
+                <div id="fileSize" style="font-size:11px;color:var(--mg-muted);"></div>
+              </div>
+              <button type="button" class="btn btn-link btn-sm ms-auto text-danger p-0" id="clearFile"><i class="bx bx-x"></i></button>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:12px;font-weight:600;">Caption <span class="text-muted fw-normal">(optioneel)</span></label>
+            <input type="text" class="form-control form-control-sm" name="UploadedBO.Caption" placeholder="Beschrijf het beeld…" />
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">Sectie</label>
+              <select class="form-select form-select-sm" name="UploadedBO.SectionId" id="uploadSectionSelect">
+                <option value="">— Geen sectie —</option>
+                @foreach (var s in Model.Sections)
+                {
+                  <option value="@s.Id">@s.Name</option>
+                }
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label" style="font-size:12px;font-weight:600;">Zichtbaarheid</label>
+              <select class="form-select form-select-sm" name="UploadedBO.IsPublic">
+                <option value="true">Publiek</option>
+                <option value="false">Intern</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuleren</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="uploadSubmit" disabled>
+            <i class="bx bx-upload me-1"></i> Uploaden
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Delete confirm modal ───────────────────────────────────────── -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title text-danger"><i class="bx bx-trash me-1"></i> Verwijderen</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p style="font-size:13px;" class="mb-0">Weet u zeker dat u dit mediabestand wil verwijderen? Dit kan niet ongedaan worden gemaakt.</p>
+        <input type="hidden" id="deleteMediaId" />
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuleren</button>
+        <button type="button" class="btn btn-danger btn-sm" id="confirmDeleteBtn"><i class="bx bx-trash me-1"></i> Verwijder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section PageScripts {
+<script>
+(function () {
+    var projectId      = @Model.ProjectId;
+    var antiForgery    = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+    var selectedIds    = new Set();
+
+    // ── Helpers ──────────────────────────────────────────────
+    function postJson(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': antiForgery
+            },
+            body: JSON.stringify(body)
+        });
+    }
+
+    // ── Section tabs ──────────────────────────────────────────
+    document.querySelectorAll('.mm-section-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.mm-section-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            var sectionId = tab.dataset.section;
+            document.querySelectorAll('.mm-section-group').forEach(function(group) {
+                if (sectionId === 'all') {
+                    group.style.display = '';
+                } else if (sectionId === 'none') {
+                    group.style.display = (group.dataset.sectionId === 'none') ? '' : 'none';
+                } else {
+                    group.style.display = (group.dataset.sectionId === sectionId) ? '' : 'none';
+                }
             });
         });
-        $('.addPhoto').click(function () {
-            var url = "/Projecten/ModalAddPhoto"; // the url to the controller
-            var id = $(this).attr('data-id'); // the id that's given to each button in the list
-            $.get(url + '/' + id, function (data) {
-                $('#add-photo-container').html(data);
+    });
+
+    // ── Media filter chips ────────────────────────────────────
+    document.querySelectorAll('.mm-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            document.querySelectorAll('.mm-chip').forEach(function(c) { c.classList.remove('active'); });
+            chip.classList.add('active');
+            var filter = chip.dataset.filter;
+            document.querySelectorAll('.mm-card').forEach(function(card) {
+                var match = filter === 'all'
+                    || (filter === 'photo'   && card.dataset.mediatype === '0')
+                    || (filter === 'video'   && card.dataset.mediatype === '1')
+                    || (filter === 'public'  && card.dataset.ispublic === 'true')
+                    || (filter === 'private' && card.dataset.ispublic === 'false');
+                card.style.display = match ? '' : 'none';
             });
         });
-        $(document).ready(function () {
-            $('.deletePhoto').magnificPopup({
-                type: 'inline',
-                src: 'deletePhoto',
-            });
-                     $('.addPhoto').magnificPopup({
-                type: 'inline',
-                src: 'addPhoto',
-            });
+    });
+
+    // ── Search ────────────────────────────────────────────────
+    document.getElementById('mmSearch').addEventListener('input', function() {
+        var q = this.value.toLowerCase();
+        document.querySelectorAll('.mm-card').forEach(function(card) {
+            var caption  = (card.dataset.caption  || '').toLowerCase();
+            var filename = (card.dataset.filename || '').toLowerCase();
+            card.style.display = (!q || caption.includes(q) || filename.includes(q)) ? '' : 'none';
         });
-    </script>
+    });
+
+    // ── Checkbox selection ────────────────────────────────────
+    function updateBulkBar() {
+        var bar = document.getElementById('bulkBar');
+        document.getElementById('bulkCount').textContent = selectedIds.size;
+        if (selectedIds.size > 0) bar.classList.add('visible');
+        else bar.classList.remove('visible');
+    }
+
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('mm-check')) {
+            var id = parseInt(e.target.value);
+            if (e.target.checked) selectedIds.add(id);
+            else selectedIds.delete(id);
+            var card = e.target.closest('.mm-card');
+            if (card) card.classList.toggle('selected', e.target.checked);
+            updateBulkBar();
+        }
+    });
+
+    document.getElementById('bulkClose').addEventListener('click', function() {
+        selectedIds.clear();
+        document.querySelectorAll('.mm-check').forEach(function(cb) { cb.checked = false; });
+        document.querySelectorAll('.mm-card').forEach(function(c) { c.classList.remove('selected'); });
+        updateBulkBar();
+    });
+
+    // ── Bulk move ─────────────────────────────────────────────
+    document.getElementById('bulkMoveBtn').addEventListener('click', function() {
+        var sectionId = document.getElementById('bulkSectionSelect').value;
+        if (!sectionId) { alert('Kies een sectie om naar te verplaatsen.'); return; }
+        postJson('/Projecten/MoveMediaToSection', { MediaIds: [...selectedIds], SectionId: parseInt(sectionId) })
+            .then(function() { location.reload(); });
+    });
+
+    // ── Bulk visibility ───────────────────────────────────────
+    document.getElementById('bulkPublicBtn').addEventListener('click', function() {
+        postJson('/Projecten/UpdateMediaVisibility', { MediaIds: [...selectedIds], IsPublic: true })
+            .then(function() { location.reload(); });
+    });
+    document.getElementById('bulkPrivateBtn').addEventListener('click', function() {
+        postJson('/Projecten/UpdateMediaVisibility', { MediaIds: [...selectedIds], IsPublic: false })
+            .then(function() { location.reload(); });
+    });
+
+    // ── Bulk delete ───────────────────────────────────────────
+    document.getElementById('bulkDeleteBtn').addEventListener('click', function() {
+        if (!confirm('Weet u zeker dat u ' + selectedIds.size + ' item(s) wil verwijderen?')) return;
+        postJson('/Projecten/BulkDeleteMedia', { MediaIds: [...selectedIds] })
+            .then(function() { location.reload(); });
+    });
+
+    // ── Single delete ─────────────────────────────────────────
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-delete-id]');
+        if (!btn) return;
+        document.getElementById('deleteMediaId').value = btn.dataset.deleteId;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+        var id = document.getElementById('deleteMediaId').value;
+        postJson('/Projecten/BulkDeleteMedia', { MediaIds: [parseInt(id)] })
+            .then(function() { location.reload(); });
+    });
+
+    // ── Toggle visibility per card ────────────────────────────
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-toggle-vis');
+        if (!btn) return;
+        var id        = parseInt(btn.dataset.id);
+        var isPublic  = btn.dataset.current !== 'true';
+        postJson('/Projecten/UpdateMediaVisibility', { MediaIds: [id], IsPublic: isPublic })
+            .then(function() { location.reload(); });
+    });
+
+    // ── Section move per card ─────────────────────────────────
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('mm-section-select')) {
+            var id        = parseInt(e.target.dataset.mediaId);
+            var sectionId = e.target.value ? parseInt(e.target.value) : null;
+            postJson('/Projecten/MoveMediaToSection', { MediaIds: [id], SectionId: sectionId });
+        }
+    });
+
+    // ── Upload modal: file input / drop zone ──────────────────
+    var dropZone    = document.getElementById('dropZone');
+    var fileInput   = document.getElementById('fileInput');
+    var uploadSubmit = document.getElementById('uploadSubmit');
+    var filePreview = document.getElementById('filePreview');
+
+    dropZone.addEventListener('click', function() { fileInput.click(); });
+    dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('drag-over'); });
+    dropZone.addEventListener('drop', function(e) {
+        e.preventDefault(); dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', function() { if (this.files.length) setFile(this.files[0]); });
+
+    function setFile(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+        var isVideo = file.type.startsWith('video/');
+        document.getElementById('fileThumb').style.display  = isVideo ? 'none' : '';
+        document.getElementById('videoIcon').style.display  = isVideo ? '' : 'none';
+        if (!isVideo) {
+            var reader = new FileReader();
+            reader.onload = function(e) { document.getElementById('fileThumb').src = e.target.result; };
+            reader.readAsDataURL(file);
+        }
+        filePreview.style.display = '';
+        uploadSubmit.disabled = false;
+        // Transfer the file to the actual input
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+    }
+
+    document.getElementById('clearFile').addEventListener('click', function() {
+        fileInput.value = '';
+        filePreview.style.display = 'none';
+        uploadSubmit.disabled = true;
+    });
+
+    // Section pre-fill from button data attribute
+    document.querySelectorAll('[data-bs-target="#uploadModal"][data-section]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var sectionId = btn.dataset.section;
+            if (sectionId) document.getElementById('uploadSectionSelect').value = sectionId;
+        });
+    });
+
+    // Show upload progress
+    document.getElementById('uploadForm').addEventListener('submit', function() {
+        uploadSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Bezig…';
+        uploadSubmit.disabled = true;
+    });
+})();
+</script>
 }

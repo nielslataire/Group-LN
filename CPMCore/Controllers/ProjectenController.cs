@@ -27,6 +27,7 @@ using ServiceCore;
 using ServiceCore.Invoicing;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 //using CPMCore.Attributes;
 using SmartBreadcrumbs.Attributes;
@@ -3873,45 +3874,52 @@ namespace CPMCore.Controllers
 
         [HttpGet]
         //[Breadcrumb("Foto's")]
-        [Breadcrumb("Foto's", FromAction = "Detail")]
+        [Breadcrumb("Media", FromAction = "Detail")]
         public ActionResult DetailPhotos(int projectid)
         {
             ViewBag.sidebarcollapsed = "sidebar-left-collapsed";
-            ViewBag.ImageWebURL = Configuration["URL:ImageWebURL"];
-            var model = new DetailPhotosModel();
+            var imgBase = (Configuration["URL:ImageWebURL"] ?? "").TrimEnd('/');
+            var vidBase = (Configuration["URL:VideoWebURL"] ?? imgBase).TrimEnd('/');
+            ViewBag.ImageWebURL = imgBase + "/";
+            ViewBag.VideoWebURL = vidBase + "/";
+
+            var model   = new DetailPhotosModel();
             var service = _projectService;
             var response = service.GetPicturesByProjectId(projectid);
 
             if (response.Success)
-            {
-                model.Photos = response.Values
-                                       .OrderByDescending(m => m.DateTimeUploaded)
-                                       .ToList();
-            }
+                model.Photos = response.Values.OrderBy(m => m.SortOrder).ThenByDescending(m => m.DateTimeUploaded).ToList();
 
-            model.ProjectId = projectid;
+            // Secties laden
+            model.Sections = _db.Set<DALCore.Models.ProjectMediaSection>()
+                .Where(s => s.ProjectId == projectid)
+                .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
+                .Select(s => new ProjectMediaSectionVM
+                {
+                    Id          = s.Id,
+                    Name        = s.Name,
+                    Description = s.Description,
+                    SortOrder   = s.SortOrder,
+                    IsPublic    = s.IsPublic,
+                    MediaCount  = s.Media.Count,
+                    PhotoCount  = s.Media.Count(m => m.MediaType == 0),
+                    VideoCount  = s.Media.Count(m => m.MediaType == 1)
+                })
+                .ToList();
+
+            model.ProjectId   = projectid;
             model.ProjectName = service.GetProjectNameById(projectid);
 
-
-            //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
-            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
-            {
-                Parent = Index,
-            };
-            var projectDetail = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
-            {
-                Parent = projectenIndex,
-                RouteValues = new { projectid = projectid }
-            };
-            var projectRecalc = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailPhotos", "Projecten", "Foto's")
-            {
-                Parent = projectDetail,
-                RouteValues = new { projectid = projectid }
-            };
+            var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten") { Parent = Index };
+            var projectDetail  = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Detail", "Projecten", model.ProjectName)
+                { Parent = projectenIndex, RouteValues = new { projectid } };
+            var projectRecalc  = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("DetailPhotos", "Projecten", "Media")
+                { Parent = projectDetail, RouteValues = new { projectid } };
             ViewData["BreadcrumbNode"] = projectRecalc;
+
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
-            ViewBag.CanWriteProjectPhotos = _ps.HasWrite(PermissionCodes.ProjectsPhotos);
+            ViewBag.CanWriteProjectPhotos  = _ps.HasWrite(PermissionCodes.ProjectsPhotos);
             ViewBag.CanDeleteProjectPhotos = _ps.HasDelete(PermissionCodes.ProjectsPhotos);
 
             return View(model);
@@ -7455,87 +7463,330 @@ namespace CPMCore.Controllers
         }
 
         //IMAGE HANDLERS
+        private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
+            { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+
+        private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
+            { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadImage(ProjectPictureBO UploadedBO, IFormFile file)
         {
-            // 0) Validatie
             if (file == null || file.Length == 0)
                 return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
 
-            var validTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/jpeg", "image/png", "image/gif"
-    };
-            if (!validTypes.Contains(file.ContentType))
+            var isVideo = _validVideoTypes.Contains(file.ContentType);
+            var isImage = _validImageTypes.Contains(file.ContentType);
+
+            if (!isImage && !isVideo)
             {
-                ModelState.AddModelError("ImageUpload", "Verkeerd type gekozen, kies een gif, jpeg of png");
+                AddMessage("error", "Ongeldig bestandstype. Kies een afbeelding (jpg, png, webp) of video (mp4, webm).", "Fout!");
                 return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
             }
 
-            var filename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg";
-            var tempRoot = Path.Combine(Path.GetTempPath(), "cpmcore-pictures");
-            Directory.CreateDirectory(tempRoot);
+            string storedFilename;
 
-            var mainPath = Path.Combine(tempRoot, $"main_{filename}");
-            var path447 = Path.Combine(tempRoot, $"447_{filename}");
-            var path800 = Path.Combine(tempRoot, $"800_{filename}");
+            if (isVideo)
+            {
+                // Video: upload direct zonder verwerking
+                var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (string.IsNullOrEmpty(ext)) ext = ".mp4";
+                var videoFilename = $"{DateTime.UtcNow:yyyyMMddHHmmssfff}{ext}";
+                var tempRoot = Path.Combine(Path.GetTempPath(), "cpmcore-videos");
+                Directory.CreateDirectory(tempRoot);
+                var tempPath = Path.Combine(tempRoot, videoFilename);
+
+                try
+                {
+                    using (var stream = System.IO.File.Create(tempPath))
+                        await file.CopyToAsync(stream);
+
+                    var uploaded = await UploadAssetFileToStorageAsync(tempPath, "videos", videoFilename, file.ContentType);
+                    if (string.IsNullOrWhiteSpace(uploaded))
+                    {
+                        AddMessage("error", "Video upload naar storage API mislukt.", "Fout!");
+                        return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+                    }
+                    storedFilename = uploaded;
+                }
+                finally
+                {
+                    TryDeleteTempFile(tempPath);
+                }
+
+                var videoPicture = new ProjectPictureBO
+                {
+                    Name            = storedFilename,
+                    Caption         = UploadedBO.Caption,
+                    ProjectId       = UploadedBO.ProjectId,
+                    Type            = UploadedBO.Type,
+                    SectionId       = UploadedBO.SectionId,
+                    IsPublic        = UploadedBO.IsPublic,
+                    MediaType       = 1, // Video
+                    FileSizeBytes   = file.Length,
+                    DateTimeUploaded = DateTime.Now
+                };
+                _projectService.InsertUpdatePicture(videoPicture);
+                return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
+            }
+
+            // Image: schalen, bijsnijden en opslaan als WebP
+            var ts         = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            var tempRootImg = Path.Combine(Path.GetTempPath(), "cpmcore-pictures");
+            Directory.CreateDirectory(tempRootImg);
+
+            var rawPath   = Path.Combine(tempRootImg, $"raw_{ts}{Path.GetExtension(file.FileName)}");
+            var main447   = Path.Combine(tempRootImg, $"447_{ts}.webp");
+            var main800   = Path.Combine(tempRootImg, $"800_{ts}.webp");
+            var mainFull  = Path.Combine(tempRootImg, $"main_{ts}.webp");
+            var webpName  = $"{ts}.webp";
 
             try
             {
-                using (var stream = System.IO.File.Create(mainPath))
+                using (var stream = System.IO.File.Create(rawPath))
                     await file.CopyToAsync(stream);
 
-                System.IO.File.Copy(mainPath, path447, overwrite: true);
-                System.IO.File.Copy(mainPath, path800, overwrite: true);
+                // Lees afmetingen voor de DB
+                int imgWidth = 0, imgHeight = 0;
+                using (var img = SixLabors.ImageSharp.Image.Load(rawPath))
+                {
+                    imgWidth  = img.Width;
+                    imgHeight = img.Height;
+                }
 
-                ScaleAndCropImage(path447, 447, 447);
-                ScaleAndCropImage(path800, 800, 800);
-                ScaleImage(mainPath, 1280, 960);
+                System.IO.File.Copy(rawPath, main447, overwrite: true);
+                System.IO.File.Copy(rawPath, main800, overwrite: true);
+                System.IO.File.Copy(rawPath, mainFull, overwrite: true);
 
-                var uploadMain = await UploadAssetFileToStorageAsync(mainPath, "pictures", filename, "image/jpeg");
-                var upload447 = await UploadAssetFileToStorageAsync(path447, "pictures/447", filename, "image/jpeg");
-                var upload800 = await UploadAssetFileToStorageAsync(path800, "pictures/800", filename, "image/jpeg");
+                ScaleAndCropImage(main447, 447, 447);
+                ScaleAndCropImage(main800, 800, 800);
+                ScaleImage(mainFull, 1280, 960);
+
+                // Na ScaleAndCropImage worden paden omgezet naar .webp indien nodig
+                main447  = Path.ChangeExtension(main447,  ".webp");
+                main800  = Path.ChangeExtension(main800,  ".webp");
+                mainFull = Path.ChangeExtension(mainFull, ".webp");
+
+                var uploadMain = await UploadAssetFileToStorageAsync(mainFull, "pictures",     webpName, "image/webp");
+                var upload447  = await UploadAssetFileToStorageAsync(main447,  "pictures/447", webpName, "image/webp");
+                var upload800  = await UploadAssetFileToStorageAsync(main800,  "pictures/800", webpName, "image/webp");
 
                 if (string.IsNullOrWhiteSpace(uploadMain) || string.IsNullOrWhiteSpace(upload447) || string.IsNullOrWhiteSpace(upload800))
                 {
                     AddMessage("error", "Afbeelding upload naar storage API mislukt.", "Fout!");
                     return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
                 }
+
+                storedFilename = webpName;
+
+                var picture = new ProjectPictureBO
+                {
+                    Name            = storedFilename,
+                    Caption         = UploadedBO.Caption,
+                    ProjectId       = UploadedBO.ProjectId,
+                    Type            = UploadedBO.Type,
+                    SectionId       = UploadedBO.SectionId,
+                    IsPublic        = UploadedBO.IsPublic,
+                    MediaType       = 0, // Photo
+                    FileSizeBytes   = file.Length,
+                    WidthPx         = imgWidth,
+                    HeightPx        = imgHeight,
+                    DateTimeUploaded = DateTime.Now
+                };
+
+                var service  = _projectService;
+                var response = service.InsertUpdatePicture(picture);
+
+                if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
+                {
+                    foreach (var msg in response.Messages)
+                    {
+                        if (msg.Type == MessageType.Value && int.TryParse(msg.Message, out var pictureId))
+                            _ = service.SetDefaultProjectPicture(UploadedBO.ProjectId, pictureId);
+                    }
+                }
             }
             finally
             {
-                TryDeleteTempFile(mainPath);
-                TryDeleteTempFile(path447);
-                TryDeleteTempFile(path800);
-            }
-
-            // 6) DB opslaan (zelfde logica als VB)
-            var picture = new ProjectPictureBO
-            {
-                Name = filename,
-                Caption = UploadedBO.Caption,
-                ProjectId = UploadedBO.ProjectId,
-                Type = UploadedBO.Type,
-                DateTimeUploaded = DateTime.Now
-            };
-
-            var service = _projectService;
-            var response = service.InsertUpdatePicture(picture);
-
-            if (picture.Type == PictureType.Hoofdfoto && response?.Messages != null)
-            {
-                foreach (var msg in response.Messages)
-                {
-                    if (msg.Type == MessageType.Value && int.TryParse(msg.Message, out var pictureId))
-                    {
-                        _ = service.SetDefaultProjectPicture(UploadedBO.ProjectId, pictureId);
-                    }
-                }
+                TryDeleteTempFile(rawPath);
+                TryDeleteTempFile(main447);
+                TryDeleteTempFile(main800);
+                TryDeleteTempFile(mainFull);
             }
 
             return RedirectToAction("DetailPhotos", "Projecten", new { projectid = UploadedBO.ProjectId });
         }
+
+        // ── Media Sections API ────────────────────────────────────────────────
+
+        [HttpGet]
+        public IActionResult GetMediaSections(int projectId)
+        {
+            var ctx = _db;
+            var sections = ctx.Set<DALCore.Models.ProjectMediaSection>()
+                .Where(s => s.ProjectId == projectId)
+                .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
+                .Select(s => new {
+                    s.Id, s.Name, s.Description, s.SortOrder, s.IsPublic,
+                    MediaCount = s.Media.Count,
+                    PhotoCount = s.Media.Count(m => m.MediaType == 0),
+                    VideoCount = s.Media.Count(m => m.MediaType == 1)
+                })
+                .ToList();
+            return Json(sections);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult CreateMediaSection([FromBody] ProjectMediaSectionRequest req)
+        {
+            if (req == null || req.ProjectId <= 0 || string.IsNullOrWhiteSpace(req.Name))
+                return BadRequest(new { error = "Ongeldige invoer." });
+
+            var ctx = _db;
+            var maxOrder = ctx.Set<DALCore.Models.ProjectMediaSection>()
+                .Where(s => s.ProjectId == req.ProjectId)
+                .Select(s => (int?)s.SortOrder).Max() ?? -1;
+
+            var section = new DALCore.Models.ProjectMediaSection
+            {
+                ProjectId   = req.ProjectId,
+                Name        = req.Name.Trim(),
+                Description = req.Description?.Trim(),
+                SortOrder   = maxOrder + 1,
+                IsPublic    = req.IsPublic
+            };
+            ctx.Set<DALCore.Models.ProjectMediaSection>().Add(section);
+            ctx.SaveChanges();
+            return Json(new { section.Id, section.Name, section.Description, section.SortOrder, section.IsPublic, MediaCount = 0 });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateMediaSection([FromBody] ProjectMediaSectionRequest req)
+        {
+            if (req == null || req.Id <= 0) return BadRequest();
+            var ctx = _db;
+            var section = ctx.Set<DALCore.Models.ProjectMediaSection>().Find(req.Id);
+            if (section == null) return NotFound();
+
+            if (!string.IsNullOrWhiteSpace(req.Name))        section.Name        = req.Name.Trim();
+            if (req.Description != null)                       section.Description = req.Description.Trim();
+            section.IsPublic = req.IsPublic;
+            ctx.SaveChanges();
+            return Ok();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult DeleteMediaSection(int id, int projectId)
+        {
+            var ctx = _db;
+            var section = ctx.Set<DALCore.Models.ProjectMediaSection>().Find(id);
+            if (section == null || section.ProjectId != projectId) return NotFound();
+
+            // Media in deze sectie -> sectie leegmaken (SectionId = null)
+            var media = ctx.Set<DALCore.Models.ProjectPictures>().Where(p => p.SectionId == id).ToList();
+            foreach (var m in media) m.SectionId = null;
+
+            ctx.Set<DALCore.Models.ProjectMediaSection>().Remove(section);
+            ctx.SaveChanges();
+            return Ok();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult MoveMediaToSection([FromBody] MoveMediaRequest req)
+        {
+            if (req == null) return BadRequest();
+            var ctx = _db;
+            var media = ctx.Set<DALCore.Models.ProjectPictures>()
+                .Where(p => req.MediaIds.Contains(p.Id))
+                .ToList();
+            foreach (var m in media) m.SectionId = req.SectionId;
+            ctx.SaveChanges();
+            return Ok(new { moved = media.Count });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateMediaVisibility([FromBody] VisibilityRequest req)
+        {
+            if (req == null) return BadRequest();
+            var ctx = _db;
+            var media = ctx.Set<DALCore.Models.ProjectPictures>()
+                .Where(p => req.MediaIds.Contains(p.Id))
+                .ToList();
+            foreach (var m in media) m.IsPublic = req.IsPublic;
+            ctx.SaveChanges();
+            return Ok(new { updated = media.Count });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDeleteMedia([FromBody] BulkDeleteRequest req)
+        {
+            if (req == null || req.MediaIds == null || req.MediaIds.Count == 0) return BadRequest();
+            var ctx   = _projectService.GetDbContext();
+            var items = ctx.Set<DALCore.Models.ProjectPictures>()
+                .Where(p => req.MediaIds.Contains(p.Id))
+                .ToList();
+
+            var baseUrl     = (Configuration["StorageApi:BaseUrl"] ?? "").TrimEnd('/');
+            var writeApiKey = Configuration["StorageApi:WriteApiKey"] ?? "";
+
+            foreach (var item in items)
+            {
+                // Verwijder fysieke bestanden via Storage API (best-effort)
+                if (!string.IsNullOrWhiteSpace(baseUrl) && !string.IsNullOrWhiteSpace(item.Name))
+                {
+                    var folder = item.MediaType == 1 ? "videos" : "pictures";
+                    _ = DeleteStorageFileAsync(baseUrl, writeApiKey, folder, item.Name);
+                    if (item.MediaType == 0)
+                    {
+                        _ = DeleteStorageFileAsync(baseUrl, writeApiKey, "pictures/447", item.Name);
+                        _ = DeleteStorageFileAsync(baseUrl, writeApiKey, "pictures/800", item.Name);
+                    }
+                }
+                ctx.Set<DALCore.Models.ProjectPictures>().Remove(item);
+            }
+            await ctx.SaveChangesAsync();
+            return Ok(new { deleted = items.Count });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateMediaSortOrder([FromBody] SortOrderRequest req)
+        {
+            if (req == null) return BadRequest();
+            var ctx = _db;
+            foreach (var item in req.Items)
+            {
+                var m = ctx.Set<DALCore.Models.ProjectPictures>().Find(item.Id);
+                if (m != null) { m.SortOrder = item.Order; m.SectionId = item.SectionId; }
+            }
+            ctx.SaveChanges();
+            return Ok();
+        }
+
+        private async Task DeleteStorageFileAsync(string baseUrl, string apiKey, string folder, string fileName)
+        {
+            try
+            {
+                using var client = new System.Net.Http.HttpClient();
+                client.DefaultRequestHeaders.Add("X-Api-Key", apiKey);
+                await client.DeleteAsync($"{baseUrl}/api/assets/{folder}/{fileName}");
+            }
+            catch { /* best-effort */ }
+        }
+
+        public record ProjectMediaSectionRequest(int Id, int ProjectId, string Name, string? Description, bool IsPublic);
+        public record MoveMediaRequest(List<int> MediaIds, int? SectionId);
+        public record VisibilityRequest(List<int> MediaIds, bool IsPublic);
+        public record BulkDeleteRequest(List<int> MediaIds);
+        public record SortOrderItem(int Id, int Order, int? SectionId);
+        public record SortOrderRequest(List<SortOrderItem> Items);
 
         private string? GetSignedAssetUrl(int docId, string folder)
         {
@@ -7935,44 +8186,42 @@ namespace CPMCore.Controllers
             }
         }
 
-        public void ScaleAndCropImage(string imagePath, int maxWidth, int maxHeight, int quality = 65)
+        public void ScaleAndCropImage(string imagePath, int maxWidth, int maxHeight, int quality = 80)
         {
-            using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
-            {
-                double ratioX = (double)maxWidth / image.Width;
-                double ratioY = (double)maxHeight / image.Height;
-                double ratio = Math.Max(ratioX, ratioY);
+            using var image = SixLabors.ImageSharp.Image.Load(imagePath);
+            double ratioX = (double)maxWidth / image.Width;
+            double ratioY = (double)maxHeight / image.Height;
+            double ratio  = Math.Max(ratioX, ratioY);
 
-                int newWidth = (int)(image.Width * ratio);
-                int newHeight = (int)(image.Height * ratio);
+            int newWidth  = (int)(image.Width  * ratio);
+            int newHeight = (int)(image.Height * ratio);
+            image.Mutate(x => x.Resize(newWidth, newHeight));
 
-                image.Mutate(x => x.Resize(newWidth, newHeight));
+            var cropX = (newWidth  - maxWidth)  / 2;
+            var cropY = (newHeight - maxHeight) / 2;
+            image.Mutate(x => x.Crop(new Rectangle(cropX, cropY, maxWidth, maxHeight)));
 
-                var cropX = (newWidth - maxWidth) / 2;
-                var cropY = (newHeight - maxHeight) / 2;
-
-                image.Mutate(x => x.Crop(new Rectangle(cropX, cropY, maxWidth, maxHeight)));
-
-                var encoder = new JpegEncoder { Quality = quality };
-                image.Save(imagePath, encoder); // <-- schrijf terug naar hetzelfde pad
-            }
+            var webpPath = Path.ChangeExtension(imagePath, ".webp");
+            image.Save(webpPath, new WebpEncoder { Quality = quality });
+            if (!string.Equals(imagePath, webpPath, StringComparison.OrdinalIgnoreCase))
+                TryDeleteTempFile(imagePath);
         }
-        public void ScaleImage(string imagePath, int maxWidth, int maxHeight, int quality = 65)
+
+        public void ScaleImage(string imagePath, int maxWidth, int maxHeight, int quality = 80)
         {
-            using (var image = SixLabors.ImageSharp.Image.Load(imagePath))
-            {
-                double ratioX = (double)maxWidth / image.Width;
-                double ratioY = (double)maxHeight / image.Height;
-                double ratio = Math.Max(ratioX, ratioY);
+            using var image = SixLabors.ImageSharp.Image.Load(imagePath);
+            double ratioX = (double)maxWidth  / image.Width;
+            double ratioY = (double)maxHeight / image.Height;
+            double ratio  = Math.Min(ratioX, ratioY); // Min = fit inside, geen bijsnijden
 
-                int newWidth = (int)(image.Width * ratio);
-                int newHeight = (int)(image.Height * ratio);
+            int newWidth  = (int)(image.Width  * ratio);
+            int newHeight = (int)(image.Height * ratio);
+            image.Mutate(x => x.Resize(newWidth, newHeight));
 
-                image.Mutate(x => x.Resize(newWidth, newHeight));
-
-                var encoder = new JpegEncoder { Quality = quality };
-                image.Save(imagePath, encoder); // <-- in-place
-            }
+            var webpPath = Path.ChangeExtension(imagePath, ".webp");
+            image.Save(webpPath, new WebpEncoder { Quality = quality });
+            if (!string.Equals(imagePath, webpPath, StringComparison.OrdinalIgnoreCase))
+                TryDeleteTempFile(imagePath);
         }
         private static bool IsValidImage(IFormFile file) => _validImageTypes.Contains(file.ContentType);
 

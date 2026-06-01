@@ -839,11 +839,19 @@ namespace ServiceCore
             // entity.ProjectNavigation = proj;    // gebruik de juiste propertynaam
 
             // 4) Overige velden mappen
-            entity.Name = picture.Name;
-            entity.Caption = picture.Caption;
-            entity.Type = (int)picture.Type;
+            entity.Name            = picture.Name;
+            entity.Caption         = picture.Caption;
+            entity.Type            = (int)picture.Type;
             entity.Datetimeuploaded = picture.DateTimeUploaded == default ? DateTime.Now : picture.DateTimeUploaded;
             entity.FacebookIdCopro = picture.FacebookIdCopro;
+            entity.SectionId       = picture.SectionId;
+            entity.IsPublic        = picture.IsPublic;
+            entity.SortOrder       = picture.SortOrder;
+            entity.MediaType       = picture.MediaType;
+            entity.FileSizeBytes   = picture.FileSizeBytes;
+            entity.WidthPx         = picture.WidthPx;
+            entity.HeightPx        = picture.HeightPx;
+            entity.DurationSeconds = picture.DurationSeconds;
 
             // 5) Opslaan
             try

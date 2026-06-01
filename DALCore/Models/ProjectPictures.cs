@@ -21,9 +21,28 @@ public partial class ProjectPictures
 
     public string FacebookIdCopro { get; set; }
 
+    public int? SectionId { get; set; }
+
+    public bool IsPublic { get; set; } = true;
+
+    public int SortOrder { get; set; }
+
+    /// <summary>0 = Photo, 1 = Video</summary>
+    public int MediaType { get; set; }
+
+    public long? FileSizeBytes { get; set; }
+
+    public int? WidthPx { get; set; }
+
+    public int? HeightPx { get; set; }
+
+    public double? DurationSeconds { get; set; }
+
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();
 
     public virtual Project ProjectNavigation { get; set; }
 
     public virtual ICollection<ProjectNews> ProjectNews { get; set; } = new List<ProjectNews>();
+
+    public virtual ProjectMediaSection Section { get; set; }
 }

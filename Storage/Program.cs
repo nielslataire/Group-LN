@@ -56,11 +56,13 @@ catch (Exception ex)
 
 var rootPath = Path.Combine(app.Environment.ContentRootPath, settings.RootPath);
 var picturesPath = Path.Combine(rootPath, AssetFolders.Pictures);
-var plansPath = Path.Combine(rootPath, AssetFolders.Plans);
-var docsPath = Path.Combine(rootPath, AssetFolders.Docs);
+var videosPath   = Path.Combine(rootPath, AssetFolders.Videos);
+var plansPath    = Path.Combine(rootPath, AssetFolders.Plans);
+var docsPath     = Path.Combine(rootPath, AssetFolders.Docs);
 
 Directory.CreateDirectory(rootPath);
 Directory.CreateDirectory(picturesPath);
+Directory.CreateDirectory(videosPath);
 Directory.CreateDirectory(plansPath);
 Directory.CreateDirectory(docsPath);
 
@@ -86,9 +88,19 @@ app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(picturesPath),
     RequestPath = "/pictures",
-    OnPrepareResponse = context =>
+    OnPrepareResponse = ctx =>
     {
-        context.Context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+        ctx.Context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+    }
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(videosPath),
+    RequestPath = "/videos",
+    OnPrepareResponse = ctx =>
+    {
+        ctx.Context.Response.Headers.CacheControl = "public,max-age=2592000";
     }
 });
 
@@ -112,7 +124,7 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
 
     if (!AssetFolders.IsValid(folder))
     {
-        return Results.BadRequest(new { error = "Invalid folder. Allowed values: pictures, plans, docs." });
+        return Results.BadRequest(new { error = "Invalid folder. Allowed values: pictures, pictures/447, pictures/800, videos, plans, docs." });
     }
 
     var file = form.Files["file"];
@@ -145,7 +157,7 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
     string? publicUrl = null;
     string? downloadUrl = null;
 
-    if (AssetFolders.IsPictures(folder))
+    if (AssetFolders.IsPublicMedia(folder))
     {
         publicUrl = $"/{folder}/{generatedFileName}";
     }
@@ -695,14 +707,17 @@ static class AssetFolders
     public const string PicturesNews = "pictures/news";
     public const string PicturesNewsOriginal = "pictures/news/original";
     public const string PicturesNews800 = "pictures/news/800";
+    public const string Videos = "videos";
     public const string Plans = "plans";
     public const string Docs = "docs";
 
     public static bool IsValid(string folder) =>
         folder is Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
-            or Plans or Docs;
+            or Videos or Plans or Docs;
 
     public static bool IsPrivate(string folder) => folder is Plans or Docs;
     public static bool IsPictures(string folder) => folder.StartsWith("pictures", StringComparison.Ordinal);
+    public static bool IsVideos(string folder) => folder == Videos;
+    public static bool IsPublicMedia(string folder) => IsPictures(folder) || IsVideos(folder);
 }

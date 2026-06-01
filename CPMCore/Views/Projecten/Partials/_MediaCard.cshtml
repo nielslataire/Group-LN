@@ -1,0 +1,139 @@
+@using CPMCore.Models.Projecten
+@model BOCore.ProjectPictureBO
+@{
+    var imgBase   = (ViewData["ImgBase"]   as string ?? "").TrimEnd('/');
+    var vidBase   = (ViewData["VidBase"]   as string ?? imgBase).TrimEnd('/');
+    var canDelete = ViewData["CanDelete"] as bool? ?? false;
+    var canWrite  = ViewData["CanWrite"]  as bool? ?? false;
+    var sections  = ViewData["Sections"]  as List<ProjectMediaSectionVM> ?? new List<ProjectMediaSectionVM>();
+
+    var isVideo   = Model.MediaType == 1;
+    var thumbUrl  = isVideo
+        ? $"{vidBase}/videos/{Model.Name}"
+        : $"{imgBase}/pictures/{Model.Name}";
+
+    var uploadedLabel = Model.DateTimeUploaded.HasValue
+        ? Model.DateTimeUploaded.Value.ToString("d MMM yyyy")
+        : "";
+
+    string FormatSize(long? bytes)
+    {
+        if (!bytes.HasValue) return "";
+        if (bytes.Value >= 1_048_576) return $"{bytes.Value / 1_048_576.0:F1} MB";
+        if (bytes.Value >= 1_024)     return $"{bytes.Value / 1_024.0:F0} KB";
+        return $"{bytes.Value} B";
+    }
+
+    string FormatDuration(double? sec)
+    {
+        if (!sec.HasValue) return "";
+        var ts = TimeSpan.FromSeconds(sec.Value);
+        return ts.Hours > 0
+            ? $"{ts.Hours}:{ts.Minutes:D2}:{ts.Seconds:D2}"
+            : $"{ts.Minutes}:{ts.Seconds:D2}";
+    }
+}
+
+<div class="mm-card"
+     data-id="@Model.Id"
+     data-mediatype="@Model.MediaType"
+     data-ispublic="@Model.IsPublic.ToString().ToLower()"
+     data-caption="@(Model.Caption ?? "")"
+     data-filename="@Model.Name"
+     data-section="@(Model.SectionId?.ToString() ?? "none")">
+
+    @* Checkbox — class "mm-check" matches the JS event listener *@
+    @if (canWrite || canDelete)
+    {
+        <label class="mm-card-check">
+            <input type="checkbox" class="mm-check" value="@Model.Id" />
+        </label>
+    }
+
+    @* Thumbnail *@
+    <div class="mm-card-thumb">
+        @if (isVideo)
+        {
+            <video src="@thumbUrl" preload="metadata" muted playsinline></video>
+            <div class="mm-play-icon"><i class="bx bx-play-circle"></i></div>
+            @if (Model.DurationSeconds.HasValue)
+            {
+                <span class="mm-duration">@FormatDuration(Model.DurationSeconds)</span>
+            }
+        }
+        else
+        {
+            <img src="@thumbUrl" alt="@Model.Caption" loading="lazy" />
+        }
+
+        @* Type + visibility badges *@
+        <div class="mm-type-badge">
+            <span class="mm-badge @(isVideo ? "video" : "photo")">
+                <i class="bx @(isVideo ? "bx-video" : "bx-image")"></i>
+                @(isVideo ? "VIDEO" : "FOTO")
+            </span>
+            <span class="mm-badge @(Model.IsPublic ? "pub" : "priv")">
+                <i class="bx @(Model.IsPublic ? "bx-globe" : "bx-lock")"></i>
+                @(Model.IsPublic ? "PUBLIEK" : "INTERN")
+            </span>
+        </div>
+
+        @* Hover action bar — data-delete-id matches JS [data-delete-id] selector *@
+        <div class="mm-card-hover-actions">
+            <a href="@thumbUrl" target="_blank" title="Bekijk origineel">
+                <i class="bx bx-fullscreen"></i>
+            </a>
+            @if (canWrite)
+            {
+                <button type="button" class="btn-toggle-vis"
+                        data-id="@Model.Id"
+                        data-current="@Model.IsPublic.ToString().ToLower()"
+                        title="@(Model.IsPublic ? "Verbergen" : "Publiek maken")">
+                    <i class="bx @(Model.IsPublic ? "bx-hide" : "bx-show")"></i>
+                </button>
+            }
+            @if (canDelete)
+            {
+                <button type="button" class="del-btn"
+                        data-delete-id="@Model.Id"
+                        title="Verwijderen">
+                    <i class="bx bx-trash"></i>
+                </button>
+            }
+        </div>
+    </div>
+
+    @* Card body *@
+    <div class="mm-card-body">
+        <div class="mm-card-caption">@(string.IsNullOrWhiteSpace(Model.Caption) ? Model.Name : Model.Caption)</div>
+        <div class="mm-card-meta">
+            <span class="mm-card-type">
+                @if (!isVideo && Model.WidthPx.HasValue && Model.HeightPx.HasValue)
+                {
+                    @($"{Model.WidthPx}×{Model.HeightPx}")
+                }
+                else if (isVideo && Model.DurationSeconds.HasValue)
+                {
+                    @FormatDuration(Model.DurationSeconds)
+                }
+                else if (Model.FileSizeBytes.HasValue)
+                {
+                    @FormatSize(Model.FileSizeBytes)
+                }
+            </span>
+            <span class="mm-card-date">@uploadedLabel</span>
+        </div>
+
+        @* Section selector — class "mm-section-select" + data-media-id matches JS listener *@
+        @if (canWrite && sections.Any())
+        {
+            <select class="mm-card-section-select mm-section-select" data-media-id="@Model.Id" title="Verplaats naar sectie">
+                <option value="">— Geen sectie —</option>
+                @foreach (var s in sections)
+                {
+                    <option value="@s.Id" @(Model.SectionId == s.Id ? "selected" : "")>@s.Name</option>
+                }
+            </select>
+        }
+    </div>
+</div>

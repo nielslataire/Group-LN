@@ -624,48 +624,30 @@ namespace CPMCore.Models.Projecten
         }
     }
 
+    public class ProjectMediaSectionVM
+    {
+        public int    Id          { get; set; }
+        public string Name        { get; set; }
+        public string Description { get; set; }
+        public int    SortOrder   { get; set; }
+        public bool   IsPublic    { get; set; }
+        public int    MediaCount  { get; set; }
+        public int    PhotoCount  { get; set; }
+        public int    VideoCount  { get; set; }
+    }
+
     public class DetailPhotosModel
     {
         public DetailPhotosModel()
         {
-            _photos = new List<ProjectPictureBO>();
+            Photos   = new List<ProjectPictureBO>();
+            Sections = new List<ProjectMediaSectionVM>();
         }
-        private List<ProjectPictureBO> _photos;
-        public List<ProjectPictureBO> Photos
-        {
-            get
-            {
-                return _photos;
-            }
-            set
-            {
-                _photos = value;
-            }
-        }
-        private int _projectid;
-        public int ProjectId
-        {
-            get
-            {
-                return _projectid;
-            }
-            set
-            {
-                _projectid = value;
-            }
-        }
-        private string _projectname;
-        public string ProjectName
-        {
-            get
-            {
-                return _projectname;
-            }
-            set
-            {
-                _projectname = value;
-            }
-        }
+
+        public List<ProjectPictureBO>    Photos   { get; set; }
+        public List<ProjectMediaSectionVM> Sections { get; set; }
+        public int    ProjectId   { get; set; }
+        public string ProjectName { get; set; }
     }
 
     public class DetailNewsModel
