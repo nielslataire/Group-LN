@@ -47,7 +47,7 @@ public static class InviteEmailHtmlBuilder
       <table cellpadding=""0"" cellspacing=""0"" align=""center"" style=""border-collapse:separate;mso-table-lspace:0pt;mso-table-rspace:0pt;margin-bottom:18px;"">
         <tr>
           <td bgcolor=""#ffffff"" style=""background:#ffffff;border:1px solid {GreenBorder};border-radius:20px;padding:5px 16px;text-align:center;"">
-            <span style=""font-size:11px;font-weight:700;color:{Green};font-family:{Font};"">&#x1F6E1;&#xFE0F;&nbsp; Beveiligde aanmelding</span>
+            <img src=""https://cpm.groupln.be/Img/icons/shield.png"" width=""14"" height=""14"" alt="""" style=""vertical-align:middle;margin-right:4px;"" /><span style=""font-size:11px;font-weight:700;color:{Green};font-family:{Font};"">Beveiligde aanmelding</span>
           </td>
         </tr>
       </table>
@@ -55,7 +55,7 @@ public static class InviteEmailHtmlBuilder
       <div style=""font-size:20px;font-weight:700;color:{TextMain};margin-bottom:8px;font-family:{Font};line-height:1.3;"">Activeer uw toegang in &eacute;&eacute;n klik</div>
       <div style=""font-size:13px;color:{TextSoft};line-height:1.6;margin-bottom:24px;font-family:{Font};"">Klik op de knop hieronder en meld u aan met uw Microsoft-account.<br/>Uw toegang wordt meteen geactiveerd.</div>
 
-      {BuildLoginButtonHtml(loginUrl)}
+      {BuildLoginButtonHtml(redeemUrl ?? loginUrl)}
 
       <div style=""margin-top:14px;font-size:11.5px;color:{Muted};font-family:{Font};"">Inloggen via uw Microsoft-account &nbsp;&middot;&nbsp; {HtmlEnc(recipientEmail)}</div>
     </td>
@@ -109,18 +109,18 @@ public static class InviteEmailHtmlBuilder
   </tr>
   <tr valign=""top"">
     <td width=""50%"" bgcolor=""#ffffff"" style=""background:#ffffff;padding:16px 18px;border-right:1px solid {BorderSoft};border-bottom:1px solid {BorderSoft};"">
-      {BuildFeatureHtml("&#9776;", "Uw punten bekijken", "Bekijk per werf al uw openstaande en afgewerkte punten op &eacute;&eacute;n plek.")}
+      {BuildFeatureHtml("https://cpm.groupln.be/Img/icons/list-ul.png", "Uw punten bekijken", "Bekijk per werf al uw openstaande en afgewerkte punten op &eacute;&eacute;n plek.")}
     </td>
     <td width=""50%"" bgcolor=""#ffffff"" style=""background:#ffffff;padding:16px 18px;border-bottom:1px solid {BorderSoft};"">
-      {BuildFeatureHtml("&#9998;", "Zelf beheren", "Pas de status aan of geef een geplande uitvoeringsdatum in.")}
+      {BuildFeatureHtml("https://cpm.groupln.be/Img/icons/edit.png", "Zelf beheren", "Pas de status aan of geef een geplande uitvoeringsdatum in.")}
     </td>
   </tr>
   <tr valign=""top"">
     <td width=""50%"" bgcolor=""#ffffff"" style=""background:#ffffff;padding:16px 18px;border-right:1px solid {BorderSoft};border-radius:0 0 0 8px;"">
-      {BuildFeatureHtml("&#128196;", "Extra info doorsturen", "Voeg een opmerking of foto toe als bewijs van uitvoering.")}
+      {BuildFeatureHtml("https://cpm.groupln.be/Img/icons/photo-album.png", "Extra info doorsturen", "Voeg een opmerking of foto toe als bewijs van uitvoering.")}
     </td>
     <td width=""50%"" bgcolor=""#ffffff"" style=""background:#ffffff;padding:16px 18px;border-radius:0 0 8px 0;"">
-      {BuildFeatureHtml("&#128276;", "Op de hoogte blijven", "Ontvang een melding zodra er nieuwe punten voor u klaarstaan.")}
+      {BuildFeatureHtml("https://cpm.groupln.be/Img/icons/bell.png", "Op de hoogte blijven", "Ontvang een melding zodra er nieuwe punten voor u klaarstaan.")}
     </td>
   </tr>
 </table>");
@@ -220,13 +220,13 @@ public static class InviteEmailHtmlBuilder
 <!--<![endif]-->";
     }
 
-    private static string BuildFeatureHtml(string icon, string title, string description)
+    private static string BuildFeatureHtml(string iconUrl, string title, string description)
     {
         return $@"
 <table cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;"">
   <tr valign=""top"">
     <td width=""36"" style=""width:36px;"">
-      <div style=""width:30px;height:30px;background:{GreenTint};border-radius:6px;text-align:center;line-height:30px;font-size:15px;"">{icon}</div>
+      <div style=""width:30px;background:{GreenTint};border-radius:6px;text-align:center;padding:5px 0;font-size:0;line-height:0;""><img src=""{iconUrl}"" width=""20"" height=""20"" alt="""" style=""display:inline-block;"" /></div>
     </td>
     <td style=""padding-left:10px;"">
       <div style=""font-size:12.5px;font-weight:700;color:{TextMain};margin-bottom:3px;font-family:{Font};"">{title}</div>
@@ -265,7 +265,7 @@ public static class InviteEmailHtmlBuilder
         <!-- BRAND BAR -->
         <tr>
           <td bgcolor=""{Green}"" style=""background:{Green};padding:26px 36px;border-radius:10px 10px 0 0;"">
-            <div style=""font-size:10px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:{Font};""><!--[if mso]><span style=""font-size:12px;"">&#x1F511;</span> <![endif]--><!--[if !mso]><!-- --><svg xmlns=""http://www.w3.org/2000/svg"" width=""12"" height=""12"" fill=""#ffffff"" viewBox=""0 0 24 24"" style=""vertical-align:middle;display:inline-block;""><path d=""M8 21c2.76 0 5-2.24 5-5 0-1.02-.31-1.96-.83-2.75l3.33-3.33 1.79 1.79 1.41-1.41-1.79-1.79L18 7.42l2.29 2.29L21.7 8.3l-2.29-2.29 1.29-1.29-1.41-1.41-8.54 8.54c-.79-.52-1.74-.83-2.75-.83-2.76 0-5 2.24-5 5s2.24 5 5 5Zm0-8c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3""></path></svg><!--<![endif]-->&nbsp; Uitnodiging aannemersportaal</div>
+            <div style=""font-size:10px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:{Font};""><img src=""https://cpm.groupln.be/Img/icons/key.png"" width=""14"" height=""14"" alt="""" style=""vertical-align:middle;margin-right:4px;"" />&nbsp; Uitnodiging aannemersportaal</div>
             <div style=""font-size:24px;font-weight:700;color:#ffffff;letter-spacing:.2px;margin-bottom:6px;font-family:{Font};"">Welkom bij het portaal van {HtmlEnc(companyName)}</div>
             <div style=""font-size:13px;color:#ffffff;font-family:{Font};"">U bent uitgenodigd om toegang te krijgen tot het aannemersportaal</div>
           </td>

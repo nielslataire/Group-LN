@@ -293,7 +293,7 @@ public class IssueNotificationAdminController : Controller
     public async Task<IActionResult> SendTestInviteEmail()
     {
         const string testRecipient = "niels.lataire@groupln.be";
-        var appBaseUrl = (_configuration["App:BaseUrl"] ?? "").TrimEnd('/');
+        var appBaseUrl = (_configuration["App:BaseUrl"] ?? $"{Request.Scheme}://{Request.Host}").TrimEnd('/');
         try
         {
             var result = await _inviteService.SendTestInviteEmailAsync(testRecipient, appBaseUrl);
