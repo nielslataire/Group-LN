@@ -301,6 +301,8 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
 
         var unitNames = new Dictionary<int, string> { { 1, "Lot 3A" }, { 2, "Lot 3B" } };
 
+        var portalBase = (_configuration["App:BaseUrl"] ?? "https://portal.groupln.be").TrimEnd('/');
+
         var html = IssueEmailHtmlBuilder.BuildIssueTableEmail(
             recipientName: "Testgebruiker",
             projectName: "Residentie De Linde – TEST",
@@ -308,9 +310,10 @@ public class IssueNotificationSenderService : IIssueNotificationSenderService
             unitNames: unitNames,
             intro: null,
             sentDate: DateTime.UtcNow,
-            portalLoginUrl: null,
-            pdfDownloadUrl: null,
-            werfleiderEmail: null);
+            portalLoginUrl: $"{portalBase}/Werfportaal",
+            pdfDownloadUrl: $"{portalBase}/Werfportaal/Rapport/999",
+            werfleiderEmail: "werfleider@groupln.be",
+            resendInviteUrl: $"{portalBase}/Uitnodiging/Hernieuw?e=aannemer%40voorbeeld.be&c=1&x=9999999999999&s=test");
 
         var subject = $"[TEST] Voorbeeld puntenlijst – {DateTime.UtcNow:dd/MM/yyyy HH:mm}";
         await SendAsync(toEmail, subject, html, new List<(string, byte[])>(), new List<string>());

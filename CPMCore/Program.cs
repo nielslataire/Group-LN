@@ -441,7 +441,8 @@ app.Map("/api/trigger", triggerApp =>
 
 app.UseAuthentication();
 
-// ── PORTAAL-SHORTCUTS: na authenticatie zodat ingelogde gebruikers niet opnieuw naar login worden gestuurd ──
+// ── PORTAAL-SHORTCUTS: redirect naar login met juiste type zodat de loginpagina de juiste layout toont ──
+// Redirect (302) i.p.v. path rewriting: UseRouting is al gelopen en rewriting had geen effect.
 app.Use(async (ctx, next) =>
 {
     if (!(ctx.User.Identity?.IsAuthenticated == true))
@@ -449,13 +450,13 @@ app.Use(async (ctx, next) =>
         var path = ctx.Request.Path.Value ?? "";
         if (path is "/aannemer" or "/Aannemer" or "/portaal" or "/Portaal" or "/werfportaal" or "/Werfportaal")
         {
-            ctx.Request.Path        = "/Account/Login";
-            ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=contractor&returnUrl=/Werfportaal");
+            ctx.Response.Redirect("/Account/Login?type=contractor&returnUrl=/Werfportaal");
+            return;
         }
-        else if (path is "/klantenportaal" or "/Klantenportaal")
+        if (path is "/klantenportaal" or "/Klantenportaal")
         {
-            ctx.Request.Path        = "/Account/Login";
-            ctx.Request.QueryString = new Microsoft.AspNetCore.Http.QueryString("?type=customer&returnUrl=/Klantenportaal");
+            ctx.Response.Redirect("/Account/Login?type=customer&returnUrl=/Klantenportaal");
+            return;
         }
     }
     await next();

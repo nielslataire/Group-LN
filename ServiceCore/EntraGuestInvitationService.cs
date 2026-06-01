@@ -229,7 +229,8 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         string toEmail, string appBaseUrl, CancellationToken ct = default)
     {
         var fakeUser = new Users { Email = toEmail, Voornaam = "Testgebruiker" };
-        await SendBrandedEmailAsync(fakeUser, redeemUrl: null, appBaseUrl, "/Werfportaal", ct);
+        var fakeRedeemUrl = $"https://login.microsoftonline.com/redeem?rd=https%3A%2F%2Finvitations.microsoft.com%2Fredeem%2F%3Ftenant%3Dtest-tenant%26user%3Dtest";
+        await SendBrandedEmailAsync(fakeUser, fakeRedeemUrl, appBaseUrl, "/Werfportaal", ct);
         return GuestInviteResult.Ok;
     }
 
@@ -285,42 +286,25 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
     private async Task SendBrandedEmailAsync(
         Users user, string? redeemUrl, string appBaseUrl, string loginPath, CancellationToken ct)
     {
-        var loginUrl    = appBaseUrl.TrimEnd('/') + loginPath;
-        var firstName   = HtmlEncode(user.Voornaam?.Trim());
-        var companyName = HtmlEncode(_configuration["Branding:CompanyName"] ?? "CPMCore");
+        var companyName   = _configuration["Branding:CompanyName"] ?? "Group LN";
+        var recipientName = user.Voornaam?.Trim();
+        if (string.IsNullOrWhiteSpace(recipientName))
+            recipientName = user.Email ?? "";
 
-        var redeemSection = string.IsNullOrWhiteSpace(redeemUrl)
-            ? string.Empty
-            : $@"<p style=""font-size:.85em;color:#888;margin-top:24px;"">
-    Werkt de knop niet? Gebruik dan de directe Microsoft-uitnodigingslink:<br/>
-    <a href=""{redeemUrl}"">{redeemUrl}</a>
-  </p>";
-
-        var body = $@"<html><body style=""font-family:Arial,sans-serif;color:#333;max-width:600px;"">
-  <h2 style=""color:#0a5a3b ;"">Welkom bij {companyName}</h2>
-  <p>Beste {firstName},</p>
-  <p>U bent uitgenodigd als externe gebruiker voor <strong>{companyName}</strong>.
-     Via onderstaande knop kunt u zich aanmelden met uw Microsoft-account.</p>
-  <p style=""margin:32px 0;"">
-    <a href=""{loginUrl}"" style=""background:#0a5a3b ;color:#fff;padding:12px 28px;
-       border-radius:4px;text-decoration:none;font-weight:bold;display:inline-block;"">
-      Aanmelden bij {companyName}
-    </a>
-  </p>
-  {redeemSection}
-  <hr style=""border:none;border-top:1px solid #eee;margin-top:32px;""/>
-  <p style=""font-size:.8em;color:#aaa;"">
-    U ontvangt dit bericht omdat een beheerder u heeft uitgenodigd.
-    Als u geen toegang verwacht, kunt u dit bericht negeren.
-  </p>
-</body></html>";
+        var html = InviteEmailHtmlBuilder.BuildInviteEmail(
+            recipientName:  recipientName,
+            recipientEmail: user.Email ?? "",
+            loginUrl:       appBaseUrl.TrimEnd('/') + loginPath,
+            redeemUrl:      redeemUrl,
+            sentDate:       DateTime.UtcNow,
+            companyName:    companyName);
 
         try
         {
             await _emailSender.SendEmailAsync(
                 toEmail:     user.Email!,
-                subject:     $"Uitnodiging: toegang tot {_configuration["Branding:CompanyName"] ?? "CPMCore"}",
-                htmlMessage: body);
+                subject:     $"Uitnodiging: toegang tot het portaal van {companyName}",
+                htmlMessage: html);
         }
         catch (Exception ex)
         {
@@ -344,6 +328,4 @@ public class EntraGuestInvitationService : IEntraGuestInvitationService
         await _db.SaveChangesAsync(ct);
     }
 
-    private static string HtmlEncode(string? value) =>
-        System.Net.WebUtility.HtmlEncode(value ?? string.Empty);
 }
