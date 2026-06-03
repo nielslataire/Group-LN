@@ -68,6 +68,9 @@ namespace CPMCore.Models.Projecten
         }
         public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; }
 
+        [ValidateNever]
+        public IFormFile? StandardFotoUpload { get; set; }
+
         // Coördinatieproject - contract schijven (JSON serialized voor form binding)
         [ValidateNever]
         public List<ProjectContractSliceVM> ContractSlices { get; set; } = new List<ProjectContractSliceVM>();
@@ -232,6 +235,10 @@ namespace CPMCore.Models.Projecten
         }
         private FacebookPlaceBO _selectedfacebookplace;
         public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; }
+
+        [ValidateNever]
+        public IFormFile? StandardFotoUpload { get; set; }
+
         [ValidateNever]
         public FacebookPlaceBO SelectedFacebookPlace
         {
@@ -3999,6 +4006,60 @@ namespace CPMCore.Models.Projecten
         public int? RouteDurationSeconds { get; set; }
         public List<ProjectIssuerCompanyOptionVM> IssuerCompanies { get; set; } = new();
         public List<IdNameBO> AvailableUsers { get; set; } = new();
+    }
+
+    // ── Budget Wizard ViewModels ─────────────────────────────────────────────
+
+    public class BudgetIndexModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+        public List<BudgetMasterBO> BudgetMasters { get; set; } = new();
+    }
+
+    public class BudgetMasterAanmakenModel
+    {
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+
+        [Required(ErrorMessage = "Naam is verplicht.")]
+        public string Naam { get; set; }
+
+        public string Omschrijving { get; set; }
+    }
+
+    public class BudgetGegevensModel
+    {
+        public int VersieId { get; set; }
+        public int MasterId { get; set; }
+        public int ProjectId { get; set; }
+        public string ProjectName { get; set; }
+        public string VersieLabel { get; set; }
+        public string VersieStatus { get; set; }
+        public string MasterNaam { get; set; }
+        public DateTime VersieCreatedAt { get; set; }
+
+        [ValidateNever]
+        public BudgetGegevensBO Gegevens { get; set; } = new();
+
+        [ValidateNever]
+        public List<SelectListItem> BouwheerOptions { get; set; } = new();
+
+        [ValidateNever]
+        public List<SelectListItem> TypeDakOptions { get; set; } = new()
+        {
+            new SelectListItem("Plat dak",             "Plat dak"),
+            new SelectListItem("Hellend dak",          "Hellend dak"),
+            new SelectListItem("Combinatie plat/hellend", "Combinatie plat/hellend"),
+        };
+
+        [ValidateNever]
+        public List<SelectListItem> TypePoortenOptions { get; set; } = new()
+        {
+            new SelectListItem("Sectionaalpoort", "Sectionaalpoort"),
+            new SelectListItem("Kantelpoort",     "Kantelpoort"),
+            new SelectListItem("Geen",            "Geen"),
+        };
     }
 }
 

@@ -23,11 +23,10 @@ public partial class ProjectPictures
 
     public int? SectionId { get; set; }
 
-    public bool IsPublic { get; set; } = true;
+    public bool IsPublic { get; set; }
 
     public int SortOrder { get; set; }
 
-    /// <summary>0 = Photo, 1 = Video</summary>
     public int MediaType { get; set; }
 
     public long? FileSizeBytes { get; set; }

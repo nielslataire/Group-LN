@@ -1,0 +1,218 @@
+@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Projecten.BudgetIndexModel
+@{
+    ViewData["Title"] = "Budgetten — " + Model.ProjectName;
+}
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+    {
+        new Breadcrumb("Home",      nameof(HomeController.Index),                      "Home",       true),
+        new Breadcrumb("Projecten", nameof(ProjectenController.Index),                 "Projecten",  true),
+        new Breadcrumb("Detail",    nameof(ProjectenController.Detail),                "Projecten",  true),
+        new Breadcrumb("Budgetten", nameof(ProjectenController.BudgetIndex),           "Projecten",  false),
+    };
+}
+@Html.AntiForgeryToken()
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            <div class="row justify-content-between align-items-center pt-2 pb-3">
+                <div class="col-auto">
+                    <h1 class="font-weight-bold mb-0">Budgetten</h1>
+                    <p class="text-muted mb-0">
+                        Elk project kan meerdere budgetten bevatten, elk met genummerde versies.
+                        Eén versie is steeds de actieve. Open een versie om de berekeningswizard te starten.
+                    </p>
+                </div>
+                <div class="col-auto">
+                    <a href="@Url.Action("BudgetMasterAanmaken", "Projecten", new { projectId = Model.ProjectId })"
+                       class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> Nieuw budget aanmaken
+                    </a>
+                </div>
+            </div>
+
+            @if (!Model.BudgetMasters.Any())
+            {
+                <div class="alert alert-info">
+                    Nog geen budgetten aangemaakt voor dit project.
+                </div>
+            }
+
+            <div class="row">
+                @foreach (var master in Model.BudgetMasters)
+                {
+                    <div class="col-xl-6 col-lg-12 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center"
+                                 style="background-color:#1a4a3a; color:#fff;">
+                                <h5 class="mb-0">@master.Naam</h5>
+                                @if (master.IsActief)
+                                {
+                                    <span class="badge bg-light text-dark">Actief</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactief</span>
+                                }
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Versie</th>
+                                            <th>Naam</th>
+                                            <th>Datum</th>
+                                            <th>Status</th>
+                                            <th>Acties</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var versie in master.Versies)
+                                        {
+                                            <tr>
+                                                <td>v@versie.Versienummer</td>
+                                                <td>@(versie.VersieNaam ?? "—")</td>
+                                                <td>@versie.CreatedAt.ToString("dd/MM/yy")</td>
+                                                <td>
+                                                    @if (versie.IsHuidig)
+                                                    {
+                                                        <span class="badge bg-success">Huidig</span>
+                                                    }
+                                                    else if (versie.Status == "Concept")
+                                                    {
+                                                        <span class="badge bg-primary">Concept</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-secondary">@versie.Status</span>
+                                                    }
+                                                </td>
+                                                <td class="d-flex gap-1 flex-wrap">
+                                                    <a href="@Url.Action("BudgetGegevens", "Projecten", new { versieId = versie.Id })"
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-folder-open me-1"></i>Open
+                                                    </a>
+                                                    @if (!versie.IsHuidig)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-secondary btn-activeer-versie"
+                                                                data-versie-id="@versie.Id">
+                                                            <i class="fas fa-check me-1"></i>Activeer
+                                                        </button>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                        <tr class="table-light">
+                                            <td colspan="5">
+                                                <button class="btn btn-sm btn-link text-success btn-nieuwe-versie"
+                                                        data-master-id="@master.Id">
+                                                    <i class="fas fa-plus-circle me-1"></i>Nieuwe versie op basis van v@(master.Versies.FirstOrDefault()?.Versienummer)
+                                                </button>
+                                                <div class="nieuwe-versie-form d-none mt-2" data-master-id="@master.Id">
+                                                    <div class="input-group input-group-sm mb-1">
+                                                        <span class="input-group-text">Naam</span>
+                                                        <input type="text" class="form-control versie-naam-input" placeholder="Optionele naam" />
+                                                    </div>
+                                                    <div class="input-group input-group-sm mb-1">
+                                                        <span class="input-group-text">Notitie</span>
+                                                        <input type="text" class="form-control versie-notitie-input" placeholder="Optionele notitie" />
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm btn-success btn-versie-opslaan">Aanmaken</button>
+                                                        <button class="btn btn-sm btn-outline-secondary btn-versie-annuleren">Annuleren</button>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="card-footer d-flex gap-2">
+                                <a href="@Url.Action("BudgetMasterAanmaken", "Projecten", new { projectId = Model.ProjectId })"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-edit me-1"></i>Bewerken
+                                </a>
+                                <span class="ms-auto text-muted small align-self-center">
+                                    @master.Versies.Count versie@(master.Versies.Count == 1 ? "" : "s")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script>
+    const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    // Nieuwe versie inline form toggle
+    document.querySelectorAll('.btn-nieuwe-versie').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const masterId = btn.dataset.masterId;
+            const form = document.querySelector(`.nieuwe-versie-form[data-master-id="${masterId}"]`);
+            form.classList.toggle('d-none');
+            btn.classList.toggle('d-none');
+        });
+    });
+
+    document.querySelectorAll('.btn-versie-annuleren').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const form = btn.closest('.nieuwe-versie-form');
+            const masterId = form.dataset.masterId;
+            const toggleBtn = document.querySelector(`.btn-nieuwe-versie[data-master-id="${masterId}"]`);
+            form.classList.add('d-none');
+            toggleBtn.classList.remove('d-none');
+        });
+    });
+
+    document.querySelectorAll('.btn-versie-opslaan').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const form = btn.closest('.nieuwe-versie-form');
+            const masterId = form.dataset.masterId;
+            const versieNaam = form.querySelector('.versie-naam-input').value;
+            const notitie = form.querySelector('.versie-notitie-input').value;
+
+            const params = new URLSearchParams({ masterId, versieNaam, notitie });
+            const resp = await fetch('@Url.Action("BudgetNieuweVersie", "Projecten")', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': antiForgeryToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const data = await resp.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Er ging iets mis bij het aanmaken van de nieuwe versie.');
+            }
+        });
+    });
+
+    // Versie activeren
+    document.querySelectorAll('.btn-activeer-versie').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const versieId = btn.dataset.versieId;
+            const params = new URLSearchParams({ versieId });
+            const resp = await fetch('@Url.Action("BudgetVersieActiveren", "Projecten")', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': antiForgeryToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const data = await resp.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Er ging iets mis bij het activeren van de versie.');
+            }
+        });
+    });
+</script>
+}

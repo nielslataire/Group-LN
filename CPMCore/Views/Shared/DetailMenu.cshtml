@@ -98,7 +98,7 @@
 							<li>
 								<a href="@Url.Action("DetailPhotos", "Projecten", new { projectid = projectId })"
 								   class="menu-item @(currentAction == "DetailPhotos" && currentController == "Projecten" ? "active" : "")">
-									Foto's
+									Media
 								</a>
 							</li>
 						}
@@ -162,6 +162,16 @@
 						</li>
 					</ul>
 				}
+
+				<h6 class="title">BUDGET</h6>
+				<ul class="list-unstyled mt-3 pt-3">
+					<li>
+						<a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = projectId })"
+						   class="menu-item @(currentAction == "BudgetIndex" || currentAction == "BudgetGegevens" || currentAction == "BudgetMasterAanmaken" ? "active" : "")">
+							Budgetten
+						</a>
+					</li>
+				</ul>
 
 				@if (showFinancieel)
 				{

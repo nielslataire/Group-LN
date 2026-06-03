@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr /s /i \"MediaType\" \"e:\\\\TFS\\\\Service\\\\*.vb\" \"e:\\\\TFS\\\\Service\\\\**\\\\*.vb\")",
+      "Bash(dir /s /b \"e:\\\\TFS\\\\*.vb\")",
+      "Bash(findstr /i \"ProjectPictures\")",
+      "Bash(findstr /n \"FK_IncommingInvoices_Project\\\\|LogList\" \"e:\\\\TFS\\\\DALNEW\\\\CoproModel.edmx\")",
+      "Bash(Select-String -Path \"e:\\\\TFS\\\\DALNEW\\\\CoproModel.edmx\" -Pattern \"FK_IncommingInvoices_Project|LogList\")",
+      "Bash(Format-Table LineNumber, Line -AutoSize)",
+      "PowerShell(Select-String -Path \"e:\\\\TFS\\\\DALNEW\\\\CoproModel.edmx\" -Pattern \"IncommingInvoices\" | Where-Object { $_.Line -match \"EntityType\" } | Select-Object LineNumber, Line)",
+      "PowerShell(\\(Get-Content \"e:\\\\TFS\\\\wwwcopro\\\\Content\\\\bootstrap.min.css\" -TotalCount 1\\).Substring\\(0, 200\\))",
+      "PowerShell($line = \\(Get-Content \"e:\\\\TFS\\\\wwwcopro\\\\Content\\\\bootstrap.min.css\" -TotalCount 1\\); $line.Substring\\(0, [Math]::Min\\(200, $line.Length\\)\\))",
+      "PowerShell(Select-String -Path \"e:\\\\TFS\\\\wwwcopro\\\\Content\\\\bootstrap.min.css\" -Pattern \"Bootstrap v\" | Select-Object -First 1 | ForEach-Object { $_.Line.Substring\\(0, [Math]::Min\\(120, $_.Line.Length\\)\\) })",
+      "Bash(Find-Item -Path \"e:\\\\TFS\\\\DALCore\\\\Models\" -Filter \"*context*\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Get-ChildItem -Path \"e:\\\\TFS\\\\DALCore\\\\Models\" -Filter \"*context*\" -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

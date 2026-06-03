@@ -227,6 +227,14 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[IncomingInvoiceEnrichment]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[IncomingInvoiceWarning]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[IncommingInvoiceDetail]",
          "ObjectType": 0
       },
@@ -263,6 +271,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[InvoiceProjectAlias]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[InvoiceRelations]",
          "ObjectType": 0
       },
@@ -284,6 +296,10 @@
       },
       {
          "Name": "[dbo].[InvoiceStatusLookup]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[InvoiceSupplierRule]",
          "ObjectType": 0
       },
       {
@@ -391,6 +407,10 @@
          "ObjectType": 0
       },
       {
+         "Name": "[dbo].[ProjectMediaSection]",
+         "ObjectType": 0
+      },
+      {
          "Name": "[dbo].[ProjectNews]",
          "ObjectType": 0
       },
@@ -452,6 +472,10 @@
       },
       {
          "Name": "[dbo].[UnitExecutionPlan]",
+         "ObjectType": 0
+      },
+      {
+         "Name": "[dbo].[UnitFinishingOption]",
          "ObjectType": 0
       },
       {

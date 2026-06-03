@@ -18,6 +18,14 @@ Partial Public Class ProjectPictures
     Public Property Caption As String
     Public Property Type As Nullable(Of Integer)
     Public Property FacebookIdCopro As String
+    Public Property SectionId As Nullable(Of Integer)
+    Public Property IsPublic As Boolean
+    Public Property SortOrder As Integer
+    Public Property MediaType As Integer
+    Public Property FileSizeBytes As Nullable(Of Long)
+    Public Property WidthPx As Nullable(Of Integer)
+    Public Property HeightPx As Nullable(Of Integer)
+    Public Property DurationSeconds As Nullable(Of Double)
 
     Public Overridable Property Project As ICollection(Of Project) = New HashSet(Of Project)
     Public Overridable Property Project1 As Project

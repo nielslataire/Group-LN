@@ -1,0 +1,521 @@
+@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Projecten.BudgetGegevensModel
+@{
+    ViewData["Title"] = "Gegevens — " + Model.MasterNaam;
+    var currentYear = DateTime.Now.Year;
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            <div class="bw-tab-bar">
+                <div class="bw-steps">
+                    @{
+                        var steps = new[]
+                        {
+                            (1,  "Gegevens"),
+                            (2,  "Oppervlaktes"),
+                            (3,  "Sanitair"),
+                            (4,  "Gevels / Ramen"),
+                            (5,  "Dak / Afbraak"),
+                            (6,  "Bouwkost (VMSW)"),
+                            (7,  "Parameters"),
+                            (8,  "Berekening"),
+                            (9,  "Verkoop"),
+                            (10, "Resultaat"),
+                        };
+                    }
+                    @foreach (var (num, label) in steps)
+                    {
+                        bool isActive = num == 1;
+                        <div class="bw-step @(isActive ? "bw-step--active" : "")">
+                            <span class="bw-step__num">@num</span>
+                            <span class="bw-step__label">@label</span>
+                        </div>
+                        @if (num < steps.Length)
+                        {
+                            <div class="bw-step__connector" aria-hidden="true"></div>
+                        }
+                    }
+                </div>
+                <div class="bw-tab-actions">
+                    <label class="small text-muted me-2 mb-0 user-select-none" for="toggleBerekeningen">
+                        Toon berekeningen
+                    </label>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="toggleBerekeningen" />
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                .bw-tab-bar {
+                    display: flex;
+                    align-items: center;
+                    background: #fff;
+                    border-top: 1px solid #dee2e6;
+                    border-bottom: 1px solid #dee2e6;
+                    margin: -40px -40px 1.5rem -40px;
+                    padding: 0 1.5rem;
+                    min-height: 46px;
+                    gap: 0;
+                }
+                .bw-steps {
+                    display: flex;
+                    align-items: center;
+                    flex: 1;
+                    overflow-x: auto;
+                    scrollbar-width: none;
+                    -ms-overflow-style: none;
+                    gap: 0;
+                }
+                .bw-steps::-webkit-scrollbar { display: none; }
+                .bw-step {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    white-space: nowrap;
+                    padding: 0.6rem 0;
+                    cursor: default;
+                    user-select: none;
+                }
+                .bw-step__num {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 22px;
+                    height: 22px;
+                    border-radius: 50%;
+                    font-size: 11px;
+                    font-weight: 700;
+                    flex-shrink: 0;
+                    color: #adb5bd;
+                    background: transparent;
+                }
+                .bw-step__label {
+                    font-size: 0.8125rem;
+                    font-weight: 400;
+                    color: #adb5bd;
+                }
+                .bw-step--active .bw-step__num {
+                    background: #1a4a3a;
+                    color: #fff;
+                }
+                .bw-step--active .bw-step__label {
+                    color: #1a4a3a;
+                    font-weight: 600;
+                }
+                .bw-step__connector {
+                    flex-shrink: 0;
+                    width: 18px;
+                    height: 1px;
+                    background: #dee2e6;
+                    margin: px 3px;
+                }
+                .bw-tab-actions {
+                    display: flex;
+                    align-items: center;
+                    padding-left: 1rem;
+                    border-left: 1px solid #dee2e6;
+                    flex-shrink: 0;
+                    margin-left: 0.5rem;
+                }
+            </style>
+
+            @* ── Versie-header ── *@
+            <div class="d-flex align-items-center justify-content-between bg-light border rounded px-3 py-2 mb-3">
+                <div>
+                    <span class="text-muted small me-2">Budget:</span>
+                    <strong>@Model.MasterNaam</strong>
+                    <span class="text-muted mx-2">|</span>
+                    <span class="text-muted small me-2">Versie:</span>
+                    <strong>@Model.VersieLabel</strong>
+                    @if (Model.VersieStatus == "Concept")
+                    {
+                        <span class="badge bg-warning text-dark ms-2">Concept</span>
+                    }
+                    else if (Model.VersieStatus == "Goedgekeurd")
+                    {
+                        <span class="badge bg-success ms-2">Goedgekeurd</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary ms-2">@Model.VersieStatus</span>
+                    }
+                </div>
+                <div>
+                    <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })"
+                       class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left me-1"></i>Terug naar overzicht
+                    </a>
+                    <button class="btn btn-sm btn-secondary" disabled
+                            title="Oppervlaktes nog niet beschikbaar">
+                        Volgende: Oppervlaktes <i class="fas fa-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+
+                @* ── Linker kolom: formulier ── *@
+                <div class="col-xl-8 col-lg-8">
+
+                    <form asp-action="BudgetGegevens" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="VersieId" />
+                        <input type="hidden" asp-for="MasterId" />
+                        <input type="hidden" asp-for="ProjectId" />
+                        <input type="hidden" asp-for="ProjectName" />
+                        <input type="hidden" asp-for="MasterNaam" />
+                        <input type="hidden" asp-for="VersieLabel" />
+                        <input type="hidden" asp-for="VersieStatus" />
+
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger mb-3"></div>
+
+                        @* ── Kaart 1: Bouwkundige parameters ── *@
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0 fw-semibold">
+                                    <i class="fas fa-hard-hat me-2 text-muted"></i>Bouwkundige parameters
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.TypeDak" class="form-label">Type dak</label>
+                                        <select asp-for="Gegevens.TypeDak" asp-items="Model.TypeDakOptions"
+                                                class="form-select">
+                                            <option value="">— kies type —</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.TypePoorten" class="form-label">Type poorten</label>
+                                        <select asp-for="Gegevens.TypePoorten" asp-items="Model.TypePoortenOptions"
+                                                class="form-select">
+                                            <option value="">— kies type —</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-sm-6 col-md-3">
+                                        <label asp-for="Gegevens.AantalLiften" class="form-label">Aantal liften</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.AantalLiften" type="number" min="0"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">st</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6 col-md-3">
+                                        <label asp-for="Gegevens.AantalBinnentrappen" class="form-label">Aantal binnentrappen</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.AantalBinnentrappen" type="number" min="0"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">st</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6 col-md-3">
+                                        <label asp-for="Gegevens.AantalBovengrondseVerdiepingen" class="form-label">Bovengrondse verdiepingen</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.AantalBovengrondseVerdiepingen" type="number" min="0"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">st</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6 col-md-3">
+                                        <label asp-for="Gegevens.AantalVerdiepingenOndergronds" class="form-label">Ondergrondse verdiepingen</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.AantalVerdiepingenOndergronds" type="number" min="0"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">st</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.OppFunderingen" class="form-label">Oppervlakte funderingen</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.OppFunderingen" type="number" min="0" step="0.01"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">m²</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.M3Grondwerk" class="form-label">Grondwerk</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.M3Grondwerk" type="number" min="0" step="0.01"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">m³</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.LmBerlinerwanden" class="form-label">Berlinerwanden</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.LmBerlinerwanden" type="number" min="0" step="0.01"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">lm</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.LmSecanpalen" class="form-label">Secanpalen</label>
+                                        <div class="input-group">
+                                            <input asp-for="Gegevens.LmSecanpalen" type="number" min="0" step="0.01"
+                                                   class="form-control text-end" />
+                                            <span class="input-group-text">lm</span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ── Kaart 2: ABEX-indexering ── *@
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0 fw-semibold">
+                                    <i class="fas fa-chart-line me-2 text-muted"></i>ABEX-indexering
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3">
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.NacalcBasisprijs" class="form-label">Nacalc basisprijs</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">€</span>
+                                            <input asp-for="Gegevens.NacalcBasisprijs" type="number" min="0" step="0.01"
+                                                   class="form-control text-end abex-input" id="inp-basisprijs" />
+                                            <span class="input-group-text">/m²</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.NacalcBasisJaar" class="form-label">Basisjaar</label>
+                                        <select asp-for="Gegevens.NacalcBasisJaar" class="form-select abex-input" id="inp-basisjaar">
+                                            <option value="">— kies jaar —</option>
+                                            @for (int y = currentYear; y >= 2000; y--)
+                                            {
+                                                <option value="@y" selected="@(Model.Gegevens.NacalcBasisJaar == y ? "selected" : null)">@y</option>
+                                            }
+                                        </select>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.ABEXBasisIndex" class="form-label">ABEX-index basisjaar</label>
+                                        <input asp-for="Gegevens.ABEXBasisIndex" type="number" min="0" step="0.01"
+                                               class="form-control text-end abex-input" id="inp-abex-basis"
+                                               placeholder="Bv. 887,36" />
+                                        @if (Model.Gegevens.ABEXBasisIndex.HasValue)
+                                        {
+                                            <div class="form-text text-muted">ABEX-index basisjaar: <strong>@Model.Gegevens.ABEXBasisIndex.Value.ToString("N2")</strong></div>
+                                        }
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.ABEXHuidigIndex" class="form-label">ABEX-index huidig jaar (@currentYear)</label>
+                                        <input asp-for="Gegevens.ABEXHuidigIndex" type="number" min="0" step="0.01"
+                                               class="form-control text-end abex-input" id="inp-abex-huidig"
+                                               placeholder="Bv. 1.066,51" />
+                                        @if (Model.Gegevens.ABEXHuidigIndex.HasValue)
+                                        {
+                                            <div class="form-text text-muted">ABEX-index huidig jaar: <strong>@Model.Gegevens.ABEXHuidigIndex.Value.ToString("N2")</strong></div>
+                                        }
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.GevelMetselwerkPrijsPerM2" class="form-label">Gevelmetselwerk</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">€</span>
+                                            <input asp-for="Gegevens.GevelMetselwerkPrijsPerM2" type="number" min="0" step="0.01"
+                                                   class="form-control text-end abex-input" id="inp-gevel" />
+                                            <span class="input-group-text">/m²</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-6">
+                                        <label asp-for="Gegevens.GipswerkenPrijsPerM2" class="form-label">Gipswerken</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">€</span>
+                                            <input asp-for="Gegevens.GipswerkenPrijsPerM2" type="number" min="0" step="0.01"
+                                                   class="form-control text-end abex-input" id="inp-gips" />
+                                            <span class="input-group-text">/m²</span>
+                                        </div>
+                                        <div class="form-text text-muted">Forfait per woning voor gipsblokken &amp; pleisterwerk; wordt geïndexeerd zoals de ruwbouwprijs.</div>
+                                    </div>
+
+                                </div>
+
+                                @* Berekend resultaat ── *@
+                                <div class="mt-3 p-3 rounded bg-light border">
+                                    <div class="row g-2 small">
+                                        <div class="col-sm-6 d-flex justify-content-between">
+                                            <span class="text-muted">ABEX-indexfactor:</span>
+                                            <strong id="calc-factor">—</strong>
+                                        </div>
+                                        <div class="col-sm-6 d-flex justify-content-between">
+                                            <span class="text-muted">Ruwbouwprijs/m² (geïnd.):</span>
+                                            <strong id="calc-ruwbouw">—</strong>
+                                        </div>
+                                        <div class="col-sm-6 d-flex justify-content-between">
+                                            <span class="text-muted">Gevelmetselwerk/m² (geïnd.):</span>
+                                            <strong id="calc-gevel">—</strong>
+                                        </div>
+                                        <div class="col-sm-6 d-flex justify-content-between">
+                                            <span class="text-muted">Gipswerken/m² (geïnd.):</span>
+                                            <strong id="calc-gips">—</strong>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted mb-0 mt-2" style="font-size:.8rem;">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Deze geïndexeerde eenheidsprijzen voeden stap 4 — Bouwkost (VMSW).
+                                    </p>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        @* ── Bottom action bar ── *@
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <a href="@Url.Action("BudgetIndex", "Projecten", new { projectId = Model.ProjectId })"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Terug naar overzicht
+                            </a>
+                            <div class="d-flex gap-2">
+                                <button type="submit" name="submitAction" value="save" class="btn btn-outline-primary">
+                                    <i class="fas fa-save me-1"></i>Opslaan
+                                </button>
+                                <button type="button" class="btn btn-secondary" disabled
+                                        title="Oppervlaktes nog niet beschikbaar">
+                                    Opslaan &amp; Volgende <i class="fas fa-arrow-right ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                    </form>
+                </div>
+
+                @* ── Rechter kolom: info card ── *@
+                <div class="col-xl-4 col-lg-4">
+                    <div class="card sticky-top" style="top:1rem;">
+                        <div class="card-header d-flex align-items-center gap-2"
+                             style="background-color:#1a4a3a; color:#fff;">
+                            <i class="fas fa-calculator"></i>
+                            <span class="fw-semibold">Live berekening</span>
+                            <span class="badge bg-success ms-auto" id="live-badge">Live</span>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row small mb-0">
+                                <dt class="col-7 text-muted fw-normal">ABEX-indexfactor</dt>
+                                <dd class="col-5 text-end fw-semibold" id="sidebar-factor">—</dd>
+
+                                <dt class="col-7 text-muted fw-normal">Ruwbouwprijs/m² (geïnd.)</dt>
+                                <dd class="col-5 text-end fw-semibold" id="sidebar-ruwbouw">—</dd>
+
+                                <dt class="col-7 text-muted fw-normal">Gevelmetselwerk/m² (geïnd.)</dt>
+                                <dd class="col-5 text-end fw-semibold" id="sidebar-gevel">—</dd>
+
+                                <dt class="col-7 text-muted fw-normal">Gipswerken/woning (geïnd.)</dt>
+                                <dd class="col-5 text-end fw-semibold" id="sidebar-gips">—</dd>
+                            </dl>
+
+                            <hr class="my-2" />
+
+                            <dl class="row small mb-0">
+                                <dt class="col-6 text-muted fw-normal">Versie</dt>
+                                <dd class="col-6 text-end">@Model.VersieLabel</dd>
+
+                                <dt class="col-6 text-muted fw-normal">Status</dt>
+                                <dd class="col-6 text-end">
+                                    @if (Model.VersieStatus == "Concept")
+                                    {
+                                        <span class="badge bg-warning text-dark">Concept</span>
+                                    }
+                                    else if (Model.VersieStatus == "Goedgekeurd")
+                                    {
+                                        <span class="badge bg-success">Goedgekeurd</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@Model.VersieStatus</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-6 text-muted fw-normal">Aangemaakt op</dt>
+                                <dd class="col-6 text-end">@Model.VersieCreatedAt.ToString("dd/MM/yyyy")</dd>
+                            </dl>
+
+                            <div class="mt-3 p-2 rounded bg-light border small text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Vul Oppervlaktes in om het aantal eenheden te berekenen →
+                                <span class="text-secondary">(stap 2, nog niet beschikbaar)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script>
+    const fmt = (val, decimals = 2) =>
+        val != null && !isNaN(val)
+            ? new Intl.NumberFormat('nl-BE', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(val)
+            : '—';
+
+    const eur = (val) => val != null && !isNaN(val) ? '€ ' + fmt(val) : '—';
+
+    function recalculate() {
+        const basis   = parseFloat(document.getElementById('inp-abex-basis')?.value) || 0;
+        const huidig  = parseFloat(document.getElementById('inp-abex-huidig')?.value) || 0;
+        const prijs   = parseFloat(document.getElementById('inp-basisprijs')?.value) || 0;
+        const gevel   = parseFloat(document.getElementById('inp-gevel')?.value) || 0;
+        const gips    = parseFloat(document.getElementById('inp-gips')?.value) || 0;
+
+        const factor   = basis > 0 && huidig > 0 ? huidig / basis : null;
+        const ruwbouw  = factor != null && prijs > 0 ? prijs * factor : null;
+        const gevelInd = factor != null && gevel > 0 ? gevel * factor : null;
+        const gipsInd  = factor != null && gips > 0  ? gips * factor  : null;
+
+        const factorStr   = factor   != null ? fmt(factor, 4) : '—';
+        const ruwbouwStr  = ruwbouw  != null ? eur(ruwbouw)   : '—';
+        const gevelStr    = gevelInd != null ? eur(gevelInd)  : '—';
+        const gipsStr     = gipsInd  != null ? eur(gipsInd)   : '—';
+
+        ['calc-factor', 'sidebar-factor'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = factorStr;
+        });
+        ['calc-ruwbouw', 'sidebar-ruwbouw'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = ruwbouwStr;
+        });
+        ['calc-gevel', 'sidebar-gevel'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = gevelStr;
+        });
+        ['calc-gips', 'sidebar-gips'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = gipsStr;
+        });
+    }
+
+    document.querySelectorAll('.abex-input').forEach(el => {
+        el.addEventListener('input', recalculate);
+        el.addEventListener('change', recalculate);
+    });
+
+    recalculate();
+</script>
+}

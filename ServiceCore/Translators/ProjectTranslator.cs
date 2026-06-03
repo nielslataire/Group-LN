@@ -118,6 +118,7 @@ namespace ServiceCore.Translators
                 bo.DefaultPicture.Name = _entity.DefaultPicture.Name;
                 bo.DefaultPicture.Caption = _entity.DefaultPicture.Caption;
             }
+            bo.StandardFotoName = _entity.StandardFotoName;
             // Alle project fotos
             foreach (var x in _entity.ProjectPictures)
             {
@@ -176,6 +177,7 @@ namespace ServiceCore.Translators
             _entity.RouteDurationSeconds = bo.RouteDurationSeconds;
             _entity.KmAllowance          = bo.KmAllowance;
             _entity.IsPublished          = bo.IsPublished;
+            _entity.StandardFotoName     = bo.StandardFotoName;
 
             if ((bo.Postalcode != null && bo.Postalcode.PostcodeId != 0))
                 _entity.PostalCodeId = bo.Postalcode.PostcodeId;

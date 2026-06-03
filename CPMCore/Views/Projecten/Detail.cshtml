@@ -21,6 +21,7 @@
 @{
     String urlTotal = "";
 }
+@Html.AntiForgeryToken()
 <!-- start: page -->
 <section class="content-with-menu">
     <div class="content-with-menu-container">
@@ -52,18 +53,18 @@
             </div>
             <div class="row">
                 <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
-                @*HOOFDFOTO*@
-                 <div class="card">
-                        @if (Model.Project.DefaultPicture.Name is null)
-                        {
-                            urlTotal = "~/img/no_image.jpg";
-                        }
-                        else
-                        {
-                            urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
-                        }
-                        <img src="@Url.Content(urlTotal)" class="card-img-top" alt="@Model.Project.Name" />
-                    </div>
+                @*STANDAARD FOTO*@
+                @{
+                    if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
+                        urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.StandardFotoName;
+                    else if (Model.Project.DefaultPicture?.Name is not null)
+                        urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
+                    else
+                        urlTotal = "~/img/no_image.jpg";
+                }
+                <div class="card">
+                    <img src="@Url.Content(urlTotal)" class="card-img-top" alt="@Model.Project.Name" style="aspect-ratio:1/1;object-fit:cover;" />
+                </div>
                 </div>
                 <div class="col-xl-3 col-lg-4 col-md-6 col-sm-12 mb-3">
                     @*ALGEMEEN*@
@@ -392,6 +393,32 @@
 
 @section PageScripts {
     <script>
+        // Standaard foto AJAX upload
+        document.getElementById('standardFotoInput')?.addEventListener('change', function () {
+            if (!this.files[0]) return;
+            var formData = new FormData();
+            formData.append('projectId', '@Model.Project.Id');
+            formData.append('file', this.files[0]);
+            formData.append('__RequestVerificationToken', document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '');
+            fetch('@Url.Action("UploadProjectStandardFoto", "Projecten")', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(d => {
+                    if (d.success) location.reload();
+                    else alert('Upload mislukt: ' + (d.error ?? 'onbekende fout'));
+                });
+        });
+
+        document.getElementById('removeStandardFotoBtn')?.addEventListener('click', function () {
+            if (!confirm('Standaard foto verwijderen?')) return;
+            fetch('@Url.Action("RemoveProjectStandardFoto", "Projecten")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'projectId=@Model.Project.Id&__RequestVerificationToken=' + encodeURIComponent(document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '')
+            })
+            .then(r => r.json())
+            .then(d => { if (d.success) location.reload(); });
+        });
+
         $(document).on('click', '#delete-project-button', function (e) {
             e.preventDefault();
             const projectId = $(this).data('project-id');

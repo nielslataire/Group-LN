@@ -109,6 +109,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<IncomingInvoiceAttachments> IncomingInvoiceAttachments { get; set; }
 
+    public virtual DbSet<IncomingInvoiceEnrichment> IncomingInvoiceEnrichment { get; set; }
+
+    public virtual DbSet<IncomingInvoiceWarning> IncomingInvoiceWarning { get; set; }
+
     public virtual DbSet<IncommingInvoiceDetail> IncommingInvoiceDetail { get; set; }
 
     public virtual DbSet<IncommingInvoices> IncommingInvoices { get; set; }
@@ -127,6 +131,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<InvoicePdfArchive> InvoicePdfArchive { get; set; }
 
+    public virtual DbSet<InvoiceProjectAlias> InvoiceProjectAlias { get; set; }
+
     public virtual DbSet<InvoiceRelations> InvoiceRelations { get; set; }
 
     public virtual DbSet<InvoiceSequence> InvoiceSequence { get; set; }
@@ -134,6 +140,8 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<InvoiceSeries> InvoiceSeries { get; set; }
 
     public virtual DbSet<InvoiceStatusLookup> InvoiceStatusLookup { get; set; }
+
+    public virtual DbSet<InvoiceSupplierRule> InvoiceSupplierRule { get; set; }
 
     public virtual DbSet<InvoiceUbl> InvoiceUbl { get; set; }
 
@@ -193,6 +201,8 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<ProjectLevels> ProjectLevels { get; set; }
 
+    public virtual DbSet<ProjectMediaSection> ProjectMediaSection { get; set; }
+
     public virtual DbSet<ProjectNews> ProjectNews { get; set; }
 
     public virtual DbSet<ProjectPictures> ProjectPictures { get; set; }
@@ -223,9 +233,9 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<UnitConstructionValue> UnitConstructionValue { get; set; }
 
-    public virtual DbSet<UnitFinishingOption> UnitFinishingOption { get; set; }
-
     public virtual DbSet<UnitExecutionPlan> UnitExecutionPlan { get; set; }
+
+    public virtual DbSet<UnitFinishingOption> UnitFinishingOption { get; set; }
 
     public virtual DbSet<UnitGroupTypes> UnitGroupTypes { get; set; }
 
@@ -258,6 +268,12 @@ public partial class cpmRunningContext : DbContext
     public virtual DbSet<VwInvoiceTotals> VwInvoiceTotals { get; set; }
 
     public virtual DbSet<WheaterStations> WheaterStations { get; set; }
+
+    public virtual DbSet<BudgetMaster> BudgetMaster { get; set; }
+
+    public virtual DbSet<BudgetVersie> BudgetVersie { get; set; }
+
+    public virtual DbSet<BudgetGegevens> BudgetGegevens { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -1337,6 +1353,61 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_IncomingInvoiceAttachments_Invoice");
         });
 
+        modelBuilder.Entity<IncomingInvoiceEnrichment>(entity =>
+        {
+            entity.HasIndex(e => e.IncomingInvoiceId, "IX_IncomingInvoiceEnrichment_InvoiceId").IsUnique();
+
+            entity.Property(e => e.DocumentClassification).HasMaxLength(50);
+            entity.Property(e => e.EnrichedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.SuggestedAccountingCode).HasMaxLength(100);
+            entity.Property(e => e.SuggestedAccountingDescription).HasMaxLength(250);
+            entity.Property(e => e.SuggestedAccountingSource).HasMaxLength(50);
+            entity.Property(e => e.SuggestedContractConfidence).HasMaxLength(20);
+            entity.Property(e => e.SuggestedContractName).HasMaxLength(250);
+            entity.Property(e => e.SuggestedProjectConfidence).HasMaxLength(20);
+            entity.Property(e => e.SuggestedProjectMatchReason).HasMaxLength(500);
+            entity.Property(e => e.SuggestedProjectMatchedFields).HasMaxLength(200);
+            entity.Property(e => e.SuggestedProjectName).HasMaxLength(250);
+            entity.Property(e => e.SupplierIban).HasMaxLength(50);
+            entity.Property(e => e.SupplierMatchConfidence).HasMaxLength(20);
+            entity.Property(e => e.SupplierMatchReason).HasMaxLength(500);
+            entity.Property(e => e.UserConfirmedAccountingCode).HasMaxLength(100);
+            entity.Property(e => e.UserNotes).HasMaxLength(2000);
+            entity.Property(e => e.UserReviewedBy).HasMaxLength(200);
+
+            entity.HasOne(d => d.IncomingInvoice).WithOne(p => p.Enrichment)
+                .HasForeignKey<IncomingInvoiceEnrichment>(d => d.IncomingInvoiceId)
+                .HasConstraintName("FK_IncomingInvoiceEnrichment_Invoice");
+
+            entity.HasOne(d => d.SuggestedProject).WithMany(p => p.IncomingInvoiceEnrichmentSuggestedProject)
+                .HasForeignKey(d => d.SuggestedProjectId)
+                .HasConstraintName("FK_IncomingInvoiceEnrichment_SuggestedProject");
+
+            entity.HasOne(d => d.UserConfirmedProject).WithMany(p => p.IncomingInvoiceEnrichmentUserConfirmedProject)
+                .HasForeignKey(d => d.UserConfirmedProjectId)
+                .HasConstraintName("FK_IncomingInvoiceEnrichment_ConfirmedProject");
+        });
+
+        modelBuilder.Entity<IncomingInvoiceWarning>(entity =>
+        {
+            entity.HasIndex(e => e.IncomingInvoiceId, "IX_IncomingInvoiceWarning_InvoiceId");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Severity)
+                .IsRequired()
+                .HasMaxLength(20)
+                .HasDefaultValue("Warning");
+            entity.Property(e => e.Source).HasMaxLength(50);
+            entity.Property(e => e.WarningCode)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.WarningMessage).HasMaxLength(1000);
+
+            entity.HasOne(d => d.IncomingInvoice).WithMany(p => p.Warnings)
+                .HasForeignKey(d => d.IncomingInvoiceId)
+                .HasConstraintName("FK_IncomingInvoiceWarning_Invoice");
+        });
+
         modelBuilder.Entity<IncommingInvoiceDetail>(entity =>
         {
             entity.Property(e => e.Id).HasColumnName("ID");
@@ -1367,6 +1438,8 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<IncommingInvoices>(entity =>
         {
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.CostContextType }, "IX_IncommingInvoices_CostContext");
+
             entity.HasIndex(e => new { e.IssuerCompanyId, e.SupplierVatNumber, e.ExternalId, e.Date }, "IX_IncommingInvoices_DuplicateCheck");
 
             entity.HasIndex(e => new { e.IssuerCompanyId, e.Source }, "IX_IncommingInvoices_IssuerSource");
@@ -1376,8 +1449,14 @@ public partial class cpmRunningContext : DbContext
             entity.HasIndex(e => e.OctopusExternalId, "IX_IncommingInvoices_OctopusExternalId").HasFilter("([OctopusExternalId] IS NOT NULL)");
 
             entity.Property(e => e.Id).HasColumnName("ID");
+            entity.Property(e => e.AssignedToName).HasMaxLength(200);
+            entity.Property(e => e.AssignedToUserId).HasMaxLength(450);
             entity.Property(e => e.CompanyId).HasColumnName("CompanyID");
             entity.Property(e => e.ContractId).HasColumnName("ContractID");
+            entity.Property(e => e.CostContextType)
+                .IsRequired()
+                .HasMaxLength(30)
+                .HasDefaultValue("Unknown");
             entity.Property(e => e.CurrencyCode)
                 .IsRequired()
                 .HasMaxLength(10)
@@ -1421,6 +1500,9 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Project).WithMany(p => p.IncommingInvoices)
                 .HasForeignKey(d => d.ProjectId)
                 .HasConstraintName("FK_IncommingInvoices_Project");
+
+            entity.Ignore(e => e.IncomingInvoiceEnrichment);
+            entity.Ignore(e => e.IncomingInvoiceWarning);
         });
 
         modelBuilder.Entity<InsuranceCompanies>(entity =>
@@ -1550,6 +1632,23 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK__InvoicePd__Invoi__21F5FC7F");
         });
 
+        modelBuilder.Entity<InvoiceProjectAlias>(entity =>
+        {
+            entity.HasIndex(e => e.ProjectId, "IX_InvoiceProjectAlias_Project");
+
+            entity.Property(e => e.Alias)
+                .IsRequired()
+                .HasMaxLength(250);
+            entity.Property(e => e.AliasType).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Project).WithMany(p => p.InvoiceProjectAlias)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_InvoiceProjectAlias_Project");
+        });
+
         modelBuilder.Entity<InvoiceRelations>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__InvoiceR__3214EC07F21FA693");
@@ -1626,6 +1725,40 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(30);
+        });
+
+        modelBuilder.Entity<InvoiceSupplierRule>(entity =>
+        {
+            entity.HasIndex(e => new { e.IssuerCompanyId, e.CompanyId }, "IX_InvoiceSupplierRule_Supplier");
+
+            entity.HasIndex(e => e.SupplierVatNumber, "IX_InvoiceSupplierRule_Vat").HasFilter("([SupplierVatNumber] IS NOT NULL)");
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CreatedBy).HasMaxLength(200);
+            entity.Property(e => e.DefaultAccountingCode).HasMaxLength(100);
+            entity.Property(e => e.DefaultVatCode).HasMaxLength(50);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.RuleType)
+                .IsRequired()
+                .HasMaxLength(100);
+            entity.Property(e => e.SupplierNameContains).HasMaxLength(250);
+            entity.Property(e => e.SupplierVatNumber).HasMaxLength(50);
+
+            entity.HasOne(d => d.Company).WithMany(p => p.InvoiceSupplierRule)
+                .HasForeignKey(d => d.CompanyId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_InvoiceSupplierRule_Company");
+
+            entity.HasOne(d => d.DefaultProject).WithMany(p => p.InvoiceSupplierRule)
+                .HasForeignKey(d => d.DefaultProjectId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_InvoiceSupplierRule_Project");
+
+            entity.HasOne(d => d.IssuerCompany).WithMany(p => p.InvoiceSupplierRule)
+                .HasForeignKey(d => d.IssuerCompanyId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_InvoiceSupplierRule_IssuerCompany");
         });
 
         modelBuilder.Entity<InvoiceUbl>(entity =>
@@ -2178,6 +2311,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.SecurityCoordinatorId).HasColumnName("SecurityCoordinatorID");
             entity.Property(e => e.Slug).HasMaxLength(50);
             entity.Property(e => e.StatusId).HasColumnName("StatusID");
+            entity.Property(e => e.StandardFotoName).HasMaxLength(255);
             entity.Property(e => e.Street).HasMaxLength(100);
             entity.Property(e => e.TotalLandShare).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.WheaterStationId).HasColumnName("WheaterStationID");
@@ -2338,6 +2472,21 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_ProjectLevels_Project");
         });
 
+        modelBuilder.Entity<ProjectMediaSection>(entity =>
+        {
+            entity.HasIndex(e => e.ProjectId, "IX_ProjectMediaSection_ProjectId");
+
+            entity.Property(e => e.Description).HasMaxLength(200);
+            entity.Property(e => e.IsPublic).HasDefaultValue(true);
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.HasOne(d => d.Project).WithMany(p => p.ProjectMediaSection)
+                .HasForeignKey(d => d.ProjectId)
+                .HasConstraintName("FK_ProjectMediaSection_Project");
+        });
+
         modelBuilder.Entity<ProjectNews>(entity =>
         {
             entity.Property(e => e.Author).HasMaxLength(50);
@@ -2361,7 +2510,10 @@ public partial class cpmRunningContext : DbContext
 
         modelBuilder.Entity<ProjectPictures>(entity =>
         {
+            entity.HasIndex(e => e.SectionId, "IX_ProjectPictures_SectionId").HasFilter("([SectionId] IS NOT NULL)");
+
             entity.Property(e => e.FacebookIdCopro).HasMaxLength(50);
+            entity.Property(e => e.IsPublic).HasDefaultValue(true);
             entity.Property(e => e.Name)
                 .IsRequired()
                 .HasMaxLength(50);
@@ -2369,6 +2521,11 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.ProjectNavigation).WithMany(p => p.ProjectPictures)
                 .HasForeignKey(d => d.ProjectId)
                 .HasConstraintName("FK_ProjectPictures_Project");
+
+            entity.HasOne(d => d.Section).WithMany(p => p.ProjectPictures)
+                .HasForeignKey(d => d.SectionId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ProjectPictures_Section");
         });
 
         modelBuilder.Entity<ProjectRegieUur>(entity =>
@@ -2574,6 +2731,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Value).HasColumnType("decimal(19, 4)");
             entity.Property(e => e.ValueSold).HasColumnType("decimal(19, 4)");
 
+            entity.HasOne(d => d.FinishingOption).WithMany(p => p.UnitConstructionValue)
+                .HasForeignKey(d => d.FinishingOptionId)
+                .HasConstraintName("FK_UnitConstructionValue_FinishingOption");
+
             entity.HasOne(d => d.PaymentGroup).WithMany(p => p.UnitConstructionValue)
                 .HasForeignKey(d => d.PaymentGroupId)
                 .HasConstraintName("FK_UnitConstructionValue_InvoicingPaymentGroup");
@@ -2581,22 +2742,6 @@ public partial class cpmRunningContext : DbContext
             entity.HasOne(d => d.Unit).WithMany(p => p.UnitConstructionValue)
                 .HasForeignKey(d => d.UnitId)
                 .HasConstraintName("FK_UnitConstructionValue_Units");
-
-            entity.HasOne(d => d.FinishingOption).WithMany(p => p.UnitConstructionValues)
-                .HasForeignKey(d => d.FinishingOptionId)
-                .HasConstraintName("FK_UnitConstructionValue_FinishingOption")
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.ClientSetNull);
-        });
-
-        modelBuilder.Entity<UnitFinishingOption>(entity =>
-        {
-            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
-
-            entity.HasOne(d => d.Unit).WithMany(p => p.UnitFinishingOptions)
-                .HasForeignKey(d => d.UnitId)
-                .HasConstraintName("FK_UnitFinishingOption_Units")
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<UnitExecutionPlan>(entity =>
@@ -2617,6 +2762,19 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.UnitId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UnitExecutionPlan_Units");
+        });
+
+        modelBuilder.Entity<UnitFinishingOption>(entity =>
+        {
+            entity.HasIndex(e => e.UnitId, "IX_UnitFinishingOption_UnitId");
+
+            entity.Property(e => e.Name)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.HasOne(d => d.Unit).WithMany(p => p.UnitFinishingOption)
+                .HasForeignKey(d => d.UnitId)
+                .HasConstraintName("FK_UnitFinishingOption_Units");
         });
 
         modelBuilder.Entity<UnitGroupTypes>(entity =>
@@ -2917,6 +3075,75 @@ public partial class cpmRunningContext : DbContext
                 .HasMaxLength(50);
         });
         modelBuilder.HasSequence<int>("Seq_ConstructionIssueReportItemId").StartsAt(2L);
+
+        modelBuilder.Entity<BudgetMaster>(entity =>
+        {
+            entity.ToTable("BudgetMaster");
+
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Omschrijving).HasMaxLength(500);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.IsActief).HasDefaultValue(true);
+            entity.Property(e => e.IsGearchiveerd).HasDefaultValue(false);
+
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetMaster_Project");
+        });
+
+        modelBuilder.Entity<BudgetVersie>(entity =>
+        {
+            entity.ToTable("BudgetVersie");
+
+            entity.Property(e => e.VersieNaam).HasMaxLength(200);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Concept");
+            entity.Property(e => e.Notitie).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime2");
+            entity.Property(e => e.IsHuidig).HasDefaultValue(false);
+
+            entity.HasOne(d => d.BudgetMaster).WithMany(p => p.BudgetVersies)
+                .HasForeignKey(d => d.BudgetMasterId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetVersie_BudgetMaster");
+
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_BudgetVersie_Project");
+        });
+
+        modelBuilder.Entity<BudgetGegevens>(entity =>
+        {
+            entity.ToTable("BudgetGegevens");
+
+            entity.HasIndex(e => e.BudgetVersieId).IsUnique();
+
+            entity.Property(e => e.Naam).HasMaxLength(200);
+            entity.Property(e => e.Adres).HasMaxLength(300);
+            entity.Property(e => e.TypePoorten).HasMaxLength(100);
+            entity.Property(e => e.TypeDak).HasMaxLength(50);
+            entity.Property(e => e.OppFunderingen).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.M3Grondwerk).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.LmBerlinerwanden).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.LmSecanpalen).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.NacalcBasisprijs).HasColumnType("decimal(8, 2)");
+            entity.Property(e => e.AbexBasisIndex).HasColumnType("decimal(8, 4)").HasColumnName("ABEXBasisIndex");
+            entity.Property(e => e.AbexHuidigIndex).HasColumnType("decimal(8, 4)").HasColumnName("ABEXHuidigIndex");
+            entity.Property(e => e.GevelMetselwerkPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(165m);
+            entity.Property(e => e.GipswerkenPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(2759m);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
+
+            entity.HasOne(d => d.BudgetVersie).WithOne(p => p.BudgetGegevens)
+                .HasForeignKey<BudgetGegevens>(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetGegevens_BudgetVersie");
+
+            entity.HasOne(d => d.Bouwheer).WithMany()
+                .HasForeignKey(d => d.BouwheerCompanyId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetGegevens_CompanyInfo");
+        });
 
         OnModelCreatingPartial(modelBuilder);
     }

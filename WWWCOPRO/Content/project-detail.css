@@ -3,9 +3,17 @@
    Kleuren via CSS-variabelen uit skins/default.css
    ================================================ */
 
+/* ----- Detail rij ----- */
+.detail-row {
+    align-items: stretch;
+}
+
 /* ----- Foto kolom ----- */
 .detail-foto-wrap {
     position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 .detail-project-badge {
     position: absolute;
@@ -33,18 +41,26 @@
 .foto-gallerij {
     position: relative;
     line-height: 0;
+    flex: 1;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
 }
 .fg-main-link {
-    display: block;
+    display: flex;
     position: relative;
     overflow: hidden;
     border-radius: 3px 3px 0 0;
     cursor: zoom-in;
-    aspect-ratio: 1 / 1;
+    flex: 1;
+    min-height: 300px;
 }
-.fg-main-link img {
+.fg-main-link > img,
+.fg-main-link > video {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
     width: 100%;
-    height: 100%;
     display: block;
     object-fit: cover;
     object-position: center;

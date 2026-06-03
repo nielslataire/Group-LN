@@ -80,9 +80,19 @@
 
         @* Hover action bar — data-delete-id matches JS [data-delete-id] selector *@
         <div class="mm-card-hover-actions">
-            <a href="@thumbUrl" target="_blank" title="Bekijk origineel">
+            <button type="button" title="Bekijk origineel"
+                    data-bs-toggle="modal" data-bs-target="#previewModal"
+                    data-src="@thumbUrl" data-mediatype="@Model.MediaType">
                 <i class="bx bx-fullscreen"></i>
-            </a>
+            </button>
+            @if (canWrite && Model.Type != BOCore.PictureType.Hoofdfoto)
+            {
+                <button type="button" class="btn-set-hoofdfoto"
+                        data-id="@Model.Id"
+                        title="@(isVideo ? "Instellen als hoofdvideo" : "Instellen als hoofdfoto")">
+                    <i class="bx bx-star"></i>
+                </button>
+            }
             @if (canWrite)
             {
                 <button type="button" class="btn-toggle-vis"
@@ -131,7 +141,14 @@
                 <option value="">— Geen sectie —</option>
                 @foreach (var s in sections)
                 {
-                    <option value="@s.Id" @(Model.SectionId == s.Id ? "selected" : "")>@s.Name</option>
+                    if (Model.SectionId == s.Id)
+                    {
+                        <option value="@s.Id" selected>@s.Name</option>
+                    }
+                    else
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
                 }
             </select>
         }

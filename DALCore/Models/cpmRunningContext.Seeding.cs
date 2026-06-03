@@ -29,8 +29,6 @@ namespace DALCore.Models
                 new PaymentTerms { Id = 3, Name = "30 dagen einde maand", Days = 30, Description = "30 dagen na einde maand factuurdatum", TermType = 1, DisplayMode = 0 },
                 new PaymentTerms { Id = 4, Name = "Contant", Days = 0, Description = "Onmiddellijk bij factuurdatum", TermType = 0, DisplayMode = 0 }
 );
-            // Verrijkings- en leertabellen configureren (zie cpmRunningContext.InvoiceEnrichment.Configuration.cs)
-            ConfigureInvoiceEnrichmentEntities(modelBuilder);
         }
     }
 }

@@ -77,6 +77,8 @@ public partial class CompanyInfo
 
     public virtual ICollection<IncommingInvoices> IncommingInvoices { get; set; } = new List<IncommingInvoices>();
 
+    public virtual ICollection<InvoiceSupplierRule> InvoiceSupplierRule { get; set; } = new List<InvoiceSupplierRule>();
+
     public virtual PostalCode PostCode { get; set; }
 
     public virtual ICollection<Project> ProjectArchitect { get; set; } = new List<Project>();

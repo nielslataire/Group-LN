@@ -1,6 +1,7 @@
 ﻿@using CPMCore.Helpers
 @using BOCore
 @using CPMCore.Models.Projecten
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 @model CPMCore.Models.Projecten.EditProjectDetail
 
 @{
@@ -39,10 +40,11 @@
     </div>
 </div>
 
-@using (Html.BeginForm("Edit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed" }))
+@using (Html.BeginForm("Edit", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.Project.Id)
+    @Html.HiddenFor(m => m.Project.StandardFotoName)
     @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
     @Html.HiddenFor(m => m.Project.WheaterStation.Id, new { id = "Project_WheaterStation_Id" })
     @Html.HiddenFor(m => m.Project.WheaterStation.Name, new { id = "Project_WheaterStation_Name" })
@@ -149,6 +151,47 @@
                                 <div class="col-lg-8 col-xl-8">
                                     <div id="commercialTextEditorContainer"></div>
                                     @Html.TextAreaFor(m => m.Project.CommercialTextNL, 6, 40, new { @class = "d-none", id = "commercialTextEditor" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-image"></i>
+                            <h2 class="card-big-info-title">Standaard foto</h2>
+                            <p class="card-big-info-desc">Upload een standaard projectfoto die overal wordt weergegeven.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group row align-items-start pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0 pt-2">Huidige foto</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    @{
+                                        string stdUrl;
+                                        if (!string.IsNullOrEmpty(Model.Project.StandardFotoName))
+                                            stdUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.StandardFotoName;
+                                        else if (Model.Project.DefaultPicture?.Name is not null)
+                                            stdUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + Model.Project.DefaultPicture.Name;
+                                        else
+                                            stdUrl = "~/img/no_image.jpg";
+                                    }
+                                    <img src="@Url.Content(stdUrl)" id="editStdFotoPreview"
+                                         style="max-height:160px;max-width:100%;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" alt="Standaard foto" />
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Nieuwe foto uploaden</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    <input type="file" name="StandardFotoUpload" id="StandardFotoUpload" accept="image/jpeg,image/png,image/webp" class="form-control form-control-modern" />
+                                    <small class="text-muted">Formaten: JPG, PNG, WEBP. Laat leeg om de huidige foto te behouden.</small>
                                 </div>
                             </div>
                         </div>

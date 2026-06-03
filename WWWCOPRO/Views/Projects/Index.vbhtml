@@ -45,7 +45,11 @@
     End If
     Dim fpTypeLabel As String = If(fpTypes.Any(), String.Join(" · ", fpTypes), "Project")
 
-    Dim fpImgSrc As String = If(fp IsNot Nothing AndAlso fp.DefaultPicture IsNot Nothing, Url.Content(imgBase & "pictures/800/" & fp.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
+    Dim videoExts As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {".mp4", ".webm", ".mov", ".avi"}
+    Dim fpIsVideo As Boolean = fp IsNot Nothing AndAlso fp.DefaultPicture IsNot Nothing AndAlso
+        (fp.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(fp.DefaultPicture.Name)))
+    Dim fpImgSrc As String = If(fp IsNot Nothing AndAlso fp.DefaultPicture IsNot Nothing AndAlso Not fpIsVideo, Url.Content(imgBase & "pictures/800/" & fp.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
+    Dim fpVideoSrc As String = If(fpIsVideo, Url.Content(imgBase & "videos/" & fp.DefaultPicture.Name), "")
     Dim fpImgAlt As String = If(fp IsNot Nothing AndAlso fp.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrEmpty(fp.DefaultPicture.Caption), fp.DefaultPicture.Caption, If(fp IsNot Nothing, fp.Name, ""))
     Dim fpTitel As String = If(fp IsNot Nothing AndAlso Not String.IsNullOrEmpty(fp.CommercialTitleNL), fp.CommercialTitleNL, If(fp IsNot Nothing, fp.Name, ""))
 
@@ -92,7 +96,11 @@ end section
             <div class="sectie-kop">Uitgelicht project</div>
             <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = fp.Slug}))" class="uitgelicht-project">
                 <div class="uitgelicht-foto">
-                    <img src="@fpImgSrc" alt="@fpImgAlt">
+                    @If fpIsVideo Then
+                        @<video src="@fpVideoSrc" muted loop playsinline data-autoplay="true"></video>
+                    Else
+                        @<img src="@fpImgSrc" alt="@fpImgAlt">
+                    End If
                     <div class="uitgelicht-foto-overlay"></div>
                     @If fpIsUitverkocht Then
                         @<text><span class="uitgelicht-foto-badge uitgelicht-foto-badge-uitverkocht">Uitverkocht</span></text>
@@ -224,7 +232,10 @@ end section
         End If
         Dim typeLabel As String = If(typeList.Any(), String.Join(" · ", typeList), "Woonproject")
 
-        Dim cardImgSrc As String = If(project.DefaultPicture IsNot Nothing, Url.Content(imgBase & "pictures/447/" & project.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
+        Dim cardIsVideo As Boolean = project.DefaultPicture IsNot Nothing AndAlso
+            (project.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(project.DefaultPicture.Name)))
+        Dim cardImgSrc As String = If(project.DefaultPicture IsNot Nothing AndAlso Not cardIsVideo, Url.Content(imgBase & "pictures/447/" & project.DefaultPicture.Name), Url.Content("~/Content/img/no_image.jpg"))
+        Dim cardVideoSrc As String = If(cardIsVideo, Url.Content(imgBase & "videos/" & project.DefaultPicture.Name), "")
         Dim cardImgAlt As String = If(project.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrEmpty(project.DefaultPicture.Caption), project.DefaultPicture.Caption, project.Name)
         Dim cardTitel As String = If(Not String.IsNullOrEmpty(project.CommercialTitleNL), project.CommercialTitleNL, project.Name)
 
@@ -232,7 +243,11 @@ end section
             @<text>
                 <a href="@(Url.Action("Inschrijving", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
                     <div class="kaart-foto">
-                        <img src="@cardImgSrc" alt="@cardImgAlt">
+                        @If cardIsVideo Then
+                            @<video src="@cardVideoSrc" muted loop playsinline data-autoplay="true"></video>
+                        Else
+                            @<img src="@cardImgSrc" alt="@cardImgAlt">
+                        End If
                         <div class="kaart-foto-overlay"></div>
                         <div class="kaart-verkocht-overlay">
                             <span class="kaart-verkocht-label">Binnenkort</span>
@@ -302,7 +317,11 @@ end section
             @<text>
                 <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
                     <div class="kaart-foto">
-                        <img src="@cardImgSrc" alt="@cardImgAlt">
+                        @If cardIsVideo Then
+                            @<video src="@cardVideoSrc" muted loop playsinline data-autoplay="true"></video>
+                        Else
+                            @<img src="@cardImgSrc" alt="@cardImgAlt">
+                        End If
                         <div class="kaart-foto-overlay"></div>
                         @If isUitverkocht Then
                             @<text>
@@ -465,6 +484,21 @@ end section
         $(document).ready(function () {
             $('a[href="' + this.location.pathname + '"]').parent().addClass('active');
         });
+
+        (function () {
+            var videos = document.querySelectorAll('video[data-autoplay]');
+            if (!videos.length || !window.IntersectionObserver) return;
+            var obs = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.play().catch(function () {});
+                    } else {
+                        entry.target.pause();
+                    }
+                });
+            }, { threshold: 0.4 });
+            videos.forEach(function (v) { obs.observe(v); });
+        })();
     </script>
 End section
 

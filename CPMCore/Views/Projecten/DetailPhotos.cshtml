@@ -19,6 +19,7 @@
             --mg-green:      #0a5a3b;
             --mg-green-dark: #083d28;
             --mg-green-tint: #f3f8f5;
+            --mg-green-light: #e6f1eb;
             --mg-border:     #e3e7ee;
             --mg-muted:      #8892a4;
             --mg-text:       #1f2937;
@@ -33,10 +34,14 @@
             border-radius: 10px;
             overflow: hidden;
             margin-bottom: 20px;
+            background: #fafbfc;
         }
+        .mm-header-card > .row { align-items: stretch; }
+        .mm-header-card .col-md-5 { display: flex; flex-direction: column; padding: 0; }
         .mm-hero-thumb {
             background: #1e2a22;
             position: relative;
+            flex: 1;
             min-height: 260px;
             display: flex;
             align-items: center;
@@ -104,6 +109,7 @@
         .mm-sections-bar {
             border: 1px solid var(--mg-border);
             border-radius: 10px; overflow: hidden; margin-bottom: 20px;
+            background: #fafbfc;
         }
         .mm-sections-header {
             display: flex; align-items: center; justify-content: space-between;
@@ -177,11 +183,14 @@
         }
         .mm-group-title {
             display: flex; align-items: center; gap: 8px;
-            font-size: 14px; font-weight: 700; color: var(--mg-text);
+            font-size: 14px; font-weight: 700; color: var(--mg-green-dark);
         }
-        .mm-group-title i { color: var(--mg-green); }
-        .mm-group-count { font-size: 12px; color: var(--mg-muted); font-weight: 400; }
-        .mm-group-desc  { font-size: 11.5px; color: var(--mg-muted); }
+        .mm-group-title i { color: var(--mg-green-dark); }
+        .mm-group-count {
+            font-size: 11px; font-weight: 600; color: var(--mg-green-dark);
+            background: var(--mg-green-light); padding: 2px 8px; border-radius: 10px;
+        }
+        .mm-group-desc { font-size: 10px; color: var(--mg-muted);font-weight: 300; }
         .mm-group-actions { display: flex; align-items: center; gap: 10px; }
         .mm-visibility-indicator {
             display: flex; align-items: center; gap: 5px;
@@ -269,6 +278,8 @@
         .mm-card-hover-actions button:hover { background: rgba(255,255,255,.35); color: #fff; }
         .mm-card-hover-actions .del-btn { color: #fca5a5; }
         .mm-card-hover-actions .del-btn:hover { background: rgba(220,38,38,.5); color: #fff; }
+        .mm-card-hover-actions .btn-set-hoofdfoto { color: #fde68a; }
+        .mm-card-hover-actions .btn-set-hoofdfoto:hover { background: rgba(245,158,11,.5); color: #fff; }
         .mm-card-body { padding: 10px 12px 12px; }
         .mm-card-caption { font-size: 12.5px; font-weight: 600; color: var(--mg-text); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .mm-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
@@ -284,15 +295,16 @@
         /* ── Add placeholder card ──────────────────────── */
         .mm-add-card {
             border: 2px dashed var(--mg-border); border-radius: 10px;
-            min-height: 180px;
+            min-height: 180px; background: #fff;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
             cursor: pointer; color: var(--mg-green); gap: 6px;
+            padding-left: 10px; padding-right: 10px;
             transition: border-color .15s, background .15s;
         }
         .mm-add-card:hover { border-color: var(--mg-green); background: var(--mg-green-tint); }
         .mm-add-card i { font-size: 24px; }
-        .mm-add-card span { font-size: 12px; font-weight: 600; }
+        .mm-add-card span { font-size: 12px; font-weight: 600; text-align: center; width: 100%; }
 
         /* ── Bulk action bar ───────────────────────────── */
         .mm-bulk-bar {
@@ -360,7 +372,26 @@
       <div class="media-manager">
 
         <!-- Page header -->
-        <div class="d-flex align-items-center justify-content-between mb-4">
+                <div class="row">
+                    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+                        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                            <h1 class="font-weight-bold mb-0 mt-0">Media</h1>
+                            <h5 class="mb-4 mt-0">Foto's en video's die op de publieke projectpagina getoond worden</h5>
+                        </div>
+                        <div class="col-sm-auto px-0">
+                            <div class="btn-group" role="group" aria-label="Project acties">
+
+@*                                     <a href="@Url.Action("Detail", "Projecten", new { projectid = Model.ProjectId })','_blank')" class="btn btn-outline-primary btn-md px-3 me-1">
+                                        <i class="bx bx-link-external me-1"></i>Bekijk publieke pagina
+                                    </a> *@
+                                    <a href="#modaldeleteproject" class="btn btn-primary btn-md px-3" data-bs-toggle="modal" data-bs-target="#uploadModal" type="button">
+                                        <i class="bx bx-upload me-1"></i>Media uploaden
+                                    </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+@*         <div class="d-flex align-items-center justify-content-between mb-4">
           <div>
             <h1 class="font-weight-bold mb-0 mt-0">Media</h1>
             <p class="text-muted mb-0" style="font-size:13px;">Foto's en video's die op de publieke projectpagina getoond worden</p>
@@ -376,7 +407,7 @@
               </button>
             }
           </div>
-        </div>
+        </div> *@
 
         @if (hoofdMedia != null)
         {
@@ -394,10 +425,12 @@
                   {
                     <img src="@imgBase/pictures/800/@hoofdMedia.Name" alt="@hoofdMedia.Caption" />
                   }
-                  <a href="@(hoofdMedia.MediaType == 1 ? $"{vidBase}/videos/{hoofdMedia.Name}" : $"{imgBase}/pictures/{hoofdMedia.Name}")"
-                     target="_blank" class="mm-hero-preview-btn">
-                    <i class="bx bx-show"></i> Voorbeeld
-                  </a>
+                  <button type="button" class="mm-hero-preview-btn"
+                          data-bs-toggle="modal" data-bs-target="#previewModal"
+                          data-src="@(hoofdMedia.MediaType == 1 ? $"{vidBase}/videos/{hoofdMedia.Name}" : $"{imgBase}/pictures/{hoofdMedia.Name}")"
+                          data-mediatype="@hoofdMedia.MediaType">
+                    <i class="bx bx-eye"></i> Voorbeeld
+                  </button>
                 </div>
               </div>
               <div class="col-md-7">
@@ -407,19 +440,19 @@
                   <div class="mm-detail-desc">Dit beeld verschijnt als header bovenaan de publieke projectpagina. Bezoekers zien dit als allereerste.</div>
                   <div class="mm-meta-grid">
                     <div class="mm-meta-item">
-                      <label><i class="bx bx-category"></i> Type</label>
+                      <label><i class="bx bx-categories"></i> Type</label>
                       <div class="val">@(hoofdMedia.MediaType == 1 ? "Video" : "Foto")</div>
                     </div>
                     <div class="mm-meta-item">
                       <label><i class="bx bx-file"></i> Formaat</label>
-                      <div class="val">@(Path.GetExtension(hoofdMedia.Name).TrimStart('.').ToUpper())@(hoofdMedia.WidthPx.HasValue ? $" · {hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : "")</div>
+                      <div class="val">@(System.IO.Path.GetExtension(hoofdMedia.Name).TrimStart('.').ToUpper())@(hoofdMedia.WidthPx.HasValue ? $" · {hoofdMedia.WidthPx}×{hoofdMedia.HeightPx}" : "")</div>
                     </div>
                     <div class="mm-meta-item">
-                      <label><i class="bx bx-data"></i> Grootte</label>
+                      <label><i class="bx bx-hard-drive"></i> Grootte</label>
                       <div class="val">@(hoofdMedia.FileSizeBytes.HasValue ? $"{hoofdMedia.FileSizeBytes.Value / 1024.0 / 1024.0:F1} MB" : "—")</div>
                     </div>
                     <div class="mm-meta-item">
-                      <label><i class="bx bx-show"></i> Zichtbaarheid</label>
+                      <label><i class="bx bx-eye"></i> Zichtbaarheid</label>
                       <div class="val">
                         <span class="mm-visibility-badge @(hoofdMedia.IsPublic ? "public" : "private")">
                           <i class="bx @(hoofdMedia.IsPublic ? "bx-globe" : "bx-lock")"></i>
@@ -432,13 +465,13 @@
                   {
                     <div class="mm-action-btns">
                       <button class="btn btn-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal" data-type="Hoofdfoto">
-                        <i class="bx bx-refresh me-1"></i> Vervangen
+                        <i class="bx bx-refresh-cw me-1"></i> Vervangen
                       </button>
                       <a href="#" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#editModal" data-id="@hoofdMedia.Id" data-caption="@hoofdMedia.Caption">
                         <i class="bx bx-edit me-1"></i> Bewerken
                       </a>
                       <a href="@(hoofdMedia.MediaType == 1 ? $"{vidBase}/videos/{hoofdMedia.Name}" : $"{imgBase}/pictures/{hoofdMedia.Name}")" download class="btn btn-outline-secondary btn-sm">
-                        <i class="bx bx-download me-1"></i> Download
+                        <i class="bx bx-arrow-in-down-square-half me-1"></i> Download
                       </a>
                     </div>
                   }
@@ -470,10 +503,10 @@
               @{ int sIdx = 1; }
               @foreach (var section in Model.Sections)
               {
-                <div class="mm-section-tab" data-section="@section.Id">
+                <div class="mm-section-tab" data-section="@(section.Id)">
                   <div class="sect-label">Sectie @sIdx</div>
-                  <div class="sect-name">@section.Name</div>
-                  <div class="sect-count">@section.MediaCount items</div>
+                  <div class="sect-name">@(section.Name)</div>
+                  <div class="sect-count">@(section.MediaCount) items</div>
                 </div>
                 sIdx++;
               }
@@ -533,16 +566,15 @@
             @foreach (var section in Model.Sections)
             {
               var sectionMedia = allPhotos.Where(p => p.SectionId == section.Id).ToList();
-              <div class="mm-section-group" data-section-id="@section.Id">
+              <div class="mm-section-group" data-section-id="@(section.Id)">
                 <div class="mm-group-header">
-                  <div>
-                    <div class="mm-group-title">
-                      <i class="bx bx-folder-open"></i>
-                      @section.Name <span class="mm-group-count">@sectionMedia.Count items</span>
-                    </div>
+                  <div class="mm-group-title">
+                    <i class="bx bx-folder-open"></i>
+                    @(section.Name)
+                    <span class="mm-group-count">@sectionMedia.Count items</span>
                     @if (!string.IsNullOrWhiteSpace(section.Description))
                     {
-                      <div class="mm-group-desc">@section.Description</div>
+                      <span class="mm-group-desc">@(section.Description)</span>
                     }
                   </div>
                   <div class="mm-group-actions">
@@ -552,13 +584,13 @@
                     </span>
                     @if (canWrite)
                     {
-                      <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal" data-section="@section.Id">
+                      <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#uploadModal" data-section="@(section.Id)">
                         <i class="bx bx-plus me-1"></i> Toevoegen
                       </button>
                     }
                   </div>
                 </div>
-                <div class="mm-grid" data-section-grid="@section.Id">
+                <div class="mm-grid" data-section-grid="@(section.Id)">
                   @foreach (var item in sectionMedia)
                   {
                     @await Html.PartialAsync("Partials/_MediaCard", item, new ViewDataDictionary(ViewData)
@@ -570,9 +602,9 @@
                   }
                   @if (canWrite)
                   {
-                    <div class="mm-add-card" data-bs-toggle="modal" data-bs-target="#uploadModal" data-section="@section.Id">
+                    <div class="mm-add-card" data-bs-toggle="modal" data-bs-target="#uploadModal" data-section="@(section.Id)">
                       <i class="bx bx-plus"></i>
-                      <span>Foto of video toevoegen aan @section.Name</span>
+                      <span>Foto of video toevoegen aan @(section.Name)</span>
                     </div>
                   }
                 </div>
@@ -580,8 +612,8 @@
             }
 
             @* Items zonder sectie *@
-            @{ var noSection = allPhotos.Where(p => p.SectionId == null).ToList(); }
-            @if (noSection.Any())
+            var noSection = allPhotos.Where(p => p.SectionId == null).ToList();
+            if (noSection.Any())
             {
               <div class="mm-section-group" data-section-id="none">
                 <div class="mm-group-header">
@@ -715,12 +747,82 @@
   </div>
 </div>
 
+<!-- ── Edit caption modal ──────────────────────────────────────────── -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title"><i class="bx bx-edit me-1"></i> Caption bewerken</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <input type="hidden" id="editMediaId" />
+        <label class="form-label" style="font-size:12px;font-weight:600;">Caption</label>
+        <input type="text" class="form-control form-control-sm" id="editCaption" placeholder="Beschrijf het beeld…" />
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuleren</button>
+        <button type="button" class="btn btn-primary btn-sm" id="confirmEditBtn"><i class="bx bx-save me-1"></i> Opslaan</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Section settings modal ──────────────────────────────────────── -->
+<div class="modal fade" id="sectionSettingsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bx bx-cog me-1"></i> Sectie-instellingen</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div id="sectSettList"></div>
+        <div class="p-3 border-top">
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Nieuwe sectie toevoegen</div>
+          <div class="row g-2">
+            <div class="col-md-5"><input class="form-control form-control-sm" id="newSectName" placeholder="Naam *" /></div>
+            <div class="col-md-4"><input class="form-control form-control-sm" id="newSectDesc" placeholder="Beschrijving (optioneel)" /></div>
+            <div class="col-md-3">
+              <select class="form-select form-select-sm" id="newSectPublic">
+                <option value="true">Publiek</option>
+                <option value="false">Intern</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm mt-2" id="addSectBtn"><i class="bx bx-plus me-1"></i> Toevoegen</button>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Sluiten</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Preview lightbox modal ──────────────────────────────────────── -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:min(92vw,1200px);">
+    <div class="modal-content" style="background:#0d1117;border:none;border-radius:10px;overflow:hidden;">
+      <div class="modal-header" style="background:#0d1117;border-bottom:1px solid rgba(255,255,255,.08);padding:10px 16px;">
+        <span class="modal-title" id="previewModalTitle" style="color:#e5e7eb;font-size:14px;"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:invert(1) grayscale(1) brightness(2);"></button>
+      </div>
+      <div class="modal-body" style="padding:0;display:flex;align-items:center;justify-content:center;background:#0d1117;min-height:200px;">
+        <img id="previewImg" src="" alt="" style="max-width:100%;max-height:80vh;object-fit:contain;display:none;" />
+        <video id="previewVideo" controls style="max-width:100%;max-height:80vh;display:none;background:#000;"></video>
+      </div>
+    </div>
+  </div>
+</div>
+
 @section PageScripts {
 <script>
 (function () {
     var projectId      = @Model.ProjectId;
     var antiForgery    = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
     var selectedIds    = new Set();
+    var sectionsData   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Sections.Select(s => new { id = s.Id, name = s.Name, description = s.Description ?? "", isPublic = s.IsPublic, mediaCount = s.MediaCount })));
 
     // ── Helpers ──────────────────────────────────────────────
     function postJson(url, body) {
@@ -844,6 +946,15 @@
             .then(function() { location.reload(); });
     });
 
+    // ── Set as hoofdfoto/video ────────────────────────────────
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.btn-set-hoofdfoto');
+        if (!btn) return;
+        var id = parseInt(btn.dataset.id);
+        postJson('/Projecten/SetHoofdMedia', { mediaId: id, projectId: projectId })
+            .then(function(r) { if (r.ok) location.reload(); });
+    });
+
     // ── Toggle visibility per card ────────────────────────────
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-toggle-vis');
@@ -862,6 +973,179 @@
             postJson('/Projecten/MoveMediaToSection', { MediaIds: [id], SectionId: sectionId });
         }
     });
+
+    // ── Preview lightbox ──────────────────────────────────────
+    (function() {
+        var modal   = document.getElementById('previewModal');
+        var img     = document.getElementById('previewImg');
+        var video   = document.getElementById('previewVideo');
+        var title   = document.getElementById('previewModalTitle');
+        modal.addEventListener('show.bs.modal', function(e) {
+            var btn     = e.relatedTarget;
+            var src     = btn.dataset.src;
+            var isVideo = btn.dataset.mediatype === '1';
+            title.textContent = isVideo ? 'Video voorvertoning' : 'Foto voorvertoning';
+            if (isVideo) {
+                img.style.display   = 'none';
+                video.style.display = '';
+                video.src = src;
+            } else {
+                video.style.display = 'none';
+                img.style.display   = '';
+                img.src = src;
+            }
+        });
+        modal.addEventListener('hide.bs.modal', function() {
+            video.pause();
+            video.src = '';
+            img.src   = '';
+        });
+    })();
+
+    // ── Edit caption modal ────────────────────────────────────
+    document.getElementById('editModal').addEventListener('show.bs.modal', function(e) {
+        var trigger = e.relatedTarget;
+        document.getElementById('editMediaId').value  = trigger.dataset.id;
+        document.getElementById('editCaption').value  = trigger.dataset.caption ?? '';
+    });
+
+    document.getElementById('confirmEditBtn').addEventListener('click', function() {
+        var id      = parseInt(document.getElementById('editMediaId').value);
+        var caption = document.getElementById('editCaption').value;
+        postJson('/Projecten/UpdateMediaCaption', { mediaId: id, caption: caption })
+            .then(function(r) { if (r.ok) location.reload(); });
+    });
+
+    // ── Section settings modal ────────────────────────────────
+    (function() {
+        var sectModal  = document.getElementById('sectionSettingsModal');
+        var sectChanged = false;
+
+        function esc(s) {
+            return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        function viewRow(s) {
+            return '<div class="d-flex align-items-center gap-2 px-3 py-2" data-sect-id="' + s.id + '">' +
+                '<div class="flex-grow-1 overflow-hidden">' +
+                    '<div style="font-size:13px;font-weight:600;">' + esc(s.name) + '</div>' +
+                    (s.description ? '<div style="font-size:11.5px;color:#8892a4;">' + esc(s.description) + '</div>' : '') +
+                '</div>' +
+                '<span class="badge ' + (s.isPublic ? 'text-bg-success' : 'text-bg-secondary') + '" style="font-size:10px;">' + (s.isPublic ? 'Publiek' : 'Intern') + '</span>' +
+                '<span style="font-size:11px;color:#8892a4;white-space:nowrap;">' + s.mediaCount + ' items</span>' +
+                '<button class="btn btn-outline-secondary btn-sm py-0 px-2 sect-edit-btn" title="Bewerken"><i class="bx bx-edit"></i></button>' +
+                '<button class="btn btn-outline-danger btn-sm py-0 px-2 sect-del-btn" title="Verwijderen"><i class="bx bx-trash"></i></button>' +
+            '</div>';
+        }
+
+        function editRow(s) {
+            return '<div class="px-3 py-2" style="background:#f8f9fa;" data-sect-id="' + s.id + '">' +
+                '<div class="row g-2 mb-2">' +
+                    '<div class="col-md-5"><input class="form-control form-control-sm sect-edit-name" value="' + esc(s.name) + '" placeholder="Naam *" /></div>' +
+                    '<div class="col-md-4"><input class="form-control form-control-sm sect-edit-desc" value="' + esc(s.description) + '" placeholder="Beschrijving" /></div>' +
+                    '<div class="col-md-3"><select class="form-select form-select-sm sect-edit-public">' +
+                        '<option value="true"' + (s.isPublic ? ' selected' : '') + '>Publiek</option>' +
+                        '<option value="false"' + (!s.isPublic ? ' selected' : '') + '>Intern</option>' +
+                    '</select></div>' +
+                '</div>' +
+                '<div class="d-flex gap-2">' +
+                    '<button class="btn btn-primary btn-sm sect-save-btn"><i class="bx bx-save me-1"></i> Opslaan</button>' +
+                    '<button class="btn btn-outline-secondary btn-sm sect-cancel-btn">Annuleren</button>' +
+                '</div>' +
+            '</div>';
+        }
+
+        function renderList() {
+            var list = document.getElementById('sectSettList');
+            if (!sectionsData.length) {
+                list.innerHTML = '<div class="p-3 text-center text-muted" style="font-size:13px;">Nog geen secties aangemaakt.</div>';
+                return;
+            }
+            list.innerHTML = sectionsData.map(function(s, i) {
+                return (i > 0 ? '<hr class="my-0" />' : '') + viewRow(s);
+            }).join('');
+        }
+
+        sectModal.addEventListener('show.bs.modal', renderList);
+
+        sectModal.addEventListener('hidden.bs.modal', function() {
+            if (sectChanged) location.reload();
+        });
+
+        document.getElementById('sectSettList').addEventListener('click', function(e) {
+            var row, id, s;
+
+            var editBtn = e.target.closest('.sect-edit-btn');
+            if (editBtn) {
+                row = editBtn.closest('[data-sect-id]');
+                id  = parseInt(row.dataset.sectId);
+                s   = sectionsData.find(function(x) { return x.id === id; });
+                row.outerHTML = editRow(s);
+                return;
+            }
+
+            var cancelBtn = e.target.closest('.sect-cancel-btn');
+            if (cancelBtn) {
+                row = cancelBtn.closest('[data-sect-id]');
+                id  = parseInt(row.dataset.sectId);
+                s   = sectionsData.find(function(x) { return x.id === id; });
+                row.outerHTML = viewRow(s);
+                return;
+            }
+
+            var saveBtn = e.target.closest('.sect-save-btn');
+            if (saveBtn) {
+                row      = saveBtn.closest('[data-sect-id]');
+                id       = parseInt(row.dataset.sectId);
+                var name = row.querySelector('.sect-edit-name').value.trim();
+                var desc = row.querySelector('.sect-edit-desc').value.trim();
+                var pub  = row.querySelector('.sect-edit-public').value === 'true';
+                if (!name) { row.querySelector('.sect-edit-name').focus(); return; }
+                postJson('/Projecten/UpdateMediaSection', { id: id, projectId: projectId, name: name, description: desc, isPublic: pub })
+                    .then(function(r) {
+                        if (!r.ok) return;
+                        s = sectionsData.find(function(x) { return x.id === id; });
+                        s.name = name; s.description = desc; s.isPublic = pub;
+                        row.outerHTML = viewRow(s);
+                        sectChanged = true;
+                    });
+                return;
+            }
+
+            var delBtn = e.target.closest('.sect-del-btn');
+            if (delBtn) {
+                row = delBtn.closest('[data-sect-id]');
+                id  = parseInt(row.dataset.sectId);
+                s   = sectionsData.find(function(x) { return x.id === id; });
+                if (!confirm('Sectie "' + s.name + '" verwijderen? Media in deze sectie wordt losgekoppeld.')) return;
+                fetch('/Projecten/DeleteMediaSection?id=' + id + '&projectId=' + projectId, {
+                    method: 'POST',
+                    headers: { 'RequestVerificationToken': antiForgery }
+                }).then(function(r) {
+                    if (!r.ok) return;
+                    sectionsData = sectionsData.filter(function(x) { return x.id !== id; });
+                    sectChanged = true;
+                    renderList();
+                });
+            }
+        });
+
+        document.getElementById('addSectBtn').addEventListener('click', function() {
+            var name = document.getElementById('newSectName').value.trim();
+            var desc = document.getElementById('newSectDesc').value.trim();
+            var pub  = document.getElementById('newSectPublic').value === 'true';
+            if (!name) { document.getElementById('newSectName').focus(); return; }
+            postJson('/Projecten/CreateMediaSection', { id: 0, projectId: projectId, name: name, description: desc, isPublic: pub })
+                .then(function(r) { return r.json(); })
+                .then(function(s) {
+                    sectionsData.push({ id: s.id, name: s.name, description: s.description || '', isPublic: s.isPublic, mediaCount: 0 });
+                    document.getElementById('newSectName').value = '';
+                    document.getElementById('newSectDesc').value = '';
+                    sectChanged = true;
+                    renderList();
+                });
+        });
+    })();
 
     // ── Upload modal: file input / drop zone ──────────────────
     var dropZone    = document.getElementById('dropZone');

@@ -86,6 +86,9 @@ namespace DALCore
         public GenericRepository<ProjectRegieUur>      ProjectRegieUren      { get; }
         public GenericRepository<IssuerCompanyUserRate> IssuerCompanyUserRates { get; }
         public GenericRepository<ProjectMediaSection> ProjectMediaSections { get; }
+        public GenericRepository<BudgetMaster>  BudgetMasters  { get; }
+        public GenericRepository<BudgetVersie>  BudgetVersies  { get; }
+        public GenericRepository<BudgetGegevens> BudgetGegevens { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -171,6 +174,9 @@ namespace DALCore
             ProjectRegieUren       = new GenericRepository<ProjectRegieUur>(_context);
             IssuerCompanyUserRates = new GenericRepository<IssuerCompanyUserRate>(_context);
             ProjectMediaSections   = new GenericRepository<ProjectMediaSection>(_context);
+            BudgetMasters  = new GenericRepository<BudgetMaster>(_context);
+            BudgetVersies  = new GenericRepository<BudgetVersie>(_context);
+            BudgetGegevens = new GenericRepository<BudgetGegevens>(_context);
         }
 
         // Eenduidige save-methodes

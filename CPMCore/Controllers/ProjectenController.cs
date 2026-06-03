@@ -70,15 +70,16 @@ namespace CPMCore.Controllers
         private readonly IPostalcodeService _postalcodeService;
         private readonly IProjectVoortgangService _voortgangService;
         private readonly DALCore.UnitOfWorkCore _uow;
+        private readonly IBudgetService _budgetService;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
-        // Content-types die we toelaten
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "image/jpeg", "image/jpg", "image/png", "image/gif"
-    };
+            { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow)
+        private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
+            { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
+
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService)
         {
             _logger = logger;
             Configuration = configuration;
@@ -94,6 +95,7 @@ namespace CPMCore.Controllers
             _postalcodeService = postalcodeService;
             _voortgangService = voortgangService;
             _uow = uow;
+            _budgetService = budgetService;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -334,6 +336,15 @@ namespace CPMCore.Controllers
                 }
             }
 
+            if (model.StandardFotoUpload != null && model.StandardFotoUpload.Length > 0)
+            {
+                var stdFilename = await ProcessStandardFotoUploadAsync(model.StandardFotoUpload);
+                if (stdFilename != null)
+                    model.Project.StandardFotoName = stdFilename;
+                else
+                    AddMessage("warning", "Standaard foto kon niet worden opgeslagen.", "Waarschuwing");
+            }
+
             var service = _projectService;
             var response = service.InsertUpdate(model.Project);
 
@@ -358,7 +369,7 @@ namespace CPMCore.Controllers
                     }).ToList());
 
                 AddMessage("success", $"Het project {model.Project.Name} is toegevoegd", "Geslaagd!");
-                return RedirectToAction("Index", "Home");
+                return RedirectToAction("Detail", new { projectid = newProjectId });
             }
 
             AddMessage("error", $"Het project {model.Project.Name} is NIET toegevoegd", "Fout!");
@@ -583,6 +594,15 @@ namespace CPMCore.Controllers
                 }
             }
 
+            if (model.StandardFotoUpload != null && model.StandardFotoUpload.Length > 0)
+            {
+                var stdFilename = await ProcessStandardFotoUploadAsync(model.StandardFotoUpload);
+                if (stdFilename != null)
+                    model.Project.StandardFotoName = stdFilename;
+                else
+                    AddMessage("warning", "Standaard foto kon niet worden opgeslagen.", "Waarschuwing");
+            }
+
             var service = _projectService;
             var response = service.InsertUpdate(model.Project);
 
@@ -615,6 +635,90 @@ namespace CPMCore.Controllers
             model.Users = GetOrderedUsers();
             return View(model);
         }
+        private async Task<string?> ProcessStandardFotoUploadAsync(IFormFile file)
+        {
+            if (file == null || file.Length == 0) return null;
+            if (!_validImageTypes.Contains(file.ContentType)) return null;
+
+            var ts       = DateTime.UtcNow.ToString("yyyyMMddHHmmssfff");
+            var tempRoot = Path.Combine(Path.GetTempPath(), "cpmcore-pictures");
+            Directory.CreateDirectory(tempRoot);
+
+            var rawPath  = Path.Combine(tempRoot, $"std_raw_{ts}{Path.GetExtension(file.FileName)}");
+            var path447  = Path.Combine(tempRoot, $"std_447_{ts}.webp");
+            var path800  = Path.Combine(tempRoot, $"std_800_{ts}.webp");
+            var pathFull = Path.Combine(tempRoot, $"std_full_{ts}.webp");
+            var webpName = $"std_{ts}.webp";
+
+            try
+            {
+                using (var stream = System.IO.File.Create(rawPath))
+                    await file.CopyToAsync(stream);
+
+                System.IO.File.Copy(rawPath, path447,  overwrite: true);
+                System.IO.File.Copy(rawPath, path800,  overwrite: true);
+                System.IO.File.Copy(rawPath, pathFull, overwrite: true);
+
+                ScaleAndCropImage(path447, 447, 447);
+                ScaleAndCropImage(path800, 800, 800);
+                ScaleImage(pathFull, 1280, 960);
+
+                path447  = Path.ChangeExtension(path447,  ".webp");
+                path800  = Path.ChangeExtension(path800,  ".webp");
+                pathFull = Path.ChangeExtension(pathFull, ".webp");
+
+                var uploadFull = await UploadAssetFileToStorageAsync(pathFull, "pictures",     webpName, "image/webp");
+                var upload447  = await UploadAssetFileToStorageAsync(path447,  "pictures/447", webpName, "image/webp");
+                var upload800  = await UploadAssetFileToStorageAsync(path800,  "pictures/800", webpName, "image/webp");
+
+                if (string.IsNullOrWhiteSpace(uploadFull) || string.IsNullOrWhiteSpace(upload447) || string.IsNullOrWhiteSpace(upload800))
+                    return null;
+
+                return webpName;
+            }
+            finally
+            {
+                TryDeleteTempFile(rawPath);
+                TryDeleteTempFile(path447);
+                TryDeleteTempFile(path800);
+                TryDeleteTempFile(pathFull);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadProjectStandardFoto(int projectId, IFormFile file)
+        {
+            var filename = await ProcessStandardFotoUploadAsync(file);
+            if (filename == null)
+                return Json(new { success = false, error = "Upload mislukt of ongeldig bestandstype (jpg/png/webp vereist)." });
+
+            var response = _projectService.GetProjectByID(projectId);
+            if (!response.Success || response.Value == null)
+                return Json(new { success = false, error = "Project niet gevonden." });
+
+            var project = response.Value;
+            project.StandardFotoName = filename;
+            _projectService.InsertUpdate(project);
+
+            return Json(new { success = true, filename, url = Configuration["URL:ImageWebUrl"] + "pictures/447/" + filename });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult RemoveProjectStandardFoto(int projectId)
+        {
+            var response = _projectService.GetProjectByID(projectId);
+            if (!response.Success || response.Value == null)
+                return Json(new { success = false, error = "Project niet gevonden." });
+
+            var project = response.Value;
+            project.StandardFotoName = null;
+            _projectService.InsertUpdate(project);
+
+            return Json(new { success = true });
+        }
+
         private IEnumerable<CpmUserOption> GetOrderedUsers()
         {
             var internalUserIds = _db.PermissionPerUser.Select(p => p.UserId).Distinct();
@@ -3901,9 +4005,9 @@ namespace CPMCore.Controllers
                     Description = s.Description,
                     SortOrder   = s.SortOrder,
                     IsPublic    = s.IsPublic,
-                    MediaCount  = s.Media.Count,
-                    PhotoCount  = s.Media.Count(m => m.MediaType == 0),
-                    VideoCount  = s.Media.Count(m => m.MediaType == 1)
+                    MediaCount  = s.ProjectPictures.Count,
+                    PhotoCount  = s.ProjectPictures.Count(m => m.MediaType == 0),
+                    VideoCount  = s.ProjectPictures.Count(m => m.MediaType == 1)
                 })
                 .ToList();
 
@@ -7462,13 +7566,6 @@ namespace CPMCore.Controllers
             public string group { get; set; }
         }
 
-        //IMAGE HANDLERS
-        private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
-            { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
-
-        private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
-            { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
-
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadImage(ProjectPictureBO UploadedBO, IFormFile file)
@@ -7629,9 +7726,9 @@ namespace CPMCore.Controllers
                 .OrderBy(s => s.SortOrder).ThenBy(s => s.Name)
                 .Select(s => new {
                     s.Id, s.Name, s.Description, s.SortOrder, s.IsPublic,
-                    MediaCount = s.Media.Count,
-                    PhotoCount = s.Media.Count(m => m.MediaType == 0),
-                    VideoCount = s.Media.Count(m => m.MediaType == 1)
+                    MediaCount = s.ProjectPictures.Count,
+                    PhotoCount = s.ProjectPictures.Count(m => m.MediaType == 0),
+                    VideoCount = s.ProjectPictures.Count(m => m.MediaType == 1)
                 })
                 .ToList();
             return Json(sections);
@@ -7728,7 +7825,7 @@ namespace CPMCore.Controllers
         public async Task<IActionResult> BulkDeleteMedia([FromBody] BulkDeleteRequest req)
         {
             if (req == null || req.MediaIds == null || req.MediaIds.Count == 0) return BadRequest();
-            var ctx   = _projectService.GetDbContext();
+            var ctx   = _db;
             var items = ctx.Set<DALCore.Models.ProjectPictures>()
                 .Where(p => req.MediaIds.Contains(p.Id))
                 .ToList();
@@ -7781,10 +7878,50 @@ namespace CPMCore.Controllers
             catch { /* best-effort */ }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult SetHoofdMedia([FromBody] SetHoofdMediaRequest req)
+        {
+            if (req.MediaId <= 0 || req.ProjectId <= 0) return BadRequest();
+
+            var pic = _db.Set<DALCore.Models.ProjectPictures>()
+                .FirstOrDefault(p => p.Id == req.MediaId && p.ProjectId == req.ProjectId);
+            if (pic == null) return NotFound();
+
+            // Reset alle huidige hoofdfoto's van dit project naar nevenfoto
+            _db.Set<DALCore.Models.ProjectPictures>()
+                .Where(p => p.ProjectId == req.ProjectId && p.Type == (int)BOCore.PictureType.Hoofdfoto)
+                .ToList()
+                .ForEach(p => p.Type = (int)BOCore.PictureType.Nevenfoto);
+
+            pic.Type = (int)BOCore.PictureType.Hoofdfoto;
+
+            var project = _db.Project.FirstOrDefault(p => p.ProjectId == req.ProjectId);
+            if (project != null) project.DefaultPictureId = req.MediaId;
+
+            _db.SaveChanges();
+            return Ok(new { success = true });
+        }
+
         public record ProjectMediaSectionRequest(int Id, int ProjectId, string Name, string? Description, bool IsPublic);
         public record MoveMediaRequest(List<int> MediaIds, int? SectionId);
         public record VisibilityRequest(List<int> MediaIds, bool IsPublic);
         public record BulkDeleteRequest(List<int> MediaIds);
+        public record SetHoofdMediaRequest(int MediaId, int ProjectId);
+        public record UpdateCaptionRequest(int MediaId, string? Caption);
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult UpdateMediaCaption([FromBody] UpdateCaptionRequest req)
+        {
+            if (req.MediaId <= 0) return BadRequest();
+            var pic = _db.Set<DALCore.Models.ProjectPictures>().FirstOrDefault(p => p.Id == req.MediaId);
+            if (pic == null) return NotFound();
+            pic.Caption = req.Caption?.Trim();
+            _db.SaveChanges();
+            return Ok(new { success = true });
+        }
+
         public record SortOrderItem(int Id, int Order, int? SectionId);
         public record SortOrderRequest(List<SortOrderItem> Items);
 
@@ -8427,6 +8564,186 @@ namespace CPMCore.Controllers
             // Zorg dat UnitBO.Type.GroupId gevuld is in je translator
             var gid = u?.Type?.GroupId ?? 0;
             return gid == 1 || gid == 4; // woning/appartement of commerciële ruimte
+        }
+
+        // ── Budget Wizard ────────────────────────────────────────────────────
+
+        [HttpGet]
+        public IActionResult BudgetIndex(int projectId)
+        {
+            var projectResponse = _projectService.GetProjectByID(projectId);
+            if (!projectResponse.Success)
+                return NotFound();
+
+            var mastersResponse = _budgetService.GetBudgetMasters(projectId);
+
+            var model = new BudgetIndexModel
+            {
+                ProjectId    = projectId,
+                ProjectName  = projectResponse.Value?.Name,
+                BudgetMasters = mastersResponse.Success ? mastersResponse.Values : new List<BudgetMasterBO>()
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",      nameof(HomeController.Index),        "Home",       true),
+                new Breadcrumb("Projecten", nameof(ProjectenController.Index),   "Projecten",  true),
+                new Breadcrumb("Detail",    nameof(ProjectenController.Detail),  "Projecten",  true),
+                new Breadcrumb("Budgetten", nameof(BudgetIndex),                 "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult BudgetMasterAanmaken(int projectId)
+        {
+            var projectResponse = _projectService.GetProjectByID(projectId);
+            if (!projectResponse.Success)
+                return NotFound();
+
+            var model = new BudgetMasterAanmakenModel
+            {
+                ProjectId   = projectId,
+                ProjectName = projectResponse.Value?.Name
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BudgetMasterAanmaken(BudgetMasterAanmakenModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var userId = _db.Users.FirstOrDefault(u => u.Email == User.Identity.Name)?.Id ?? 0;
+
+            var bo = new BudgetMasterBO
+            {
+                ProjectId   = model.ProjectId,
+                Naam        = model.Naam,
+                Omschrijving = model.Omschrijving
+            };
+
+            var response = _budgetService.CreateBudgetMaster(bo, userId);
+            if (!response.Success)
+            {
+                foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
+                    ModelState.AddModelError(string.Empty, msg.Message);
+                return View(model);
+            }
+
+            return RedirectToAction(nameof(BudgetGegevens), new { versieId = response.InsertedId });
+        }
+
+        [HttpGet]
+        public IActionResult BudgetGegevens(int versieId)
+        {
+            var versieEntity = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .SingleOrDefault();
+
+            if (versieEntity == null)
+                return NotFound();
+
+            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
+            if (!projectResponse.Success)
+                return NotFound();
+
+            var gegevensResponse = _budgetService.GetBudgetGegevens(versieId);
+            var gegevens = gegevensResponse.Success ? gegevensResponse.Value : new BudgetGegevensBO();
+
+            var bouwheerOptions = new List<SelectListItem>
+            {
+                new SelectListItem("— geen —", "")
+            };
+            var companyList = _uow.CompanyInfo.GetNoTracking()
+                .OrderBy(c => c.BedrijfsNaam)
+                .Select(c => new { c.CompanyId, c.BedrijfsNaam })
+                .ToList();
+            bouwheerOptions.AddRange(companyList.Select(c => new SelectListItem(c.BedrijfsNaam, c.CompanyId.ToString())));
+
+            var versieBO = new BudgetVersieBO
+            {
+                Id           = versieEntity.Id,
+                BudgetMasterId = versieEntity.BudgetMasterId,
+                ProjectId    = versieEntity.ProjectId,
+                Versienummer = versieEntity.Versienummer,
+                VersieNaam   = versieEntity.VersieNaam,
+                Status       = versieEntity.Status,
+                IsHuidig     = versieEntity.IsHuidig,
+                CreatedAt    = versieEntity.CreatedAt
+            };
+
+            var model = new BudgetGegevensModel
+            {
+                VersieId      = versieId,
+                MasterId      = versieEntity.BudgetMasterId,
+                ProjectId     = versieEntity.ProjectId,
+                ProjectName   = projectResponse.Value?.Name,
+                VersieLabel   = versieBO.VersieLabel,
+                VersieStatus  = versieEntity.Status,
+                MasterNaam    = versieEntity.BudgetMaster?.Naam,
+                VersieCreatedAt = versieEntity.CreatedAt,
+                Gegevens      = gegevens,
+                BouwheerOptions = bouwheerOptions
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",      nameof(HomeController.Index),        "Home",       true),
+                new Breadcrumb("Projecten", nameof(ProjectenController.Index),   "Projecten",  true),
+                new Breadcrumb("Detail",    nameof(ProjectenController.Detail),  "Projecten",  true),
+                new Breadcrumb("Budgetten", nameof(BudgetIndex),                 "Projecten",  true),
+                new Breadcrumb("Gegevens",  nameof(BudgetGegevens),              "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BudgetGegevens(BudgetGegevensModel model, string submitAction)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var response = _budgetService.SaveBudgetGegevens(model.Gegevens, model.VersieId);
+            if (!response.Success)
+            {
+                foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
+                    ModelState.AddModelError(string.Empty, msg.Message);
+                return View(model);
+            }
+
+            return RedirectToAction(nameof(BudgetGegevens), new { versieId = model.VersieId });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetNieuweVersie(int masterId, string versieNaam, string notitie)
+        {
+            var userId = _db.Users.FirstOrDefault(u => u.Email == User.Identity.Name)?.Id ?? 0;
+            var response = _budgetService.CreateNieuweVersie(masterId, versieNaam, notitie, userId);
+
+            var versienummer = 0;
+            if (response.Success)
+            {
+                var versie = _uow.BudgetVersies.GetNoTracking()
+                    .SingleOrDefault(v => v.Id == response.InsertedId);
+                versienummer = versie?.Versienummer ?? 0;
+            }
+
+            return Json(new { success = response.Success, newVersieId = response.InsertedId, versienummer });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetVersieActiveren(int versieId)
+        {
+            var response = _budgetService.ActiveerVersie(versieId);
+            return Json(new { success = response.Success });
         }
 
     }

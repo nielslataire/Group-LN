@@ -63,21 +63,25 @@ public partial class IncommingInvoices
 
     public string OctopusBookingStatus { get; set; }
 
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
     public string CostContextType { get; set; }
 
     public string AssignedToUserId { get; set; }
 
     public string AssignedToName { get; set; }
 
-    public DateTime? CreatedAt { get; set; }
-
-    public DateTime? UpdatedAt { get; set; }
-
     public virtual CompanyInfo Company { get; set; }
 
     public virtual Contract Contract { get; set; }
 
     public virtual ICollection<IncomingInvoiceAttachments> IncomingInvoiceAttachments { get; set; } = new List<IncomingInvoiceAttachments>();
+
+    public virtual IncomingInvoiceEnrichment IncomingInvoiceEnrichment { get; set; }
+
+    public virtual ICollection<IncomingInvoiceWarning> IncomingInvoiceWarning { get; set; } = new List<IncomingInvoiceWarning>();
 
     public virtual ICollection<IncommingInvoiceDetail> IncommingInvoiceDetail { get; set; } = new List<IncommingInvoiceDetail>();
 

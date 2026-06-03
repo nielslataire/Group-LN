@@ -45,7 +45,7 @@ End Section
 
 
 <div class="container">
-    <div class="row">
+    <div class="row detail-row">
         <div class="col-md-7">
 
             <div class="detail-foto-wrap">
@@ -53,13 +53,20 @@ End Section
 
             @Code
                 Dim imgBase = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
+                Dim videoExts As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {".mp4", ".webm", ".mov", ".avi"}
                 Dim nevenfotos = Model.Data.Pictures.Where(Function(p) p.Type = BO.PictureType.Nevenfoto).ToList()
                 Dim heeftMeerdereFotos = (Model.Data.DefaultPicture IsNot Nothing) AndAlso nevenfotos.Count > 0
+                Dim defaultIsVideo As Boolean = Model.Data.DefaultPicture IsNot Nothing AndAlso
+                    (Model.Data.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(Model.Data.DefaultPicture.Name)))
             End Code
+            <style>
+                #fgMainVideo { border-radius: 3px 3px 0 0; }
+            </style>
             <div class="foto-gallerij" id="fotoGallerij">
                 @If Model.Data.DefaultPicture IsNot Nothing Then
-                    @<a href="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="fg-main-link" id="fgMainLink">
-                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="projectfoto">
+                    @<a href="@(If(defaultIsVideo, Url.Content(imgBase & "videos/" & Model.Data.DefaultPicture.Name), Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)))" class="fg-main-link" id="fgMainLink">
+                        <img id="fgMainImg" src="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)" class="img-responsive" alt="projectfoto" style="@(If(defaultIsVideo, "display:none;", ""))">
+                        <video id="fgMainVideo" src="@(If(defaultIsVideo, Url.Content(imgBase & "videos/" & Model.Data.DefaultPicture.Name), ""))" muted loop playsinline data-autoplay="true" style="@(If(Not defaultIsVideo, "display:none;", ""))"></video>
                         <span class="fg-zoom-ico"><i class="icon-magnifier icons font-size-xl"></i></span>
                     </a>
                 End If
@@ -69,15 +76,25 @@ End Section
                         <button class="fg-arrow fg-next" id="fgNext"><i class="fa fa-angle-right"></i></button>
                     </text>
                 End If
-                <!-- Foto data voor JS -->
+                <!-- Foto/video data voor JS -->
                 <div id="fgData" style="display:none">
                     @If Model.Data.DefaultPicture IsNot Nothing Then
-                        @<a data-full="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)"
-                            data-medium="@Url.Content(imgBase & "pictures/447/" & Model.Data.DefaultPicture.Name)"></a>
+                        @If defaultIsVideo Then
+                            @<a data-videosrc="@Url.Content(imgBase & "videos/" & Model.Data.DefaultPicture.Name)" data-mediatype="1"></a>
+                        Else
+                            @<a data-full="@Url.Content(imgBase & "pictures/800/" & Model.Data.DefaultPicture.Name)"
+                                data-medium="@Url.Content(imgBase & "pictures/447/" & Model.Data.DefaultPicture.Name)"
+                                data-mediatype="0"></a>
+                        End If
                     End If
                     @For Each nf In nevenfotos
-                        @<a data-full="@Url.Content(imgBase & "pictures/800/" & nf.Name)"
-                            data-medium="@Url.Content(imgBase & "pictures/447/" & nf.Name)"></a>
+                        @If nf.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(nf.Name)) Then
+                            @<a data-videosrc="@Url.Content(imgBase & "videos/" & nf.Name)" data-mediatype="1"></a>
+                        Else
+                            @<a data-full="@Url.Content(imgBase & "pictures/800/" & nf.Name)"
+                                data-medium="@Url.Content(imgBase & "pictures/447/" & nf.Name)"
+                                data-mediatype="0"></a>
+                        End If
                     Next
                 </div>
             </div>
@@ -693,13 +710,26 @@ End Section
                                         <div class="row mg-files" data-sort-destination data-sort-id="media-gallery">
 
                                             @For Each picture In picturesToShow
-                                                @<text>
-                                                    <div Class="isotope-item image col-sm-4 col-md-3 col-lg-3">
+                                                @If picture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(picture.Name)) Then
+                                                    @<div class="isotope-item image col-sm-4 col-md-3 col-lg-3">
+                                                        <div class="thumbnail">
+                                                            <div class="thumb-preview" style="position:relative;overflow:hidden;">
+                                                                <video src="@Url.Content(imgBase & "videos/" & picture.Name)"
+                                                                       muted loop playsinline data-autoplay="true"
+                                                                       class="img-responsive" style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+                                                                <div class="mg-thumb-options">
+                                                                    <div class="mg-zoom"><i class="fa fa-play"></i></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                Else
+                                                    @<div class="isotope-item image col-sm-4 col-md-3 col-lg-3">
                                                         <div class="thumbnail">
                                                             <div class="thumb-preview">
                                                                 <a class="thumb-image"
-                                                                   href="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & picture.Name)">
-                                                                    <img src="@Url.Content(System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/447/" & picture.Name)"
+                                                                   href="@Url.Content(imgBase & "pictures/" & picture.Name)">
+                                                                    <img src="@Url.Content(imgBase & "pictures/447/" & picture.Name)"
                                                                          class="img-responsive"
                                                                          alt="@picture.Caption" />
                                                                 </a>
@@ -709,7 +739,7 @@ End Section
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </text>
+                                                End If
                                             Next
 
                                         </div>
@@ -746,23 +776,37 @@ End Section
         var $main = $('#fgMainLink');
         if (!$main.length) return;
 
-        // Bouw items op uit verborgen data-container
         var fgItems = [];
         $('#fgData a').each(function () {
+            var mt = parseInt($(this).data('mediatype')) || 0;
             fgItems.push({
-                src: $(this).data('full'),
-                medium: $(this).data('medium'),
-                type: 'image'
+                src:      $(this).data('full') || '',
+                medium:   $(this).data('medium') || '',
+                videosrc: $(this).data('videosrc') || '',
+                mediatype: mt
             });
         });
         if (!fgItems.length) return;
 
         var fgCurrentIndex = 0;
+        var $img = $('#fgMainImg');
+        var vid  = document.getElementById('fgMainVideo');
 
         function fgGoTo(index) {
             fgCurrentIndex = ((index % fgItems.length) + fgItems.length) % fgItems.length;
-            $('#fgMainImg').attr('src', fgItems[fgCurrentIndex].src);
-            $main.attr('href', fgItems[fgCurrentIndex].src);
+            var item = fgItems[fgCurrentIndex];
+            if (item.mediatype === 1) {
+                $img.hide();
+                vid.src = item.videosrc;
+                $(vid).show();
+                vid.play().catch(function () {});
+                $main.attr('href', item.videosrc);
+            } else {
+                $(vid).hide();
+                vid.pause();
+                $img.show().attr('src', item.src);
+                $main.attr('href', item.src);
+            }
         }
 
         $('#fgPrev').on('click', function (e) {
@@ -775,16 +819,59 @@ End Section
             fgGoTo(fgCurrentIndex + 1);
         });
 
-        // Hoofdfoto klik: open lightbox op huidig index
         $main.on('click', function (e) {
             e.preventDefault();
+            var item = fgItems[fgCurrentIndex];
+            if (item.mediatype === 1) {
+                if (vid.paused) vid.play().catch(function () {}); else vid.pause();
+                return;
+            }
+            var imageItems = [];
+            var startAt = 0, imgIdx = 0;
+            fgItems.forEach(function (it, i) {
+                if (it.mediatype !== 1) {
+                    if (i === fgCurrentIndex) startAt = imgIdx;
+                    imageItems.push({ src: it.src, type: 'image' });
+                    imgIdx++;
+                }
+            });
             $.magnificPopup.open({
-                items: fgItems,
+                items: imageItems,
                 type: 'image',
                 gallery: { enabled: true },
-                startAt: fgCurrentIndex
+                startAt: startAt
             });
         });
+    });
+
+    (function () {
+        var videos = document.querySelectorAll('video[data-autoplay]');
+        if (!videos.length || !window.IntersectionObserver) return;
+        var obs = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.play().catch(function () {});
+                } else {
+                    entry.target.pause();
+                }
+            });
+        }, { threshold: 0.4 });
+        videos.forEach(function (v) { obs.observe(v); });
+    })();
+
+    // ── Foto hoogte gelijkstellen aan info-kaart ──────────────
+    (function syncFotoHeight() {
+        var $foto = $('.detail-foto-wrap');
+        var $info = $('.info-kaart');
+        if (!$foto.length || !$info.length) return;
+        var h = $info.outerHeight(true);
+        $foto.css('height', h + 'px');
+    })();
+    $(window).on('resize', function () {
+        var $foto = $('.detail-foto-wrap');
+        var $info = $('.info-kaart');
+        if (!$foto.length || !$info.length) return;
+        $foto.css('height', '').css('height', $info.outerHeight(true) + 'px');
     });
     </script>
     <script src="~/scripts/examples.modals.js"></script>

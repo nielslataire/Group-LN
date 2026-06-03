@@ -516,6 +516,16 @@ Public Class ProjectBO
         End Set
     End Property
 
+    Private _standardFotoName As String
+    Public Property StandardFotoName() As String
+        Get
+            Return _standardFotoName
+        End Get
+        Set(ByVal value As String)
+            _standardFotoName = value
+        End Set
+    End Property
+
     Private _hourlyRates As List(Of ProjectHourlyRateBO)
     Public Property HourlyRates() As List(Of ProjectHourlyRateBO)
         Get

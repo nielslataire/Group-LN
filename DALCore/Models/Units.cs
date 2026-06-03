@@ -89,9 +89,9 @@ public partial class Units
 
     public virtual ICollection<UnitConstructionValue> UnitConstructionValue { get; set; } = new List<UnitConstructionValue>();
 
-    public virtual ICollection<UnitFinishingOption> UnitFinishingOptions { get; set; } = new List<UnitFinishingOption>();
-
     public virtual ICollection<UnitExecutionPlan> UnitExecutionPlan { get; set; } = new List<UnitExecutionPlan>();
+
+    public virtual ICollection<UnitFinishingOption> UnitFinishingOption { get; set; } = new List<UnitFinishingOption>();
 
     public virtual ICollection<UnitRooms> UnitRooms { get; set; } = new List<UnitRooms>();
 }

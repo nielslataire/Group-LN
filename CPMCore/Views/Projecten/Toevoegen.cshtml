@@ -32,7 +32,7 @@
     </div>
 </div>
 
-@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed" }))
+@using (Html.BeginForm("Toevoegen", "Projecten", FormMethod.Post, new { @class = "ecommerce-form action-buttons-fixed", enctype = "multipart/form-data" }))
 {
     @Html.AntiForgeryToken()
     @Html.HiddenFor(m => m.SelectedPostalcode, new { id = "SelectedPostalcode" })
@@ -246,6 +246,37 @@
                                 <label class="col-lg-2 col-xl-2 control-label text-lg-end mb-0" for="Project_IssuerCompanyLandOwner">@Html.DisplayNameFor(m => m.Project.IssuerCompanyIdLandOwner)</label>
                                 <div class="col-lg-3 col-xl-3">
                                     @Html.DropDownListFor(m => m.Project.IssuerCompanyIdLandOwner, new SelectList(Model.IssuerCompanies, nameof(ProjectIssuerCompanyOptionVM.Id), nameof(ProjectIssuerCompanyOptionVM.Name), Model.Project.IssuerCompanyIdLandOwner), "-- Selecteer --", new { @class = "form-control form-control-modern" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-image"></i>
+                            <h2 class="card-big-info-title">Standaard foto</h2>
+                            <p class="card-big-info-desc">Upload een standaard projectfoto (optioneel).</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Foto uploaden</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    <input type="file" name="StandardFotoUpload" id="StandardFotoUpload" accept="image/jpeg,image/png,image/webp" class="form-control form-control-modern" />
+                                    <small class="text-muted">Formaten: JPG, PNG, WEBP. Optioneel — kan later worden toegevoegd.</small>
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-center pb-3 d-none" id="stdFotoPreviewRow">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0">Voorbeeld</label>
+                                <div class="col-lg-8 col-xl-8">
+                                    <img id="stdFotoPreview" src="" style="max-height:160px;max-width:100%;object-fit:cover;border-radius:6px;border:1px solid #dee2e6;" alt="Voorbeeld" />
                                 </div>
                             </div>
                         </div>
@@ -518,6 +549,18 @@
                     rateIndex = $('#ratesContainer .rate-row').length;
                 });
 
+        });
+
+        // Standaard foto live preview
+        document.getElementById('StandardFotoUpload')?.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('stdFotoPreview').src = e.target.result;
+                document.getElementById('stdFotoPreviewRow').classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
         });
     </script>
 }

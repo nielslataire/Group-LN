@@ -85,8 +85,6 @@ public partial class Project
 
     public bool IsCoordinationProject { get; set; }
 
-    public bool IsOnlyCoordinationProject { get; set; }
-
     public int? CoordinationIssuerCompanyId { get; set; }
 
     public int? ContractType { get; set; }
@@ -100,6 +98,10 @@ public partial class Project
     public string CoordinationReference { get; set; }
 
     public bool IsPublished { get; set; }
+
+    public bool IsOnlyCoordinationProject { get; set; }
+
+    public string StandardFotoName { get; set; }
 
     public virtual CompanyInfo Architect { get; set; }
 
@@ -127,7 +129,15 @@ public partial class Project
 
     public virtual CompanyInfo EpbReporter { get; set; }
 
+    public virtual ICollection<IncomingInvoiceEnrichment> IncomingInvoiceEnrichmentSuggestedProject { get; set; } = new List<IncomingInvoiceEnrichment>();
+
+    public virtual ICollection<IncomingInvoiceEnrichment> IncomingInvoiceEnrichmentUserConfirmedProject { get; set; } = new List<IncomingInvoiceEnrichment>();
+
     public virtual ICollection<IncommingInvoices> IncommingInvoices { get; set; } = new List<IncommingInvoices>();
+
+    public virtual ICollection<InvoiceProjectAlias> InvoiceProjectAlias { get; set; } = new List<InvoiceProjectAlias>();
+
+    public virtual ICollection<InvoiceSupplierRule> InvoiceSupplierRule { get; set; } = new List<InvoiceSupplierRule>();
 
     public virtual ICollection<InvoicingPaymentGroup> InvoicingPaymentGroup { get; set; } = new List<InvoicingPaymentGroup>();
 
@@ -150,6 +160,8 @@ public partial class Project
     public virtual ICollection<ProjectHourlyRate> ProjectHourlyRate { get; set; } = new List<ProjectHourlyRate>();
 
     public virtual ICollection<ProjectLevels> ProjectLevels { get; set; } = new List<ProjectLevels>();
+
+    public virtual ICollection<ProjectMediaSection> ProjectMediaSection { get; set; } = new List<ProjectMediaSection>();
 
     public virtual ICollection<ProjectNews> ProjectNews { get; set; } = new List<ProjectNews>();
 

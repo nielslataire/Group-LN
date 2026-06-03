@@ -137,6 +137,8 @@ public partial class IssuerCompany
 
     public virtual ICollection<InvoiceSeries> InvoiceSeries { get; set; } = new List<InvoiceSeries>();
 
+    public virtual ICollection<InvoiceSupplierRule> InvoiceSupplierRule { get; set; } = new List<InvoiceSupplierRule>();
+
     public virtual ICollection<Invoices> Invoices { get; set; } = new List<Invoices>();
 
     public virtual IssuerBankAccount IssuerBankAccount { get; set; }

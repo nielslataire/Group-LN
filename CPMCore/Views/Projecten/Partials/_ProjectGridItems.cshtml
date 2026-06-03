@@ -37,16 +37,16 @@
         var soldPercentageStyleText = soldPercentageClamped.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
         var statusId = project.Status?.Id ?? 0;
 
-        if (project.DefaultPicture?.Name is null)
-        {
-            imageUrl = "~/img/no_image.jpg";
-        }
-        else
-        {
+        if (!string.IsNullOrEmpty(project.StandardFotoName))
+            imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.StandardFotoName;
+        else if (!string.IsNullOrEmpty(project.DefaultPicture?.Name))
             imageUrl = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name;
-        }
+        else
+            imageUrl = "~/img/no_image.jpg";
 
-        <div class="isotope-item status-@statusId @(project.DefaultPicture?.Name is null ? "has-no-photo" : "") col-sm-12 col-md-4 col-lg-2 mb-4">
+        var hasPhoto = !string.IsNullOrEmpty(project.StandardFotoName) || !string.IsNullOrEmpty(project.DefaultPicture?.Name);
+
+        <div class="isotope-item status-@statusId @(hasPhoto ? "" : "has-no-photo") col-sm-12 col-md-4 col-lg-2 mb-4">
             <div class="card card-modern h-100 gl-project-card">
                 <div class="image-frame-wrapper position-relative">
                     @if (!string.IsNullOrWhiteSpace(statusName))

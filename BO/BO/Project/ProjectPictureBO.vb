@@ -70,6 +70,85 @@ Public Class ProjectPictureBO
         End Set
     End Property
 
-  
+    Private _sectionId As Nullable(Of Integer)
+    Public Property SectionId() As Nullable(Of Integer)
+        Get
+            Return _sectionId
+        End Get
+        Set(ByVal value As Nullable(Of Integer))
+            _sectionId = value
+        End Set
+    End Property
+
+    Private _isPublic As Boolean = True
+    Public Property IsPublic() As Boolean
+        Get
+            Return _isPublic
+        End Get
+        Set(ByVal value As Boolean)
+            _isPublic = value
+        End Set
+    End Property
+
+    Private _sortOrder As Integer
+    Public Property SortOrder() As Integer
+        Get
+            Return _sortOrder
+        End Get
+        Set(ByVal value As Integer)
+            _sortOrder = value
+        End Set
+    End Property
+
+    ''' <summary>0 = Photo, 1 = Video</summary>
+    Private _mediaType As Integer
+    Public Property MediaType() As Integer
+        Get
+            Return _mediaType
+        End Get
+        Set(ByVal value As Integer)
+            _mediaType = value
+        End Set
+    End Property
+
+    Private _fileSizeBytes As Nullable(Of Long)
+    Public Property FileSizeBytes() As Nullable(Of Long)
+        Get
+            Return _fileSizeBytes
+        End Get
+        Set(ByVal value As Nullable(Of Long))
+            _fileSizeBytes = value
+        End Set
+    End Property
+
+    Private _widthPx As Nullable(Of Integer)
+    Public Property WidthPx() As Nullable(Of Integer)
+        Get
+            Return _widthPx
+        End Get
+        Set(ByVal value As Nullable(Of Integer))
+            _widthPx = value
+        End Set
+    End Property
+
+    Private _heightPx As Nullable(Of Integer)
+    Public Property HeightPx() As Nullable(Of Integer)
+        Get
+            Return _heightPx
+        End Get
+        Set(ByVal value As Nullable(Of Integer))
+            _heightPx = value
+        End Set
+    End Property
+
+    Private _durationSeconds As Nullable(Of Double)
+    Public Property DurationSeconds() As Nullable(Of Double)
+        Get
+            Return _durationSeconds
+        End Get
+        Set(ByVal value As Nullable(Of Double))
+            _durationSeconds = value
+        End Set
+    End Property
 
 End Class

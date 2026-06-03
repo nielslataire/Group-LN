@@ -88,21 +88,31 @@ Public Class ProjectTranslator
         End If
         'Standaard weer te geven foto
         If (_entity.DefaultPicture IsNot Nothing) Then
-            bo.DefaultPicture.Id = _entity.DefaultPicture.Id
-            bo.DefaultPicture.Name = _entity.DefaultPicture.Name
-            bo.DefaultPicture.Caption = _entity.DefaultPicture.Caption
+            bo.DefaultPicture.Id        = _entity.DefaultPicture.Id
+            bo.DefaultPicture.Name      = _entity.DefaultPicture.Name
+            bo.DefaultPicture.Caption   = _entity.DefaultPicture.Caption
+            bo.DefaultPicture.MediaType = _entity.DefaultPicture.MediaType
+            bo.DefaultPicture.IsPublic  = _entity.DefaultPicture.IsPublic
+            bo.DefaultPicture.SortOrder = _entity.DefaultPicture.SortOrder
         End If
         'Alle project fotos
         For Each x In _entity.ProjectPictures
             Dim picture As New ProjectPictureBO
-            picture.Id = x.Id
-            picture.Caption = x.Caption
-            picture.Name = x.Name
-            picture.Type = x.Type
+            picture.Id              = x.Id
+            picture.Caption         = x.Caption
+            picture.Name            = x.Name
+            picture.Type            = x.Type
             picture.DateTimeUploaded = x.Datetimeuploaded
             picture.FacebookIdCopro = x.FacebookIdCopro
+            picture.MediaType       = x.MediaType
+            picture.IsPublic        = x.IsPublic
+            picture.SortOrder       = x.SortOrder
+            picture.SectionId       = x.SectionId
+            picture.FileSizeBytes   = x.FileSizeBytes
+            picture.WidthPx         = x.WidthPx
+            picture.HeightPx        = x.HeightPx
+            picture.DurationSeconds = x.DurationSeconds
             bo.Pictures.Add(picture)
-
         Next
         Return ErrorCode.Success
     End Function

@@ -17,7 +17,6 @@ Partial Public Class UnitConstructionValue
     Public Property Description As String
     Public Property PaymentGroupId As Nullable(Of Integer)
     Public Property UnitId As Integer
-
     Public Property FinishingOptionId As Nullable(Of Integer)
 
     Public Overridable Property InvoicingPaymentGroup As InvoicingPaymentGroup

@@ -68,10 +68,11 @@ else
 				@foreach (var project in Model.Projects)
 				{
 					<div class="col-sm-12 col-xl-3 mb-4 filteritem Status@(project.Status.Id)">
-						<div class="card card-modern card-modern-alt-padding @(project.DefaultPicture.Name is null ? "card-no-photo" : "")">
+						<div class="card card-modern card-modern-alt-padding @(string.IsNullOrEmpty(project.StandardFotoName) && project.DefaultPicture.Name is null ? "card-no-photo" : "")">
 							@{
-								if (project.DefaultPicture.Name is null) { urlTotal = "~/img/no_image.jpg"; }
-								else { urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name; }
+								if (!string.IsNullOrEmpty(project.StandardFotoName)) { urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.StandardFotoName; }
+								else if (project.DefaultPicture.Name is not null) { urlTotal = Configuration["URL:ImageWebUrl"] + "pictures/447/" + project.DefaultPicture.Name; }
+								else { urlTotal = "~/img/no_image.jpg"; }
 							}
 							<a href="@(Url.Action("Detail", "Projecten", new { projectid = project.Id}))">
 								<img src="@Url.Content(urlTotal)" class="card-img-top" alt="@project.Name" />

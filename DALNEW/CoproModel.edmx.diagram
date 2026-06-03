@@ -138,6 +138,194 @@
         <AssociationConnector Association="copropmModel.FK_UtilityPercentage_Contract" />
         <AssociationConnector Association="copropmModel.FK_UtilityPercentage_IncommingInvoiceDetail" />
         <EntityTypeShape EntityType="copropmModel.LogList" Width="1.5" PointX="5.375" PointY="0.75" />
+        <EntityTypeShape EntityType="copropmModel.C__MigrationHistory" Width="1.5" PointX="7.375" PointY="3.625" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_Applications" Width="1.5" PointX="5.375" PointY="13.875" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_Membership" Width="1.5" PointX="12.125" PointY="11.875" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_Paths" Width="1.5" PointX="7.625" PointY="21.625" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_PersonalizationAllUsers" Width="1.5" PointX="9.875" PointY="25" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_PersonalizationPerUser" Width="1.5" PointX="12.125" PointY="18.125" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_Profile" Width="1.5" PointX="12.125" PointY="8.25" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_Roles" Width="1.5" PointX="7.625" PointY="12.375" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_SchemaVersions" Width="1.5" PointX="7.375" PointY="6.625" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_Users" Width="1.5" PointX="9.875" PointY="12.75" />
+        <EntityTypeShape EntityType="copropmModel.aspnet_WebEvent_Events" Width="1.5" PointX="9.375" PointY="3.625" />
+        <EntityTypeShape EntityType="copropmModel.AspNetUserClaims" Width="1.5" PointX="17.75" PointY="65.75" />
+        <EntityTypeShape EntityType="copropmModel.AspNetUserLogins" Width="1.5" PointX="17.75" PointY="77.5" />
+        <EntityTypeShape EntityType="copropmModel.ClientAccountIssuerCompany" Width="1.5" PointX="38.875" PointY="69.625" />
+        <EntityTypeShape EntityType="copropmModel.ClientContactIssuerCompany" Width="1.5" PointX="35.875" PointY="70.125" />
+        <EntityTypeShape EntityType="copropmModel.CompanyIssuerCompany" Width="1.5" PointX="38.875" PointY="66.625" />
+        <EntityTypeShape EntityType="copropmModel.CompanyLegalForm" Width="1.5" PointX="31.375" PointY="81.875" />
+        <EntityTypeShape EntityType="copropmModel.ConnectionAdvanceApplication" Width="1.5" PointX="30.75" PointY="66" />
+        <EntityTypeShape EntityType="copropmModel.ConnectionSettlement" Width="1.5" PointX="20" PointY="77" />
+        <EntityTypeShape EntityType="copropmModel.ConnectionSettlementSource" Width="1.5" PointX="25.5" PointY="64.5" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssue" Width="1.5" PointX="28.875" PointY="41.625" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssueCategory" Width="1.5" PointX="26.625" PointY="34" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssueHistory" Width="1.5" PointX="31.125" PointY="35.75" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssueMedia" Width="1.5" PointX="31.125" PointY="59.375" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssueNotification" Width="1.5" PointX="34.125" PointY="52.375" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssueReport" Width="1.5" PointX="20" PointY="63" />
+        <EntityTypeShape EntityType="copropmModel.ConstructionIssueReportItem" Width="1.5" PointX="34.125" PointY="56.875" />
+        <EntityTypeShape EntityType="copropmModel.ContactRequests" Width="1.5" PointX="31.875" PointY="49" />
+        <EntityTypeShape EntityType="copropmModel.IncomingInvoiceAttachments" Width="1.5" PointX="17.25" PointY="70" />
+        <EntityTypeShape EntityType="copropmModel.IncomingInvoiceEnrichment" Width="1.5" PointX="32" PointY="39.875" />
+        <EntityTypeShape EntityType="copropmModel.IncomingInvoiceWarning" Width="1.5" PointX="17.25" PointY="73.625" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceAttachments" Width="1.5" PointX="9.75" PointY="36.875" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceDunning" Width="1.5" PointX="9.75" PointY="69.875" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceEmailLog" Width="1.5" PointX="9.75" PointY="73.375" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceLayoutTemplate" Width="1.5" PointX="9.375" PointY="8.625" />
+        <EntityTypeShape EntityType="copropmModel.InvoicePdfArchive" Width="1.5" PointX="9.75" PointY="60.375" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceProjectAlias" Width="1.5" PointX="20" PointY="33.875" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceRelations" Width="1.5" PointX="9.75" PointY="66.875" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceSequence" Width="1.5" PointX="40.375" PointY="98.375" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceSeries" Width="1.5" PointX="35.875" PointY="105.875" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceStatusLookup" Width="1.5" PointX="5.25" PointY="56.375" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceSupplierRule" Width="1.5" PointX="35.875" PointY="64.25" />
+        <EntityTypeShape EntityType="copropmModel.InvoiceUbl" Width="1.5" PointX="9.75" PointY="63.375" />
+        <EntityTypeShape EntityType="copropmModel.IssueNotificationRun" Width="1.5" PointX="16.625" PointY="4.375" />
+        <EntityTypeShape EntityType="copropmModel.IssueNotificationSchedule" Width="1.5" PointX="14.375" PointY="4" />
+        <EntityTypeShape EntityType="copropmModel.IssuerBankAccount" Width="1.5" PointX="35.875" PointY="87" />
+        <EntityTypeShape EntityType="copropmModel.IssuerCompany" Width="1.5" PointX="33.625" PointY="75.125" />
+        <EntityTypeShape EntityType="copropmModel.IssuerCompanyUserRate" Width="1.5" PointX="35.875" PointY="84.375" />
+        <EntityTypeShape EntityType="copropmModel.OctopusBookyearPeriods" Width="1.5" PointX="38.125" PointY="95.375" />
+        <EntityTypeShape EntityType="copropmModel.OctopusBookyears" Width="1.5" PointX="35.875" PointY="92.625" />
+        <EntityTypeShape EntityType="copropmModel.OctopusJournals" Width="1.5" PointX="38.125" PointY="90.75" />
+        <EntityTypeShape EntityType="copropmModel.PaymentAllocations" Width="1.5" PointX="17.75" PointY="62" />
+        <EntityTypeShape EntityType="copropmModel.Payments" Width="1.5" PointX="15.5" PointY="77.5" />
+        <EntityTypeShape EntityType="copropmModel.PaymentTerms" Width="1.5" PointX="35.875" PointY="98.375" />
+        <EntityTypeShape EntityType="copropmModel.PlanningSectie" Width="1.5" PointX="25" PointY="41.375" />
+        <EntityTypeShape EntityType="copropmModel.PlanningTaak" Width="1.5" PointX="27.25" PointY="37.25" />
+        <EntityTypeShape EntityType="copropmModel.ProjectConnectionKey" Width="1.5" PointX="30.875" PointY="55.625" />
+        <EntityTypeShape EntityType="copropmModel.ProjectContractSlice" Width="1.5" PointX="23" PointY="61.5" />
+        <EntityTypeShape EntityType="copropmModel.ProjectHourlyRate" Width="1.5" PointX="20" PointY="74.25" />
+        <EntityTypeShape EntityType="copropmModel.ProjectMediaSection" Width="1.5" PointX="20" PointY="67.25" />
+        <EntityTypeShape EntityType="copropmModel.ProjectRegieUur" Width="1.5" PointX="25" PointY="57.125" />
+        <EntityTypeShape EntityType="copropmModel.ProjectUserAccess" Width="1.5" PointX="20" PointY="30.25" />
+        <EntityTypeShape EntityType="copropmModel.ProjectVoortgang" Width="1.5" PointX="20" PointY="70.625" />
+        <EntityTypeShape EntityType="copropmModel.SecurityPermission" Width="1.5" PointX="2.75" PointY="25.5" />
+        <EntityTypeShape EntityType="copropmModel.SecurityRole" Width="1.5" PointX="0.75" PointY="12" />
+        <EntityTypeShape EntityType="copropmModel.SecurityRolePermission" Width="1.5" PointX="6" PointY="17.75" />
+        <EntityTypeShape EntityType="copropmModel.SecurityUserPermissionOverride" Width="1.5" PointX="5" PointY="7.5" />
+        <EntityTypeShape EntityType="copropmModel.SecurityUserRole" Width="1.5" PointX="3" PointY="0.75" />
+        <EntityTypeShape EntityType="copropmModel.sysdiagrams" Width="1.5" PointX="3.375" PointY="10.625" />
+        <EntityTypeShape EntityType="copropmModel.UnitExecutionPlan" Width="1.5" PointX="25.875" PointY="68.25" />
+        <EntityTypeShape EntityType="copropmModel.UserCoachmarkState" Width="1.5" PointX="3" PointY="20.75" />
+        <EntityTypeShape EntityType="copropmModel.UserCompanyAccess" Width="1.5" PointX="17.25" PointY="28.125" />
+        <EntityTypeShape EntityType="copropmModel.UserGuestInvitation" Width="1.5" PointX="3" PointY="15.75" />
+        <EntityTypeShape EntityType="copropmModel.UserGuestInvitationAudit" Width="1.5" PointX="11.375" PointY="3.625" />
+        <EntityTypeShape EntityType="copropmModel.VATtype" Width="1.5" PointX="35.875" PointY="102" />
+        <EntityTypeShape EntityType="copropmModel.Setting" Width="1.5" PointX="14.375" PointY="8.625" />
+        <AssociationConnector Association="copropmModel.FK_PlanningSectie_ActivityGroup" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Me__Appli__4EA8A765" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Pa__Appli__07E124C1" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Ro__Appli__70FDBF69" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Us__Appli__3AA1AEB8" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Me__UserI__4F9CCB9E" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Pe__PathI__0F824689" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Pe__PathI__153B1FDF" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Pe__UserI__162F4418" />
+        <AssociationConnector Association="copropmModel.FK__aspnet_Pr__UserI__658C0CBD" />
+        <AssociationConnector Association="copropmModel.FK_dbo_AspNetUserClaims_dbo_AspNetUsers_UserId" />
+        <AssociationConnector Association="copropmModel.FK_dbo_AspNetUserLogins_dbo_AspNetUsers_UserId" />
+        <AssociationConnector Association="copropmModel.FK_ClientAccountIssuerCompany_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_Invoices_ClientAccount" />
+        <AssociationConnector Association="copropmModel.FK_ClientAccountIssuerCompany_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_ClientContactIssuerCompany_ClientContact" />
+        <AssociationConnector Association="copropmModel.FK_ClientContactIssuerCompany_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_Invoices_ClientContacts" />
+        <AssociationConnector Association="copropmModel.FK_Contract_CompanyContacts_SiteManager" />
+        <AssociationConnector Association="copropmModel.FK_UserCompanyAccess_CompanyContacts" />
+        <AssociationConnector Association="copropmModel.FK_CompanyIssuerCompany_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSupplierRule_Company" />
+        <AssociationConnector Association="copropmModel.FK_UserCompanyAccess_CompanyInfo" />
+        <AssociationConnector Association="copropmModel.FK_CompanyIssuerCompany_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_IssuerCompany_CompanyLegalForm" />
+        <AssociationConnector Association="copropmModel.FK_CAA_Line" />
+        <AssociationConnector Association="copropmModel.FK_CAA_Sett" />
+        <AssociationConnector Association="copropmModel.FK_ConnectionSettlement_Project" />
+        <AssociationConnector Association="copropmModel.FK_CSS_Sett" />
+        <AssociationConnector Association="copropmModel.FK_CSS_InDet" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssue_ConstructionIssueCategory" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssue_Project" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssue_Units" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueHistory_ConstructionIssue" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueMedia_ConstructionIssue" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueNotification_ConstructionIssue" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueReportItem_ConstructionIssue" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueNotification_ConstructionIssueReport" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueReport_Project" />
+        <AssociationConnector Association="copropmModel.FK_ConstructionIssueReportItem_ConstructionIssueReport" />
+        <AssociationConnector Association="copropmModel.FK_ContactRequests_Project" />
+        <AssociationConnector Association="copropmModel.FK_ContactRequests_ProjectDocs" />
+        <AssociationConnector Association="copropmModel.FK_ContactRequests_Units" />
+        <AssociationConnector Association="copropmModel.FK_IncomingInvoiceAttachments_Invoice" />
+        <AssociationConnector Association="copropmModel.FK_IncomingInvoiceEnrichment_ConfirmedProject" />
+        <AssociationConnector Association="copropmModel.FK_IncomingInvoiceEnrichment_Invoice" />
+        <AssociationConnector Association="copropmModel.FK_IncomingInvoiceEnrichment_SuggestedProject" />
+        <AssociationConnector Association="copropmModel.FK_IncomingInvoiceWarning_Invoice" />
+        <AssociationConnector Association="copropmModel.FK_IncommingInvoices_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceAt__Invoi__12B3B8EF" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceDu__Invoi__168449D3" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceEm__Invoi__0EE3280B" />
+        <AssociationConnector Association="copropmModel.FK__InvoicePd__Invoi__21F5FC7F" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceProjectAlias_Project" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceRe__Child__0B129727" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceRe__Paren__0A1E72EE" />
+        <AssociationConnector Association="copropmModel.FK__Invoices__Replac__25C68D63" />
+        <AssociationConnector Association="copropmModel.FK__Invoices__Series__23DE44F1" />
+        <AssociationConnector Association="copropmModel.FK__Invoices__Status__24D2692A" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceUb__Invoi__1B48FEF0" />
+        <AssociationConnector Association="copropmModel.FK__PaymentAl__Invoi__064DE20A" />
+        <AssociationConnector Association="copropmModel.FK_Invoices_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_ProjectContractSlice_Invoices" />
+        <AssociationConnector Association="copropmModel.FK_ProjectRegieUur_Invoice" />
+        <AssociationConnector Association="copropmModel.FK__InvoiceSe__Serie__79E80B25" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSequence_InvoiceSeries" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSequence_OctopusBookyear" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSequence_OctopusJournal" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSeries_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSupplierRule_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_InvoiceSupplierRule_Project" />
+        <AssociationConnector Association="copropmModel.FK_InvoicingPaymentGroup_VatType" />
+        <AssociationConnector Association="copropmModel.FK_IssueNotificationRun_Schedule" />
+        <AssociationConnector Association="copropmModel.FK__IssuerBan__Issue__2E5BD364" />
+        <AssociationConnector Association="copropmModel.FK__IssuerCom__Defau__2A8B4280" />
+        <AssociationConnector Association="copropmModel.FK_IssuerCompany_DefaultVatType" />
+        <AssociationConnector Association="copropmModel.FK_IssuerCompanyUserRate_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_OctopusBookyears_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_PaymentTerms_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_Project_CoordinationIssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_Project_IssuerCompanyBuilder" />
+        <AssociationConnector Association="copropmModel.FK_Project_IssuerCompanyIdLandOwner" />
+        <AssociationConnector Association="copropmModel.FK_VATtype_IssuerCompany" />
+        <AssociationConnector Association="copropmModel.FK_OctopusBookyearPeriods_Bookyear" />
+        <AssociationConnector Association="copropmModel.FK_OctopusJournals_Bookyear" />
+        <AssociationConnector Association="copropmModel.FK__PaymentAl__Payme__0559BDD1" />
+        <AssociationConnector Association="copropmModel.FK_PlanningSectie_Project" />
+        <AssociationConnector Association="copropmModel.FK_PlanningTaak_PlanningSectie" />
+        <AssociationConnector Association="copropmModel.FK_PCK_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectContractSlice_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectHourlyRate_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectMediaSection_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectRegieUur_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectUserAccess_Project" />
+        <AssociationConnector Association="copropmModel.FK_ProjectVoortgang_Project" />
+        <AssociationConnector Association="copropmModel.FK_PCK_Unit" />
+        <AssociationConnector Association="copropmModel.FK_ProjectPictures_Section" />
+        <AssociationConnector Association="copropmModel.FK_ProjectUserAccess_Users" />
+        <AssociationConnector Association="copropmModel.FK_SecurityRolePermission_Permission" />
+        <AssociationConnector Association="copropmModel.FK_SecurityUserPermissionOverride_Permission" />
+        <AssociationConnector Association="copropmModel.FK_SecurityRolePermission_Role" />
+        <AssociationConnector Association="copropmModel.FK_SecurityUserRole_Role" />
+        <AssociationConnector Association="copropmModel.FK_SecurityUserPermissionOverride_Users" />
+        <AssociationConnector Association="copropmModel.FK_SecurityUserRole_Users" />
+        <AssociationConnector Association="copropmModel.FK_UnitExecutionPlan_Units" />
+        <AssociationConnector Association="copropmModel.FK_UserCoachmarkState_Users" />
+        <AssociationConnector Association="copropmModel.FK_UserCompanyAccess_Users" />
+        <AssociationConnector Association="copropmModel.FK_UserGuestInvitation_InvitedByUser" />
+        <AssociationConnector Association="copropmModel.FK_UserGuestInvitation_Users" />
+        <AssociationConnector Association="copropmModel.aspnet_UsersInRoles" />
+        <AssociationConnector Association="copropmModel.AspNetUserRoles" />
+        <AssociationConnector Association="copropmModel.CustomerProject" />
         </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

@@ -535,6 +535,14 @@
           <Property Name="Caption" Type="nvarchar(max)" />
           <Property Name="Type" Type="int" />
           <Property Name="FacebookIdCopro" Type="nvarchar" MaxLength="50" />
+          <Property Name="SectionId" Type="int" />
+          <Property Name="IsPublic" Type="bit" Nullable="false" />
+          <Property Name="SortOrder" Type="int" Nullable="false" />
+          <Property Name="MediaType" Type="int" Nullable="false" />
+          <Property Name="FileSizeBytes" Type="bigint" />
+          <Property Name="WidthPx" Type="int" />
+          <Property Name="HeightPx" Type="int" />
+          <Property Name="DurationSeconds" Type="float" />
         </EntityType>
         <EntityType Name="ProjectSalesSettings">
           <Key>
@@ -2319,6 +2327,7 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <EntitySet Name="Permission" EntityType="Self.Permission" />
           <EntitySet Name="PermissionPerUser" EntityType="Self.PermissionPerUser" />
           <EntitySet Name="Users" EntityType="Self.Users" />
+          <EntitySet Name="LogList" EntityType="copropmModel.LogList" />
           <AssociationSet Name="FK_PermissionPerUser_Permissions" Association="Self.FK_PermissionPerUser_Permissions">
             <End Role="Permission" EntitySet="Permission" />
             <End Role="PermissionPerUser" EntitySet="PermissionPerUser" />
@@ -2716,7 +2725,6 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
             <End Role="IncommingInvoiceDetail" EntitySet="IncommingInvoiceDetail" />
             <End Role="UtilityPercentage" EntitySet="UtilityPercentage" />
           </AssociationSet>
-          <EntitySet Name="LogList" EntityType="copropmModel.LogList" />
           </EntityContainer>
         <EntityType Name="Country">
           <Key>
@@ -3544,6 +3552,14 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
           <Property Name="Caption" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
           <Property Name="Type" Type="Int32" />
           <Property Name="FacebookIdCopro" Type="String" MaxLength="50" FixedLength="false" Unicode="true" />
+          <Property Name="SectionId" Type="Int32" />
+          <Property Name="IsPublic" Type="Boolean" Nullable="false" />
+          <Property Name="SortOrder" Type="Int32" Nullable="false" />
+          <Property Name="MediaType" Type="Int32" Nullable="false" />
+          <Property Name="FileSizeBytes" Type="Int64" />
+          <Property Name="WidthPx" Type="Int32" />
+          <Property Name="HeightPx" Type="Int32" />
+          <Property Name="DurationSeconds" Type="Double" />
           <NavigationProperty Name="Project" Relationship="copropmModel.FK_Project_ProjectPictures" FromRole="ProjectPictures" ToRole="Project" />
           <NavigationProperty Name="Project1" Relationship="copropmModel.FK_ProjectPictures_Project" FromRole="ProjectPictures" ToRole="Project" />
           <NavigationProperty Name="ProjectNews" Relationship="copropmModel.FK_ProjectNews_ProjectPictures" FromRole="ProjectPictures" ToRole="ProjectNews" />
@@ -4961,6 +4977,14 @@ warning 6002: The table/view 'cpmDevelop.dbo.UtilityPercentage' does not have a 
                 <ScalarProperty Name="Datetimeuploaded" ColumnName="Datetimeuploaded" />
                 <ScalarProperty Name="Name" ColumnName="Name" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="SectionId" ColumnName="SectionId" />
+                <ScalarProperty Name="IsPublic" ColumnName="IsPublic" />
+                <ScalarProperty Name="SortOrder" ColumnName="SortOrder" />
+                <ScalarProperty Name="MediaType" ColumnName="MediaType" />
+                <ScalarProperty Name="FileSizeBytes" ColumnName="FileSizeBytes" />
+                <ScalarProperty Name="WidthPx" ColumnName="WidthPx" />
+                <ScalarProperty Name="HeightPx" ColumnName="HeightPx" />
+                <ScalarProperty Name="DurationSeconds" ColumnName="DurationSeconds" />
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
