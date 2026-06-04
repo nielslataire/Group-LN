@@ -1,0 +1,40 @@
+@model BOCore.BudgetSanitairBO
+<tr data-rij-id="@Model.Id" data-versie-id="@Model.BudgetVersieId">
+    <td class="text-muted small row-number text-center" style="width:36px;"></td>
+    <td>
+        <span class="fw-semibold">@Model.EenheidNaam</span>
+    </td>
+    <td class="text-center">
+        <input class="form-control form-control-sm text-center san-input mx-auto"
+               data-field="badkamer" type="number" min="0" max="9"
+               value="@Model.Badkamer" style="width:60px;" />
+    </td>
+    <td class="text-center">
+        <input class="form-control form-control-sm text-center san-input mx-auto"
+               data-field="toiletInBadkamer" type="number" min="0" max="9"
+               value="@Model.ToiletInBadkamer" style="width:60px;" />
+    </td>
+    <td class="text-center">
+        <input class="form-control form-control-sm text-center san-input mx-auto"
+               data-field="afzonderlijkToilet" type="number" min="0" max="9"
+               value="@Model.AfzonderlijkToilet" style="width:60px;" />
+    </td>
+    <td class="text-center">
+        <input class="form-control form-control-sm text-center san-input mx-auto"
+               data-field="doucheInBadkamer" type="number" min="0" max="9"
+               value="@Model.DoucheInBadkamer" style="width:60px;" />
+    </td>
+    <td class="text-center">
+        <input class="form-control form-control-sm text-center san-input mx-auto"
+               data-field="douchekamer" type="number" min="0" max="9"
+               value="@Model.Douchekamer" style="width:60px;" />
+    </td>
+    <td class="text-center">
+        <span class="badge bg-light text-dark border row-totaal">@Model.TotaalElementen</span>
+    </td>
+    <td class="text-end" style="width:44px;">
+        <button class="btn btn-link btn-sm text-danger btn-delete-sanitair p-0" title="Verwijderen">
+            <i class="bi bi-trash"></i>
+        </button>
+    </td>
+</tr>

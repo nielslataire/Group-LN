@@ -1,0 +1,22 @@
+@{
+    var elementType = ViewData["ElementType"]?.ToString() ?? "";
+    var versieId    = ViewData["VersieId"] is int vid ? vid : 0;
+}
+<div class="d-flex gap-2 align-items-end flex-wrap"
+     data-element-type-section="@elementType">
+    <div>
+        <label class="form-label small mb-1">Eenheid</label>
+        <input type="text" class="form-control form-control-sm add-eenheid"
+               placeholder="bv. L1" style="width:90px;" />
+    </div>
+    <div>
+        <label class="form-label small mb-1">Beschrijving</label>
+        <input type="text" class="form-control form-control-sm add-beschrijving"
+               placeholder="bv. VG" style="width:110px;" />
+    </div>
+    <div>
+        <button type="button" class="btn btn-sm btn-outline-primary btn-gevel-toevoegen">
+            <i class="fas fa-plus me-1"></i>Toevoegen
+        </button>
+    </div>
+</div>

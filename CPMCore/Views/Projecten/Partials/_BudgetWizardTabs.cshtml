@@ -1,0 +1,66 @@
+@using CPMCore.Controllers
+@model CPMCore.Models.Projecten.BudgetWizardTabsModel
+@{
+    var steps = new[]
+    {
+        (1, "Gegevens",           Url.Action("BudgetGegevens",    "Projecten", new { versieId = Model.VersieId })),
+        (2, "Oppervlaktes",       Url.Action("BudgetOppervlaktes","Projecten", new { versieId = Model.VersieId })),
+        (3, "Sanitair",           Url.Action("BudgetSanitair",    "Projecten", new { versieId = Model.VersieId })),
+        (4, "Gevels",             Url.Action("BudgetGevels",      "Projecten", new { versieId = Model.VersieId })),
+        (5, "Dak & Afbraak",      Url.Action("BudgetDakAfbraak",  "Projecten", new { versieId = Model.VersieId })),
+        (6, "Activiteiten",       Url.Action("BudgetActivityLijnen", "Projecten", new { versieId = Model.VersieId })),
+        (7, "Parameters",         (string)null),
+        (8, "Verkoop & Resultaat",(string)null),
+    };
+}
+
+<div class="bw-tab-bar">
+    <div class="bw-steps">
+        @foreach (var (num, label, url) in steps)
+        {
+            bool isActive = num == Model.ActiveStep;
+            bool isDone   = num < Model.ActiveStep;
+            string cls    = isActive ? "bw-step--active" : (isDone ? "bw-step--done" : "");
+
+            if (url != null)
+            {
+                <a href="@url" class="bw-step @cls">
+                    <span class="bw-step__circle">
+                        @if (isDone)
+                        {
+                            <i class="fas fa-check" style="font-size:9px;"></i>
+                        }
+                        else
+                        {
+                            @num
+                        }
+                    </span>
+                    <span class="bw-step__label">@label</span>
+                </a>
+            }
+            else
+            {
+                <div class="bw-step @cls">
+                    <span class="bw-step__circle">@(isDone ? "" : num.ToString())</span>
+                    <span class="bw-step__label">@label</span>
+                </div>
+            }
+
+            @if (num < steps.Length)
+            {
+                <div class="bw-step__connector" aria-hidden="true"></div>
+            }
+        }
+    </div>
+    @if (Model.ShowCalcToggle)
+    {
+        <div class="bw-tab-actions">
+            <label class="small text-muted me-2 mb-0 user-select-none" for="bw-calc-toggle">
+                Toon berekeningen
+            </label>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch" id="bw-calc-toggle" />
+            </div>
+        </div>
+    }
+</div>

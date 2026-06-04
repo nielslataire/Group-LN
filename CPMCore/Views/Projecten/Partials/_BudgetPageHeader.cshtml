@@ -1,0 +1,58 @@
+@model CPMCore.Models.Projecten.BudgetPageHeaderModel
+
+<div class="bw-page-header">
+    <div class="bw-page-header__left">
+        <h1 class="bw-page-header__title">
+            <span class="bw-page-header__step me-2">Stap @Model.StepNum / @Model.TotalSteps</span>@Model.PageTitle
+        </h1>
+        @if (!string.IsNullOrEmpty(Model.PageDescription))
+        {
+            <p class="bw-page-header__sub">@Model.PageDescription</p>
+        }
+        <div class="bw-page-header__chips">
+            <span class="bw-chip bw-chip--budget">
+                <div class="text-muted fs-7 me-2">BUDGET</div> <i class="bx bx-folder me-1"></i>@Model.MasterNaam
+            </span>
+            <span class="bw-chip bw-chip--versie">VERSIE @Model.VersieLabel</span>
+            @if (!string.IsNullOrEmpty(Model.VersieStatus))
+            {
+                if (Model.VersieStatus == "Concept")
+                {
+                    <span class="bw-chip bw-chip--concept">● CONCEPT</span>
+                }
+                else if (Model.VersieStatus == "Goedgekeurd")
+                {
+                    <span class="bw-chip bw-chip--goedgekeurd">● GOEDGEKEURD</span>
+                }
+                else
+                {
+                    <span class="bw-chip bw-chip--other">@Model.VersieStatus</span>
+                }
+            }
+        </div>
+    </div>
+    <div class="bw-page-header__right">
+        @if (Model.ShowSaveButton)
+        {
+            <button type="submit" form="@Model.SaveFormId" name="submitAction" value="save"
+                    class="btn bw-btn-save">
+                <i class="fas fa-save me-1"></i>Opslaan
+            </button>
+        }
+        else
+        {
+            if (!string.IsNullOrEmpty(Model.PrevUrl))
+            {
+                <a href="@Model.PrevUrl" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+                </a>
+            }
+            if (!string.IsNullOrEmpty(Model.NextUrl))
+            {
+                <a href="@Model.NextUrl" class="btn btn-sm btn-primary">
+                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            }
+        }
+    </div>
+</div>

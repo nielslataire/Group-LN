@@ -125,3 +125,162 @@ CREATE NONCLUSTERED INDEX [IX_BudgetGegevens_BudgetVersieId]
     ON [dbo].[BudgetGegevens] ([BudgetVersieId] ASC);
 
 GO
+
+-- ── 4. BudgetOppervlaktes ─────────────────────────────────────────────────────
+
+CREATE TABLE [dbo].[BudgetOppervlaktes]
+(
+    [Id]                        INT             NOT NULL IDENTITY(1,1),
+    [BudgetVersieId]            INT             NOT NULL,
+    [EenheidNaam]               NVARCHAR(100)   NOT NULL,
+    [UnitGroupTypeId]           INT             NULL,
+    [UnitTypeId]                INT             NULL,
+    [SortOrder]                 INT             NOT NULL CONSTRAINT [DF_BudgetOpp_SortOrder]              DEFAULT 0,
+    [BewoonbareOpp]             DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_BewoonbareOpp]          DEFAULT 0,
+    [Tuin]                      DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_Tuin]                   DEFAULT 0,
+    [TerrasPrefab]              DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_TerrasPrefab]           DEFAULT 0,
+    [TerrasGelijkvloers]        DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_TerrasGelijkvloers]     DEFAULT 0,
+    [Dakterras]                 DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_Dakterras]              DEFAULT 0,
+    [GaragesParkingsBovenGr]    DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_GaragesParkingsBGR]     DEFAULT 0,
+    [GarBergOndergronds]        DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_GarBergOndergronds]     DEFAULT 0,
+    [BergGelijkvloers]          DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_BergGelijkvloers]       DEFAULT 0,
+    [Carports]                  DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_Carports]               DEFAULT 0,
+    [DoorritGVL]                DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_DoorritGVL]             DEFAULT 0,
+    [Zolder]                    DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_Zolder]                 DEFAULT 0,
+    [GemeenschappelijkeDelen]   DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_GemeenschappDelen]      DEFAULT 0,
+    [Wegenis]                   DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_Wegenis]                DEFAULT 0,
+    [Grondopp]                  DECIMAL(8,2)    NOT NULL CONSTRAINT [DF_BudgetOpp_Grondopp]               DEFAULT 0,
+
+    CONSTRAINT [PK_BudgetOppervlaktes]
+        PRIMARY KEY CLUSTERED ([Id] ASC),
+
+    CONSTRAINT [FK_BudgetOpp_BudgetVersie]
+        FOREIGN KEY ([BudgetVersieId])
+        REFERENCES [dbo].[BudgetVersie] ([Id])
+        ON DELETE CASCADE,
+
+    CONSTRAINT [FK_BudgetOpp_UnitGroupType]
+        FOREIGN KEY ([UnitGroupTypeId])
+        REFERENCES [dbo].[UnitGroupTypes] ([Id])
+        ON DELETE SET NULL,
+
+    CONSTRAINT [FK_BudgetOpp_UnitType]
+        FOREIGN KEY ([UnitTypeId])
+        REFERENCES [dbo].[UnitTypes] ([Id])
+        ON DELETE SET NULL
+);
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_BudgetOpp_BudgetVersieId]
+    ON [dbo].[BudgetOppervlaktes] ([BudgetVersieId] ASC, [SortOrder] ASC);
+
+GO
+
+-- ── 5. BudgetSanitair ────────────────────────────────────────────────────────
+
+CREATE TABLE [dbo].[BudgetSanitair]
+(
+    [Id]                    INT             NOT NULL IDENTITY(1,1),
+    [BudgetVersieId]        INT             NOT NULL,
+    [EenheidNaam]           NVARCHAR(100)   NOT NULL,
+    [UnitTypeId]            INT             NULL,
+    [SortOrder]             INT             NOT NULL CONSTRAINT [DF_BudgetSanitair_SortOrder]              DEFAULT 0,
+    [Badkamer]              INT             NOT NULL CONSTRAINT [DF_BudgetSanitair_Badkamer]              DEFAULT 0,
+    [ToiletInBadkamer]      INT             NOT NULL CONSTRAINT [DF_BudgetSanitair_ToiletInBadkamer]      DEFAULT 0,
+    [AfzonderlijkToilet]    INT             NOT NULL CONSTRAINT [DF_BudgetSanitair_AfzonderlijkToilet]    DEFAULT 0,
+    [DoucheInBadkamer]      INT             NOT NULL CONSTRAINT [DF_BudgetSanitair_DoucheInBadkamer]      DEFAULT 0,
+    [Douchekamer]           INT             NOT NULL CONSTRAINT [DF_BudgetSanitair_Douchekamer]           DEFAULT 0,
+
+    CONSTRAINT [PK_BudgetSanitair]
+        PRIMARY KEY CLUSTERED ([Id] ASC),
+
+    CONSTRAINT [FK_BudgetSanitair_BudgetVersie]
+        FOREIGN KEY ([BudgetVersieId])
+        REFERENCES [dbo].[BudgetVersie] ([Id])
+        ON DELETE CASCADE,
+
+    CONSTRAINT [FK_BudgetSanitair_UnitType]
+        FOREIGN KEY ([UnitTypeId])
+        REFERENCES [dbo].[UnitTypes] ([Id])
+        ON DELETE SET NULL
+);
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_BudgetSanitair_BudgetVersieId]
+    ON [dbo].[BudgetSanitair] ([BudgetVersieId] ASC, [SortOrder] ASC);
+
+GO
+
+-- ── 6. BudgetGevelElementen ───────────────────────────────────────────────────
+
+CREATE TABLE [dbo].[BudgetGevelElementen]
+(
+    [Id]            INT             NOT NULL IDENTITY(1,1),
+    [BudgetVersieId] INT            NOT NULL,
+    [ElementType]   NVARCHAR(30)    NOT NULL,
+    [EenheidNaam]   NVARCHAR(100)   NULL,
+    [Beschrijving]  NVARCHAR(200)   NULL,
+    [Aantal]        DECIMAL(6,2)    NOT NULL CONSTRAINT [DF_BudgetGevel_Aantal]   DEFAULT 1,
+    [Breedte]       DECIMAL(8,3)    NULL,
+    [Hoogte]        DECIMAL(8,3)    NULL,
+    [Lengte]        DECIMAL(8,3)    NULL,
+    [SortOrder]     INT             NOT NULL CONSTRAINT [DF_BudgetGevel_SortOrder] DEFAULT 0,
+
+    CONSTRAINT [PK_BudgetGevelElementen]
+        PRIMARY KEY CLUSTERED ([Id] ASC),
+
+    CONSTRAINT [FK_BudgetGevel_BudgetVersie]
+        FOREIGN KEY ([BudgetVersieId])
+        REFERENCES [dbo].[BudgetVersie] ([Id])
+        ON DELETE CASCADE
+);
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_BudgetGevel_VersieType]
+    ON [dbo].[BudgetGevelElementen] ([BudgetVersieId] ASC, [ElementType] ASC, [SortOrder] ASC);
+
+GO
+
+-- ── 7. BudgetActivityLijnen ───────────────────────────────────────────────────
+
+CREATE TABLE [dbo].[BudgetActivityLijnen]
+(
+    [Id]                            INT             NOT NULL IDENTITY(1,1),
+    [BudgetVersieId]                INT             NOT NULL,
+    [ActivityId]                    INT             NOT NULL,
+    [NacalcPrijsPerEenheid]         DECIMAL(10,2)   NULL,
+    [NacalcBronProjectId]           INT             NULL,
+    [Correctiefactor]               DECIMAL(4,2)    NOT NULL CONSTRAINT [DF_BudgetActLijn_Correctiefactor]   DEFAULT 1,
+    [AlternatievePrijsPerEenheid]   DECIMAL(10,2)   NULL,
+    [IsManueel]                     BIT             NOT NULL CONSTRAINT [DF_BudgetActLijn_IsManueel]          DEFAULT 0,
+    [VerhogingsPerc]                DECIMAL(5,2)    NOT NULL CONSTRAINT [DF_BudgetActLijn_VerhogingsPerc]     DEFAULT 0,
+    [Omschrijving]                  NVARCHAR(200)   NULL,
+
+    CONSTRAINT [PK_BudgetActivityLijnen]
+        PRIMARY KEY CLUSTERED ([Id] ASC),
+
+    CONSTRAINT [FK_BudgetActLijn_BudgetVersie]
+        FOREIGN KEY ([BudgetVersieId])
+        REFERENCES [dbo].[BudgetVersie] ([Id])
+        ON DELETE CASCADE,
+
+    CONSTRAINT [FK_BudgetActLijn_Activity]
+        FOREIGN KEY ([ActivityId])
+        REFERENCES [dbo].[Activity] ([ActivityId])
+        ON DELETE NO ACTION,
+
+    CONSTRAINT [FK_BudgetActLijn_NacalcProject]
+        FOREIGN KEY ([NacalcBronProjectId])
+        REFERENCES [dbo].[Project] ([ProjectId])
+        ON DELETE NO ACTION
+);
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_BudgetActLijn_VersieActivity]
+    ON [dbo].[BudgetActivityLijnen] ([BudgetVersieId] ASC, [ActivityId] ASC);
+
+GO

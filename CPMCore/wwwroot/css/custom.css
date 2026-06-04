@@ -1314,3 +1314,13 @@ html.gl-modal-open .sidebar-left { display: none !important; }
     color: #a71d2a;
     border: 1px solid #dc3545;
 }
+
+h1.page-head {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -.2px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}

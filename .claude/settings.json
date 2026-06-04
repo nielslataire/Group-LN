@@ -13,7 +13,13 @@
       "PowerShell(Select-String -Path \"e:\\\\TFS\\\\wwwcopro\\\\Content\\\\bootstrap.min.css\" -Pattern \"Bootstrap v\" | Select-Object -First 1 | ForEach-Object { $_.Line.Substring\\(0, [Math]::Min\\(120, $_.Line.Length\\)\\) })",
       "Bash(Find-Item -Path \"e:\\\\TFS\\\\DALCore\\\\Models\" -Filter \"*context*\" -ErrorAction SilentlyContinue)",
       "Bash(Select-Object -ExpandProperty Name)",
-      "Bash(Get-ChildItem -Path \"e:\\\\TFS\\\\DALCore\\\\Models\" -Filter \"*context*\" -ErrorAction SilentlyContinue)"
+      "Bash(Get-ChildItem -Path \"e:\\\\TFS\\\\DALCore\\\\Models\" -Filter \"*context*\" -ErrorAction SilentlyContinue)",
+      "Bash(New-Item -ItemType Directory -Force \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\Partials\")",
+      "Bash(Out-Null)",
+      "Bash(Write-Host \"done\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\Partials\")",
+      "PowerShell(\"done\")",
+      "Bash(Get-ChildItem -Path \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\Recalculation.cshtml\" -ErrorAction SilentlyContinue)"
     ]
   }
 }

@@ -1,0 +1,127 @@
+@model BOCore.BudgetOppervlaktesBO
+@{
+    var versieId = ViewBag.VersieId as int? ?? Model.BudgetVersieId;
+}
+<tr data-rij-id="@Model.Id"
+    data-versie-id="@Model.BudgetVersieId"
+    data-group-type="@Model.UnitGroupTypeId">
+
+    <td class="text-center text-muted rij-nummer" style="width:36px;"></td>
+
+    <td style="min-width:120px;">
+        <input type="text"
+               class="form-control form-control-sm opp-naam"
+               value="@Model.EenheidNaam"
+               data-field="eenheidNaam" />
+    </td>
+
+    <td style="min-width:130px;">
+        <select class="form-select form-select-sm opp-group-type" data-field="unitGroupTypeId">
+            <option value="">—</option>
+            @* Ingevuld via JavaScript vanuit window.budgetGroupTypes *@
+        </select>
+    </td>
+
+    <td style="min-width:120px;">
+        <select class="form-select form-select-sm opp-unit-type" data-field="unitTypeId">
+            <option value="">—</option>
+        </select>
+    </td>
+
+    @{
+        var fields = new[]
+        {
+            ("bewoonbareOpp",          Model.BewoonbareOpp),
+            ("tuin",                   Model.Tuin),
+            ("terrasPrefab",           Model.TerrasPrefab),
+            ("terrasGelijkvloers",     Model.TerrasGelijkvloers),
+            ("dakterras",              Model.Dakterras),
+            ("garagesParkingsBovenGr", Model.GaragesParkingsBovenGr),
+            ("garBergOndergronds",     Model.GarBergOndergronds),
+            ("bergGelijkvloers",       Model.BergGelijkvloers),
+            ("carports",               Model.Carports),
+            ("doorritGVL",             Model.DoorritGVL),
+            ("zolder",                 Model.Zolder),
+            ("gemeenschappelijkeDelen",Model.GemeenschappelijkeDelen),
+            ("wegenis",                Model.Wegenis),
+            ("grondopp",               Model.Grondopp),
+        };
+    }
+
+    @foreach (var (field, val) in fields)
+    {
+        <td style="min-width:70px;">
+            <input type="number" min="0" step="0.01"
+                   class="form-control form-control-sm text-end opp-input"
+                   data-field="@field"
+                   value="@val.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)" />
+        </td>
+    }
+
+    <td class="opp-gereduceerd-cell text-end fw-semibold text-primary"
+        style="min-width:90px;"
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title="@Model.FormulaOppGereduceerd">
+        <span class="opp-gered-value">@Model.OppGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</span>
+        <br />
+        <small class="calc-detail text-muted fw-normal" style="display:none;font-size:0.65rem;">
+            @Model.FormulaOppGereduceerd
+        </small>
+    </td>
+
+    <td class="text-center" style="width:50px;">
+        <div class="dropdown">
+            <button class="btn btn-sm btn-light btn-icon dropdown-toggle"
+                    type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <button type="button" class="dropdown-item text-danger btn-delete-rij">
+                        <i class="fas fa-trash-alt me-1"></i>Verwijderen
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item btn-duplicate-rij">
+                        <i class="fas fa-copy me-1"></i>Dupliceren
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </td>
+</tr>
+
+<script>
+    // Initialiseer de dropdowns voor deze net-toegevoegde rij
+    (function () {
+        const row   = document.querySelector('tr[data-rij-id="@Model.Id"]');
+        if (!row || !window.budgetGroupTypes) return;
+
+        const grpSel  = row.querySelector('.opp-group-type');
+        const typeSel = row.querySelector('.opp-unit-type');
+
+        window.budgetGroupTypes.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.text  = g.name;
+            if (g.id == @(Model.UnitGroupTypeId?.ToString() ?? "null")) opt.selected = true;
+            grpSel.appendChild(opt);
+        });
+
+        if (@(Model.UnitGroupTypeId.HasValue ? "true" : "false")) {
+            const filtered = (window.budgetAllTypes || [])
+                .filter(t => t.groupId == @(Model.UnitGroupTypeId?.ToString() ?? "0"));
+            filtered.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.text  = t.name;
+                if (t.id == @(Model.UnitTypeId?.ToString() ?? "null")) opt.selected = true;
+                typeSel.appendChild(opt);
+            });
+        }
+
+        // Tooltips
+        new bootstrap.Tooltip(row.querySelector('.opp-gereduceerd-cell'));
+    })();
+</script>

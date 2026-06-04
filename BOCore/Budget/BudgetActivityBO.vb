@@ -1,0 +1,70 @@
+Namespace Budget
+
+    Public Class BudgetActivityLijnBO
+
+        Public Property Id As Integer
+        Public Property BudgetVersieId As Integer
+        Public Property ActivityId As Integer
+        Public Property ActivityOmschrijving As String
+        Public Property LotNummer As Decimal
+        Public Property LotNaam As String
+        Public Property GroupId As Integer
+
+        Public Property AlternatievePrijsPerEenheid As Decimal
+        Public Property NacalcPrijsPerEenheid As Decimal
+        Public Property Correctiefactor As Decimal = 1D
+        Public Property IsManueel As Boolean
+
+        ''' <summary>Gevuld door service — niet opgeslagen in DB.</summary>
+        Public Property AantalEenheden As Integer
+
+        ''' <summary>Totale GBA m², gevuld door service.</summary>
+        Public Property TotaalOppervlakte As Decimal
+
+        Public ReadOnly Property NacalcGeindexeerd As Decimal
+            Get
+                Return NacalcPrijsPerEenheid * Correctiefactor
+            End Get
+        End Property
+
+        Public ReadOnly Property TotaalAlternatief As Decimal
+            Get
+                Return AlternatievePrijsPerEenheid * AantalEenheden
+            End Get
+        End Property
+
+        Public ReadOnly Property TotaalNacalc As Decimal
+            Get
+                Return NacalcGeindexeerd * AantalEenheden
+            End Get
+        End Property
+
+        Public ReadOnly Property Verschil As Decimal
+            Get
+                Return TotaalAlternatief - TotaalNacalc
+            End Get
+        End Property
+
+    End Class
+
+    Public Class BudgetLotGroepBO
+
+        Public Property LotNummer As Decimal
+        Public Property LotNaam As String
+        Public Property Lijnen As New List(Of BudgetActivityLijnBO)
+
+        Public ReadOnly Property TotaalAlternatief As Decimal
+            Get
+                Return Lijnen.Sum(Function(l) l.TotaalAlternatief)
+            End Get
+        End Property
+
+        Public ReadOnly Property TotaalNacalc As Decimal
+            Get
+                Return Lijnen.Sum(Function(l) l.TotaalNacalc)
+            End Get
+        End Property
+
+    End Class
+
+End Namespace

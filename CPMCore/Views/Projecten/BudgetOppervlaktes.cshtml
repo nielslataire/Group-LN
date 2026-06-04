@@ -1,0 +1,483 @@
+@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Projecten.BudgetOppervlaktesModel
+@{
+    ViewData["Title"] = "Oppervlaktes — " + Model.MasterNaam;
+}
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+}
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+    {
+        new Breadcrumb("Home",         nameof(HomeController.Index),        "Home",       true),
+        new Breadcrumb("Projecten",    nameof(ProjectenController.Index),   "Projecten",  true),
+        new Breadcrumb("Detail",       nameof(ProjectenController.Detail),  "Projecten",  true),
+        new Breadcrumb("Budgetten",    nameof(ProjectenController.BudgetIndex), "Projecten", true),
+        new Breadcrumb("Oppervlaktes", nameof(ProjectenController.BudgetOppervlaktes), "Projecten", false),
+    };
+}
+@Html.AntiForgeryToken()
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 2 })
+
+            @* ── Tab-bar styles (identiek aan BudgetGegevens) ── *@
+
+            @* ── Pagina-koptekst ── *@
+            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+            {
+                StepNum    = 2,
+                PageTitle  = "Oppervlaktes",
+                PageDescription = "Bewoonbare en bijkomende oppervlaktes per eenheid, met VMSW-reductiefactoren.",
+                MasterNaam = Model.MasterNaam,
+                VersieLabel= Model.VersieLabel,
+                PrevUrl    = Url.Action("BudgetGegevens",    "Projecten", new { versieId = Model.VersieId }),
+                NextUrl    = Url.Action("BudgetSanitair",    "Projecten", new { versieId = Model.VersieId })
+            })
+
+            @* ── KPI kaarten (rij 1: aantallen) ── *@
+            <div class="row g-3 mb-3">
+                @{
+                    var kpi1 = new[]
+                    {
+                        ("kpi-wooneenheden",    "Wooneenheden",     Model.Totalen.AantalWooneenheden.ToString()),
+                        ("kpi-parkeerplaatsen", "Parkeerplaatsen",  Model.Totalen.AantalParkeerplaatsen.ToString()),
+                        ("kpi-commercieel",     "Commercieel",      Model.Totalen.AantalCommercieel.ToString()),
+                        ("kpi-totaal",          "Totaal eenheden",  Model.Totalen.AantalTotaal.ToString()),
+                    };
+                }
+                @foreach (var (id, lbl, val) in kpi1)
+                {
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center py-3">
+                            <div class="card-body p-2">
+                                <div class="fs-2 fw-bold text-primary" id="@id">@val</div>
+                                <div class="small text-muted">@lbl</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ── KPI kaarten (rij 2: oppervlaktes) ── *@
+            <div class="row g-3 mb-3">
+                @{
+                    var kpi2 = new[]
+                    {
+                        ("kpi-totaal-bew",  "Totaal bewoonbaar",    Model.Totalen.TotaalBewoonbaar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                        ("kpi-totaal-gered","Totaal gereduceerd",   Model.Totalen.TotaalGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                        ("kpi-gem-m2",      "Gem. m²/eenheid",      Model.Totalen.GemiddeldeM2PerEenheid.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                        ("kpi-totaal-grond","Grondopp. totaal",      Model.Totalen.TotaalGrondopp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + " m²"),
+                    };
+                }
+                @foreach (var (id, lbl, val) in kpi2)
+                {
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center py-2">
+                            <div class="card-body p-2">
+                                <div class="fs-5 fw-semibold text-dark" id="@id">@val</div>
+                                <div class="small text-muted">@lbl</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ── Coëfficiënten legende ── *@
+            <div class="card mb-3 bg-light border-0" id="legendeCard">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <small class="fw-semibold text-muted">Reductiefactoren VMSW</small>
+                        <button type="button" class="btn btn-link btn-sm p-0 text-muted" id="btnToggleLegende">
+                            Verberg <i class="fas fa-chevron-up"></i>
+                        </button>
+                    </div>
+                    <div id="legendeBody" class="d-flex flex-wrap gap-1">
+                        @{
+                            var coeffs = new[]
+                            {
+                                ("Bewoonbaar",   "×1,0"),  ("Tuin",         "×0,05"), ("Terras prefab",  "×1,0"),
+                                ("Terras gvl.",  "×0,1"),  ("Dakterras",    "×0,33"), ("Garage bgr.",    "×0,9"),
+                                ("Berg. ond.",   "×0,5"),  ("Berg. gvl.",   "×0,4"),  ("Carport",        "×0,3"),
+                                ("Doorrit",      "×0,6"),  ("Zolder",       "×0,3"),  ("Gem. delen",     "×1,0"),
+                                ("Wegenis",      "×0,1"),
+                            };
+                        }
+                        @foreach (var (name, factor) in coeffs)
+                        {
+                            <span class="badge bg-white border text-dark fw-normal">
+                                @name <strong>@factor</strong>
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @* ── Eenheid toevoegen ── *@
+            <div class="card mb-3 bg-light border-dashed">
+                <div class="card-body py-2 px-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-auto">
+                            <label class="form-label small mb-1 fw-semibold">Naam eenheid</label>
+                            <input type="text" id="addNaam" class="form-control form-control-sm"
+                                   placeholder="bv. Lot 1" style="min-width:140px;" />
+                        </div>
+                        <div class="col-md-auto">
+                            <label class="form-label small mb-1 fw-semibold">Hoofdtype</label>
+                            <select id="addGroupType" class="form-select form-select-sm" style="min-width:160px;">
+                                <option value="">— kies type —</option>
+                                @foreach (var item in Model.GroupTypes.Skip(1))
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-auto">
+                            <label class="form-label small mb-1 fw-semibold">Subtype</label>
+                            <select id="addType" class="form-select form-select-sm" disabled style="min-width:140px;">
+                                <option value="">— eerst hoofdtype —</option>
+                            </select>
+                        </div>
+                        <div class="col-md-auto">
+                            <button type="button" class="btn btn-sm btn-primary" id="btnToevoegen">
+                                <i class="fas fa-plus me-1"></i>Toevoegen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Tabel ── *@
+            <div class="table-responsive mb-3" style="max-height:60vh; overflow-y:auto;">
+                <table class="table table-hover table-sm table-bordered align-middle mb-0"
+                       id="oppervlaktesTable" style="min-width:1800px;">
+                    <thead class="sticky-top" style="z-index:2;">
+                        <tr class="table-secondary text-center small">
+                            <th rowspan="2" style="width:36px;">#</th>
+                            <th rowspan="2" style="min-width:120px;">Naam</th>
+                            <th rowspan="2" style="min-width:130px;">Hoofdtype</th>
+                            <th rowspan="2" style="min-width:120px;">Subtype</th>
+                            <th colspan="1" class="text-primary border-start">Bewoonbaar</th>
+                            <th colspan="4" class="border-start">Buitenruimtes</th>
+                            <th colspan="4" class="border-start">Parkeren &amp; Berging</th>
+                            <th colspan="5" class="border-start">Overige</th>
+                            <th rowspan="2" class="text-info border-start" style="min-width:90px;"
+                                data-bs-toggle="tooltip" title="Berekend met VMSW-reductiefactoren">
+                                Gered. m²
+                            </th>
+                            <th rowspan="2" style="width:50px;"></th>
+                        </tr>
+                        <tr class="table-light small text-center">
+                            <th class="text-primary border-start" style="min-width:70px;">Bew. m²</th>
+                            <th class="border-start" style="min-width:70px;">Tuin</th>
+                            <th style="min-width:70px;">T.prefab</th>
+                            <th style="min-width:70px;">T.gvl.</th>
+                            <th style="min-width:70px;">Dakt.</th>
+                            <th class="border-start" style="min-width:70px;">Gar.bgr.</th>
+                            <th style="min-width:70px;">Berg.ond.</th>
+                            <th style="min-width:70px;">Berg.gvl.</th>
+                            <th style="min-width:70px;">Carport</th>
+                            <th class="border-start" style="min-width:70px;">Doorrit</th>
+                            <th style="min-width:70px;">Zolder</th>
+                            <th style="min-width:70px;">Gem.del.</th>
+                            <th style="min-width:70px;">Wegenis</th>
+                            <th style="min-width:70px;">Grond</th>
+                        </tr>
+                    </thead>
+                    <tbody id="oppervlaktesTableBody">
+                        @foreach (var rij in Model.Rijen)
+                        {
+                            @await Html.PartialAsync("Partials/_BudgetOppervlaktesRij", rij)
+                        }
+                    </tbody>
+                    <tfoot id="totals-row" class="table-dark fw-semibold text-end small">
+                        <tr>
+                            <td colspan="4" class="text-start ps-2">Totaal</td>
+                            <td class="text-primary" id="ft-bew">@Model.Totalen.TotaalBewoonbaar.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td></td><td></td><td></td><td></td>
+                            <td></td><td></td><td></td><td></td>
+                            <td></td><td></td>
+                            <td id="ft-grond">@Model.Totalen.TotaalGrondopp.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td class="text-info" id="ft-gered">@Model.Totalen.TotaalGereduceerd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            @* ── Bottom actions ── *@
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="@Url.Action("BudgetGegevens", "Projecten", new { versieId = Model.VersieId })"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+                </a>
+                <a href="@Url.Action("BudgetSanitair", "Projecten", new { versieId = Model.VersieId })" class="btn btn-primary">
+                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@* Data voor JavaScript *@
+<script id="budgetTypesData" type="application/json">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.GroupTypes.Skip(1).Select(g => new { id = int.Parse(g.Value), name = g.Text })
+    ))
+</script>
+<script id="budgetAllTypesData" type="application/json">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.AllTypes.Select(t => new { id = t.Id, name = t.Name, shortcode = t.Shortcode, groupId = t.GroupId })
+    ))
+</script>
+
+@section PageScripts {
+<script src="~/js/budget-wizard.js"></script>
+<script>
+    // Gedeelde data
+    window.budgetGroupTypes = JSON.parse(document.getElementById('budgetTypesData').textContent);
+    window.budgetAllTypes   = JSON.parse(document.getElementById('budgetAllTypesData').textContent);
+
+
+    const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const versieId    = @Model.VersieId;
+
+    const fmtNL = BudgetWizard.fmtNL;
+
+    // ── Initialiseer dropdowns voor bestaande rijen ───────────────────────────
+    function initRowDropdowns(row) {
+        const grpSel  = row.querySelector('.opp-group-type');
+        const typeSel = row.querySelector('.opp-unit-type');
+        const grpId   = parseInt(row.dataset.groupType) || 0;
+
+        // Vul hoofdtype-dropdown
+        if (grpSel.options.length <= 1) {
+            window.budgetGroupTypes.forEach(g => {
+                const opt = new Option(g.name, g.id, false, g.id === grpId);
+                grpSel.add(opt);
+            });
+        }
+
+        // Vul subtype-dropdown op basis van huidige hoofdtype
+        function fillSubTypes(selectedGroupId, selectedTypeId) {
+            typeSel.innerHTML = '<option value="">—</option>';
+            const filtered = window.budgetAllTypes.filter(t => t.groupId === selectedGroupId);
+            filtered.forEach(t => {
+                typeSel.add(new Option(t.name, t.id, false, t.id === selectedTypeId));
+            });
+        }
+
+        const currentTypeId = parseInt(row.querySelector('[data-field="unitTypeId"]')?.value) || 0;
+        if (grpId) fillSubTypes(grpId, currentTypeId);
+
+        grpSel.addEventListener('change', () => {
+            fillSubTypes(parseInt(grpSel.value) || 0, 0);
+            queueSave(row);
+        });
+        typeSel.addEventListener('change', () => queueSave(row));
+    }
+
+    document.querySelectorAll('#oppervlaktesTableBody tr').forEach(initRowDropdowns);
+    renumberRows();
+
+
+    document.getElementById('btnToggleLegende').addEventListener('click', function () {
+        const body = document.getElementById('legendeBody');
+        const hidden = body.style.display === 'none';
+        body.style.display = hidden ? '' : 'none';
+        this.innerHTML = hidden ? 'Verberg <i class="fas fa-chevron-up"></i>'
+                                : 'Toon <i class="fas fa-chevron-down"></i>';
+    });
+
+    // ── Client-side OppGereduceerd ────────────────────────────────────────────
+    const COEFF = BudgetWizard.COEFF;
+
+    function collectRowData(row) {
+        const data = { rijId: parseInt(row.dataset.rijId), versieId: parseInt(row.dataset.versieId) };
+        row.querySelectorAll('.opp-input').forEach(inp => {
+            data[toCamel(inp.dataset.field)] = parseFloat(inp.value) || 0;
+        });
+        data.grondopp       = parseFloat(row.querySelector('[data-field="grondopp"]')?.value) || 0;
+        data.eenheidNaam    = row.querySelector('.opp-naam')?.value ?? '';
+        data.unitGroupTypeId = parseInt(row.querySelector('.opp-group-type')?.value) || null;
+        data.unitTypeId      = parseInt(row.querySelector('.opp-unit-type')?.value) || null;
+        return data;
+    }
+
+    function toCamel(s) {
+        // already camelCase from data-field attributes
+        return s;
+    }
+
+    const calcGered = BudgetWizard.calcGered;
+    }
+
+    // ── Debounced save ────────────────────────────────────────────────────────
+    const saveTimers = {};
+
+    function queueSave(row) {
+        const id = row.dataset.rijId;
+        clearTimeout(saveTimers[id]);
+        const gered = calcGered(collectRowData(row));
+        row.querySelector('.opp-gered-value').textContent = fmtNL(gered);
+
+        saveTimers[id] = setTimeout(() => saveRow(row), 400);
+    }
+
+    async function saveRow(row) {
+        const payload = collectRowData(row);
+        try {
+            const resp = await fetch('/Projecten/BudgetOppervlaktesRijOpslaan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgery },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            if (result.success) {
+                updateKpiCards(result.totalen);
+                updateFooter(result.totalen);
+                row.querySelector('.calc-detail').textContent = result.formula;
+                row.querySelector('.opp-gereduceerd-cell').setAttribute('title', result.formula);
+            }
+        } catch (e) { console.error('Save fout:', e); }
+    }
+
+    // ── Event listeners voor inputs ───────────────────────────────────────────
+    document.getElementById('oppervlaktesTableBody').addEventListener('change', function (e) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+        if (e.target.classList.contains('opp-input') ||
+            e.target.classList.contains('opp-naam')   ||
+            e.target.classList.contains('opp-group-type') ||
+            e.target.classList.contains('opp-unit-type')) {
+            queueSave(row);
+        }
+    });
+
+    // ── KPI + footer update ───────────────────────────────────────────────────
+    const updateKpiCards = BudgetWizard.updateKpiCards;
+
+    function updateFooter(t) {
+        document.getElementById('ft-bew').textContent   = fmtNL(t.totaalBewoonbaar);
+        document.getElementById('ft-gered').textContent = fmtNL(t.totaalGereduceerd);
+        document.getElementById('ft-grond').textContent = fmtNL(t.totaalGrondopp);
+    }
+
+    // ── Rij-nummering ─────────────────────────────────────────────────────────
+    function renumberRows() {
+        document.querySelectorAll('#oppervlaktesTableBody tr').forEach((row, i) => {
+            const cell = row.querySelector('.rij-nummer');
+            if (cell) cell.textContent = i + 1;
+        });
+    }
+
+    // ── Eenheid toevoegen ─────────────────────────────────────────────────────
+    document.getElementById('addGroupType').addEventListener('change', function () {
+        const typeSelect = document.getElementById('addType');
+        const gid = parseInt(this.value) || 0;
+        typeSelect.innerHTML = '<option value="">—</option>';
+        if (gid) {
+            window.budgetAllTypes.filter(t => t.groupId === gid).forEach(t => {
+                typeSelect.add(new Option(t.name, t.id));
+            });
+            typeSelect.disabled = false;
+        } else {
+            typeSelect.disabled = true;
+        }
+    });
+
+    document.getElementById('btnToevoegen').addEventListener('click', async function () {
+        const naam     = document.getElementById('addNaam').value.trim();
+        const groupId  = document.getElementById('addGroupType').value;
+        const typeId   = document.getElementById('addType').value;
+
+        const params = new URLSearchParams({ versieId, eenheidNaam: naam, groupTypeId: groupId, typeId });
+        const resp = await fetch('/Projecten/BudgetOppervlaktesRijToevoegen', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+
+        if (!resp.ok) { alert('Fout bij toevoegen.'); return; }
+        const html = await resp.text();
+
+        const tbody = document.getElementById('oppervlaktesTableBody');
+        const temp  = document.createElement('tbody');
+        temp.innerHTML = html;
+        const newRow = temp.querySelector('tr');
+        if (newRow) {
+            tbody.appendChild(newRow);
+            initRowDropdowns(newRow);
+            renumberRows();
+        }
+
+        // Reset form
+        document.getElementById('addNaam').value = '';
+        document.getElementById('addGroupType').value = '';
+        document.getElementById('addType').innerHTML = '<option value="">— eerst hoofdtype —</option>';
+        document.getElementById('addType').disabled = true;
+    });
+
+    // ── Verwijderen & dupliceren ──────────────────────────────────────────────
+    document.getElementById('oppervlaktesTableBody').addEventListener('click', async function (e) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+
+        if (e.target.closest('.btn-delete-rij')) {
+            if (!confirm('Rij verwijderen?')) return;
+            const rijId   = row.dataset.rijId;
+            const params  = new URLSearchParams({ rijId, versieId });
+            const resp    = await fetch('/Projecten/BudgetOppervlaktesRijVerwijderen', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const result = await resp.json();
+            if (result.success) {
+                row.remove();
+                renumberRows();
+                updateKpiCards(result.totalen);
+                updateFooter(result.totalen);
+            }
+        }
+
+        if (e.target.closest('.btn-duplicate-rij')) {
+            const data = collectRowData(row);
+            const naam = (document.querySelector(`tr[data-rij-id="${data.rijId}"] .opp-naam`)?.value ?? '') + ' (kopie)';
+            const params = new URLSearchParams({
+                versieId,
+                eenheidNaam: naam,
+                groupTypeId: data.unitGroupTypeId ?? '',
+                typeId: data.unitTypeId ?? ''
+            });
+            const resp = await fetch('/Projecten/BudgetOppervlaktesRijToevoegen', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            if (!resp.ok) return;
+            const html    = await resp.text();
+            const temp    = document.createElement('tbody');
+            temp.innerHTML = html;
+            const newRow  = temp.querySelector('tr');
+            if (newRow) {
+                document.getElementById('oppervlaktesTableBody').appendChild(newRow);
+                initRowDropdowns(newRow);
+                renumberRows();
+            }
+        }
+    });
+
+    // ── Bootstrap tooltips initialiseren ─────────────────────────────────────
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+}
+
+

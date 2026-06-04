@@ -24,7 +24,10 @@ using QuestPDF.Infrastructure;
 using Rotativa.AspNetCore;
 using Rotativa.AspNetCore.Options;
 using ServiceCore;
+using ServiceCore.Budget;
 using ServiceCore.Invoicing;
+using BOCore.Budget;
+using CPMCore.Models.Budget;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Webp;
@@ -71,6 +74,8 @@ namespace CPMCore.Controllers
         private readonly IProjectVoortgangService _voortgangService;
         private readonly DALCore.UnitOfWorkCore _uow;
         private readonly IBudgetService _budgetService;
+        private readonly BudgetActivityService _budgetActivityService;
+        private readonly ABEXService           _abexService;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -79,7 +84,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, ABEXService abexService)
         {
             _logger = logger;
             Configuration = configuration;
@@ -95,7 +100,9 @@ namespace CPMCore.Controllers
             _postalcodeService = postalcodeService;
             _voortgangService = voortgangService;
             _uow = uow;
-            _budgetService = budgetService;
+            _budgetService          = budgetService;
+            _budgetActivityService  = budgetActivityService;
+            _abexService            = abexService;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -8719,7 +8726,196 @@ namespace CPMCore.Controllers
                 return View(model);
             }
 
+            if (submitAction == "next")
+                return RedirectToAction(nameof(BudgetOppervlaktes), new { versieId = model.VersieId });
+
             return RedirectToAction(nameof(BudgetGegevens), new { versieId = model.VersieId });
+        }
+
+        // ── BudgetOppervlaktes ────────────────────────────────────────────────
+
+        [HttpGet]
+        public IActionResult BudgetOppervlaktes(int versieId)
+        {
+            var versieEntity = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .SingleOrDefault();
+
+            if (versieEntity == null) return NotFound();
+
+            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
+            if (!projectResponse.Success) return NotFound();
+
+            var rijResp     = _budgetService.GetBudgetOppervlaktes(versieId);
+            var totaalResp  = _budgetService.GetBudgetOppervlaktesTotaal(versieId);
+
+            var groupOptions = new List<SelectListItem> { new SelectListItem("— kies type —", "") };
+            var dbGroupTypes = _uow.UnitGroupTypes.GetNoTracking()
+                .Where(g => g.Selectable)
+                .OrderBy(g => g.Name)
+                .Select(g => new { g.Id, g.Name })
+                .ToList();
+            groupOptions.AddRange(dbGroupTypes.Select(g => new SelectListItem(g.Name, g.Id.ToString())));
+
+            var allTypesBos = _uow.UnitTypes.GetNoTracking()
+                .Where(t => t.Selectable != false)
+                .Select(t => new UnitTypeBO { Id = t.Id, Name = t.Name, Shortcode = t.Shortcode, GroupId = t.GroupId })
+                .ToList();
+
+            var versieBO = new BudgetVersieBO
+            {
+                Id           = versieEntity.Id,
+                BudgetMasterId = versieEntity.BudgetMasterId,
+                ProjectId    = versieEntity.ProjectId,
+                Versienummer = versieEntity.Versienummer,
+                VersieNaam   = versieEntity.VersieNaam,
+                Status       = versieEntity.Status,
+                IsHuidig     = versieEntity.IsHuidig,
+                CreatedAt    = versieEntity.CreatedAt
+            };
+
+            var model = new BudgetOppervlaktesModel
+            {
+                VersieId    = versieId,
+                MasterId    = versieEntity.BudgetMasterId,
+                ProjectId   = versieEntity.ProjectId,
+                ProjectName = projectResponse.Value?.Name,
+                VersieLabel = versieBO.VersieLabel,
+                MasterNaam  = versieEntity.BudgetMaster?.Naam,
+                Rijen       = rijResp.Success ? rijResp.Values : new List<BudgetOppervlaktesBO>(),
+                Totalen     = totaalResp.Success ? totaalResp.Value : new BudgetOppervlaktesTotaalBO(),
+                GroupTypes  = groupOptions,
+                AllTypes    = allTypesBos
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",          nameof(HomeController.Index),       "Home",       true),
+                new Breadcrumb("Projecten",     nameof(ProjectenController.Index),  "Projecten",  true),
+                new Breadcrumb("Detail",        nameof(ProjectenController.Detail), "Projecten",  true),
+                new Breadcrumb("Budgetten",     nameof(BudgetIndex),                "Projecten",  true),
+                new Breadcrumb("Oppervlaktes",  nameof(BudgetOppervlaktes),         "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult BudgetOppervlaktesRijToevoegen(int versieId, string eenheidNaam, int? groupTypeId, int? typeId)
+        {
+            var rij = new BudgetOppervlaktesBO
+            {
+                BudgetVersieId  = versieId,
+                EenheidNaam     = eenheidNaam ?? "",
+                UnitGroupTypeId = groupTypeId,
+                UnitTypeId      = typeId
+            };
+
+            if (groupTypeId.HasValue)
+            {
+                var grp = _uow.UnitGroupTypes.GetNoTracking().SingleOrDefault(g => g.Id == groupTypeId.Value);
+                rij.GroupTypeName = grp?.Name;
+            }
+            if (typeId.HasValue)
+            {
+                var tp = _uow.UnitTypes.GetNoTracking().SingleOrDefault(t => t.Id == typeId.Value);
+                rij.TypeName      = tp?.Name;
+                rij.TypeShortcode = tp?.Shortcode;
+            }
+
+            var response = _budgetService.AddBudgetOppervlaktesRij(rij, versieId);
+            if (!response.Success)
+                return BadRequest(response.Messages.FirstOrDefault()?.Message);
+
+            rij.Id = response.InsertedId;
+            return PartialView("Partials/_BudgetOppervlaktesRij", rij);
+        }
+
+        [HttpPost]
+        public IActionResult BudgetOppervlaktesRijOpslaan([FromBody] BudgetOppervlaktesRijModel model)
+        {
+            var bo = new BudgetOppervlaktesBO
+            {
+                Id                      = model.RijId,
+                BudgetVersieId          = model.VersieId,
+                EenheidNaam             = model.EenheidNaam ?? "",
+                UnitGroupTypeId         = model.UnitGroupTypeId,
+                UnitTypeId              = model.UnitTypeId,
+                BewoonbareOpp           = model.BewoonbareOpp,
+                Tuin                    = model.Tuin,
+                TerrasPrefab            = model.TerrasPrefab,
+                TerrasGelijkvloers      = model.TerrasGelijkvloers,
+                Dakterras               = model.Dakterras,
+                GaragesParkingsBovenGr  = model.GaragesParkingsBovenGr,
+                GarBergOndergronds      = model.GarBergOndergronds,
+                BergGelijkvloers        = model.BergGelijkvloers,
+                Carports                = model.Carports,
+                DoorritGVL              = model.DoorritGVL,
+                Zolder                  = model.Zolder,
+                GemeenschappelijkeDelen = model.GemeenschappelijkeDelen,
+                Wegenis                 = model.Wegenis,
+                Grondopp                = model.Grondopp
+            };
+
+            var response = _budgetService.UpdateBudgetOppervlaktesRij(bo);
+            if (!response.Success)
+                return Json(new { success = false, error = response.Messages.FirstOrDefault()?.Message });
+
+            var totalen = _budgetService.GetBudgetOppervlaktesTotaal(model.VersieId);
+            var t = totalen.Value ?? new BudgetOppervlaktesTotaalBO();
+
+            return Json(new
+            {
+                success           = true,
+                oppGereduceerd    = bo.OppGereduceerd,
+                formula           = bo.FormulaOppGereduceerd,
+                totalen = new
+                {
+                    aantalWooneenheden    = t.AantalWooneenheden,
+                    aantalParkeerplaatsen = t.AantalParkeerplaatsen,
+                    aantalCommercieel     = t.AantalCommercieel,
+                    aantalTotaal          = t.AantalTotaal,
+                    totaalBewoonbaar      = t.TotaalBewoonbaar,
+                    totaalGereduceerd     = t.TotaalGereduceerd,
+                    gemiddeldeM2PerEenheid = t.GemiddeldeM2PerEenheid,
+                    totaalGrondopp        = t.TotaalGrondopp
+                }
+            });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetOppervlaktesRijVerwijderen(int rijId, int versieId)
+        {
+            var response = _budgetService.DeleteBudgetOppervlaktesRij(rijId, versieId);
+            if (!response.Success)
+                return Json(new { success = false, error = response.Messages.FirstOrDefault()?.Message });
+
+            var totalen = _budgetService.GetBudgetOppervlaktesTotaal(versieId);
+            var t = totalen.Value ?? new BudgetOppervlaktesTotaalBO();
+
+            return Json(new
+            {
+                success = true,
+                totalen = new
+                {
+                    aantalWooneenheden    = t.AantalWooneenheden,
+                    aantalParkeerplaatsen = t.AantalParkeerplaatsen,
+                    aantalCommercieel     = t.AantalCommercieel,
+                    aantalTotaal          = t.AantalTotaal,
+                    totaalBewoonbaar      = t.TotaalBewoonbaar,
+                    totaalGereduceerd     = t.TotaalGereduceerd,
+                    gemiddeldeM2PerEenheid = t.GemiddeldeM2PerEenheid,
+                    totaalGrondopp        = t.TotaalGrondopp
+                }
+            });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetOppervlaktesVolgorde(int versieId, [FromBody] int[] orderedIds)
+        {
+            var response = _budgetService.ReorderBudgetOppervlaktes(orderedIds?.ToList() ?? new List<int>(), versieId);
+            return Json(new { success = response.Success });
         }
 
         [HttpPost]
@@ -8746,8 +8942,505 @@ namespace CPMCore.Controllers
             return Json(new { success = response.Success });
         }
 
+        // ── BudgetSanitair ────────────────────────────────────────────────────
+
+        [HttpGet]
+        public IActionResult BudgetSanitair(int versieId)
+        {
+            var versieEntity = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .SingleOrDefault();
+
+            if (versieEntity == null) return NotFound();
+
+            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
+            if (!projectResponse.Success) return NotFound();
+
+            _budgetService.SyncSanitairVanOppervlaktes(versieId);
+
+            var rijResp    = _budgetService.GetBudgetSanitair(versieId);
+            var totaalResp = _budgetService.GetBudgetSanitairTotaal(versieId);
+
+            var versieBO = new BudgetVersieBO
+            {
+                Id             = versieEntity.Id,
+                BudgetMasterId = versieEntity.BudgetMasterId,
+                ProjectId      = versieEntity.ProjectId,
+                Versienummer   = versieEntity.Versienummer,
+                VersieNaam     = versieEntity.VersieNaam,
+                Status         = versieEntity.Status,
+                IsHuidig       = versieEntity.IsHuidig,
+                CreatedAt      = versieEntity.CreatedAt
+            };
+
+            var model = new BudgetSanitairModel
+            {
+                VersieId    = versieId,
+                MasterId    = versieEntity.BudgetMasterId,
+                ProjectId   = versieEntity.ProjectId,
+                ProjectName = projectResponse.Value?.Name,
+                VersieLabel = versieBO.VersieLabel,
+                MasterNaam  = versieEntity.BudgetMaster?.Naam,
+                Rijen       = rijResp.Success ? rijResp.Values : new List<BudgetSanitairBO>(),
+                Totaal      = totaalResp.Success ? totaalResp.Value : new BudgetSanitairTotaalBO()
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",       nameof(HomeController.Index),      "Home",       true),
+                new Breadcrumb("Projecten",  nameof(ProjectenController.Index), "Projecten",  true),
+                new Breadcrumb("Detail",     nameof(ProjectenController.Detail),"Projecten",  true),
+                new Breadcrumb("Budgetten",  nameof(BudgetIndex),               "Projecten",  true),
+                new Breadcrumb("Sanitair",   nameof(BudgetSanitair),            "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult BudgetSanitairRijToevoegen(int versieId, string eenheidNaam, int? unitTypeId)
+        {
+            var rij = new BudgetSanitairBO
+            {
+                BudgetVersieId = versieId,
+                EenheidNaam    = eenheidNaam ?? "",
+                UnitTypeId     = unitTypeId
+            };
+
+            var response = _budgetService.AddBudgetSanitairRij(rij, versieId);
+            if (!response.Success)
+                return BadRequest(response.Messages.FirstOrDefault()?.Message);
+
+            rij.Id = response.InsertedId;
+            return PartialView("Partials/_BudgetSanitairRij", rij);
+        }
+
+        [HttpPost]
+        public IActionResult BudgetSanitairRijOpslaan([FromBody] BudgetSanitairRijModel model)
+        {
+            var bo = new BudgetSanitairBO
+            {
+                Id                  = model.RijId,
+                BudgetVersieId      = model.VersieId,
+                EenheidNaam         = model.EenheidNaam,
+                UnitTypeId          = model.UnitTypeId,
+                Badkamer            = model.Badkamer,
+                ToiletInBadkamer    = model.ToiletInBadkamer,
+                AfzonderlijkToilet  = model.AfzonderlijkToilet,
+                DoucheInBadkamer    = model.DoucheInBadkamer,
+                Douchekamer         = model.Douchekamer
+            };
+
+            var response = _budgetService.UpdateBudgetSanitairRij(bo);
+            if (!response.Success)
+                return Json(new { success = false, error = response.Messages.FirstOrDefault()?.Message });
+
+            var totaalResp = _budgetService.GetBudgetSanitairTotaal(model.VersieId);
+            var t = totaalResp.Value ?? new BudgetSanitairTotaalBO();
+
+            return Json(new
+            {
+                success = true,
+                totaal = new
+                {
+                    totaalBadkamers             = t.TotaalBadkamers,
+                    totaalToilettenInBadkamer   = t.TotaalToilettenInBadkamer,
+                    totaalAfzonderlijkeToiletten = t.TotaalAfzonderlijkeToiletten,
+                    totaalDouchesInBadkamer     = t.TotaalDouchesInBadkamer,
+                    totaalDouchekamers          = t.TotaalDouchekamers,
+                    aantalEenheden              = t.AantalEenheden
+                }
+            });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetSanitairRijVerwijderen(int rijId, int versieId)
+        {
+            var response = _budgetService.DeleteBudgetSanitairRij(rijId, versieId);
+            if (!response.Success)
+                return Json(new { success = false, error = response.Messages.FirstOrDefault()?.Message });
+
+            var totaalResp = _budgetService.GetBudgetSanitairTotaal(versieId);
+            var t = totaalResp.Value ?? new BudgetSanitairTotaalBO();
+
+            return Json(new
+            {
+                success = true,
+                totaal = new
+                {
+                    totaalBadkamers             = t.TotaalBadkamers,
+                    totaalToilettenInBadkamer   = t.TotaalToilettenInBadkamer,
+                    totaalAfzonderlijkeToiletten = t.TotaalAfzonderlijkeToiletten,
+                    totaalDouchesInBadkamer     = t.TotaalDouchesInBadkamer,
+                    totaalDouchekamers          = t.TotaalDouchekamers,
+                    aantalEenheden              = t.AantalEenheden
+                }
+            });
+        }
+
+        // ── BudgetGevels ─────────────────────────────────────────────────────
+
+        private static readonly string[] GevelTypes = { "GevelNieuwbouw", "GevelBestaand", "RaamNieuwbouw", "RaamBestaand", "Ballustrade", "Zichtscherm" };
+
+        [HttpGet]
+        public IActionResult BudgetGevels(int versieId)
+        {
+            var versieEntity = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .SingleOrDefault();
+
+            if (versieEntity == null) return NotFound();
+
+            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
+            if (!projectResponse.Success) return NotFound();
+
+            var elementenResp = _budgetService.GetBudgetGevelElementen(versieId);
+            var totaalResp    = _budgetService.GetBudgetGevelTotaal(versieId);
+
+            var versieBO = new BudgetVersieBO
+            {
+                Id           = versieEntity.Id,
+                Versienummer = versieEntity.Versienummer,
+                VersieNaam   = versieEntity.VersieNaam
+            };
+
+            var elementen = (elementenResp.Success ? elementenResp.Values : new List<BudgetGevelElementBO>())
+                .Where(e => GevelTypes.Contains(e.ElementType))
+                .GroupBy(e => e.ElementType)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var model = new BudgetGevelsDakModel
+            {
+                VersieId    = versieId,
+                MasterId    = versieEntity.BudgetMasterId,
+                ProjectId   = versieEntity.ProjectId,
+                ProjectName = projectResponse.Value?.Name,
+                VersieLabel = versieBO.VersieLabel,
+                MasterNaam  = versieEntity.BudgetMaster?.Naam,
+                Elementen   = elementen,
+                Totaal      = totaalResp.Success ? totaalResp.Value : new BudgetGevelTotaalBO()
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",       nameof(HomeController.Index),      "Home",       true),
+                new Breadcrumb("Projecten",  nameof(ProjectenController.Index), "Projecten",  true),
+                new Breadcrumb("Detail",     nameof(ProjectenController.Detail),"Projecten",  true),
+                new Breadcrumb("Budgetten",  nameof(BudgetIndex),               "Projecten",  true),
+                new Breadcrumb("Gevels",     nameof(BudgetGevels),              "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        // ── BudgetDakAfbraak ──────────────────────────────────────────────────
+
+        private static readonly string[] DakAfbraakTypes = { "PlatDak", "HellendDak", "GroenDak", "Dakoversteken", "OnderkantDoorrit", "Afbraak" };
+
+        [HttpGet]
+        public IActionResult BudgetDakAfbraak(int versieId)
+        {
+            var versieEntity = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .SingleOrDefault();
+
+            if (versieEntity == null) return NotFound();
+
+            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
+            if (!projectResponse.Success) return NotFound();
+
+            var elementenResp = _budgetService.GetBudgetGevelElementen(versieId);
+            var totaalResp    = _budgetService.GetBudgetGevelTotaal(versieId);
+
+            var versieBO = new BudgetVersieBO
+            {
+                Id           = versieEntity.Id,
+                Versienummer = versieEntity.Versienummer,
+                VersieNaam   = versieEntity.VersieNaam
+            };
+
+            var elementen = (elementenResp.Success ? elementenResp.Values : new List<BudgetGevelElementBO>())
+                .Where(e => DakAfbraakTypes.Contains(e.ElementType))
+                .GroupBy(e => e.ElementType)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var model = new BudgetGevelsDakModel
+            {
+                VersieId    = versieId,
+                MasterId    = versieEntity.BudgetMasterId,
+                ProjectId   = versieEntity.ProjectId,
+                ProjectName = projectResponse.Value?.Name,
+                VersieLabel = versieBO.VersieLabel,
+                MasterNaam  = versieEntity.BudgetMaster?.Naam,
+                Elementen   = elementen,
+                Totaal      = totaalResp.Success ? totaalResp.Value : new BudgetGevelTotaalBO()
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",         nameof(HomeController.Index),        "Home",       true),
+                new Breadcrumb("Projecten",    nameof(ProjectenController.Index),   "Projecten",  true),
+                new Breadcrumb("Detail",       nameof(ProjectenController.Detail),  "Projecten",  true),
+                new Breadcrumb("Budgetten",    nameof(BudgetIndex),                 "Projecten",  true),
+                new Breadcrumb("Dak & Afbraak",nameof(BudgetDakAfbraak),            "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        // ── BudgetGevelsDak ───────────────────────────────────────────────────
+
+        [HttpGet]
+        public IActionResult BudgetGevelsDak(int versieId)
+        {
+            var versieEntity = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .SingleOrDefault();
+
+            if (versieEntity == null) return NotFound();
+
+            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
+            if (!projectResponse.Success) return NotFound();
+
+            var elementenResp = _budgetService.GetBudgetGevelElementen(versieId);
+            var totaalResp    = _budgetService.GetBudgetGevelTotaal(versieId);
+
+            var versieBO = new BudgetVersieBO
+            {
+                Id           = versieEntity.Id,
+                Versienummer = versieEntity.Versienummer,
+                VersieNaam   = versieEntity.VersieNaam
+            };
+
+            var elementen = (elementenResp.Success ? elementenResp.Values : new List<BudgetGevelElementBO>())
+                .GroupBy(e => e.ElementType)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var model = new BudgetGevelsDakModel
+            {
+                VersieId    = versieId,
+                MasterId    = versieEntity.BudgetMasterId,
+                ProjectId   = versieEntity.ProjectId,
+                ProjectName = projectResponse.Value?.Name,
+                VersieLabel = versieBO.VersieLabel,
+                MasterNaam  = versieEntity.BudgetMaster?.Naam,
+                Elementen   = elementen,
+                Totaal      = totaalResp.Success ? totaalResp.Value : new BudgetGevelTotaalBO()
+            };
+
+            ViewBag.Breadcrumbs = new List<Breadcrumb>
+            {
+                new Breadcrumb("Home",          nameof(HomeController.Index),       "Home",       true),
+                new Breadcrumb("Projecten",     nameof(ProjectenController.Index),  "Projecten",  true),
+                new Breadcrumb("Detail",        nameof(ProjectenController.Detail), "Projecten",  true),
+                new Breadcrumb("Budgetten",     nameof(BudgetIndex),                "Projecten",  true),
+                new Breadcrumb("Gevels & Dak",  nameof(BudgetGevelsDak),            "Projecten",  false),
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public IActionResult BudgetGevelElementToevoegen(int versieId, string elementType,
+            string eenheidNaam, string beschrijving)
+        {
+            var bo = new BudgetGevelElementBO
+            {
+                BudgetVersieId = versieId,
+                ElementType    = elementType ?? "GevelNieuwbouw",
+                EenheidNaam    = eenheidNaam,
+                Beschrijving   = beschrijving,
+                Aantal         = 1m
+            };
+
+            var response = _budgetService.AddBudgetGevelElement(bo, versieId);
+            if (!response.Success)
+                return BadRequest(response.Messages.FirstOrDefault()?.Message);
+
+            bo.Id = response.InsertedId;
+            ViewBag.VersieId = versieId;
+            return PartialView("Partials/_BudgetGevelRij", bo);
+        }
+
+        [HttpPost]
+        public IActionResult BudgetGevelElementOpslaan([FromBody] BudgetGevelElementModel model)
+        {
+            var bo = new BudgetGevelElementBO
+            {
+                Id           = model.ElementId,
+                BudgetVersieId = model.VersieId,
+                ElementType  = model.ElementType,
+                EenheidNaam  = model.EenheidNaam,
+                Beschrijving = model.Beschrijving,
+                Aantal       = model.Aantal,
+                Breedte      = model.Breedte,
+                Hoogte       = model.Hoogte,
+                Lengte       = model.Lengte
+            };
+
+            var response = _budgetService.UpdateBudgetGevelElement(bo);
+            if (!response.Success)
+                return Json(new { success = false, error = response.Messages.FirstOrDefault()?.Message });
+
+            var totaal = _budgetService.GetBudgetGevelTotaal(model.VersieId);
+            var t = totaal.Value ?? new BudgetGevelTotaalBO();
+
+            return Json(new
+            {
+                success      = true,
+                resultaatM2  = bo.ResultaatM2,
+                resultaatLm  = bo.ResultaatLm,
+                formula      = bo.FormulaResultaat,
+                totaal = new
+                {
+                    totaalGevelNieuwbouw   = t.TotaalGevelNieuwbouw,
+                    totaalGevelBestaand    = t.TotaalGevelBestaand,
+                    totaalRaamNieuwbouw    = t.TotaalRaamNieuwbouw,
+                    totaalRaamBestaand     = t.TotaalRaamBestaand,
+                    totaalBallustrade      = t.TotaalBallustrade,
+                    totaalZichtscherm      = t.TotaalZichtscherm,
+                    totaalPlatDak          = t.TotaalPlatDak,
+                    totaalHellendDak       = t.TotaalHellendDak,
+                    totaalGroenDak         = t.TotaalGroenDak,
+                    totaalDakoversteken    = t.TotaalDakoversteken,
+                    totaalOnderkantDoorrit = t.TotaalOnderkantDoorrit,
+                    totaalAfbraak          = t.TotaalAfbraak,
+                    totaalGevelCombineerd  = t.TotaalGevelCombineerd,
+                    totaalRaamCombineerd   = t.TotaalRaamCombineerd,
+                    totaalDakCombineerd    = t.TotaalDakCombineerd
+                }
+            });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetGevelElementVerwijderen(int elementId, int versieId)
+        {
+            var response = _budgetService.DeleteBudgetGevelElement(elementId, versieId);
+            if (!response.Success)
+                return Json(new { success = false, error = response.Messages.FirstOrDefault()?.Message });
+
+            var totaal = _budgetService.GetBudgetGevelTotaal(versieId);
+            var t = totaal.Value ?? new BudgetGevelTotaalBO();
+
+            return Json(new
+            {
+                success = true,
+                totaal = new
+                {
+                    totaalGevelNieuwbouw   = t.TotaalGevelNieuwbouw,
+                    totaalGevelBestaand    = t.TotaalGevelBestaand,
+                    totaalRaamNieuwbouw    = t.TotaalRaamNieuwbouw,
+                    totaalRaamBestaand     = t.TotaalRaamBestaand,
+                    totaalBallustrade      = t.TotaalBallustrade,
+                    totaalZichtscherm      = t.TotaalZichtscherm,
+                    totaalPlatDak          = t.TotaalPlatDak,
+                    totaalHellendDak       = t.TotaalHellendDak,
+                    totaalGroenDak         = t.TotaalGroenDak,
+                    totaalDakoversteken    = t.TotaalDakoversteken,
+                    totaalOnderkantDoorrit = t.TotaalOnderkantDoorrit,
+                    totaalAfbraak          = t.TotaalAfbraak,
+                    totaalGevelCombineerd  = t.TotaalGevelCombineerd,
+                    totaalRaamCombineerd   = t.TotaalRaamCombineerd,
+                    totaalDakCombineerd    = t.TotaalDakCombineerd
+                }
+            });
+        }
+
+        // ── BudgetActivityLijnen ──────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> BudgetActivityLijnen(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.Id == versieId)
+                .Include(v => v.BudgetMaster)
+                .Include(v => v.BudgetGegevens)
+                .SingleOrDefault();
+
+            if (versie == null) return NotFound();
+
+            var projectResp = _projectService.GetProjectByID(versie.BudgetMaster.ProjectId);
+
+            var lotGroepen = await _budgetActivityService.GetLotGroepenAsync(versieId);
+
+            var aantalEenheden = _uow.BudgetOppervlaktes.GetNoTracking()
+                .Count(o => o.BudgetVersieId == versieId);
+
+            var totaalGBA = _uow.BudgetOppervlaktes.GetNoTracking()
+                .Where(o => o.BudgetVersieId == versieId)
+                .Sum(o => (decimal?)o.BewoonbareOpp) ?? 0m;
+
+            var beschikbareProjecten = await _budgetActivityService.GetProjectenVoorNacalcAsync();
+
+            var model = new BudgetActivityLijnenModel
+            {
+                BudgetVersieId       = versieId,
+                ProjectId            = versie.BudgetMaster.ProjectId,
+                ProjectName          = projectResp.Success ? projectResp.Value?.Name : string.Empty,
+                BudgetNaam           = versie.BudgetMaster.Naam,
+                Versienummer         = versie.Versienummer,
+                LotGroepen           = lotGroepen,
+                AantalEenheden       = aantalEenheden,
+                OppervlakteGBA       = totaalGBA,
+                ABEXBasis            = versie.BudgetGegevens?.AbexBasisIndex  ?? 0m,
+                ABEXHuidig           = versie.BudgetGegevens?.AbexHuidigIndex ?? 0m,
+                BeschikbareProjecten = beschikbareProjecten
+            };
+
+            ViewData["Referrer"] = Request.Headers["Referer"].ToString();
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveActivityLijnen([FromBody] SaveActivityLijnenRequest request)
+        {
+            if (request == null)
+                return Json(new { success = false, message = "Ongeldig verzoek." });
+
+            var lijnen = request.Lijnen?.Select(dto => new BudgetActivityLijnBO
+            {
+                ActivityId                  = dto.ActivityId,
+                AlternatievePrijsPerEenheid = dto.AlternatievePrijsPerEenheid ?? 0m,
+                NacalcPrijsPerEenheid       = dto.NacalcPrijsPerEenheid       ?? 0m,
+                Correctiefactor             = dto.Correctiefactor,
+                IsManueel                   = dto.IsManueel
+            }).ToList() ?? new List<BudgetActivityLijnBO>();
+
+            var response = await _budgetActivityService.SaveLijnenAsync(request.BudgetVersieId, lijnen);
+
+            return Json(new { success = response.Success, message = response.Messages.FirstOrDefault()?.Message });
+        }
+
+        [HttpPost]
+        public IActionResult ImportNacalcVanProject(int bronProjectId, int doelVersieId)
+        {
+            return Json(new { success = false, message = "Nog niet geïmplementeerd." });
+        }
+
     }
 }
+
+// ── Request DTOs voor BudgetActivityLijnen ────────────────────────────────────
+public class SaveActivityLijnenRequest
+{
+    public int                         BudgetVersieId { get; set; }
+    public List<ActivityLijnUpdateDto> Lijnen         { get; set; } = new();
+}
+
+public class ActivityLijnUpdateDto
+{
+    public int      ActivityId                  { get; set; }
+    public decimal? AlternatievePrijsPerEenheid { get; set; }
+    public decimal? NacalcPrijsPerEenheid       { get; set; }
+    public decimal  Correctiefactor             { get; set; } = 1m;
+    public bool     IsManueel                   { get; set; }
+}
+
 // Payloads voor herberekenen
 public class RecalculateRequest
 {

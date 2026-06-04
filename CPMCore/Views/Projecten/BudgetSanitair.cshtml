@@ -1,0 +1,309 @@
+@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Projecten.BudgetSanitairModel
+@{
+    ViewData["Title"] = "Sanitair — " + Model.MasterNaam;
+}
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+}
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+    {
+        new Breadcrumb("Home",       nameof(HomeController.Index),        "Home",       true),
+        new Breadcrumb("Projecten",  nameof(ProjectenController.Index),   "Projecten",  true),
+        new Breadcrumb("Detail",     nameof(ProjectenController.Detail),  "Projecten",  true),
+        new Breadcrumb("Budgetten",  nameof(ProjectenController.BudgetIndex), "Projecten", true),
+        new Breadcrumb("Sanitair",   nameof(ProjectenController.BudgetSanitair), "Projecten", false),
+    };
+}
+@Html.AntiForgeryToken()
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 3 })
+
+            @* ── Pagina-koptekst ── *@
+            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+            {
+                StepNum    = 3,
+                PageTitle  = "Sanitair",
+                PageDescription = "Sanitaire elementen per eenheid: badkamers, toiletten en doucheruimtes.",
+                MasterNaam = Model.MasterNaam,
+                VersieLabel= Model.VersieLabel,
+                PrevUrl    = Url.Action("BudgetOppervlaktes","Projecten", new { versieId = Model.VersieId }),
+                NextUrl    = Url.Action("BudgetGevels",      "Projecten", new { versieId = Model.VersieId })
+            })
+
+            @* ── KPI kaarten ── *@
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md">
+                    <div class="card card-modern text-center p-3">
+                        <div class="fs-3 fw-bold text-primary" id="kpi-badkamer">@Model.Totaal.TotaalBadkamers</div>
+                        <div class="small text-muted">Badkamers</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card card-modern text-center p-3">
+                        <div class="fs-3 fw-bold text-primary" id="kpi-toilet-bk">@Model.Totaal.TotaalToilettenInBadkamer</div>
+                        <div class="small text-muted">Toiletten in BK</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card card-modern text-center p-3">
+                        <div class="fs-3 fw-bold text-primary" id="kpi-toilet-afz">@Model.Totaal.TotaalAfzonderlijkeToiletten</div>
+                        <div class="small text-muted">Afz. toiletten</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card card-modern text-center p-3">
+                        <div class="fs-3 fw-bold text-primary" id="kpi-douche-bk">@Model.Totaal.TotaalDouchesInBadkamer</div>
+                        <div class="small text-muted">Douches in BK</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card card-modern text-center p-3">
+                        <div class="fs-3 fw-bold text-primary" id="kpi-douchekamer">@Model.Totaal.TotaalDouchekamers</div>
+                        <div class="small text-muted">Douchekamers</div>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Info banner ── *@
+            <div class="alert alert-info d-flex align-items-center mb-3">
+                <i class="bi bi-info-circle-fill me-2"></i>
+                <span>
+                    Eenheden worden automatisch gesynchroniseerd vanuit de oppervlaktestabel.
+                    <a href="@Url.Action("BudgetOppervlaktes", new { versieId = Model.VersieId })"
+                       class="alert-link">Oppervlaktes bewerken</a>
+                </span>
+            </div>
+
+            @* ── Rij toevoegen ── *@
+            <div class="card card-modern mb-3 bg-light border-0">
+                <div class="card-body py-2">
+                    <div class="d-flex gap-2 align-items-end">
+                        <div>
+                            <label class="form-label small mb-1">Eenheid naam</label>
+                            <input type="text" id="sanitairNaam" class="form-control form-control-sm"
+                                   placeholder="bv. Lot 1" style="width:140px;" />
+                        </div>
+                        <button id="btnSanitairToevoegen" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus me-1"></i> Toevoegen
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Tabel ── *@
+            <div class="table-responsive mb-3">
+                <table class="table table-hover align-middle" id="sanitairTable">
+                    <thead class="table-light sticky-top" style="z-index:2;">
+                        <tr>
+                            <th style="width:36px;">#</th>
+                            <th>Eenheid</th>
+                            <th class="text-center">
+                                Badkamer
+                                <i class="bi bi-info-circle text-muted"
+                                   title="Volledige badkamer met bad en/of douche"
+                                   data-bs-toggle="tooltip"></i>
+                            </th>
+                            <th class="text-center">
+                                Toilet in BK
+                                <i class="bi bi-info-circle text-muted"
+                                   title="Toilet geïntegreerd in badkamer"
+                                   data-bs-toggle="tooltip"></i>
+                            </th>
+                            <th class="text-center">
+                                Afz. toilet
+                                <i class="bi bi-info-circle text-muted"
+                                   title="Afzonderlijk toilet buiten badkamer"
+                                   data-bs-toggle="tooltip"></i>
+                            </th>
+                            <th class="text-center">
+                                Douche in BK
+                                <i class="bi bi-info-circle text-muted"
+                                   title="Douche geïntegreerd in badkamer"
+                                   data-bs-toggle="tooltip"></i>
+                            </th>
+                            <th class="text-center">
+                                Douchekamer
+                                <i class="bi bi-info-circle text-muted"
+                                   title="Aparte douchekamer"
+                                   data-bs-toggle="tooltip"></i>
+                            </th>
+                            <th class="text-center text-muted">Totaal</th>
+                            <th style="width:44px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sanitairTableBody">
+                        @foreach (var rij in Model.Rijen)
+                        {
+                            @await Html.PartialAsync("Partials/_BudgetSanitairRij", rij)
+                        }
+                    </tbody>
+                    <tfoot class="table-dark fw-bold">
+                        <tr>
+                            <td colspan="2">Totaal</td>
+                            <td class="text-center" id="tot-badkamer">@Model.Totaal.TotaalBadkamers</td>
+                            <td class="text-center" id="tot-toilet-bk">@Model.Totaal.TotaalToilettenInBadkamer</td>
+                            <td class="text-center" id="tot-toilet-afz">@Model.Totaal.TotaalAfzonderlijkeToiletten</td>
+                            <td class="text-center" id="tot-douche-bk">@Model.Totaal.TotaalDouchesInBadkamer</td>
+                            <td class="text-center" id="tot-douchekamer">@Model.Totaal.TotaalDouchekamers</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            @* ── Bottom actions ── *@
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+                </a>
+                <a href="@Url.Action("BudgetGevels", "Projecten", new { versieId = Model.VersieId })"
+                   class="btn btn-primary">
+                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script src="~/js/budget-wizard.js"></script>
+<script>
+    const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const versieId    = @Model.VersieId;
+    let saveTimer;
+
+    // ── Rij-nummering ─────────────────────────────────────────────────────────
+    function renumberRows() {
+        document.querySelectorAll('#sanitairTableBody tr').forEach((row, i) => {
+            const cell = row.querySelector('.row-number');
+            if (cell) cell.textContent = i + 1;
+        });
+    }
+
+    renumberRows();
+
+    // ── KPI updater ───────────────────────────────────────────────────────────
+    function updateSanitairKpi(totaal) {
+        document.getElementById('kpi-badkamer').textContent        = totaal.totaalBadkamers;
+        document.getElementById('kpi-toilet-bk').textContent       = totaal.totaalToilettenInBadkamer;
+        document.getElementById('kpi-toilet-afz').textContent      = totaal.totaalAfzonderlijkeToiletten;
+        document.getElementById('kpi-douche-bk').textContent       = totaal.totaalDouchesInBadkamer;
+        document.getElementById('kpi-douchekamer').textContent     = totaal.totaalDouchekamers;
+        document.getElementById('tot-badkamer').textContent        = totaal.totaalBadkamers;
+        document.getElementById('tot-toilet-bk').textContent       = totaal.totaalToilettenInBadkamer;
+        document.getElementById('tot-toilet-afz').textContent      = totaal.totaalAfzonderlijkeToiletten;
+        document.getElementById('tot-douche-bk').textContent       = totaal.totaalDouchesInBadkamer;
+        document.getElementById('tot-douchekamer').textContent     = totaal.totaalDouchekamers;
+    }
+
+    // ── Inline save on change (debounced 400ms) ───────────────────────────────
+    document.getElementById('sanitairTableBody').addEventListener('change', function (e) {
+        if (!e.target.classList.contains('san-input')) return;
+
+        const row = e.target.closest('tr');
+        if (!row) return;
+
+        // Update row total immediately
+        let tot = 0;
+        row.querySelectorAll('.san-input').forEach(inp => {
+            tot += parseInt(inp.value) || 0;
+        });
+        const badge = row.querySelector('.row-totaal');
+        if (badge) badge.textContent = tot;
+
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(function () {
+            const payload = {
+                rijId:               parseInt(row.dataset.rijId),
+                versieId:            parseInt(row.dataset.versieId),
+                badkamer:            parseInt(row.querySelector('[data-field="badkamer"]').value) || 0,
+                toiletInBadkamer:    parseInt(row.querySelector('[data-field="toiletInBadkamer"]').value) || 0,
+                afzonderlijkToilet:  parseInt(row.querySelector('[data-field="afzonderlijkToilet"]').value) || 0,
+                doucheInBadkamer:    parseInt(row.querySelector('[data-field="doucheInBadkamer"]').value) || 0,
+                douchekamer:         parseInt(row.querySelector('[data-field="douchekamer"]').value) || 0
+            };
+
+            fetch('/Projecten/BudgetSanitairRijOpslaan', {
+                method:  'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': antiForgery
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) updateSanitairKpi(result.totaal);
+            })
+            .catch(err => console.error('Save fout:', err));
+        }, 400);
+    });
+
+    // ── Rij toevoegen ─────────────────────────────────────────────────────────
+    document.getElementById('btnSanitairToevoegen').addEventListener('click', async function () {
+        const naam = document.getElementById('sanitairNaam').value.trim();
+        if (!naam) return;
+
+        const params = new URLSearchParams({ versieId, eenheidNaam: naam });
+        const resp = await fetch('/Projecten/BudgetSanitairRijToevoegen', {
+            method:  'POST',
+            headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body:    params.toString()
+        });
+
+        if (!resp.ok) { alert('Fout bij toevoegen.'); return; }
+
+        const html   = await resp.text();
+        const tbody  = document.getElementById('sanitairTableBody');
+        const temp   = document.createElement('tbody');
+        temp.innerHTML = html;
+        const newRow = temp.querySelector('tr');
+        if (newRow) {
+            tbody.appendChild(newRow);
+            renumberRows();
+        }
+
+        document.getElementById('sanitairNaam').value = '';
+    });
+
+    // ── Rij verwijderen ───────────────────────────────────────────────────────
+    document.getElementById('sanitairTableBody').addEventListener('click', async function (e) {
+        const btn = e.target.closest('.btn-delete-sanitair');
+        if (!btn) return;
+
+        if (!confirm('Rij verwijderen?')) return;
+
+        const row    = btn.closest('tr');
+        const rijId  = row.dataset.rijId;
+        const params = new URLSearchParams({ rijId, versieId });
+
+        const resp = await fetch('/Projecten/BudgetSanitairRijVerwijderen', {
+            method:  'POST',
+            headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body:    params.toString()
+        });
+
+        const result = await resp.json();
+        if (result.success) {
+            row.remove();
+            renumberRows();
+            updateSanitairKpi(result.totaal);
+        }
+    });
+
+    // ── Bootstrap tooltips ────────────────────────────────────────────────────
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+}

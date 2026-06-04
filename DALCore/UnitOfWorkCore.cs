@@ -86,9 +86,17 @@ namespace DALCore
         public GenericRepository<ProjectRegieUur>      ProjectRegieUren      { get; }
         public GenericRepository<IssuerCompanyUserRate> IssuerCompanyUserRates { get; }
         public GenericRepository<ProjectMediaSection> ProjectMediaSections { get; }
-        public GenericRepository<BudgetMaster>  BudgetMasters  { get; }
-        public GenericRepository<BudgetVersie>  BudgetVersies  { get; }
-        public GenericRepository<BudgetGegevens> BudgetGegevens { get; }
+        public GenericRepository<BudgetMaster>       BudgetMasters      { get; }
+        public GenericRepository<BudgetVersie>       BudgetVersies      { get; }
+        public GenericRepository<BudgetGegevens>     BudgetGegevens     { get; }
+        public GenericRepository<BudgetOppervlaktes>   BudgetOppervlaktes   { get; }
+        public GenericRepository<BudgetGevelElementen>  BudgetGevelElementen  { get; }
+        public GenericRepository<BudgetSanitair>        BudgetSanitair        { get; }
+        public GenericRepository<BudgetActivityLijnen>  BudgetActivityLijnen  { get; }
+        public GenericRepository<BudgetParams>          BudgetParams          { get; }
+        public GenericRepository<ABEXIndex>             ABEXIndex             { get; }
+        public GenericRepository<BudgetVerkoopLijn>     BudgetVerkoopLijn     { get; }
+        public GenericRepository<BudgetPrijsReferentie> BudgetPrijsReferentie { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -174,9 +182,17 @@ namespace DALCore
             ProjectRegieUren       = new GenericRepository<ProjectRegieUur>(_context);
             IssuerCompanyUserRates = new GenericRepository<IssuerCompanyUserRate>(_context);
             ProjectMediaSections   = new GenericRepository<ProjectMediaSection>(_context);
-            BudgetMasters  = new GenericRepository<BudgetMaster>(_context);
-            BudgetVersies  = new GenericRepository<BudgetVersie>(_context);
-            BudgetGegevens = new GenericRepository<BudgetGegevens>(_context);
+            BudgetMasters      = new GenericRepository<BudgetMaster>(_context);
+            BudgetVersies      = new GenericRepository<BudgetVersie>(_context);
+            BudgetGegevens     = new GenericRepository<BudgetGegevens>(_context);
+            BudgetOppervlaktes   = new GenericRepository<BudgetOppervlaktes>(_context);
+            BudgetGevelElementen  = new GenericRepository<BudgetGevelElementen>(_context);
+            BudgetSanitair        = new GenericRepository<BudgetSanitair>(_context);
+            BudgetActivityLijnen  = new GenericRepository<BudgetActivityLijnen>(_context);
+            BudgetParams          = new GenericRepository<BudgetParams>(_context);
+            ABEXIndex             = new GenericRepository<ABEXIndex>(_context);
+            BudgetVerkoopLijn     = new GenericRepository<BudgetVerkoopLijn>(_context);
+            BudgetPrijsReferentie = new GenericRepository<BudgetPrijsReferentie>(_context);
         }
 
         // Eenduidige save-methodes

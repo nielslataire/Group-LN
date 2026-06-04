@@ -19,14 +19,13 @@
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
         <div class="inner-body">
-
             <div class="row justify-content-between align-items-center pt-2 pb-3">
-                <div class="col-auto">
-                    <h1 class="font-weight-bold mb-0">Budgetten</h1>
-                    <p class="text-muted mb-0">
+                <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+                    <h1 class="page-head mb-0 mt-0">Budgetten</h1>
+                    <h5 class="mb-4 mt-0">
                         Elk project kan meerdere budgetten bevatten, elk met genummerde versies.
                         Eén versie is steeds de actieve. Open een versie om de berekeningswizard te starten.
-                    </p>
+                    </h5>
                 </div>
                 <div class="col-auto">
                     <a href="@Url.Action("BudgetMasterAanmaken", "Projecten", new { projectId = Model.ProjectId })"

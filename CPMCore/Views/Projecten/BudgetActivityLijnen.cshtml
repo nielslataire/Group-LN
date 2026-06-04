@@ -1,0 +1,326 @@
+@using CPMCore.Controllers
+@model CPMCore.Models.Budget.BudgetActivityLijnenModel
+@{
+    ViewData["Title"] = "Activiteiten — " + Model.BudgetNaam;
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    string Fmt(decimal v, int d = 2) => v.ToString("F" + d, ic);
+    string FmtN(decimal v) => v.ToString("N0", ic);
+}
+
+@section PageStyle {
+<style>
+    .calc-detail               { display: none; }
+    .calc-detail.visible       { display: block; }
+    .lot-accordion .accordion-button:not(.collapsed) { background-color: #e8f0fe; color: #0d6efd; }
+    .kpi-card                  { border-top: 3px solid; }
+    .kpi-card.alt              { border-color: #0d6efd; }
+    .kpi-card.nacalc           { border-color: #198754; }
+    .kpi-card.verschil         { border-color: #ffc107; }
+    .kpi-card.m2               { border-color: #6c757d; }
+    .step-wizard .nav-link     { font-size: .8rem; padding: .35rem .5rem; }
+    .step-wizard .nav-link.completed { background-color: #198754; color: #fff; }
+    .activity-row input        { min-width: 80px; }
+</style>
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            @* ── Wizard stepper ── *@
+            <ul class="nav nav-pills nav-justified step-wizard mb-4">
+                @for (int i = 0; i < Model.WizardSteps.Count; i++)
+                {
+                    string stepClass = (i + 1 == Model.HuidigeStap) ? "active"
+                                     : (i + 1 < Model.HuidigeStap)  ? "completed"
+                                     : "";
+                    <li class="nav-item">
+                        <span class="nav-link @stepClass">@Model.WizardSteps[i]</span>
+                    </li>
+                }
+            </ul>
+
+            @* ── Paginatitel ── *@
+            <h2 class="mb-0">Activiteiten <small class="text-muted fs-6">(VMSW-structuur)</small></h2>
+            <p class="text-muted mb-3">Budget @Model.BudgetNaam — versie @Model.Versienummer</p>
+
+            @* ── 4 KPI cards ── *@
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card kpi-card alt p-3 text-center">
+                        <div class="fs-4 fw-bold text-primary" id="kpiAlt">€ @FmtN(Model.TotaalAlternatief)</div>
+                        <div class="small text-muted">Alternatief totaal</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card kpi-card nacalc p-3 text-center">
+                        <div class="fs-4 fw-bold text-success" id="kpiNacalc">€ @FmtN(Model.TotaalNacalc)</div>
+                        <div class="small text-muted">Nacalc totaal</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card kpi-card verschil p-3 text-center">
+                        <div class="fs-4 fw-bold text-warning" id="kpiVerschil">€ @FmtN(Model.Verschil)</div>
+                        <div class="small text-muted">Verschil</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card kpi-card m2 p-3 text-center">
+                        <div class="fs-4 fw-bold text-secondary" id="kpiM2">€ @Fmt(Model.PrijsPerM2GBA)</div>
+                        <div class="small text-muted">
+                            €/m² GBA
+                            <br />
+                            <span class="text-muted" style="font-size:.75rem;">
+                                @Fmt(Model.OppervlakteGBA) m² · @Model.AantalEenheden eenheden
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ── ABEX + nacalc import balk ── *@
+            <div class="card card-modern mb-4">
+                <div class="card-body d-flex flex-wrap align-items-center gap-3">
+                    <span class="badge bg-secondary fs-6">ABEX basis: @Fmt(Model.ABEXBasis)</span>
+                    <span class="badge bg-primary  fs-6">ABEX huidig: @Fmt(Model.ABEXHuidig)</span>
+                    <span class="badge bg-info text-dark fs-6">Factor: @Fmt(Model.ABEXFactor, 4)</span>
+
+                    <div class="ms-md-auto d-flex gap-2 flex-wrap align-items-center">
+                        <select id="ddlBronProject" class="form-select form-select-sm" style="min-width:180px;">
+                            <option value="">— kies bronproject —</option>
+                            @foreach (var item in Model.BeschikbareProjecten)
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+                        <button id="btnImportNacalc" class="btn btn-outline-secondary btn-sm">
+                            <i class="bx bx-import me-1"></i>Nacalc importeren
+                        </button>
+                        <button id="btnToggleCalc" class="btn btn-outline-primary btn-sm">
+                            <i class="bx bx-code-alt me-1"></i>Formules
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Accordion per lot ── *@
+            <form id="frmActivityLijnen">
+                <input type="hidden" id="hdnVersieId" value="@Model.BudgetVersieId" />
+
+                <div class="accordion lot-accordion mb-4" id="lotAccordion">
+                    @{int lotIdx = 0;}
+                    @foreach (var lot in Model.LotGroepen)
+                    {
+                        string collapseId = $"lotCollapse{lotIdx}";
+                        string headerId   = $"lotHeader{lotIdx}";
+                        bool   isFirst    = lotIdx == 0;
+                        lotIdx++;
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="@headerId">
+                            <button class="accordion-button @(isFirst ? "" : "collapsed")"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#@collapseId"
+                                    aria-expanded="@(isFirst ? "true" : "false")"
+                                    aria-controls="@collapseId">
+                                <span class="badge bg-primary me-2">Lot @lot.LotNummer.ToString("G", ic)</span>
+                                <span class="me-3">@lot.LotNaam</span>
+                                <span class="ms-auto me-3 small text-muted">
+                                    Alt: <strong class="lot-totaal-alt text-primary">
+                                        € @Fmt(lot.TotaalAlternatief)
+                                    </strong>
+                                </span>
+                                <span class="small text-muted">
+                                    Nacalc: <strong class="lot-totaal-nacalc text-success">
+                                        € @Fmt(lot.TotaalNacalc)
+                                    </strong>
+                                </span>
+                            </button>
+                        </h2>
+                        <div id="@collapseId"
+                             class="accordion-collapse collapse @(isFirst ? "show" : "")"
+                             aria-labelledby="@headerId"
+                             data-bs-parent="#lotAccordion">
+                            <div class="accordion-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Activiteit</th>
+                                                <th style="min-width:90px;">Alt. €/eenh.</th>
+                                                <th class="text-end">Alt. totaal</th>
+                                                <th style="min-width:90px;">Nacalc €/eenh.</th>
+                                                <th style="min-width:80px;">Corr.</th>
+                                                <th class="text-end">Nacalc geïnd.</th>
+                                                <th class="text-end">Verschil</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="lot-tbody">
+                                            @foreach (var lijn in lot.Lijnen)
+                                            {
+                                                @await Html.PartialAsync("Partials/_ActivityLijnRow", lijn)
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    }
+                </div>
+
+                @* ── Actie-knoppen ── *@
+                <div class="d-flex gap-2 align-items-center mb-4">
+                    <button type="button" id="btnSaveActivity" class="btn btn-primary">
+                        <i class="bx bx-save me-1"></i>Opslaan
+                    </button>
+                    @if (!string.IsNullOrEmpty(ViewData["Referrer"] as string))
+                    {
+                        <a href="@ViewData["Referrer"]" class="btn btn-outline-secondary">Annuleren</a>
+                    }
+                </div>
+            </form>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script>
+    const versieId       = @Model.BudgetVersieId;
+    const aantalEenheden = @Model.AantalEenheden;
+    const oppGBA         = @Fmt(Model.OppervlakteGBA);
+    const antiForgery    = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    // ── Herbereken één rij ─────────────────────────────────────────────────
+    function herbereken($tr) {
+        const altPrijs    = parseFloat($tr.find('.alt-prijs').val())    || 0;
+        const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
+        const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
+
+        const altTotaal  = altPrijs * aantalEenheden;
+        const nacalcGein = nacalcPrijs * corr;
+        const verschil   = altTotaal - (nacalcGein * aantalEenheden);
+
+        $tr.find('.alt-totaal').text('€ ' + altTotaal.toFixed(2));
+        $tr.find('.nacalc-geind').text('€ ' + nacalcGein.toFixed(2));
+
+        const $badge = $tr.find('.verschil-cel .badge');
+        $badge.text('€ ' + verschil.toFixed(2))
+              .removeClass('bg-warning text-dark bg-primary bg-success');
+        if (verschil > 0)       $badge.addClass('bg-warning text-dark');
+        else if (verschil < 0)  $badge.addClass('bg-primary');
+        else                    $badge.addClass('bg-success');
+
+        const calcText = `Nacalc: ${nacalcPrijs.toFixed(2)} × ${corr.toFixed(4)} (corr.) ` +
+                         `= ${nacalcGein.toFixed(2)} €/eenh. × ${aantalEenheden} eenheden ` +
+                         `= € ${(nacalcGein * aantalEenheden).toFixed(2)}`;
+        $tr.find('.calc-detail').text(calcText);
+    }
+
+    // ── Herbereken lot-totalen ─────────────────────────────────────────────
+    function herberekenLotTotalen($tbody) {
+        let sumAlt    = 0;
+        let sumNacalc = 0;
+        $tbody.find('.activity-row').each(function () {
+            const $tr = $(this);
+            const altPrijs    = parseFloat($tr.find('.alt-prijs').val())    || 0;
+            const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
+            const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
+            sumAlt    += altPrijs * aantalEenheden;
+            sumNacalc += nacalcPrijs * corr * aantalEenheden;
+        });
+        const $accItem = $tbody.closest('.accordion-item');
+        $accItem.find('.lot-totaal-alt').text('€ ' + sumAlt.toFixed(2));
+        $accItem.find('.lot-totaal-nacalc').text('€ ' + sumNacalc.toFixed(2));
+    }
+
+    // ── Update KPI-cards ───────────────────────────────────────────────────
+    function updateKPIs() {
+        let totAlt    = 0;
+        let totNacalc = 0;
+        $('.activity-row').each(function () {
+            const $tr = $(this);
+            const altPrijs    = parseFloat($tr.find('.alt-prijs').val())    || 0;
+            const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
+            const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
+            totAlt    += altPrijs * aantalEenheden;
+            totNacalc += nacalcPrijs * corr * aantalEenheden;
+        });
+        const verschil = totAlt - totNacalc;
+        const m2Prijs  = oppGBA > 0 ? totAlt / oppGBA : 0;
+
+        $('#kpiAlt').text('€ ' + Math.round(totAlt).toLocaleString('nl-BE'));
+        $('#kpiNacalc').text('€ ' + Math.round(totNacalc).toLocaleString('nl-BE'));
+        $('#kpiVerschil').text('€ ' + Math.round(verschil).toLocaleString('nl-BE'));
+        $('#kpiM2').text('€ ' + m2Prijs.toFixed(2));
+    }
+
+    // ── Input event: één handler voor alles ───────────────────────────────
+    $(document).on('input', '.activity-row input', function () {
+        const $tr    = $(this).closest('tr');
+        const $tbody = $(this).closest('tbody');
+        herbereken($tr);
+        herberekenLotTotalen($tbody);
+        updateKPIs();
+    });
+
+    // ── Formules toggle ────────────────────────────────────────────────────
+    $('#btnToggleCalc').on('click', function () {
+        $('.calc-detail').toggleClass('visible');
+        $(this).toggleClass('btn-outline-primary btn-primary');
+    });
+
+    // ── Opslaan ────────────────────────────────────────────────────────────
+    $('#btnSaveActivity').on('click', function () {
+        const lijnen = [];
+        $('.activity-row').each(function () {
+            const $tr = $(this);
+            lijnen.push({
+                activityId:                  parseInt($tr.data('activity-id')),
+                alternatievePrijsPerEenheid:  parseFloat($tr.find('.alt-prijs').val())    || 0,
+                nacalcPrijsPerEenheid:        parseFloat($tr.find('.nacalc-prijs').val()) || 0,
+                correctiefactor:              parseFloat($tr.find('.corr-factor').val())  || 1,
+                isManueel:                    false
+            });
+        });
+
+        $.ajax({
+            url:         '@Url.Action("SaveActivityLijnen", "Projecten")',
+            method:      'POST',
+            contentType: 'application/json',
+            data:        JSON.stringify({ budgetVersieId: versieId, lijnen: lijnen }),
+            success: function (result) {
+                if (result.success) {
+                    if (typeof toastr !== 'undefined') toastr.success('Activiteiten opgeslagen.');
+                    else alert('Opgeslagen.');
+                } else {
+                    if (typeof toastr !== 'undefined') toastr.error(result.message || 'Fout bij opslaan.');
+                    else alert('Fout: ' + (result.message || 'onbekend'));
+                }
+            },
+            error: function () {
+                if (typeof toastr !== 'undefined') toastr.error('Verbindingsfout.');
+                else alert('Verbindingsfout.');
+            }
+        });
+    });
+
+    // ── Nacalc importeren ──────────────────────────────────────────────────
+    $('#btnImportNacalc').on('click', function () {
+        const bronId = $('#ddlBronProject').val();
+        if (!bronId) { alert('Kies eerst een bronproject.'); return; }
+        $.post('@Url.Action("ImportNacalcVanProject", "Projecten")',
+            { bronProjectId: bronId, doelVersieId: versieId },
+            function (result) {
+                if (result.success) { location.reload(); }
+                else {
+                    if (typeof toastr !== 'undefined') toastr.info(result.message);
+                    else alert(result.message);
+                }
+            });
+    });
+</script>
+}

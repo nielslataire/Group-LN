@@ -275,6 +275,18 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<BudgetGegevens> BudgetGegevens { get; set; }
 
+    public virtual DbSet<BudgetOppervlaktes> BudgetOppervlaktes { get; set; }
+
+    public virtual DbSet<BudgetGevelElementen> BudgetGevelElementen { get; set; }
+
+    public virtual DbSet<BudgetSanitair>          BudgetSanitair          { get; set; }
+
+    public virtual DbSet<BudgetActivityLijnen>    BudgetActivityLijnen    { get; set; }
+    public virtual DbSet<BudgetParams>            BudgetParams            { get; set; }
+    public virtual DbSet<ABEXIndex>               ABEXIndex               { get; set; }
+    public virtual DbSet<BudgetVerkoopLijn>       BudgetVerkoopLijn       { get; set; }
+    public virtual DbSet<BudgetPrijsReferentie>   BudgetPrijsReferentie   { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Data Source=sql6032.site4now.net;Initial Catalog=db_ab5fbb_testdb;Persist Security Info=True;User ID=db_ab5fbb_testdb_admin;Password=840683P@s;Encrypt=False");
@@ -3143,6 +3155,183 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.BouwheerCompanyId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_BudgetGegevens_CompanyInfo");
+        });
+
+        modelBuilder.Entity<BudgetOppervlaktes>(entity =>
+        {
+            entity.ToTable("BudgetOppervlaktes");
+
+            entity.Property(e => e.EenheidNaam).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.SortOrder).HasDefaultValue(0);
+            entity.Property(e => e.BewoonbareOpp).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.Tuin).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.TerrasPrefab).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.TerrasGelijkvloers).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.Dakterras).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.GaragesParkingsBovenGr).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.GarBergOndergronds).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.BergGelijkvloers).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.Carports).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.DoorritGVL).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.Zolder).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.GemeenschappelijkeDelen).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.Wegenis).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.Grondopp).HasColumnType("decimal(8, 2)").HasDefaultValue(0m);
+
+            entity.HasOne(d => d.BudgetVersie).WithMany()
+                .HasForeignKey(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetOpp_BudgetVersie");
+
+            entity.HasOne(d => d.UnitGroupType).WithMany()
+                .HasForeignKey(d => d.UnitGroupTypeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetOpp_UnitGroupType");
+
+            entity.HasOne(d => d.UnitType).WithMany()
+                .HasForeignKey(d => d.UnitTypeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetOpp_UnitType");
+        });
+
+        modelBuilder.Entity<BudgetGevelElementen>(entity =>
+        {
+            entity.ToTable("BudgetGevelElementen");
+
+            entity.Property(e => e.ElementType).IsRequired().HasMaxLength(30);
+            entity.Property(e => e.EenheidNaam).HasMaxLength(100);
+            entity.Property(e => e.Beschrijving).HasMaxLength(200);
+            entity.Property(e => e.Aantal).HasColumnType("decimal(6, 2)").HasDefaultValue(1m);
+            entity.Property(e => e.Breedte).HasColumnType("decimal(8, 3)");
+            entity.Property(e => e.Hoogte).HasColumnType("decimal(8, 3)");
+            entity.Property(e => e.Lengte).HasColumnType("decimal(8, 3)");
+            entity.Property(e => e.SortOrder).HasDefaultValue(0);
+
+            entity.HasOne(d => d.BudgetVersie).WithMany()
+                .HasForeignKey(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetGevel_BudgetVersie");
+        });
+
+        modelBuilder.Entity<BudgetSanitair>(entity =>
+        {
+            entity.ToTable("BudgetSanitair");
+
+            entity.Property(e => e.EenheidNaam).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.SortOrder).HasDefaultValue(0);
+            entity.Property(e => e.Badkamer).HasDefaultValue(0);
+            entity.Property(e => e.ToiletInBadkamer).HasDefaultValue(0);
+            entity.Property(e => e.AfzonderlijkToilet).HasDefaultValue(0);
+            entity.Property(e => e.DoucheInBadkamer).HasDefaultValue(0);
+            entity.Property(e => e.Douchekamer).HasDefaultValue(0);
+
+            entity.HasOne(d => d.BudgetVersie).WithMany()
+                .HasForeignKey(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetSanitair_BudgetVersie");
+
+            entity.HasOne(d => d.UnitType).WithMany()
+                .HasForeignKey(d => d.UnitTypeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetSanitair_UnitType");
+        });
+
+        modelBuilder.Entity<BudgetActivityLijnen>(entity =>
+        {
+            entity.ToTable("BudgetActivityLijnen");
+
+            entity.Property(e => e.NacalcPrijsPerEenheid).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.AlternatievePrijsPerEenheid).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Correctiefactor).HasColumnType("decimal(4, 2)").HasDefaultValue(1m);
+            entity.Property(e => e.VerhogingsPerc).HasColumnType("decimal(5, 2)").HasDefaultValue(0m);
+            entity.Property(e => e.IsManueel).HasDefaultValue(false);
+            entity.Property(e => e.Omschrijving).HasMaxLength(200);
+
+            entity.HasOne(d => d.BudgetVersie).WithMany()
+                .HasForeignKey(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetActLijn_BudgetVersie");
+
+            entity.HasOne(d => d.Activity).WithMany()
+                .HasForeignKey(d => d.ActivityId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_BudgetActLijn_Activity");
+        });
+
+        modelBuilder.Entity<BudgetParams>(entity =>
+        {
+            entity.ToTable("BudgetParams");
+
+            entity.HasIndex(e => e.BudgetVersieId).IsUnique();
+
+            entity.Property(e => e.ProjectcoordinatiePerc).HasColumnType("decimal(8, 4)").HasDefaultValue(0.0525m);
+            entity.Property(e => e.ArchitectPerc).HasColumnType("decimal(8, 4)");
+            entity.Property(e => e.VeiligheidscoordEPBPerc).HasColumnType("decimal(8, 4)");
+            entity.Property(e => e.StudieIRPerc).HasColumnType("decimal(8, 4)");
+            entity.Property(e => e.DecennaleGeslRuwbouwPerc).HasColumnType("decimal(8, 4)");
+            entity.Property(e => e.ABRPlaatsbeschrPerc).HasColumnType("decimal(8, 4)");
+            entity.Property(e => e.WetBreynePerc).HasColumnType("decimal(8, 4)").HasDefaultValue(0.01m);
+            entity.Property(e => e.StraightloanGebouwPerc).HasColumnType("decimal(8, 4)").HasDefaultValue(0.0125m);
+            entity.Property(e => e.StraightloanGrondPerc).HasColumnType("decimal(8, 4)").HasDefaultValue(0.0125m);
+            entity.Property(e => e.OnvoorzienPerc).HasColumnType("decimal(8, 4)").HasDefaultValue(0.02m);
+            entity.Property(e => e.VentVerslaggeverForfait).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.OpmetingSonderingForfait).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.InfrastructuurForfait).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.LiftPrijsPerStuk).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.AankoopprijsGrond).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PubliciteitForfait).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.BudgetVersie).WithOne()
+                .HasForeignKey<BudgetParams>(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetParams_BudgetVersie");
+        });
+
+        modelBuilder.Entity<ABEXIndex>(entity =>
+        {
+            entity.ToTable("ABEXIndex");
+
+            entity.HasIndex(e => new { e.Jaar, e.Kwartaal }).IsUnique();
+
+            entity.Property(e => e.IndexWaarde).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.IsActief).HasDefaultValue(false);
+        });
+
+        modelBuilder.Entity<BudgetVerkoopLijn>(entity =>
+        {
+            entity.ToTable("BudgetVerkoopLijnen");
+
+            entity.Property(e => e.EenheidNaam).HasMaxLength(100);
+            entity.Property(e => e.OppTuin).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.OppTerras).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.OppDakterras).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ExtraForfait).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.IsRuil).HasDefaultValue(false);
+            entity.Property(e => e.SortOrder).HasDefaultValue(0);
+
+            entity.HasOne(d => d.BudgetVersie).WithMany()
+                .HasForeignKey(d => d.BudgetVersieId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_BudgetVerkLijn_BudgetVersie");
+
+            entity.HasOne(d => d.Unit).WithMany()
+                .HasForeignKey(d => d.UnitId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetVerkLijn_Units");
+        });
+
+        modelBuilder.Entity<BudgetPrijsReferentie>(entity =>
+        {
+            entity.ToTable("BudgetPrijsReferentie");
+
+            entity.Property(e => e.PrijsType).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.PrijsPerM2).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Omschrijving).HasMaxLength(200);
+
+            entity.HasOne(d => d.Project).WithMany()
+                .HasForeignKey(d => d.ProjectId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_BudgetPrijsRef_Project");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -1,0 +1,373 @@
+/* ============================================================
+   Budget Wizard — gedeelde stijlen voor alle wizardstappen
+   ============================================================ */
+
+/* ── Tab bar container ───────────────────────────────────────── */
+.bw-tab-bar {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+    margin: -40px -40px 0 -40px;
+    padding: 0 1.5rem;
+    min-height: 60px;
+    gap: 0;
+}
+
+/* ── Steps scroll container ──────────────────────────────────── */
+.bw-steps {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #dee2e6 transparent;
+    gap: 0;
+}
+.bw-steps::-webkit-scrollbar         { height: 3px; display: block; }
+.bw-steps::-webkit-scrollbar-track   { background: transparent; }
+.bw-steps::-webkit-scrollbar-thumb   { background: #dee2e6; border-radius: 3px; }
+
+/* ── Step (default = inactive) ───────────────────────────────── */
+.bw-step {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    padding: 0.3rem 0.65rem;
+    border-radius: 10px;
+    background: transparent;
+    cursor: default;
+    user-select: none;
+    flex-shrink: 0;
+    text-decoration: none;
+    transition: background 0.15s ease;
+}
+.bw-step:hover { background: var(--lightgreen); }
+
+.bw-step__circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    color: #adb5bd;
+    background: transparent;
+    border: 1.5px solid #adb5bd;
+}
+.bw-step__label {
+    font-size: 0.8125rem;
+    font-weight: 400;
+    color: #adb5bd;
+}
+
+/* ── Active ──────────────────────────────────────────────────── */
+.bw-step--active                    { background: var(--lightgreen); }
+.bw-step--active .bw-step__circle   { background: var(--primary); border-color: var(--primary); color: #fff; }
+.bw-step--active .bw-step__label    { color: var(--primary); font-weight: 600; }
+
+/* ── Done ────────────────────────────────────────────────────── */
+.bw-step--done                      { background: transparent; cursor: pointer; }
+    .bw-step--done .bw-step__circle {
+        background: #e6f2ed;
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+    .bw-step--done .bw-step__label {
+        color: var(--primary);
+        font-weight: 500;
+    }
+
+a.bw-step, a.bw-step:visited, a.bw-step:hover { text-decoration: none; color: inherit; }
+
+.bw-step__connector {
+    flex-shrink: 0;
+    width: 32px;
+    height: 1px;
+    background: #dee2e6;
+    margin: 0 4px;
+}
+
+/* ── Inner body override ─────────────────────────────────────── */
+.bw-inner-body {
+    padding-bottom: 0 !important;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 52px);
+}
+
+/* ── Pagina-koptekst ─────────────────────────────────────────── */
+.bw-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 1.5rem 0 1rem;
+    gap: 1rem;
+    color:var(--primary);
+}
+.bw-page-header__step {
+    font-size: 0.7rem;
+    font-weight: 600;
+    background-color: var(--lightgreen);
+    color: #1a4a3a;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 0.15rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 50px;
+}
+.bw-page-header__title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 0.35rem;
+}
+.bw-page-header__sub {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin: 0 0 0.75rem;
+    max-width: 600px;
+}
+.bw-page-header__chips {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.bw-page-header__right {
+    flex-shrink: 0;
+    padding-top: 0.25rem;
+}
+
+/* ── Chips ───────────────────────────────────────────────────── */
+.bw-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.bw-chip--budget {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid #dee2e6;
+}
+.bw-chip--versie {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid #dee2e6;
+    font-weight: 500;
+}
+.bw-chip--concept   { background: #fff3cd; color: #856404; border: 1px solid #ffe69c; }
+.bw-chip--goedgekeurd { background: #d1e7dd; color: #0a3622; border: 1px solid #a3cfbb; }
+.bw-chip--other     { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+
+/* ── Opslaan-knop ────────────────────────────────────────────── */
+.bw-btn-save {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    color: #1a4a3a;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: background 0.15s, border-color 0.15s;
+}
+.bw-btn-save:hover { background: #f0f7f4; border-color: #1a4a3a; color: #1a4a3a; }
+
+/* ── Body grid ───────────────────────────────────────────────── */
+.bw-body-grid {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+    align-items: start;
+    flex: 1;
+}
+@media (max-width: 1100px) {
+    .bw-body-grid { grid-template-columns: 1fr; }
+    .bw-col-aside  { order: -1; }
+}
+
+/* ── Invoer-kaart ────────────────────────────────────────────── */
+.bw-invoer-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 0;
+}
+.bw-invoer-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #dee2e6;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--primary);
+}
+.bw-invoer-card__body {
+    padding: 1.25rem;
+}
+
+/* ── Auto-opgeslagen label ───────────────────────────────────── */
+.bw-autosave {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #6c757d;
+}
+
+/* ── Sectielabels binnen de invoerkaart ──────────────────────── */
+.bw-section-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* ── Info-note boven een sectie ──────────────────────────────── */
+.bw-section-note {
+    font-size: 0.8125rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+}
+.bw-section-note a { color: #1a4a3a; font-weight: 600; text-decoration: underline; }
+
+/* ── ABEX-hint (link onder veld) ─────────────────────────────── */
+.bw-abex-hint {
+    font-size: 0.75rem;
+    color: #1a4a3a;
+    margin-top: 0.3rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+.bw-abex-inline-input {
+    border: none;
+    border-bottom: 1.5px solid #1a4a3a;
+    background: transparent;
+    color: #1a4a3a;
+    font-weight: 700;
+    font-size: 0.75rem;
+    width: 90px;
+    padding: 0 2px;
+    outline: none;
+    text-align: right;
+}
+.bw-abex-inline-input::placeholder { color: #adb5bd; font-weight: 400; }
+.bw-abex-inline-input:focus { border-bottom-color: #0d6efd; }
+
+/* ── Live berekening panel ───────────────────────────────────── */
+.bw-live-panel {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.bw-live-panel__header {
+    display: flex;
+    align-items: center;
+    background: var(--primary);
+    color: #fff;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    gap: 0.25rem;
+}
+.bw-live-dot {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #4ade80;
+    letter-spacing: .04em;
+}
+.bw-live-panel__body {
+    padding: 1rem;
+}
+.bw-live-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.8125rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 0.5rem;
+}
+.bw-live-row:last-of-type { border-bottom: none; }
+.bw-live-row span { color: #6c757d; flex: 1; }
+.bw-live-row strong { color: #1a1f1e; white-space: nowrap; }
+.bw-live-note {
+    font-size: 0.75rem;
+    color: #6c757d;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 0.5rem 0.75rem;
+    line-height: 1.4;
+}
+
+/* ── Bottom navigatiebalk ────────────────────────────────────── */
+.bw-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #dee2e6;
+    background: transparent;
+    padding: 0.875rem 0;
+    margin-top: 1.5rem;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+}
+.bw-bottom-nav__back {
+    font-size: 0.875rem;
+    color: #495057;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    transition: background 0.15s;
+}
+.bw-bottom-nav__back:hover { background: #f8f9fa; color: #212529; }
+.bw-bottom-nav__indicator {
+    font-size: 0.8125rem;
+    color: #6c757d;
+}
+.bw-bottom-nav__next {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #1a4a3a;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.bw-bottom-nav__next:hover { background: #143d2f; color: #fff; }

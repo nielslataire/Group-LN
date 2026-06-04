@@ -1,0 +1,759 @@
+@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Projecten.BudgetGevelsDakModel
+@{
+    ViewData["Title"] = "Gevels & Ramen — " + Model.MasterNaam;
+
+    var gevelNB = Model.Elementen.GetValueOrDefault("GevelNieuwbouw")  ?? new List<BudgetGevelElementBO>();
+    var gevelBe = Model.Elementen.GetValueOrDefault("GevelBestaand")   ?? new List<BudgetGevelElementBO>();
+    var raamNB  = Model.Elementen.GetValueOrDefault("RaamNieuwbouw")   ?? new List<BudgetGevelElementBO>();
+    var raamBe  = Model.Elementen.GetValueOrDefault("RaamBestaand")    ?? new List<BudgetGevelElementBO>();
+    var ballus  = Model.Elementen.GetValueOrDefault("Ballustrade")     ?? new List<BudgetGevelElementBO>();
+    var zicht   = Model.Elementen.GetValueOrDefault("Zichtscherm")     ?? new List<BudgetGevelElementBO>();
+    var t       = Model.Totaal;
+
+    string Fmt(decimal v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+}
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+    <style>
+        /* Hide Lengte column (6th) for Gevels/Ramen tables */
+        .table-hide-lengte th:nth-child(6),
+        .table-hide-lengte td:nth-child(6) { display: none; }
+
+        /* Hide Breedte (4th) + Hoogte (5th) columns for Ballustrade/Zichtscherm tables */
+        .table-hide-bh th:nth-child(4),
+        .table-hide-bh th:nth-child(5),
+        .table-hide-bh td:nth-child(4),
+        .table-hide-bh td:nth-child(5) { display: none; }
+
+        .gevel-section-card .card-header { padding: .5rem .75rem; }
+        .gevel-add-row { background: #f8f9fa; border-radius: .25rem; padding: .5rem .75rem; margin-bottom: .5rem; }
+        .table-sm.gevel-table td, .table-sm.gevel-table th { padding: .25rem .4rem; }
+    </style>
+}
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+    {
+        new Breadcrumb("Home",       nameof(HomeController.Index),             "Home",       true),
+        new Breadcrumb("Projecten",  nameof(ProjectenController.Index),        "Projecten",  true),
+        new Breadcrumb("Detail",     nameof(ProjectenController.Detail),       "Projecten",  true),
+        new Breadcrumb("Budgetten",  nameof(ProjectenController.BudgetIndex),  "Projecten",  true),
+        new Breadcrumb("Gevels",     nameof(ProjectenController.BudgetGevels), "Projecten",  false),
+    };
+}
+@Html.AntiForgeryToken()
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.VersieId, ActiveStep = 4 })
+
+            @* ── Pagina-koptekst ── *@
+            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+            {
+                StepNum    = 4,
+                PageTitle  = "Gevels & Ramen",
+                PageDescription = "Gevelvlakken, raamopeningen en balustrades per geveltype en oriëntatie.",
+                MasterNaam = Model.MasterNaam,
+                VersieLabel= Model.VersieLabel,
+                PrevUrl    = Url.Action("BudgetSanitair",   "Projecten", new { versieId = Model.VersieId }),
+                NextUrl    = Url.Action("BudgetDakAfbraak", "Projecten", new { versieId = Model.VersieId })
+            })
+
+            @* ── KPI kaarten (2 rijen × 3) ── *@
+            <div class="row g-3 mb-3">
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-primary" id="kpi-gevel-nb">@Fmt(t.TotaalGevelNieuwbouw) m²</div>
+                            <div class="small text-muted">Gevels nieuwbouw</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-secondary" id="kpi-gevel-be">@Fmt(t.TotaalGevelBestaand) m²</div>
+                            <div class="small text-muted">Gevels bestaand</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-primary" id="kpi-raam-nb">@Fmt(t.TotaalRaamNieuwbouw) m²</div>
+                            <div class="small text-muted">Ramen nieuwbouw</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-secondary" id="kpi-raam-be">@Fmt(t.TotaalRaamBestaand) m²</div>
+                            <div class="small text-muted">Ramen bestaand</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-info" id="kpi-ballus">@Fmt(t.TotaalBallustrade) lm</div>
+                            <div class="small text-muted">Ballustrades</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-info" id="kpi-zicht">@Fmt(t.TotaalZichtscherm) lm</div>
+                            <div class="small text-muted">Zichtschermen</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Sectie tabs ── *@
+            <ul class="nav nav-tabs mb-3" id="gevelSectionTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-gevels-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-gevels" type="button" role="tab">
+                        <i class="bi bi-house-door me-1"></i>Gevels
+                        <span class="badge bg-primary ms-1" id="badge-gevels">@Fmt(t.TotaalGevelCombineerd) m²</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-ramen-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-ramen" type="button" role="tab">
+                        <i class="bi bi-aspect-ratio me-1"></i>Ramen
+                        <span class="badge bg-secondary ms-1" id="badge-ramen">@Fmt(t.TotaalRaamCombineerd) m²</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-ballust-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-ballust" type="button" role="tab">
+                        <i class="bi bi-three-dots me-1"></i>Balustrades &amp; Zichtschermen
+                        <span class="badge bg-secondary ms-1" id="badge-ballust">@Fmt(t.TotaalBallustrade + t.TotaalZichtscherm) lm</span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="gevelSectionContent">
+
+                @* ══════ TAB: GEVELS ══════ *@
+                <div class="tab-pane fade show active" id="tab-gevels" role="tabpanel">
+                    <div class="row g-3">
+
+                        @* ── Gevels Nieuwbouw ── *@
+                        <div class="col-lg-6">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><span class="badge bg-primary me-2">Nieuwbouw</span>Gevels</span>
+                                    <span class="badge bg-primary" id="subtot-GevelNieuwbouw">@Fmt(t.TotaalGevelNieuwbouw) m²</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Eenheid</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="GevelNieuwbouw" placeholder="bv. L1" style="width:90px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Geveldeel</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="GevelNieuwbouw" placeholder="bv. VG" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-primary btn-sm btn-add-element" data-type="GevelNieuwbouw">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-lengte align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Eenheid</th>
+                                                    <th>Geveldeel</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end">Breedte (m)</th>
+                                                    <th class="text-end">Hoogte (m)</th>
+                                                    <th class="text-end text-muted">Lengte (m)</th>
+                                                    <th class="text-end text-primary">m²</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-GevelNieuwbouw">
+                                                @foreach (var rij in gevelNB)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="5" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td></td>@* Lengte (hidden) *@
+                                                    <td class="text-end text-primary fw-bold" id="tfoot-GevelNieuwbouw">
+                                                        @Fmt(t.TotaalGevelNieuwbouw) m²
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ── Gevels Bestaand ── *@
+                        <div class="col-lg-6">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><span class="badge bg-secondary me-2">Bestaand</span>Gevels</span>
+                                    <span class="badge bg-secondary" id="subtot-GevelBestaand">@Fmt(t.TotaalGevelBestaand) m²</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Eenheid</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="GevelBestaand" placeholder="bv. L1" style="width:90px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Geveldeel</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="GevelBestaand" placeholder="bv. BG" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm btn-add-element" data-type="GevelBestaand">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-lengte align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Eenheid</th>
+                                                    <th>Geveldeel</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end">Breedte (m)</th>
+                                                    <th class="text-end">Hoogte (m)</th>
+                                                    <th class="text-end text-muted">Lengte (m)</th>
+                                                    <th class="text-end text-secondary">m²</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-GevelBestaand">
+                                                @foreach (var rij in gevelBe)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="5" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td></td>@* Lengte (hidden) *@
+                                                    <td class="text-end fw-bold" id="tfoot-GevelBestaand">
+                                                        @Fmt(t.TotaalGevelBestaand) m²
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                @* ══════ TAB: RAMEN ══════ *@
+                <div class="tab-pane fade" id="tab-ramen" role="tabpanel">
+                    <div class="row g-3">
+
+                        @* ── Ramen Nieuwbouw ── *@
+                        <div class="col-lg-6">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><span class="badge bg-primary me-2">Nieuwbouw</span>Ramen</span>
+                                    <span class="badge bg-primary" id="subtot-RaamNieuwbouw">@Fmt(t.TotaalRaamNieuwbouw) m²</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Eenheid</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="RaamNieuwbouw" placeholder="bv. L1" style="width:90px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Geveldeel</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="RaamNieuwbouw" placeholder="bv. VG" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-primary btn-sm btn-add-element" data-type="RaamNieuwbouw">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-lengte align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Eenheid</th>
+                                                    <th>Geveldeel</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end">Breedte (m)</th>
+                                                    <th class="text-end">Hoogte (m)</th>
+                                                    <th class="text-end text-muted">Lengte (m)</th>
+                                                    <th class="text-end text-primary">m²</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-RaamNieuwbouw">
+                                                @foreach (var rij in raamNB)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="5" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td></td>@* Lengte (hidden) *@
+                                                    <td class="text-end text-primary fw-bold" id="tfoot-RaamNieuwbouw">
+                                                        @Fmt(t.TotaalRaamNieuwbouw) m²
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ── Ramen Bestaand ── *@
+                        <div class="col-lg-6">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><span class="badge bg-secondary me-2">Bestaand</span>Ramen</span>
+                                    <span class="badge bg-secondary" id="subtot-RaamBestaand">@Fmt(t.TotaalRaamBestaand) m²</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Eenheid</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="RaamBestaand" placeholder="bv. L1" style="width:90px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Geveldeel</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="RaamBestaand" placeholder="bv. BG" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm btn-add-element" data-type="RaamBestaand">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-lengte align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Eenheid</th>
+                                                    <th>Geveldeel</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end">Breedte (m)</th>
+                                                    <th class="text-end">Hoogte (m)</th>
+                                                    <th class="text-end text-muted">Lengte (m)</th>
+                                                    <th class="text-end text-secondary">m²</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-RaamBestaand">
+                                                @foreach (var rij in raamBe)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="5" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td></td>@* Lengte (hidden) *@
+                                                    <td class="text-end fw-bold" id="tfoot-RaamBestaand">
+                                                        @Fmt(t.TotaalRaamBestaand) m²
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                @* ══════ TAB: BALUSTRADES & ZICHTSCHERMEN ══════ *@
+                <div class="tab-pane fade" id="tab-ballust" role="tabpanel">
+                    <div class="row g-3">
+
+                        @* ── Ballustrade ── *@
+                        <div class="col-lg-6">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-three-dots me-2"></i>Ballustrades</span>
+                                    <span class="badge bg-info text-dark" id="subtot-Ballustrade">@Fmt(t.TotaalBallustrade) lm</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Locatie</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="Ballustrade" placeholder="bv. Terras" style="width:100px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Beschrijving</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="Ballustrade" placeholder="optioneel" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-info btn-sm btn-add-element" data-type="Ballustrade">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-bh align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Locatie</th>
+                                                    <th>Beschrijving</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end text-muted">Breedte (m)</th>
+                                                    <th class="text-end text-muted">Hoogte (m)</th>
+                                                    <th class="text-end">Lengte (m)</th>
+                                                    <th class="text-end text-info">lm</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-Ballustrade">
+                                                @foreach (var rij in ballus)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="3" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td class="text-muted"></td>
+                                                    <td class="text-muted"></td>
+                                                    <td></td>
+                                                    <td class="text-end text-info fw-bold" id="tfoot-Ballustrade">
+                                                        @Fmt(t.TotaalBallustrade) lm
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        @* ── Zichtscherm ── *@
+                        <div class="col-lg-6">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-three-dots me-2"></i>Zichtschermen</span>
+                                    <span class="badge bg-info text-dark" id="subtot-Zichtscherm">@Fmt(t.TotaalZichtscherm) lm</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Locatie</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="Zichtscherm" placeholder="bv. Terras" style="width:100px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Beschrijving</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="Zichtscherm" placeholder="optioneel" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-info btn-sm btn-add-element" data-type="Zichtscherm">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-bh align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Locatie</th>
+                                                    <th>Beschrijving</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end text-muted">Breedte (m)</th>
+                                                    <th class="text-end text-muted">Hoogte (m)</th>
+                                                    <th class="text-end">Lengte (m)</th>
+                                                    <th class="text-end text-info">lm</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-Zichtscherm">
+                                                @foreach (var rij in zicht)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="3" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td class="text-muted"></td>
+                                                    <td class="text-muted"></td>
+                                                    <td></td>
+                                                    <td class="text-end text-info fw-bold" id="tfoot-Zichtscherm">
+                                                        @Fmt(t.TotaalZichtscherm) lm
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>@* /tab-content *@
+
+            @* ── Bottom actions ── *@
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+                <a href="@Url.Action("BudgetSanitair", "Projecten", new { versieId = Model.VersieId })"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+                </a>
+                <a href="@Url.Action("BudgetDakAfbraak", "Projecten", new { versieId = Model.VersieId })"
+                   class="btn btn-primary">
+                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script src="~/js/budget-wizard.js"></script>
+<script>
+    const antiForgery = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const versieId    = @Model.VersieId;
+
+
+    // ── Tab state (sessionstorage) ────────────────────────────────────────────
+    const TAB_KEY = 'bw-gevels-tab-@Model.VersieId';
+    const savedTab = sessionStorage.getItem(TAB_KEY);
+    if (savedTab) {
+        const btn = document.querySelector(`#gevelSectionTabs button[data-bs-target="${savedTab}"]`);
+        if (btn) bootstrap.Tab.getOrCreateInstance(btn).show();
+    }
+    document.getElementById('gevelSectionTabs').addEventListener('shown.bs.tab', e => {
+        sessionStorage.setItem(TAB_KEY, e.target.dataset.bsTarget);
+    });
+
+    // ── Client-side calculation ───────────────────────────────────────────────
+    const TYPES_HOOGTE  = ['GevelNieuwbouw','GevelBestaand','RaamNieuwbouw','RaamBestaand'];
+    const TYPES_LENGTE  = ['Ballustrade','Zichtscherm'];
+
+    function calcRow(row) {
+        const type = row.dataset.elementType;
+        const n = parseFloat(row.querySelector('[data-field="aantal"]')?.value)  || 0;
+        const b = parseFloat(row.querySelector('[data-field="breedte"]')?.value) || 0;
+        const h = parseFloat(row.querySelector('[data-field="hoogte"]')?.value)  || 0;
+        const l = parseFloat(row.querySelector('[data-field="lengte"]')?.value)  || 0;
+
+        if (TYPES_HOOGTE.includes(type)) return n * b * h;
+        if (TYPES_LENGTE.includes(type)) return n * l;
+        return 0;
+    }
+
+    function updateRowResultaat(row) {
+        const val = calcRow(row);
+        const span = row.querySelector('.resultaat-value');
+        if (span) span.textContent = val.toFixed(2).replace('.', ',');
+    }
+
+    // ── Debounced save ────────────────────────────────────────────────────────
+    const saveTimers = {};
+
+    function queueSave(row) {
+        updateRowResultaat(row);
+        const id = row.dataset.elementId;
+        clearTimeout(saveTimers[id]);
+        saveTimers[id] = setTimeout(() => saveRow(row), 400);
+    }
+
+    async function saveRow(row) {
+        const payload = {
+            elementId:   parseInt(row.dataset.elementId),
+            versieId:    versieId,
+            elementType: row.dataset.elementType,
+            eenheidNaam: row.querySelector('[data-field="eenheidNaam"]')?.value ?? '',
+            beschrijving:row.querySelector('[data-field="beschrijving"]')?.value ?? '',
+            aantal:      parseFloat(row.querySelector('[data-field="aantal"]')?.value)  || 0,
+            breedte:     parseFloat(row.querySelector('[data-field="breedte"]')?.value) || null,
+            hoogte:      parseFloat(row.querySelector('[data-field="hoogte"]')?.value)  || null,
+            lengte:      parseFloat(row.querySelector('[data-field="lengte"]')?.value)  || null
+        };
+        if (payload.breedte === 0) payload.breedte = null;
+        if (payload.hoogte  === 0) payload.hoogte  = null;
+        if (payload.lengte  === 0) payload.lengte  = null;
+
+        try {
+            const resp   = await fetch('/Projecten/BudgetGevelElementOpslaan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': antiForgery },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            if (result.success) {
+                updateKpi(result.totaal);
+                const detail = row.querySelector('.calc-detail');
+                if (detail) detail.textContent = result.formula;
+                const cell = row.querySelector('.gevel-resultaat-cell');
+                if (cell) cell.title = result.formula;
+            }
+        } catch (e) { console.error('Save fout:', e); }
+    }
+
+    // ── Event listeners ───────────────────────────────────────────────────────
+    document.querySelectorAll('#gevelSectionContent').forEach(container => {
+        container.addEventListener('change', e => {
+            if (e.target.classList.contains('gevel-input')) {
+                const row = e.target.closest('tr');
+                if (row) queueSave(row);
+            }
+        });
+    });
+
+    // ── KPI & badge updater ───────────────────────────────────────────────────
+    function fmt(v) { return parseFloat(v).toFixed(2).replace('.', ','); }
+
+    function updateKpi(totaal) {
+        const gvlNB = totaal.totaalGevelNieuwbouw   ?? 0;
+        const gvlBe = totaal.totaalGevelBestaand    ?? 0;
+        const ramNB = totaal.totaalRaamNieuwbouw    ?? 0;
+        const ramBe = totaal.totaalRaamBestaand     ?? 0;
+        const bal   = totaal.totaalBallustrade      ?? 0;
+        const zch   = totaal.totaalZichtscherm      ?? 0;
+        const gvlC  = totaal.totaalGevelCombineerd  ?? (gvlNB + gvlBe);
+        const ramC  = totaal.totaalRaamCombineerd   ?? (ramNB + ramBe);
+        const balC  = bal + zch;
+
+        // KPI cards
+        document.getElementById('kpi-gevel-nb').textContent = fmt(gvlNB) + ' m²';
+        document.getElementById('kpi-gevel-be').textContent = fmt(gvlBe) + ' m²';
+        document.getElementById('kpi-raam-nb').textContent  = fmt(ramNB) + ' m²';
+        document.getElementById('kpi-raam-be').textContent  = fmt(ramBe) + ' m²';
+        document.getElementById('kpi-ballus').textContent   = fmt(bal)   + ' lm';
+        document.getElementById('kpi-zicht').textContent    = fmt(zch)   + ' lm';
+
+        // Section tab badges
+        document.getElementById('badge-gevels').textContent  = fmt(gvlC) + ' m²';
+        document.getElementById('badge-ramen').textContent   = fmt(ramC) + ' m²';
+        document.getElementById('badge-ballust').textContent = fmt(balC) + ' lm';
+
+        // Card header badges
+        document.getElementById('subtot-GevelNieuwbouw').textContent = fmt(gvlNB) + ' m²';
+        document.getElementById('subtot-GevelBestaand').textContent  = fmt(gvlBe) + ' m²';
+        document.getElementById('subtot-RaamNieuwbouw').textContent  = fmt(ramNB) + ' m²';
+        document.getElementById('subtot-RaamBestaand').textContent   = fmt(ramBe) + ' m²';
+        document.getElementById('subtot-Ballustrade').textContent    = fmt(bal)   + ' lm';
+        document.getElementById('subtot-Zichtscherm').textContent    = fmt(zch)   + ' lm';
+
+        // Tfoot subtotals
+        document.getElementById('tfoot-GevelNieuwbouw').textContent = fmt(gvlNB) + ' m²';
+        document.getElementById('tfoot-GevelBestaand').textContent  = fmt(gvlBe) + ' m²';
+        document.getElementById('tfoot-RaamNieuwbouw').textContent  = fmt(ramNB) + ' m²';
+        document.getElementById('tfoot-RaamBestaand').textContent   = fmt(ramBe) + ' m²';
+        document.getElementById('tfoot-Ballustrade').textContent    = fmt(bal)   + ' lm';
+        document.getElementById('tfoot-Zichtscherm').textContent    = fmt(zch)   + ' lm';
+    }
+
+    // ── Rij toevoegen ─────────────────────────────────────────────────────────
+    document.querySelectorAll('.btn-add-element').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const type        = this.dataset.type;
+            const eenheidInp  = document.querySelector(`.add-eenheid[data-type="${type}"]`);
+            const beschrInp   = document.querySelector(`.add-beschrijving[data-type="${type}"]`);
+
+            const params = new URLSearchParams({
+                versieId,
+                elementType:  type,
+                eenheidNaam:  eenheidInp?.value ?? '',
+                beschrijving: beschrInp?.value  ?? ''
+            });
+
+            const resp = await fetch('/Projecten/BudgetGevelElementToevoegen', {
+                method:  'POST',
+                headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body:    params.toString()
+            });
+
+            if (!resp.ok) { alert('Fout bij toevoegen.'); return; }
+
+            const html   = await resp.text();
+            const tbody  = document.getElementById(`tbody-${type}`);
+            const temp   = document.createElement('tbody');
+            temp.innerHTML = html;
+            const newRow = temp.querySelector('tr');
+            if (newRow && tbody) tbody.appendChild(newRow);
+
+            if (eenheidInp)  eenheidInp.value  = '';
+            if (beschrInp)   beschrInp.value    = '';
+        });
+    });
+
+    // ── Rij verwijderen & dupliceren ──────────────────────────────────────────
+    document.getElementById('gevelSectionContent').addEventListener('click', async function (e) {
+        const row = e.target.closest('tr');
+        if (!row) return;
+
+        if (e.target.closest('.btn-delete-gevel')) {
+            if (!confirm('Element verwijderen?')) return;
+            const elementId = row.dataset.elementId;
+            const params    = new URLSearchParams({ elementId, versieId });
+
+            const resp   = await fetch('/Projecten/BudgetGevelElementVerwijderen', {
+                method:  'POST',
+                headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body:    params.toString()
+            });
+            const result = await resp.json();
+            if (result.success) { row.remove(); updateKpi(result.totaal); }
+        }
+
+        if (e.target.closest('.btn-duplicate-gevel')) {
+            const type   = row.dataset.elementType;
+            const naam   = row.querySelector('[data-field="eenheidNaam"]')?.value ?? '';
+            const beschr = row.querySelector('[data-field="beschrijving"]')?.value ?? '';
+            const params = new URLSearchParams({
+                versieId, elementType: type,
+                eenheidNaam: naam + ' (kopie)', beschrijving: beschr
+            });
+            const resp = await fetch('/Projecten/BudgetGevelElementToevoegen', {
+                method:  'POST',
+                headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body:    params.toString()
+            });
+            if (!resp.ok) return;
+            const html   = await resp.text();
+            const tbody  = document.getElementById(`tbody-${type}`);
+            const temp   = document.createElement('tbody');
+            temp.innerHTML = html;
+            const newRow = temp.querySelector('tr');
+            if (newRow && tbody) tbody.appendChild(newRow);
+        }
+    });
+
+    // ── Bootstrap tooltips ────────────────────────────────────────────────────
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+}

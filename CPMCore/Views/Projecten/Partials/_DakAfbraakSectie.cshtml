@@ -1,0 +1,57 @@
+@using BOCore
+@model CPMCore.Models.Projecten.DakSectieVM
+@{
+    string Fmt(decimal v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+@* ── Rij toevoegen ── *@
+<div class="dak-add-row d-flex gap-2 align-items-end flex-wrap mb-2">
+    <div>
+        <label class="form-label small mb-1">Locatie</label>
+        <input type="text" class="form-control form-control-sm add-eenheid"
+               data-type="@Model.ElementType" placeholder="bv. W2" style="width:90px;" />
+    </div>
+    <div>
+        <label class="form-label small mb-1">Beschrijving</label>
+        <input type="text" class="form-control form-control-sm add-beschrijving"
+               data-type="@Model.ElementType" placeholder="optioneel" style="width:110px;" />
+    </div>
+    <button class="btn btn-sm btn-primary btn-add-element" data-type="@Model.ElementType">
+        <i class="bi bi-plus me-1"></i>Toevoegen
+    </button>
+</div>
+
+@* ── Tabel ── *@
+<div class="table-responsive">
+    <table class="table table-sm table-hover dak-table table-hide-hoogte align-middle mb-1">
+        <thead class="table-light small">
+            <tr>
+                <th>Locatie</th>
+                <th>Beschrijving</th>
+                <th class="text-end">Aantal</th>
+                <th class="text-end">Breedte (m)</th>
+                <th class="text-end text-muted">Hoogte (m)</th>@* hidden *@
+                <th class="text-end">Lengte (m)</th>
+                <th class="text-end text-primary">m²</th>
+                <th style="width:44px;"></th>
+            </tr>
+        </thead>
+        <tbody id="tbody-@Model.ElementType">
+            @foreach (var rij in Model.Rijen)
+            {
+                @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+            }
+        </tbody>
+        <tfoot class="table-secondary small">
+            <tr>
+                <td colspan="4" class="text-muted fw-semibold">Subtotaal</td>
+                <td></td>@* Hoogte (hidden) *@
+                <td></td>@* Lengte *@
+                <td class="text-end text-primary fw-bold" id="tfoot-@Model.ElementType">
+                    @Fmt(Model.Subtotaal) m²
+                </td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>

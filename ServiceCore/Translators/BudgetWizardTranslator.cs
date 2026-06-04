@@ -108,5 +108,184 @@ namespace ServiceCore.Translators
             entity.GipswerkenPrijsPerM2             = bo.GipswerkenPrijsPerM2;
             entity.UpdatedAt                        = DateTime.Now;
         }
+
+        internal static BudgetOppervlaktesBO TranslateOppervlaktesToBO(BudgetOppervlaktes entity)
+        {
+            if (entity == null) return null;
+
+            var bo = new BudgetOppervlaktesBO();
+            bo.Id                       = entity.Id;
+            bo.BudgetVersieId           = entity.BudgetVersieId;
+            bo.EenheidNaam              = entity.EenheidNaam;
+            bo.UnitGroupTypeId          = entity.UnitGroupTypeId;
+            bo.UnitTypeId               = entity.UnitTypeId;
+            bo.SortOrder                = entity.SortOrder;
+            bo.BewoonbareOpp            = entity.BewoonbareOpp;
+            bo.Tuin                     = entity.Tuin;
+            bo.TerrasPrefab             = entity.TerrasPrefab;
+            bo.TerrasGelijkvloers       = entity.TerrasGelijkvloers;
+            bo.Dakterras                = entity.Dakterras;
+            bo.GaragesParkingsBovenGr   = entity.GaragesParkingsBovenGr;
+            bo.GarBergOndergronds       = entity.GarBergOndergronds;
+            bo.BergGelijkvloers         = entity.BergGelijkvloers;
+            bo.Carports                 = entity.Carports;
+            bo.DoorritGVL               = entity.DoorritGVL;
+            bo.Zolder                   = entity.Zolder;
+            bo.GemeenschappelijkeDelen  = entity.GemeenschappelijkeDelen;
+            bo.Wegenis                  = entity.Wegenis;
+            bo.Grondopp                 = entity.Grondopp;
+
+            bo.GroupTypeName  = entity.UnitGroupType?.Name;
+            bo.TypeName       = entity.UnitType?.Name;
+            bo.TypeShortcode  = entity.UnitType?.Shortcode;
+
+            return bo;
+        }
+
+        internal static void ApplyOppervlaktesBOToEntity(BudgetOppervlaktesBO bo, BudgetOppervlaktes entity)
+        {
+            entity.EenheidNaam              = bo.EenheidNaam;
+            entity.UnitGroupTypeId          = bo.UnitGroupTypeId;
+            entity.UnitTypeId               = bo.UnitTypeId;
+            entity.SortOrder                = bo.SortOrder;
+            entity.BewoonbareOpp            = bo.BewoonbareOpp;
+            entity.Tuin                     = bo.Tuin;
+            entity.TerrasPrefab             = bo.TerrasPrefab;
+            entity.TerrasGelijkvloers       = bo.TerrasGelijkvloers;
+            entity.Dakterras                = bo.Dakterras;
+            entity.GaragesParkingsBovenGr   = bo.GaragesParkingsBovenGr;
+            entity.GarBergOndergronds       = bo.GarBergOndergronds;
+            entity.BergGelijkvloers         = bo.BergGelijkvloers;
+            entity.Carports                 = bo.Carports;
+            entity.DoorritGVL               = bo.DoorritGVL;
+            entity.Zolder                   = bo.Zolder;
+            entity.GemeenschappelijkeDelen  = bo.GemeenschappelijkeDelen;
+            entity.Wegenis                  = bo.Wegenis;
+            entity.Grondopp                 = bo.Grondopp;
+        }
+
+        internal static BudgetGevelElementBO TranslateGevelToBO(BudgetGevelElementen entity)
+        {
+            if (entity == null) return null;
+
+            var bo = new BudgetGevelElementBO();
+            bo.Id             = entity.Id;
+            bo.BudgetVersieId = entity.BudgetVersieId;
+            bo.ElementType    = entity.ElementType;
+            bo.EenheidNaam    = entity.EenheidNaam;
+            bo.Beschrijving   = entity.Beschrijving;
+            bo.Aantal         = entity.Aantal;
+            bo.Breedte        = entity.Breedte;
+            bo.Hoogte         = entity.Hoogte;
+            bo.Lengte         = entity.Lengte;
+            bo.SortOrder      = entity.SortOrder;
+
+            return bo;
+        }
+
+        internal static void ApplyGevelBOToEntity(BudgetGevelElementBO bo, BudgetGevelElementen entity)
+        {
+            entity.ElementType   = bo.ElementType;
+            entity.EenheidNaam   = bo.EenheidNaam;
+            entity.Beschrijving  = bo.Beschrijving;
+            entity.Aantal        = bo.Aantal;
+            entity.Breedte       = bo.Breedte;
+            entity.Hoogte        = bo.Hoogte;
+            entity.Lengte        = bo.Lengte;
+            entity.SortOrder     = bo.SortOrder;
+        }
+
+        internal static BudgetGevelTotaalBO BuildGevelTotalen(IEnumerable<BudgetGevelElementBO> rows)
+        {
+            var t = new BudgetGevelTotaalBO();
+            foreach (var r in rows)
+            {
+                switch (r.ElementType)
+                {
+                    case "GevelNieuwbouw":    t.TotaalGevelNieuwbouw   += r.ResultaatM2;  break;
+                    case "GevelBestaand":     t.TotaalGevelBestaand    += r.ResultaatM2;  break;
+                    case "RaamNieuwbouw":     t.TotaalRaamNieuwbouw    += r.ResultaatM2;  break;
+                    case "RaamBestaand":      t.TotaalRaamBestaand     += r.ResultaatM2;  break;
+                    case "Ballustrade":       t.TotaalBallustrade      += r.ResultaatLm;  break;
+                    case "Zichtscherm":       t.TotaalZichtscherm      += r.ResultaatLm;  break;
+                    case "PlatDak":           t.TotaalPlatDak          += r.ResultaatM2;  break;
+                    case "HellendDak":        t.TotaalHellendDak       += r.ResultaatM2;  break;
+                    case "GroenDak":          t.TotaalGroenDak         += r.ResultaatM2;  break;
+                    case "Dakoversteken":     t.TotaalDakoversteken    += r.ResultaatM2;  break;
+                    case "OnderkantDoorrit":  t.TotaalOnderkantDoorrit += r.ResultaatM2;  break;
+                    case "Afbraak":           t.TotaalAfbraak          += r.ResultaatM2;  break;
+                }
+            }
+            return t;
+        }
+
+        internal static BudgetSanitairBO TranslateSanitairToBO(BudgetSanitair entity)
+        {
+            if (entity == null) return null;
+
+            var bo = new BudgetSanitairBO();
+            bo.Id                   = entity.Id;
+            bo.BudgetVersieId       = entity.BudgetVersieId;
+            bo.EenheidNaam          = entity.EenheidNaam;
+            bo.UnitTypeId           = entity.UnitTypeId;
+            bo.SortOrder            = entity.SortOrder;
+            bo.Badkamer             = entity.Badkamer;
+            bo.ToiletInBadkamer     = entity.ToiletInBadkamer;
+            bo.AfzonderlijkToilet   = entity.AfzonderlijkToilet;
+            bo.DoucheInBadkamer     = entity.DoucheInBadkamer;
+            bo.Douchekamer          = entity.Douchekamer;
+
+            return bo;
+        }
+
+        internal static void ApplySanitairBOToEntity(BudgetSanitairBO bo, BudgetSanitair entity)
+        {
+            entity.EenheidNaam          = bo.EenheidNaam;
+            entity.UnitTypeId           = bo.UnitTypeId;
+            entity.SortOrder            = bo.SortOrder;
+            entity.Badkamer             = bo.Badkamer;
+            entity.ToiletInBadkamer     = bo.ToiletInBadkamer;
+            entity.AfzonderlijkToilet   = bo.AfzonderlijkToilet;
+            entity.DoucheInBadkamer     = bo.DoucheInBadkamer;
+            entity.Douchekamer          = bo.Douchekamer;
+        }
+
+        internal static BudgetSanitairTotaalBO BuildSanitairTotalen(IEnumerable<BudgetSanitairBO> rows)
+        {
+            var t = new BudgetSanitairTotaalBO();
+            foreach (var r in rows)
+            {
+                t.TotaalBadkamers               += r.Badkamer;
+                t.TotaalToilettenInBadkamer      += r.ToiletInBadkamer;
+                t.TotaalAfzonderlijkeToiletten   += r.AfzonderlijkToilet;
+                t.TotaalDouchesInBadkamer        += r.DoucheInBadkamer;
+                t.TotaalDouchekamers             += r.Douchekamer;
+                t.AantalEenheden++;
+            }
+            return t;
+        }
+
+        internal static BudgetOppervlaktesTotaalBO BuildTotalen(IEnumerable<BudgetOppervlaktesBO> rows)
+        {
+            var totalen = new BudgetOppervlaktesTotaalBO();
+            foreach (var r in rows)
+            {
+                totalen.TotaalBewoonbaar  += r.BewoonbareOpp;
+                totalen.TotaalGereduceerd += r.OppGereduceerd;
+                totalen.TotaalGrondopp    += r.Grondopp;
+                totalen.AantalTotaal++;
+
+                var grp = (r.GroupTypeName ?? "").ToLowerInvariant();
+                var sc  = (r.TypeShortcode ?? "").ToUpperInvariant();
+
+                if (grp.Contains("woon"))
+                    totalen.AantalWooneenheden++;
+                else if (grp.Contains("park") || sc == "GAR" || sc == "CAR" || sc == "PARK")
+                    totalen.AantalParkeerplaatsen++;
+                else if (grp.Contains("commerc"))
+                    totalen.AantalCommercieel++;
+            }
+            return totalen;
+        }
     }
 }

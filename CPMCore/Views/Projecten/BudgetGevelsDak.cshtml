@@ -1,0 +1,685 @@
+@using CPMCore.Controllers
+@using BOCore
+@model CPMCore.Models.Projecten.BudgetGevelsDakModel
+@{
+    ViewData["Title"] = "Gevels & Dak — " + Model.MasterNaam;
+
+    // Helper: haal rijen op voor een bepaald elementType
+    List<BudgetGevelElementBO> Rijen(string type) =>
+        Model.Elementen.TryGetValue(type, out var lst) ? lst : new List<BudgetGevelElementBO>();
+
+    string Fmt(decimal v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+}
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+}
+@{
+    ViewBag.Breadcrumbs = new List<Breadcrumb>()
+    {
+        new Breadcrumb("Home",         nameof(HomeController.Index),       "Home",       true),
+        new Breadcrumb("Projecten",    nameof(ProjectenController.Index),  "Projecten",  true),
+        new Breadcrumb("Detail",       nameof(ProjectenController.Detail), "Projecten",  true),
+        new Breadcrumb("Budgetten",    nameof(ProjectenController.BudgetIndex), "Projecten", true),
+        new Breadcrumb("Gevels & Dak", nameof(ProjectenController.BudgetGevelsDak), "Projecten", false),
+    };
+}
+@Html.AntiForgeryToken()
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            <div class="bw-tab-bar">
+                <div class="bw-steps">
+                    @{
+                        var steps = new[]
+                        {
+                            (1,  "Gegevens",         Url.Action("BudgetGegevens",     "Projecten", new { versieId = Model.VersieId })),
+                            (2,  "Oppervlaktes",     Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })),
+                            (3,  "Gevels / Ramen",   (string)null),
+                            (4,  "Sanitair",         (string)null),
+                            (5,  "Dak / Afbraak",    (string)null),
+                            (6,  "Bouwkost (VMSW)",  (string)null),
+                            (7,  "Parameters",       (string)null),
+                            (8,  "Berekening",       (string)null),
+                            (9,  "Verkoop",          (string)null),
+                            (10, "Resultaat",        (string)null),
+                        };
+                        int activeStep = 3;
+                    }
+                    @foreach (var (num, label, url) in steps)
+                    {
+                        bool isActive = num == activeStep;
+                        bool isDone   = num < activeStep;
+                        string cls    = isActive ? "bw-step--active" : (isDone ? "bw-step--done" : "");
+
+                        if (isDone && url != null)
+                        {
+                            <a href="@url" class="bw-step @cls">
+                                <span class="bw-step__circle"><i class="fas fa-check" style="font-size:9px;"></i></span>
+                                <span class="bw-step__label">@label</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="bw-step @cls">
+                                <span class="bw-step__circle">@num</span>
+                                <span class="bw-step__label">@label</span>
+                            </div>
+                        }
+
+                        @if (num < steps.Length)
+                        {
+                            <div class="bw-step__connector" aria-hidden="true"></div>
+                        }
+                    }
+                </div>
+                <div class="bw-tab-actions">
+                    <label class="small text-muted me-2 mb-0 user-select-none" for="toggleBerek3">
+                        Toon berekeningen
+                    </label>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" role="switch" id="toggleBerek3" />
+                    </div>
+                </div>
+            </div>
+
+            @* ── Versie-header ── *@
+            <div class="d-flex align-items-center justify-content-between bg-light border rounded px-3 py-2 mb-3">
+                <div>
+                    <span class="text-muted small me-2">Budget:</span><strong>@Model.MasterNaam</strong>
+                    <span class="text-muted mx-2">|</span>
+                    <span class="text-muted small me-2">Versie:</span><strong>@Model.VersieLabel</strong>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Vorige stap
+                    </a>
+                    <button class="btn btn-sm btn-secondary" disabled title="Volgende stap nog niet beschikbaar">
+                        Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+
+            @* ── Samenvatting KPI cards ── *@
+            <div class="row g-2 mb-3">
+                @{
+                    var kpi1 = new[]
+                    {
+                        ("kpi-gevel-nb",  "Gevels nieuwbouw",  Fmt(Model.Totaal.TotaalGevelNieuwbouw),  "m²"),
+                        ("kpi-gevel-best","Gevels bestaand",   Fmt(Model.Totaal.TotaalGevelBestaand),   "m²"),
+                        ("kpi-raam-nb",   "Ramen nieuwbouw",   Fmt(Model.Totaal.TotaalRaamNieuwbouw),   "m²"),
+                        ("kpi-raam-best", "Ramen bestaand",    Fmt(Model.Totaal.TotaalRaamBestaand),    "m²"),
+                    };
+                    var kpi2 = new[]
+                    {
+                        ("kpi-ballust",   "Balustrades",       Fmt(Model.Totaal.TotaalBallustrade),     "lm"),
+                        ("kpi-platdak",   "Plat dak",          Fmt(Model.Totaal.TotaalPlatDak),         "m²"),
+                        ("kpi-helldak",   "Hellend dak",       Fmt(Model.Totaal.TotaalHellendDak),      "m²"),
+                        ("kpi-afbraak",   "Afbraak",           Fmt(Model.Totaal.TotaalAfbraak),         "m²"),
+                    };
+                }
+                @foreach (var (id, lbl, val, eenheid) in kpi1)
+                {
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center py-2">
+                            <div class="card-body p-1">
+                                <div class="fw-semibold text-primary" id="@id">@val <span class="small fw-normal text-muted">@eenheid</span></div>
+                                <div class="small text-muted">@lbl</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @foreach (var (id, lbl, val, eenheid) in kpi2)
+                {
+                    <div class="col-6 col-md-3">
+                        <div class="card text-center py-2">
+                            <div class="card-body p-1">
+                                <div class="fw-semibold text-primary" id="@id">@val <span class="small fw-normal text-muted">@eenheid</span></div>
+                                <div class="small text-muted">@lbl</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ── Sectietabs ── *@
+            <ul class="nav nav-tabs mb-3" id="gevelTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="tab-gevels" data-bs-toggle="tab"
+                            data-bs-target="#pane-gevels" type="button">Gevels</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-ramen" data-bs-toggle="tab"
+                            data-bs-target="#pane-ramen" type="button">Ramen</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-ballust" data-bs-toggle="tab"
+                            data-bs-target="#pane-ballust" type="button">Balustrades &amp; Zichtschermen</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-dak" data-bs-toggle="tab"
+                            data-bs-target="#pane-dak" type="button">Dak</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-afbraak" data-bs-toggle="tab"
+                            data-bs-target="#pane-afbraak" type="button">Afbraak</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="gevelTabContent">
+
+                @* ── TAB: GEVELS ── *@
+                <div class="tab-pane fade show active" id="pane-gevels" role="tabpanel">
+                    <div class="row g-3">
+                        @foreach (var (etype, label) in new[] { ("GevelNieuwbouw","Gevels Nieuwbouw"), ("GevelBestaand","Gevels Bestaand") })
+                        {
+                            var rijen = Rijen(etype);
+                            var totaalType = rijen.Sum(r => r.ResultaatM2);
+                            <div class="col-lg-6">
+                                <div class="card h-100">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <strong>@label</strong>
+                                        <span class="badge bg-primary gevel-badge" data-type="@etype">@Fmt(totaalType) m²</span>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        @await Html.PartialAsync("Partials/_GevelAddForm", (object)new ViewDataDictionary(ViewData) { { "ElementType", etype }, { "VersieId", Model.VersieId } })
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-hover table-sm table-bordered align-middle mb-0" style="min-width:500px;">
+                                                <thead class="table-light small text-center">
+                                                    <tr>
+                                                        <th style="min-width:90px;">Eenheid</th>
+                                                        <th style="min-width:110px;">Beschrijving</th>
+                                                        <th style="min-width:65px;">Aantal</th>
+                                                        <th style="min-width:75px;">Breedte (m)</th>
+                                                        <th style="min-width:75px;">Hoogte (m)</th>
+                                                        <th style="min-width:75px;">—</th>
+                                                        <th style="min-width:80px;" class="text-primary">m²</th>
+                                                        <th style="width:44px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="gevel-tbody" data-element-type="@etype">
+                                                    @foreach (var rij in rijen)
+                                                    {
+                                                        @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                    }
+                                                </tbody>
+                                                <tfoot class="table-secondary small fw-semibold">
+                                                    <tr>
+                                                        <td colspan="6" class="text-end">Totaal</td>
+                                                        <td class="text-end text-primary gevel-totaal-cel" data-type="@etype">@Fmt(totaalType)</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ── TAB: RAMEN ── *@
+                <div class="tab-pane fade" id="pane-ramen" role="tabpanel">
+                    <div class="row g-3">
+                        @foreach (var (etype, label) in new[] { ("RaamNieuwbouw","Ramen Nieuwbouw"), ("RaamBestaand","Ramen Bestaand") })
+                        {
+                            var rijen = Rijen(etype);
+                            var totaalType = rijen.Sum(r => r.ResultaatM2);
+                            <div class="col-lg-6">
+                                <div class="card h-100">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <strong>@label</strong>
+                                        <span class="badge bg-primary gevel-badge" data-type="@etype">@Fmt(totaalType) m²</span>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        @await Html.PartialAsync("Partials/_GevelAddForm", (object)new ViewDataDictionary(ViewData) { { "ElementType", etype }, { "VersieId", Model.VersieId } })
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-hover table-sm table-bordered align-middle mb-0" style="min-width:500px;">
+                                                <thead class="table-light small text-center">
+                                                    <tr>
+                                                        <th style="min-width:90px;">Eenheid</th>
+                                                        <th style="min-width:110px;">Beschrijving</th>
+                                                        <th style="min-width:65px;">Aantal</th>
+                                                        <th style="min-width:75px;">Breedte (m)</th>
+                                                        <th style="min-width:75px;">Hoogte (m)</th>
+                                                        <th style="min-width:75px;">—</th>
+                                                        <th style="min-width:80px;" class="text-primary">m²</th>
+                                                        <th style="width:44px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="gevel-tbody" data-element-type="@etype">
+                                                    @foreach (var rij in rijen)
+                                                    {
+                                                        @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                    }
+                                                </tbody>
+                                                <tfoot class="table-secondary small fw-semibold">
+                                                    <tr>
+                                                        <td colspan="6" class="text-end">Totaal</td>
+                                                        <td class="text-end text-primary gevel-totaal-cel" data-type="@etype">@Fmt(totaalType)</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ── TAB: BALLUSTRADES & ZICHTSCHERMEN ── *@
+                <div class="tab-pane fade" id="pane-ballust" role="tabpanel">
+                    <div class="row g-3">
+                        @foreach (var (etype, label, eenheid) in new[] {
+                            ("Ballustrade","Balustrades","lm"), ("Zichtscherm","Zichtschermen","lm") })
+                        {
+                            var rijen = Rijen(etype);
+                            var totaalType = rijen.Sum(r => r.ResultaatLm);
+                            <div class="col-lg-6">
+                                <div class="card h-100">
+                                    <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                        <strong>@label</strong>
+                                        <span class="badge bg-primary gevel-badge" data-type="@etype">@Fmt(totaalType) @eenheid</span>
+                                    </div>
+                                    <div class="card-body p-2">
+                                        @await Html.PartialAsync("Partials/_GevelAddForm", (object)new ViewDataDictionary(ViewData) { { "ElementType", etype }, { "VersieId", Model.VersieId } })
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-hover table-sm table-bordered align-middle mb-0" style="min-width:450px;">
+                                                <thead class="table-light small text-center">
+                                                    <tr>
+                                                        <th style="min-width:90px;">Locatie</th>
+                                                        <th style="min-width:110px;">Beschrijving</th>
+                                                        <th style="min-width:65px;">Aantal</th>
+                                                        <th style="min-width:75px;">—</th>
+                                                        <th style="min-width:75px;">—</th>
+                                                        <th style="min-width:75px;">Lengte (m)</th>
+                                                        <th style="min-width:80px;" class="text-primary">lm</th>
+                                                        <th style="width:44px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="gevel-tbody" data-element-type="@etype">
+                                                    @foreach (var rij in rijen)
+                                                    {
+                                                        @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                    }
+                                                </tbody>
+                                                <tfoot class="table-secondary small fw-semibold">
+                                                    <tr>
+                                                        <td colspan="6" class="text-end">Totaal</td>
+                                                        <td class="text-end text-primary gevel-totaal-cel" data-type="@etype">@Fmt(totaalType)</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ── TAB: DAK ── *@
+                <div class="tab-pane fade" id="pane-dak" role="tabpanel">
+                    <div class="accordion" id="accordionDak">
+                        @{
+                            var dakSections = new[]
+                            {
+                                ("PlatDak",         "Plat dak",           Model.Totaal.TotaalPlatDak,         "m²", true),
+                                ("HellendDak",      "Hellend dak",        Model.Totaal.TotaalHellendDak,      "m²", false),
+                                ("GroenDak",        "Groen dak",          Model.Totaal.TotaalGroenDak,        "m²", false),
+                                ("Dakoversteken",   "Dakoversteken",      Model.Totaal.TotaalDakoversteken,   "m²", false),
+                                ("OnderkantDoorrit","Onderkant doorrit",  Model.Totaal.TotaalOnderkantDoorrit,"m²", false),
+                            };
+                        }
+                        @foreach (var (etype, label, totaalVal, eenheid, openDefault) in dakSections)
+                        {
+                            var rijen = Rijen(etype);
+                            var collapseId = "acc-" + etype.ToLower();
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button @(openDefault ? "" : "collapsed")"
+                                            type="button" data-bs-toggle="collapse"
+                                            data-bs-target="#@collapseId" aria-expanded="@(openDefault ? "true" : "false")">
+                                        <span class="me-2">@label</span>
+                                        <span class="badge bg-secondary gevel-badge" data-type="@etype">
+                                            @Fmt(totaalVal) @eenheid
+                                        </span>
+                                    </button>
+                                </h2>
+                                <div id="@collapseId" class="accordion-collapse collapse @(openDefault ? "show" : "")">
+                                    <div class="accordion-body p-2">
+                                        @await Html.PartialAsync("Partials/_GevelAddForm", (object)new ViewDataDictionary(ViewData) { { "ElementType", etype }, { "VersieId", Model.VersieId } })
+                                        <div class="table-responsive mt-2">
+                                            <table class="table table-hover table-sm table-bordered align-middle mb-0" style="min-width:500px;">
+                                                <thead class="table-light small text-center">
+                                                    <tr>
+                                                        <th style="min-width:90px;">Locatie</th>
+                                                        <th style="min-width:110px;">Beschrijving</th>
+                                                        <th style="min-width:65px;">Aantal</th>
+                                                        <th style="min-width:75px;">Breedte (m)</th>
+                                                        <th style="min-width:75px;">—</th>
+                                                        <th style="min-width:75px;">Lengte (m)</th>
+                                                        <th style="min-width:80px;" class="text-primary">m²</th>
+                                                        <th style="width:44px;"></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="gevel-tbody" data-element-type="@etype">
+                                                    @foreach (var rij in rijen)
+                                                    {
+                                                        @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                    }
+                                                </tbody>
+                                                <tfoot class="table-secondary small fw-semibold">
+                                                    <tr>
+                                                        <td colspan="6" class="text-end">Totaal</td>
+                                                        <td class="text-end text-primary gevel-totaal-cel" data-type="@etype">@Fmt(totaalVal)</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                @* ── TAB: AFBRAAK ── *@
+                <div class="tab-pane fade" id="pane-afbraak" role="tabpanel">
+                    @{
+                        var afbraakRijen  = Rijen("Afbraak");
+                        var afbraakTotaal = afbraakRijen.Sum(r => r.ResultaatM2);
+                    }
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                            <strong>Afbraak</strong>
+                            <span class="badge bg-primary gevel-badge" data-type="Afbraak">@Fmt(afbraakTotaal) m²</span>
+                        </div>
+                        <div class="card-body p-2">
+                            @await Html.PartialAsync("Partials/_GevelAddForm", (object)new ViewDataDictionary(ViewData) { { "ElementType", "Afbraak" }, { "VersieId", Model.VersieId } })
+                            <div class="table-responsive mt-2">
+                                <table class="table table-hover table-sm table-bordered align-middle mb-0" style="min-width:500px;">
+                                    <thead class="table-light small text-center">
+                                        <tr>
+                                            <th style="min-width:90px;">Locatie</th>
+                                            <th style="min-width:110px;">Beschrijving</th>
+                                            <th style="min-width:65px;">Aantal</th>
+                                            <th style="min-width:75px;">Breedte (m)</th>
+                                            <th style="min-width:75px;">—</th>
+                                            <th style="min-width:75px;">Lengte (m)</th>
+                                            <th style="min-width:80px;" class="text-primary">m²</th>
+                                            <th style="width:44px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="gevel-tbody" data-element-type="Afbraak">
+                                        @foreach (var rij in afbraakRijen)
+                                        {
+                                            @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                        }
+                                    </tbody>
+                                    <tfoot class="table-secondary small fw-semibold">
+                                        <tr>
+                                            <td colspan="6" class="text-end">Totaal</td>
+                                            <td class="text-end text-primary gevel-totaal-cel" data-type="Afbraak">@Fmt(afbraakTotaal)</td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>@* /tab-content *@
+
+            @* ── Bottom actions ── *@
+            <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+                <a href="@Url.Action("BudgetOppervlaktes", "Projecten", new { versieId = Model.VersieId })"
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Vorige stap
+                </a>
+                <button class="btn btn-secondary" disabled title="Volgende stap nog niet beschikbaar">
+                    Volgende stap <i class="fas fa-arrow-right ms-1"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script src="~/js/budget-wizard.js"></script>
+<script>
+    BudgetWizard.initCalcToggle('toggleBerek3');
+
+    const ANTI = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const versieId = @Model.VersieId;
+
+    const TYPES_HOOGTE       = ['GevelNieuwbouw','GevelBestaand','RaamNieuwbouw','RaamBestaand'];
+    const TYPES_LENGTE_ALLEEN = ['Ballustrade','Zichtscherm'];
+
+    const fmtNL = BudgetWizard.fmtNL;
+
+    // ── Sectietab-state in sessionStorage ────────────────────────────────────
+    const TAB_KEY = 'bwGevelTab_' + versieId;
+    const savedTab = sessionStorage.getItem(TAB_KEY);
+    if (savedTab) {
+        const tabEl = document.querySelector('#gevelTabs button[data-bs-target="' + savedTab + '"]');
+        if (tabEl) bootstrap.Tab.getOrCreateInstance(tabEl).show();
+    }
+    document.querySelectorAll('#gevelTabs button').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', () => sessionStorage.setItem(TAB_KEY, btn.dataset.bsTarget));
+    });
+
+    // ── Client-side berekening ────────────────────────────────────────────────
+    function calcRij(row) {
+        const type   = row.dataset.elementType;
+        const aantal = parseFloat(row.querySelector('[data-field="aantal"]')?.value) || 0;
+        const br     = parseFloat(row.querySelector('[data-field="breedte"]')?.value) || 0;
+        const hg     = parseFloat(row.querySelector('[data-field="hoogte"]')?.value) || 0;
+        const ln     = parseFloat(row.querySelector('[data-field="lengte"]')?.value) || 0;
+
+        let val = 0, unit = 'm²', formula = '';
+        if (TYPES_HOOGTE.includes(type)) {
+            val = aantal * br * hg;
+            formula = `${aantal} × ${br.toFixed(3)} × ${hg.toFixed(3)} = ${val.toFixed(2)} m²`;
+        } else if (TYPES_LENGTE_ALLEEN.includes(type)) {
+            val = aantal * ln;
+            unit = 'lm';
+            formula = `${aantal} × ${ln.toFixed(3)} = ${val.toFixed(2)} lm`;
+        } else {
+            val = aantal * br * ln;
+            formula = `${aantal} × ${br.toFixed(3)} × ${ln.toFixed(3)} = ${val.toFixed(2)} m²`;
+        }
+        return { val, unit, formula };
+    }
+
+    // ── Debounced save ────────────────────────────────────────────────────────
+    const saveTimers = {};
+
+    function queueSave(row) {
+        const id = row.dataset.elementId;
+        const { val, formula } = calcRij(row);
+
+        row.querySelector('.resultaat-value').textContent = fmtNL(val);
+        row.querySelector('.calc-detail').textContent     = formula;
+
+        clearTimeout(saveTimers[id]);
+        saveTimers[id] = setTimeout(() => saveRij(row), 400);
+    }
+
+    async function saveRij(row) {
+        const type = row.dataset.elementType;
+        const payload = {
+            elementId:   parseInt(row.dataset.elementId),
+            versieId:    versieId,
+            elementType: type,
+            eenheidNaam: row.querySelector('[data-field="eenheidNaam"]')?.value ?? '',
+            beschrijving: row.querySelector('[data-field="beschrijving"]')?.value ?? '',
+            aantal:   parseFloat(row.querySelector('[data-field="aantal"]')?.value) || 0,
+            breedte:  parseFloat(row.querySelector('[data-field="breedte"]')?.value) || null,
+            hoogte:   parseFloat(row.querySelector('[data-field="hoogte"]')?.value) || null,
+            lengte:   parseFloat(row.querySelector('[data-field="lengte"]')?.value) || null
+        };
+        try {
+            const resp = await fetch('/Projecten/BudgetGevelElementOpslaan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': ANTI },
+                body: JSON.stringify(payload)
+            });
+            const result = await resp.json();
+            if (result.success) {
+                updateGevelCards(result.totaal);
+                updateBadgesAndFooters(result.totaal);
+            }
+        } catch (e) { console.error('Gevel save fout:', e); }
+    }
+
+    // ── Input event ──────────────────────────────────────────────────────────
+    document.addEventListener('change', function (e) {
+        const row = e.target.closest('tr[data-element-id]');
+        if (!row) return;
+        if (e.target.classList.contains('gevel-input')) queueSave(row);
+    });
+
+    // ── KPI cards ────────────────────────────────────────────────────────────
+    function updateGevelCards(t) {
+        const set = (id, v, u) => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = fmtNL(v) + ' <span class="small fw-normal text-muted">' + u + '</span>';
+        };
+        set('kpi-gevel-nb',  t.totaalGevelNieuwbouw,   'm²');
+        set('kpi-gevel-best',t.totaalGevelBestaand,     'm²');
+        set('kpi-raam-nb',   t.totaalRaamNieuwbouw,     'm²');
+        set('kpi-raam-best', t.totaalRaamBestaand,      'm²');
+        set('kpi-ballust',   t.totaalBallustrade,       'lm');
+        set('kpi-platdak',   t.totaalPlatDak,           'm²');
+        set('kpi-helldak',   t.totaalHellendDak,        'm²');
+        set('kpi-afbraak',   t.totaalAfbraak,           'm²');
+    }
+
+    const TYPE_TOTAAL_MAP = {
+        GevelNieuwbouw:    t => t.totaalGevelNieuwbouw,
+        GevelBestaand:     t => t.totaalGevelBestaand,
+        RaamNieuwbouw:     t => t.totaalRaamNieuwbouw,
+        RaamBestaand:      t => t.totaalRaamBestaand,
+        Ballustrade:       t => t.totaalBallustrade,
+        Zichtscherm:       t => t.totaalZichtscherm,
+        PlatDak:           t => t.totaalPlatDak,
+        HellendDak:        t => t.totaalHellendDak,
+        GroenDak:          t => t.totaalGroenDak,
+        Dakoversteken:     t => t.totaalDakoversteken,
+        OnderkantDoorrit:  t => t.totaalOnderkantDoorrit,
+        Afbraak:           t => t.totaalAfbraak,
+    };
+
+    function updateBadgesAndFooters(t) {
+        document.querySelectorAll('.gevel-badge[data-type]').forEach(el => {
+            const type = el.dataset.type;
+            const fn = TYPE_TOTAAL_MAP[type];
+            if (fn) el.textContent = fmtNL(fn(t)) + ' ' + (TYPES_LENGTE_ALLEEN.includes(type) ? 'lm' : 'm²');
+        });
+        document.querySelectorAll('.gevel-totaal-cel[data-type]').forEach(el => {
+            const type = el.dataset.type;
+            const fn = TYPE_TOTAAL_MAP[type];
+            if (fn) el.textContent = fmtNL(fn(t));
+        });
+    }
+
+    // ── Toevoegen ────────────────────────────────────────────────────────────
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.btn-gevel-toevoegen');
+        if (!btn) return;
+
+        const section = btn.closest('[data-element-type-section]');
+        const etype   = section?.dataset.elementTypeSection;
+        if (!etype) return;
+
+        const eenheidInput = section.querySelector('.add-eenheid');
+        const beschrInput  = section.querySelector('.add-beschrijving');
+
+        const params = new URLSearchParams({
+            versieId,
+            elementType:  etype,
+            eenheidNaam:  eenheidInput?.value ?? '',
+            beschrijving: beschrInput?.value ?? ''
+        });
+
+        const resp = await fetch('/Projecten/BudgetGevelElementToevoegen', {
+            method: 'POST',
+            headers: { 'RequestVerificationToken': ANTI, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        });
+        if (!resp.ok) return;
+
+        const html  = await resp.text();
+        const temp  = document.createElement('tbody');
+        temp.innerHTML = html;
+        const newRow = temp.querySelector('tr');
+        if (newRow) {
+            const tbody = section.closest('.card, .accordion-item')
+                .querySelector('.gevel-tbody[data-element-type="' + etype + '"]');
+            if (tbody) tbody.appendChild(newRow);
+        }
+
+        if (eenheidInput) eenheidInput.value = '';
+        if (beschrInput)  beschrInput.value  = '';
+    });
+
+    // ── Verwijderen & dupliceren ─────────────────────────────────────────────
+    document.addEventListener('click', async function (e) {
+        const row = e.target.closest('tr[data-element-id]');
+        if (!row) return;
+
+        if (e.target.closest('.btn-delete-gevel')) {
+            if (!confirm('Element verwijderen?')) return;
+            const params = new URLSearchParams({
+                elementId: row.dataset.elementId, versieId
+            });
+            const resp = await fetch('/Projecten/BudgetGevelElementVerwijderen', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': ANTI, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            const result = await resp.json();
+            if (result.success) {
+                row.remove();
+                updateGevelCards(result.totaal);
+                updateBadgesAndFooters(result.totaal);
+            }
+        }
+
+        if (e.target.closest('.btn-duplicate-gevel')) {
+            const params = new URLSearchParams({
+                versieId,
+                elementType:  row.dataset.elementType,
+                eenheidNaam:  (row.querySelector('[data-field="eenheidNaam"]')?.value ?? '') + ' (kopie)',
+                beschrijving: row.querySelector('[data-field="beschrijving"]')?.value ?? ''
+            });
+            const resp = await fetch('/Projecten/BudgetGevelElementToevoegen', {
+                method: 'POST',
+                headers: { 'RequestVerificationToken': ANTI, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            if (!resp.ok) return;
+            const html   = await resp.text();
+            const temp   = document.createElement('tbody');
+            temp.innerHTML = html;
+            const newRow = temp.querySelector('tr');
+            if (newRow) row.parentElement.appendChild(newRow);
+        }
+    });
+
+    // ── Bootstrap tooltips ───────────────────────────────────────────────────
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+</script>
+}

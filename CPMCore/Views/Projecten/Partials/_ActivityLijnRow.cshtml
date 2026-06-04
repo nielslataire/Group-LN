@@ -1,0 +1,47 @@
+@model BOCore.Budget.BudgetActivityLijnBO
+@{
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    string FmtDec(decimal v, int d = 2) => v.ToString("F" + d, ic);
+
+    string verschilClass = Model.Verschil > 0 ? "bg-warning text-dark"
+                         : Model.Verschil < 0 ? "bg-primary"
+                                              : "bg-success";
+
+    string calcText = $"Nacalc: {FmtDec(Model.NacalcPrijsPerEenheid)} × {FmtDec(Model.Correctiefactor, 4)} (corr.) " +
+                      $"= {FmtDec(Model.NacalcGeindexeerd)} €/eenh. × {Model.AantalEenheden} eenheden " +
+                      $"= € {FmtDec(Model.TotaalNacalc)}";
+}
+<tr class="activity-row" data-activity-id="@Model.ActivityId">
+    <td>
+        @Model.ActivityOmschrijving
+        <input type="hidden" class="hdn-activity-id" value="@Model.ActivityId" />
+    </td>
+    <td>
+        <input type="number" step="0.01" min="0"
+               class="form-control form-control-sm alt-prijs"
+               value="@FmtDec(Model.AlternatievePrijsPerEenheid)" />
+    </td>
+    <td class="text-end alt-totaal">€ @FmtDec(Model.TotaalAlternatief)</td>
+    <td>
+        <input type="number" step="0.01" min="0"
+               class="form-control form-control-sm nacalc-prijs"
+               value="@FmtDec(Model.NacalcPrijsPerEenheid)" />
+    </td>
+    <td>
+        <input type="number" step="0.0001" min="0"
+               class="form-control form-control-sm corr-factor"
+               value="@FmtDec(Model.Correctiefactor, 4)" />
+    </td>
+    <td class="text-end nacalc-geind">€ @FmtDec(Model.NacalcGeindexeerd)</td>
+    <td class="text-end verschil-cel">
+        <span class="badge @verschilClass">
+            € @FmtDec(Model.Verschil)
+        </span>
+    </td>
+    <td>
+        <div class="calc-detail small font-monospace text-muted ps-2"
+             style="border-left:3px solid #0d6efd;">
+            @calcText
+        </div>
+    </td>
+</tr>
