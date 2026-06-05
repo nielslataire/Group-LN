@@ -294,8 +294,10 @@ namespace ServiceCore
                 gegevensEntity.LmSecanpalen                     = src.LmSecanpalen;
                 gegevensEntity.NacalcBasisprijs                 = src.NacalcBasisprijs;
                 gegevensEntity.NacalcBasisJaar                  = src.NacalcBasisJaar;
-                gegevensEntity.AbexBasisIndex                   = src.AbexBasisIndex;
-                gegevensEntity.AbexHuidigIndex                  = src.AbexHuidigIndex;
+                gegevensEntity.SIndexStart                      = src.SIndexStart;
+                gegevensEntity.SIndexHuidig                     = src.SIndexHuidig;
+                gegevensEntity.IIndexStart                      = src.IIndexStart;
+                gegevensEntity.IIndexHuidig                     = src.IIndexHuidig;
                 gegevensEntity.GevelMetselwerkPrijsPerM2        = src.GevelMetselwerkPrijsPerM2;
                 gegevensEntity.GipswerkenPrijsPerM2             = src.GipswerkenPrijsPerM2;
             }

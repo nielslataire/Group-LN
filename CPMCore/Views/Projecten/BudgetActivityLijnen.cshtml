@@ -8,6 +8,7 @@
 }
 
 @section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
 <style>
     .calc-detail               { display: none; }
     .calc-detail.visible       { display: block; }
@@ -17,8 +18,6 @@
     .kpi-card.nacalc           { border-color: #198754; }
     .kpi-card.verschil         { border-color: #ffc107; }
     .kpi-card.m2               { border-color: #6c757d; }
-    .step-wizard .nav-link     { font-size: .8rem; padding: .35rem .5rem; }
-    .step-wizard .nav-link.completed { background-color: #198754; color: #fff; }
     .activity-row input        { min-width: 80px; }
 </style>
 }
@@ -26,24 +25,23 @@
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)
-        <div class="inner-body">
+        <div class="inner-body bw-inner-body">
 
-            @* ── Wizard stepper ── *@
-            <ul class="nav nav-pills nav-justified step-wizard mb-4">
-                @for (int i = 0; i < Model.WizardSteps.Count; i++)
-                {
-                    string stepClass = (i + 1 == Model.HuidigeStap) ? "active"
-                                     : (i + 1 < Model.HuidigeStap)  ? "completed"
-                                     : "";
-                    <li class="nav-item">
-                        <span class="nav-link @stepClass">@Model.WizardSteps[i]</span>
-                    </li>
-                }
-            </ul>
+            @* ── Wizard tabbladen ── *@
+            @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.BudgetVersieId, ActiveStep = 6, ShowCalcToggle = false })
 
-            @* ── Paginatitel ── *@
-            <h2 class="mb-0">Activiteiten <small class="text-muted fs-6">(VMSW-structuur)</small></h2>
-            <p class="text-muted mb-3">Budget @Model.BudgetNaam — versie @Model.Versienummer</p>
+            @* ── Pagina-koptekst ── *@
+            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+            {
+                StepNum         = 6,
+                PageTitle       = "Activiteiten",
+                PageDescription = "Nacalc- en alternatiefprijzen per activiteit (VMSW-structuur), geïndexeerd met de gewogen S/I bouwkostfactor.",
+                MasterNaam      = Model.BudgetNaam,
+                VersieLabel     = Model.VersieLabel,
+                VersieStatus    = Model.VersieStatus,
+                PrevUrl         = Url.Action("BudgetDakAfbraak", "Projecten", new { versieId = Model.BudgetVersieId }),
+                NextUrl         = Url.Action("BudgetParams",     "Projecten", new { versieId = Model.BudgetVersieId })
+            })
 
             @* ── 4 KPI cards ── *@
             <div class="row g-3 mb-4">
@@ -79,27 +77,43 @@
                 </div>
             </div>
 
-            @* ── ABEX + nacalc import balk ── *@
+            @* ── S/I bouwindex + nacalc import balk ── *@
             <div class="card card-modern mb-4">
-                <div class="card-body d-flex flex-wrap align-items-center gap-3">
-                    <span class="badge bg-secondary fs-6">ABEX basis: @Fmt(Model.ABEXBasis)</span>
-                    <span class="badge bg-primary  fs-6">ABEX huidig: @Fmt(Model.ABEXHuidig)</span>
-                    <span class="badge bg-info text-dark fs-6">Factor: @Fmt(Model.ABEXFactor, 4)</span>
-
-                    <div class="ms-md-auto d-flex gap-2 flex-wrap align-items-center">
-                        <select id="ddlBronProject" class="form-select form-select-sm" style="min-width:180px;">
-                            <option value="">— kies bronproject —</option>
-                            @foreach (var item in Model.BeschikbareProjecten)
-                            {
-                                <option value="@item.Value">@item.Text</option>
-                            }
-                        </select>
-                        <button id="btnImportNacalc" class="btn btn-outline-secondary btn-sm">
-                            <i class="bx bx-import me-1"></i>Nacalc importeren
-                        </button>
-                        <button id="btnToggleCalc" class="btn btn-outline-primary btn-sm">
-                            <i class="bx bx-code-alt me-1"></i>Formules
-                        </button>
+                <div class="card-body">
+                    <div class="row align-items-center g-3">
+                        <div class="col-md-auto d-flex flex-wrap gap-2">
+                            <span class="badge bg-light text-dark border">
+                                S-start: <strong>@Model.SIndexStart.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                S-huidig: <strong>@Model.SIndexHuidig.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                I-start: <strong>@Model.IIndexStart.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
+                            </span>
+                            <span class="badge bg-light text-dark border">
+                                I-huidig: <strong>@Model.IIndexHuidig.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
+                            </span>
+                            <span class="badge bg-primary">
+                                Gewogen factor: <strong>@Model.GewogenFactor.ToString("F4", System.Globalization.CultureInfo.InvariantCulture)</strong>
+                            </span>
+                            <span class="text-muted small align-self-center">(I/I₀)×0.40 + (S/S₀)×0.40 + 0.20</span>
+                        </div>
+                        <div class="col-md-auto ms-md-auto d-flex gap-2">
+                            <select class="form-select form-select-sm" id="ddlBronProject" style="min-width:200px">
+                                <option value="">Kies bronproject...</option>
+                                @foreach (var item in Model.BeschikbareProjecten)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            </select>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnImportNacalc">
+                                <i class="bx bx-import me-1"></i> Nacalc importeren
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="btnToggleCalc">
+                                <i class="bx bx-calculator me-1"></i> Formules
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -193,6 +207,7 @@
     const aantalEenheden = @Model.AantalEenheden;
     const oppGBA         = @Fmt(Model.OppervlakteGBA);
     const antiForgery    = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+    const gewogenFactor  = @Model.GewogenFactor.ToString("F6", System.Globalization.CultureInfo.InvariantCulture);
 
     // ── Herbereken één rij ─────────────────────────────────────────────────
     function herbereken($tr) {
@@ -201,23 +216,19 @@
         const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
 
         const altTotaal  = altPrijs * aantalEenheden;
-        const nacalcGein = nacalcPrijs * corr;
-        const verschil   = altTotaal - (nacalcGein * aantalEenheden);
+        const nacalcGein = nacalcPrijs * corr * gewogenFactor;
+        const nacalcTot  = nacalcGein * aantalEenheden;
+        const verschil   = altTotaal - nacalcTot;
 
-        $tr.find('.alt-totaal').text('€ ' + altTotaal.toFixed(2));
-        $tr.find('.nacalc-geind').text('€ ' + nacalcGein.toFixed(2));
+        $tr.find('.alt-totaal').text('€ ' + altTotaal.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
+        $tr.find('.nacalc-geind').text('€ ' + nacalcGein.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
 
         const $badge = $tr.find('.verschil-cel .badge');
-        $badge.text('€ ' + verschil.toFixed(2))
-              .removeClass('bg-warning text-dark bg-primary bg-success');
-        if (verschil > 0)       $badge.addClass('bg-warning text-dark');
-        else if (verschil < 0)  $badge.addClass('bg-primary');
-        else                    $badge.addClass('bg-success');
-
-        const calcText = `Nacalc: ${nacalcPrijs.toFixed(2)} × ${corr.toFixed(4)} (corr.) ` +
-                         `= ${nacalcGein.toFixed(2)} €/eenh. × ${aantalEenheden} eenheden ` +
-                         `= € ${(nacalcGein * aantalEenheden).toFixed(2)}`;
-        $tr.find('.calc-detail').text(calcText);
+        $badge.text('€ ' + verschil.toLocaleString('nl-BE', { minimumFractionDigits: 2 }));
+        $badge.removeClass('bg-warning text-dark bg-primary bg-success');
+        if (verschil > 0.01)       $badge.addClass('bg-warning text-dark');
+        else if (verschil < -0.01) $badge.addClass('bg-primary');
+        else                       $badge.addClass('bg-success');
     }
 
     // ── Herbereken lot-totalen ─────────────────────────────────────────────
@@ -230,7 +241,7 @@
             const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
             const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
             sumAlt    += altPrijs * aantalEenheden;
-            sumNacalc += nacalcPrijs * corr * aantalEenheden;
+            sumNacalc += nacalcPrijs * corr * gewogenFactor * aantalEenheden;
         });
         const $accItem = $tbody.closest('.accordion-item');
         $accItem.find('.lot-totaal-alt').text('€ ' + sumAlt.toFixed(2));
@@ -247,7 +258,7 @@
             const nacalcPrijs = parseFloat($tr.find('.nacalc-prijs').val()) || 0;
             const corr        = parseFloat($tr.find('.corr-factor').val())  || 1;
             totAlt    += altPrijs * aantalEenheden;
-            totNacalc += nacalcPrijs * corr * aantalEenheden;
+            totNacalc += nacalcPrijs * corr * gewogenFactor * aantalEenheden;
         });
         const verschil = totAlt - totNacalc;
         const m2Prijs  = oppGBA > 0 ? totAlt / oppGBA : 0;

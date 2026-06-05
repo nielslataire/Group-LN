@@ -75,8 +75,10 @@ namespace ServiceCore.Translators
             bo.LmSecanpalen                     = entity.LmSecanpalen;
             bo.NacalcBasisprijs                 = entity.NacalcBasisprijs;
             bo.NacalcBasisJaar                  = entity.NacalcBasisJaar;
-            bo.ABEXBasisIndex                   = entity.AbexBasisIndex;
-            bo.ABEXHuidigIndex                  = entity.AbexHuidigIndex;
+            bo.SIndexStart                      = entity.SIndexStart;
+            bo.SIndexHuidig                     = entity.SIndexHuidig;
+            bo.IIndexStart                      = entity.IIndexStart;
+            bo.IIndexHuidig                     = entity.IIndexHuidig;
             bo.GevelMetselwerkPrijsPerM2        = entity.GevelMetselwerkPrijsPerM2;
             bo.GipswerkenPrijsPerM2             = entity.GipswerkenPrijsPerM2;
             bo.UpdatedAt                        = entity.UpdatedAt;
@@ -102,8 +104,10 @@ namespace ServiceCore.Translators
             entity.LmSecanpalen                     = bo.LmSecanpalen;
             entity.NacalcBasisprijs                 = bo.NacalcBasisprijs;
             entity.NacalcBasisJaar                  = bo.NacalcBasisJaar;
-            entity.AbexBasisIndex                   = bo.ABEXBasisIndex;
-            entity.AbexHuidigIndex                  = bo.ABEXHuidigIndex;
+            entity.SIndexStart                      = bo.SIndexStart;
+            entity.SIndexHuidig                     = bo.SIndexHuidig;
+            entity.IIndexStart                      = bo.IIndexStart;
+            entity.IIndexHuidig                     = bo.IIndexHuidig;
             entity.GevelMetselwerkPrijsPerM2        = bo.GevelMetselwerkPrijsPerM2;
             entity.GipswerkenPrijsPerM2             = bo.GipswerkenPrijsPerM2;
             entity.UpdatedAt                        = DateTime.Now;

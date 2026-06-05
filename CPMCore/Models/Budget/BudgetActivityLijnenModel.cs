@@ -13,6 +13,8 @@ namespace CPMCore.Models.Budget
         public string ProjectName    { get; set; }
         public string BudgetNaam     { get; set; }
         public int    Versienummer   { get; set; }
+        public string VersieLabel    { get; set; }
+        public string VersieStatus   { get; set; }
 
         public List<BudgetLotGroepBO> LotGroepen { get; set; } = new();
 
@@ -26,21 +28,22 @@ namespace CPMCore.Models.Budget
         public decimal PrijsPerM2GBA =>
             OppervlakteGBA == 0 ? 0m : TotaalAlternatief / OppervlakteGBA;
 
-        public decimal ABEXBasis  { get; set; }
-        public decimal ABEXHuidig { get; set; }
+        public decimal SIndexStart  { get; set; }
+        public decimal SIndexHuidig { get; set; }
+        public decimal IIndexStart  { get; set; }
+        public decimal IIndexHuidig { get; set; }
 
-        public decimal ABEXFactor =>
-            ABEXBasis == 0 ? 1m : ABEXHuidig / ABEXBasis;
+        public decimal GewogenFactor
+        {
+            get
+            {
+                var s = SIndexStart > 0 ? SIndexHuidig / SIndexStart : 1m;
+                var i = IIndexStart > 0 ? IIndexHuidig / IIndexStart : 1m;
+                return i * 0.40m + s * 0.40m + 0.20m;
+            }
+        }
 
         public IEnumerable<SelectListItem> BeschikbareProjecten { get; set; } =
             new List<SelectListItem>();
-
-        public List<string> WizardSteps { get; set; } = new List<string>
-        {
-            "Gegevens", "Oppervlaktes", "Sanitair", "Gevels",
-            "Dak & Afbraak", "Activiteiten", "Parameters", "Verkoop", "Resultaat"
-        };
-
-        public int HuidigeStap { get; set; } = 6;
     }
 }

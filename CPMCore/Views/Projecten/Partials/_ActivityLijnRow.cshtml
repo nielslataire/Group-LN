@@ -6,10 +6,6 @@
     string verschilClass = Model.Verschil > 0 ? "bg-warning text-dark"
                          : Model.Verschil < 0 ? "bg-primary"
                                               : "bg-success";
-
-    string calcText = $"Nacalc: {FmtDec(Model.NacalcPrijsPerEenheid)} × {FmtDec(Model.Correctiefactor, 4)} (corr.) " +
-                      $"= {FmtDec(Model.NacalcGeindexeerd)} €/eenh. × {Model.AantalEenheden} eenheden " +
-                      $"= € {FmtDec(Model.TotaalNacalc)}";
 }
 <tr class="activity-row" data-activity-id="@Model.ActivityId">
     <td>
@@ -39,9 +35,13 @@
         </span>
     </td>
     <td>
-        <div class="calc-detail small font-monospace text-muted ps-2"
-             style="border-left:3px solid #0d6efd;">
-            @calcText
+        <div class="calc-detail small font-monospace text-muted ps-2" style="border-left:3px solid #0d6efd">
+            Nacalc: @Model.NacalcPrijsPerEenheid.ToString("N2") €/eenh.
+            × @Model.Correctiefactor.ToString("F4") (corr.)
+            × @Model.GewogenIndexFactor.ToString("F4") (gew.factor)
+            = @Model.NacalcGeindexeerd.ToString("N2") €/eenh.
+            × @Model.AantalEenheden eenheden
+            = € @Model.TotaalNacalc.ToString("N2")
         </div>
     </td>
 </tr>

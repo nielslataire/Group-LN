@@ -1,0 +1,45 @@
+@model DALCore.Models.BudgetVerkoopLijn
+@{
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    string FmtDec(decimal? v) => v.HasValue ? v.Value.ToString("F2", ic) : string.Empty;
+}
+<tr class="verkoop-row">
+    <td>
+        <input type="text" class="form-control form-control-sm eenheid-naam"
+               value="@Model.EenheidNaam" placeholder="naam eenheid" />
+    </td>
+    <td>
+        <input type="number" class="form-control form-control-sm code-bouw"
+               value="@Model.CodeBouw" placeholder="code" />
+    </td>
+    <td>
+        <input type="number" class="form-control form-control-sm code-grond"
+               value="@Model.CodeGrond" placeholder="code" />
+    </td>
+    <td>
+        <input type="number" class="form-control form-control-sm opp-tuin"
+               value="@FmtDec(Model.OppTuin)" step="0.01" placeholder="0.00" />
+    </td>
+    <td>
+        <input type="number" class="form-control form-control-sm opp-terras"
+               value="@FmtDec(Model.OppTerras)" step="0.01" placeholder="0.00" />
+    </td>
+    <td>
+        <input type="number" class="form-control form-control-sm opp-dakterras"
+               value="@FmtDec(Model.OppDakterras)" step="0.01" placeholder="0.00" />
+    </td>
+    <td class="text-center">
+        <div class="form-check d-flex justify-content-center">
+            <input type="checkbox" class="form-check-input is-ruil" @(Model.IsRuil ? "checked" : "") />
+        </div>
+    </td>
+    <td>
+        <input type="number" class="form-control form-control-sm extra-forfait"
+               value="@FmtDec(Model.ExtraForfait)" step="0.01" placeholder="0.00" />
+    </td>
+    <td class="text-end">
+        <a href="#" class="text-danger delete-verkoop-row" title="Verwijderen">
+            <i class="bx bx-trash"></i>
+        </a>
+    </td>
+</tr>

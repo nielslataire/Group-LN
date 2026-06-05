@@ -189,8 +189,9 @@ builder.Services.AddHttpClient<FacadeCore.IRouteService, ServiceCore.RouteServic
 builder.Services.AddScoped<IOctopusTokenManager, OctopusTokenManager>();
 builder.Services.AddScoped<FacadeCore.IProjectVoortgangService, ServiceCore.ProjectVoortgangService>();
 builder.Services.AddScoped<FacadeCore.IBudgetService, ServiceCore.BudgetWizardService>();
-builder.Services.AddScoped<ServiceCore.Budget.ABEXService>();
+builder.Services.AddScoped<ServiceCore.Budget.BouwIndexService>();
 builder.Services.AddScoped<ServiceCore.Budget.BudgetActivityService>();
+builder.Services.AddScoped<ServiceCore.Budget.BudgetBerekeningService>();
 builder.Services.AddScoped<IConstructionIssueService, ConstructionIssueService>();
 builder.Services.AddScoped<IConstructionIssueReportService, ConstructionIssueReportService>();
 builder.Services.AddScoped<IQRCodeService, QRCodeServiceStub>();

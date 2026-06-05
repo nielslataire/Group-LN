@@ -4029,7 +4029,7 @@ namespace CPMCore.Models.Projecten
     public class BudgetPageHeaderModel
     {
         public int    StepNum         { get; set; }
-        public int    TotalSteps      { get; set; } = 8;
+        public int    TotalSteps      { get; set; } = 9;
         public string PageTitle       { get; set; }
         public string PageDescription { get; set; }
         public string MasterNaam      { get; set; }

@@ -283,7 +283,7 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<BudgetActivityLijnen>    BudgetActivityLijnen    { get; set; }
     public virtual DbSet<BudgetParams>            BudgetParams            { get; set; }
-    public virtual DbSet<ABEXIndex>               ABEXIndex               { get; set; }
+    public virtual DbSet<BouwIndex>               BouwIndex               { get; set; }
     public virtual DbSet<BudgetVerkoopLijn>       BudgetVerkoopLijn       { get; set; }
     public virtual DbSet<BudgetPrijsReferentie>   BudgetPrijsReferentie   { get; set; }
 
@@ -3140,8 +3140,10 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.LmBerlinerwanden).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.LmSecanpalen).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.NacalcBasisprijs).HasColumnType("decimal(8, 2)");
-            entity.Property(e => e.AbexBasisIndex).HasColumnType("decimal(8, 4)").HasColumnName("ABEXBasisIndex");
-            entity.Property(e => e.AbexHuidigIndex).HasColumnType("decimal(8, 4)").HasColumnName("ABEXHuidigIndex");
+            entity.Property(e => e.SIndexStart).HasColumnType("decimal(10, 4)");
+            entity.Property(e => e.SIndexHuidig).HasColumnType("decimal(10, 4)");
+            entity.Property(e => e.IIndexStart).HasColumnType("decimal(10, 4)");
+            entity.Property(e => e.IIndexHuidig).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.GevelMetselwerkPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(165m);
             entity.Property(e => e.GipswerkenPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(2759m);
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
@@ -3287,13 +3289,14 @@ public partial class cpmRunningContext : DbContext
                 .HasConstraintName("FK_BudgetParams_BudgetVersie");
         });
 
-        modelBuilder.Entity<ABEXIndex>(entity =>
+        modelBuilder.Entity<BouwIndex>(entity =>
         {
-            entity.ToTable("ABEXIndex");
+            entity.ToTable("BouwIndex");
 
-            entity.HasIndex(e => new { e.Jaar, e.Kwartaal }).IsUnique();
+            entity.HasIndex(e => new { e.IndexType, e.Jaar, e.Maand }).IsUnique();
 
-            entity.Property(e => e.IndexWaarde).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.IndexType).HasMaxLength(1);
+            entity.Property(e => e.IndexWaarde).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.IsActief).HasDefaultValue(false);
         });
 

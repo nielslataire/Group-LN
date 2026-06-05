@@ -94,7 +94,7 @@ namespace DALCore
         public GenericRepository<BudgetSanitair>        BudgetSanitair        { get; }
         public GenericRepository<BudgetActivityLijnen>  BudgetActivityLijnen  { get; }
         public GenericRepository<BudgetParams>          BudgetParams          { get; }
-        public GenericRepository<ABEXIndex>             ABEXIndex             { get; }
+        public GenericRepository<BouwIndex>              BouwIndex             { get; }
         public GenericRepository<BudgetVerkoopLijn>     BudgetVerkoopLijn     { get; }
         public GenericRepository<BudgetPrijsReferentie> BudgetPrijsReferentie { get; }
 
@@ -190,7 +190,7 @@ namespace DALCore
             BudgetSanitair        = new GenericRepository<BudgetSanitair>(_context);
             BudgetActivityLijnen  = new GenericRepository<BudgetActivityLijnen>(_context);
             BudgetParams          = new GenericRepository<BudgetParams>(_context);
-            ABEXIndex             = new GenericRepository<ABEXIndex>(_context);
+            BouwIndex             = new GenericRepository<BouwIndex>(_context);
             BudgetVerkoopLijn     = new GenericRepository<BudgetVerkoopLijn>(_context);
             BudgetPrijsReferentie = new GenericRepository<BudgetPrijsReferentie>(_context);
         }

@@ -22,7 +22,7 @@
             {
                 StepNum         = 1,
                 PageTitle       = "Projectgegevens",
-                PageDescription = "Aantallen, dimensies en ABEX-indexering. Deze waarden voeden alle volgende stappen.",
+                PageDescription = "Aantallen, dimensies en S/I bouwkostindexering. Deze waarden voeden alle volgende stappen.",
                 MasterNaam      = Model.MasterNaam,
                 VersieLabel     = Model.VersieLabel,
                 VersieStatus    = Model.VersieStatus,
@@ -141,9 +141,9 @@
                                     </div>
                                 </div>
 
-                                @* ── ABEX-INDEXERING ── *@
+                                @* ── BOUWKOSTINDEXERING ── *@
                                 <div class="bw-section-label">
-                                    <i class="fas fa-chart-line me-1"></i>ABEX-indexering
+                                    <i class="fas fa-chart-line me-1"></i>Bouwkostindexering (S/I)
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-sm-12 col-md-6">
@@ -151,7 +151,7 @@
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.NacalcBasisprijs" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end abex-input" id="inp-basisprijs" />
+                                                   class="form-control form-control-sm text-end" id="inp-basisprijs" />
                                             <span class="input-group-text">/m²</span>
                                         </div>
                                     </div>
@@ -160,7 +160,7 @@
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.GevelMetselwerkPrijsPerM2" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end abex-input" id="inp-gevel" />
+                                                   class="form-control form-control-sm text-end" id="inp-gevel" />
                                             <span class="input-group-text">/m²</span>
                                         </div>
                                     </div>
@@ -173,39 +173,118 @@
                                                 <option value="@y" selected="@(Model.Gegevens.NacalcBasisJaar == y ? "selected" : null)">@y</option>
                                             }
                                         </select>
-                                        <div class="bw-abex-hint mt-1">
-                                            ABEX-index basisjaar:
-                                            <input asp-for="Gegevens.ABEXBasisIndex" type="number" min="0" step="0.01"
-                                                   class="bw-abex-inline-input abex-input" id="inp-abex-basis"
-                                                   placeholder="bv. 887,36" />
-                                        </div>
-                                    </div>
-                                    <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.ABEXHuidigIndex" class="form-label">Huidig jaar (@currentYear)</label>
-                                        <select class="form-select form-select-sm" id="inp-huidig-jaar" disabled>
-                                            <option selected>@currentYear</option>
-                                        </select>
-                                        <div class="bw-abex-hint mt-1">
-                                            ABEX-index huidig jaar:
-                                            <input asp-for="Gegevens.ABEXHuidigIndex" type="number" min="0" step="0.01"
-                                                   class="bw-abex-inline-input abex-input" id="inp-abex-huidig"
-                                                   placeholder="bv. 1.066,51" />
-                                        </div>
                                     </div>
                                     <div class="col-sm-12 col-md-6">
                                         <label asp-for="Gegevens.GipswerkenPrijsPerM2" class="form-label">Gipswerken</label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.GipswerkenPrijsPerM2" type="number" min="0" step="0.01"
-                                                   class="form-control form-control-sm text-end abex-input" id="inp-gips" />
+                                                   class="form-control form-control-sm text-end" id="inp-gips" />
                                             <span class="input-group-text">/m²</span>
                                         </div>
                                         <div class="form-text text-muted">
-                                            Forfait per woning voor gipsblokken &amp; pleisterwerk; wordt geïndexeerd zoals de ruwbouwprijs.
+                                            Forfait per woning voor gipsblokken &amp; pleisterwerk.
                                         </div>
                                     </div>
                                 </div>
 
+                                @* ── S/I INDEXEN ── *@
+                                <div class="bw-section-label mt-4">
+                                    <i class="fas fa-chart-bar me-1"></i>S-index (lonen) &amp; I-index (materialen)
+                                </div>
+
+                                @* S-index start *@
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
+                                        S-index bij opmaak nacalc
+                                    </label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Gegevens.SIndexStart,
+                                            new { @class = "form-control form-control-sm", type = "number",
+                                                  step = "0.0001", placeholder = "bv. 100.0000" })
+                                    </div>
+                                    <div class="col-auto text-muted small">lonen — startwaarde</div>
+                                </div>
+                                @* S-index huidig *@
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
+                                        S-index huidig (lonen)
+                                    </label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Gegevens.SIndexHuidig,
+                                            new { @class = "form-control form-control-sm", type = "number",
+                                                  step = "0.0001", placeholder = "bv. 119.1000" })
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnPickSIndex">
+                                            <i class="fas fa-history me-1"></i> Uit historiek
+                                        </button>
+                                    </div>
+                                </div>
+                                @* I-index start *@
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
+                                        I-index bij opmaak nacalc
+                                    </label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Gegevens.IIndexStart,
+                                            new { @class = "form-control form-control-sm", type = "number",
+                                                  step = "0.0001", placeholder = "bv. 100.0000" })
+                                    </div>
+                                    <div class="col-auto text-muted small">materialen — startwaarde</div>
+                                </div>
+                                @* I-index huidig *@
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
+                                        I-index huidig (materialen)
+                                    </label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Gegevens.IIndexHuidig,
+                                            new { @class = "form-control form-control-sm", type = "number",
+                                                  step = "0.0001", placeholder = "bv. 123.5000" })
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btnPickIIndex">
+                                            <i class="fas fa-history me-1"></i> Uit historiek
+                                        </button>
+                                    </div>
+                                </div>
+                                @* Live factor preview *@
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">
+                                        Indexatiefactor (berekend)
+                                    </label>
+                                    <div class="col-lg-7 col-xl-6">
+                                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                            <span class="badge bg-light text-dark border fs-6" id="badgeSFactor">S-factor: —</span>
+                                            <span class="badge bg-light text-dark border fs-6" id="badgeIFactor">I-factor: —</span>
+                                            <span class="badge bg-primary fs-6" id="badgeGewogen">Gewogen: —</span>
+                                        </div>
+                                        <div class="small font-monospace text-muted ps-2" style="border-left:3px solid #0d6efd">
+                                            (<span id="calcIHuidig">—</span> / <span id="calcIStart">—</span>) × 0.40
+                                            + (<span id="calcSHuidig">—</span> / <span id="calcSStart">—</span>) × 0.40
+                                            + 0.20
+                                            = <strong id="calcGewogen">—</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div class="modal fade" id="modalIndexPick" tabindex="-1">
+                            <div class="modal-dialog modal-sm">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Kies indexwaarde</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body" id="modalIndexLijst"></div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-primary" id="btnBevestigIndex">Overnemen</button>
+                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuleren</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -222,7 +301,15 @@
                         </div>
                         <div class="bw-live-panel__body">
                             <div class="bw-live-row">
-                                <span>ABEX-indexfactor</span>
+                                <span>S-factor (lonen)</span>
+                                <strong id="sidebar-sfactor">—</strong>
+                            </div>
+                            <div class="bw-live-row">
+                                <span>I-factor (materialen)</span>
+                                <strong id="sidebar-ifactor">—</strong>
+                            </div>
+                            <div class="bw-live-row">
+                                <span>Gewogen indexfactor</span>
                                 <strong id="sidebar-factor">—</strong>
                             </div>
                             <div class="bw-live-row">
@@ -240,7 +327,7 @@
 
                             <div class="bw-live-note mt-3">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Deze geïndexeerde eenheidsprijzen voeden stap 6 — Bouwkost (VMSW).
+                                (I/I₀)×0.40 + (S/S₀)×0.40 + 0.20
                             </div>
                         </div>
                     </div>
@@ -273,29 +360,75 @@
     const fmt = (val, decimals = 2) => BudgetWizard.fmtNL(val, decimals);
     const eur = (val) => val != null && !isNaN(val) ? '€ ' + fmt(val) : '—';
 
-    function recalculate() {
-        const basis  = parseFloat(document.getElementById('inp-abex-basis')?.value)    || 0;
-        const huidig = parseFloat(document.getElementById('inp-abex-huidig')?.value)   || 0;
-        const prijs  = parseFloat(document.getElementById('inp-basisprijs')?.value)    || 0;
-        const gevel  = parseFloat(document.getElementById('inp-gevel')?.value)         || 0;
-        const gips   = parseFloat(document.getElementById('inp-gips')?.value)          || 0;
+    function updateIndexFactors() {
+        const sStart  = parseFloat($('[name$="SIndexStart"]').val())  || 0;
+        const sHuidig = parseFloat($('[name$="SIndexHuidig"]').val()) || 0;
+        const iStart  = parseFloat($('[name$="IIndexStart"]').val())  || 0;
+        const iHuidig = parseFloat($('[name$="IIndexHuidig"]').val()) || 0;
 
-        const factor   = basis > 0 && huidig > 0 ? huidig / basis : null;
-        const ruwbouw  = factor != null && prijs > 0 ? prijs * factor : null;
-        const gevelInd = factor != null && gevel > 0 ? gevel * factor : null;
-        const gipsInd  = factor != null && gips  > 0 ? gips  * factor : null;
+        const sFactor = sStart > 0 ? sHuidig / sStart : 1;
+        const iFactor = iStart > 0 ? iHuidig / iStart : 1;
+        const gewogen = iFactor * 0.40 + sFactor * 0.40 + 0.20;
 
-        document.getElementById('sidebar-factor').textContent  = factor   != null ? fmt(factor, 4) : '—';
-        document.getElementById('sidebar-ruwbouw').textContent = ruwbouw  != null ? eur(ruwbouw)   : '—';
-        document.getElementById('sidebar-gevel').textContent   = gevelInd != null ? eur(gevelInd)  : '—';
-        document.getElementById('sidebar-gips').textContent    = gipsInd  != null ? eur(gipsInd)   : '—';
+        $('#badgeSFactor').text('S-factor: ' + sFactor.toFixed(4));
+        $('#badgeIFactor').text('I-factor: ' + iFactor.toFixed(4));
+        $('#badgeGewogen').text('Gewogen: ' + gewogen.toFixed(4));
+        $('#calcSStart').text(sStart > 0 ? sStart.toFixed(4) : '—');
+        $('#calcSHuidig').text(sHuidig > 0 ? sHuidig.toFixed(4) : '—');
+        $('#calcIStart').text(iStart > 0 ? iStart.toFixed(4) : '—');
+        $('#calcIHuidig').text(iHuidig > 0 ? iHuidig.toFixed(4) : '—');
+        $('#calcGewogen').text(gewogen.toFixed(4));
+
+        $('#sidebar-sfactor').text(sFactor.toFixed(4));
+        $('#sidebar-ifactor').text(iFactor.toFixed(4));
+        $('#sidebar-factor').text(gewogen.toFixed(4));
+
+        const prijs = parseFloat(document.getElementById('inp-basisprijs')?.value) || 0;
+        const gevel = parseFloat(document.getElementById('inp-gevel')?.value) || 0;
+        const gips  = parseFloat(document.getElementById('inp-gips')?.value)  || 0;
+
+        document.getElementById('sidebar-ruwbouw').textContent = prijs > 0 ? eur(prijs * gewogen) : '—';
+        document.getElementById('sidebar-gevel').textContent   = gevel > 0 ? eur(gevel * gewogen) : '—';
+        document.getElementById('sidebar-gips').textContent    = gips  > 0 ? eur(gips  * gewogen) : '—';
     }
 
-    document.querySelectorAll('.abex-input').forEach(el => {
-        el.addEventListener('input',  recalculate);
-        el.addEventListener('change', recalculate);
-    });
+    $('[name$="SIndexStart"],[name$="SIndexHuidig"],[name$="IIndexStart"],[name$="IIndexHuidig"],' +
+      '#inp-basisprijs,#inp-gevel,#inp-gips')
+        .on('input', updateIndexFactors);
 
-    recalculate();
+    $(document).ready(function () {
+        updateIndexFactors();
+
+        $('#btnPickSIndex').on('click', function () {
+            $.getJSON('@Url.Action("GetBouwIndexen", "Projecten")', { type: 'S' }, function (data) {
+                var opties = data.map(function (d) {
+                    return '<option value="' + d.indexWaarde + '">'
+                        + d.jaar + (d.maand ? '/' + d.maand : '') + ' — ' + d.indexWaarde + '</option>';
+                }).join('');
+                $('#modalIndexLijst').html('<select class="form-select" id="ddlPickedIndex">' + opties + '</select>');
+                $('#modalIndexPick').data('target', 'S').modal('show');
+            });
+        });
+
+        $('#btnPickIIndex').on('click', function () {
+            $.getJSON('@Url.Action("GetBouwIndexen", "Projecten")', { type: 'I' }, function (data) {
+                var opties = data.map(function (d) {
+                    return '<option value="' + d.indexWaarde + '">'
+                        + d.jaar + (d.maand ? '/' + d.maand : '') + ' — ' + d.indexWaarde + '</option>';
+                }).join('');
+                $('#modalIndexLijst').html('<select class="form-select" id="ddlPickedIndex">' + opties + '</select>');
+                $('#modalIndexPick').data('target', 'I').modal('show');
+            });
+        });
+
+        $('#btnBevestigIndex').on('click', function () {
+            const waarde = $('#ddlPickedIndex').val();
+            const type = $('#modalIndexPick').data('target');
+            if (type === 'S') $('[name$="SIndexHuidig"]').val(waarde);
+            if (type === 'I') $('[name$="IIndexHuidig"]').val(waarde);
+            updateIndexFactors();
+            $('#modalIndexPick').modal('hide');
+        });
+    });
 </script>
 }

@@ -14,18 +14,25 @@ namespace ServiceCore.Budget
     public class BudgetActivityService
     {
         private readonly UnitOfWorkCore _uow;
+        private readonly BouwIndexService _bouwIndex;
 
-        public BudgetActivityService(UnitOfWorkCore uow)
+        public BudgetActivityService(UnitOfWorkCore uow, BouwIndexService bouwIndex)
         {
             _uow = uow;
+            _bouwIndex = bouwIndex;
         }
 
         public async Task<List<BudgetLotGroepBO>> GetLotGroepenAsync(int budgetVersieId)
         {
-            // ABEX-waarden uit BudgetGegevens
             var versie = await _uow.BudgetVersies.GetNoTracking()
                 .Include(v => v.BudgetGegevens)
                 .SingleOrDefaultAsync(v => v.Id == budgetVersieId);
+
+            var sStart  = versie?.BudgetGegevens?.SIndexStart  ?? 0m;
+            var sHuidig = versie?.BudgetGegevens?.SIndexHuidig ?? 0m;
+            var iStart  = versie?.BudgetGegevens?.IIndexStart  ?? 0m;
+            var iHuidig = versie?.BudgetGegevens?.IIndexHuidig ?? 0m;
+            var gewogenFactor = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
 
             // Eenheden en GBA-oppervlakte
             var aantalEenheden = await _uow.BudgetOppervlaktes.GetNoTracking()
@@ -79,7 +86,12 @@ namespace ServiceCore.Budget
                             GroupId               = activity.GroupId,
                             AantalEenheden        = aantalEenheden,
                             TotaalOppervlakte     = totaalGBA,
-                            Correctiefactor       = 1m
+                            Correctiefactor       = 1m,
+                            SIndexStart           = sStart,
+                            SIndexHuidig          = sHuidig,
+                            IIndexStart           = iStart,
+                            IIndexHuidig          = iHuidig,
+                            GewogenIndexFactor    = gewogenFactor
                         };
 
                         if (lijnenByActivity.TryGetValue(activity.ActivityId, out var lijn))

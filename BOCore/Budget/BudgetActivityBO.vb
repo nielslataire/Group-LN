@@ -15,6 +15,12 @@ Namespace Budget
         Public Property Correctiefactor As Decimal = 1D
         Public Property IsManueel As Boolean
 
+        Public Property SIndexStart As Decimal
+        Public Property SIndexHuidig As Decimal
+        Public Property IIndexStart As Decimal
+        Public Property IIndexHuidig As Decimal
+        Public Property GewogenIndexFactor As Decimal = 1D
+
         ''' <summary>Gevuld door service — niet opgeslagen in DB.</summary>
         Public Property AantalEenheden As Integer
 
@@ -23,7 +29,8 @@ Namespace Budget
 
         Public ReadOnly Property NacalcGeindexeerd As Decimal
             Get
-                Return NacalcPrijsPerEenheid * Correctiefactor
+                Dim factor As Decimal = If(GewogenIndexFactor = 0, 1D, GewogenIndexFactor)
+                Return NacalcPrijsPerEenheid * Correctiefactor * factor
             End Get
         End Property
 

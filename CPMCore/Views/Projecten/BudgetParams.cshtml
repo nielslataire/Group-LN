@@ -1,0 +1,326 @@
+@using CPMCore.Controllers
+@using CPMCore.Models.Budget
+@using CPMCore.Models.Projecten
+@model BudgetParamsModel
+@{
+    ViewData["Title"] = "Parameters — " + Model.BudgetNaam;
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+<style>
+    .params-preview { background: #f8f9fa; border-left: 3px solid #0d6efd; font-weight: 600; }
+    .kpi-card { border-top: 3px solid; }
+    .kpi-card.bouw { border-color: #0d6efd; }
+    .kpi-card.eenh { border-color: #198754; }
+    .kpi-card.lift { border-color: #6c757d; }
+</style>
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body bw-inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.BudgetVersieId, ActiveStep = 7, ShowCalcToggle = false })
+
+            @* ── Pagina-koptekst ── *@
+            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+            {
+                StepNum         = 7,
+                PageTitle       = "Parameters",
+                PageDescription = "Erelonen, verzekeringen, infrastructuur en financieringskosten op de bouwkost.",
+                MasterNaam      = Model.BudgetNaam,
+                VersieLabel     = Model.VersieLabel,
+                VersieStatus    = Model.VersieStatus,
+                ShowSaveButton  = true,
+                SaveFormId      = "bw-params-form",
+                PrevUrl         = Url.Action("BudgetActivityLijnen", "Projecten", new { versieId = Model.BudgetVersieId }),
+                NextUrl         = Url.Action("BudgetVerkoop", "Projecten", new { versieId = Model.BudgetVersieId })
+            })
+
+            @* ── KPI cards ── *@
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-4">
+                    <div class="card kpi-card bouw h-100">
+                        <div class="card-body text-center py-3">
+                            <div class="text-muted small mb-1">Bouwkost (activiteiten)</div>
+                            <div class="h4 fw-bold mb-0" id="kpiBouw">€ @Model.TotaalBouw.ToString("N0")</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card kpi-card eenh h-100">
+                        <div class="card-body text-center py-3">
+                            <div class="text-muted small mb-1">Aantal eenheden</div>
+                            <div class="h4 fw-bold mb-0">@Model.AantalEenheden</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <div class="card kpi-card lift h-100">
+                        <div class="card-body text-center py-3">
+                            <div class="text-muted small mb-1">Liften</div>
+                            <div class="h4 fw-bold mb-0">@Model.AantalLiften</div>
+                            <div class="text-muted" style="font-size:.75rem">uit Projectgegevens</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form id="bw-params-form" asp-action="BudgetParams" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="BudgetVersieId" value="@Model.BudgetVersieId" />
+                <input type="hidden" name="Params.Id" value="@Model.Params.Id" />
+                <input type="hidden" name="Params.BudgetVersieId" value="@Model.BudgetVersieId" />
+
+                @* ── ERELONEN & STUDIES ── *@
+                <section class="card card-modern card-big-info mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-1-5">
+                                <i class="card-big-info-icon bx bx-user-check"></i>
+                                <h2 class="card-big-info-title">Erelonen & Studies</h2>
+                                <p class="card-big-info-desc">Percentages op bouwkost en vaste forfaits.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-4-5">
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Projectcoördinatie (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.ProjectcoordinatiePerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001", placeholder = "0.0525" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevProjectcoord">—</div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Architect (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.ArchitectPerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001", placeholder = "0.0000" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevArchitect">—</div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Veiligheidscoörd. + EPB (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.VeiligheidscoordEPBPerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevVeiligheid">—</div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Studie IR (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.StudieIRPerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevStudieIR">—</div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Vent. verslaggever (€)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.VentVerslaggeverForfait, new { @class = "form-control form-control-modern", type = "number", step = "0.01" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Opmeting + sondering (€)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.OpmetingSonderingForfait, new { @class = "form-control form-control-modern", type = "number", step = "0.01" })
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                @* ── VERZEKERINGEN ── *@
+                <section class="card card-modern card-big-info mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-1-5">
+                                <i class="card-big-info-icon bx bx-shield-quarter"></i>
+                                <h2 class="card-big-info-title">Verzekeringen</h2>
+                                <p class="card-big-info-desc">Decennale en plaatsbeschrijving.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-4-5">
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Decennale gesloten ruwbouw (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.DecennaleGeslRuwbouwPerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevDecennale">—</div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">ABR + plaatsbeschrijving (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.ABRPlaatsbeschrPerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevABR">—</div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                @* ── INFRASTRUCTUUR & LIFTEN ── *@
+                <section class="card card-modern card-big-info mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-1-5">
+                                <i class="card-big-info-icon bx bx-building"></i>
+                                <h2 class="card-big-info-title">Infrastructuur & Liften</h2>
+                                <p class="card-big-info-desc">Vaste kosten infrastructuur en liften per stuk.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-4-5">
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Infrastructuur (€ forfait)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.InfrastructuurForfait, new { @class = "form-control form-control-modern", type = "number", step = "0.01" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Lift prijs per stuk (€)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.LiftPrijsPerStuk, new { @class = "form-control form-control-modern lift-input", type = "number", step = "0.01", placeholder = "0.00" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevLiften">
+                                        @Model.AantalLiften lift(en)
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Publiciteit (€ forfait)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.PubliciteitForfait, new { @class = "form-control form-control-modern", type = "number", step = "0.01" })
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                @* ── FINANCIERING ── *@
+                <section class="card card-modern card-big-info mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-2-5 col-xl-1-5">
+                                <i class="card-big-info-icon bx bx-euro"></i>
+                                <h2 class="card-big-info-title">Financiering</h2>
+                                <p class="card-big-info-desc">Wet Breyne en straight loan kosten.</p>
+                            </div>
+                            <div class="col-lg-3-5 col-xl-4-5">
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Wet Breyne (%)</label>
+                                    <div class="col-lg-2 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.WetBreynePerc, new { @class = "form-control form-control-modern", type = "number", step = "0.0001" })
+                                    </div>
+                                    <label class="col-auto control-label mb-0">Maanden</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        @Html.TextBoxFor(m => m.Params.WetBreyneMaanden, new { @class = "form-control form-control-modern", type = "number", step = "1" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Straight loan gebouw (%)</label>
+                                    <div class="col-lg-2 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.StraightloanGebouwPerc, new { @class = "form-control form-control-modern", type = "number", step = "0.0001" })
+                                    </div>
+                                    <label class="col-auto control-label mb-0">Maanden</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        @Html.TextBoxFor(m => m.Params.StraightloanGebouwMaanden, new { @class = "form-control form-control-modern", type = "number", step = "1" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Straight loan grond (%)</label>
+                                    <div class="col-lg-2 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.StraightloanGrondPerc, new { @class = "form-control form-control-modern", type = "number", step = "0.0001" })
+                                    </div>
+                                    <label class="col-auto control-label mb-0">Maanden</label>
+                                    <div class="col-lg-2 col-xl-1">
+                                        @Html.TextBoxFor(m => m.Params.StraightloanGrondMaanden, new { @class = "form-control form-control-modern", type = "number", step = "1" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Aankoopprijs grond (€)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.AankoopprijsGrond, new { @class = "form-control form-control-modern", type = "number", step = "0.01" })
+                                    </div>
+                                </div>
+
+                                <div class="form-group row align-items-center pb-3">
+                                    <label class="col-lg-5 col-xl-3 control-label text-lg-end mb-0">Onvoorzien (%)</label>
+                                    <div class="col-lg-3 col-xl-2">
+                                        @Html.TextBoxFor(m => m.Params.OnvoorzienPerc, new { @class = "form-control form-control-modern perc-input", type = "number", step = "0.0001", placeholder = "0.0200" })
+                                    </div>
+                                    <div class="col-auto small text-muted params-preview px-2 py-1 rounded" id="prevOnvoorzien">—</div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </form>
+
+            @* ── Bottom navigatiebalk ── *@
+            <div class="bw-bottom-nav">
+                <a href="@Url.Action("BudgetActivityLijnen", "Projecten", new { versieId = Model.BudgetVersieId })"
+                   class="bw-bottom-nav__back">
+                    <i class="fas fa-chevron-left me-1"></i>Terug: Activiteiten
+                </a>
+                <span class="bw-bottom-nav__indicator">
+                    <i class="fas fa-check-circle me-1 text-success"></i>Stap 7 van 9 — Parameters
+                </span>
+                <button type="submit" form="bw-params-form" class="bw-bottom-nav__next btn btn-link p-0 border-0 text-decoration-none">
+                    Opslaan & volgende: Verkoop <i class="fas fa-chevron-right ms-1"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script>
+    const totaalBouw   = @Model.TotaalBouw.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+    const aantalLiften = @Model.AantalLiften;
+
+    function fmtEuro(val) {
+        return '€ ' + Math.round(val).toLocaleString('nl-BE');
+    }
+
+    function updatePreviews() {
+        function percBedrag(selector, prevId) {
+            var perc = parseFloat($(selector).val()) || 0;
+            $('#' + prevId).text(fmtEuro(totaalBouw * perc));
+        }
+        percBedrag('[name="Params.ProjectcoordinatiePerc"]',  'prevProjectcoord');
+        percBedrag('[name="Params.ArchitectPerc"]',           'prevArchitect');
+        percBedrag('[name="Params.VeiligheidscoordEPBPerc"]', 'prevVeiligheid');
+        percBedrag('[name="Params.StudieIRPerc"]',            'prevStudieIR');
+        percBedrag('[name="Params.DecennaleGeslRuwbouwPerc"]','prevDecennale');
+        percBedrag('[name="Params.ABRPlaatsbeschrPerc"]',     'prevABR');
+        percBedrag('[name="Params.OnvoorzienPerc"]',          'prevOnvoorzien');
+
+        var liftPrijs = parseFloat($('[name="Params.LiftPrijsPerStuk"]').val()) || 0;
+        $('#prevLiften').text(fmtEuro(aantalLiften * liftPrijs) + ' (' + aantalLiften + ' st.)');
+    }
+
+    $('input[type="number"]').on('input', updatePreviews);
+    $(document).ready(updatePreviews);
+</script>
+}

@@ -43,9 +43,13 @@ public partial class BudgetGegevens
 
     public int? NacalcBasisJaar { get; set; }
 
-    public decimal? AbexBasisIndex { get; set; }
+    public decimal? SIndexStart { get; set; }
 
-    public decimal? AbexHuidigIndex { get; set; }
+    public decimal? SIndexHuidig { get; set; }
+
+    public decimal? IIndexStart { get; set; }
+
+    public decimal? IIndexHuidig { get; set; }
 
     public decimal? GevelMetselwerkPrijsPerM2 { get; set; }
 

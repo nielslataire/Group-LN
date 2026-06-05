@@ -74,8 +74,9 @@ namespace CPMCore.Controllers
         private readonly IProjectVoortgangService _voortgangService;
         private readonly DALCore.UnitOfWorkCore _uow;
         private readonly IBudgetService _budgetService;
-        private readonly BudgetActivityService _budgetActivityService;
-        private readonly ABEXService           _abexService;
+        private readonly BudgetActivityService    _budgetActivityService;
+        private readonly BouwIndexService         _bouwIndex;
+        private readonly BudgetBerekeningService  _berekeningService;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -84,7 +85,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, ABEXService abexService)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService)
         {
             _logger = logger;
             Configuration = configuration;
@@ -102,7 +103,8 @@ namespace CPMCore.Controllers
             _uow = uow;
             _budgetService          = budgetService;
             _budgetActivityService  = budgetActivityService;
-            _abexService            = abexService;
+            _bouwIndex              = bouwIndex;
+            _berekeningService      = berekeningService;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -8646,7 +8648,7 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
-        public IActionResult BudgetGegevens(int versieId)
+        public async Task<IActionResult> BudgetGegevens(int versieId)
         {
             var versieEntity = _uow.BudgetVersies.GetNoTracking()
                 .Where(v => v.Id == versieId)
@@ -8662,6 +8664,11 @@ namespace CPMCore.Controllers
 
             var gegevensResponse = _budgetService.GetBudgetGegevens(versieId);
             var gegevens = gegevensResponse.Success ? gegevensResponse.Value : new BudgetGegevensBO();
+
+            if (gegevens.SIndexHuidig == null || gegevens.SIndexHuidig == 0)
+                gegevens.SIndexHuidig = await _bouwIndex.GetActieveIndexAsync("S");
+            if (gegevens.IIndexHuidig == null || gegevens.IIndexHuidig == 0)
+                gegevens.IIndexHuidig = await _bouwIndex.GetActieveIndexAsync("I");
 
             var bouwheerOptions = new List<SelectListItem>
             {
@@ -9383,11 +9390,17 @@ namespace CPMCore.Controllers
                 ProjectName          = projectResp.Success ? projectResp.Value?.Name : string.Empty,
                 BudgetNaam           = versie.BudgetMaster.Naam,
                 Versienummer         = versie.Versienummer,
+                VersieLabel          = string.IsNullOrWhiteSpace(versie.VersieNaam)
+                                           ? $"v{versie.Versienummer}"
+                                           : $"v{versie.Versienummer} • {versie.VersieNaam}",
+                VersieStatus         = versie.Status,
                 LotGroepen           = lotGroepen,
                 AantalEenheden       = aantalEenheden,
                 OppervlakteGBA       = totaalGBA,
-                ABEXBasis            = versie.BudgetGegevens?.AbexBasisIndex  ?? 0m,
-                ABEXHuidig           = versie.BudgetGegevens?.AbexHuidigIndex ?? 0m,
+                SIndexStart          = versie.BudgetGegevens?.SIndexStart  ?? 0m,
+                SIndexHuidig         = versie.BudgetGegevens?.SIndexHuidig ?? 0m,
+                IIndexStart          = versie.BudgetGegevens?.IIndexStart  ?? 0m,
+                IIndexHuidig         = versie.BudgetGegevens?.IIndexHuidig ?? 0m,
                 BeschikbareProjecten = beschikbareProjecten
             };
 
@@ -9422,7 +9435,485 @@ namespace CPMCore.Controllers
             return Json(new { success = false, message = "Nog niet geïmplementeerd." });
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetBouwIndexen(string type)
+        {
+            var lijst = await _bouwIndex.GetAlleIndexenAsync(type);
+            return Json(lijst.Select(x => new {
+                id = x.Id,
+                jaar = x.Jaar,
+                maand = x.Maand,
+                indexWaarde = x.IndexWaarde,
+                isActief = x.IsActief
+            }));
+        }
+
+        // ── BudgetParams (stap 7) ─────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> BudgetParams(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetMaster)
+                .Include(v => v.BudgetGegevens)
+                .FirstOrDefault(v => v.Id == versieId);
+
+            if (versie == null) return NotFound();
+
+            var budgetParams = await _berekeningService.GetOrCreateParamsAsync(versieId);
+
+            var aantalEenh = _uow.BudgetOppervlaktes.GetNoTracking()
+                .Count(o => o.BudgetVersieId == versieId);
+
+            var totaalBouw = _uow.BudgetActivityLijnen.GetNoTracking()
+                .Where(l => l.BudgetVersieId == versieId)
+                .AsEnumerable()
+                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalEenh);
+
+            var model = new BudgetParamsModel
+            {
+                BudgetVersieId = versieId,
+                ProjectId      = versie.ProjectId,
+                ProjectName    = versie.BudgetMaster?.Naam ?? string.Empty,
+                BudgetNaam     = versie.BudgetMaster?.Naam ?? string.Empty,
+                Versienummer   = versie.Versienummer,
+                VersieLabel    = string.IsNullOrWhiteSpace(versie.VersieNaam)
+                                     ? $"v{versie.Versienummer}"
+                                     : $"v{versie.Versienummer} • {versie.VersieNaam}",
+                VersieStatus   = versie.Status,
+                Params         = budgetParams,
+                TotaalBouw     = totaalBouw,
+                AantalEenheden = aantalEenh,
+                AantalLiften   = versie.BudgetGegevens?.AantalLiften ?? 0
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> BudgetParams(BudgetParamsModel model)
+        {
+            var bestaand = await _db.BudgetParams
+                .FirstOrDefaultAsync(p => p.BudgetVersieId == model.BudgetVersieId);
+
+            if (bestaand == null)
+            {
+                model.Params.BudgetVersieId = model.BudgetVersieId;
+                _db.BudgetParams.Add(model.Params);
+            }
+            else
+            {
+                bestaand.ProjectcoordinatiePerc  = model.Params.ProjectcoordinatiePerc;
+                bestaand.ArchitectPerc           = model.Params.ArchitectPerc;
+                bestaand.VeiligheidscoordEPBPerc = model.Params.VeiligheidscoordEPBPerc;
+                bestaand.VentVerslaggeverForfait  = model.Params.VentVerslaggeverForfait;
+                bestaand.StudieIRPerc             = model.Params.StudieIRPerc;
+                bestaand.OpmetingSonderingForfait = model.Params.OpmetingSonderingForfait;
+                bestaand.DecennaleGeslRuwbouwPerc = model.Params.DecennaleGeslRuwbouwPerc;
+                bestaand.ABRPlaatsbeschrPerc      = model.Params.ABRPlaatsbeschrPerc;
+                bestaand.InfrastructuurForfait    = model.Params.InfrastructuurForfait;
+                bestaand.LiftPrijsPerStuk         = model.Params.LiftPrijsPerStuk;
+                bestaand.WetBreynePerc            = model.Params.WetBreynePerc;
+                bestaand.WetBreyneMaanden         = model.Params.WetBreyneMaanden;
+                bestaand.StraightloanGebouwPerc   = model.Params.StraightloanGebouwPerc;
+                bestaand.StraightloanGebouwMaanden= model.Params.StraightloanGebouwMaanden;
+                bestaand.StraightloanGrondPerc    = model.Params.StraightloanGrondPerc;
+                bestaand.StraightloanGrondMaanden = model.Params.StraightloanGrondMaanden;
+                bestaand.AankoopprijsGrond        = model.Params.AankoopprijsGrond;
+                bestaand.OnvoorzienPerc           = model.Params.OnvoorzienPerc;
+                bestaand.PubliciteitForfait       = model.Params.PubliciteitForfait;
+            }
+
+            await _db.SaveChangesAsync();
+            return RedirectToAction(nameof(BudgetVerkoop), new { versieId = model.BudgetVersieId });
+        }
+
+        // ── BudgetVerkoop (stap 8) ────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> BudgetVerkoop(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetMaster)
+                .FirstOrDefault(v => v.Id == versieId);
+
+            if (versie == null) return NotFound();
+
+            var lijnen = await _db.BudgetVerkoopLijn
+                .Where(l => l.BudgetVersieId == versieId)
+                .OrderBy(l => l.SortOrder)
+                .ToListAsync();
+
+            var eenheden = await _db.BudgetOppervlaktes
+                .Where(o => o.BudgetVersieId == versieId)
+                .Select(o => o.EenheidNaam)
+                .Distinct()
+                .ToListAsync();
+
+            var model = new BudgetVerkoopModel
+            {
+                BudgetVersieId        = versieId,
+                ProjectId             = versie.ProjectId,
+                ProjectName           = versie.BudgetMaster?.Naam ?? string.Empty,
+                BudgetNaam            = versie.BudgetMaster?.Naam ?? string.Empty,
+                Versienummer          = versie.Versienummer,
+                VersieLabel           = string.IsNullOrWhiteSpace(versie.VersieNaam)
+                                            ? $"v{versie.Versienummer}"
+                                            : $"v{versie.Versienummer} • {versie.VersieNaam}",
+                VersieStatus          = versie.Status,
+                Lijnen                = lijnen,
+                PrijsReferentiesBouw  = await _db.BudgetPrijsReferentie
+                                            .Where(p => p.PrijsType == "Bouw" &&
+                                                       (p.ProjectId == null || p.ProjectId == versie.ProjectId))
+                                            .OrderBy(p => p.Code).ToListAsync(),
+                PrijsReferentiesGrond = await _db.BudgetPrijsReferentie
+                                            .Where(p => p.PrijsType == "Grond" &&
+                                                       (p.ProjectId == null || p.ProjectId == versie.ProjectId))
+                                            .OrderBy(p => p.Code).ToListAsync(),
+                BeschikbareEenheden   = eenheden
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> SaveBudgetVerkoop([FromBody] SaveVerkoopRequest req)
+        {
+            try
+            {
+                var bestaand = await _db.BudgetVerkoopLijn
+                    .Where(l => l.BudgetVersieId == req.BudgetVersieId).ToListAsync();
+                _db.BudgetVerkoopLijn.RemoveRange(bestaand);
+
+                for (int i = 0; i < req.Lijnen.Count; i++)
+                {
+                    req.Lijnen[i].Id             = 0;
+                    req.Lijnen[i].BudgetVersieId = req.BudgetVersieId;
+                    req.Lijnen[i].SortOrder      = i;
+                    req.Lijnen[i].BudgetVersie   = null;
+                    req.Lijnen[i].Unit           = null;
+                }
+                _db.BudgetVerkoopLijn.AddRange(req.Lijnen);
+                await _db.SaveChangesAsync();
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult BlankVerkoopRij(int versieId, string eenheidNaam)
+        {
+            var lijn = new BudgetVerkoopLijn
+            {
+                BudgetVersieId = versieId,
+                EenheidNaam    = eenheidNaam
+            };
+            return PartialView("Partials/_VerkoopRij", lijn);
+        }
+
+        // ── BudgetResultaat (stap 9) ──────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> BudgetResultaat(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetMaster)
+                .Include(v => v.BudgetGegevens)
+                .FirstOrDefault(v => v.Id == versieId);
+
+            if (versie == null) return NotFound();
+
+            var resultaat = await _berekeningService.BerekenAsync(versieId);
+            resultaat.VersieNaam   = versie.VersieNaam   ?? string.Empty;
+            resultaat.Versienummer = versie.Versienummer;
+
+            var aantalEenh = _uow.BudgetOppervlaktes.GetNoTracking()
+                .Count(o => o.BudgetVersieId == versieId);
+
+            var altBouw = _uow.BudgetActivityLijnen.GetNoTracking()
+                .Where(l => l.BudgetVersieId == versieId)
+                .AsEnumerable()
+                .Sum(l => (l.AlternatievePrijsPerEenheid ?? 0m) * aantalEenh);
+
+            var nacBouw = _uow.BudgetActivityLijnen.GetNoTracking()
+                .Where(l => l.BudgetVersieId == versieId)
+                .AsEnumerable()
+                .Sum(l => (l.NacalcPrijsPerEenheid ?? 0m) * aantalEenh);
+
+            var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
+            var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
+            var iStart  = versie.BudgetGegevens?.IIndexStart  ?? 100m;
+            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I");
+            var gewogen = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
+
+            var andereVersies = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.BudgetMasterId == versie.BudgetMasterId && v.Id != versieId)
+                .OrderByDescending(v => v.Versienummer)
+                .ToList();
+
+            var model = new BudgetResultaatModel
+            {
+                BudgetVersieId       = versieId,
+                ProjectId            = versie.ProjectId,
+                ProjectName          = versie.BudgetMaster?.Naam ?? string.Empty,
+                BudgetNaam           = versie.BudgetMaster?.Naam ?? string.Empty,
+                Versienummer         = versie.Versienummer,
+                VersieLabel          = string.IsNullOrWhiteSpace(versie.VersieNaam)
+                                           ? $"v{versie.Versienummer}"
+                                           : $"v{versie.Versienummer} • {versie.VersieNaam}",
+                VersieStatus         = versie.Status,
+                BudgetMasterId       = versie.BudgetMasterId,
+                Resultaat            = resultaat,
+                TotaalBouwAlternatief = altBouw,
+                TotaalBouwNacalc     = nacBouw * gewogen,
+                GewogenFactor        = gewogen,
+                AndereVersies        = andereVersies
+            };
+
+            return View(model);
+        }
+
+        // ── BudgetVergelijken ─────────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> BudgetVergelijken(int masterId)
+        {
+            var master = await _db.BudgetMaster
+                .Include(m => m.BudgetVersies)
+                .FirstOrDefaultAsync(m => m.Id == masterId);
+
+            if (master == null) return NotFound();
+
+            var project = await _db.Project.FindAsync(master.ProjectId);
+
+            var model = new BudgetVergelijkenModel
+            {
+                BudgetMasterId = masterId,
+                ProjectId      = master.ProjectId,
+                ProjectName    = project?.ProjectName ?? string.Empty,
+                BudgetNaam     = master.Naam,
+                AlleVersies    = master.BudgetVersies
+                                    .OrderByDescending(v => v.Versienummer)
+                                    .ToList()
+            };
+
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VergelijkenResultaat([FromBody] VergelijkRequest req)
+        {
+            if (req?.VersieIds == null || !req.VersieIds.Any())
+                return Json(new { success = false, message = "Geen versies geselecteerd." });
+
+            var resultaten = await _berekeningService.GetVergelijkingAsync(req.VersieIds);
+            return Json(new { success = true, resultaten });
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> HerstelVersie(int versieId)
+        {
+            var bron = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetGegevens)
+                .FirstOrDefault(v => v.Id == versieId);
+
+            if (bron == null)
+                return Json(new { success = false, message = "Versie niet gevonden." });
+
+            var maxVersie = _uow.BudgetVersies.GetNoTracking()
+                .Where(v => v.BudgetMasterId == bron.BudgetMasterId)
+                .Max(v => (int?)v.Versienummer) ?? 0;
+
+            var nieuw = new BudgetVersie
+            {
+                BudgetMasterId = bron.BudgetMasterId,
+                ProjectId      = bron.ProjectId,
+                Versienummer   = maxVersie + 1,
+                VersieNaam     = $"Herstel van v{bron.Versienummer}",
+                Status         = "Concept",
+                IsHuidig       = false,
+                CreatedAt      = DateTime.Now
+            };
+            _db.BudgetVersie.Add(nieuw);
+            await _db.SaveChangesAsync();
+
+            // Gegevens
+            if (bron.BudgetGegevens != null)
+            {
+                var g = bron.BudgetGegevens;
+                _db.BudgetGegevens.Add(new BudgetGegevens
+                {
+                    BudgetVersieId                 = nieuw.Id,
+                    Naam                           = g.Naam,
+                    Adres                          = g.Adres,
+                    SIndexStart                    = g.SIndexStart,
+                    SIndexHuidig                   = g.SIndexHuidig,
+                    IIndexStart                    = g.IIndexStart,
+                    IIndexHuidig                   = g.IIndexHuidig,
+                    NacalcBasisprijs               = g.NacalcBasisprijs,
+                    NacalcBasisJaar                = g.NacalcBasisJaar,
+                    AantalLiften                   = g.AantalLiften,
+                    AantalBinnentrappen            = g.AantalBinnentrappen,
+                    AantalBovengrondseVerdiepingen = g.AantalBovengrondseVerdiepingen,
+                    AantalVerdiepingenOndergronds  = g.AantalVerdiepingenOndergronds,
+                    TypePoorten                    = g.TypePoorten,
+                    TypeDak                        = g.TypeDak,
+                    GevelLeienSidings              = g.GevelLeienSidings,
+                    OppFunderingen                 = g.OppFunderingen,
+                    M3Grondwerk                    = g.M3Grondwerk,
+                    LmBerlinerwanden               = g.LmBerlinerwanden,
+                    LmSecanpalen                   = g.LmSecanpalen,
+                    GevelMetselwerkPrijsPerM2      = g.GevelMetselwerkPrijsPerM2,
+                    GipswerkenPrijsPerM2           = g.GipswerkenPrijsPerM2
+                });
+            }
+
+            // Oppervlaktes
+            var oppLijnen = await _db.BudgetOppervlaktes
+                .Where(o => o.BudgetVersieId == versieId).ToListAsync();
+            foreach (var o in oppLijnen)
+                _db.BudgetOppervlaktes.Add(new BudgetOppervlaktes
+                {
+                    BudgetVersieId          = nieuw.Id,
+                    EenheidNaam             = o.EenheidNaam,
+                    UnitGroupTypeId         = o.UnitGroupTypeId,
+                    UnitTypeId              = o.UnitTypeId,
+                    SortOrder               = o.SortOrder,
+                    BewoonbareOpp           = o.BewoonbareOpp,
+                    Tuin                    = o.Tuin,
+                    TerrasPrefab            = o.TerrasPrefab,
+                    TerrasGelijkvloers      = o.TerrasGelijkvloers,
+                    Dakterras               = o.Dakterras,
+                    GaragesParkingsBovenGr  = o.GaragesParkingsBovenGr,
+                    GarBergOndergronds      = o.GarBergOndergronds,
+                    BergGelijkvloers        = o.BergGelijkvloers,
+                    Carports                = o.Carports,
+                    DoorritGVL              = o.DoorritGVL,
+                    Zolder                  = o.Zolder,
+                    GemeenschappelijkeDelen = o.GemeenschappelijkeDelen,
+                    Wegenis                 = o.Wegenis,
+                    Grondopp                = o.Grondopp
+                });
+
+            // Sanitair
+            var sanitairLijnen = await _db.BudgetSanitair
+                .Where(s => s.BudgetVersieId == versieId).ToListAsync();
+            foreach (var s in sanitairLijnen)
+                _db.BudgetSanitair.Add(new BudgetSanitair
+                {
+                    BudgetVersieId       = nieuw.Id,
+                    EenheidNaam          = s.EenheidNaam,
+                    UnitTypeId           = s.UnitTypeId,
+                    SortOrder            = s.SortOrder,
+                    Badkamer             = s.Badkamer,
+                    ToiletInBadkamer     = s.ToiletInBadkamer,
+                    AfzonderlijkToilet   = s.AfzonderlijkToilet,
+                    DoucheInBadkamer     = s.DoucheInBadkamer,
+                    Douchekamer          = s.Douchekamer
+                });
+
+            // Gevelelementen
+            var gevelLijnen = await _db.BudgetGevelElementen
+                .Where(g => g.BudgetVersieId == versieId).ToListAsync();
+            foreach (var g in gevelLijnen)
+                _db.BudgetGevelElementen.Add(new BudgetGevelElementen
+                {
+                    BudgetVersieId = nieuw.Id,
+                    ElementType    = g.ElementType,
+                    EenheidNaam    = g.EenheidNaam,
+                    Beschrijving   = g.Beschrijving,
+                    Aantal         = g.Aantal,
+                    Breedte        = g.Breedte,
+                    Hoogte         = g.Hoogte,
+                    Lengte         = g.Lengte,
+                    SortOrder      = g.SortOrder
+                });
+
+            // Activiteitslijnen
+            var actLijnen = await _db.BudgetActivityLijnen
+                .Where(l => l.BudgetVersieId == versieId).ToListAsync();
+            foreach (var l in actLijnen)
+                _db.BudgetActivityLijnen.Add(new BudgetActivityLijnen
+                {
+                    BudgetVersieId              = nieuw.Id,
+                    ActivityId                  = l.ActivityId,
+                    AlternatievePrijsPerEenheid = l.AlternatievePrijsPerEenheid,
+                    NacalcPrijsPerEenheid       = l.NacalcPrijsPerEenheid,
+                    Correctiefactor             = l.Correctiefactor,
+                    IsManueel                   = l.IsManueel,
+                    VerhogingsPerc              = l.VerhogingsPerc,
+                    Omschrijving                = l.Omschrijving
+                });
+
+            // Params
+            var bronParams = await _db.BudgetParams
+                .FirstOrDefaultAsync(p => p.BudgetVersieId == versieId);
+            if (bronParams != null)
+                _db.BudgetParams.Add(new BudgetParams
+                {
+                    BudgetVersieId          = nieuw.Id,
+                    ProjectcoordinatiePerc  = bronParams.ProjectcoordinatiePerc,
+                    ArchitectPerc           = bronParams.ArchitectPerc,
+                    VeiligheidscoordEPBPerc = bronParams.VeiligheidscoordEPBPerc,
+                    VentVerslaggeverForfait = bronParams.VentVerslaggeverForfait,
+                    StudieIRPerc            = bronParams.StudieIRPerc,
+                    OpmetingSonderingForfait= bronParams.OpmetingSonderingForfait,
+                    DecennaleGeslRuwbouwPerc= bronParams.DecennaleGeslRuwbouwPerc,
+                    ABRPlaatsbeschrPerc     = bronParams.ABRPlaatsbeschrPerc,
+                    InfrastructuurForfait   = bronParams.InfrastructuurForfait,
+                    LiftPrijsPerStuk        = bronParams.LiftPrijsPerStuk,
+                    WetBreynePerc           = bronParams.WetBreynePerc,
+                    WetBreyneMaanden        = bronParams.WetBreyneMaanden,
+                    StraightloanGebouwPerc  = bronParams.StraightloanGebouwPerc,
+                    StraightloanGebouwMaanden = bronParams.StraightloanGebouwMaanden,
+                    StraightloanGrondPerc   = bronParams.StraightloanGrondPerc,
+                    StraightloanGrondMaanden= bronParams.StraightloanGrondMaanden,
+                    AankoopprijsGrond       = bronParams.AankoopprijsGrond,
+                    OnvoorzienPerc          = bronParams.OnvoorzienPerc,
+                    PubliciteitForfait      = bronParams.PubliciteitForfait
+                });
+
+            // Verkooplijnen
+            var verkoopLijnen = await _db.BudgetVerkoopLijn
+                .Where(v => v.BudgetVersieId == versieId).ToListAsync();
+            foreach (var v in verkoopLijnen)
+                _db.BudgetVerkoopLijn.Add(new BudgetVerkoopLijn
+                {
+                    BudgetVersieId = nieuw.Id,
+                    EenheidNaam    = v.EenheidNaam,
+                    UnitId         = v.UnitId,
+                    CodeBouw       = v.CodeBouw,
+                    CodeGrond      = v.CodeGrond,
+                    OppTuin        = v.OppTuin,
+                    OppTerras      = v.OppTerras,
+                    OppDakterras   = v.OppDakterras,
+                    IsRuil         = v.IsRuil,
+                    ExtraForfait   = v.ExtraForfait,
+                    SortOrder      = v.SortOrder
+                });
+
+            await _db.SaveChangesAsync();
+            return Json(new { success = true, nieuweVersieId = nieuw.Id, versienummer = nieuw.Versienummer });
+        }
+
     }
+}
+
+// ── Request DTO voor BudgetVergelijken ────────────────────────────────────────
+public class VergelijkRequest
+{
+    public List<int> VersieIds { get; set; } = new();
+}
+
+// ── Request DTOs voor BudgetVerkoop ───────────────────────────────────────────
+public class SaveVerkoopRequest
+{
+    public int BudgetVersieId { get; set; }
+    public List<BudgetVerkoopLijn> Lijnen { get; set; } = new();
 }
 
 // ── Request DTOs voor BudgetActivityLijnen ────────────────────────────────────

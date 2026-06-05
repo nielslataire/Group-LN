@@ -1,0 +1,218 @@
+@using CPMCore.Controllers
+@using CPMCore.Models.Budget
+@using CPMCore.Models.Projecten
+@model BudgetVerkoopModel
+@{
+    ViewData["Title"] = "Verkoop — " + Model.BudgetNaam;
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/css/budget-wizard.css" />
+}
+
+<section class="content-with-menu">
+    <div class="content-with-menu-container">
+        @await Html.PartialAsync("DetailMenu", Model.ProjectId)
+        <div class="inner-body bw-inner-body">
+
+            @* ── Wizard tabbladen ── *@
+            @await Html.PartialAsync("Partials/_BudgetWizardTabs", new BudgetWizardTabsModel { VersieId = Model.BudgetVersieId, ActiveStep = 8, ShowCalcToggle = false })
+
+            @* ── Pagina-koptekst ── *@
+            @await Html.PartialAsync("Partials/_BudgetPageHeader", new BudgetPageHeaderModel
+            {
+                StepNum         = 8,
+                PageTitle       = "Verkoop",
+                PageDescription = "Verkoopprijscodes en extra opties per eenheidstype.",
+                MasterNaam      = Model.BudgetNaam,
+                VersieLabel     = Model.VersieLabel,
+                VersieStatus    = Model.VersieStatus,
+                PrevUrl         = Url.Action("BudgetParams",   "Projecten", new { versieId = Model.BudgetVersieId }),
+                NextUrl         = Url.Action("BudgetResultaat","Projecten", new { versieId = Model.BudgetVersieId })
+            })
+
+            @* ── Prijsreferentie legenda ── *@
+            <div class="row g-3 mb-4">
+                @if (Model.PrijsReferentiesBouw.Any())
+                {
+                    <div class="col-md-6">
+                        <div class="card card-modern h-100">
+                            <div class="card-header">
+                                <strong><i class="bx bx-building me-1"></i>Bouwprijscodes (€/m²)</strong>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr><th>Code</th><th>Omschrijving</th><th class="text-end">€/m²</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var r in Model.PrijsReferentiesBouw)
+                                        {
+                                            <tr>
+                                                <td><span class="badge bg-primary">@r.Code</span></td>
+                                                <td>@r.Omschrijving</td>
+                                                <td class="text-end">€ @r.PrijsPerM2.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @if (Model.PrijsReferentiesGrond.Any())
+                {
+                    <div class="col-md-6">
+                        <div class="card card-modern h-100">
+                            <div class="card-header">
+                                <strong><i class="bx bx-map-alt me-1"></i>Grondprijscodes (€/m²)</strong>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr><th>Code</th><th>Omschrijving</th><th class="text-end">€/m²</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var r in Model.PrijsReferentiesGrond)
+                                        {
+                                            <tr>
+                                                <td><span class="badge bg-success">@r.Code</span></td>
+                                                <td>@r.Omschrijving</td>
+                                                <td class="text-end">€ @r.PrijsPerM2.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @* ── Verkooplijnen tabel ── *@
+            <div class="card card-modern mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>Verkooplijnen per eenheid</strong>
+                    <div class="d-flex gap-2">
+                        <select class="form-select form-select-sm" id="ddlEenheidNaam" style="min-width:160px">
+                            <option value="">Kies eenheid...</option>
+                            @foreach (var e in Model.BeschikbareEenheden)
+                            {
+                                <option value="@e">@e</option>
+                            }
+                            <option value="">— vrij invoeren —</option>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddVerkoopRij">
+                            <i class="bx bx-plus me-1"></i> Rij toevoegen
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <input type="hidden" id="hdnVersieId" value="@Model.BudgetVersieId" />
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:18%">Eenheid</th>
+                                    <th style="width:8%">Code bouw</th>
+                                    <th style="width:8%">Code grond</th>
+                                    <th style="width:9%">Opp. tuin</th>
+                                    <th style="width:9%">Opp. terras</th>
+                                    <th style="width:9%">Opp. dakterras</th>
+                                    <th style="width:6%" class="text-center">Ruil</th>
+                                    <th style="width:10%">Extra forfait</th>
+                                    <th style="width:4%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="verkoopLijnenBody">
+                                @foreach (var lijn in Model.Lijnen)
+                                {
+                                    @await Html.PartialAsync("Partials/_VerkoopRij", lijn)
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @* ── Bottom navigatiebalk ── *@
+            <div class="bw-bottom-nav">
+                <a href="@Url.Action("BudgetParams", "Projecten", new { versieId = Model.BudgetVersieId })"
+                   class="bw-bottom-nav__back">
+                    <i class="fas fa-chevron-left me-1"></i>Terug: Parameters
+                </a>
+                <span class="bw-bottom-nav__indicator">
+                    <i class="fas fa-check-circle me-1 text-success"></i>Stap 8 van 9 — Verkoop
+                </span>
+                <button type="button" id="btnSaveVerkoop" class="bw-bottom-nav__next btn btn-link p-0 border-0 text-decoration-none">
+                    Opslaan & volgende: Resultaat <i class="fas fa-chevron-right ms-1"></i>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+@section PageScripts {
+<script>
+    const versieId      = parseInt($('#hdnVersieId').val());
+    const resultaatUrl  = '@Url.Action("BudgetResultaat", "Projecten", new { versieId = 0 })'.replace('/0', '/' + versieId);
+
+    $('#btnAddVerkoopRij').on('click', function () {
+        const naam = $('#ddlEenheidNaam').val() || '';
+        $.ajax({
+            url: '@Url.Action("BlankVerkoopRij", "Projecten")',
+            type: 'POST',
+            data: {
+                versieId: versieId,
+                eenheidNaam: naam,
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+            },
+            success: function (html) {
+                $('#verkoopLijnenBody').append(html);
+            }
+        });
+    });
+
+    $(document).on('click', '.delete-verkoop-row', function (e) {
+        e.preventDefault();
+        $(this).closest('tr').remove();
+    });
+
+    $('#btnSaveVerkoop').on('click', function () {
+        const lijnen = [];
+        $('#verkoopLijnenBody .verkoop-row').each(function () {
+            lijnen.push({
+                eenheidNaam:  $(this).find('.eenheid-naam').val(),
+                codeBouw:     parseInt($(this).find('.code-bouw').val())       || null,
+                codeGrond:    parseInt($(this).find('.code-grond').val())      || null,
+                oppTuin:      parseFloat($(this).find('.opp-tuin').val())      || null,
+                oppTerras:    parseFloat($(this).find('.opp-terras').val())    || null,
+                oppDakterras: parseFloat($(this).find('.opp-dakterras').val()) || null,
+                isRuil:       $(this).find('.is-ruil').is(':checked'),
+                extraForfait: parseFloat($(this).find('.extra-forfait').val()) || null
+            });
+        });
+
+        $.ajax({
+            url: '@Url.Action("SaveBudgetVerkoop", "Projecten")',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ budgetVersieId: versieId, lijnen: lijnen }),
+            success: function (res) {
+                if (res.success) {
+                    if (typeof toastr !== 'undefined') toastr.success('Verkoopgegevens opgeslagen.');
+                    setTimeout(function () { window.location.href = resultaatUrl; }, 600);
+                } else {
+                    if (typeof toastr !== 'undefined') toastr.error('Fout: ' + res.message);
+                    else alert('Fout: ' + res.message);
+                }
+            },
+            error: function () {
+                if (typeof toastr !== 'undefined') toastr.error('Verbindingsfout.');
+                else alert('Verbindingsfout.');
+            }
+        });
+    });
+</script>
+}

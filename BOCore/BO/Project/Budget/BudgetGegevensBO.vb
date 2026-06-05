@@ -196,25 +196,47 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
-    Private _abexBasisIndex As Decimal?
-    <Display(Name:="ABEX-index basisjaar")>
-    Public Property ABEXBasisIndex() As Decimal?
+    Private _sIndexStart As Decimal?
+    <Display(Name:="S-index bij opmaak nacalc (lonen)")>
+    Public Property SIndexStart() As Decimal?
         Get
-            Return _abexBasisIndex
+            Return _sIndexStart
         End Get
         Set(ByVal value As Decimal?)
-            _abexBasisIndex = value
+            _sIndexStart = value
         End Set
     End Property
 
-    Private _abexHuidigIndex As Decimal?
-    <Display(Name:="ABEX-index huidig jaar")>
-    Public Property ABEXHuidigIndex() As Decimal?
+    Private _sIndexHuidig As Decimal?
+    <Display(Name:="S-index huidig (lonen)")>
+    Public Property SIndexHuidig() As Decimal?
         Get
-            Return _abexHuidigIndex
+            Return _sIndexHuidig
         End Get
         Set(ByVal value As Decimal?)
-            _abexHuidigIndex = value
+            _sIndexHuidig = value
+        End Set
+    End Property
+
+    Private _iIndexStart As Decimal?
+    <Display(Name:="I-index bij opmaak nacalc (materialen)")>
+    Public Property IIndexStart() As Decimal?
+        Get
+            Return _iIndexStart
+        End Get
+        Set(ByVal value As Decimal?)
+            _iIndexStart = value
+        End Set
+    End Property
+
+    Private _iIndexHuidig As Decimal?
+    <Display(Name:="I-index huidig (materialen)")>
+    Public Property IIndexHuidig() As Decimal?
+        Get
+            Return _iIndexHuidig
+        End Get
+        Set(ByVal value As Decimal?)
+            _iIndexHuidig = value
         End Set
     End Property
 
@@ -250,12 +272,13 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
-    Public ReadOnly Property ABEXIndexFactor() As Decimal?
+    Public ReadOnly Property GewogenIndexFactor() As Decimal
         Get
-            If _abexBasisIndex.HasValue AndAlso _abexBasisIndex.Value > 0 AndAlso _abexHuidigIndex.HasValue Then
-                Return _abexHuidigIndex.Value / _abexBasisIndex.Value
-            End If
-            Return Nothing
+            Dim sF As Decimal = If(_sIndexStart.HasValue AndAlso _sIndexStart.Value > 0 AndAlso _sIndexHuidig.HasValue,
+                                   _sIndexHuidig.Value / _sIndexStart.Value, 1D)
+            Dim inF As Decimal = If(_iIndexStart.HasValue AndAlso _iIndexStart.Value > 0 AndAlso _iIndexHuidig.HasValue,
+                                   _iIndexHuidig.Value / _iIndexStart.Value, 1D)
+            Return inF * 0.4D + sF * 0.4D + 0.2D
         End Get
     End Property
 End Class
