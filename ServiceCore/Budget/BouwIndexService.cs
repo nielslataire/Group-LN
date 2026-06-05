@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -60,6 +61,48 @@ namespace ServiceCore.Budget
             decimal iStart, decimal iHuidig)
         {
             return basisPrijs * BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
+        }
+
+        public async Task<List<BouwIndex>> GetGefilterdAsync(string indexType, int? jaar = null, string? categorie = null)
+        {
+            var query = _uow.BouwIndex.GetNoTracking().Where(x => x.IndexType == indexType);
+            if (jaar.HasValue) query = query.Where(x => x.Jaar == jaar);
+            if (!string.IsNullOrEmpty(categorie)) query = query.Where(x => x.Categorie == categorie);
+            return await query
+                .OrderByDescending(x => x.Jaar)
+                .ThenByDescending(x => x.Maand)
+                .ToListAsync();
+        }
+
+        public async Task OpslaanAsync(BouwIndex index)
+        {
+            if (index.Id == 0)
+            {
+                _uow.BouwIndex.Add(index);
+            }
+            else
+            {
+                var bestaand = await _uow.BouwIndex.GetNormal().FirstOrDefaultAsync(x => x.Id == index.Id);
+                if (bestaand != null)
+                {
+                    bestaand.IndexWaarde = index.IndexWaarde;
+                    bestaand.Jaar        = index.Jaar;
+                    bestaand.Maand       = index.Maand;
+                    bestaand.IsActief    = index.IsActief;
+                    bestaand.Opmerking   = index.Opmerking;
+                    bestaand.Bron        = index.Bron;
+                }
+            }
+            await _uow.SaveChangesAsync();
+        }
+
+        public async Task<bool> VerwijderenAsync(int id)
+        {
+            var item = await _uow.BouwIndex.GetNormal().FirstOrDefaultAsync(x => x.Id == id);
+            if (item == null) return false;
+            _uow.BouwIndex.DeleteObject(item);
+            await _uow.SaveChangesAsync();
+            return true;
         }
     }
 }

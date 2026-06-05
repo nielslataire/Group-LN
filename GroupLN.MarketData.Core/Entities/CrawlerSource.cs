@@ -12,5 +12,5 @@ public class CrawlerSource
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<CrawlerRun> Runs { get; set; } = new List<CrawlerRun>();
-    public ICollection<MarketProperty> Properties { get; set; } = new List<MarketProperty>();
+    public ICollection<MarketListing> Listings { get; set; } = new List<MarketListing>();
 }

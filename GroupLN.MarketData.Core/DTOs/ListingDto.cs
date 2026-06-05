@@ -14,6 +14,8 @@ public class ListingDto
     public string? City { get; set; }
     public string? Street { get; set; }
     public string? HouseNumber { get; set; }
+    public int? Floor { get; set; }
+    public string? UnitNumber { get; set; }
 
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }

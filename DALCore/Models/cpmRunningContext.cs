@@ -3293,11 +3293,15 @@ public partial class cpmRunningContext : DbContext
         {
             entity.ToTable("BouwIndex");
 
-            entity.HasIndex(e => new { e.IndexType, e.Jaar, e.Maand }).IsUnique();
+            entity.HasIndex(e => new { e.IndexType, e.Jaar, e.Maand });
 
-            entity.Property(e => e.IndexType).HasMaxLength(1);
+            entity.Property(e => e.IndexType).HasMaxLength(10);
             entity.Property(e => e.IndexWaarde).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.IsActief).HasDefaultValue(false);
+            entity.Property(e => e.Categorie).HasMaxLength(100);
+            entity.Property(e => e.SubCategorie).HasMaxLength(100);
+            entity.Property(e => e.Bron).HasMaxLength(200);
+            entity.Property(e => e.Opmerking).HasMaxLength(500);
         });
 
         modelBuilder.Entity<BudgetVerkoopLijn>(entity =>

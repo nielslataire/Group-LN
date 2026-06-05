@@ -29,10 +29,7 @@ public class CrawlerSourceConfiguration : IEntityTypeConfiguration<CrawlerSource
             .HasForeignKey(x => x.SourceId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(x => x.Properties)
-            .WithOne(x => x.Source)
-            .HasForeignKey(x => x.SourceId)
-            .OnDelete(DeleteBehavior.Restrict);
+        // Listings worden geconfigureerd vanuit MarketListingConfiguration
 
         builder.HasData(CrawlerSourceSeed.GetSeedData());
     }

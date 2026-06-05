@@ -8,18 +8,18 @@ namespace GroupLN.MarketData.Infrastructure.Crawlers.Base;
 
 public abstract class BaseCrawler : IRealEstateCrawler
 {
-    protected readonly IMarketPropertyService PropertyService;
+    protected readonly IMarketListingService ListingService;
     protected readonly IPropertyNormalizer Normalizer;
     protected readonly CrawlerSettings Settings;
     protected readonly ILogger Logger;
 
     protected BaseCrawler(
-        IMarketPropertyService propertyService,
+        IMarketListingService listingService,
         IPropertyNormalizer normalizer,
         CrawlerSettings settings,
         ILogger logger)
     {
-        PropertyService = propertyService;
+        ListingService = listingService;
         Normalizer = normalizer;
         Settings = settings;
         Logger = logger;
@@ -46,6 +46,28 @@ public abstract class BaseCrawler : IRealEstateCrawler
 
         try
         {
+            // ── ManualTestListingUrls: zoekpagina-scraping overslaan ───────────
+            if (Settings.ManualTestListingUrls.Count > 0)
+            {
+                Logger.LogWarning(
+                    "[{Source}] ManualTestListingUrls actief ({Count} URL(s)) — zoekpagina-scraping wordt overgeslagen.",
+                    SourceName, Settings.ManualTestListingUrls.Count);
+
+                await ProcessListingUrlsAsync(
+                    source, Settings.ManualTestListingUrls, result,
+                    isDryRun, maxListings, skipAllowedFilter: true, cancellationToken);
+
+                result.Success = result.Errors == 0 || result.ListingsFound > 0;
+                result.FinishedAt = DateTime.UtcNow;
+                var d = result.FinishedAt.Value - result.StartedAt;
+                Logger.LogInformation(
+                    "[{Source}] ══ ManualTest klaar ({Duration:mm\\:ss}) ══ Gevonden: {Found} | Fouten: {Errors}{DryRun}",
+                    SourceName, d, result.ListingsFound, result.Errors,
+                    isDryRun ? " [DRYRUN - niets opgeslagen]" : "");
+                return result;
+            }
+
+            // ── Normale zoekpagina-loop ─────────────────────────────────────────
             var searchUrls = (await GetSearchPageUrlsAsync(source, cancellationToken)).ToList();
             Logger.LogInformation("[{Source}] {Count} zoekpagina(s) te verwerken.", SourceName, searchUrls.Count);
 
@@ -89,7 +111,6 @@ public abstract class BaseCrawler : IRealEstateCrawler
                         {
                             await ApplyRateLimitAsync(cancellationToken);
                             pageProcessed++;
-
                             Logger.LogDebug("[{Source}]   Detailpagina {N}: {Url}", SourceName, pageProcessed, listingUrl);
 
                             var listing = await FetchAndParseListingAsync(listingUrl, source, cancellationToken);
@@ -99,7 +120,6 @@ public abstract class BaseCrawler : IRealEstateCrawler
                                 continue;
                             }
 
-                            // Geografische filter
                             if (!IsAllowed(listing))
                             {
                                 filteredOut++;
@@ -118,39 +138,7 @@ public abstract class BaseCrawler : IRealEstateCrawler
 
                             seenExternalIds.Add(normalized.ExternalId);
                             result.ListingsFound++;
-
-                            if (isDryRun)
-                            {
-                                result.ListingsCreated++;
-                                Logger.LogInformation(
-                                    "[{Source}]   [DRYRUN] Zou aanmaken/bijwerken → ID={ExternalId} | {City} {PostalCode} | €{Price} | {Type} {SubType}",
-                                    SourceName,
-                                    normalized.ExternalId,
-                                    normalized.City ?? "?",
-                                    normalized.PostalCode ?? "?",
-                                    normalized.AskingPrice.HasValue ? normalized.AskingPrice.Value.ToString("N0") : "?",
-                                    normalized.PropertyType,
-                                    normalized.PropertySubType);
-                            }
-                            else
-                            {
-                                var wasCreated = await PropertyService.UpsertPropertyAsync(normalized, cancellationToken);
-                                if (wasCreated)
-                                {
-                                    result.ListingsCreated++;
-                                    Logger.LogInformation(
-                                        "[{Source}]   ✚ NIEUW: {ExternalId} | {City} {PostalCode} | €{Price}",
-                                        SourceName, normalized.ExternalId, normalized.City, normalized.PostalCode,
-                                        normalized.AskingPrice?.ToString("N0") ?? "?");
-                                }
-                                else
-                                {
-                                    result.ListingsUpdated++;
-                                    Logger.LogDebug(
-                                        "[{Source}]   ↺ BIJGEWERKT: {ExternalId} | {City}",
-                                        SourceName, normalized.ExternalId, normalized.City);
-                                }
-                            }
+                            await PersistOrLogAsync(normalized, result, isDryRun, source, cancellationToken);
                         }
                         catch (OperationCanceledException) { throw; }
                         catch (Exception ex)
@@ -174,7 +162,6 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 }
             }
 
-            // ── MarkInactive bescherming ─────────────────────────────────────
             LogMarkInactiveDecision(isDryRun, limitReached, seenExternalIds.Count);
 
             var canMarkInactive = !isDryRun
@@ -182,7 +169,7 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 && seenExternalIds.Count >= Settings.MinListingsBeforeMarkInactive;
 
             if (canMarkInactive)
-                await PropertyService.MarkInactiveAsync(source.Id, seenExternalIds, cancellationToken);
+                await ListingService.MarkInactiveAsync(source.Id, seenExternalIds, cancellationToken);
 
             result.Success = result.Errors == 0 || result.ListingsFound > 0;
         }
@@ -215,6 +202,113 @@ public abstract class BaseCrawler : IRealEstateCrawler
         return result;
     }
 
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>Verwerkt een vaste lijst listing-URL's (manuele testmodus).</summary>
+    private async Task ProcessListingUrlsAsync(
+        CrawlerSource source,
+        IReadOnlyList<string> listingUrls,
+        CrawlerResult result,
+        bool isDryRun,
+        int maxListings,
+        bool skipAllowedFilter,
+        CancellationToken cancellationToken)
+    {
+        var processed = 0;
+        foreach (var listingUrl in listingUrls)
+        {
+            if (cancellationToken.IsCancellationRequested) break;
+
+            if (maxListings > 0 && result.ListingsFound >= maxListings)
+            {
+                Logger.LogWarning(
+                    "[{Source}] MaxListingsPerRun ({Max}) bereikt — manuele test stopgezet.",
+                    SourceName, maxListings);
+                break;
+            }
+
+            try
+            {
+                await ApplyRateLimitAsync(cancellationToken);
+                processed++;
+                Logger.LogInformation("[{Source}] [MANUAL {N}/{Total}] {Url}",
+                    SourceName, processed, listingUrls.Count, listingUrl);
+
+                var listing = await FetchAndParseListingAsync(listingUrl, source, cancellationToken);
+                if (listing is null)
+                {
+                    Logger.LogWarning("[{Source}]   ⚠ Parsing mislukt: {Url}", SourceName, listingUrl);
+                    continue;
+                }
+
+                if (!skipAllowedFilter && !IsAllowed(listing))
+                {
+                    Logger.LogDebug("[{Source}]   ⊘ Geografisch gefilterd: {PostalCode} {City}",
+                        SourceName, listing.PostalCode ?? "?", listing.City ?? "?");
+                    continue;
+                }
+
+                var normalized = Normalizer.Normalize(listing, source.Id);
+                if (string.IsNullOrEmpty(normalized.ExternalId))
+                {
+                    Logger.LogWarning("[{Source}]   ⚠ ExternalId leeg na normalisatie.", SourceName);
+                    continue;
+                }
+
+                result.ListingsFound++;
+                await PersistOrLogAsync(normalized, result, isDryRun, source, cancellationToken);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                result.Errors++;
+                result.ErrorMessages.Add($"[{listingUrl}] {ex.Message}");
+                Logger.LogWarning(ex, "[{Source}]   ✗ Fout bij {Url}.", SourceName, listingUrl);
+            }
+        }
+    }
+
+    private async Task PersistOrLogAsync(
+        NormalizedPropertyDto normalized,
+        CrawlerResult result,
+        bool isDryRun,
+        CrawlerSource source,
+        CancellationToken cancellationToken)
+    {
+        if (isDryRun)
+        {
+            result.ListingsCreated++;
+            Logger.LogInformation(
+                "[{Source}]   [DRYRUN] Zou aanmaken/bijwerken → ID={ExternalId} | {City} {PostalCode} | €{Price} | {Type} {SubType}",
+                SourceName,
+                normalized.ExternalId,
+                normalized.City ?? "?",
+                normalized.PostalCode ?? "?",
+                normalized.AskingPrice.HasValue ? normalized.AskingPrice.Value.ToString("N0") : "?",
+                normalized.PropertyType,
+                normalized.PropertySubType);
+        }
+        else
+        {
+            var wasCreated = await ListingService.UpsertListingAsync(normalized, cancellationToken);
+            if (wasCreated)
+            {
+                result.ListingsCreated++;
+                Logger.LogInformation(
+                    "[{Source}]   ✚ NIEUW: {ExternalId} | {City} {PostalCode} | €{Price}",
+                    SourceName, normalized.ExternalId, normalized.City, normalized.PostalCode,
+                    normalized.AskingPrice?.ToString("N0") ?? "?");
+            }
+            else
+            {
+                result.ListingsUpdated++;
+                Logger.LogDebug(
+                    "[{Source}]   ↺ BIJGEWERKT: {ExternalId} | {City}",
+                    SourceName, normalized.ExternalId, normalized.City);
+            }
+        }
+    }
+
     protected abstract Task<IEnumerable<string>> GetSearchPageUrlsAsync(
         CrawlerSource source, CancellationToken cancellationToken);
 
@@ -230,10 +324,6 @@ public abstract class BaseCrawler : IRealEstateCrawler
             await Task.Delay(TimeSpan.FromSeconds(Settings.DelayBetweenRequestsSeconds), cancellationToken);
     }
 
-    /// <summary>
-    /// Geeft true als de listing door de postcode/gemeente-filter mag.
-    /// Lege filterlijsten = alles toelaten.
-    /// </summary>
     protected virtual bool IsAllowed(ListingDto listing)
     {
         if (Settings.AllowedPostalCodes.Count > 0)
@@ -262,21 +352,21 @@ public abstract class BaseCrawler : IRealEstateCrawler
         if (isDryRun)
         {
             Logger.LogWarning(
-                "[{Source}] MarkInactive OVERGESLAGEN — DryRun actief. Geen panden worden gedeactiveerd.",
+                "[{Source}] MarkInactive OVERGESLAGEN — DryRun actief. Geen listings worden gedeactiveerd.",
                 SourceName);
         }
         else if (limitReached)
         {
             Logger.LogWarning(
                 "[{Source}] MarkInactive OVERGESLAGEN — MaxListingsPerRun was actief (gedeeltelijke run). " +
-                "Panden worden niet gedeactiveerd om onterechte deactivaties te voorkomen.",
+                "Listings worden niet gedeactiveerd om onterechte deactivaties te voorkomen.",
                 SourceName);
         }
         else if (seenCount < Settings.MinListingsBeforeMarkInactive)
         {
             Logger.LogWarning(
                 "[{Source}] MarkInactive OVERGESLAGEN — Te weinig listings gevonden ({Seen} < minimum {Min}). " +
-                "Mogelijke crawl-fout. Geen panden worden gedeactiveerd.",
+                "Mogelijke crawl-fout. Geen listings worden gedeactiveerd.",
                 SourceName, seenCount, Settings.MinListingsBeforeMarkInactive);
         }
         else

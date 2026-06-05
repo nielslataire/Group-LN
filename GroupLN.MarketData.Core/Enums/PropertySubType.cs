@@ -23,10 +23,16 @@ public enum PropertySubType
     ServiceFlat = 25,
     GroundFloorFlat = 26,
 
+    // Projectgroepen
+    ApartmentGroup = 27,   // APARTMENT_GROUP — nieuwbouwproject appartementen
+    HouseGroup = 28,       // HOUSE_GROUP — nieuwbouwproject woningen
+
     // Grond & commercieel
     BuildingLand = 30,
     LandWithBuilding = 31,
     IndustrialBuilding = 32,
     Office = 33,
-    CommercialGround = 34
+    CommercialGround = 34,
+    Parking = 35,
+    ExceptionalProperty = 36
 }

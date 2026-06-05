@@ -18,6 +18,9 @@ public class NormalizedPropertyDto
     public string? City { get; set; }
     public string? Street { get; set; }
     public string? HouseNumber { get; set; }
+    public int? Floor { get; set; }
+    public string? UnitNumber { get; set; }
+    public bool IsProjectListing { get; set; }
 
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }

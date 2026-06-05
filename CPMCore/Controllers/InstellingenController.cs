@@ -49,6 +49,9 @@ public class InstellingenController : BaseController
     private readonly IOctopusRelationSyncService _octopusRelations;
     private readonly IActivityService _activityService;
     private readonly IProjectService _projectService;
+    private readonly ServiceCore.Budget.BouwIndexService _bouwIndex;
+    private readonly ServiceCore.Budget.SIndexScraperService _sIndexScraper;
+    private readonly ServiceCore.Budget.I2021SyncService _i2021Sync;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -64,7 +67,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService)
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync)
     {
         _logger = logger;
         _issuers = issuers;
@@ -77,6 +80,9 @@ public class InstellingenController : BaseController
         _octopusRelations = octopusRelations;
         _activityService = activityService;
         _projectService = projectService;
+        _bouwIndex = bouwIndex;
+        _sIndexScraper = sIndexScraper;
+        _i2021Sync = i2021Sync;
     }
 
     [HttpGet]
@@ -1763,6 +1769,77 @@ public class InstellingenController : BaseController
         };
     }
 
+    // ─── Bouwindexen ────────────────────────────────────────────────────────────
+
+    [HttpGet]
+    [Breadcrumb("Bouwindexen")]
+    public async Task<IActionResult> Bouwindexen()
+    {
+        var dashboard       = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingen    = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
+        var bouwindexen     = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Bouwindexen", "Instellingen", "Bouwindexen") { Parent = instellingen };
+        ViewData["BreadcrumbNode"] = bouwindexen;
+
+        var model = new CPMCore.Models.Instellingen.BouwindexenModel
+        {
+            SIndexen     = await _bouwIndex.GetGefilterdAsync("S"),
+            I2021Indexen = await _bouwIndex.GetGefilterdAsync("I2021"),
+            IPlusIndexen = await _bouwIndex.GetGefilterdAsync("I+"),
+            AbexIndexen  = await _bouwIndex.GetGefilterdAsync("ABEX")
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SyncSIndex()
+    {
+        var result = await _sIndexScraper.ScrapeAsync();
+        var herlaad = result.Geslaagd && (result.AantalNieuw > 0 || result.AantalBijgewerkt > 0);
+        return Json(new { ok = herlaad, waarschuwing = !herlaad && result.Geslaagd, bericht = result.Samenvatting });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SyncI2021()
+    {
+        var result = await _i2021Sync.SyncAsync();
+        var herlaad = result.Geslaagd && (result.AantalNieuw > 0 || result.AantalBijgewerkt > 0);
+        return Json(new { ok = herlaad, waarschuwing = !herlaad && result.Geslaagd, bericht = result.Samenvatting });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetBouwIndexen(string indexType)
+    {
+        var lijst = await _bouwIndex.GetGefilterdAsync(indexType);
+        return Json(lijst);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> OpslaanBouwIndex([FromBody] DALCore.Models.BouwIndex index)
+    {
+        try
+        {
+            await _bouwIndex.OpslaanAsync(index);
+            return Json(new { ok = true });
+        }
+        catch (Exception ex)
+        {
+            return Json(new { ok = false, bericht = ex.Message });
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> VerwijderBouwIndex(int id)
+    {
+        var ok = await _bouwIndex.VerwijderenAsync(id);
+        return Json(new { ok });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetActiefBouwIndex(string indexType, int id)
+    {
+        await _bouwIndex.SetActiefAsync(indexType, id);
+        return Json(new { ok = true });
+    }
 
 }
 public class OctopusRelationLinkRequest

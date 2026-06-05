@@ -2,13 +2,10 @@ using GroupLN.MarketData.Core.Enums;
 
 namespace GroupLN.MarketData.Core.Entities;
 
-public class MarketProperty
+public class MarketAsset
 {
     public long Id { get; set; }
-    public int SourceId { get; set; }
-    public string ExternalId { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public string? Title { get; set; }
+    public string AssetKey { get; set; } = string.Empty;
 
     public PropertyType PropertyType { get; set; }
     public PropertySubType PropertySubType { get; set; }
@@ -23,16 +20,22 @@ public class MarketProperty
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
 
+    public decimal? LivingArea { get; set; }
+    public decimal? LandArea { get; set; }
+    public int? Bedrooms { get; set; }
+    public int? Bathrooms { get; set; }
+    public int? ConstructionYear { get; set; }
+    public decimal? EPCScore { get; set; }
+    public EPCLabel? EPCLabel { get; set; }
+    public bool NewBuild { get; set; }
+
     public DateTime FirstSeenAt { get; set; }
     public DateTime LastSeenAt { get; set; }
-
     public bool IsActive { get; set; } = true;
-    public DateTime? RemovedAt { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
-    public CrawlerSource Source { get; set; } = null!;
-    public ICollection<MarketPropertySnapshot> Snapshots { get; set; } = new List<MarketPropertySnapshot>();
-    public ICollection<MarketPropertyPriceHistory> PriceHistory { get; set; } = new List<MarketPropertyPriceHistory>();
+    public ICollection<MarketListing> Listings { get; set; } = new List<MarketListing>();
+    public ICollection<MarketAssetMatchCandidate> MatchCandidates { get; set; } = new List<MarketAssetMatchCandidate>();
 }

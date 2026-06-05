@@ -8,5 +8,6 @@ public enum PropertyType
     Land = 3,
     CommercialProperty = 4,
     Garage = 5,
-    Other = 6
+    Other = 6,
+    ProjectGroup = 7  // APARTMENT_GROUP / HOUSE_GROUP / nieuwbouwprojecten
 }

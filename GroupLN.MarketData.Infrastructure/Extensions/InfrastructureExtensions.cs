@@ -42,7 +42,8 @@ public static class InfrastructureExtensions
         services.AddScoped<IPropertyNormalizer, PropertyNormalizer>();
 
         // Services
-        services.AddScoped<IMarketPropertyService, MarketPropertyService>();
+        services.AddScoped<IMarketAssetMatcher, MarketAssetMatcherService>();
+        services.AddScoped<IMarketListingService, MarketListingService>();
         services.AddScoped<ICrawlerRunService, CrawlerRunService>();
         services.AddScoped<ICrawlerSourceService, CrawlerSourceService>();
 

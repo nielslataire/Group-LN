@@ -1,4 +1,4 @@
-using GroupLN.MarketData.Core.DTOs;
+﻿using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
@@ -7,15 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace GroupLN.MarketData.Infrastructure.Crawlers;
 
-// ImmoNotaire = notariële verkopen — wekelijkse crawl volstaat
+// ImmoNotaire = notariÃ«le verkopen â€” wekelijkse crawl volstaat
 public class ImmoNotaireCrawler : BaseCrawler
 {
     public ImmoNotaireCrawler(
-        IMarketPropertyService propertyService,
+        IMarketListingService listingService,
         IPropertyNormalizer normalizer,
         CrawlerSettings settings,
         ILogger<ImmoNotaireCrawler> logger)
-        : base(propertyService, normalizer, settings, logger) { }
+        : base(listingService, normalizer, settings, logger) { }
 
     public override string SourceName => "ImmoNotaire";
 
@@ -34,3 +34,4 @@ public class ImmoNotaireCrawler : BaseCrawler
         string listingUrl, CrawlerSource source, CancellationToken cancellationToken)
         => Task.FromResult<ListingDto?>(null);
 }
+

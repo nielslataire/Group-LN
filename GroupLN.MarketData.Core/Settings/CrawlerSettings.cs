@@ -61,4 +61,11 @@ public class CrawlerSettings
 
     // ── Opruimen ─────────────────────────────────────────────────────────────
     public int MarkInactiveAfterDays { get; set; } = 30;
+
+    // ── Manuele test ─────────────────────────────────────────────────────────
+    /// <summary>
+    /// Als gevuld: sla zoekpagina-scraping over en verwerk enkel deze URL's.
+    /// Alleen voor development/debugging. Leeg laten in productie.
+    /// </summary>
+    public List<string> ManualTestListingUrls { get; set; } = new();
 }

@@ -4,6 +4,7 @@ using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GroupLN.MarketData.Persistence.Migrations
 {
     [DbContext(typeof(MarketDataDbContext))]
-    partial class MarketDataDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605103949_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -182,7 +185,7 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketAsset", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketProperty", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -190,23 +193,9 @@ namespace GroupLN.MarketData.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<string>("AssetKey")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int?>("Bathrooms")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("Bedrooms")
-                        .HasColumnType("int");
-
                     b.Property<string>("City")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
-
-                    b.Property<int?>("ConstructionYear")
-                        .HasColumnType("int");
 
                     b.Property<string>("Country")
                         .IsRequired()
@@ -218,12 +207,10 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("EPCLabel")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("EPCScore")
-                        .HasPrecision(8, 2)
-                        .HasColumnType("decimal(8,2)");
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<DateTime>("FirstSeenAt")
                         .HasColumnType("datetime2");
@@ -235,10 +222,6 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
-                    b.Property<decimal?>("LandArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
                     b.Property<DateTime>("LastSeenAt")
                         .HasColumnType("datetime2");
 
@@ -246,16 +229,9 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         .HasPrecision(9, 6)
                         .HasColumnType("decimal(9,6)");
 
-                    b.Property<decimal?>("LivingArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
                     b.Property<decimal?>("Longitude")
                         .HasPrecision(9, 6)
                         .HasColumnType("decimal(9,6)");
-
-                    b.Property<bool>("NewBuild")
-                        .HasColumnType("bit");
 
                     b.Property<string>("PostalCode")
                         .HasMaxLength(10)
@@ -267,9 +243,19 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<int>("PropertyType")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("RemovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SourceId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Street")
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("TransactionType")
                         .HasColumnType("int");
@@ -277,11 +263,12 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("Id");
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
-                    b.HasIndex("AssetKey")
-                        .IsUnique()
-                        .HasDatabaseName("UQ_MarketAsset_AssetKey");
+                    b.HasKey("Id");
 
                     b.HasIndex("City");
 
@@ -297,144 +284,14 @@ namespace GroupLN.MarketData.Persistence.Migrations
 
                     b.HasIndex("TransactionType");
 
-                    b.HasIndex("Latitude", "Longitude")
-                        .HasDatabaseName("IX_MarketAsset_Coordinates");
-
-                    b.ToTable("MarketAsset", (string)null);
-                });
-
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketAssetMatchCandidate", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("ExistingMarketAssetId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("ExternalId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<bool>("IsConfirmed")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsRejected")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MatchReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<decimal>("MatchScore")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
-
-                    b.Property<DateTime?>("ReviewedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SourceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ExistingMarketAssetId");
-
-                    b.HasIndex("IsConfirmed");
-
-                    b.HasIndex("IsRejected");
-
-                    b.HasIndex("MatchScore");
-
-                    b.HasIndex("SourceId", "ExternalId")
-                        .HasDatabaseName("IX_MarketAssetMatchCandidate_Source_ExternalId");
-
-                    b.ToTable("MarketAssetMatchCandidate", (string)null);
-                });
-
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListing", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal?>("AskingPrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("decimal(14,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ExternalId")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime>("FirstSeenAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("LastSeenAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("MarketAssetId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("RemovedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SourceId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FirstSeenAt");
-
-                    b.HasIndex("IsActive");
-
-                    b.HasIndex("LastSeenAt");
-
-                    b.HasIndex("MarketAssetId");
-
-                    b.HasIndex("SourceId");
-
-                    b.HasIndex("Url");
-
                     b.HasIndex("SourceId", "ExternalId")
                         .IsUnique()
-                        .HasDatabaseName("UQ_MarketListing_Source_ExternalId");
+                        .HasDatabaseName("UQ_MarketProperty_Source_ExternalId");
 
-                    b.ToTable("MarketListing", (string)null);
+                    b.ToTable("MarketProperty", (string)null);
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListingPriceHistory", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketPropertyPriceHistory", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -449,7 +306,7 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<DateTime>("DetectedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<long>("MarketListingId")
+                    b.Property<long>("MarketPropertyId")
                         .HasColumnType("bigint");
 
                     b.Property<decimal?>("PreviousPrice")
@@ -468,12 +325,12 @@ namespace GroupLN.MarketData.Persistence.Migrations
 
                     b.HasIndex("DetectedAt");
 
-                    b.HasIndex("MarketListingId");
+                    b.HasIndex("MarketPropertyId");
 
-                    b.ToTable("MarketListingPriceHistory", (string)null);
+                    b.ToTable("MarketPropertyPriceHistory", (string)null);
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListingSnapshot", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketPropertySnapshot", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -519,7 +376,7 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<long>("MarketListingId")
+                    b.Property<long>("MarketPropertyId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("RawJson")
@@ -530,11 +387,11 @@ namespace GroupLN.MarketData.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MarketListingId");
+                    b.HasIndex("MarketPropertyId");
 
                     b.HasIndex("SnapshotDate");
 
-                    b.ToTable("MarketListingSnapshot", (string)null);
+                    b.ToTable("MarketPropertySnapshot", (string)null);
                 });
 
             modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CrawlerRun", b =>
@@ -548,73 +405,47 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Navigation("Source");
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketAssetMatchCandidate", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketProperty", b =>
                 {
-                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketAsset", "ExistingAsset")
-                        .WithMany("MatchCandidates")
-                        .HasForeignKey("ExistingMarketAssetId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("ExistingAsset");
-                });
-
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListing", b =>
-                {
-                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketAsset", "Asset")
-                        .WithMany("Listings")
-                        .HasForeignKey("MarketAssetId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("GroupLN.MarketData.Core.Entities.CrawlerSource", "Source")
-                        .WithMany("Listings")
+                        .WithMany("Properties")
                         .HasForeignKey("SourceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Asset");
-
                     b.Navigation("Source");
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListingPriceHistory", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketPropertyPriceHistory", b =>
                 {
-                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketListing", "Listing")
+                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketProperty", "Property")
                         .WithMany("PriceHistory")
-                        .HasForeignKey("MarketListingId")
+                        .HasForeignKey("MarketPropertyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Listing");
+                    b.Navigation("Property");
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListingSnapshot", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketPropertySnapshot", b =>
                 {
-                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketListing", "Listing")
+                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketProperty", "Property")
                         .WithMany("Snapshots")
-                        .HasForeignKey("MarketListingId")
+                        .HasForeignKey("MarketPropertyId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Listing");
+                    b.Navigation("Property");
                 });
 
             modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CrawlerSource", b =>
                 {
-                    b.Navigation("Listings");
+                    b.Navigation("Properties");
 
                     b.Navigation("Runs");
                 });
 
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketAsset", b =>
-                {
-                    b.Navigation("Listings");
-
-                    b.Navigation("MatchCandidates");
-                });
-
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketListing", b =>
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketProperty", b =>
                 {
                     b.Navigation("PriceHistory");
 

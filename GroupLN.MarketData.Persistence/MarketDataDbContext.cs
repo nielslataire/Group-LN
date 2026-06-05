@@ -9,9 +9,12 @@ public class MarketDataDbContext : DbContext
 
     public DbSet<CrawlerSource> CrawlerSources => Set<CrawlerSource>();
     public DbSet<CrawlerRun> CrawlerRuns => Set<CrawlerRun>();
-    public DbSet<MarketProperty> MarketProperties => Set<MarketProperty>();
-    public DbSet<MarketPropertySnapshot> MarketPropertySnapshots => Set<MarketPropertySnapshot>();
-    public DbSet<MarketPropertyPriceHistory> MarketPropertyPriceHistories => Set<MarketPropertyPriceHistory>();
+
+    public DbSet<MarketAsset> MarketAssets => Set<MarketAsset>();
+    public DbSet<MarketListing> MarketListings => Set<MarketListing>();
+    public DbSet<MarketListingSnapshot> MarketListingSnapshots => Set<MarketListingSnapshot>();
+    public DbSet<MarketListingPriceHistory> MarketListingPriceHistories => Set<MarketListingPriceHistory>();
+    public DbSet<MarketAssetMatchCandidate> MarketAssetMatchCandidates => Set<MarketAssetMatchCandidate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,0 +1,384 @@
+@model CPMCore.Models.Instellingen.BouwindexenModel
+@{
+    ViewData["Title"] = "Bouwindexen";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<section class="card">
+    <header class="card-header">
+        <div class="card-actions">
+            <a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+        </div>
+        <h2 class="card-title">Bouwindexen</h2>
+        <p class="card-subtitle">Beheer S-index (lonen), I2021 (materialen) en ABEX-index voor budgetberekeningen.</p>
+    </header>
+    <div class="card-body">
+
+        <div id="syncAlert" class="alert d-none mb-3" role="alert"></div>
+
+        <ul class="nav nav-tabs mb-3" id="indexTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="sindex-tab" data-bs-toggle="tab" href="#sindex" role="tab">
+                    <i class="bx bx-trending-up me-1"></i> S-index (lonen)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="iindex-tab" data-bs-toggle="tab" href="#iindex" role="tab">
+                    <i class="bx bx-package me-1"></i> I2021 (materialen)
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="abex-tab" data-bs-toggle="tab" href="#abex" role="tab">
+                    <i class="bx bx-buildings me-1"></i> ABEX
+                </a>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+
+            <!-- S-INDEX TAB -->
+            <div class="tab-pane fade show active" id="sindex" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">S-index waarden (lonen bouwsector)</h5>
+                    <button class="btn btn-primary btn-sm" id="btnSyncSIndex">
+                        <i class="bx bx-refresh me-1"></i> Synchroniseer via arch-index.be
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-striped" id="tblSIndex">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Jaar</th>
+                                <th>Maand</th>
+                                <th>Categorie</th>
+                                <th>Indexwaarde</th>
+                                <th>Geldig vanaf</th>
+                                <th>Bron</th>
+                                <th>Actief</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var idx in Model.SIndexen)
+                            {
+                                <tr data-id="@idx.Id" data-type="S">
+                                    <td>@idx.Jaar</td>
+                                    <td>@(idx.Maand.HasValue ? idx.Maand.Value.ToString("D2") : "—")</td>
+                                    <td>@(idx.Categorie ?? "—")</td>
+                                    <td class="text-end"><strong>@idx.IndexWaarde.ToString("N4")</strong></td>
+                                    <td>@(idx.GeldigVanaf?.ToString("dd/MM/yyyy") ?? "—")</td>
+                                    <td><small class="text-muted">@(idx.Bron ?? "—")</small></td>
+                                    <td class="text-center">
+                                        @if (idx.IsActief)
+                                        {
+                                            <span class="badge bg-success">Actief</span>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-success btn-xs btn-set-actief" data-id="@idx.Id" data-type="S" title="Stel actief">
+                                                <i class="bx bx-check"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-xs btn-delete" data-id="@idx.Id" title="Verwijder">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (!Model.SIndexen.Any())
+                    {
+                        <p class="text-muted text-center py-3">Geen S-indexwaarden gevonden. Klik op "Synchroniseer" om te laden.</p>
+                    }
+                </div>
+            </div>
+
+            <!-- I2021 TAB -->
+            <div class="tab-pane fade" id="iindex" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">I2021-index (materiaalprijzen)</h5>
+                    <button class="btn btn-primary btn-sm" id="btnSyncI2021">
+                        <i class="bx bx-refresh me-1"></i> Synchroniseer via FOD Economie
+                    </button>
+                </div>
+
+                @if (!Model.I2021Indexen.Any() && !Model.IPlusIndexen.Any())
+                {
+                    <p class="text-muted text-center py-3">Geen I2021-indexwaarden gevonden. Klik op "Synchroniseer" om te laden.</p>
+                }
+
+                @if (Model.I2021Indexen.Any())
+                {
+                    <h6 class="text-muted mb-2">INDEX I-2021 (basis nov. 2020 = 100)</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-sm table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Jaar</th><th>Maand</th>
+                                    <th class="text-end">Indexwaarde</th>
+                                    <th>Actief</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var idx in Model.I2021Indexen)
+                                {
+                                    <tr data-id="@idx.Id" data-type="I2021">
+                                        <td>@idx.Jaar</td>
+                                        <td>@(idx.Maand.HasValue ? idx.Maand.Value.ToString("D2") : "—")</td>
+                                        <td class="text-end"><strong>@idx.IndexWaarde.ToString("N2")</strong></td>
+                                        <td class="text-center">
+                                            @if (idx.IsActief) { <span class="badge bg-success">Actief</span> }
+                                            else {
+                                                <button class="btn btn-outline-success btn-xs btn-set-actief"
+                                                        data-id="@idx.Id" data-type="I2021" title="Stel actief">
+                                                    <i class="bx bx-check"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-danger btn-xs btn-delete"
+                                                    data-id="@idx.Id" title="Verwijder">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (Model.IPlusIndexen.Any())
+                {
+                    <h6 class="text-muted mb-2">INDEX I+ (absoluut)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Jaar</th><th>Maand</th>
+                                    <th class="text-end">Indexwaarde</th>
+                                    <th>Actief</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var idx in Model.IPlusIndexen)
+                                {
+                                    <tr data-id="@idx.Id" data-type="I+">
+                                        <td>@idx.Jaar</td>
+                                        <td>@(idx.Maand.HasValue ? idx.Maand.Value.ToString("D2") : "—")</td>
+                                        <td class="text-end"><strong>@idx.IndexWaarde.ToString("N0")</strong></td>
+                                        <td class="text-center">
+                                            @if (idx.IsActief) { <span class="badge bg-success">Actief</span> }
+                                            else {
+                                                <button class="btn btn-outline-success btn-xs btn-set-actief"
+                                                        data-id="@idx.Id" data-type="I+" title="Stel actief">
+                                                    <i class="bx bx-check"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-danger btn-xs btn-delete"
+                                                    data-id="@idx.Id" title="Verwijder">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- ABEX TAB -->
+            <div class="tab-pane fade" id="abex" role="tabpanel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">ABEX-index (manuele invoer per jaar)</h5>
+                    <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalAbex">
+                        <i class="bx bx-plus me-1"></i> Nieuw jaar toevoegen
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Jaar</th>
+                                <th>ABEX-waarde</th>
+                                <th>Opmerking</th>
+                                <th>Actief</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tblAbexBody">
+                            @foreach (var idx in Model.AbexIndexen.OrderByDescending(x => x.Jaar))
+                            {
+                                <tr data-id="@idx.Id">
+                                    <td>@idx.Jaar</td>
+                                    <td class="text-end"><strong>@idx.IndexWaarde.ToString("N2")</strong></td>
+                                    <td><small class="text-muted">@(idx.Opmerking ?? "—")</small></td>
+                                    <td class="text-center">
+                                        @if (idx.IsActief)
+                                        {
+                                            <span class="badge bg-success">Actief</span>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-outline-success btn-xs btn-set-actief" data-id="@idx.Id" data-type="ABEX" title="Stel actief">
+                                                <i class="bx bx-check"></i>
+                                            </button>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-danger btn-xs btn-delete" data-id="@idx.Id" title="Verwijder">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- Modal: Nieuw ABEX -->
+<div class="modal fade" id="modalAbex" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">ABEX-index toevoegen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="abexId" value="0" />
+                <div class="mb-3">
+                    <label class="form-label">Jaar</label>
+                    <input type="number" class="form-control" id="abexJaar" placeholder="2026" min="2000" max="2100" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">ABEX-waarde</label>
+                    <input type="number" class="form-control" id="abexWaarde" placeholder="963.00" step="0.01" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Opmerking (optioneel)</label>
+                    <input type="text" class="form-control" id="abexOpmerking" maxlength="500" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Annuleer</button>
+                <button class="btn btn-success" id="btnAbexOpslaan">Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section PageScripts {
+<script>
+(function () {
+    const alertEl = document.getElementById('syncAlert');
+
+    function toonBericht(tekst, ok, waarschuwing) {
+        alertEl.className = 'alert mb-3 '
+            + (ok ? 'alert-success' : waarschuwing ? 'alert-warning' : 'alert-danger');
+        alertEl.textContent = tekst;
+        alertEl.classList.remove('d-none');
+        const timeout = waarschuwing ? 30000 : 6000;
+        setTimeout(() => alertEl.classList.add('d-none'), timeout);
+    }
+
+    async function post(url, data) {
+        const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+            body: data ? JSON.stringify(data) : null
+        });
+        return resp.json();
+    }
+
+    async function postForm(url, params) {
+        const fd = new FormData();
+        for (const [k, v] of Object.entries(params)) fd.append(k, v);
+        const resp = await fetch(url, { method: 'POST', body: fd });
+        return resp.json();
+    }
+
+    // Sync S-index
+    document.getElementById('btnSyncSIndex')?.addEventListener('click', async function () {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Bezig...';
+        const r = await postForm('@Url.Action("SyncSIndex", "Instellingen")', {});
+        toonBericht(r.bericht, r.ok, r.waarschuwing);
+        if (r.ok) setTimeout(() => location.reload(), 2000);
+        this.disabled = false;
+        this.innerHTML = '<i class="bx bx-refresh me-1"></i> Synchroniseer via arch-index.be';
+    });
+
+    // Sync I2021
+    document.getElementById('btnSyncI2021')?.addEventListener('click', async function () {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Bezig...';
+        const r = await postForm('@Url.Action("SyncI2021", "Instellingen")', {});
+        toonBericht(r.bericht, r.ok, r.waarschuwing);
+        if (r.ok) setTimeout(() => location.reload(), 2000);
+        this.disabled = false;
+        this.innerHTML = '<i class="bx bx-refresh me-1"></i> Synchroniseer via FOD Economie';
+    });
+
+    // Set actief
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.btn-set-actief');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const type = btn.dataset.type;
+        const r = await postForm('@Url.Action("SetActiefBouwIndex", "Instellingen")', { indexType: type, id });
+        if (r.ok) location.reload();
+        else toonBericht('Fout bij instellen actief', false);
+    });
+
+    // Verwijder
+    document.addEventListener('click', async function (e) {
+        const btn = e.target.closest('.btn-delete');
+        if (!btn) return;
+        if (!confirm('Verwijder deze indexwaarde?')) return;
+        const id = btn.dataset.id ?? btn.closest('tr').dataset.id;
+        const r = await postForm('@Url.Action("VerwijderBouwIndex", "Instellingen")', { id });
+        if (r.ok) btn.closest('tr').remove();
+        else toonBericht('Fout bij verwijderen', false);
+    });
+
+    // ABEX opslaan
+    document.getElementById('btnAbexOpslaan')?.addEventListener('click', async function () {
+        const jaar = parseInt(document.getElementById('abexJaar').value);
+        const waarde = parseFloat(document.getElementById('abexWaarde').value);
+        const opmerking = document.getElementById('abexOpmerking').value;
+        const id = parseInt(document.getElementById('abexId').value);
+
+        if (!jaar || !waarde) { alert('Vul jaar en waarde in.'); return; }
+
+        const r = await post('@Url.Action("OpslaanBouwIndex", "Instellingen")', {
+            id,
+            indexType: 'ABEX',
+            jaar,
+            maand: null,
+            indexWaarde: waarde,
+            isActief: false,
+            opmerking,
+            bron: 'ABEX handmatig'
+        });
+
+        if (r.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalAbex')).hide();
+            location.reload();
+        } else {
+            toonBericht(r.bericht ?? 'Fout bij opslaan', false);
+        }
+    });
+})();
+</script>
+}

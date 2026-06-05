@@ -19,7 +19,18 @@
       "Bash(Write-Host \"done\")",
       "PowerShell(New-Item -ItemType Directory -Force \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\Partials\")",
       "PowerShell(\"done\")",
-      "Bash(Get-ChildItem -Path \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\Recalculation.cshtml\" -ErrorAction SilentlyContinue)"
+      "Bash(Get-ChildItem -Path \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\Recalculation.cshtml\" -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Path \"e:\\\\TFS\" -Recurse -Filter \"*.csproj\")",
+      "Bash(Remove-Item \"e:\\\\TFS\\\\GroupLN.MarketData.Core\\\\Entities\\\\MarketProperty.cs\" -Force)",
+      "Bash(Remove-Item \"e:\\\\TFS\\\\GroupLN.MarketData.Core\\\\Entities\\\\MarketPropertySnapshot.cs\" -Force)",
+      "Bash(Remove-Item \"e:\\\\TFS\\\\GroupLN.MarketData.Core\\\\Entities\\\\MarketPropertyPriceHistory.cs\" -Force)",
+      "Bash(Write-Output \"Deleted\")",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Infrastructure\\\\GroupLN.MarketData.Infrastructure.csproj\" --no-restore -v quiet 2>&1)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.sln\" --no-restore -v quiet 2>&1)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\\\\GroupLN.MarketData.Worker.csproj\" --no-restore -v quiet 2>&1)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Persistence\\\\GroupLN.MarketData.Persistence.csproj\" --no-restore -v quiet 2>&1)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Core\\\\GroupLN.MarketData.Core.csproj\" --no-restore -v quiet 2>&1)",
+      "PowerShell(Get-Content \"e:\\\\TFS\\\\GroupLN.MarketData.Infrastructure\\\\Services\\\\MarketListingService.cs\" | Select-Object -Index 105, 106 | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes\\($_\\) | ForEach-Object { \"{0:X2}\" -f $_ } })"
     ]
   }
 }

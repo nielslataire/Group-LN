@@ -1,4 +1,4 @@
-using GroupLN.MarketData.Core.DTOs;
+﻿using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
@@ -7,15 +7,15 @@ using Microsoft.Extensions.Logging;
 
 namespace GroupLN.MarketData.Infrastructure.Crawlers;
 
-// Niet actief in fase 1 — structuur klaar voor activatie
+// Niet actief in fase 1 â€” structuur klaar voor activatie
 public class ImmovlanCrawler : BaseCrawler
 {
     public ImmovlanCrawler(
-        IMarketPropertyService propertyService,
+        IMarketListingService listingService,
         IPropertyNormalizer normalizer,
         CrawlerSettings settings,
         ILogger<ImmovlanCrawler> logger)
-        : base(propertyService, normalizer, settings, logger) { }
+        : base(listingService, normalizer, settings, logger) { }
 
     public override string SourceName => "Immovlan";
 
@@ -34,3 +34,4 @@ public class ImmovlanCrawler : BaseCrawler
         string listingUrl, CrawlerSource source, CancellationToken cancellationToken)
         => Task.FromResult<ListingDto?>(null);
 }
+

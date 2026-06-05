@@ -77,6 +77,7 @@ namespace CPMCore.Controllers
         private readonly BudgetActivityService    _budgetActivityService;
         private readonly BouwIndexService         _bouwIndex;
         private readonly BudgetBerekeningService  _berekeningService;
+        private readonly BudgetExcelService       _excelService;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -85,7 +86,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService)
         {
             _logger = logger;
             Configuration = configuration;
@@ -105,6 +106,7 @@ namespace CPMCore.Controllers
             _budgetActivityService  = budgetActivityService;
             _bouwIndex              = bouwIndex;
             _berekeningService      = berekeningService;
+            _excelService           = excelService;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -9898,6 +9900,82 @@ namespace CPMCore.Controllers
 
             await _db.SaveChangesAsync();
             return Json(new { success = true, nieuweVersieId = nieuw.Id, versienummer = nieuw.Versienummer });
+        }
+
+        // ── DownloadBudgetPDF ─────────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadBudgetPDF(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetMaster)
+                .Include(v => v.BudgetGegevens)
+                .FirstOrDefault(v => v.Id == versieId);
+
+            if (versie == null) return NotFound();
+
+            var resultaat = await _berekeningService.BerekenAsync(versieId);
+
+            var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
+            var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
+            var iStart  = versie.BudgetGegevens?.IIndexStart  ?? 100m;
+            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I");
+            var gewogen = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
+
+            var activiteitLijnen = _uow.BudgetActivityLijnen.GetNoTracking()
+                .Where(l => l.BudgetVersieId == versieId).ToList();
+
+            var activiteiten = _uow.Activities.GetNoTracking().ToList();
+            var groepen      = _uow.ActivityGroups.GetNoTracking().OrderBy(g => g.Lot).ToList();
+            var oppervlaktes = _uow.BudgetOppervlaktes.GetNoTracking()
+                .Where(o => o.BudgetVersieId == versieId).OrderBy(o => o.SortOrder).ToList();
+
+            var document = new BudgetDocument(resultaat, versie, activiteitLijnen, activiteiten, groepen, oppervlaktes, gewogen);
+            var pdfBytes = document.GeneratePdf();
+
+            var bestandsnaam = $"Budget_{versie.VersieNaam}_v{versie.Versienummer}_{DateTime.Now:yyyyMMdd}.pdf"
+                .Replace(Path.GetInvalidFileNameChars(), '_');
+
+            return File(pdfBytes, "application/pdf", bestandsnaam);
+        }
+
+        // ── DownloadBudgetExcel ───────────────────────────────────────────────
+
+        [HttpGet]
+        public async Task<IActionResult> DownloadBudgetExcel(int versieId)
+        {
+            var versie = _uow.BudgetVersies.GetNoTracking()
+                .Include(v => v.BudgetMaster)
+                .Include(v => v.BudgetGegevens)
+                .FirstOrDefault(v => v.Id == versieId);
+
+            if (versie == null) return NotFound();
+
+            var resultaat = await _berekeningService.BerekenAsync(versieId);
+
+            var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
+            var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
+            var iStart  = versie.BudgetGegevens?.IIndexStart  ?? 100m;
+            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I");
+            var gewogen = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
+
+            var activiteitLijnen = _uow.BudgetActivityLijnen.GetNoTracking()
+                .Where(l => l.BudgetVersieId == versieId).ToList();
+
+            var activiteiten = _uow.Activities.GetNoTracking().ToList();
+            var groepen      = _uow.ActivityGroups.GetNoTracking().OrderBy(g => g.Lot).ToList();
+            var oppervlaktes = _uow.BudgetOppervlaktes.GetNoTracking()
+                .Where(o => o.BudgetVersieId == versieId).OrderBy(o => o.SortOrder).ToList();
+
+            var excelBytes = _excelService.GenereerBudgetExcel(
+                resultaat, versie, activiteitLijnen, activiteiten, groepen, oppervlaktes, gewogen);
+
+            var bestandsnaam = $"Budget_{versie.VersieNaam}_v{versie.Versienummer}_{DateTime.Now:yyyyMMdd}.xlsx"
+                .Replace(Path.GetInvalidFileNameChars(), '_');
+
+            return File(excelBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                bestandsnaam);
         }
 
     }

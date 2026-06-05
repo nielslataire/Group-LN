@@ -8,8 +8,12 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<MarketData
     public MarketDataDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<MarketDataDbContext>();
+
+        var connectionString =
+            "Server=tcp:sql6031.site4now.net,1433;Database=db_ab5fbb_cpmmarketdata;User ID=db_ab5fbb_cpmmarketdata_admin;Password=840683P@ssword;Encrypt=True;TrustServerCertificate=False;MultipleActiveResultSets=True;Connection Timeout=30;";
+
         optionsBuilder.UseSqlServer(
-            "Server=.;Database=CPM_MarketData;Trusted_Connection=True;TrustServerCertificate=True",
+            connectionString,
             sql => sql.MigrationsAssembly(typeof(MarketDataDbContext).Assembly.FullName));
 
         return new MarketDataDbContext(optionsBuilder.Options);

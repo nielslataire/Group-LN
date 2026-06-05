@@ -141,21 +141,21 @@ public class CrawlerWorker : BackgroundService
                 "[{Source}] Crawl voltooid. Gevonden: {Found} | Nieuw: {Created} | Bijgewerkt: {Updated} | Fouten: {Errors}.",
                 source.Name, result.ListingsFound, result.ListingsCreated, result.ListingsUpdated, result.Errors);
 
-            // Verouderde panden markeren — alleen in echte run, niet DryRun
+            // Verouderde listings markeren — alleen in echte run, niet DryRun
             if (!_settings.DryRun)
             {
                 await using var staleScope = _scopeFactory.CreateAsyncScope();
-                var propertyService = staleScope.ServiceProvider.GetRequiredService<IMarketPropertyService>();
-                var staleCount = await propertyService.MarkStalePropertiesInactiveAsync(
+                var listingService = staleScope.ServiceProvider.GetRequiredService<IMarketListingService>();
+                var staleCount = await listingService.MarkStaleListingsInactiveAsync(
                     source.Id, _settings.MarkInactiveAfterDays, cancellationToken);
 
                 if (staleCount > 0)
-                    _logger.LogInformation("[{Source}] {Count} verouderde panden (>{Days} dagen) gemarkeerd als inactief.",
+                    _logger.LogInformation("[{Source}] {Count} verouderde listings (>{Days} dagen) gemarkeerd als inactief.",
                         source.Name, staleCount, _settings.MarkInactiveAfterDays);
             }
             else
             {
-                _logger.LogInformation("[{Source}] [DRYRUN] MarkStalePropertiesInactive overgeslagen.", source.Name);
+                _logger.LogInformation("[{Source}] [DRYRUN] MarkStaleListingsInactive overgeslagen.", source.Name);
             }
         }
         catch (OperationCanceledException)

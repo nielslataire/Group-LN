@@ -1,4 +1,4 @@
-using System.Net.Http;
+﻿using System.Net.Http;
 using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Interfaces;
@@ -8,19 +8,19 @@ using Microsoft.Extensions.Logging;
 
 namespace GroupLN.MarketData.Infrastructure.Crawlers;
 
-// Immoscoop is traditioneler HTML — kan met HttpClient + HtmlAgilityPack
+// Immoscoop is traditioneler HTML â€” kan met HttpClient + HtmlAgilityPack
 // TODO: Implementeer na validatie van Immoscoop's HTML structuur
 public class ImmoscoopCrawler : BaseCrawler
 {
     private readonly HttpClient _httpClient;
 
     public ImmoscoopCrawler(
-        IMarketPropertyService propertyService,
+        IMarketListingService listingService,
         IPropertyNormalizer normalizer,
         CrawlerSettings settings,
         IHttpClientFactory httpClientFactory,
         ILogger<ImmoscoopCrawler> logger)
-        : base(propertyService, normalizer, settings, logger)
+        : base(listingService, normalizer, settings, logger)
     {
         _httpClient = httpClientFactory.CreateClient("MarketDataClient");
     }
@@ -31,7 +31,7 @@ public class ImmoscoopCrawler : BaseCrawler
         CrawlerSource source, CancellationToken cancellationToken)
     {
         // TODO: Implementeer Immoscoop zoek-URL structuur
-        Logger.LogInformation("[Immoscoop] Crawler nog niet geïmplementeerd — wordt overgeslagen.");
+        Logger.LogInformation("[Immoscoop] Crawler nog niet geÃ¯mplementeerd â€” wordt overgeslagen.");
         return Task.FromResult(Enumerable.Empty<string>());
     }
 
@@ -43,3 +43,4 @@ public class ImmoscoopCrawler : BaseCrawler
         string listingUrl, CrawlerSource source, CancellationToken cancellationToken)
         => Task.FromResult<ListingDto?>(null);
 }
+

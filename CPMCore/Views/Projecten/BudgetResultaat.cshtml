@@ -53,6 +53,14 @@
                    class="btn btn-outline-primary btn-sm">
                     <i class="bx bx-git-compare me-1"></i> Versies vergelijken
                 </a>
+                <a href="@Url.Action("DownloadBudgetPDF", "Projecten", new { versieId = Model.BudgetVersieId })"
+                   class="btn btn-danger btn-sm" target="_blank">
+                    <i class="bx bx-file-pdf me-1"></i> PDF
+                </a>
+                <a href="@Url.Action("DownloadBudgetExcel", "Projecten", new { versieId = Model.BudgetVersieId })"
+                   class="btn btn-success btn-sm">
+                    <i class="bx bx-spreadsheet me-1"></i> Excel
+                </a>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="btnHerstelVersie"
                         data-versie-id="@Model.BudgetVersieId">
                     <i class="bx bx-copy me-1"></i> Herstel als nieuwe versie
