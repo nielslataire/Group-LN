@@ -55,7 +55,15 @@
       "Bash(grep -E \"^-.*\\\\.\\(props|config\\)$\")",
       "Bash(grep -E \"\\\\.\\(props|config|json\\)$\")",
       "Bash(dir \"c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\")",
-      "Bash(findstr /i \"\\\\.config\\\\|\\\\.props\\\\|nuget\")"
+      "Bash(findstr /i \"\\\\.config\\\\|\\\\.props\\\\|nuget\")",
+      "Bash(powershell -Command \"Get-Content 'c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Worker\\\\bin\\\\Debug\\\\net8.0\\\\debug\\\\project-units\\\\20383395.json' | ConvertFrom-Json | ConvertTo-Json -Depth 2\")",
+      "PowerShell($json = Get-Content 'c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Worker\\\\bin\\\\Debug\\\\net8.0\\\\debug\\\\project-units\\\\20383395.json' | ConvertFrom-Json; $json.cluster.units[0] | ConvertTo-Json -Depth 1)",
+      "PowerShell($json = Get-Content 'c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Worker\\\\bin\\\\Debug\\\\net8.0\\\\debug\\\\project-units\\\\20383395.json' | ConvertFrom-Json; $json.cluster.units[0].items[0] | ConvertTo-Json -Depth 3)",
+      "PowerShell(& \"$env:USERPROFILE\\\\.dotnet\\\\tools\\\\dotnet-ef.exe\" migrations add AddProjectGroupColumns --project c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Persistence --startup-project c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Worker 2>&1)",
+      "PowerShell(Get-Command dotnet-ef -ErrorAction SilentlyContinue; Get-ChildItem \"$env:USERPROFILE\\\\.dotnet\\\\tools\\\\\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell(dotnet tool install --global dotnet-ef --version 8.0.10 2>&1)",
+      "PowerShell($env:PATH = \"$env:USERPROFILE\\\\.dotnet\\\\tools;$env:PATH\"; dotnet-ef migrations add AddProjectGroupColumns --project c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Persistence --startup-project c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Worker 2>&1)",
+      "Bash(dotnet ef *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\niels\\.claude\\projects\\c--Users-niels-source-repos-nielslataire-Group-LN\\memory"

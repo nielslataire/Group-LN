@@ -49,6 +49,7 @@ public class InstellingenController : BaseController
     private readonly IOctopusRelationSyncService _octopusRelations;
     private readonly IActivityService _activityService;
     private readonly IProjectService _projectService;
+    private readonly IKostprijsService _kostprijsService;
     private readonly ServiceCore.Budget.BouwIndexService _bouwIndex;
     private readonly ServiceCore.Budget.SIndexScraperService _sIndexScraper;
     private readonly ServiceCore.Budget.I2021SyncService _i2021Sync;
@@ -67,7 +68,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync)
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync)
     {
         _logger = logger;
         _issuers = issuers;
@@ -80,6 +81,7 @@ public class InstellingenController : BaseController
         _octopusRelations = octopusRelations;
         _activityService = activityService;
         _projectService = projectService;
+        _kostprijsService = kostprijsService;
         _bouwIndex = bouwIndex;
         _sIndexScraper = sIndexScraper;
         _i2021Sync = i2021Sync;
@@ -1767,6 +1769,121 @@ public class InstellingenController : BaseController
             new("Date", "Factuurdatum"),
             new("ExpirationDate", "Vervaldatum")
         };
+    }
+
+    // ─── Kostprijzen materialen ─────────────────────────────────────────────────
+
+    [HttpGet]
+    [Breadcrumb("Kostprijzen materialen")]
+    public IActionResult KostprijsMaterialen()
+    {
+        var vm = new KostprijsMaterialenViewModel
+        {
+            IndexTypes         = _kostprijsService.GetIndexTypes().Values         ?? new(),
+            ActivityGroepen    = _kostprijsService.GetActivityGroepen().Values    ?? new(),
+            Materialen         = _kostprijsService.GetMaterialen().Values         ?? new(),
+            PercentageGroepen  = _kostprijsService.GetPercentageGroepen().Values  ?? new(),
+            Percentages        = _kostprijsService.GetPercentages().Values        ?? new(),
+            FormulaKoppelingen = _kostprijsService.GetFormulaKoppelingen().Values ?? new()
+        };
+        return View(vm);
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult KostprijsMateriaalCreate(int categorieId, string naam, string eenheid, string toepassingsgebied, int kmIndexTypeId, decimal referentiePrijs, DateTime referentieDatum, int volgorde)
+    {
+        SetActivityResponseMessage(_kostprijsService.InsertUpdateMateriaal(new KostprijsMateriaalBO { CategorieId = categorieId, Naam = naam, Eenheid = eenheid, Toepassingsgebied = toepassingsgebied, KmIndexTypeId = kmIndexTypeId, ReferentiePrijs = referentiePrijs, ReferentieDatum = referentieDatum, Volgorde = volgorde }), "Materiaal aangemaakt.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult KostprijsMateriaalUpdate(int id, int categorieId, string naam, string eenheid, string toepassingsgebied, int kmIndexTypeId, decimal referentiePrijs, DateTime referentieDatum, int volgorde)
+    {
+        SetActivityResponseMessage(_kostprijsService.InsertUpdateMateriaal(new KostprijsMateriaalBO { Id = id, CategorieId = categorieId, Naam = naam, Eenheid = eenheid, Toepassingsgebied = toepassingsgebied, KmIndexTypeId = kmIndexTypeId, ReferentiePrijs = referentiePrijs, ReferentieDatum = referentieDatum, Volgorde = volgorde }), "Materiaal opgeslagen.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult KostprijsMateriaalDelete(int id)
+    {
+        var r = _kostprijsService.DeleteMateriaal(id);
+        SetActivityResponseMessage(r, "Materiaal verwijderd.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost]
+    public IActionResult FormulaKoppelingOpslaanAjax([FromBody] FormulaKoppelingAjaxRequest req)
+    {
+        if (req == null) return BadRequest();
+        var r = _kostprijsService.SaveFormulaKoppeling(req.Sleutel, req.MateriaalId);
+        var fout = r.Messages.FirstOrDefault(m => m.Type == BOCore.MessageType.Error)?.Message;
+        return Json(new { ok = r.Success, message = r.Success ? "Koppeling opgeslagen." : fout });
+    }
+
+    [HttpGet]
+    public IActionResult GetFormulaKoppelingen()
+    {
+        var lijst = _kostprijsService.GetFormulaKoppelingen().Values ?? new();
+        return Json(lijst.Select(k => new {
+            k.Sleutel, k.Omschrijving, k.MateriaalId, k.MateriaalNaam,
+            k.MateriaalReferentiePrijs, k.MateriaalEenheid
+        }));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult BouwkostPercentageGroepCreate(string naam, int volgorde)
+    {
+        SetActivityResponseMessage(_kostprijsService.InsertUpdatePercentageGroep(new BouwkostPercentageGroepBO { Naam = naam, Volgorde = volgorde }), "Groep aangemaakt.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult BouwkostPercentageGroepUpdate(int id, string naam, int volgorde)
+    {
+        SetActivityResponseMessage(_kostprijsService.InsertUpdatePercentageGroep(new BouwkostPercentageGroepBO { Id = id, Naam = naam, Volgorde = volgorde }), "Groep opgeslagen.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult BouwkostPercentageGroepDelete(int id)
+    {
+        SetActivityResponseMessage(_kostprijsService.DeletePercentageGroep(id), "Groep verwijderd.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult BouwkostPercentageCreate(int groepId, string naam, decimal percentage, int volgorde)
+    {
+        SetActivityResponseMessage(_kostprijsService.InsertUpdatePercentage(new BouwkostPercentageBO { GroepId = groepId, Naam = naam, Percentage = percentage, Volgorde = volgorde }), "Percentage aangemaakt.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult BouwkostPercentageUpdate(int id, int groepId, string naam, decimal percentage, int volgorde)
+    {
+        SetActivityResponseMessage(_kostprijsService.InsertUpdatePercentage(new BouwkostPercentageBO { Id = id, GroepId = groepId, Naam = naam, Percentage = percentage, Volgorde = volgorde }), "Percentage opgeslagen.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult BouwkostPercentageDelete(int id)
+    {
+        SetActivityResponseMessage(_kostprijsService.DeletePercentage(id), "Percentage verwijderd.");
+        return RedirectToAction(nameof(KostprijsMaterialen));
+    }
+
+    [HttpGet]
+    public IActionResult KostprijsUpdatePreview(int projectId)
+    {
+        ViewBag.ProjectId = projectId;
+        return View(_kostprijsService.GetUpdatePreview(projectId).Values ?? new());
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public IActionResult KostprijsUpdateBevestigen(int projectId)
+    {
+        SetActivityResponseMessage(_kostprijsService.BevestigUpdate(projectId), "Kostprijzen bijgewerkt.");
+        return RedirectToAction("Details", "Project", new { id = projectId });
     }
 
     // ─── Bouwindexen ────────────────────────────────────────────────────────────

@@ -12,10 +12,15 @@ public class MarketListingSnapshotConfiguration : IEntityTypeConfiguration<Marke
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.AskingPrice).HasPrecision(14, 2);
+        builder.Property(x => x.MaxPrice).HasPrecision(14, 2);
         builder.Property(x => x.LivingArea).HasPrecision(10, 2);
         builder.Property(x => x.LandArea).HasPrecision(10, 2);
+        builder.Property(x => x.TerraceArea).HasPrecision(10, 2);
+        builder.Property(x => x.GardenArea).HasPrecision(10, 2);
         builder.Property(x => x.EPCScore).HasPrecision(8, 2);
+        builder.Property(x => x.EnergyFeatures).HasMaxLength(500);
         builder.Property(x => x.EPCLabel).HasConversion<int?>();
+        builder.Property(x => x.SaleStatus).HasConversion<int?>();
         builder.Property(x => x.DescriptionHash).HasMaxLength(64);
         builder.Property(x => x.RawJson).HasColumnType("nvarchar(max)");
 

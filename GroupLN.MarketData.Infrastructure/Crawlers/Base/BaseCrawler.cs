@@ -27,6 +27,18 @@ public abstract class BaseCrawler : IRealEstateCrawler
 
     public abstract string SourceName { get; }
 
+    /// <summary>
+    /// Geeft de manuele test-URL's terug. Subklassen overschrijven dit om
+    /// source-specifieke ManualTestListingUrls te leveren vanuit Sources[name].
+    /// </summary>
+    protected virtual IReadOnlyList<string> GetManualTestUrls() => [];
+
+    /// <summary>
+    /// true = Fase 2 (detailpagina's) wordt overgeslagen.
+    /// Subklassen overschrijven op basis van Sources[name].SearchDebugMode.
+    /// </summary>
+    protected virtual bool SearchDebugMode => false;
+
     public async Task<CrawlerResult> CrawlAsync(CrawlerSource source, CancellationToken cancellationToken)
     {
         var result = new CrawlerResult { StartedAt = DateTime.UtcNow };
@@ -34,12 +46,11 @@ public abstract class BaseCrawler : IRealEstateCrawler
         var maxListings = Settings.MaxListingsPerRun;
 
         Logger.LogInformation(
-            "[{Source}] ══ Crawl gestart ══ DryRun={DryRun} | MaxListings={Max} | PostcodeFilter={PostalFilter} | GemeenteFilter={CityFilter}",
+            "[{Source}] ══ Crawl gestart ══ DryRun={DryRun} | MaxListings={Max} | SearchDebugMode={DbgMode}",
             SourceName,
             isDryRun,
             maxListings == 0 ? "onbeperkt" : maxListings.ToString(),
-            Settings.AllowedPostalCodes.Count > 0 ? string.Join(",", Settings.AllowedPostalCodes) : "geen",
-            Settings.AllowedCities.Count > 0 ? string.Join(",", Settings.AllowedCities) : "geen");
+            SearchDebugMode);
 
         if (isDryRun)
             Logger.LogWarning("[{Source}] DryRun actief — GEEN data wordt opgeslagen.", SourceName);
@@ -47,14 +58,15 @@ public abstract class BaseCrawler : IRealEstateCrawler
         try
         {
             // ── ManualTestListingUrls: zoekpagina-scraping overslaan ───────────
-            if (Settings.ManualTestListingUrls.Count > 0)
+            var manualTestUrls = GetManualTestUrls();
+            if (manualTestUrls.Count > 0)
             {
                 Logger.LogWarning(
                     "[{Source}] ManualTestListingUrls actief ({Count} URL(s)) — zoekpagina-scraping wordt overgeslagen.",
-                    SourceName, Settings.ManualTestListingUrls.Count);
+                    SourceName, manualTestUrls.Count);
 
                 await ProcessListingUrlsAsync(
-                    source, Settings.ManualTestListingUrls, result,
+                    source, manualTestUrls, result,
                     isDryRun, maxListings, skipAllowedFilter: true, cancellationToken);
 
                 result.Success = result.Errors == 0 || result.ListingsFound > 0;
@@ -67,91 +79,30 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 return result;
             }
 
-            // ── Normale zoekpagina-loop ─────────────────────────────────────────
+            // ══════════════════════════════════════════════════════════════════════
+            // FASE 1 — URL-verzameling: alle zoekpagina's doorlopen, GEEN verwerking
+            // MaxListingsPerRun wordt hier NIET toegepast.
+            // ══════════════════════════════════════════════════════════════════════
             var searchUrls = (await GetSearchPageUrlsAsync(source, cancellationToken)).ToList();
-            Logger.LogInformation("[{Source}] {Count} zoekpagina(s) te verwerken.", SourceName, searchUrls.Count);
+            Logger.LogInformation(
+                "[{Source}] Fase 1 — URL-verzameling: {Count} zoekpagina(s) te doorzoeken.",
+                SourceName, searchUrls.Count);
 
-            var seenExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var limitReached = false;
-            var filteredOut = 0;
+            var allCollectedUrls = new List<string>();
+            var pageIndex = 0;
 
             foreach (var searchUrl in searchUrls)
             {
-                if (cancellationToken.IsCancellationRequested || limitReached) break;
+                if (cancellationToken.IsCancellationRequested) break;
+                pageIndex++;
 
-                Logger.LogInformation("[{Source}] ▶ Zoekpagina ophalen: {Url}", SourceName, searchUrl);
+                Logger.LogInformation("[{Source}] ▶ Zoekpagina {Current}/{Total}: {Url}",
+                    SourceName, pageIndex, searchUrls.Count, searchUrl);
 
+                List<string> pageUrls;
                 try
                 {
-                    var listingUrls = (await FetchListingUrlsFromSearchPageAsync(searchUrl, cancellationToken)).ToList();
-
-                    Logger.LogInformation("[{Source}]   → {Count} listing-URL's gevonden op deze pagina.", SourceName, listingUrls.Count);
-
-                    if (listingUrls.Count == 0)
-                    {
-                        Logger.LogInformation("[{Source}]   Geen listings op {Url} — verdere pagina's worden overgeslagen.", SourceName, searchUrl);
-                        break;
-                    }
-
-                    var pageProcessed = 0;
-                    foreach (var listingUrl in listingUrls)
-                    {
-                        if (cancellationToken.IsCancellationRequested) break;
-
-                        if (maxListings > 0 && result.ListingsFound >= maxListings)
-                        {
-                            Logger.LogWarning(
-                                "[{Source}] MaxListingsPerRun ({Max}) bereikt na {Processed} verwerkte listings. Crawl stopgezet.",
-                                SourceName, maxListings, result.ListingsFound);
-                            limitReached = true;
-                            break;
-                        }
-
-                        try
-                        {
-                            await ApplyRateLimitAsync(cancellationToken);
-                            pageProcessed++;
-                            Logger.LogDebug("[{Source}]   Detailpagina {N}: {Url}", SourceName, pageProcessed, listingUrl);
-
-                            var listing = await FetchAndParseListingAsync(listingUrl, source, cancellationToken);
-                            if (listing is null)
-                            {
-                                Logger.LogDebug("[{Source}]   ⚠ Parsing mislukt of geen data: {Url}", SourceName, listingUrl);
-                                continue;
-                            }
-
-                            if (!IsAllowed(listing))
-                            {
-                                filteredOut++;
-                                Logger.LogDebug(
-                                    "[{Source}]   ⊘ Overgeslagen (filter): postcode={PostalCode}, gemeente={City}",
-                                    SourceName, listing.PostalCode ?? "?", listing.City ?? "?");
-                                continue;
-                            }
-
-                            var normalized = Normalizer.Normalize(listing, source.Id);
-                            if (string.IsNullOrEmpty(normalized.ExternalId))
-                            {
-                                Logger.LogDebug("[{Source}]   ⚠ ExternalId leeg na normalisatie: {Url}", SourceName, listingUrl);
-                                continue;
-                            }
-
-                            seenExternalIds.Add(normalized.ExternalId);
-                            result.ListingsFound++;
-                            await PersistOrLogAsync(normalized, result, isDryRun, source, cancellationToken);
-                        }
-                        catch (OperationCanceledException) { throw; }
-                        catch (Exception ex)
-                        {
-                            result.Errors++;
-                            result.ErrorMessages.Add($"[{listingUrl}] {ex.Message}");
-                            Logger.LogWarning(ex, "[{Source}]   ✗ Fout bij listing {Url}.", SourceName, listingUrl);
-                        }
-                    }
-
-                    Logger.LogInformation(
-                        "[{Source}]   Pagina klaar. Verwerkt: {Processed} | Gevonden (cumulatief): {Found} | Gefilterd: {Filtered}",
-                        SourceName, pageProcessed, result.ListingsFound, filteredOut);
+                    pageUrls = (await FetchListingUrlsFromSearchPageAsync(searchUrl, cancellationToken)).ToList();
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -159,8 +110,128 @@ public abstract class BaseCrawler : IRealEstateCrawler
                     result.Errors++;
                     result.ErrorMessages.Add($"[{searchUrl}] {ex.Message}");
                     Logger.LogWarning(ex, "[{Source}] ✗ Fout bij zoekpagina {Url}.", SourceName, searchUrl);
+                    continue;
+                }
+
+                Logger.LogInformation(
+                    "[{Source}]   Zoekpagina {Current}/{Total} klaar: {PageCount} URL's | cumulatief: {Total}",
+                    SourceName, pageIndex, searchUrls.Count, pageUrls.Count, allCollectedUrls.Count + pageUrls.Count);
+
+                if (pageUrls.Count == 0)
+                {
+                    Logger.LogInformation(
+                        "[{Source}]   Pagina {Current}/{Total} leeg — wordt overgeslagen, volgende pagina gaat door.",
+                        SourceName, pageIndex, searchUrls.Count);
+                    continue;
+                }
+
+                allCollectedUrls.AddRange(pageUrls);
+            }
+
+            // Dedupliceren op URL-string over alle pagina's
+            var uniqueListingUrls = allCollectedUrls
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            Logger.LogInformation(
+                "[{Source}] Fase 1 klaar. TotalCollectedListingUrls={Collected} | TotalUniqueListingUrls={Unique}",
+                SourceName, allCollectedUrls.Count, uniqueListingUrls.Count);
+
+            // MaxListingsPerRun: nu pas toepassen, na volledige deduplicatie
+            var limitReached = maxListings > 0 && uniqueListingUrls.Count > maxListings;
+            var listingsToProcess = limitReached
+                ? uniqueListingUrls.Take(maxListings).ToList()
+                : uniqueListingUrls;
+
+            if (maxListings > 0)
+                Logger.LogInformation(
+                    "[{Source}] MaxListingsPerRun={Max} | Beschikbaar={Unique} | ListingsToProcessAfterMaxLimit={ToProcess}",
+                    SourceName, maxListings, uniqueListingUrls.Count, listingsToProcess.Count);
+            else
+                Logger.LogInformation(
+                    "[{Source}] MaxListingsPerRun=onbeperkt | ListingsToProcessAfterMaxLimit={Count}",
+                    SourceName, listingsToProcess.Count);
+
+            // ══════════════════════════════════════════════════════════════════════
+            // FASE 2 — Detailpagina verwerking
+            // Overgeslagen als ImmowebSearchDebugMode=true — enkel URL-analyse.
+            // ══════════════════════════════════════════════════════════════════════
+            if (SearchDebugMode)
+            {
+                Logger.LogWarning(
+                    "[{Source}] SearchDebugMode=true — Fase 2 overgeslagen. " +
+                    "{Count} URL(s) verzameld, geen detailpagina's geopend. " +
+                    "Zet SearchDebugMode=false voor volledige crawl.",
+                    SourceName, uniqueListingUrls.Count);
+
+                result.Success = true;
+                result.FinishedAt = DateTime.UtcNow;
+                var debugDuration = result.FinishedAt.Value - result.StartedAt;
+                Logger.LogInformation(
+                    "[{Source}] ══ SearchDebugMode klaar ({Duration:mm\\:ss}) ══ Unieke listing-URLs: {Count}",
+                    SourceName, debugDuration, uniqueListingUrls.Count);
+                return result;
+            }
+
+            Logger.LogInformation(
+                "[{Source}] Fase 2 — Detailpagina verwerking: {Count} listing(s) te verwerken.",
+                SourceName, listingsToProcess.Count);
+
+            var seenExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var filteredOut = 0;
+            var processed = 0;
+
+            foreach (var listingUrl in listingsToProcess)
+            {
+                if (cancellationToken.IsCancellationRequested) break;
+
+                try
+                {
+                    await ApplyRateLimitAsync(cancellationToken);
+                    processed++;
+                    Logger.LogDebug("[{Source}]   Detailpagina {N}/{Total}: {Url}",
+                        SourceName, processed, listingsToProcess.Count, listingUrl);
+
+                    var listing = await FetchAndParseListingAsync(listingUrl, source, cancellationToken);
+                    if (listing is null)
+                    {
+                        Logger.LogDebug("[{Source}]   ⚠ Parsing mislukt of geen data: {Url}", SourceName, listingUrl);
+                        continue;
+                    }
+
+                    if (!IsAllowed(listing))
+                    {
+                        filteredOut++;
+                        Logger.LogDebug(
+                            "[{Source}]   ⊘ Overgeslagen (filter): postcode={PostalCode}, gemeente={City}",
+                            SourceName, listing.PostalCode ?? "?", listing.City ?? "?");
+                        continue;
+                    }
+
+                    var normalized = Normalizer.Normalize(listing, source.Id);
+                    if (string.IsNullOrEmpty(normalized.ExternalId))
+                    {
+                        Logger.LogDebug("[{Source}]   ⚠ ExternalId leeg na normalisatie: {Url}", SourceName, listingUrl);
+                        continue;
+                    }
+
+                    seenExternalIds.Add(normalized.ExternalId);
+                    result.ListingsFound++;
+                    var assetId = await PersistOrLogAsync(normalized, result, isDryRun, source, cancellationToken);
+                    await AfterPersistAsync(normalized, assetId, isDryRun, source, cancellationToken);
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    result.Errors++;
+                    result.ErrorMessages.Add($"[{listingUrl}] {ex.Message}");
+                    Logger.LogWarning(ex, "[{Source}]   ✗ Fout bij listing {Url}.", SourceName, listingUrl);
                 }
             }
+
+            Logger.LogInformation(
+                "[{Source}]   Fase 2 klaar. Verwerkt: {Processed} | Gefilterd: {Filtered} | Gevonden: {Found}",
+                SourceName, processed, filteredOut, result.ListingsFound);
 
             LogMarkInactiveDecision(isDryRun, limitReached, seenExternalIds.Count);
 
@@ -256,7 +327,8 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 }
 
                 result.ListingsFound++;
-                await PersistOrLogAsync(normalized, result, isDryRun, source, cancellationToken);
+                var manualAssetId = await PersistOrLogAsync(normalized, result, isDryRun, source, cancellationToken);
+                await AfterPersistAsync(normalized, manualAssetId, isDryRun, source, cancellationToken);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
@@ -268,7 +340,7 @@ public abstract class BaseCrawler : IRealEstateCrawler
         }
     }
 
-    private async Task PersistOrLogAsync(
+    private async Task<long?> PersistOrLogAsync(
         NormalizedPropertyDto normalized,
         CrawlerResult result,
         bool isDryRun,
@@ -287,27 +359,40 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 normalized.AskingPrice.HasValue ? normalized.AskingPrice.Value.ToString("N0") : "?",
                 normalized.PropertyType,
                 normalized.PropertySubType);
+            return null;
+        }
+
+        var (wasCreated, assetId) = await ListingService.UpsertListingAsync(normalized, cancellationToken);
+        if (wasCreated)
+        {
+            result.ListingsCreated++;
+            Logger.LogInformation(
+                "[{Source}]   ✚ NIEUW: {ExternalId} | {City} {PostalCode} | €{Price}",
+                SourceName, normalized.ExternalId, normalized.City, normalized.PostalCode,
+                normalized.AskingPrice?.ToString("N0") ?? "?");
         }
         else
         {
-            var wasCreated = await ListingService.UpsertListingAsync(normalized, cancellationToken);
-            if (wasCreated)
-            {
-                result.ListingsCreated++;
-                Logger.LogInformation(
-                    "[{Source}]   ✚ NIEUW: {ExternalId} | {City} {PostalCode} | €{Price}",
-                    SourceName, normalized.ExternalId, normalized.City, normalized.PostalCode,
-                    normalized.AskingPrice?.ToString("N0") ?? "?");
-            }
-            else
-            {
-                result.ListingsUpdated++;
-                Logger.LogDebug(
-                    "[{Source}]   ↺ BIJGEWERKT: {ExternalId} | {City}",
-                    SourceName, normalized.ExternalId, normalized.City);
-            }
+            result.ListingsUpdated++;
+            Logger.LogDebug(
+                "[{Source}]   ↺ BIJGEWERKT: {ExternalId} | {City}",
+                SourceName, normalized.ExternalId, normalized.City);
         }
+        return assetId;
     }
+
+    /// <summary>
+    /// Hook die na elke persist (of dry-run log) wordt aangeroepen.
+    /// Subklassen gebruiken dit om aanvullende data op te slaan (bijv. project-units).
+    /// assetId is null in DryRun.
+    /// </summary>
+    protected virtual Task AfterPersistAsync(
+        NormalizedPropertyDto normalized,
+        long? assetId,
+        bool isDryRun,
+        CrawlerSource source,
+        CancellationToken cancellationToken)
+        => Task.CompletedTask;
 
     protected abstract Task<IEnumerable<string>> GetSearchPageUrlsAsync(
         CrawlerSource source, CancellationToken cancellationToken);
@@ -324,28 +409,11 @@ public abstract class BaseCrawler : IRealEstateCrawler
             await Task.Delay(TimeSpan.FromSeconds(Settings.DelayBetweenRequestsSeconds), cancellationToken);
     }
 
-    protected virtual bool IsAllowed(ListingDto listing)
-    {
-        if (Settings.AllowedPostalCodes.Count > 0)
-        {
-            if (string.IsNullOrEmpty(listing.PostalCode))
-                return false;
-            if (!Settings.AllowedPostalCodes.Contains(listing.PostalCode.Trim(), StringComparer.OrdinalIgnoreCase))
-                return false;
-        }
-
-        if (Settings.AllowedCities.Count > 0)
-        {
-            if (string.IsNullOrEmpty(listing.City))
-                return false;
-            var cityMatches = Settings.AllowedCities.Any(c =>
-                listing.City.Contains(c, StringComparison.OrdinalIgnoreCase));
-            if (!cityMatches)
-                return false;
-        }
-
-        return true;
-    }
+    /// <summary>
+    /// Geografische filter. Subklassen overschrijven om source-specifieke
+    /// AllowedLocations te controleren. Standaard: alles toelaten.
+    /// </summary>
+    protected virtual bool IsAllowed(ListingDto listing) => true;
 
     private void LogMarkInactiveDecision(bool isDryRun, bool limitReached, int seenCount)
     {

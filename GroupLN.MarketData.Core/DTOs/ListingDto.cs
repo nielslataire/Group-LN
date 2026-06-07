@@ -21,11 +21,16 @@ public class ListingDto
     public decimal? Longitude { get; set; }
 
     public decimal? AskingPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
     public decimal? LivingArea { get; set; }
     public decimal? LandArea { get; set; }
+    public decimal? TerraceArea { get; set; }
+    public decimal? GardenArea { get; set; }
 
     public int? Bedrooms { get; set; }
     public int? Bathrooms { get; set; }
+    public int? ShowerCount { get; set; }
+    public int? ToiletCount { get; set; }
     public int? GarageCount { get; set; }
 
     public int? ConstructionYear { get; set; }
@@ -35,6 +40,11 @@ public class ListingDto
 
     public bool? IsNewBuild { get; set; }
 
+    public string? DeveloperName { get; set; }
+    public string? DeveloperWebsite { get; set; }
+    public string? DeveloperPhone { get; set; }
+
+    public string? EnergyFeatures { get; set; }
     public string? Description { get; set; }
     public string? RawJson { get; set; }
 }

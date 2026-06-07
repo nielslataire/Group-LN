@@ -1,5 +1,6 @@
 @using CPMCore.Controllers
 @using BOCore
+@using ServiceCore.Budget
 @model CPMCore.Models.Projecten.BudgetGegevensModel
 @{
     ViewData["Title"] = "Gegevens — " + Model.MasterNaam;
@@ -147,13 +148,41 @@
                                 </div>
                                 <div class="row g-3">
                                     <div class="col-sm-12 col-md-6">
-                                        <label asp-for="Gegevens.NacalcBasisprijs" class="form-label">Nacalc basisprijs ruwbouw</label>
+                                        @{
+                                            Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.NacalcRuwbouwBasis, out var fRuwbouw);
+                                        }
+                                        <label asp-for="Gegevens.NacalcBasisprijs" class="form-label">
+                                            Nacalc basisprijs ruwbouw
+                                            @if (fRuwbouw?.MNaam != null) {
+                                                <span class="badge bg-light text-secondary border ms-1" style="font-size:.7rem;font-weight:400;"
+                                                      title="Berekend via: @fRuwbouw.MNaam">
+                                                    <i class="bx bx-link-alt me-1"></i>@fRuwbouw.MNaam
+                                                </span>
+                                            }
+                                        </label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text">€</span>
                                             <input asp-for="Gegevens.NacalcBasisprijs" type="number" min="0" step="0.01"
                                                    class="form-control form-control-sm text-end" id="inp-basisprijs" />
                                             <span class="input-group-text">/m²</span>
+                                            @if (fRuwbouw?.Waarde != null) {
+                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                        onclick="document.getElementById('inp-basisprijs').value='@fRuwbouw.Waarde.Value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)'; updateIndexFactors();"
+                                                        title="Overnemen uit KostprijsMaterialen (geïndexeerd)">
+                                                    <i class="bx bx-transfer-alt"></i>
+                                                </button>
+                                            }
                                         </div>
+                                        @if (fRuwbouw?.Waarde != null) {
+                                            <div class="form-text text-primary">
+                                                <i class="bx bx-calculator me-1"></i>Formulewaarde: <strong>€ @fRuwbouw.Waarde.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</strong>/m²
+                                                @if (fRuwbouw.MNaam != null) { <span class="text-muted">— @fRuwbouw.MNaam</span> }
+                                            </div>
+                                        } else if (fRuwbouw != null) {
+                                            <div class="form-text text-muted">
+                                                <i class="bx bx-link-external me-1"></i>Geen materiaal gekoppeld — stel in via <a asp-controller="Instellingen" asp-action="KostprijsMaterialen" target="_blank">Instellingen</a>.
+                                            </div>
+                                        }
                                     </div>
                                     <div class="col-sm-12 col-md-6">
                                         <label asp-for="Gegevens.GevelMetselwerkPrijsPerM2" class="form-label">Gevelmetselwerk</label>

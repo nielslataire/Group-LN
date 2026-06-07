@@ -141,6 +141,7 @@ builder.Services.AddScoped<FacadeCore.IProjectService, ServiceCore.ProjectServic
 builder.Services.AddScoped<FacadeCore.IUnitService, ServiceCore.UnitService>();
 builder.Services.AddScoped<FacadeCore.IAuthenticationService, ServiceCore.AuthenticationService>();
 builder.Services.AddScoped<FacadeCore.IActivityService, ServiceCore.ActivityService>();
+builder.Services.AddScoped<FacadeCore.IKostprijsService, ServiceCore.KostprijsService>();
 builder.Services.AddScoped<FacadeCore.IProvinceService, ServiceCore.ProvinceService>();
 builder.Services.AddScoped<FacadeCore.ICompanyService, ServiceCore.CompanyService>();
 builder.Services.AddScoped<FacadeCore.ICountryService, ServiceCore.CountryService>();
@@ -192,6 +193,8 @@ builder.Services.AddScoped<FacadeCore.IBudgetService, ServiceCore.BudgetWizardSe
 builder.Services.AddScoped<ServiceCore.Budget.BouwIndexService>();
 builder.Services.AddScoped<ServiceCore.Budget.SIndexScraperService>();
 builder.Services.AddScoped<ServiceCore.Budget.I2021SyncService>();
+builder.Services.AddSingleton<ServiceCore.Budget.BudgetFormulaRegistry>();
+builder.Services.AddScoped<ServiceCore.Budget.BudgetFormulaService>();
 builder.Services.AddHttpClient("SIndexScraper").ConfigurePrimaryHttpMessageHandler(() =>
     new System.Net.Http.HttpClientHandler { AllowAutoRedirect = true });
 builder.Services.AddHttpClient("I2021Sync").ConfigurePrimaryHttpMessageHandler(() =>

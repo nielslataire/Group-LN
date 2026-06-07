@@ -5,49 +5,13 @@ public class CrawlerSettings
     public const string Section = "CrawlerSettings";
 
     // ── Veiligheidsschakelaar ───────────────────────────────────────────────
-    /// <summary>
-    /// Globale schakelaar. false = worker start wel maar crawlt nooit.
-    /// Zet op true alleen als je bewust wil crawlen.
-    /// </summary>
     public bool EnableCrawler { get; set; } = true;
-
-    /// <summary>
-    /// Schrijf niets naar de database. Log enkel wat zou worden opgeslagen.
-    /// Verplicht true in development totdat je zeker bent van de werking.
-    /// </summary>
     public bool DryRun { get; set; } = false;
-
-    /// <summary>
-    /// EF migraties automatisch toepassen bij opstart.
-    /// true in development (handige automatisatie), false in productie (bewuste controle).
-    /// </summary>
     public bool ApplyMigrationsOnStartup { get; set; } = false;
 
     // ── Limieten ────────────────────────────────────────────────────────────
-    /// <summary>
-    /// Stop na N listings per crawl-run. 0 = onbeperkt.
-    /// Gebruik bijv. 5 voor eerste test.
-    /// </summary>
     public int MaxListingsPerRun { get; set; } = 0;
-
-    /// <summary>
-    /// MarkInactive draait alleen als minstens dit aantal listings gevonden werd.
-    /// Beschermt tegen het deactiveren van alles bij een gebroken crawl.
-    /// </summary>
     public int MinListingsBeforeMarkInactive { get; set; } = 20;
-
-    // ── Geografische filters ────────────────────────────────────────────────
-    /// <summary>
-    /// Lege lijst = alle postcodes toelaten.
-    /// Vul in voor testtoeloop: ["8730", "8000", "8020"].
-    /// </summary>
-    public List<string> AllowedPostalCodes { get; set; } = new();
-
-    /// <summary>
-    /// Lege lijst = alle gemeenten toelaten.
-    /// Vul in als alternatief voor postcodes: ["Beernem", "Brugge"].
-    /// </summary>
-    public List<string> AllowedCities { get; set; } = new();
 
     // ── HTTP ─────────────────────────────────────────────────────────────────
     public int MaxRequestsPerMinute { get; set; } = 20;
@@ -62,10 +26,97 @@ public class CrawlerSettings
     // ── Opruimen ─────────────────────────────────────────────────────────────
     public int MarkInactiveAfterDays { get; set; } = 30;
 
-    // ── Manuele test ─────────────────────────────────────────────────────────
+    // ── Per-bron instellingen ────────────────────────────────────────────────
+    public Dictionary<string, SourceSettings> Sources { get; set; } = new();
+
+    // ── Debug-instellingen ───────────────────────────────────────────────────
+    public DebugSettings Debug { get; set; } = new();
+}
+
+/// <summary>
+/// Instellingen specifiek voor één crawler-bron (bijv. "Immoweb").
+/// Sleutel in CrawlerSettings.Sources is de naam van de bron (exact gelijk aan SourceName in de crawler).
+/// </summary>
+public class SourceSettings
+{
+    /// <summary>false = bron wordt overgeslagen, geen URLs gegenereerd, geen verwerking.</summary>
+    public bool Enabled { get; set; } = true;
+
     /// <summary>
-    /// Als gevuld: sla zoekpagina-scraping over en verwerk enkel deze URL's.
-    /// Alleen voor development/debugging. Leeg laten in productie.
+    /// true = enkel zoekpagina's bezoeken en debug-bestanden schrijven.
+    /// Geen detailpagina's openen, geen database-writes.
+    /// </summary>
+    public bool SearchDebugMode { get; set; } = false;
+
+    /// <summary>
+    /// Maximaal aantal zoekpagina's per locatie (bijv. per gemeente).
+    /// In SearchDebugMode wordt Debug.MaxPagesInSearchDebugMode gebruikt.
+    /// </summary>
+    public int MaxSearchPagesPerLocation { get; set; } = 10;
+
+    /// <summary>
+    /// Lijst van zoek-URL-templates. Ondersteunde placeholders:
+    /// {city}, {citySlug}, {postalCode}, {page}, {transactionType}, {propertyType}.
+    /// Templates met locatie-placeholders worden per AllowedLocations-item uitgebreid.
+    /// Templates zonder locatie-placeholders worden globaal uitgevoerd (enkel {page} uitgebreid).
+    /// </summary>
+    public List<string> SearchUrls { get; set; } = new();
+
+    /// <summary>
+    /// Manuele test-URL's. Als niet leeg: zoekpagina-scraping overgeslagen,
+    /// enkel deze URL's worden als detailpagina verwerkt.
     /// </summary>
     public List<string> ManualTestListingUrls { get; set; } = new();
+
+    /// <summary>
+    /// Locatiefilter voor URL-generatie en detail-filtering.
+    /// Leeg = geen geografisch filter (alle resultaten worden verwerkt).
+    /// </summary>
+    public List<LocationSettings> AllowedLocations { get; set; } = new();
+}
+
+/// <summary>
+/// Één locatie-entry: stad + slug + postcode.
+/// CitySlug is de schrijfwijze die de site verwacht in het URL-pad.
+/// Stel altijd expliciet in — vermijd automatische slugify voor Belgische gemeentenamen.
+/// </summary>
+public class LocationSettings
+{
+    /// <summary>Weergavenaam, bijv. "Knokke-Heist".</summary>
+    public string City { get; set; } = string.Empty;
+
+    /// <summary>
+    /// URL-slug die de site verwacht, bijv. "knokke-heist".
+    /// Als leeg: fallback naar City.ToLower().Replace(' ', '-') met een waarschuwing in de logs.
+    /// </summary>
+    public string? CitySlug { get; set; }
+
+    /// <summary>Postcode, bijv. "8730".</summary>
+    public string PostalCode { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Debug-uitvoer instellingen. Schakel individuele bestanden aan/uit.
+/// Debug.Enabled=false overschrijft alles: geen enkel debug-bestand wordt geschreven.
+/// </summary>
+public class DebugSettings
+{
+    /// <summary>Hoofdschakelaar. false = geen debug-bestanden, alle onderstaande flags worden genegeerd.</summary>
+    public bool Enabled { get; set; } = false;
+
+    public bool SaveHtml { get; set; } = true;
+    public bool SaveScreenshots { get; set; } = true;
+    public bool SaveNetworkResponses { get; set; } = true;
+    public bool SaveAcceptedUrls { get; set; } = true;
+    public bool SaveBodyText { get; set; } = true;
+    public bool SavePaginationSummary { get; set; } = true;
+
+    /// <summary>Map relatief t.o.v. AppContext.BaseDirectory.</summary>
+    public string DebugDirectory { get; set; } = "debug/search";
+
+    /// <summary>
+    /// Maximaal aantal zoekpagina's in SearchDebugMode.
+    /// Overschrijft MaxSearchPagesPerLocation wanneer SearchDebugMode=true.
+    /// </summary>
+    public int MaxPagesInSearchDebugMode { get; set; } = 3;
 }

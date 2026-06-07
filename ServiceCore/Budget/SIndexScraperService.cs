@@ -95,19 +95,18 @@ namespace ServiceCore.Budget
                     // Parse eerste kolom: datum + optionele subcategorie
                     if (!TryParseDatumEnSubCat(cellen[0], out var datum, out var subCat)) continue;
 
-                    // Verwerk elke categorie-kolom (2..n)
-                    for (int k = 1; k < cellen.Count; k++)
+                    // Alleen rijen met subcategorie "2B" (één waarde per maand)
+                    if (!"2B".Equals(subCat, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    // Alleen Categorie A (eerste datakolom)
+                    if (!TryParseWaarde(cellen[1], out var waarde)) continue;
+                    var categorie = catHeaders.Count > 0 ? catHeaders[0] : "Categorie A";
+
                     {
-                        if (!TryParseWaarde(cellen[k], out var waarde)) continue;
-
-                        var categorie = k - 1 < catHeaders.Count ? catHeaders[k - 1] : $"Kolom {k}";
-
                         var bestaand = bestaande.FirstOrDefault(x =>
                             x.Jaar == datum.Year &&
                             x.Maand == datum.Month &&
-                            x.GeldigVanaf == datum &&
-                            string.Equals(x.Categorie ?? "", categorie, StringComparison.OrdinalIgnoreCase) &&
-                            string.Equals(x.SubCategorie ?? "", subCat ?? "", StringComparison.OrdinalIgnoreCase));
+                            x.GeldigVanaf == datum);
 
                         if (bestaand == null)
                         {

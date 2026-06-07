@@ -63,11 +63,16 @@ public class PropertyNormalizer : IPropertyNormalizer
             Longitude = listing.Longitude,
 
             AskingPrice = listing.AskingPrice,
+            MaxPrice = listing.MaxPrice,
             LivingArea = listing.LivingArea,
             LandArea = listing.LandArea,
+            TerraceArea = listing.TerraceArea,
+            GardenArea = listing.GardenArea,
 
             Bedrooms = listing.Bedrooms,
             Bathrooms = listing.Bathrooms,
+            ShowerCount = listing.ShowerCount,
+            ToiletCount = listing.ToiletCount,
             GarageCount = listing.GarageCount,
 
             ConstructionYear = listing.ConstructionYear,
@@ -77,6 +82,11 @@ public class PropertyNormalizer : IPropertyNormalizer
 
             IsNewBuild = listing.IsNewBuild ?? false,
 
+            DeveloperName = listing.DeveloperName?.Trim(),
+            DeveloperWebsite = listing.DeveloperWebsite?.Trim(),
+            DeveloperPhone = listing.DeveloperPhone?.Trim(),
+
+            EnergyFeatures = listing.EnergyFeatures,
             DescriptionHash = HashDescription(listing.Description),
             RawJson = listing.RawJson
         };

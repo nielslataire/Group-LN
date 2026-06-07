@@ -4,6 +4,7 @@ using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GroupLN.MarketData.Persistence.Migrations
 {
     [DbContext(typeof(MarketDataDbContext))]
-    partial class MarketDataDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260607172917_AddProjectGroupColumns")]
+    partial class AddProjectGroupColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -218,18 +221,6 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DeveloperName")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("DeveloperPhone")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("DeveloperWebsite")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<int?>("EPCLabel")
                         .HasColumnType("int");
 
@@ -237,22 +228,8 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         .HasPrecision(8, 2)
                         .HasColumnType("decimal(8,2)");
 
-                    b.Property<string>("EnergyFeatures")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<DateTime>("FirstSeenAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<int?>("Floor")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("GarageCount")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("GardenArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
 
                     b.Property<string>("HouseNumber")
                         .HasMaxLength(20)
@@ -285,10 +262,6 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         .HasPrecision(9, 6)
                         .HasColumnType("decimal(9,6)");
 
-                    b.Property<decimal?>("MaxPrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("decimal(14,2)");
-
                     b.Property<bool>("NewBuild")
                         .HasColumnType("bit");
 
@@ -312,19 +285,9 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<int?>("SaleStatus")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ShowerCount")
-                        .HasColumnType("int");
-
                     b.Property<string>("Street")
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
-
-                    b.Property<decimal?>("TerraceArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<int?>("ToiletCount")
-                        .HasColumnType("int");
 
                     b.Property<int>("TransactionType")
                         .HasColumnType("int");
@@ -570,19 +533,8 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         .HasPrecision(8, 2)
                         .HasColumnType("decimal(8,2)");
 
-                    b.Property<string>("EnergyFeatures")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int?>("Floor")
-                        .HasColumnType("int");
-
                     b.Property<int?>("GarageCount")
                         .HasColumnType("int");
-
-                    b.Property<decimal?>("GardenArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
 
                     b.Property<bool>("IsNewBuild")
                         .HasColumnType("bit");
@@ -598,28 +550,14 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<long>("MarketListingId")
                         .HasColumnType("bigint");
 
-                    b.Property<decimal?>("MaxPrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("decimal(14,2)");
-
                     b.Property<string>("RawJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("SaleStatus")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ShowerCount")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("SnapshotDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<decimal?>("TerraceArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<int?>("ToiletCount")
-                        .HasColumnType("int");
 
                     b.HasKey("Id");
 

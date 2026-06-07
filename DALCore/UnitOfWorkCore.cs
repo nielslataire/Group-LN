@@ -97,6 +97,12 @@ namespace DALCore
         public GenericRepository<BouwIndex>              BouwIndex             { get; }
         public GenericRepository<BudgetVerkoopLijn>     BudgetVerkoopLijn     { get; }
         public GenericRepository<BudgetPrijsReferentie> BudgetPrijsReferentie { get; }
+        public GenericRepository<KmIndexType>               KmIndexTypes          { get; }
+        public GenericRepository<KostprijsMateriaal>        KostprijsMaterialen   { get; }
+        public GenericRepository<KostprijsFormulaKoppeling> FormulaKoppelingen    { get; }
+        public GenericRepository<ProjectKostprijs>   ProjectKostprijzen   { get; }
+        public GenericRepository<BouwkostPercentageGroep> BouwkostPercentageGroepen { get; }
+        public GenericRepository<BouwkostPercentage>      BouwkostPercentages       { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -193,6 +199,12 @@ namespace DALCore
             BouwIndex             = new GenericRepository<BouwIndex>(_context);
             BudgetVerkoopLijn     = new GenericRepository<BudgetVerkoopLijn>(_context);
             BudgetPrijsReferentie = new GenericRepository<BudgetPrijsReferentie>(_context);
+            KmIndexTypes          = new GenericRepository<KmIndexType>(_context);
+            KostprijsMaterialen   = new GenericRepository<KostprijsMateriaal>(_context);
+            FormulaKoppelingen    = new GenericRepository<KostprijsFormulaKoppeling>(_context);
+            ProjectKostprijzen   = new GenericRepository<ProjectKostprijs>(_context);
+            BouwkostPercentageGroepen = new GenericRepository<BouwkostPercentageGroep>(_context);
+            BouwkostPercentages       = new GenericRepository<BouwkostPercentage>(_context);
         }
 
         // Eenduidige save-methodes

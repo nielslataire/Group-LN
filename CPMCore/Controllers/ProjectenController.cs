@@ -75,9 +75,10 @@ namespace CPMCore.Controllers
         private readonly DALCore.UnitOfWorkCore _uow;
         private readonly IBudgetService _budgetService;
         private readonly BudgetActivityService    _budgetActivityService;
-        private readonly BouwIndexService         _bouwIndex;
-        private readonly BudgetBerekeningService  _berekeningService;
-        private readonly BudgetExcelService       _excelService;
+        private readonly BouwIndexService            _bouwIndex;
+        private readonly BudgetBerekeningService     _berekeningService;
+        private readonly BudgetExcelService          _excelService;
+        private readonly ServiceCore.Budget.BudgetFormulaService _formulaService;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -86,7 +87,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService)
         {
             _logger = logger;
             Configuration = configuration;
@@ -107,6 +108,7 @@ namespace CPMCore.Controllers
             _bouwIndex              = bouwIndex;
             _berekeningService      = berekeningService;
             _excelService           = excelService;
+            _formulaService         = formulaService;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -8694,6 +8696,9 @@ namespace CPMCore.Controllers
                 CreatedAt    = versieEntity.CreatedAt
             };
 
+            var formulaCtx = await _formulaService.BuildContextAsync(versieId, gegevens);
+            var formulaVoorstellingen = _formulaService.BerekenAlle(formulaCtx);
+
             var model = new BudgetGegevensModel
             {
                 VersieId      = versieId,
@@ -8705,7 +8710,8 @@ namespace CPMCore.Controllers
                 MasterNaam    = versieEntity.BudgetMaster?.Naam,
                 VersieCreatedAt = versieEntity.CreatedAt,
                 Gegevens      = gegevens,
-                BouwheerOptions = bouwheerOptions
+                BouwheerOptions = bouwheerOptions,
+                FormulaVoorstellingen = formulaVoorstellingen
             };
 
             ViewBag.Breadcrumbs = new List<Breadcrumb>

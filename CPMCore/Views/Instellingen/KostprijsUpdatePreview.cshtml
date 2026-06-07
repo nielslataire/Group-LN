@@ -1,0 +1,88 @@
+@model IEnumerable<ProjectKostprijsBO>
+@using BOCore
+@{
+    ViewData["Title"] = "Kostprijzen bijwerken — preview";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    int projectId = (int)(ViewBag.ProjectId ?? 0);
+    var lijst = Model?.ToList() ?? new List<ProjectKostprijsBO>();
+    int aantalGewijzigd = lijst.Count(x => x.Gewijzigd && x.Prijs > 0);
+    int aantalNieuw     = lijst.Count(x => x.Prijs == 0);
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="row">
+    <div class="col">
+        <h1 class="fw-bold mb-0">Kostprijzen bijwerken</h1>
+        <h5 class="text-muted mb-4">Vergelijk de huidige snapshot met de meest recente referentieprijzen uit de instellingen.</h5>
+    </div>
+</div>
+
+<div class="d-flex gap-3 mb-4">
+    <span class="badge bg-warning text-dark fs-6 px-3 py-2">@aantalGewijzigd gewijzigd</span>
+    <span class="badge bg-success fs-6 px-3 py-2">@aantalNieuw nieuw</span>
+    <span class="badge bg-secondary fs-6 px-3 py-2">@lijst.Count totaal</span>
+</div>
+
+<div class="card card-modern mb-4">
+    <div class="card-body pt-2">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle table-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Categorie</th>
+                        <th>Naam</th>
+                        <th>Eenheid</th>
+                        <th>Indextype</th>
+                        <th class="text-end">Huidige prijs</th>
+                        <th class="text-end">Nieuwe prijs</th>
+                        <th>Referentiedatum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in lijst.OrderBy(x => x.CategorieNaam).ThenBy(x => x.Naam))
+                    {
+                        string rowClass = item.Prijs == 0 ? "table-success" : (item.Gewijzigd ? "table-warning" : "");
+                        <tr class="@rowClass">
+                            <td>
+                                @item.CategorieNaam
+                                @if (item.LotNummer.HasValue)
+                                {
+                                    <span class="badge bg-secondary ms-1">Lot @item.LotNummer</span>
+                                }
+                            </td>
+                            <td>@item.Naam</td>
+                            <td>@item.Eenheid</td>
+                            <td><span class="badge bg-info text-dark">@item.IndexTypeCode</span></td>
+                            <td class="text-end">
+                                @if (item.Prijs == 0)
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                else
+                                {
+                                    <span>€ @item.Prijs.ToString("N2")</span>
+                                }
+                            </td>
+                            <td class="text-end fw-semibold">€ @item.PrijsInstellingen.ToString("N2")</td>
+                            <td>@item.ReferentieDatum.ToString("dd/MM/yyyy")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-3">
+    <form method="post" asp-action="KostprijsUpdateBevestigen" asp-controller="Instellingen">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="projectId" value="@projectId" />
+        <button type="submit" class="btn btn-primary"
+                onclick="return confirm('Alle kostprijzen voor dit project bijwerken naar de huidige instellingen?');">
+            <i class="bx bx-check me-1"></i> Bevestigen
+        </button>
+    </form>
+    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+        <i class="bx bx-arrow-back me-1"></i> Annuleren
+    </a>
+</div>

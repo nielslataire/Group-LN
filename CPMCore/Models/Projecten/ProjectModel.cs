@@ -4193,6 +4193,10 @@ namespace CPMCore.Models.Projecten
             new SelectListItem("Kantelpoort",     "Kantelpoort"),
             new SelectListItem("Geen",            "Geen"),
         };
+
+        // Formule-voorstellen: sleutel → berekend resultaat (null = geen koppeling of formule)
+        [ValidateNever]
+        public Dictionary<string, ServiceCore.Budget.FormulaResultaat> FormulaVoorstellingen { get; set; } = new();
     }
 }
 

@@ -22,12 +22,30 @@ public class MarketAsset
 
     public decimal? LivingArea { get; set; }
     public decimal? LandArea { get; set; }
+    public decimal? TerraceArea { get; set; }
+    public decimal? GardenArea { get; set; }
+    public int? Floor { get; set; }
     public int? Bedrooms { get; set; }
     public int? Bathrooms { get; set; }
+    public int? ShowerCount { get; set; }
+    public int? ToiletCount { get; set; }
+    public int? GarageCount { get; set; }
     public int? ConstructionYear { get; set; }
     public decimal? EPCScore { get; set; }
     public EPCLabel? EPCLabel { get; set; }
+    public decimal? MaxPrice { get; set; }
+    public string? EnergyFeatures { get; set; }
+    public string? DeveloperName { get; set; }
+    public string? DeveloperWebsite { get; set; }
+    public string? DeveloperPhone { get; set; }
     public bool NewBuild { get; set; }
+
+    // ProjectGroup en unit-relatie
+    public bool IsProjectGroup { get; set; }
+    public long? ParentMarketAssetId { get; set; }
+    public string? ProjectExternalId { get; set; }
+    public string? UnitExternalId { get; set; }
+    public SaleStatus? SaleStatus { get; set; }
 
     public DateTime FirstSeenAt { get; set; }
     public DateTime LastSeenAt { get; set; }
@@ -38,4 +56,7 @@ public class MarketAsset
 
     public ICollection<MarketListing> Listings { get; set; } = new List<MarketListing>();
     public ICollection<MarketAssetMatchCandidate> MatchCandidates { get; set; } = new List<MarketAssetMatchCandidate>();
+
+    public MarketAsset? ParentAsset { get; set; }
+    public ICollection<MarketAsset> ChildUnits { get; set; } = new List<MarketAsset>();
 }

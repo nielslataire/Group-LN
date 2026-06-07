@@ -1,0 +1,667 @@
+@model CPMCore.Models.KostprijsMaterialenViewModel
+@{
+    ViewData["Title"] = "Kostprijzen materialen";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var ic = System.Globalization.CultureInfo.InvariantCulture;
+    var eenheden = new[] { "m²", "m³", "lm", "stuk", "forfait" };
+    var toepassingen = new[] { "", "Woning", "Appartement", "Gemeenschappelijk" };
+    string ToepassingLabel(string t) => t switch { "Woning" => "Woning", "Appartement" => "Appartement", "Gemeenschappelijk" => "Gemeenschappelijk deel", _ => "Alle types" };
+}
+
+@section PageStyle
+{
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.css" />
+    <link rel="stylesheet" href="~/css/instellingen-custom.css" />
+    <style>
+        .currency-input { text-align: right; }
+    </style>
+}
+
+<div class="row">
+    <div class="row justify-content-center justify-content-sm-between pt-2 pe-0">
+        <div class="col-sm-auto mb-4 mb-sm-0 mt-2 mt-sm-0">
+            <h1 class="font-weight-bold mb-0 mt-0">Kostprijzen materialen</h1>
+            <h5 class="mb-4 mt-0">Beheer referentieprijzen per materiaaltype voor gebruik in budgetten.</h5>
+        </div>
+    </div>
+</div>
+
+@if (TempData["Message"] != null)
+{
+    <div class="alert alert-success">@TempData["Message"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="coord-tabs" role="tablist">
+    <button class="coord-tab active" type="button" data-gl-settings-section="materialen">Materialen</button>
+    <button class="coord-tab" type="button" data-gl-settings-section="percentages">Bouwkost %</button>
+    <button class="coord-tab" type="button" data-gl-settings-section="koppelingen">Formule koppelingen</button>
+</div>
+
+@* ── TAB 1: Materialen ── *@
+<div id="materialen-section" class="gl-settings-section">
+
+    <section class="card card-modern mb-4">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Materiaal toevoegen</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" asp-action="KostprijsMateriaalCreate" asp-controller="Instellingen" id="form-mat-create">
+                @Html.AntiForgeryToken()
+                <div class="row g-3 align-items-end">
+                    <div class="col-lg-3">
+                        <label class="form-label">Naam</label>
+                        <input name="naam" class="form-control form-control-modern" required />
+                    </div>
+                    <div class="col-lg-1">
+                        <label class="form-label">Eenheid</label>
+                        <select name="eenheid" class="form-control form-control-modern" required>
+                            @foreach (var e in eenheden)
+                            {
+                                <option value="@e">@e</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label">Toepassingsgebied</label>
+                        <select name="toepassingsgebied" class="form-control form-control-modern">
+                            @foreach (var t in toepassingen)
+                            {
+                                <option value="@t">@ToepassingLabel(t)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label">Referentieprijs</label>
+                        <div class="input-group">
+                            <span class="input-group-text">€</span>
+                            <input type="text" inputmode="decimal" name="referentiePrijs"
+                                   value="0,00" class="form-control form-control-modern currency-input" required />
+                        </div>
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label">Referentiedatum</label>
+                        <input type="date" name="referentieDatum" class="form-control form-control-modern" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label">Activiteitsgroep</label>
+                        <select name="categorieId" class="form-control form-control-modern" required>
+                            @foreach (var grp in Model.ActivityGroepen)
+                            {
+                                <option value="@grp.ID">@(grp.Lot > 0 ? $"Deel {grp.Lot} – " : "")@grp.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <label class="form-label">Indextype</label>
+                        <select name="kmIndexTypeId" class="form-control form-control-modern" required>
+                            @foreach (var idx in Model.IndexTypes)
+                            {
+                                <option value="@idx.Id" title="@idx.Naam">@idx.Code</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-lg-1">
+                        <label class="form-label">Volgorde</label>
+                        <input type="number" name="volgorde" class="form-control form-control-modern" value="0" />
+                    </div>
+                    <div class="col-lg-2">
+                        <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <div class="card card-modern mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <label class="form-label mb-1" for="filter-categorie">Filter activiteitsgroep</label>
+                    <div class="input-group input-group-select-append">
+                        <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                        <select id="filter-categorie" class="form-control form-control-modern">
+                            <option value="">Alle groepen</option>
+                            @foreach (var grp in Model.ActivityGroepen)
+                            {
+                                <option value="@grp.ID">@(grp.Lot > 0 ? $"Deel {grp.Lot} – " : "")@grp.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <label class="form-label mb-1" for="filter-toepassing">Filter toepassing</label>
+                    <div class="input-group input-group-select-append">
+                        <span class="input-group-text"><i class="fas fa-filter"></i></span>
+                        <select id="filter-toepassing" class="form-control form-control-modern">
+                            <option value="">Alle types</option>
+                            <option value="Woning">Woning</option>
+                            <option value="Appartement">Appartement</option>
+                            <option value="Gemeenschappelijk">Gemeenschappelijk deel</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="card card-modern">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Materialen</h2>
+        </div>
+        <div class="card-body pt-2">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="datatable-materialen">
+                    <thead>
+                        <tr>
+                            <th>Naam</th>
+                            <th>Eenheid</th>
+                            <th>Toepassing</th>
+                            <th>Referentieprijs</th>
+                            <th>Referentiedatum</th>
+                            <th>Categorie</th>
+                            <th>Indextype</th>
+                            <th>Volgorde</th>
+                            <th class="text-end">Acties</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mat in Model.Materialen)
+                        {
+                            <tr data-categorie-id="@mat.CategorieId" data-toepassing="@(mat.Toepassingsgebied ?? "")">
+                                <form method="post" asp-action="KostprijsMateriaalUpdate" asp-controller="Instellingen" class="mat-update-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@mat.Id" />
+                                    <td>
+                                        <input name="naam" value="@mat.Naam" class="form-control form-control-sm" style="min-width:140px" />
+                                    </td>
+                                    <td>
+                                        <select name="eenheid" class="form-control form-control-sm" style="width:90px">
+                                            @foreach (var e in eenheden)
+                                            {
+                                                <option value="@e" selected="@(e == mat.Eenheid ? "selected" : null)">@e</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="toepassingsgebied" class="form-control form-control-sm" style="min-width:130px">
+                                            @foreach (var t in toepassingen)
+                                            {
+                                                <option value="@t" selected="@(t == (mat.Toepassingsgebied ?? "") ? "selected" : null)">@ToepassingLabel(t)</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div class="input-group input-group-sm" style="width:130px">
+                                            <span class="input-group-text">€</span>
+                                            <input type="text" inputmode="decimal" name="referentiePrijs"
+                                                   value="@mat.ReferentiePrijs.ToString("F2", ic)"
+                                                   class="form-control form-control-sm currency-input" />
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="date" name="referentieDatum" value="@mat.ReferentieDatum.ToString("yyyy-MM-dd")" class="form-control form-control-sm" style="width:140px" />
+                                    </td>
+                                    <td>
+                                        <select name="categorieId" class="form-control form-control-sm" style="min-width:130px">
+                                            @foreach (var grp in Model.ActivityGroepen)
+                                            {
+                                                <option value="@grp.ID" selected="@(grp.ID == mat.CategorieId ? "selected" : null)">
+                                                    @(grp.Lot > 0 ? $"D{grp.Lot} " : "")@grp.Name
+                                                </option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="kmIndexTypeId" class="form-control form-control-sm" style="width:80px">
+                                            @foreach (var idx in Model.IndexTypes)
+                                            {
+                                                <option value="@idx.Id" title="@idx.Naam" selected="@(idx.Id == mat.KmIndexTypeId ? "selected" : null)">@idx.Code</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <input type="number" name="volgorde" value="@mat.Volgorde" class="form-control form-control-sm" style="width:65px" />
+                                    </td>
+                                    <td class="actions text-end text-nowrap">
+                                        <button type="submit" class="btn btn-link p-0 ms-1 me-1" title="Opslaan">
+                                            <i class="bx bx-save fs-5"></i>
+                                        </button>
+                                        <button type="submit"
+                                                formmethod="post"
+                                                formaction="@Url.Action("KostprijsMateriaalDelete", "Instellingen", new { id = mat.Id })"
+                                                class="btn btn-link p-0 ms-1 me-1"
+                                                title="Verwijderen"
+                                                onclick="return confirm('Dit materiaal verwijderen?');">
+                                            <i class="bx bx-trash fs-5 text-danger"></i>
+                                        </button>
+                                    </td>
+                                </form>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+@* ── TAB 2: Bouwkost Percentages ── *@
+<div id="percentages-section" class="gl-settings-section d-none">
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <section class="card card-modern mb-4">
+                <div class="card-header border-0 pb-0">
+                    <h2 class="card-title mb-0">Groep toevoegen</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="BouwkostPercentageGroepCreate" asp-controller="Instellingen">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label">Naam</label>
+                            <input name="naam" class="form-control form-control-modern" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Volgorde</label>
+                            <input type="number" name="volgorde" class="form-control form-control-modern" value="0" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="card card-modern">
+                <div class="card-header border-0 pb-0">
+                    <h2 class="card-title mb-0">Groepen</h2>
+                </div>
+                <div class="card-body pt-2">
+                    <table class="table table-hover align-middle" id="datatable-pct-groepen">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th style="width:70px">Volgorde</th>
+                                <th class="text-end">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var g in Model.PercentageGroepen)
+                            {
+                                <tr>
+                                    <form method="post" asp-action="BouwkostPercentageGroepUpdate" asp-controller="Instellingen">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@g.Id" />
+                                        <td><input name="naam" value="@g.Naam" class="form-control form-control-sm" /></td>
+                                        <td><input type="number" name="volgorde" value="@g.Volgorde" class="form-control form-control-sm" /></td>
+                                        <td class="text-end text-nowrap">
+                                            <button type="submit" class="btn btn-link p-0 ms-1 me-1" title="Opslaan">
+                                                <i class="bx bx-save fs-5"></i>
+                                            </button>
+                                            <button type="submit"
+                                                    formmethod="post"
+                                                    formaction="@Url.Action("BouwkostPercentageGroepDelete", "Instellingen", new { id = g.Id })"
+                                                    class="btn btn-link p-0 ms-1 me-1"
+                                                    title="Verwijderen"
+                                                    onclick="return confirm('Deze groep verwijderen?');">
+                                                <i class="bx bx-trash fs-5 text-danger"></i>
+                                            </button>
+                                        </td>
+                                    </form>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-8">
+            <section class="card card-modern mb-4">
+                <div class="card-header border-0 pb-0">
+                    <h2 class="card-title mb-0">Percentage toevoegen</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="BouwkostPercentageCreate" asp-controller="Instellingen">
+                        @Html.AntiForgeryToken()
+                        <div class="row g-3 align-items-end">
+                            <div class="col-lg-4">
+                                <label class="form-label">Naam</label>
+                                <input name="naam" class="form-control form-control-modern" required />
+                            </div>
+                            <div class="col-lg-3">
+                                <label class="form-label">Groep</label>
+                                <select name="groepId" class="form-control form-control-modern" required>
+                                    @foreach (var g in Model.PercentageGroepen)
+                                    {
+                                        <option value="@g.Id">@g.Naam</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-lg-2">
+                                <label class="form-label">Percentage</label>
+                                <div class="input-group">
+                                    <input type="text" inputmode="decimal" name="percentage"
+                                           value="0,00" class="form-control form-control-modern currency-input pct-input" />
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-lg-1">
+                                <label class="form-label">Volgorde</label>
+                                <input type="number" name="volgorde" class="form-control form-control-modern" value="0" />
+                            </div>
+                            <div class="col-lg-2">
+                                <button type="submit" class="btn btn-primary w-100">Toevoegen</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="card card-modern">
+                <div class="card-header border-0 pb-0">
+                    <h2 class="card-title mb-0">Percentages</h2>
+                </div>
+                <div class="card-body pt-2">
+                    <table class="table table-hover align-middle" id="datatable-percentages">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th>Groep</th>
+                                <th style="width:130px">Percentage</th>
+                                <th style="width:70px">Volgorde</th>
+                                <th class="text-end">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var pct in Model.Percentages)
+                            {
+                                <tr>
+                                    <form method="post" asp-action="BouwkostPercentageUpdate" asp-controller="Instellingen">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@pct.Id" />
+                                        <td><input name="naam" value="@pct.Naam" class="form-control form-control-sm" style="min-width:140px" /></td>
+                                        <td>
+                                            <select name="groepId" class="form-control form-control-sm" style="min-width:130px">
+                                                @foreach (var g in Model.PercentageGroepen)
+                                                {
+                                                    <option value="@g.Id" selected="@(g.Id == pct.GroepId ? "selected" : null)">@g.Naam</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm" style="width:120px">
+                                                <input type="text" inputmode="decimal" name="percentage"
+                                                       value="@pct.Percentage.ToString("F2", ic)"
+                                                       class="form-control form-control-sm currency-input pct-input" />
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </td>
+                                        <td><input type="number" name="volgorde" value="@pct.Volgorde" class="form-control form-control-sm" style="width:65px" /></td>
+                                        <td class="text-end text-nowrap">
+                                            <button type="submit" class="btn btn-link p-0 ms-1 me-1" title="Opslaan">
+                                                <i class="bx bx-save fs-5"></i>
+                                            </button>
+                                            <button type="submit"
+                                                    formmethod="post"
+                                                    formaction="@Url.Action("BouwkostPercentageDelete", "Instellingen", new { id = pct.Id })"
+                                                    class="btn btn-link p-0 ms-1 me-1"
+                                                    title="Verwijderen"
+                                                    onclick="return confirm('Dit percentage verwijderen?');">
+                                                <i class="bx bx-trash fs-5 text-danger"></i>
+                                            </button>
+                                        </td>
+                                    </form>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@* ── TAB 3: Formule koppelingen ── *@
+<div id="koppelingen-section" class="gl-settings-section" style="display:none">
+    <section class="card card-modern mb-4">
+        <div class="card-header border-0 pb-0">
+            <h2 class="card-title mb-0">Formule koppelingen</h2>
+            <p class="text-muted small mb-0 mt-1">
+                Koppel hier elk formule-slot aan een materiaal uit de lijst.
+                De prijs van dat materiaal wordt gebruikt als invoer voor de formule in het budget.
+                Materialen die hier gekoppeld zijn kunnen niet worden verwijderd.
+            </p>
+        </div>
+        <div class="card-body">
+            <table class="table table-sm table-hover align-middle" id="tbl-koppelingen">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:220px">Formule-slot</th>
+                        <th>Omschrijving</th>
+                        <th style="min-width:260px">Gekoppeld materiaal</th>
+                        <th style="width:130px">Referentieprijs</th>
+                        <th style="width:80px">Eenheid</th>
+                        <th style="width:90px"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var k in Model.FormulaKoppelingen) {
+                        <tr data-sleutel="@k.Sleutel">
+                            <td><code class="text-secondary small">@k.Sleutel</code></td>
+                            <td>@k.Omschrijving</td>
+                            <td>
+                                <select class="form-select form-select-sm koppeling-materiaal-select" data-sleutel="@k.Sleutel">
+                                    <option value="">— geen koppeling —</option>
+                                    @foreach (var m in Model.Materialen) {
+                                        <option value="@m.Id"
+                                                selected="@(m.Id == k.MateriaalId ? "selected" : null)"
+                                                data-prijs="@m.ReferentiePrijs.ToString("F2", ic)"
+                                                data-eenheid="@m.Eenheid">
+                                            @(string.IsNullOrEmpty(m.CategorieNaam) ? "" : $"[{m.CategorieNaam}] ")@m.Naam
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="koppeling-prijs text-end font-monospace small">
+                                @if (k.MateriaalReferentiePrijs.HasValue) {
+                                    <span>€ @k.MateriaalReferentiePrijs.Value.ToString("N2", new System.Globalization.CultureInfo("nl-BE"))</span>
+                                }
+                            </td>
+                            <td class="koppeling-eenheid small text-muted">@k.MateriaalEenheid</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary btn-save-koppeling" data-sleutel="@k.Sleutel">
+                                    <i class="bx bx-save me-1"></i>Opslaan
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+@section PageScripts
+{
+    <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+    (function () {
+        // ── Currency mask ──────────────────────────────────────────────────────
+        function parseCurrency(str) {
+            // "1.234,56" or "1234.56" or "1234,56" → 1234.56
+            const s = String(str).trim();
+            // If has both . and , : determine which is decimal separator
+            const lastDot  = s.lastIndexOf('.');
+            const lastComma = s.lastIndexOf(',');
+            let raw;
+            if (lastComma > lastDot) {
+                // Belgian/EU format: 1.234,56
+                raw = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Invariant: 1234.56 or 1,234.56
+                raw = s.replace(/,/g, '');
+            }
+            return parseFloat(raw) || 0;
+        }
+
+        function formatDisplay(val) {
+            return val.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function initCurrencyInputs(scope) {
+            (scope || document).querySelectorAll('.currency-input').forEach(function (input) {
+                const raw = parseCurrency(input.value);
+                input.value = formatDisplay(raw);
+
+                input.addEventListener('focus', function () {
+                    // Show raw editable value with comma as decimal
+                    const v = parseCurrency(this.value);
+                    this.value = v.toFixed(2).replace('.', ',');
+                    this.select();
+                });
+
+                input.addEventListener('blur', function () {
+                    const v = parseCurrency(this.value);
+                    this.value = formatDisplay(v);
+                });
+            });
+        }
+
+        // Convert display format back to invariant decimal before submit
+        function hookFormSubmit(form) {
+            form.addEventListener('submit', function () {
+                form.querySelectorAll('.currency-input').forEach(function (input) {
+                    input.value = parseCurrency(input.value).toFixed(2);
+                });
+            }, true);
+        }
+
+        initCurrencyInputs(document);
+        document.querySelectorAll('form').forEach(hookFormSubmit);
+
+        // ── Tabs ───────────────────────────────────────────────────────────────
+        const sectionLinks = document.querySelectorAll('[data-gl-settings-section]');
+        const sections = {
+            materialen:  document.getElementById('materialen-section'),
+            percentages: document.getElementById('percentages-section')
+        };
+
+        function showSection(key) {
+            Object.values(sections).forEach(s => s.classList.add('d-none'));
+            sectionLinks.forEach(l => l.classList.remove('active'));
+            if (sections[key]) sections[key].classList.remove('d-none');
+            const activeLink = document.querySelector(`[data-gl-settings-section="${key}"]`);
+            if (activeLink) activeLink.classList.add('active');
+        }
+
+        sectionLinks.forEach(link => {
+            link.addEventListener('click', () => showSection(link.dataset.glSettingsSection));
+        });
+
+        // ── DataTables ─────────────────────────────────────────────────────────
+        const tableM = $('#datatable-materialen').DataTable({
+            paging: true,
+            ordering: true,
+            info: true,
+            searching: false,
+            lengthChange: false,
+            pageLength: 25,
+            language: {
+                zeroRecords: 'Geen materialen gevonden',
+                emptyTable: 'Geen materialen',
+                paginate: { previous: 'Vorige', next: 'Volgende' }
+            }
+        });
+
+        const filterCat       = document.getElementById('filter-categorie');
+        const filterToepassing = document.getElementById('filter-toepassing');
+
+        $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+            if (settings.nTable.id !== 'datatable-materialen') return true;
+            const row = tableM.row(dataIndex).node();
+            if (!row) return true;
+            const catOk = !filterCat?.value || row.getAttribute('data-categorie-id') === filterCat.value;
+            const topOk = !filterToepassing?.value || row.getAttribute('data-toepassing') === filterToepassing.value;
+            return catOk && topOk;
+        });
+
+        filterCat?.addEventListener('change', () => tableM.draw());
+        filterToepassing?.addEventListener('change', () => tableM.draw());
+
+        $('#datatable-pct-groepen').DataTable({
+            paging: false, ordering: true, info: false, searching: false, lengthChange: false,
+            language: { zeroRecords: 'Geen groepen', emptyTable: 'Geen groepen' }
+        });
+
+        $('#datatable-percentages').DataTable({
+            paging: true, ordering: true, info: true, searching: false, lengthChange: false, pageLength: 25,
+            language: { zeroRecords: 'Geen percentages gevonden', emptyTable: 'Geen percentages', paginate: { previous: 'Vorige', next: 'Volgende' } }
+        });
+
+        // Percentage-velden: formatDisplay zonder € teken (gewoon getal met 2 decimalen)
+        function formatPct(val) {
+            return val.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        document.querySelectorAll('.pct-input').forEach(function (input) {
+            // Override: pct-inputs tonen geen €-formaat maar gewoon getal
+            const raw = parseCurrency(input.value);
+            input.value = formatPct(raw);
+            input.addEventListener('focus', function () {
+                const v = parseCurrency(this.value);
+                this.value = v.toFixed(2).replace('.', ',');
+                this.select();
+            });
+            input.addEventListener('blur', function () {
+                this.value = formatPct(parseCurrency(this.value));
+            });
+        });
+    })();
+
+    // ── Formule koppelingen ─────────────────────────────────────────────────
+    document.querySelectorAll('.koppeling-materiaal-select').forEach(function(sel) {
+        sel.addEventListener('change', function() {
+            const tr = this.closest('tr');
+            const opt = this.options[this.selectedIndex];
+            tr.querySelector('.koppeling-prijs').innerHTML =
+                opt.dataset.prijs ? '€ ' + parseFloat(opt.dataset.prijs).toLocaleString('nl-BE', {minimumFractionDigits:2,maximumFractionDigits:2}) : '';
+            tr.querySelector('.koppeling-eenheid').textContent = opt.dataset.eenheid || '';
+        });
+    });
+
+    document.querySelectorAll('.btn-save-koppeling').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            const sleutel = this.dataset.sleutel;
+            const tr = this.closest('tr');
+            const materiaalId = tr.querySelector('.koppeling-materiaal-select').value;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Bezig...';
+            try {
+                const resp = await fetch('@Url.Action("FormulaKoppelingOpslaanAjax", "Instellingen")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sleutel: sleutel, materiaalId: materiaalId ? parseInt(materiaalId) : null })
+                });
+                const data = await resp.json();
+                btn.innerHTML = data.ok
+                    ? '<i class="bx bx-check me-1"></i>Opgeslagen'
+                    : '<i class="bx bx-error me-1"></i>Fout';
+                btn.className = data.ok
+                    ? 'btn btn-sm btn-success btn-save-koppeling'
+                    : 'btn btn-sm btn-danger btn-save-koppeling';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="bx bx-save me-1"></i>Opslaan';
+                    btn.className = 'btn btn-sm btn-primary btn-save-koppeling';
+                    btn.disabled = false;
+                }, 2000);
+            } catch {
+                btn.innerHTML = '<i class="bx bx-error me-1"></i>Fout';
+                btn.disabled = false;
+            }
+        });
+    });
+    </script>
+}

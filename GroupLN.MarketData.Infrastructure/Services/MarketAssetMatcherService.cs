@@ -19,6 +19,12 @@ public class MarketAssetMatcherService : IMarketAssetMatcher
     public async Task<MarketAssetMatchResult> FindMatchingAssetAsync(
         NormalizedPropertyDto dto, CancellationToken cancellationToken = default)
     {
+        // ProjectGroups en ProjectUnits nooit matchen op adres — AssetKey-deduplicatie is voldoende
+        if (dto.IsProjectListing || dto.IsProjectUnit
+            || dto.PropertyType == PropertyType.ProjectGroup
+            || !string.IsNullOrEmpty(dto.ProjectExternalId))
+            return NoMatch();
+
         if (string.IsNullOrEmpty(dto.PostalCode))
             return NoMatch();
 
