@@ -13,7 +13,28 @@ public class BudgetFormulaRegistry {
             FormulaSleutels.NacalcRuwbouwBasis,
             "Nacalc basisprijs ruwbouw (€/m²)",
             ctx => ctx.HeeftMateriaal(FormulaSleutels.NacalcRuwbouwBasis)
-                ? ctx.M(FormulaSleutels.NacalcRuwbouwBasis) * ctx.GewogenIndex
+                ? ctx.M(FormulaSleutels.NacalcRuwbouwBasis) * ctx.MIndexFactor(FormulaSleutels.NacalcRuwbouwBasis)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.BovenbouwGevelmetselwerk,
+            "Gevelmetselwerk (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.BovenbouwGevelmetselwerk)
+                ? ctx.M(FormulaSleutels.BovenbouwGevelmetselwerk) * ctx.MIndexFactor(FormulaSleutels.BovenbouwGevelmetselwerk)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.BovenbouwGipsblokken,
+            "Gipsblokken (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.BovenbouwGipsblokken)
+                ? ctx.M(FormulaSleutels.BovenbouwGipsblokken) * ctx.MIndexFactor(FormulaSleutels.BovenbouwGipsblokken)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.BovenbouwTerras,
+            "Terras (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.BovenbouwTerras)
+                ? ctx.M(FormulaSleutels.BovenbouwTerras) * ctx.MIndexFactor(FormulaSleutels.BovenbouwTerras)
                 : (decimal?)null
         );
 

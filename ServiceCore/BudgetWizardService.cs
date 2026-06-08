@@ -300,6 +300,7 @@ namespace ServiceCore
                 gegevensEntity.IIndexHuidig                     = src.IIndexHuidig;
                 gegevensEntity.GevelMetselwerkPrijsPerM2        = src.GevelMetselwerkPrijsPerM2;
                 gegevensEntity.GipswerkenPrijsPerM2             = src.GipswerkenPrijsPerM2;
+                gegevensEntity.TerrasPrijsPerM2                 = src.TerrasPrijsPerM2;
             }
 
             _uow.BudgetGegevens.Add(gegevensEntity);

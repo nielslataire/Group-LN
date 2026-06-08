@@ -46,6 +46,8 @@ public static class InfrastructureExtensions
         services.AddScoped<IMarketListingService, MarketListingService>();
         services.AddScoped<ICrawlerRunService, CrawlerRunService>();
         services.AddScoped<ICrawlerSourceService, CrawlerSourceService>();
+        services.AddScoped<IHistorySummaryService, HistorySummaryService>();
+        services.AddScoped<IMarketAreaStatisticsService, MarketAreaStatisticsService>();
 
         // Crawlers — allemaal geregistreerd als IRealEstateCrawler
         services.AddScoped<IRealEstateCrawler, ImmowebCrawler>();

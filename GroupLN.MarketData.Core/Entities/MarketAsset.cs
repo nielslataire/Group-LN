@@ -49,6 +49,8 @@ public class MarketAsset
 
     public DateTime FirstSeenAt { get; set; }
     public DateTime LastSeenAt { get; set; }
+    public DateTime? FirstSoldAt { get; set; }
+    public DateTime? StatusChangedAt { get; set; }
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; }

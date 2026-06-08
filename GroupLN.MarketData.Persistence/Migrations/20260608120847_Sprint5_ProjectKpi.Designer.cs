@@ -4,6 +4,7 @@ using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GroupLN.MarketData.Persistence.Migrations
 {
     [DbContext(typeof(MarketDataDbContext))]
-    partial class MarketDataDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260608120847_Sprint5_ProjectKpi")]
+    partial class Sprint5_ProjectKpi
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -180,97 +183,6 @@ namespace GroupLN.MarketData.Persistence.Migrations
                             Name = "ImmoNotaire",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
-                });
-
-            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketAreaStatistics", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<decimal?>("AverageLivingArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<decimal?>("AveragePrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("decimal(14,2)");
-
-                    b.Property<decimal?>("AveragePricePerSqm")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("City")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal?>("MaxLivingArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<decimal?>("MaxPrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("decimal(14,2)");
-
-                    b.Property<decimal?>("MaxPricePerSqm")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<decimal?>("MinLivingArea")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<decimal?>("MinPrice")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("decimal(14,2)");
-
-                    b.Property<decimal?>("MinPricePerSqm")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<string>("PostalCode")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<int>("ProjectsTotal")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PropertyType")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("SnapshotDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("SoldPercentage")
-                        .HasPrecision(8, 4)
-                        .HasColumnType("decimal(8,4)");
-
-                    b.Property<int>("UnitsAvailable")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnitsReserved")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnitsSold")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UnitsTotal")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AveragePricePerSqm");
-
-                    b.HasIndex("SnapshotDate");
-
-                    b.HasIndex("PostalCode", "PropertyType");
-
-                    b.ToTable("MarketAreaStatistics", (string)null);
                 });
 
             modelBuilder.Entity("GroupLN.MarketData.Core.Entities.MarketAsset", b =>

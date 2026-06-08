@@ -274,7 +274,7 @@
             });
         }
 
-        const currentTypeId = parseInt(row.querySelector('[data-field="unitTypeId"]')?.value) || 0;
+        const currentTypeId = parseInt(row.dataset.unitType) || 0;
         if (grpId) fillSubTypes(grpId, currentTypeId);
 
         grpSel.addEventListener('change', () => {
@@ -317,7 +317,6 @@
     }
 
     const calcGered = BudgetWizard.calcGered;
-    }
 
     // ── Debounced save ────────────────────────────────────────────────────────
     const saveTimers = {};
@@ -327,6 +326,11 @@
         clearTimeout(saveTimers[id]);
         const gered = calcGered(collectRowData(row));
         row.querySelector('.opp-gered-value').textContent = fmtNL(gered);
+        // Sync data-attributes zodat initRowDropdowns na herinitialisatie correct blijft
+        const grpVal  = row.querySelector('.opp-group-type')?.value;
+        const typeVal = row.querySelector('.opp-unit-type')?.value;
+        if (grpVal  !== undefined) row.dataset.groupType = grpVal;
+        if (typeVal !== undefined) row.dataset.unitType  = typeVal;
 
         saveTimers[id] = setTimeout(() => saveRow(row), 400);
     }

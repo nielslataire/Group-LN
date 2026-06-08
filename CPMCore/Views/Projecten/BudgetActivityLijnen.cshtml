@@ -203,6 +203,9 @@
 
 @section PageScripts {
 <script>
+    // Initialiseer popovers
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
+
     const versieId       = @Model.BudgetVersieId;
     const aantalEenheden = @Model.AantalEenheden;
     const oppGBA         = @Fmt(Model.OppervlakteGBA);

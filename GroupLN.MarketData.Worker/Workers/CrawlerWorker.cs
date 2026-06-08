@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+
 namespace GroupLN.MarketData.Worker.Workers;
 
 public class CrawlerWorker : BackgroundService
@@ -63,6 +64,8 @@ public class CrawlerWorker : BackgroundService
         var sourceService = scope.ServiceProvider.GetRequiredService<ICrawlerSourceService>();
         var runService = scope.ServiceProvider.GetRequiredService<ICrawlerRunService>();
         var crawlerFactory = scope.ServiceProvider.GetRequiredService<ICrawlerFactory>();
+        var historySummaryService = scope.ServiceProvider.GetRequiredService<IHistorySummaryService>();
+        var areaStatisticsService = scope.ServiceProvider.GetRequiredService<IMarketAreaStatisticsService>();
 
         IReadOnlyList<Core.Entities.CrawlerSource> activeSources;
         try
@@ -97,7 +100,7 @@ public class CrawlerWorker : BackgroundService
                     continue;
                 }
 
-                await CrawlSourceAsync(source, runService, crawlerFactory, cancellationToken);
+                await CrawlSourceAsync(source, runService, crawlerFactory, historySummaryService, areaStatisticsService, cancellationToken);
                 await sourceService.UpdateLastCrawledAsync(source.Id, cancellationToken);
             }
             catch (OperationCanceledException) { break; }
@@ -114,6 +117,8 @@ public class CrawlerWorker : BackgroundService
         Core.Entities.CrawlerSource source,
         ICrawlerRunService runService,
         ICrawlerFactory crawlerFactory,
+        IHistorySummaryService historySummaryService,
+        IMarketAreaStatisticsService areaStatisticsService,
         CancellationToken cancellationToken)
     {
         var crawler = crawlerFactory.GetCrawler(source.Name);
@@ -140,6 +145,36 @@ public class CrawlerWorker : BackgroundService
             _logger.LogInformation(
                 "[{Source}] Crawl voltooid. Gevonden: {Found} | Nieuw: {Created} | Bijgewerkt: {Updated} | Fouten: {Errors}.",
                 source.Name, result.ListingsFound, result.ListingsCreated, result.ListingsUpdated, result.Errors);
+
+            // History summary schrijven (ook bij DryRun voor analyse)
+            try
+            {
+                await historySummaryService.WriteHistorySummaryAsync(result.StartedAt, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[{Source}] History summary schrijven mislukt.", source.Name);
+            }
+
+            // Top-projecten rapport bijwerken
+            try
+            {
+                await historySummaryService.WriteTopProjectsReportAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[{Source}] Top-projecten rapport schrijven mislukt.", source.Name);
+            }
+
+            // Marktstatistieken per gemeente/postcode bijwerken
+            try
+            {
+                await areaStatisticsService.UpdateStatisticsAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[{Source}] MarketAreaStatistics bijwerken mislukt.", source.Name);
+            }
 
             // Verouderde listings markeren — alleen in echte run, niet DryRun
             if (!_settings.DryRun)

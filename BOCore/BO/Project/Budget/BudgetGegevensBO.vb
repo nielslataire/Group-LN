@@ -262,6 +262,17 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
+    Private _terrasPrijsPerM2 As Decimal?
+    <Display(Name:="Terras (€/m²)")>
+    Public Property TerrasPrijsPerM2() As Decimal?
+        Get
+            Return _terrasPrijsPerM2
+        End Get
+        Set(ByVal value As Decimal?)
+            _terrasPrijsPerM2 = value
+        End Set
+    End Property
+
     Private _updatedAt As DateTime?
     Public Property UpdatedAt() As DateTime?
         Get

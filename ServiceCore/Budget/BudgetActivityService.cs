@@ -15,11 +15,22 @@ namespace ServiceCore.Budget
     {
         private readonly UnitOfWorkCore _uow;
         private readonly BouwIndexService _bouwIndex;
+        private readonly BudgetFormulaService _formulaService;
 
-        public BudgetActivityService(UnitOfWorkCore uow, BouwIndexService bouwIndex)
+        public BudgetActivityService(UnitOfWorkCore uow, BouwIndexService bouwIndex, BudgetFormulaService formulaService)
         {
             _uow = uow;
             _bouwIndex = bouwIndex;
+            _formulaService = formulaService;
+        }
+
+        private static decimal GevelM2(DALCore.Models.BudgetGevelElementen e)
+        {
+            if (e.Hoogte.HasValue && e.Hoogte.Value > 0)
+                return e.Aantal * (e.Breedte ?? 0m) * e.Hoogte.Value;
+            if (e.Breedte.HasValue && e.Breedte.Value > 0 && e.Lengte.HasValue && e.Lengte.Value > 0)
+                return e.Aantal * e.Breedte.Value * e.Lengte.Value;
+            return 0m;
         }
 
         public async Task<List<BudgetLotGroepBO>> GetLotGroepenAsync(int budgetVersieId)
@@ -34,13 +45,69 @@ namespace ServiceCore.Budget
             var iHuidig = versie?.BudgetGegevens?.IIndexHuidig ?? 0m;
             var gewogenFactor = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
 
-            // Eenheden en GBA-oppervlakte
-            var aantalEenheden = await _uow.BudgetOppervlaktes.GetNoTracking()
-                .CountAsync(o => o.BudgetVersieId == budgetVersieId);
-
-            var totaalGBA = await _uow.BudgetOppervlaktes.GetNoTracking()
+            // Oppervlaktes (met UnitGroupType voor eenhedentelling)
+            var opps = await _uow.BudgetOppervlaktes.GetNoTracking()
+                .Include(o => o.UnitGroupType)
                 .Where(o => o.BudgetVersieId == budgetVersieId)
-                .SumAsync(o => (decimal?)o.BewoonbareOpp) ?? 0m;
+                .ToListAsync();
+
+            var aantalEenheden = opps.Count;
+            var totaalGBA = opps.Sum(o => o.BewoonbareOpp);
+
+            // ── Ruwbouw-voorstel berekening ────────────────────────────────────────
+            // Gebruik de opgeslagen basisprijzen uit BudgetGegevens (zelfde als de live sidebar),
+            // en haal enkel de referentie-indexwaarden op via de formualkoppeling voor de juiste noemer.
+            var gegevensBO = new BudgetGegevensBO();
+            gegevensBO.IIndexHuidig = versie?.BudgetGegevens?.IIndexHuidig;
+            gegevensBO.SIndexHuidig = versie?.BudgetGegevens?.SIndexHuidig;
+            var formulaCtx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
+            var formulaResultaten = _formulaService.BerekenAlle(formulaCtx);
+
+            var fIHuidig = versie?.BudgetGegevens?.IIndexHuidig ?? 100m;
+            var fSHuidig = versie?.BudgetGegevens?.SIndexHuidig ?? 100m;
+
+            decimal MatFactor(decimal iRef, decimal sRef) =>
+                fIHuidig / (iRef > 0m ? iRef : 100m) * 0.4m +
+                fSHuidig / (sRef > 0m ? sRef : 100m) * 0.4m + 0.2m;
+
+            var ruwbouwIRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalIRef ?? 100m;
+            var ruwbouwSRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalSRef ?? 100m;
+            var gevelIRef   = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwGevelmetselwerk)?.MateriaalIRef ?? 100m;
+            var gevelSRef   = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwGevelmetselwerk)?.MateriaalSRef ?? 100m;
+            var terrasIRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalIRef ?? 100m;
+            var terrasSRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalSRef ?? 100m;
+
+            // Basisprijzen uit BudgetGegevens — zelfde bron als de live berekening op tabblad Gegevens
+            var ruwbouwPrijsGeind = (versie?.BudgetGegevens?.NacalcBasisprijs       ?? 0m) * MatFactor(ruwbouwIRef, ruwbouwSRef);
+            var gevelPrijsGeind   = (versie?.BudgetGegevens?.GevelMetselwerkPrijsPerM2 ?? 0m) * MatFactor(gevelIRef,   gevelSRef);
+            var terrasPrijsGeind  = (versie?.BudgetGegevens?.TerrasPrijsPerM2        ?? 0m) * MatFactor(terrasIRef,  terrasSRef);
+
+            var totOppRuwbouw = opps.Sum(o =>
+                o.BewoonbareOpp + o.GaragesParkingsBovenGr + o.GarBergOndergronds +
+                o.BergGelijkvloers + o.DoorritGVL + o.GemeenschappelijkeDelen + o.Zolder * 0.30m);
+
+            var totTerrasPrefab = opps.Sum(o => o.TerrasPrefab);
+
+            var gevelRijen = await _uow.BudgetGevelElementen.GetNoTracking()
+                .Where(g => g.BudgetVersieId == budgetVersieId)
+                .ToListAsync();
+            var totaalGevels = gevelRijen
+                .Where(g => g.ElementType == "GevelNieuwbouw" || g.ElementType == "GevelBestaand")
+                .Sum(g => GevelM2(g));
+
+            var aantalWoonComm = opps.Count(o =>
+                o.UnitGroupType != null && (
+                    o.UnitGroupType.Name.Contains("woon", StringComparison.OrdinalIgnoreCase) ||
+                    o.UnitGroupType.Name.Contains("commerci", StringComparison.OrdinalIgnoreCase)));
+            if (aantalWoonComm == 0) aantalWoonComm = aantalEenheden;
+
+            var ruwbouwVoorstelTotaal = ruwbouwPrijsGeind * totOppRuwbouw
+                                      + terrasPrijsGeind  * totTerrasPrefab
+                                      + gevelPrijsGeind   * totaalGevels;
+            var ruwbouwVoorstelPerEenheid = aantalWoonComm > 0
+                ? Math.Round(ruwbouwVoorstelTotaal / aantalWoonComm, 2)
+                : 0m;
+            // ── Einde ruwbouw-voorstel ─────────────────────────────────────────────
 
             // Alle activiteiten inclusief lot-groep
             var activities = await _uow.Activities.GetNoTracking()
@@ -76,6 +143,9 @@ namespace ServiceCore.Budget
 
                     foreach (var activity in g)
                     {
+                        bool isRuwbouw = g.Key.Name.Contains("ruwbouw", StringComparison.OrdinalIgnoreCase) ||
+                                         activity.Omschrijving.Contains("ruwbouw", StringComparison.OrdinalIgnoreCase);
+
                         var bo = new BudgetActivityLijnBO
                         {
                             BudgetVersieId        = budgetVersieId,
@@ -94,13 +164,28 @@ namespace ServiceCore.Budget
                             GewogenIndexFactor    = gewogenFactor
                         };
 
-                        if (lijnenByActivity.TryGetValue(activity.ActivityId, out var lijn))
+                        bool heeftBestaandeLijn = lijnenByActivity.TryGetValue(activity.ActivityId, out var lijn);
+                        if (heeftBestaandeLijn)
                         {
                             bo.Id                          = lijn.Id;
                             bo.AlternatievePrijsPerEenheid = lijn.AlternatievePrijsPerEenheid ?? 0m;
                             bo.NacalcPrijsPerEenheid       = lijn.NacalcPrijsPerEenheid       ?? 0m;
                             bo.Correctiefactor             = lijn.Correctiefactor;
                             bo.IsManueel                   = lijn.IsManueel;
+                        }
+
+                        if (isRuwbouw && ruwbouwVoorstelPerEenheid > 0)
+                        {
+                            bo.VoorgesteldePrijsPerEenheid  = ruwbouwVoorstelPerEenheid;
+                            bo.VoorstelRuwbouwPrijs         = ruwbouwPrijsGeind;
+                            bo.VoorstelRuwbouwOpp           = totOppRuwbouw;
+                            bo.VoorstelTerrasPrijs          = terrasPrijsGeind;
+                            bo.VoorstelTerrasOpp            = totTerrasPrefab;
+                            bo.VoorstelGevelPrijs           = gevelPrijsGeind;
+                            bo.VoorstelGevelOpp             = totaalGevels;
+                            bo.VoorstelAantalEenheden       = aantalWoonComm;
+                            if (!heeftBestaandeLijn)
+                                bo.AlternatievePrijsPerEenheid = ruwbouwVoorstelPerEenheid;
                         }
 
                         groep.Lijnen.Add(bo);

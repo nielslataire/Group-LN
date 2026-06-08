@@ -38,37 +38,43 @@ public class MarketListingService : IMarketListingService
 
         if (existing is not null)
         {
+            var oldPrice = existing.AskingPrice;
+
             existing.Title = dto.Title ?? existing.Title;
             existing.AskingPrice = dto.AskingPrice ?? existing.AskingPrice;
             existing.LastSeenAt = now;
             existing.IsActive = true;
             existing.RemovedAt = null;
+            existing.MissingCrawlCount = 0;
             existing.UpdatedAt = now;
 
             UpdateAssetFromDto(existing.Asset, dto, now);
 
             var lastSnapshot = existing.Snapshots.MaxBy(s => s.SnapshotDate);
-            _context.MarketListingSnapshots.Add(CreateSnapshot(existing.Id, dto, now));
 
-            if (dto.AskingPrice.HasValue && lastSnapshot?.AskingPrice != dto.AskingPrice)
+            if (HasRelevantChange(lastSnapshot, dto))
+                _context.MarketListingSnapshots.Add(CreateSnapshot(existing.Id, dto, now));
+
+            if (dto.AskingPrice.HasValue && dto.AskingPrice != oldPrice)
             {
                 var change = new MarketListingPriceHistory
                 {
                     MarketListingId = existing.Id,
                     DetectedAt = now,
                     AskingPrice = dto.AskingPrice.Value,
-                    PreviousPrice = lastSnapshot?.AskingPrice
+                    PreviousPrice = oldPrice
                 };
 
-                if (lastSnapshot?.AskingPrice is decimal prev && prev != 0)
+                if (oldPrice is decimal prev && prev != 0)
                 {
                     change.PriceChangeAmount = dto.AskingPrice.Value - prev;
                     change.PriceChangePercentage = change.PriceChangeAmount / prev * 100m;
                 }
 
                 _context.MarketListingPriceHistories.Add(change);
-                _logger.LogInformation("Prijswijziging voor listing {ExternalId}: {Old} → {New}.",
-                    dto.ExternalId, lastSnapshot?.AskingPrice, dto.AskingPrice);
+                _logger.LogInformation(
+                    "PriceChangeDetected UnitId={ExternalId} OldPrice={Old} NewPrice={New}",
+                    dto.ExternalId, oldPrice, dto.AskingPrice.Value);
             }
 
             await _context.SaveChangesAsync(cancellationToken);
@@ -121,6 +127,7 @@ public class MarketListingService : IMarketListingService
         _context.MarketListings.Add(listing);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Eerste snapshot altijd aanmaken
         _context.MarketListingSnapshots.Add(CreateSnapshot(listing.Id, dto, now));
 
         if (dto.AskingPrice.HasValue)
@@ -161,16 +168,21 @@ public class MarketListingService : IMarketListingService
         NormalizedPropertyDto projectDto,
         IReadOnlyList<ProjectGroupUnitDto> units,
         bool dryRun,
+        int missingThreshold = 1,
         CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
-        int unitsCreated = 0, unitsUpdated = 0;
+        int unitsCreated = 0, unitsUpdated = 0, statusChanges = 0;
         int houseUnits = 0, apartmentUnits = 0, commercialUnits = 0;
         int soldUnits = 0, availableUnits = 0, reservedUnits = 0, optionUnits = 0, unknownUnits = 0;
+
+        var seenUnitIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var unit in units)
         {
             if (string.IsNullOrEmpty(unit.UnitId)) continue;
+
+            seenUnitIds.Add(unit.UnitId);
 
             switch (unit.MappedPropertyType)
             {
@@ -203,14 +215,18 @@ public class MarketListingService : IMarketListingService
 
             var existing = await _context.MarketListings
                 .Include(l => l.Asset)
+                .Include(l => l.Snapshots.OrderByDescending(s => s.SnapshotDate).Take(1))
                 .FirstOrDefaultAsync(l => l.SourceId == projectDto.SourceId && l.ExternalId == unit.UnitId, cancellationToken);
 
             if (existing is not null)
             {
+                var oldStatus = existing.Asset.SaleStatus;
+
                 existing.AskingPrice = unit.Price ?? existing.AskingPrice;
                 existing.LastSeenAt = now;
                 existing.IsActive = true;
                 existing.RemovedAt = null;
+                existing.MissingCrawlCount = 0;
                 existing.UpdatedAt = now;
 
                 existing.Asset.SaleStatus = unit.SaleStatus;
@@ -219,7 +235,23 @@ public class MarketListingService : IMarketListingService
                 existing.Asset.LastSeenAt = now;
                 existing.Asset.UpdatedAt = now;
 
-                _context.MarketListingSnapshots.Add(CreateUnitSnapshot(existing.Id, unit, now));
+                if (oldStatus != unit.SaleStatus)
+                {
+                    statusChanges++;
+                    existing.Asset.StatusChangedAt = now;
+
+                    if (unit.SaleStatus == SaleStatus.Sold && !existing.Asset.FirstSoldAt.HasValue)
+                        existing.Asset.FirstSoldAt = now;
+
+                    _logger.LogInformation(
+                        "StatusChangeDetected UnitId={UnitId} {OldStatus} -> {NewStatus}",
+                        unit.UnitId, oldStatus?.ToString() ?? "null", unit.SaleStatus);
+                }
+
+                var lastSnapshot = existing.Snapshots.MaxBy(s => s.SnapshotDate);
+                if (HasUnitRelevantChange(lastSnapshot, unit))
+                    _context.MarketListingSnapshots.Add(CreateUnitSnapshot(existing.Id, unit, now, projectDto.IsNewBuild));
+
                 unitsUpdated++;
 
                 _logger.LogInformation(
@@ -256,12 +288,14 @@ public class MarketListingService : IMarketListingService
                     LivingArea = unit.Surface,
                     Floor = unit.Floor,
                     Bedrooms = unit.BedroomCount,
-                    NewBuild = true,
+                    NewBuild = projectDto.IsNewBuild,
                     IsProjectGroup = false,
                     ParentMarketAssetId = parentAssetId,
                     ProjectExternalId = projectDto.ExternalId,
                     UnitExternalId = unit.UnitId,
                     SaleStatus = unit.SaleStatus,
+                    FirstSoldAt = unit.SaleStatus == SaleStatus.Sold ? now : null,
+                    StatusChangedAt = null,
                     FirstSeenAt = now,
                     LastSeenAt = now,
                     IsActive = true,
@@ -293,7 +327,7 @@ public class MarketListingService : IMarketListingService
                 _context.MarketListings.Add(listing);
                 await _context.SaveChangesAsync(cancellationToken);
 
-                _context.MarketListingSnapshots.Add(CreateUnitSnapshot(listing.Id, unit, now));
+                _context.MarketListingSnapshots.Add(CreateUnitSnapshot(listing.Id, unit, now, projectDto.IsNewBuild));
                 unitsCreated++;
 
                 _logger.LogInformation(
@@ -308,8 +342,46 @@ public class MarketListingService : IMarketListingService
             }
         }
 
-        if (!dryRun && (unitsCreated > 0 || unitsUpdated > 0))
-            await _context.SaveChangesAsync(cancellationToken);
+        // KPI-aggregaten berekenen op basis van alle aangeboden units
+        var pricedUnits = units.Where(u => u.Price.HasValue && u.Price.Value > 0).ToList();
+        var areaUnits = units.Where(u => u.Surface.HasValue && u.Surface.Value > 0).ToList();
+        var pricedAndArea = pricedUnits.Where(u => u.Surface.HasValue && u.Surface.Value > 0).ToList();
+
+        var minPrice = pricedUnits.Count > 0 ? pricedUnits.Min(u => u.Price!.Value) : (decimal?)null;
+        var maxPrice = pricedUnits.Count > 0 ? pricedUnits.Max(u => u.Price!.Value) : (decimal?)null;
+        var avgPrice = pricedUnits.Count > 0 ? Math.Round(pricedUnits.Average(u => u.Price!.Value), 2) : (decimal?)null;
+
+        var ppSqms = pricedAndArea.Select(u => u.Price!.Value / u.Surface!.Value).ToList();
+        var minPpSqm = ppSqms.Count > 0 ? Math.Round(ppSqms.Min(), 2) : (decimal?)null;
+        var maxPpSqm = ppSqms.Count > 0 ? Math.Round(ppSqms.Max(), 2) : (decimal?)null;
+        var avgPpSqm = ppSqms.Count > 0 ? Math.Round(ppSqms.Average(), 2) : (decimal?)null;
+
+        var minArea = areaUnits.Count > 0 ? areaUnits.Min(u => u.Surface!.Value) : (decimal?)null;
+        var maxArea = areaUnits.Count > 0 ? areaUnits.Max(u => u.Surface!.Value) : (decimal?)null;
+        var avgArea = areaUnits.Count > 0 ? Math.Round(areaUnits.Average(u => u.Surface!.Value), 2) : (decimal?)null;
+
+        if (!dryRun)
+        {
+            if (unitsCreated > 0 || unitsUpdated > 0)
+                await _context.SaveChangesAsync(cancellationToken);
+
+            // Verdwenen units bijhouden via threshold
+            await MarkMissingProjectUnitsAsync(parentAssetId, projectDto.SourceId, seenUnitIds, missingThreshold, now, cancellationToken);
+
+            // ProjectGroup snapshot bijwerken indien stats gewijzigd
+            await UpsertProjectGroupSnapshotAsync(
+                parentAssetId, units.Count, soldUnits, availableUnits, reservedUnits, optionUnits, unknownUnits, now, cancellationToken);
+
+            // KPI altijd opslaan per crawl (historisch)
+            await InsertProjectGroupKpiAsync(
+                parentAssetId,
+                units.Count, availableUnits, reservedUnits, soldUnits,
+                apartmentUnits, houseUnits,
+                minPrice, maxPrice, avgPrice,
+                minPpSqm, maxPpSqm, avgPpSqm,
+                minArea, maxArea, avgArea,
+                now, cancellationToken);
+        }
 
         return new ProjectGroupSaveResult(
             UnitsFound: units.Count,
@@ -322,31 +394,55 @@ public class MarketListingService : IMarketListingService
             AvailableUnits: availableUnits,
             ReservedUnits: reservedUnits,
             OptionUnits: optionUnits,
-            UnknownUnits: unknownUnits);
+            UnknownUnits: unknownUnits,
+            StatusChanges: statusChanges,
+            MinPrice: minPrice,
+            MaxPrice: maxPrice,
+            AveragePrice: avgPrice,
+            MinPricePerSqm: minPpSqm,
+            MaxPricePerSqm: maxPpSqm,
+            AveragePricePerSqm: avgPpSqm,
+            MinLivingArea: minArea,
+            MaxLivingArea: maxArea,
+            AverageLivingArea: avgArea);
     }
 
     public async Task MarkInactiveAsync(
-        int sourceId, IEnumerable<string> activeExternalIds, CancellationToken cancellationToken = default)
+        int sourceId,
+        IEnumerable<string> activeExternalIds,
+        int missingThreshold = 1,
+        CancellationToken cancellationToken = default)
     {
         var activeSet = activeExternalIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
         var now = DateTime.UtcNow;
 
-        var toDeactivate = await _context.MarketListings
+        var candidates = await _context.MarketListings
             .Where(l => l.SourceId == sourceId && l.IsActive && !activeSet.Contains(l.ExternalId))
             .ToListAsync(cancellationToken);
 
-        if (toDeactivate.Count == 0) return;
+        if (candidates.Count == 0) return;
 
-        foreach (var l in toDeactivate)
+        int deactivated = 0;
+        foreach (var l in candidates)
         {
-            l.IsActive = false;
-            l.RemovedAt = now;
+            l.MissingCrawlCount++;
             l.UpdatedAt = now;
+
+            if (l.MissingCrawlCount >= missingThreshold)
+            {
+                l.IsActive = false;
+                l.RemovedAt = now;
+                deactivated++;
+                _logger.LogInformation(
+                    "ListingDeactivated ExternalId={ExternalId} na {Count} ontbrekende crawls.",
+                    l.ExternalId, l.MissingCrawlCount);
+            }
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation("{Count} listings gemarkeerd als inactief voor bron {SourceId}.",
-            toDeactivate.Count, sourceId);
+        _logger.LogInformation(
+            "{Missing} listings ontbreken (bron {SourceId}): {Deactivated} gedeactiveerd, {Pending} nog in threshold.",
+            candidates.Count, sourceId, deactivated, candidates.Count - deactivated);
     }
 
     public async Task<int> MarkStaleListingsInactiveAsync(
@@ -372,7 +468,160 @@ public class MarketListingService : IMarketListingService
         return stale.Count;
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Privé helpers ─────────────────────────────────────────────────────────
+
+    private async Task MarkMissingProjectUnitsAsync(
+        long parentAssetId,
+        int sourceId,
+        HashSet<string> seenUnitIds,
+        int missingThreshold,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var existingUnits = await _context.MarketListings
+            .Where(l => l.SourceId == sourceId && l.IsActive
+                && _context.MarketAssets
+                    .Where(a => a.ParentMarketAssetId == parentAssetId)
+                    .Select(a => a.Id)
+                    .Contains(l.MarketAssetId))
+            .ToListAsync(cancellationToken);
+
+        int deactivated = 0;
+        foreach (var unit in existingUnits.Where(u => !seenUnitIds.Contains(u.ExternalId)))
+        {
+            unit.MissingCrawlCount++;
+            unit.UpdatedAt = now;
+
+            if (unit.MissingCrawlCount >= missingThreshold)
+            {
+                unit.IsActive = false;
+                unit.RemovedAt = now;
+                deactivated++;
+                _logger.LogInformation(
+                    "UnitDeactivated ExternalId={ExternalId} (project {ProjectId}) na {Count} ontbrekende crawls.",
+                    unit.ExternalId, parentAssetId, unit.MissingCrawlCount);
+            }
+        }
+
+        if (deactivated > 0 || existingUnits.Any(u => !seenUnitIds.Contains(u.ExternalId)))
+            await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpsertProjectGroupSnapshotAsync(
+        long parentAssetId,
+        int unitsTotal,
+        int unitsSold,
+        int unitsAvailable,
+        int unitsReserved,
+        int unitsOption,
+        int unitsUnknown,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var lastSnapshot = await _context.ProjectGroupSnapshots
+            .Where(s => s.MarketAssetId == parentAssetId)
+            .OrderByDescending(s => s.SnapshotDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (lastSnapshot is not null
+            && lastSnapshot.UnitsTotal == unitsTotal
+            && lastSnapshot.UnitsSold == unitsSold
+            && lastSnapshot.UnitsAvailable == unitsAvailable
+            && lastSnapshot.UnitsReserved == unitsReserved
+            && lastSnapshot.UnitsOption == unitsOption
+            && lastSnapshot.UnitsUnknown == unitsUnknown)
+        {
+            return;
+        }
+
+        var soldPct = unitsTotal > 0
+            ? Math.Round((decimal)unitsSold / unitsTotal * 100, 4)
+            : 0m;
+
+        if (lastSnapshot is not null && lastSnapshot.SoldPercentage != soldPct)
+        {
+            _logger.LogInformation(
+                "ProjectSoldPercentageChanged ProjectId={ProjectId} Old={Old}% New={New}%",
+                parentAssetId, lastSnapshot.SoldPercentage, soldPct);
+        }
+
+        _context.ProjectGroupSnapshots.Add(new ProjectGroupSnapshot
+        {
+            MarketAssetId = parentAssetId,
+            SnapshotDate = now,
+            UnitsTotal = unitsTotal,
+            UnitsSold = unitsSold,
+            UnitsAvailable = unitsAvailable,
+            UnitsReserved = unitsReserved,
+            UnitsOption = unitsOption,
+            UnitsUnknown = unitsUnknown,
+            SoldPercentage = soldPct
+        });
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task InsertProjectGroupKpiAsync(
+        long parentAssetId,
+        int unitsTotal, int unitsAvailable, int unitsReserved, int unitsSold,
+        int apartmentCount, int houseCount,
+        decimal? minPrice, decimal? maxPrice, decimal? avgPrice,
+        decimal? minPpSqm, decimal? maxPpSqm, decimal? avgPpSqm,
+        decimal? minArea, decimal? maxArea, decimal? avgArea,
+        DateTime now, CancellationToken cancellationToken)
+    {
+        var soldPct = unitsTotal > 0
+            ? Math.Round((decimal)unitsSold / unitsTotal * 100, 4)
+            : 0m;
+
+        _context.ProjectGroupKpis.Add(new ProjectGroupKpi
+        {
+            MarketAssetId = parentAssetId,
+            SnapshotDate = now,
+            UnitsTotal = unitsTotal,
+            UnitsAvailable = unitsAvailable,
+            UnitsReserved = unitsReserved,
+            UnitsSold = unitsSold,
+            SoldPercentage = soldPct,
+            MinPrice = minPrice,
+            MaxPrice = maxPrice,
+            AveragePrice = avgPrice,
+            MinPricePerSqm = minPpSqm,
+            MaxPricePerSqm = maxPpSqm,
+            AveragePricePerSqm = avgPpSqm,
+            MinLivingArea = minArea,
+            MaxLivingArea = maxArea,
+            AverageLivingArea = avgArea,
+            ApartmentCount = apartmentCount,
+            HouseCount = houseCount,
+            CreatedAt = now
+        });
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool HasRelevantChange(MarketListingSnapshot? last, NormalizedPropertyDto dto)
+    {
+        if (last is null) return true;
+        return last.AskingPrice != dto.AskingPrice
+            || last.LivingArea != dto.LivingArea
+            || last.Bedrooms != dto.Bedrooms
+            || last.Bathrooms != dto.Bathrooms
+            || last.ConstructionYear != dto.ConstructionYear
+            || last.EPCScore != dto.EPCScore
+            || last.EPCLabel != dto.EPCLabel
+            || last.GarageCount != dto.GarageCount
+            || last.LandArea != dto.LandArea;
+    }
+
+    private static bool HasUnitRelevantChange(MarketListingSnapshot? last, ProjectGroupUnitDto unit)
+    {
+        if (last is null) return true;
+        return last.AskingPrice != unit.Price
+            || last.LivingArea != unit.Surface
+            || last.Bedrooms != unit.BedroomCount
+            || last.SaleStatus != unit.SaleStatus;
+    }
 
     private static void UpdateAssetFromDto(MarketAsset asset, NormalizedPropertyDto dto, DateTime now)
     {
@@ -498,6 +747,9 @@ public class MarketListingService : IMarketListingService
         SnapshotDate = now,
         AskingPrice = dto.AskingPrice,
         MaxPrice = dto.MaxPrice,
+        PricePerSqm = (dto.AskingPrice > 0 && dto.LivingArea > 0)
+            ? Math.Round(dto.AskingPrice!.Value / dto.LivingArea!.Value, 2)
+            : null,
         LivingArea = dto.LivingArea,
         LandArea = dto.LandArea,
         TerraceArea = dto.TerraceArea,
@@ -517,15 +769,18 @@ public class MarketListingService : IMarketListingService
         RawJson = dto.RawJson
     };
 
-    private static MarketListingSnapshot CreateUnitSnapshot(long listingId, ProjectGroupUnitDto unit, DateTime now) => new()
+    private static MarketListingSnapshot CreateUnitSnapshot(long listingId, ProjectGroupUnitDto unit, DateTime now, bool isNewBuild) => new()
     {
         MarketListingId = listingId,
         SnapshotDate = now,
         AskingPrice = unit.Price,
+        PricePerSqm = (unit.Price > 0 && unit.Surface > 0)
+            ? Math.Round(unit.Price!.Value / unit.Surface!.Value, 2)
+            : null,
         LivingArea = unit.Surface,
         Floor = unit.Floor,
         Bedrooms = unit.BedroomCount,
-        IsNewBuild = true,
+        IsNewBuild = isNewBuild,
         SaleStatus = unit.SaleStatus,
         RawJson = JsonSerializer.Serialize(unit)
     };

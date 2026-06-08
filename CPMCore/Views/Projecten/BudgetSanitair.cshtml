@@ -228,6 +228,8 @@
             const payload = {
                 rijId:               parseInt(row.dataset.rijId),
                 versieId:            parseInt(row.dataset.versieId),
+                eenheidNaam:         row.dataset.eenheidNaam || '',
+                unitTypeId:          parseInt(row.dataset.unitTypeId) || 0,
                 badkamer:            parseInt(row.querySelector('[data-field="badkamer"]').value) || 0,
                 toiletInBadkamer:    parseInt(row.querySelector('[data-field="toiletInBadkamer"]').value) || 0,
                 afzonderlijkToilet:  parseInt(row.querySelector('[data-field="afzonderlijkToilet"]').value) || 0,

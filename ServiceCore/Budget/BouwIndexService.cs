@@ -19,11 +19,43 @@ namespace ServiceCore.Budget
 
         public async Task<decimal> GetActieveIndexAsync(string indexType)
         {
-            var idx = await _uow.BouwIndex.GetNoTracking()
-                .Where(x => x.IndexType == indexType && x.IsActief)
+            var query = _uow.BouwIndex.GetNoTracking()
+                .Where(x => x.IndexType == indexType);
+
+            // Eerst actief gemarkeerde rij proberen
+            var actief = await query.Where(x => x.IsActief).FirstOrDefaultAsync();
+            if (actief != null) return actief.IndexWaarde;
+
+            // Fallback: meest recente op basis van jaar + maand
+            var meestRecent = await query
+                .OrderByDescending(x => x.Jaar)
+                .ThenByDescending(x => x.Maand)
                 .FirstOrDefaultAsync();
-            if (idx != null) return idx.IndexWaarde;
+            if (meestRecent != null) return meestRecent.IndexWaarde;
+
             return indexType == "S" ? 119.1000m : 123.5000m;
+        }
+
+        // Geeft de indexwaarde terug die het dichtst bij de opgegeven datum ligt (meest recente <= datum, anders vroegste)
+        public async Task<decimal?> GetIndexOpDatumAsync(string indexType, DateTime datum)
+        {
+            var query = _uow.BouwIndex.GetNoTracking()
+                .Where(x => x.IndexType == indexType && x.Jaar != null && x.Maand != null);
+
+            var opOfVoor = await query
+                .Where(x => x.Jaar < datum.Year ||
+                            (x.Jaar == datum.Year && x.Maand <= datum.Month))
+                .OrderByDescending(x => x.Jaar)
+                .ThenByDescending(x => x.Maand)
+                .FirstOrDefaultAsync();
+            if (opOfVoor != null) return opOfVoor.IndexWaarde;
+
+            // Geen data vóór de datum: neem vroegst beschikbare
+            var vroegste = await query
+                .OrderBy(x => x.Jaar)
+                .ThenBy(x => x.Maand)
+                .FirstOrDefaultAsync();
+            return vroegste?.IndexWaarde;
         }
 
         public async Task<List<BouwIndex>> GetAlleIndexenAsync(string indexType)
@@ -50,8 +82,10 @@ namespace ServiceCore.Budget
             decimal sStart, decimal sHuidig,
             decimal iStart, decimal iHuidig)
         {
-            decimal sFactor = sStart > 0 ? sHuidig / sStart : 1m;
-            decimal iFactor = iStart > 0 ? iHuidig / iStart : 1m;
+            decimal sBase   = sStart > 0 ? sStart : 100m;
+            decimal iBase   = iStart > 0 ? iStart : 100m;
+            decimal sFactor = sHuidig / sBase;
+            decimal iFactor = iHuidig / iBase;
             return iFactor * 0.40m + sFactor * 0.40m + 0.20m;
         }
 

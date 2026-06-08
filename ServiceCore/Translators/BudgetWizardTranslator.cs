@@ -81,6 +81,7 @@ namespace ServiceCore.Translators
             bo.IIndexHuidig                     = entity.IIndexHuidig;
             bo.GevelMetselwerkPrijsPerM2        = entity.GevelMetselwerkPrijsPerM2;
             bo.GipswerkenPrijsPerM2             = entity.GipswerkenPrijsPerM2;
+            bo.TerrasPrijsPerM2                 = entity.TerrasPrijsPerM2;
             bo.UpdatedAt                        = entity.UpdatedAt;
 
             return bo;
@@ -110,6 +111,7 @@ namespace ServiceCore.Translators
             entity.IIndexHuidig                     = bo.IIndexHuidig;
             entity.GevelMetselwerkPrijsPerM2        = bo.GevelMetselwerkPrijsPerM2;
             entity.GipswerkenPrijsPerM2             = bo.GipswerkenPrijsPerM2;
+            entity.TerrasPrijsPerM2                 = bo.TerrasPrijsPerM2;
             entity.UpdatedAt                        = DateTime.Now;
         }
 

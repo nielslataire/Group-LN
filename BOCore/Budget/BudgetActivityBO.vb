@@ -27,6 +27,23 @@ Namespace Budget
         ''' <summary>Totale GBA m², gevuld door service.</summary>
         Public Property TotaalOppervlakte As Decimal
 
+        ''' <summary>Automatisch berekende suggestie voor AlternatievePrijsPerEenheid. Niet opgeslagen in DB.</summary>
+        Public Property VoorgesteldePrijsPerEenheid As Decimal?
+
+        Public Property VoorstelRuwbouwPrijs As Decimal?
+        Public Property VoorstelRuwbouwOpp As Decimal?
+        Public Property VoorstelTerrasPrijs As Decimal?
+        Public Property VoorstelTerrasOpp As Decimal?
+        Public Property VoorstelGevelPrijs As Decimal?
+        Public Property VoorstelGevelOpp As Decimal?
+        Public Property VoorstelAantalEenheden As Integer?
+
+        Public ReadOnly Property HeeftVoorstel As Boolean
+            Get
+                Return VoorgesteldePrijsPerEenheid.HasValue AndAlso VoorgesteldePrijsPerEenheid.Value > 0
+            End Get
+        End Property
+
         Public ReadOnly Property NacalcGeindexeerd As Decimal
             Get
                 Dim factor As Decimal = If(GewogenIndexFactor = 0, 1D, GewogenIndexFactor)

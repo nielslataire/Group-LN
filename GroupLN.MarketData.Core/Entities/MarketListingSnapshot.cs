@@ -10,6 +10,7 @@ public class MarketListingSnapshot
 
     public decimal? AskingPrice { get; set; }
     public decimal? MaxPrice { get; set; }
+    public decimal? PricePerSqm { get; set; }
     public decimal? LivingArea { get; set; }
     public decimal? LandArea { get; set; }
     public decimal? TerraceArea { get; set; }

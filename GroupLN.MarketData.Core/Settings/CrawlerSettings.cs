@@ -26,6 +26,9 @@ public class CrawlerSettings
     // ── Opruimen ─────────────────────────────────────────────────────────────
     public int MarkInactiveAfterDays { get; set; } = 30;
 
+    // Aantal opeenvolgende crawls dat een listing ontbreekt voor deactivatie
+    public int MissingListingThreshold { get; set; } = 3;
+
     // ── Per-bron instellingen ────────────────────────────────────────────────
     public Dictionary<string, SourceSettings> Sources { get; set; } = new();
 
@@ -53,6 +56,13 @@ public class SourceSettings
     /// In SearchDebugMode wordt Debug.MaxPagesInSearchDebugMode gebruikt.
     /// </summary>
     public int MaxSearchPagesPerLocation { get; set; } = 10;
+
+    /// <summary>
+    /// true = altijd MaxSearchPagesPerLocation pagina's ophalen, ook als het geschatte
+    /// resultaat al volledig verwerkt is.
+    /// false (standaard) = stop na min(EstimatedPages, MaxSearchPagesPerLocation) pagina's.
+    /// </summary>
+    public bool ForceMaxSearchPages { get; set; } = false;
 
     /// <summary>
     /// Lijst van zoek-URL-templates. Ondersteunde placeholders:

@@ -3146,6 +3146,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.IIndexHuidig).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.GevelMetselwerkPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(165m);
             entity.Property(e => e.GipswerkenPrijsPerM2).HasColumnType("decimal(8, 2)").HasDefaultValue(2759m);
+            entity.Property(e => e.TerrasPrijsPerM2).HasColumnType("decimal(8, 2)");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime2");
 
             entity.HasOne(d => d.BudgetVersie).WithOne(p => p.BudgetGegevens)

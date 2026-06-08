@@ -240,7 +240,7 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 && seenExternalIds.Count >= Settings.MinListingsBeforeMarkInactive;
 
             if (canMarkInactive)
-                await ListingService.MarkInactiveAsync(source.Id, seenExternalIds, cancellationToken);
+                await ListingService.MarkInactiveAsync(source.Id, seenExternalIds, Settings.MissingListingThreshold, cancellationToken);
 
             result.Success = result.Errors == 0 || result.ListingsFound > 0;
         }

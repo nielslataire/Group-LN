@@ -15,6 +15,9 @@ public class MarketDataDbContext : DbContext
     public DbSet<MarketListingSnapshot> MarketListingSnapshots => Set<MarketListingSnapshot>();
     public DbSet<MarketListingPriceHistory> MarketListingPriceHistories => Set<MarketListingPriceHistory>();
     public DbSet<MarketAssetMatchCandidate> MarketAssetMatchCandidates => Set<MarketAssetMatchCandidate>();
+    public DbSet<ProjectGroupSnapshot> ProjectGroupSnapshots => Set<ProjectGroupSnapshot>();
+    public DbSet<ProjectGroupKpi> ProjectGroupKpis => Set<ProjectGroupKpi>();
+    public DbSet<MarketAreaStatistics> MarketAreaStatistics => Set<MarketAreaStatistics>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

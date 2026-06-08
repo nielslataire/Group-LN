@@ -20,12 +20,24 @@ public partial class ImmowebCrawler : BaseCrawler
 
     // State over de volledige crawl-sessie — reset in GetSearchPageUrlsAsync (start fase 1)
     private int? _detectedResultCount;
+    private int? _estimatedMaxPages;
     private readonly List<PageStat> _pageStats = [];
 
     // Units per project, gevuld door HandleProjectGroupAsync, geconsumeerd door AfterPersistAsync
     private readonly Dictionary<string, List<ProjectGroupUnitDto>> _pendingProjectUnits = new();
 
+    // Field availability summary — accumulatie over de volledige crawl-sessie
+    private readonly Dictionary<string, (int Found, int Missing)> _fieldSummary = new(StringComparer.Ordinal);
+
+    // Listing-URL's afkomstig van een nieuwbouwzoekopdracht (isNewlyBuilt=true in zoek-URL)
+    private readonly ConcurrentDictionary<string, bool> _newBuildSearchListings =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private record PageStat(int PageNum, string Location, int Href, int Api, int Sponsor, int Unique);
+
+    private sealed record SearchUrlContext(
+        IReadOnlySet<string> AllowedPostalCodes,
+        bool IsNewBuildSearch);
 
     // Geldig: /nl/zoekertje/TYPE/te-koop/GEMEENTE/POSTCODE/ID
     //         /fr/annonce/...
@@ -43,6 +55,10 @@ public partial class ImmowebCrawler : BaseCrawler
     // Classified ID uit detail-URL extraheren (laatste numeriek segment vóór ? of einde)
     private static readonly Regex UrlIdPattern =
         new(@"/(\d{6,})(?:[?#]|$)", RegexOptions.Compiled);
+
+    // Postcode extractie uit listing-URL: /GEMEENTE/POSTCODE/ID  (bijv. /brugge/8000/12345678)
+    private static readonly Regex PostalCodeInListingUrl =
+        new(@"/([1-9]\d{3})/\d{6,}", RegexOptions.Compiled);
 
     // Regex voor HTML-tekst scan (fase 4 fallback)
     private static readonly Regex HtmlClassifiedUrlPattern =
@@ -118,8 +134,19 @@ public partial class ImmowebCrawler : BaseCrawler
     {
         // Per-crawl state resetten
         _detectedResultCount = null;
+        _estimatedMaxPages = null;
         _pageStats.Clear();
         _pendingProjectUnits.Clear();
+        _newBuildSearchListings.Clear();
+
+        // Verwijder afgelopen crawl's rejected-urls bestand (herstart per crawl)
+        try
+        {
+            var rejectedPath = Path.Combine(AppContext.BaseDirectory, "debug", "search",
+                "immoweb-rejected-listing-urls.txt");
+            if (File.Exists(rejectedPath)) File.Delete(rejectedPath);
+        }
+        catch { /* niet-kritiek */ }
 
         var src = GetSourceSettings();
         var debug = Settings.Debug;
@@ -210,6 +237,25 @@ public partial class ImmowebCrawler : BaseCrawler
         string searchPageUrl, CancellationToken cancellationToken)
     {
         IPage? page = null;
+
+        // ── Paginering: overgeslagen pagina's voorbij schatting ───────────────
+        {
+            var pageMatch = Regex.Match(searchPageUrl, @"[?&]page=(\d+)", RegexOptions.IgnoreCase);
+            var currentPage = pageMatch.Success ? int.Parse(pageMatch.Groups[1].Value) : 1;
+
+            if (currentPage == 1)
+                _estimatedMaxPages = null; // Reset voor nieuwe locatie/template
+
+            var src2 = GetSourceSettings();
+            if (currentPage > 1 && _estimatedMaxPages.HasValue && !src2.ForceMaxSearchPages
+                && currentPage > _estimatedMaxPages.Value)
+            {
+                Logger.LogInformation(
+                    "[Immoweb] Pagina {Page} overgeslagen — voorbij EstimatedPages={Est} (ForceMaxSearchPages=false).",
+                    currentPage, _estimatedMaxPages.Value);
+                return Enumerable.Empty<string>();
+            }
+        }
 
         try
         {
@@ -321,8 +367,9 @@ public partial class ImmowebCrawler : BaseCrawler
             // ════════════════════════════════════════════════════════════════════
             // BRON 1 (primair): Href-scan — altijd uitvoeren, niet enkel als fallback
             // ════════════════════════════════════════════════════════════════════
-            var hrefListingUrls = await ScanHrefsAsync(page);
-            Logger.LogInformation("[Immoweb] Bron 1 (hrefs): {Count} listing-URL's gevonden.", hrefListingUrls.Count);
+            var (hrefListingUrls, rawHrefCount) = await ScanHrefsAsync(page);
+            Logger.LogInformation("[Immoweb] Bron 1 (hrefs): {Candidates} listing-kandidaten uit {Raw} rauwe hrefs.",
+                hrefListingUrls.Count, rawHrefCount);
 
             if (hrefListingUrls.Count > 0)
             {
@@ -388,13 +435,39 @@ public partial class ImmowebCrawler : BaseCrawler
             // SAMENVOEGEN: hrefs eerst, dan API, dan sponsor, dan regex
             // Dedupliceren op ExternalId (numeriek segment in URL)
             // ════════════════════════════════════════════════════════════════════
-            var listingUrls = MergeAndDeduplicate(hrefListingUrls, apiListingUrls, sponsorListingUrls, regexListingUrls);
+            List<string> listingUrls = MergeAndDeduplicate(hrefListingUrls, apiListingUrls, sponsorListingUrls, regexListingUrls);
+            var candidateCount = listingUrls.Count;
+
+            // ════════════════════════════════════════════════════════════════════
+            // POSTCODE-FILTER: verwijder listings buiten de gezochte locatie(s)
+            // Filtert zowel hrefs als API/sponsor URLs — pakt "gelijkaardige panden"
+            // ════════════════════════════════════════════════════════════════════
+            var searchContext = BuildSearchContext(searchPageUrl);
+            var rejectedUrls = new List<(string Url, string Reason)>();
+
+            if (searchContext.AllowedPostalCodes.Count > 0)
+                listingUrls = FilterByPostalCode(listingUrls, searchContext.AllowedPostalCodes, rejectedUrls);
+
+            // Markeer listing-URLs van nieuwbouwzoekopdracht voor latere detail-filtering
+            if (searchContext.IsNewBuildSearch)
+                foreach (var u in listingUrls)
+                    _newBuildSearchListings[u] = true;
 
             Logger.LogInformation(
                 "[Immoweb] ══ URL-collectie klaar ══ " +
-                "HrefListingUrlsFound={Href} | ApiUrlsFound={Api} | SponsoredApiUrlsFound={Sponsor} | RegexUrlsFound={Regex} | TotalUniqueListingUrls={Total}",
-                hrefListingUrls.Count, apiListingUrls.Count, sponsorListingUrls.Count, regexListingUrls.Count,
-                listingUrls.Count);
+                "RawHrefsFound={Raw} | HrefCandidates={Href} | ApiFound={Api} | SponsorFound={Sponsor} | RegexFound={Regex} | " +
+                "CandidateListingUrls={Candidate} | AcceptedListingUrls={Accepted} | RejectedListingUrls={Rejected}" +
+                "{NewBuild}",
+                rawHrefCount, hrefListingUrls.Count, apiListingUrls.Count, sponsorListingUrls.Count, regexListingUrls.Count,
+                candidateCount, listingUrls.Count, rejectedUrls.Count,
+                searchContext.IsNewBuildSearch ? " | IsNewBuildSearch=true" : "");
+
+            if (rejectedUrls.Count > 0)
+            {
+                foreach (var r in rejectedUrls)
+                    Logger.LogInformation("[Immoweb] RejectedListingUrl | {Url} | Reason={Reason}", r.Url, r.Reason);
+                await WriteRejectedUrlsFileAsync(rejectedUrls, cancellationToken);
+            }
 
             // ── Debug-bestanden wegschrijven ──────────────────────────────────
             await WriteSearchDebugFilesAsync(
@@ -746,6 +819,19 @@ public partial class ImmowebCrawler : BaseCrawler
                 ? (int)Math.Ceiling(effectiveCount.Value / (double)resultsPerPage)
                 : (int?)null;
 
+            // Sla geschat maximum op na pagina 1 (gebruikt voor vroeg afbreken)
+            if (pageNum == 1 && estimatedPages.HasValue)
+            {
+                var srcSettings = GetSourceSettings();
+                var cap = srcSettings.SearchDebugMode
+                    ? Settings.Debug.MaxPagesInSearchDebugMode
+                    : srcSettings.MaxSearchPagesPerLocation;
+                _estimatedMaxPages = Math.Min(estimatedPages.Value, cap);
+                Logger.LogInformation(
+                    "[Immoweb] EstimatedMaxPages vastgesteld op {Est} (gecapped op {Cap}).",
+                    _estimatedMaxPages.Value, cap);
+            }
+
             Logger.LogInformation(
                 "[Immoweb] Paginering | Pagina {Page}: Href={Href} Unique={Unique} | " +
                 "Cumulatief={Total}/{ResultCount} | EstimatedPages={Est}",
@@ -830,27 +916,78 @@ public partial class ImmowebCrawler : BaseCrawler
     private async Task WriteAcceptedUrlsFileAsync(
         IReadOnlyList<string> urls, CancellationToken cancellationToken)
     {
-        if (!Settings.Debug.Enabled || !Settings.Debug.SaveAcceptedUrls) return;
         try
         {
-            var path = Path.Combine(GetDebugDir(), "immoweb-accepted-listing-urls.txt");
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var dir = Path.Combine(AppContext.BaseDirectory, "debug", "search");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "immoweb-accepted-listing-urls.txt");
 
             var lines = new List<string>
             {
                 $"# Datum     : {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                $"# Totaal    : {urls.Count} unieke listing-URL's",
+                $"# Totaal    : {urls.Count} geaccepteerde listing-URL's",
                 ""
             };
             lines.AddRange(urls);
 
             await File.WriteAllLinesAsync(path, lines, cancellationToken);
-            Logger.LogInformation("[Immoweb] Geaccepteerde listing-URL's → {Dir}/immoweb-accepted-listing-urls.txt ({Count})",
-                Settings.Debug.DebugDirectory, urls.Count);
+            Logger.LogInformation("[Immoweb] Geaccepteerde listing-URL's → debug/search/immoweb-accepted-listing-urls.txt ({Count})",
+                urls.Count);
         }
         catch (Exception ex)
         {
             Logger.LogDebug("[Immoweb] Schrijven accepted-urls mislukt: {Msg}", ex.Message);
+        }
+    }
+
+    // ── Postcode-filter helpers ───────────────────────────────────────────────
+
+    private SearchUrlContext BuildSearchContext(string searchUrl)
+    {
+        var isNewBuild = searchUrl.Contains("isNewlyBuilt=true", StringComparison.OrdinalIgnoreCase);
+        var codes = GetSourceSettings().AllowedLocations
+            .Where(l => !string.IsNullOrWhiteSpace(l.PostalCode))
+            .Select(l => l.PostalCode!.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return new SearchUrlContext(codes, isNewBuild);
+    }
+
+    private List<string> FilterByPostalCode(
+        List<string> urls,
+        IReadOnlySet<string> allowedCodes,
+        List<(string Url, string Reason)> rejectedOut)
+    {
+        var accepted = new List<string>();
+        foreach (var url in urls)
+        {
+            var m = PostalCodeInListingUrl.Match(url);
+            if (m.Success && allowedCodes.Contains(m.Groups[1].Value))
+            {
+                accepted.Add(url);
+            }
+            else
+            {
+                var reason = m.Success ? "PostalCodeMismatch" : "NoPostalCodeInUrl";
+                rejectedOut.Add((url, reason));
+            }
+        }
+        return accepted;
+    }
+
+    private async Task WriteRejectedUrlsFileAsync(
+        List<(string Url, string Reason)> rejections, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var dir = Path.Combine(AppContext.BaseDirectory, "debug", "search");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "immoweb-rejected-listing-urls.txt");
+            var lines = rejections.Select(r => $"RejectedListingUrl | {r.Url} | Reason={r.Reason}");
+            await File.AppendAllLinesAsync(path, lines, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug("[Immoweb] Schrijven rejected-urls mislukt: {Msg}", ex.Message);
         }
     }
 
@@ -1053,15 +1190,16 @@ public partial class ImmowebCrawler : BaseCrawler
 
     // ── Fase 3: Href-scan ─────────────────────────────────────────────────────
 
-    private async Task<List<string>> ScanHrefsAsync(IPage page)
+    private async Task<(List<string> Urls, int RawCount)> ScanHrefsAsync(IPage page)
     {
         var result = new List<string>();
 
         var allHrefs = await page.EvaluateAsync<string[]>(
             "() => Array.from(document.querySelectorAll('a[href]')).map(a => a.href).filter(h => h.length > 0)");
 
-        if (allHrefs is null) return result;
+        if (allHrefs is null) return (result, 0);
 
+        var rawCount = allHrefs.Length;
         var accepted = 0;
         var rejected = 0;
 
@@ -1085,10 +1223,10 @@ public partial class ImmowebCrawler : BaseCrawler
         }
 
         Logger.LogInformation(
-            "[Immoweb] Href-scan: totaal={Total} | geaccepteerd={Acc} | geweigerd={Rej}",
-            allHrefs.Length, accepted, rejected);
+            "[Immoweb] Href-scan: totaal={Total} | listing-kandidaten={Acc} | niet-listing={Rej}",
+            rawCount, accepted, rejected);
 
-        return result;
+        return (result, rawCount);
     }
 
     // ── Debug-bestanden (zoekpagina) ──────────────────────────────────────────
@@ -1217,6 +1355,7 @@ public partial class ImmowebCrawler : BaseCrawler
                 var dto = ParseClassifiedJson(classifiedJson, listingUrl);
                 if (dto is not null)
                 {
+                    if (ApplyNewBuildFilter(dto, listingUrl) is null) return null;
                     Logger.LogInformation("[Immoweb] window.classified gevonden.");
                     LogParsedListing(dto);
                     await HandleProjectGroupAsync(dto, classifiedJson, cancellationToken);
@@ -1234,6 +1373,7 @@ public partial class ImmowebCrawler : BaseCrawler
                 var dto = ParseNextDataJson(nextDataJson, listingUrl);
                 if (dto is not null)
                 {
+                    if (ApplyNewBuildFilter(dto, listingUrl) is null) return null;
                     Logger.LogInformation("[Immoweb] __NEXT_DATA__ gevonden.");
                     LogParsedListing(dto);
                     await HandleProjectGroupAsync(dto, nextDataJson, cancellationToken);
@@ -1262,6 +1402,11 @@ public partial class ImmowebCrawler : BaseCrawler
 
             if (fallbackDto is not null)
             {
+                if (ApplyNewBuildFilter(fallbackDto, listingUrl) is null)
+                {
+                    await WriteDetailDebugFilesAsync(listingUrl, htmlContent, scripts, cancellationToken);
+                    return null;
+                }
                 Logger.LogInformation("[Immoweb] Script-fallback gelukt voor ID {Id}.", classifiedId);
                 LogParsedListing(fallbackDto);
                 var fallbackRaw = scripts?.FirstOrDefault(s => s.Contains(classifiedId ?? "")) ?? "";
@@ -1299,6 +1444,16 @@ public partial class ImmowebCrawler : BaseCrawler
         }
     }
 
+    private ListingDto? ApplyNewBuildFilter(ListingDto dto, string listingUrl)
+    {
+        if (!_newBuildSearchListings.ContainsKey(listingUrl)) return dto;
+        if (dto.IsNewBuild == true) return dto;
+        Logger.LogInformation(
+            "[Immoweb] ListingSkipped | {Url} | Reason=NotNewBuild (zoekopdracht: isNewlyBuilt=true, listing: IsNewBuild=false).",
+            listingUrl);
+        return null;
+    }
+
     private void LogParsedListing(ListingDto dto)
     {
         var isProject = IsProjectGroup(dto, dto.Url ?? "");
@@ -1323,6 +1478,7 @@ public partial class ImmowebCrawler : BaseCrawler
             "  ConstructionYear: {Year}\n" +
             "  EPCScore        : {EpcScore} kWh/m²jaar\n" +
             "  EPCLabel        : {EpcLabel}\n" +
+            "  IsNewBuild      : {IsNewBuild} (bron: {IsNewBuildSource})\n" +
             "  Description     : {DescLen} tekens\n" +
             "  EnergyFeatures  : {Features}\n" +
             "  RawJson         : {HasJson}",
@@ -1344,6 +1500,8 @@ public partial class ImmowebCrawler : BaseCrawler
             dto.ConstructionYear?.ToString() ?? "?",
             dto.EPCScore?.ToString("N0") ?? "?",
             dto.EPCLabelRaw ?? "?",
+            dto.IsNewBuild == true ? "JA" : "nee",
+            dto.IsNewBuildSource ?? "geen",
             dto.Description?.Length.ToString() ?? "0",
             features.Count > 0 ? string.Join(", ", features) : "geen",
             string.IsNullOrEmpty(dto.RawJson) ? "NEE" : $"JA ({dto.RawJson.Length:N0} bytes)");
@@ -1567,20 +1725,25 @@ public partial class ImmowebCrawler : BaseCrawler
             Logger.LogInformation(
                 "[Immoweb] [DRYRUN] Project zou worden opgeslagen: {ExternalId} | {Units} units te verwerken",
                 normalized.ExternalId, units.Count);
-            await ListingService.UpsertProjectUnitsAsync(0, normalized, units, dryRun: true, cancellationToken);
+            await ListingService.UpsertProjectUnitsAsync(0, normalized, units, dryRun: true, Settings.MissingListingThreshold, cancellationToken);
             return;
         }
 
         if (!assetId.HasValue) return;
 
         var saveResult = await ListingService.UpsertProjectUnitsAsync(
-            assetId.Value, normalized, units, dryRun: false, cancellationToken);
+            assetId.Value, normalized, units, dryRun: false, Settings.MissingListingThreshold, cancellationToken);
+
+        var soldPct = saveResult.UnitsFound > 0
+            ? Math.Round((decimal)saveResult.SoldUnits / saveResult.UnitsFound * 100, 1)
+            : 0m;
 
         Logger.LogInformation(
             "[Immoweb] ProjectGroupSaved | ProjectAssetId={AssetId} | ProjectExternalId={ExternalId} | ProjectName={Name} | " +
             "UnitsFound={Found} | UnitsCreated={Created} | UnitsUpdated={Updated} | " +
             "HouseUnits={H} | ApartmentUnits={A} | CommercialUnits={C} | " +
-            "SoldUnits={Sold} | AvailableUnits={Avail} | ReservedUnits={Res} | OptionUnits={Opt} | UnknownUnits={Unk}",
+            "SoldUnits={Sold} | AvailableUnits={Avail} | ReservedUnits={Res} | OptionUnits={Opt} | UnknownUnits={Unk} | " +
+            "SoldPct={SoldPct}% | AvgPrice={AvgPrice} | AvgPricePerSqm={AvgPpSqm} | AvgArea={AvgArea}m²",
             assetId.Value,
             normalized.ExternalId,
             units.FirstOrDefault()?.ParentProjectName ?? "?",
@@ -1594,7 +1757,51 @@ public partial class ImmowebCrawler : BaseCrawler
             saveResult.AvailableUnits,
             saveResult.ReservedUnits,
             saveResult.OptionUnits,
-            saveResult.UnknownUnits);
+            saveResult.UnknownUnits,
+            soldPct,
+            saveResult.AveragePrice.HasValue ? $"€{saveResult.AveragePrice.Value:N0}" : "?",
+            saveResult.AveragePricePerSqm.HasValue ? $"€{saveResult.AveragePricePerSqm.Value:N0}" : "?",
+            saveResult.AverageLivingArea?.ToString("N0") ?? "?");
+
+        // KPI JSON schrijven
+        try
+        {
+            var kpiDir = Path.Combine(AppContext.BaseDirectory, "debug", "kpi");
+            Directory.CreateDirectory(kpiDir);
+
+            var kpiOutput = new
+            {
+                projectId = normalized.ExternalId,
+                projectName = units.FirstOrDefault()?.ParentProjectName ?? "?",
+                crawledAt = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                unitsTotal = saveResult.UnitsFound,
+                unitsSold = saveResult.SoldUnits,
+                unitsAvailable = saveResult.AvailableUnits,
+                unitsReserved = saveResult.ReservedUnits,
+                unitsOption = saveResult.OptionUnits,
+                soldPercentage = soldPct,
+                minPrice = saveResult.MinPrice,
+                maxPrice = saveResult.MaxPrice,
+                averagePrice = saveResult.AveragePrice,
+                minPricePerSqm = saveResult.MinPricePerSqm,
+                maxPricePerSqm = saveResult.MaxPricePerSqm,
+                averagePricePerSqm = saveResult.AveragePricePerSqm,
+                minLivingArea = saveResult.MinLivingArea,
+                maxLivingArea = saveResult.MaxLivingArea,
+                averageLivingArea = saveResult.AverageLivingArea,
+                houseCount = saveResult.HouseUnits,
+                apartmentCount = saveResult.ApartmentUnits
+            };
+
+            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var kpiPath = Path.Combine(kpiDir, $"project-{normalized.ExternalId}.json");
+            await File.WriteAllTextAsync(kpiPath, JsonSerializer.Serialize(kpiOutput, opts), cancellationToken);
+            Logger.LogInformation("[Immoweb] ProjectKPI → debug/kpi/project-{Id}.json", normalized.ExternalId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug("[Immoweb] KPI debug-bestand schrijven mislukt: {Msg}", ex.Message);
+        }
     }
 
     private static string? ExtractIdFromUrl(string url)
@@ -1733,6 +1940,32 @@ public partial class ImmowebCrawler : BaseCrawler
         var description = prop?["description"]?.GetValue<string>();
         var features = AnalyzeDescription(description);
 
+        // IsNewBuild detectie – prioriteitsketen
+        bool isNewBuild;
+        string? isNewBuildSource;
+        if (TryGetBool(root?["flags"]?["isNewlyBuilt"]))
+        { isNewBuild = true; isNewBuildSource = "flags.isNewlyBuilt"; }
+        else if (TryGetBool(root?["flags"]?["isNewRealEstateProject"]))
+        { isNewBuild = true; isNewBuildSource = "flags.isNewRealEstateProject"; }
+        else if (TryGetBool(prop?["isFirstOccupation"]))
+        { isNewBuild = true; isNewBuildSource = "property.isFirstOccupation"; }
+        else if (url.Contains("isNewlyBuilt=true", StringComparison.OrdinalIgnoreCase))
+        { isNewBuild = true; isNewBuildSource = "searchUrl"; }
+        else if (condition.Contains("NEW_CONSTRUCTION", StringComparison.OrdinalIgnoreCase))
+        { isNewBuild = true; isNewBuildSource = "condition.NEW_CONSTRUCTION"; }
+        else if (!string.IsNullOrEmpty(description))
+        {
+            var descLower = description.ToLowerInvariant();
+            if (descLower.Contains("nieuwbouw") || descLower.Contains("e-peil")
+                || descLower.Contains("warmtepomp") || descLower.Contains(" ben ")
+                || descLower.Contains("bijna-energieneutraal") || descLower.Contains("bijna energieneutraal"))
+            { isNewBuild = true; isNewBuildSource = "descriptionFallback"; }
+            else
+            { isNewBuild = false; isNewBuildSource = null; }
+        }
+        else
+        { isNewBuild = false; isNewBuildSource = null; }
+
         return new ListingDto
         {
             ExternalId = id.Value.ToString(),
@@ -1740,7 +1973,7 @@ public partial class ImmowebCrawler : BaseCrawler
             Title = $"{rawType} in {city}",
             PropertyTypeRaw = rawType,
             PropertySubTypeRaw = rawSubType,
-            TransactionTypeRaw = root["transaction"]?["type"]?.GetValue<string>() ?? "FOR_SALE",
+            TransactionTypeRaw = root?["transaction"]?["type"]?.GetValue<string>() ?? "FOR_SALE",
             PostalCode = location?["postalCode"]?.GetValue<string>(),
             City = city,
             Street = location?["street"]?.GetValue<string>(),
@@ -1750,7 +1983,7 @@ public partial class ImmowebCrawler : BaseCrawler
             Latitude = TryGetDecimal(location?["latitude"]),
             Longitude = TryGetDecimal(location?["longitude"]),
             AskingPrice = price,
-            MaxPrice = TryGetDecimal(root["price"]?["maxRangeValue"]),
+            MaxPrice = TryGetDecimal(root?["price"]?["maxRangeValue"]),
             LivingArea = TryGetDecimal(prop?["netHabitableSurface"]) ?? TryGetDecimal(prop?["habitableSurface"]),
             LandArea = TryGetDecimal(prop?["land"]?["surface"]),
             TerraceArea = TryGetDecimal(prop?["terraceSurface"]),
@@ -1763,8 +1996,8 @@ public partial class ImmowebCrawler : BaseCrawler
             ConstructionYear = TryGetInt(building?["constructionYear"]),
             EPCScore = TryGetDecimal(energy?["primaryEnergyConsumptionPerSqm"]),
             EPCLabelRaw = energy?["epcScoreClass"]?.GetValue<string>(),
-            IsNewBuild = condition.Contains("NEW_CONSTRUCTION", StringComparison.OrdinalIgnoreCase)
-                      || (rawType?.Contains("GROUP", StringComparison.OrdinalIgnoreCase) ?? false),
+            IsNewBuild = isNewBuild,
+            IsNewBuildSource = isNewBuildSource,
             DeveloperName = dev?["name"]?.GetValue<string>(),
             DeveloperWebsite = dev?["website"]?.GetValue<string>(),
             DeveloperPhone = dev?["phoneNumber"]?.GetValue<string>(),
@@ -1792,6 +2025,13 @@ public partial class ImmowebCrawler : BaseCrawler
         if (node is null) return null;
         try { return node.GetValue<decimal>(); }
         catch { return null; }
+    }
+
+    private static bool TryGetBool(JsonNode? node)
+    {
+        if (node is null) return false;
+        try { return node.GetValue<bool>(); }
+        catch { return false; }
     }
 
     private static int? TryGetInt(JsonNode? node)
@@ -1885,7 +2125,8 @@ public partial class ImmowebCrawler : BaseCrawler
                     constructionYear = dto.ConstructionYear,
                     epcScore = dto.EPCScore,
                     epcLabel = dto.EPCLabelRaw,
-                    isNewBuild = dto.IsNewBuild
+                    isNewBuild = dto.IsNewBuild,
+                    isNewBuildSource = dto.IsNewBuildSource
                 },
                 jsonPathsUsed = new
                 {
@@ -1922,10 +2163,229 @@ public partial class ImmowebCrawler : BaseCrawler
         {
             Logger.LogDebug("[Immoweb] Parser debug-bestand schrijven mislukt: {Msg}", ex.Message);
         }
+
+        await WriteFieldAvailabilityAsync(dto, rawJson, cancellationToken);
     }
 
     [GeneratedRegex(@"""(?:id|classifiedId|propertyId)""\s*:\s*(\d{6,})", RegexOptions.IgnoreCase)]
     private static partial Regex ClassifiedIdPattern();
+
+    // ── Field Availability Report ─────────────────────────────────────────────
+
+    private sealed class FieldEntry
+    {
+        public bool Found { get; init; }
+        public object? Value { get; init; }
+        public string? Path { get; init; }
+        public string[]? PathsTried { get; init; }
+    }
+
+    // Haal classified root op ongeacht wrapper-formaat (window.classified of __NEXT_DATA__)
+    private static JsonNode? ExtractClassifiedRoot(JsonNode? root)
+        => root?["property"] != null
+            ? root
+            : root?["props"]?["pageProps"]?["classified"]
+              ?? root?["props"]?["pageProps"]?["listing"]?["classified"];
+
+    private static FieldEntry ProbeFirst(params (string Path, object? Value)[] candidates)
+    {
+        foreach (var (path, value) in candidates)
+            if (value is not null)
+                return new FieldEntry { Found = true, Value = value, Path = path };
+        return new FieldEntry { Found = false, PathsTried = candidates.Select(c => c.Path).ToArray() };
+    }
+
+    private static object? V(decimal? v) => v.HasValue ? (object)v.Value : null;
+    private static object? V(int? v)     => v.HasValue ? (object)v.Value : null;
+    private static object? V(bool? v)    => v.HasValue ? (object)v.Value : null;
+    private static object? V(string? v)  => v;
+
+    private static Dictionary<string, FieldEntry> BuildFieldReport(JsonNode? c)
+    {
+        var prop     = c?["property"];
+        var building = prop?["building"];
+        var energy   = prop?["energy"];
+        var price    = c?["price"];
+        var tx       = c?["transaction"];
+
+        var indoor    = TryGetInt(prop?["parkingCountIndoor"])    ?? 0;
+        var outdoor   = TryGetInt(prop?["parkingCountOutdoor"])   ?? 0;
+        var closedBox = TryGetInt(prop?["parkingCountClosedBox"]) ?? 0;
+        var parkingTotal = indoor + outdoor + closedBox;
+
+        return new Dictionary<string, FieldEntry>
+        {
+            ["askingPrice"] = ProbeFirst(
+                ("transaction.sale.price",                           V(TryGetDecimal(tx?["sale"]?["price"]))),
+                ("price.mainValue",                                  V(TryGetDecimal(price?["mainValue"]))),
+                ("price.minRangeValue",                              V(TryGetDecimal(price?["minRangeValue"]))),
+                ("transaction.rental.monthlyRent",                   V(TryGetDecimal(tx?["rental"]?["monthlyRent"])))),
+
+            ["pricePerSqm"] = ProbeFirst(
+                ("transaction.sale.pricePerSqm",                     V(TryGetDecimal(tx?["sale"]?["pricePerSqm"])))),
+
+            ["livingArea"] = ProbeFirst(
+                ("property.netHabitableSurface",                     V(TryGetDecimal(prop?["netHabitableSurface"]))),
+                ("property.habitableSurface",                        V(TryGetDecimal(prop?["habitableSurface"])))),
+
+            ["landArea"] = ProbeFirst(
+                ("property.land.surface",                            V(TryGetDecimal(prop?["land"]?["surface"])))),
+
+            ["bedrooms"] = ProbeFirst(
+                ("property.bedroomCount",                            V(TryGetInt(prop?["bedroomCount"])))),
+
+            ["bathrooms"] = ProbeFirst(
+                ("property.bathroomCount",                           V(TryGetInt(prop?["bathroomCount"])))),
+
+            ["showerCount"] = ProbeFirst(
+                ("property.showerRoomCount",                         V(TryGetInt(prop?["showerRoomCount"])))),
+
+            ["toiletCount"] = ProbeFirst(
+                ("property.toiletCount",                             V(TryGetInt(prop?["toiletCount"])))),
+
+            ["floor"] = ProbeFirst(
+                ("property.building.floorNumber",                    V(TryGetInt(building?["floorNumber"]))),
+                ("property.floor",                                   V(TryGetInt(prop?["floor"])))),
+
+            ["constructionYear"] = ProbeFirst(
+                ("property.building.constructionYear",               V(TryGetInt(building?["constructionYear"])))),
+
+            ["garageCount"] = parkingTotal > 0
+                ? new FieldEntry { Found = true, Value = parkingTotal, Path = "SUM(property.parkingCountIndoor+Outdoor+ClosedBox)" }
+                : new FieldEntry { Found = false, PathsTried = ["property.parkingCountIndoor", "property.parkingCountOutdoor", "property.parkingCountClosedBox"] },
+
+            ["epcScore"] = ProbeFirst(
+                ("property.energy.primaryEnergyConsumptionPerSqm",   V(TryGetDecimal(energy?["primaryEnergyConsumptionPerSqm"])))),
+
+            ["epcLabel"] = ProbeFirst(
+                ("property.energy.epcScoreClass",                    V(energy?["epcScoreClass"]?.GetValue<string>()))),
+
+            ["epcLevel"] = ProbeFirst(
+                ("property.energy.eLevel",                           V(energy?["eLevel"]?.GetValue<string>()))),
+
+            ["heatingType"] = ProbeFirst(
+                ("property.energy.heatingType",                      V(energy?["heatingType"]?.GetValue<string>()))),
+
+            ["isLowEnergy"] = ProbeFirst(
+                ("flags.isLowEnergy",                                V(c?["flags"]?["isLowEnergy"]?.GetValue<bool?>()))),
+
+            ["isPassiveHouse"] = ProbeFirst(
+                ("flags.isPassiveHouse",                             V(c?["flags"]?["isPassiveHouse"]?.GetValue<bool?>()))),
+
+            ["terraceArea"] = ProbeFirst(
+                ("property.terraceSurface",                          V(TryGetDecimal(prop?["terraceSurface"])))),
+
+            ["hasTerrace"] = ProbeFirst(
+                ("property.hasTerrace",                              V(prop?["hasTerrace"]?.GetValue<bool?>()))),
+
+            ["gardenArea"] = ProbeFirst(
+                ("property.gardenSurface",                           V(TryGetDecimal(prop?["gardenSurface"])))),
+
+            ["hasGarden"] = ProbeFirst(
+                ("property.hasGarden",                               V(prop?["hasGarden"]?.GetValue<bool?>()))),
+        };
+    }
+
+    private static Dictionary<string, object?> BuildProjectFieldReport(
+        JsonNode? root, IReadOnlyList<ProjectGroupUnitDto> units)
+    {
+        var classified  = ExtractClassifiedRoot(root);
+        var cluster     = classified?["cluster"]
+                       ?? root?["props"]?["pageProps"]?["classified"]?["cluster"];
+        var projectInfo = cluster?["projectInfo"];
+
+        return new Dictionary<string, object?>
+        {
+            ["projectName"] = new FieldEntry
+            {
+                Found = projectInfo?["projectName"] != null,
+                Value = V(projectInfo?["projectName"]?.GetValue<string>()),
+                Path  = "cluster.projectInfo.projectName"
+            },
+            ["soldPercentage"] = new FieldEntry
+            {
+                Found = projectInfo?["soldPercentage"] != null,
+                Value = V(TryGetInt(projectInfo?["soldPercentage"])),
+                Path  = "cluster.projectInfo.soldPercentage"
+            },
+            ["unitsDetected"] = new FieldEntry
+            {
+                Found = units.Count > 0,
+                Value = units.Count > 0 ? (object)units.Count : null,
+                Path  = "cluster.units[].items[]"
+            },
+            ["unitFieldSummary"] = units.Count == 0 ? null : (object)new
+            {
+                saleStatus   = new { found = units.Count(u => u.SaleStatus != SaleStatus.Unknown), total = units.Count, path = "cluster.units[].items[].saleStatus" },
+                price        = new { found = units.Count(u => u.Price.HasValue),        total = units.Count, path = "cluster.units[].items[].price" },
+                surface      = new { found = units.Count(u => u.Surface.HasValue),      total = units.Count, path = "cluster.units[].items[].surface" },
+                bedroomCount = new { found = units.Count(u => u.BedroomCount.HasValue), total = units.Count, path = "cluster.units[].items[].bedroomCount" },
+                floor        = new { found = units.Count(u => u.Floor.HasValue),        total = units.Count, path = "cluster.units[].items[].floor" },
+            }
+        };
+    }
+
+    private async Task WriteFieldAvailabilityAsync(
+        ListingDto dto, string rawJson, CancellationToken ct)
+    {
+        if (!Settings.Debug.Enabled) return;
+        try
+        {
+            JsonNode? root;
+            try { root = JsonNode.Parse(rawJson); } catch { root = null; }
+
+            var classified = ExtractClassifiedRoot(root);
+            var fields     = BuildFieldReport(classified);
+
+            // In-memory summary bijwerken
+            foreach (var (name, entry) in fields)
+            {
+                _fieldSummary.TryGetValue(name, out var cur);
+                _fieldSummary[name] = entry.Found
+                    ? (cur.Found + 1, cur.Missing)
+                    : (cur.Found, cur.Missing + 1);
+            }
+
+            // Project units (reeds gevuld door HandleProjectGroupAsync)
+            _pendingProjectUnits.TryGetValue(dto.ExternalId ?? string.Empty, out var units);
+            var isProjectGroup = units is { Count: > 0 }
+                || (dto.PropertyTypeRaw?.Contains("GROUP", StringComparison.OrdinalIgnoreCase) ?? false);
+
+            var report = new
+            {
+                externalId     = dto.ExternalId,
+                type           = dto.PropertyTypeRaw ?? "Unknown",
+                isProjectGroup,
+                fields,
+                projectFields  = isProjectGroup && units is { Count: > 0 }
+                    ? BuildProjectFieldReport(root, units)
+                    : null
+            };
+
+            var opts = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            };
+
+            var debugDir = Path.Combine(AppContext.BaseDirectory, "debug", "parser");
+            Directory.CreateDirectory(debugDir);
+
+            var listingPath = Path.Combine(debugDir, $"{dto.ExternalId}-field-availability.json");
+            await File.WriteAllTextAsync(listingPath, JsonSerializer.Serialize(report, opts), ct);
+
+            // Samenvattingsbestand — running total, overschreven na elke listing
+            var summary = _fieldSummary.ToDictionary(
+                kvp => kvp.Key,
+                kvp => (object)new { found = kvp.Value.Found, missing = kvp.Value.Missing });
+            var summaryPath = Path.Combine(debugDir, "field-availability-summary.json");
+            await File.WriteAllTextAsync(summaryPath, JsonSerializer.Serialize(summary, opts), ct);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug("[Immoweb] Field-availability bestand schrijven mislukt: {Msg}", ex.Message);
+        }
+    }
 }
 
 // ── Value object voor onderschepte responses ───────────────────────────────────

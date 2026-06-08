@@ -425,7 +425,7 @@
 </div>
 
 @* ── TAB 3: Formule koppelingen ── *@
-<div id="koppelingen-section" class="gl-settings-section" style="display:none">
+<div id="koppelingen-section" class="gl-settings-section d-none">
     <section class="card card-modern mb-4">
         <div class="card-header border-0 pb-0">
             <h2 class="card-title mb-0">Formule koppelingen</h2>
@@ -547,7 +547,8 @@
         const sectionLinks = document.querySelectorAll('[data-gl-settings-section]');
         const sections = {
             materialen:  document.getElementById('materialen-section'),
-            percentages: document.getElementById('percentages-section')
+            percentages: document.getElementById('percentages-section'),
+            koppelingen: document.getElementById('koppelingen-section')
         };
 
         function showSection(key) {

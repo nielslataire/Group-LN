@@ -55,6 +55,8 @@ public partial class BudgetGegevens
 
     public decimal? GipswerkenPrijsPerM2 { get; set; }
 
+    public decimal? TerrasPrijsPerM2 { get; set; }
+
     public DateTime? UpdatedAt { get; set; }
 
     public virtual BudgetVersie BudgetVersie { get; set; }

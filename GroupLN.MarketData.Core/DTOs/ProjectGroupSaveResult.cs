@@ -11,4 +11,14 @@ public record ProjectGroupSaveResult(
     int AvailableUnits,
     int ReservedUnits,
     int OptionUnits,
-    int UnknownUnits);
+    int UnknownUnits,
+    int StatusChanges,
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    decimal? AveragePrice,
+    decimal? MinPricePerSqm,
+    decimal? MaxPricePerSqm,
+    decimal? AveragePricePerSqm,
+    decimal? MinLivingArea,
+    decimal? MaxLivingArea,
+    decimal? AverageLivingArea);

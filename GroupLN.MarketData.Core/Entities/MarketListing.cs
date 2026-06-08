@@ -14,6 +14,7 @@ public class MarketListing
     public DateTime LastSeenAt { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? RemovedAt { get; set; }
+    public int MissingCrawlCount { get; set; } = 0;
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

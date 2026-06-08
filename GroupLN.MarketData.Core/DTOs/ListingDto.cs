@@ -39,6 +39,7 @@ public class ListingDto
     public string? EPCLabelRaw { get; set; }
 
     public bool? IsNewBuild { get; set; }
+    public string? IsNewBuildSource { get; set; }
 
     public string? DeveloperName { get; set; }
     public string? DeveloperWebsite { get; set; }

@@ -8672,7 +8672,7 @@ namespace CPMCore.Controllers
             if (gegevens.SIndexHuidig == null || gegevens.SIndexHuidig == 0)
                 gegevens.SIndexHuidig = await _bouwIndex.GetActieveIndexAsync("S");
             if (gegevens.IIndexHuidig == null || gegevens.IIndexHuidig == 0)
-                gegevens.IIndexHuidig = await _bouwIndex.GetActieveIndexAsync("I");
+                gegevens.IIndexHuidig = await _bouwIndex.GetActieveIndexAsync("I2021");
 
             var bouwheerOptions = new List<SelectListItem>
             {
@@ -8768,7 +8768,8 @@ namespace CPMCore.Controllers
             var groupOptions = new List<SelectListItem> { new SelectListItem("— kies type —", "") };
             var dbGroupTypes = _uow.UnitGroupTypes.GetNoTracking()
                 .Where(g => g.Selectable)
-                .OrderBy(g => g.Name)
+                .OrderBy(g => g.Name == "Wooneenheid" ? 0 : 1)
+                .ThenBy(g => g.Name)
                 .Select(g => new { g.Id, g.Name })
                 .ToList();
             groupOptions.AddRange(dbGroupTypes.Select(g => new SelectListItem(g.Name, g.Id.ToString())));
@@ -9655,7 +9656,7 @@ namespace CPMCore.Controllers
             var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
             var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
             var iStart  = versie.BudgetGegevens?.IIndexStart  ?? 100m;
-            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I");
+            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I2021");
             var gewogen = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
 
             var andereVersies = _uow.BudgetVersies.GetNoTracking()
@@ -9776,7 +9777,8 @@ namespace CPMCore.Controllers
                     LmBerlinerwanden               = g.LmBerlinerwanden,
                     LmSecanpalen                   = g.LmSecanpalen,
                     GevelMetselwerkPrijsPerM2      = g.GevelMetselwerkPrijsPerM2,
-                    GipswerkenPrijsPerM2           = g.GipswerkenPrijsPerM2
+                    GipswerkenPrijsPerM2           = g.GipswerkenPrijsPerM2,
+                    TerrasPrijsPerM2               = g.TerrasPrijsPerM2
                 });
             }
 
@@ -9925,7 +9927,7 @@ namespace CPMCore.Controllers
             var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
             var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
             var iStart  = versie.BudgetGegevens?.IIndexStart  ?? 100m;
-            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I");
+            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I2021");
             var gewogen = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
 
             var activiteitLijnen = _uow.BudgetActivityLijnen.GetNoTracking()
@@ -9962,7 +9964,7 @@ namespace CPMCore.Controllers
             var sStart  = versie.BudgetGegevens?.SIndexStart  ?? 100m;
             var sHuidig = versie.BudgetGegevens?.SIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("S");
             var iStart  = versie.BudgetGegevens?.IIndexStart  ?? 100m;
-            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I");
+            var iHuidig = versie.BudgetGegevens?.IIndexHuidig ?? await _bouwIndex.GetActieveIndexAsync("I2021");
             var gewogen = _bouwIndex.BerekenGewogenFactor(sStart, sHuidig, iStart, iHuidig);
 
             var activiteitLijnen = _uow.BudgetActivityLijnen.GetNoTracking()

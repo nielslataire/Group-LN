@@ -15,11 +15,14 @@ public interface IMarketListingService
         NormalizedPropertyDto projectDto,
         IReadOnlyList<ProjectGroupUnitDto> units,
         bool dryRun,
+        int missingThreshold = 1,
         CancellationToken cancellationToken = default);
 
+    // missingThreshold: aantal opeenvolgende ontbrekende crawls voor deactivatie
     Task MarkInactiveAsync(
         int sourceId,
         IEnumerable<string> activeExternalIds,
+        int missingThreshold = 1,
         CancellationToken cancellationToken = default);
 
     Task<int> MarkStaleListingsInactiveAsync(

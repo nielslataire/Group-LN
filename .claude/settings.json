@@ -30,7 +30,15 @@
       "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\\\\GroupLN.MarketData.Worker.csproj\" --no-restore -v quiet 2>&1)",
       "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Persistence\\\\GroupLN.MarketData.Persistence.csproj\" --no-restore -v quiet 2>&1)",
       "PowerShell(dotnet build \"e:\\\\TFS\\\\GroupLN.MarketData.Core\\\\GroupLN.MarketData.Core.csproj\" --no-restore -v quiet 2>&1)",
-      "PowerShell(Get-Content \"e:\\\\TFS\\\\GroupLN.MarketData.Infrastructure\\\\Services\\\\MarketListingService.cs\" | Select-Object -Index 105, 106 | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes\\($_\\) | ForEach-Object { \"{0:X2}\" -f $_ } })"
+      "PowerShell(Get-Content \"e:\\\\TFS\\\\GroupLN.MarketData.Infrastructure\\\\Services\\\\MarketListingService.cs\" | Select-Object -Index 105, 106 | ForEach-Object { [System.Text.Encoding]::UTF8.GetBytes\\($_\\) | ForEach-Object { \"{0:X2}\" -f $_ } })",
+      "Bash(sqlcmd -S \"tcp:sql6031.site4now.net,1433\" -d \"db_ab5fbb_cpmmarketdata\" -U \"db_ab5fbb_cpmmarketdata_admin\" -P \"840683P@ssword\" -Q \"SELECT MigrationId FROM __EFMigrationsHistory ORDER BY MigrationId;\" -N)",
+      "Bash(sqlcmd -S tcp:sql6031.site4now.net,1433 -d db_ab5fbb_cpmmarketdata -U db_ab5fbb_cpmmarketdata_admin -P 840683P@ssword -N -Q ' *)",
+      "Bash(sqlcmd -S \"tcp:sql6031.site4now.net,1433\" -d \"db_ab5fbb_cpmmarketdata\" -U \"db_ab5fbb_cpmmarketdata_admin\" -P \"840683P@ssword\" -N -Q \"SELECT MigrationId, ProductVersion FROM __EFMigrationsHistory ORDER BY MigrationId;\")",
+      "Bash(cd /mnt/e/TFS && dotnet build CPMCore/CPMCore.csproj --no-restore -c Debug 2>&1 | tail -30)",
+      "Read(//mnt/e/**)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\CPMCore\\\\CPMCore.csproj\" --no-restore -c Debug 2>&1)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\ServiceCore\\\\ServiceCore.csproj\" --no-restore -c Debug 2>&1)",
+      "PowerShell(dotnet build \"e:\\\\TFS\\\\ServiceCore\\\\ServiceCore.csproj\" --no-restore -c Debug 2>&1 | Where-Object { $_ -match 'error|Error' } | Select-Object -First 10)"
     ]
   }
 }
