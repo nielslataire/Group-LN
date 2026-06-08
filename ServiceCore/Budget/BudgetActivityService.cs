@@ -55,12 +55,15 @@ namespace ServiceCore.Budget
             var totaalGBA = opps.Sum(o => o.BewoonbareOpp);
 
             // ── Ruwbouw-voorstel berekening ────────────────────────────────────────
-            // Gebruik de opgeslagen basisprijzen uit BudgetGegevens (zelfde als de live sidebar),
-            // en haal enkel de referentie-indexwaarden op via de formualkoppeling voor de juiste noemer.
-            var gegevensBO = new BudgetGegevensBO();
-            gegevensBO.IIndexHuidig = versie?.BudgetGegevens?.IIndexHuidig;
-            gegevensBO.SIndexHuidig = versie?.BudgetGegevens?.SIndexHuidig;
-            var formulaCtx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
+            // Dezelfde indexformule als de live sidebar in BudgetGegevens:
+            //   basisprijs × (IHuidig/MateriaalIRef × 0.4 + SHuidig/MateriaalSRef × 0.4 + 0.2)
+            // Basisprijs = opgeslagen NacalcBasisprijs/GevelPrijs/TerrasPrijs uit BudgetGegevens.
+            var gegevensBO = new BudgetGegevensBO
+            {
+                IIndexHuidig = versie?.BudgetGegevens?.IIndexHuidig,
+                SIndexHuidig = versie?.BudgetGegevens?.SIndexHuidig
+            };
+            var formulaCtx      = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
             var formulaResultaten = _formulaService.BerekenAlle(formulaCtx);
 
             var fIHuidig = versie?.BudgetGegevens?.IIndexHuidig ?? 100m;
@@ -70,17 +73,16 @@ namespace ServiceCore.Budget
                 fIHuidig / (iRef > 0m ? iRef : 100m) * 0.4m +
                 fSHuidig / (sRef > 0m ? sRef : 100m) * 0.4m + 0.2m;
 
-            var ruwbouwIRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalIRef ?? 100m;
-            var ruwbouwSRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalSRef ?? 100m;
+            var ruwbouwIRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalIRef      ?? 100m;
+            var ruwbouwSRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalSRef      ?? 100m;
             var gevelIRef   = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwGevelmetselwerk)?.MateriaalIRef ?? 100m;
             var gevelSRef   = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwGevelmetselwerk)?.MateriaalSRef ?? 100m;
-            var terrasIRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalIRef ?? 100m;
-            var terrasSRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalSRef ?? 100m;
+            var terrasIRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalIRef          ?? 100m;
+            var terrasSRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalSRef          ?? 100m;
 
-            // Basisprijzen uit BudgetGegevens — zelfde bron als de live berekening op tabblad Gegevens
-            var ruwbouwPrijsGeind = (versie?.BudgetGegevens?.NacalcBasisprijs       ?? 0m) * MatFactor(ruwbouwIRef, ruwbouwSRef);
+            var ruwbouwPrijsGeind = (versie?.BudgetGegevens?.NacalcBasisprijs          ?? 0m) * MatFactor(ruwbouwIRef, ruwbouwSRef);
             var gevelPrijsGeind   = (versie?.BudgetGegevens?.GevelMetselwerkPrijsPerM2 ?? 0m) * MatFactor(gevelIRef,   gevelSRef);
-            var terrasPrijsGeind  = (versie?.BudgetGegevens?.TerrasPrijsPerM2        ?? 0m) * MatFactor(terrasIRef,  terrasSRef);
+            var terrasPrijsGeind  = (versie?.BudgetGegevens?.TerrasPrijsPerM2          ?? 0m) * MatFactor(terrasIRef,  terrasSRef);
 
             var totOppRuwbouw = opps.Sum(o =>
                 o.BewoonbareOpp + o.GaragesParkingsBovenGr + o.GarBergOndergronds +
