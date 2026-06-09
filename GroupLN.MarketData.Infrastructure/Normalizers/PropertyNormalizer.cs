@@ -3,6 +3,7 @@ using System.Text;
 using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Interfaces;
+using GroupLN.MarketData.Infrastructure.TitleResolution;
 using Microsoft.Extensions.Logging;
 
 namespace GroupLN.MarketData.Infrastructure.Normalizers;
@@ -39,12 +40,14 @@ public class PropertyNormalizer : IPropertyNormalizer
                 "[Normalizer] Onbekend PropertyType voor raw='{Raw}'. ExternalId={Id}",
                 listing.PropertyTypeRaw, listing.ExternalId);
 
+        var titleResult = ListingTitleResolver.Resolve(listing, mappedType, _logger);
+
         return new NormalizedPropertyDto
         {
             SourceId = sourceId,
             ExternalId = listing.ExternalId,
             Url = listing.Url,
-            Title = listing.Title,
+            Title = titleResult.Title,
 
             PropertyType = mappedType,
             PropertySubType = mappedSubType,

@@ -8747,6 +8747,17 @@ namespace CPMCore.Controllers
             return RedirectToAction(nameof(BudgetGegevens), new { versieId = model.VersieId });
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult BudgetGegevensOpslaan(BudgetGegevensModel model)
+        {
+            if (!ModelState.IsValid)
+                return Json(new { success = false });
+
+            var response = _budgetService.SaveBudgetGegevens(model.Gegevens, model.VersieId);
+            return Json(new { success = response.Success });
+        }
+
         // ── BudgetOppervlaktes ────────────────────────────────────────────────
 
         [HttpGet]

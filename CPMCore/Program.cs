@@ -1,4 +1,5 @@
 ﻿using CPMCore.Configuration;
+using GroupLN.MarketData.Persistence.Extensions;
 using Microsoft.AspNetCore.DataProtection;
 using CPMCore.Helpers;
 using CPMCore.Models;
@@ -213,6 +214,10 @@ builder.Services.AddSingleton<IssueNotificationHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<IssueNotificationHostedService>());
 builder.Services.AddSingleton<VoortgangHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<VoortgangHostedService>());
+
+// ── Marktanalyse ─────────────────────────────────────────────────────────────
+builder.Services.AddMarketDataPersistence(configuration);
+builder.Services.AddScoped<IMarktanalyseService, MarktanalyseService>();
 
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();

@@ -38,6 +38,43 @@ public class BudgetFormulaRegistry {
                 : (decimal?)null
         );
 
+        // ── Stap 2: Onderbouw ────────────────────────────────────────────────────
+        Register(
+            FormulaSleutels.OnderbouwBerlinerwanden,
+            "Berlinerwanden (€/lm)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.OnderbouwBerlinerwanden)
+                ? ctx.M(FormulaSleutels.OnderbouwBerlinerwanden) * ctx.MIndexFactor(FormulaSleutels.OnderbouwBerlinerwanden)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.OnderbouwSecanpalen,
+            "Secanpalen (€/lm)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.OnderbouwSecanpalen)
+                ? ctx.M(FormulaSleutels.OnderbouwSecanpalen) * ctx.MIndexFactor(FormulaSleutels.OnderbouwSecanpalen)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.OnderbouwFunderingen,
+            "Funderingen (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.OnderbouwFunderingen)
+                ? ctx.M(FormulaSleutels.OnderbouwFunderingen) * ctx.MIndexFactor(FormulaSleutels.OnderbouwFunderingen)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.OnderbouwGrondwerken,
+            "Grondwerken (€/m³)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.OnderbouwGrondwerken)
+                ? ctx.M(FormulaSleutels.OnderbouwGrondwerken) * ctx.MIndexFactor(FormulaSleutels.OnderbouwGrondwerken)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.OnderbouwOnderschoeiingen,
+            "Onderschoeiingen (€/m³)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.OnderbouwOnderschoeiingen)
+                ? ctx.M(FormulaSleutels.OnderbouwOnderschoeiingen) * ctx.MIndexFactor(FormulaSleutels.OnderbouwOnderschoeiingen)
+                : (decimal?)null
+        );
+
         // Voeg hieronder nieuwe formules toe zodra een nieuw veld gekoppeld wordt.
         // Beschikbare helpers op ctx:
         //   ctx.M("sleutel")              prijs van gekoppeld materiaal

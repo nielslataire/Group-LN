@@ -13,6 +13,13 @@ namespace ServiceCore.Budget
 {
     public class BudgetActivityService
     {
+        private const int ActivityIdRuwbouw          = 186;
+        private const int ActivityIdBerlinerwanden    = 177;
+        private const int ActivityIdSecanpalen        = 178;
+        private const int ActivityIdFunderingen       = 183;
+        private const int ActivityIdGrondwerken       = 173;
+        private const int ActivityIdOnderschoeiingen  = 179;
+
         private readonly UnitOfWorkCore _uow;
         private readonly BouwIndexService _bouwIndex;
         private readonly BudgetFormulaService _formulaService;
@@ -26,7 +33,7 @@ namespace ServiceCore.Budget
 
         private static decimal GevelM2(DALCore.Models.BudgetGevelElementen e)
         {
-            if (e.Hoogte.HasValue && e.Hoogte.Value > 0)
+            if (e.Hoogte.HasValue && e.Hoogte.Value != 0)
                 return e.Aantal * (e.Breedte ?? 0m) * e.Hoogte.Value;
             if (e.Breedte.HasValue && e.Breedte.Value > 0 && e.Lengte.HasValue && e.Lengte.Value > 0)
                 return e.Aantal * e.Breedte.Value * e.Lengte.Value;
@@ -55,34 +62,55 @@ namespace ServiceCore.Budget
             var totaalGBA = opps.Sum(o => o.BewoonbareOpp);
 
             // ── Ruwbouw-voorstel berekening ────────────────────────────────────────
-            // Dezelfde indexformule als de live sidebar in BudgetGegevens:
-            //   basisprijs × (IHuidig/MateriaalIRef × 0.4 + SHuidig/MateriaalSRef × 0.4 + 0.2)
-            // Basisprijs = opgeslagen NacalcBasisprijs/GevelPrijs/TerrasPrijs uit BudgetGegevens.
+            // Dezelfde formule als de live sidebar in BudgetGegevens:
+            //   basisprijs × ctx.MIndexFactor(sleutel)
+            //   = basisprijs × (IHuidig/MateriaalIRef × 0.4 + SHuidig/MateriaalSRef × 0.4 + 0.2)
+            // ctx.Gegevens bevat de volledige BudgetGegevensBO zodat IHuidig/SHuidig en
+            // de basisprijzen beschikbaar zijn via dezelfde context als in BudgetGegevens.
+            var dbGeg = versie?.BudgetGegevens;
             var gegevensBO = new BudgetGegevensBO
             {
-                IIndexHuidig = versie?.BudgetGegevens?.IIndexHuidig,
-                SIndexHuidig = versie?.BudgetGegevens?.SIndexHuidig
+                IIndexHuidig                    = dbGeg?.IIndexHuidig,
+                SIndexHuidig                    = dbGeg?.SIndexHuidig,
+                IIndexStart                     = dbGeg?.IIndexStart,
+                SIndexStart                     = dbGeg?.SIndexStart,
+                NacalcBasisprijs                = dbGeg?.NacalcBasisprijs,
+                GevelMetselwerkPrijsPerM2       = dbGeg?.GevelMetselwerkPrijsPerM2,
+                TerrasPrijsPerM2                = dbGeg?.TerrasPrijsPerM2,
+                GipswerkenPrijsPerM2            = dbGeg?.GipswerkenPrijsPerM2,
+                LmBerlinerwanden                = dbGeg?.LmBerlinerwanden,
+                LmSecanpalen                    = dbGeg?.LmSecanpalen,
+                OppFunderingen                  = dbGeg?.OppFunderingen,
+                AantalVerdiepingenOndergronds   = dbGeg?.AantalVerdiepingenOndergronds ?? 0,
+                M3Onderschoeiingen              = dbGeg?.M3Onderschoeiingen
             };
-            var formulaCtx      = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
-            var formulaResultaten = _formulaService.BerekenAlle(formulaCtx);
+            var formulaCtx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
 
-            var fIHuidig = versie?.BudgetGegevens?.IIndexHuidig ?? 100m;
-            var fSHuidig = versie?.BudgetGegevens?.SIndexHuidig ?? 100m;
+            var ruwbouwPrijsGeind = (gegevensBO.NacalcBasisprijs          ?? 0m) * formulaCtx.MIndexFactor(FormulaSleutels.NacalcRuwbouwBasis);
+            var gevelPrijsGeind   = (gegevensBO.GevelMetselwerkPrijsPerM2 ?? 0m) * formulaCtx.MIndexFactor(FormulaSleutels.BovenbouwGevelmetselwerk);
+            var terrasPrijsGeind  = (gegevensBO.TerrasPrijsPerM2          ?? 0m) * formulaCtx.MIndexFactor(FormulaSleutels.BovenbouwTerras);
+            var gipsPrijsGeind    = (gegevensBO.GipswerkenPrijsPerM2      ?? 0m) * formulaCtx.MIndexFactor(FormulaSleutels.BovenbouwGipsblokken);
 
-            decimal MatFactor(decimal iRef, decimal sRef) =>
-                fIHuidig / (iRef > 0m ? iRef : 100m) * 0.4m +
-                fSHuidig / (sRef > 0m ? sRef : 100m) * 0.4m + 0.2m;
+            // ── Onderbouw: geïndexeerde catalogusprijzen per materiaal ─────────
+            decimal MatGeind(string sleutel) =>
+                formulaCtx.HeeftMateriaal(sleutel)
+                    ? formulaCtx.M(sleutel) * formulaCtx.MIndexFactor(sleutel)
+                    : 0m;
 
-            var ruwbouwIRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalIRef      ?? 100m;
-            var ruwbouwSRef = formulaResultaten.GetValueOrDefault(FormulaSleutels.NacalcRuwbouwBasis)?.MateriaalSRef      ?? 100m;
-            var gevelIRef   = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwGevelmetselwerk)?.MateriaalIRef ?? 100m;
-            var gevelSRef   = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwGevelmetselwerk)?.MateriaalSRef ?? 100m;
-            var terrasIRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalIRef          ?? 100m;
-            var terrasSRef  = formulaResultaten.GetValueOrDefault(FormulaSleutels.BovenbouwTerras)?.MateriaalSRef          ?? 100m;
+            var berlinerPrijsGeind   = MatGeind(FormulaSleutels.OnderbouwBerlinerwanden);
+            var secanPrijsGeind      = MatGeind(FormulaSleutels.OnderbouwSecanpalen);
+            var funderPrijsGeind     = MatGeind(FormulaSleutels.OnderbouwFunderingen);
+            var grondwerkPrijsGeind  = MatGeind(FormulaSleutels.OnderbouwGrondwerken);
+            var onderschPrijsGeind   = MatGeind(FormulaSleutels.OnderbouwOnderschoeiingen);
 
-            var ruwbouwPrijsGeind = (versie?.BudgetGegevens?.NacalcBasisprijs          ?? 0m) * MatFactor(ruwbouwIRef, ruwbouwSRef);
-            var gevelPrijsGeind   = (versie?.BudgetGegevens?.GevelMetselwerkPrijsPerM2 ?? 0m) * MatFactor(gevelIRef,   gevelSRef);
-            var terrasPrijsGeind  = (versie?.BudgetGegevens?.TerrasPrijsPerM2          ?? 0m) * MatFactor(terrasIRef,  terrasSRef);
+            // ── Hoeveelheden onderbouw ────────────────────────────────────────
+            var lmBerliner     = gegevensBO.LmBerlinerwanden    ?? 0m;
+            var lmSecan        = gegevensBO.LmSecanpalen        ?? 0m;
+            var m2Funder       = gegevensBO.OppFunderingen      ?? 0m;
+            var m3Onderschoei  = gegevensBO.M3Onderschoeiingen  ?? 0m;
+            var totaalGarBerg  = opps.Sum(o => o.GarBergOndergronds);
+            var m3Grondwerk    = m2Funder * 0.3m
+                               + gegevensBO.AantalVerdiepingenOndergronds * 3.5m * totaalGarBerg;
 
             var totOppRuwbouw = opps.Sum(o =>
                 o.BewoonbareOpp + o.GaragesParkingsBovenGr + o.GarBergOndergronds +
@@ -93,9 +121,13 @@ namespace ServiceCore.Budget
             var gevelRijen = await _uow.BudgetGevelElementen.GetNoTracking()
                 .Where(g => g.BudgetVersieId == budgetVersieId)
                 .ToListAsync();
-            var totaalGevels = gevelRijen
+            var totaalGevels  = gevelRijen
                 .Where(g => g.ElementType == "GevelNieuwbouw" || g.ElementType == "GevelBestaand")
                 .Sum(g => GevelM2(g));
+            var totaalPlatDak = gevelRijen
+                .Where(g => g.ElementType == "PlatDak")
+                .Sum(g => GevelM2(g));
+            totOppRuwbouw += totaalPlatDak * 0.25m;
 
             var aantalWoonComm = opps.Count(o =>
                 o.UnitGroupType != null && (
@@ -105,7 +137,8 @@ namespace ServiceCore.Budget
 
             var ruwbouwVoorstelTotaal = ruwbouwPrijsGeind * totOppRuwbouw
                                       + terrasPrijsGeind  * totTerrasPrefab
-                                      + gevelPrijsGeind   * totaalGevels;
+                                      + gevelPrijsGeind   * totaalGevels
+                                      + gipsPrijsGeind    * aantalWoonComm;
             var ruwbouwVoorstelPerEenheid = aantalWoonComm > 0
                 ? Math.Round(ruwbouwVoorstelTotaal / aantalWoonComm, 2)
                 : 0m;
@@ -145,8 +178,7 @@ namespace ServiceCore.Budget
 
                     foreach (var activity in g)
                     {
-                        bool isRuwbouw = g.Key.Name.Contains("ruwbouw", StringComparison.OrdinalIgnoreCase) ||
-                                         activity.Omschrijving.Contains("ruwbouw", StringComparison.OrdinalIgnoreCase);
+                        bool isRuwbouw = activity.ActivityId == ActivityIdRuwbouw;
 
                         var bo = new BudgetActivityLijnBO
                         {
@@ -185,9 +217,57 @@ namespace ServiceCore.Budget
                             bo.VoorstelTerrasOpp            = totTerrasPrefab;
                             bo.VoorstelGevelPrijs           = gevelPrijsGeind;
                             bo.VoorstelGevelOpp             = totaalGevels;
+                            bo.VoorstelGipsPrijs            = gipsPrijsGeind;
+                            bo.VoorstelGipsOpp              = aantalWoonComm;
+                            bo.VoorstelGipsAantalEenheden   = aantalWoonComm;
                             bo.VoorstelAantalEenheden       = aantalWoonComm;
                             if (!heeftBestaandeLijn)
                                 bo.AlternatievePrijsPerEenheid = ruwbouwVoorstelPerEenheid;
+                        }
+
+                        (decimal prijs, decimal hoev, string eenh, string label) enkel = activity.ActivityId switch
+                        {
+                            ActivityIdBerlinerwanden   => (berlinerPrijsGeind,  lmBerliner,    "lm", "Berlinerwanden"),
+                            ActivityIdSecanpalen       => (secanPrijsGeind,     lmSecan,       "lm", "Secanpalen"),
+                            ActivityIdFunderingen      => (funderPrijsGeind,    m2Funder,      "m²", "Funderingen"),
+                            ActivityIdGrondwerken      => (grondwerkPrijsGeind, m3Grondwerk,   "m³", "Grondwerken"),
+                            ActivityIdOnderschoeiingen => (onderschPrijsGeind,  m3Onderschoei, "m³", "Onderschoeiingen"),
+                            _                          => (0m, 0m, string.Empty, string.Empty)
+                        };
+
+                        if (enkel.prijs > 0 && enkel.hoev > 0)
+                        {
+                            var ePerEenheid = aantalWoonComm > 0
+                                ? Math.Round(enkel.prijs * enkel.hoev / aantalWoonComm, 2)
+                                : 0m;
+                            bo.VoorgesteldePrijsPerEenheid = ePerEenheid;
+                            bo.VoorstelEnkelPrijs          = enkel.prijs;
+                            bo.VoorstelEnkelHoeveelheid    = enkel.hoev;
+                            bo.VoorstelEnkelEenheid        = enkel.eenh;
+                            bo.VoorstelEnkelLabel          = enkel.label;
+                            bo.VoorstelAantalEenheden      = aantalWoonComm;
+                            if (!heeftBestaandeLijn)
+                                bo.AlternatievePrijsPerEenheid = ePerEenheid;
+
+                            if (activity.ActivityId == ActivityIdGrondwerken)
+                            {
+                                var nlBE = new System.Globalization.CultureInfo("nl-BE");
+                                string F(decimal v) => v.ToString("N2", nlBE);
+                                var funderDeel = m2Funder * 0.3m;
+                                var ondergDeel = (decimal)gegevensBO.AantalVerdiepingenOndergronds * 3.5m * totaalGarBerg;
+                                bo.VoorstelEnkelDetail =
+                                    $"<tr style='font-size:.75rem;color:#6c757d'>" +
+                                    $"<td>Funderingen</td><td style='padding:0 6px;text-align:right'>{F(m2Funder)} m²</td>" +
+                                    $"<td style='text-align:right'>× 0,30</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= {F(funderDeel)} m³</td></tr>" +
+                                    $"<tr style='font-size:.75rem;color:#6c757d'>" +
+                                    $"<td>Ondergronds</td><td style='padding:0 6px;text-align:right'>{gegevensBO.AantalVerdiepingenOndergronds} verd. × {F(totaalGarBerg)} m²</td>" +
+                                    $"<td style='text-align:right'>× 3,50</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= {F(ondergDeel)} m³</td></tr>" +
+                                    $"<tr style='font-size:.75rem;color:#6c757d;border-bottom:1px dashed #ccc'>" +
+                                    $"<td colspan='3'>Volume totaal</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= {F(enkel.hoev)} m³</td></tr>";
+                            }
                         }
 
                         groep.Lijnen.Add(bo);

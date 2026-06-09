@@ -174,6 +174,17 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
+    Private _m3Onderschoeiingen As Decimal?
+    <Display(Name:="Onderschoeiingen (m³)")>
+    Public Property M3Onderschoeiingen() As Decimal?
+        Get
+            Return _m3Onderschoeiingen
+        End Get
+        Set(ByVal value As Decimal?)
+            _m3Onderschoeiingen = value
+        End Set
+    End Property
+
     Private _nacalcBasisprijs As Decimal?
     <Display(Name:="Nacalc basisprijs (€/m²)")>
     Public Property NacalcBasisprijs() As Decimal?

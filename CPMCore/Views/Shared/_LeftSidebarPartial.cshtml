@@ -206,6 +206,17 @@
 						</a>
 					</li>
 				}
+					<li class="nav-parent @(currentController == "Marktanalyse" ? "nav-active" : string.Empty)">
+						<a class="main-nav-tile" href="#">
+							<i class="bx bx-analyze" aria-hidden="true"></i>
+							<span class="main-nav-label">Marktanalyse</span>
+						</a>
+						<ul class="nav nav-children flyout-menu">
+							<li>@Html.ActionLink("Gemeenteanalyse", "Gemeenteanalyse", "Marktanalyse")</li>
+							<li>@Html.ActionLink("Vergelijkbare panden", "VergelijkbarePanden", "Marktanalyse")</li>
+							<li>@Html.ActionLink("Projectdetail", "Projectdetail", "Marktanalyse")</li>
+						</ul>
+					</li>
 					<li class="nav-parent">
 						<a class="main-nav-tile" href="#">
 							<i class="bx bx-link-alt" aria-hidden="true"></i>

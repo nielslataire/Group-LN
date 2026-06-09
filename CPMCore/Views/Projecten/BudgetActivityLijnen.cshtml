@@ -19,6 +19,7 @@
     .kpi-card.verschil         { border-color: #ffc107; }
     .kpi-card.m2               { border-color: #6c757d; }
     .activity-row input        { min-width: 80px; }
+    .popover-ruwbouw           { max-width: 420px; }
 </style>
 }
 
@@ -204,7 +205,7 @@
 @section PageScripts {
 <script>
     // Initialiseer popovers
-    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el));
+    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => new bootstrap.Popover(el, { sanitize: false }));
 
     const versieId       = @Model.BudgetVersieId;
     const aantalEenheden = @Model.AantalEenheden;

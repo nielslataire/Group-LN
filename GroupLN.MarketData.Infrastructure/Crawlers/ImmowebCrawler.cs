@@ -1940,6 +1940,9 @@ public partial class ImmowebCrawler : BaseCrawler
         var description = prop?["description"]?.GetValue<string>();
         var features = AnalyzeDescription(description);
 
+        // cluster.projectInfo.projectName — beschikbaar voor ProjectGroups
+        var projectName = root["cluster"]?["projectInfo"]?["projectName"]?.GetValue<string>();
+
         // IsNewBuild detectie – prioriteitsketen
         bool isNewBuild;
         string? isNewBuildSource;
@@ -1970,7 +1973,8 @@ public partial class ImmowebCrawler : BaseCrawler
         {
             ExternalId = id.Value.ToString(),
             Url = url,
-            Title = $"{rawType} in {city}",
+            Title = $"{rawType} in {city}",   // resolver verbetert dit in PropertyNormalizer
+            ProjectName = projectName,
             PropertyTypeRaw = rawType,
             PropertySubTypeRaw = rawSubType,
             TransactionTypeRaw = root?["transaction"]?["type"]?.GetValue<string>() ?? "FOR_SALE",

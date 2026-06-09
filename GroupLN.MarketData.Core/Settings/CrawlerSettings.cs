@@ -32,6 +32,13 @@ public class CrawlerSettings
     // ── Per-bron instellingen ────────────────────────────────────────────────
     public Dictionary<string, SourceSettings> Sources { get; set; } = new();
 
+    // ── Deduplicatie ─────────────────────────────────────────────────────────
+    /// <summary>
+    /// true = voer één keer een volledige deduplicatie-scan uit bij opstart (alle bestaande assets).
+    /// Zet terug op false na de eerste run.
+    /// </summary>
+    public bool FullDeduplicationScanOnStartup { get; set; } = false;
+
     // ── Debug-instellingen ───────────────────────────────────────────────────
     public DebugSettings Debug { get; set; } = new();
 }

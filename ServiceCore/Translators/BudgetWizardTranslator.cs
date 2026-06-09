@@ -73,6 +73,7 @@ namespace ServiceCore.Translators
             bo.M3Grondwerk                      = entity.M3Grondwerk;
             bo.LmBerlinerwanden                 = entity.LmBerlinerwanden;
             bo.LmSecanpalen                     = entity.LmSecanpalen;
+            bo.M3Onderschoeiingen               = entity.M3Onderschoeiingen;
             bo.NacalcBasisprijs                 = entity.NacalcBasisprijs;
             bo.NacalcBasisJaar                  = entity.NacalcBasisJaar;
             bo.SIndexStart                      = entity.SIndexStart;
@@ -103,6 +104,7 @@ namespace ServiceCore.Translators
             entity.M3Grondwerk                      = bo.M3Grondwerk;
             entity.LmBerlinerwanden                 = bo.LmBerlinerwanden;
             entity.LmSecanpalen                     = bo.LmSecanpalen;
+            entity.M3Onderschoeiingen               = bo.M3Onderschoeiingen;
             entity.NacalcBasisprijs                 = bo.NacalcBasisprijs;
             entity.NacalcBasisJaar                  = bo.NacalcBasisJaar;
             entity.SIndexStart                      = bo.SIndexStart;

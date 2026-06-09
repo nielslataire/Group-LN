@@ -24,6 +24,8 @@
   <ItemGroup>
     <ProjectReference Include="..\BOCore\BOCore.vbproj" />
     <ProjectReference Include="..\ServiceCore\ServiceCore.csproj" />
+    <ProjectReference Include="..\GroupLN.MarketData.Core\GroupLN.MarketData.Core.csproj" />
+    <ProjectReference Include="..\GroupLN.MarketData.Persistence\GroupLN.MarketData.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>

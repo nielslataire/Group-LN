@@ -19,36 +19,64 @@
                    value="@FmtDec(Model.AlternatievePrijsPerEenheid)" />
             @if (Model.HeeftVoorstel)
             {
-                var nlBE    = new System.Globalization.CultureInfo("nl-BE");
+                var nlBE = new System.Globalization.CultureInfo("nl-BE");
                 string N2(decimal v) => v.ToString("N2", nlBE);
                 string N0(decimal v) => v.ToString("N0", nlBE);
 
-                var rPrijs  = Model.VoorstelRuwbouwPrijs  ?? 0m;
-                var rOpp    = Model.VoorstelRuwbouwOpp    ?? 0m;
-                var tPrijs  = Model.VoorstelTerrasPrijs   ?? 0m;
-                var tOpp    = Model.VoorstelTerrasOpp     ?? 0m;
-                var gPrijs  = Model.VoorstelGevelPrijs    ?? 0m;
-                var gOpp    = Model.VoorstelGevelOpp      ?? 0m;
-                var nEenh   = Model.VoorstelAantalEenheden ?? 0;
-                var rTot    = rPrijs * rOpp;
-                var tTot    = tPrijs * tOpp;
-                var gTot    = gPrijs * gOpp;
-                var totaal  = rTot + tTot + gTot;
+                string popTitle;
+                string popContent;
 
-                var popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;min-width:320px;'>
+                var nEenh = Model.VoorstelAantalEenheden ?? 0;
+
+                if (Model.VoorstelRuwbouwPrijs.HasValue)
+                {
+                    var rPrijs = Model.VoorstelRuwbouwPrijs  ?? 0m;
+                    var rOpp   = Model.VoorstelRuwbouwOpp    ?? 0m;
+                    var tPrijs = Model.VoorstelTerrasPrijs   ?? 0m;
+                    var tOpp   = Model.VoorstelTerrasOpp     ?? 0m;
+                    var gPrijs = Model.VoorstelGevelPrijs    ?? 0m;
+                    var gOpp   = Model.VoorstelGevelOpp      ?? 0m;
+                    var iPrijs = Model.VoorstelGipsPrijs     ?? 0m;
+                    var iAant  = (int)(Model.VoorstelGipsOpp ?? 0m);
+                    var rTot   = rPrijs * rOpp;
+                    var tTot   = tPrijs * tOpp;
+                    var gTot   = gPrijs * gOpp;
+                    var iTot   = iPrijs * iAant;
+                    var totaal = rTot + tTot + gTot + iTot;
+                    popTitle   = "Ruwbouw berekening";
+                    popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;width:100%;'>
 <tr><td>Ruwbouwprijs</td><td style='padding:0 6px;text-align:right'>€ {N2(rPrijs)}/m²</td><td style='text-align:right'>× {N2(rOpp)} m²</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(rTot)}</td></tr>
 <tr><td>Terrasprijs</td><td style='padding:0 6px;text-align:right'>€ {N2(tPrijs)}/m²</td><td style='text-align:right'>× {N2(tOpp)} m²</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(tTot)}</td></tr>
 <tr><td>Gevelprijs</td><td style='padding:0 6px;text-align:right'>€ {N2(gPrijs)}/m²</td><td style='text-align:right'>× {N2(gOpp)} m²</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(gTot)}</td></tr>
+<tr><td>Gipsblokken</td><td style='padding:0 6px;text-align:right'>€ {N2(iPrijs)}/eenh.</td><td style='text-align:right'>× {iAant} eenh.</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(iTot)}</td></tr>
 <tr style='border-top:1px solid #dee2e6'><td colspan='3'><strong>Totaal project</strong></td><td style='padding-left:8px;text-align:right;font-weight:700'>€ {N0(totaal)}</td></tr>
 <tr><td colspan='3'>÷ {nEenh} wooneenheden</td><td style='padding-left:8px;text-align:right;color:#0d6efd;font-weight:700'>= € {N2(Model.VoorgesteldePrijsPerEenheid ?? 0m)}/eenh.</td></tr>
 </table>";
+                }
+                else
+                {
+                    var ePrijs     = Model.VoorstelEnkelPrijs       ?? 0m;
+                    var eHoev      = Model.VoorstelEnkelHoeveelheid ?? 0m;
+                    var eEenh      = Model.VoorstelEnkelEenheid     ?? "";
+                    var eLabel     = Model.VoorstelEnkelLabel        ?? "";
+                    var eTot       = ePrijs * eHoev;
+                    var detailRows = Model.VoorstelEnkelDetail       ?? "";
+                    popTitle   = $"{eLabel} berekening";
+                    popContent = $@"<table style='font-size:.8rem;border-collapse:collapse;width:100%;'>
+{detailRows}
+<tr><td>{eLabel}</td><td style='padding:0 6px;text-align:right'>€ {N2(ePrijs)}/{eEenh}</td><td style='text-align:right'>× {N2(eHoev)} {eEenh}</td><td style='padding-left:8px;text-align:right;font-weight:600'>= € {N0(eTot)}</td></tr>
+<tr style='border-top:1px solid #dee2e6'><td colspan='3'><strong>Totaal project</strong></td><td style='padding-left:8px;text-align:right;font-weight:700'>€ {N0(eTot)}</td></tr>
+<tr><td colspan='3'>÷ {nEenh} wooneenheden</td><td style='padding-left:8px;text-align:right;color:#0d6efd;font-weight:700'>= € {N2(Model.VoorgesteldePrijsPerEenheid ?? 0m)}/eenh.</td></tr>
+</table>";
+                }
 
                 <span class="badge bg-info text-dark flex-shrink-0 voorstel-calc-badge"
                       data-bs-toggle="popover"
                       data-bs-trigger="hover focus"
                       data-bs-placement="bottom"
                       data-bs-html="true"
-                      data-bs-title="Ruwbouw berekening"
+                      data-bs-custom-class="popover-ruwbouw"
+                      data-bs-title="@popTitle"
                       data-bs-content="@popContent"
                       style="cursor:pointer;">
                     <i class="bx bx-calculator"></i>

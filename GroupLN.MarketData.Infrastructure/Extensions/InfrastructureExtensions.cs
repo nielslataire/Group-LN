@@ -2,6 +2,7 @@ using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
 using GroupLN.MarketData.Infrastructure.Browser;
 using GroupLN.MarketData.Infrastructure.Crawlers;
+using GroupLN.MarketData.Infrastructure.Deduplication;
 using GroupLN.MarketData.Infrastructure.Factories;
 using GroupLN.MarketData.Infrastructure.Normalizers;
 using GroupLN.MarketData.Infrastructure.Services;
@@ -60,6 +61,9 @@ public static class InfrastructureExtensions
 
         // Factory haalt alle crawlers op via IEnumerable<IRealEstateCrawler>
         services.AddScoped<ICrawlerFactory, CrawlerFactory>();
+
+        // Deduplicatie
+        services.AddScoped<IDeduplicationService, DeduplicationService>();
 
         return services;
     }

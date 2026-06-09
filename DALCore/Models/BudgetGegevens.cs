@@ -39,6 +39,8 @@ public partial class BudgetGegevens
 
     public decimal? LmSecanpalen { get; set; }
 
+    public decimal? M3Onderschoeiingen { get; set; }
+
     public decimal? NacalcBasisprijs { get; set; }
 
     public int? NacalcBasisJaar { get; set; }

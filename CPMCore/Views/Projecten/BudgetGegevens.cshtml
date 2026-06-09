@@ -106,6 +106,14 @@
                                         </div>
                                     </div>
                                     <div class="col-sm-12 col-md-6">
+                                        <label asp-for="Gegevens.AantalVerdiepingenOndergronds" class="form-label">Ondergrondse verdiepingen</label>
+                                        <div class="input-group input-group-sm">
+                                            <input asp-for="Gegevens.AantalVerdiepingenOndergronds" type="number" min="0"
+                                                   class="form-control form-control-sm text-end" />
+                                            <span class="input-group-text">st</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12 col-md-6">
                                         <label asp-for="Gegevens.TypePoorten" class="form-label">Type poorten</label>
                                         <select asp-for="Gegevens.TypePoorten" asp-items="Model.TypePoortenOptions"
                                                 class="form-select form-select-sm">
@@ -147,6 +155,14 @@
                                             <input asp-for="Gegevens.LmSecanpalen" type="number" min="0" step="0.01"
                                                    class="form-control form-control-sm text-end" />
                                             <span class="input-group-text">lm</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12 col-md-6">
+                                        <label asp-for="Gegevens.M3Onderschoeiingen" class="form-label">Onderschoeiingen</label>
+                                        <div class="input-group input-group-sm">
+                                            <input asp-for="Gegevens.M3Onderschoeiingen" type="number" min="0" step="0.01"
+                                                   class="form-control form-control-sm text-end" />
+                                            <span class="input-group-text">m³</span>
                                         </div>
                                     </div>
                                     <div class="col-sm-6">
@@ -467,6 +483,34 @@
     $('[name$="SIndexHuidig"],[name$="IIndexHuidig"],' +
       '#inp-basisprijs,#inp-gevel,#inp-gips,#inp-terras')
         .on('input', updateIndexFactors);
+
+    // ── Auto-opslaan bij navigeren ────────────────────────────────────────────
+    async function autoSaveEnNavigeer(targetUrl) {
+        const form   = document.getElementById('bw-form');
+        const label  = document.getElementById('autosave-label');
+        label.textContent = 'Opslaan…';
+        try {
+            const resp = await fetch('@Url.Action("BudgetGegevensOpslaan", "Projecten")', {
+                method: 'POST',
+                body:   new FormData(form)
+            });
+            const json = await resp.json();
+            if (json.success) {
+                window.location.href = targetUrl;
+            } else {
+                label.textContent = '⚠ Fout bij opslaan';
+            }
+        } catch {
+            label.textContent = '⚠ Fout bij opslaan';
+        }
+    }
+
+    document.querySelectorAll('a.bw-step, a.bw-bottom-nav__next, a.bw-bottom-nav__back').forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            autoSaveEnNavigeer(this.href);
+        });
+    });
 
     $(document).ready(function () {
         if (ruwbouwBasePrijs !== null) {

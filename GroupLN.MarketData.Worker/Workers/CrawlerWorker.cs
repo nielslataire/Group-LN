@@ -43,6 +43,25 @@ public class CrawlerWorker : BackgroundService
             "CrawlerWorker gestart. Check-interval: {Interval} min. DryRun={DryRun}.",
             _checkInterval.TotalMinutes, _settings.DryRun);
 
+        // Eenmalige volledige deduplicatie-scan bij opstart (alle bestaande assets)
+        if (_settings.FullDeduplicationScanOnStartup && !_settings.DryRun)
+        {
+            _logger.LogInformation("[Deduplicatie] FullDeduplicationScanOnStartup = true — volledige scan starten...");
+            try
+            {
+                await using var dedupScope   = _scopeFactory.CreateAsyncScope();
+                var dedupService = dedupScope.ServiceProvider.GetRequiredService<IDeduplicationService>();
+                var summary = await dedupService.RunAsync(DateTime.MinValue, stoppingToken);
+                _logger.LogInformation(
+                    "[Deduplicatie] Volledige scan klaar. {Scanned} assets, {Projects} project-candidates, {Units} unit-candidates, {Saved} opgeslagen.",
+                    summary.NewAssetsScanned, summary.ProjectCandidatesFound, summary.UnitCandidatesFound, summary.CandidatesSaved);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Deduplicatie] Volledige scan bij opstart mislukt.");
+            }
+        }
+
         // Eerste check direct bij opstart uitvoeren
         await RunAllDueCrawlsAsync(stoppingToken);
 
@@ -187,10 +206,29 @@ public class CrawlerWorker : BackgroundService
                 if (staleCount > 0)
                     _logger.LogInformation("[{Source}] {Count} verouderde listings (>{Days} dagen) gemarkeerd als inactief.",
                         source.Name, staleCount, _settings.MarkInactiveAfterDays);
+
+                // Deduplicatie: detecteer mogelijke duplicaten onder nieuwe/bijgewerkte assets
+                try
+                {
+                    await using var dedupScope = _scopeFactory.CreateAsyncScope();
+                    var dedupService = dedupScope.ServiceProvider.GetRequiredService<IDeduplicationService>();
+                    var dedupSummary = await dedupService.RunAsync(result.StartedAt, cancellationToken);
+                    _logger.LogInformation(
+                        "[{Source}] Deduplicatie: {Scanned} assets gescand, {Projects} project-candidates, {Units} unit-candidates, {Saved} opgeslagen.",
+                        source.Name,
+                        dedupSummary.NewAssetsScanned,
+                        dedupSummary.ProjectCandidatesFound,
+                        dedupSummary.UnitCandidatesFound,
+                        dedupSummary.CandidatesSaved);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[{Source}] Deduplicatie mislukt.", source.Name);
+                }
             }
             else
             {
-                _logger.LogInformation("[{Source}] [DRYRUN] MarkStaleListingsInactive overgeslagen.", source.Name);
+                _logger.LogInformation("[{Source}] [DRYRUN] MarkStaleListingsInactive en deduplicatie overgeslagen.", source.Name);
             }
         }
         catch (OperationCanceledException)

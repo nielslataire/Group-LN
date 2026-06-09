@@ -38,6 +38,17 @@ Namespace Budget
         Public Property VoorstelGevelOpp As Decimal?
         Public Property VoorstelAantalEenheden As Integer?
 
+        Public Property VoorstelGipsPrijs As Decimal?
+        Public Property VoorstelGipsOpp As Decimal?
+        Public Property VoorstelGipsAantalEenheden As Integer?
+
+        ' Generiek voorstel voor enkelvoudige activiteiten (prijs × hoeveelheid)
+        Public Property VoorstelEnkelPrijs As Decimal?
+        Public Property VoorstelEnkelHoeveelheid As Decimal?
+        Public Property VoorstelEnkelEenheid As String
+        Public Property VoorstelEnkelLabel As String
+        Public Property VoorstelEnkelDetail As String
+
         Public ReadOnly Property HeeftVoorstel As Boolean
             Get
                 Return VoorgesteldePrijsPerEenheid.HasValue AndAlso VoorgesteldePrijsPerEenheid.Value > 0

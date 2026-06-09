@@ -1,0 +1,712 @@
+@using System.Text.Json
+@model CPMCore.Models.Marktanalyse.GemeenteAnalyseViewModel
+@{
+    ViewData["Title"] = "Gemeenteanalyse";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var gemeentes = Model.Locaties
+        .GroupBy(l => l.Gemeente)
+        .Select(g => g.Key)
+        .OrderBy(g => g)
+        .ToList();
+
+    var locatiesJson = JsonSerializer.Serialize(
+        Model.Locaties.Select(l => new { gemeente = l.Gemeente, postcode = l.Postcode }));
+
+    var geselecteerdeGemeente = Model.Locaties
+        .FirstOrDefault(l => l.Postcode == Model.GeselecteerdePostcode)?.Gemeente ?? "";
+
+    var kpi = Model.Kpi;
+}
+
+@section PageStyle {
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.min.css" />
+    <style>
+        .kpi-card { border-left: 4px solid #6c757d; }
+        .kpi-card.accent-blue  { border-left-color: #0d6efd; }
+        .kpi-card.accent-green { border-left-color: #198754; }
+        .kpi-card.accent-red   { border-left-color: #dc3545; }
+        .kpi-card.accent-teal  { border-left-color: #0dcaf0; }
+        .kpi-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+        .kpi-label { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .04em; }
+        .chart-container   { position: relative; height: 260px; }
+        .chart-container-h { position: relative; height: 320px; }
+
+        .dashboard-stat {
+            border: 0;
+            border-radius: .75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            transition: all .2s ease;
+            min-height: 100px;
+        }
+
+            .dashboard-stat:hover {
+                box-shadow: 0 .25rem .75rem rgba(0,0,0,.10);
+            }
+
+            .dashboard-stat .card-body {
+                padding: 1rem 1.25rem;
+            }
+
+        .dashboard-stat-title {
+            color: #6c757d;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: .2rem;
+        }
+
+            .dashboard-stat-title i {
+                margin-right: .25rem;
+                font-size: .9rem;
+                color: var(--primary);
+            }
+
+        .dashboard-stat-value {
+            font-size: 21px;
+            font-weight: 700;
+            line-height: 1;
+            color: #212529;
+            margin-bottom: .2rem;
+        }
+
+        .dashboard-stat-subtitle {
+            color: #6c757d;
+            font-size: 10.5px;
+            margin-bottom:0;
+        }
+
+            .dashboard-stat-subtitle i {
+                margin-right: .25rem;
+                color: #adb5bd;
+            }
+
+        .btn-group-segmented {
+            padding: 4px;
+            background: #f3f5f7;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            gap: 4px;
+            display: inline-flex;
+        }
+
+            .btn-group-segmented .btn {
+                border: 0;
+                background: transparent;
+                color: #6c757d;
+                font-weight: 600;
+                font-size: .875rem;
+                padding: .4rem .85rem;
+                border-radius: 7px;
+                transition: all .2s ease;
+                margin: 0;
+            }
+
+                .btn-group-segmented .btn:hover {
+                    color: var(--primary);
+                    background: rgba(0,0,0,.03);
+                }
+
+        /* geselecteerde knop */
+        .btn-check:checked + .btn {
+            background: #fff;
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+
+        /* Grafieken */
+        .chart-row {
+         padding-top:0 !important;
+        }
+        .chart-card {
+            border: 1px solid #e1e7ef;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, .06);
+        }
+
+            .chart-card .card-body {
+                padding: 1rem 1.25rem .9rem;
+            }
+
+        .chart-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .chart-subtitle {
+            font-size: 10.5px;
+            color: #8a97a8;
+            margin-bottom: .75rem;
+        }
+
+        .chart-container {
+            height: 210px;
+        }
+
+        .chart-container-h {
+            height: 210px;
+        }
+    </style>
+}
+
+<section class="content-header">
+    <h1>
+        Marktanalyse
+        @if (!string.IsNullOrEmpty(Model.GeselecteerdeGemeente))
+        {
+            <small class="text-muted">— @Model.GeselecteerdeGemeente (@Model.GeselecteerdePostcode)</small>
+        }
+    </h1>
+</section>
+
+
+@*     <div class="container-fluid"> *@
+
+        <!-- Filter -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4 class="text-primary font-weight-semibold">FILTER</h4>
+                <form id="filterForm" method="get" action="@Url.Action("Gemeenteanalyse", "Marktanalyse")" class="row g-3 align-items-end">
+                    <div class="col-sm-4 col-md-3">
+                        <label class="form-label fw-semibold text-muted" for="sel-gemeente">GEMEENTE</label>
+                        <select id="sel-gemeente" class="form-select">
+                            <option value="">— Selecteer gemeente —</option>
+                            @foreach (var g in gemeentes)
+                            {
+                                if (g == geselecteerdeGemeente)
+                                {
+                                    <option value="@g" selected>@g</option>
+                                }
+                                else
+                                {
+                                    <option value="@g">@g</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="col-sm-4 col-md-2">
+                        <label class="form-label fw-semibold text-muted" for="sel-postcode">POSTCODE</label>
+                        <select id="sel-postcode" name="postcode" class="form-select">
+                            <option value="">—</option>
+                        </select>
+                    </div>
+            <div class="col-sm-4 col-md-3">
+                <label class="form-label fw-semibold d-block text-muted">TYPE</label>
+
+                <div class="btn-group btn-group-segmented" role="group">
+                    @foreach (var t in new[] { "Alles", "Appartement", "Woning" })
+                    {
+                        <input type="radio"
+                               class="btn-check"
+                               name="type"
+                               id="type-@t"
+                               value="@t"
+                               @(Model.GeselecteerdType == t ? "checked" : "") />
+
+                        <label class="btn" for="type-@t">
+                            @t
+                        </label>
+                    }
+                </div>
+            </div>
+                    <div class="col-sm-auto d-none">
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-search me-1"></i>Toon markt
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        @if (Model.HeeftFilter && !Model.HeeftData)
+        {
+            <div class="alert alert-warning">
+                Geen projectdata gevonden voor postcode <strong>@Model.GeselecteerdePostcode</strong>@if (Model.GeselecteerdType != "Alles"){ <text> — type <strong>@Model.GeselecteerdType</strong></text> }.
+            </div>
+        }
+
+        @if (Model.HeeftData)
+        {
+            <!-- KPI cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="card dashboard-stat">
+                        <div class="card-body">
+                            <div class="dashboard-stat-title d-flex align-items-center">
+                                <i class="bx bx-buildings"></i>
+                                ACTIEVE PROJECTEN
+                            </div>
+
+                            <div class="dashboard-stat-value">
+                                @kpi!.ActieveProjecten
+                            </div>
+
+                            <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                <i class="bx bx-map"></i>{gemeente}
+                        
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card dashboard-stat">
+                        <div class="card-body">
+                            <div class="dashboard-stat-title d-flex align-items-center">
+                                <i class="bx bx-grid"></i>
+                                ACTIEVE UNITS
+                            </div>
+
+                            <div class="dashboard-stat-value">
+                                @kpi!.ActieveUnits
+                            </div>
+
+                            <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                in deze selectie
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card dashboard-stat">
+                        <div class="card-body">
+                            <div class="dashboard-stat-title d-flex align-items-center">
+                                <i class="bx bx-check-circle"></i>
+                                VERKOCHTE UNITS
+                            </div>
+
+                            <div class="dashboard-stat-value">
+                                @kpi!.VerkochteUnits
+                            </div>
+
+                            <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                <i class="bx bx-check"></i> % van het aanbod
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="card dashboard-stat">
+                        <div class="card-body">
+                            <div class="dashboard-stat-title d-flex align-items-center">
+                                <i class="bx bx-price-tag"></i>
+                                BESCHIKBARE UNITS
+                            </div>
+
+                            <div class="dashboard-stat-value">
+                                @kpi!.BeschikbareUnits
+                            </div>
+
+                            <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                <i class="bx bx-price-tag"></i> te koop
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        <div class="col-6 col-md-3">
+            <div class="card dashboard-stat">
+                <div class="card-body">
+                    <div class="dashboard-stat-title d-flex align-items-center">
+                        <i class="bx bx-euro"></i>
+                        GEMIDDELDE PRIJS
+                    </div>
+                    <div class="dashboard-stat-value">
+                        @(kpi.GemiddeldePrijs.HasValue
+                                            ? kpi.GemiddeldePrijs.Value.ToString("N0") + " €"
+                                            : "—")
+                    </div>
+                    <div class="dashboard-stat-subtitle d-flex align-items-center">
+                        vraagprijs gemiddeld
+                    </div>
+                </div>
+            </div>
+        </div>
+                                  <div class="col-6 col-md-3">
+                                      <div class="card dashboard-stat">
+                                          <div class="card-body">
+                                              <div class="dashboard-stat-title d-flex align-items-center">
+                                                  <i class="bx bx-ruler"></i>
+                                                  GEM. PRIJS PER M²
+                                              </div>
+                                              <div class="dashboard-stat-value">
+                                                @(kpi.GemiddeldePrijsPerM2.HasValue
+                                                                    ? kpi.GemiddeldePrijsPerM2.Value.ToString("N0") + " €/m²"
+                                                                    : "—")
+                                              </div>
+                                              <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                                 per m² bewoonbaar
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div class="col-6 col-md-3">
+                                      <div class="card dashboard-stat">
+                                          <div class="card-body">
+                                              <div class="dashboard-stat-title d-flex align-items-center">
+                                                  <i class="bx bx-arrow-out-down-left-stroke-square"></i>
+                                                  GEM. OPPERVLAKTE
+                                              </div>
+                                              <div class="dashboard-stat-value">
+                        @(kpi.GemiddeldeOppervlakte.HasValue
+                                            ? kpi.GemiddeldeOppervlakte.Value.ToString("N0") + " m²"
+                                            : "—")
+                                              </div>
+                                              <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                                  gemiddeld per unit
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                                  <div class="col-6 col-md-3">
+                                      <div class="card dashboard-stat">
+                                          <div class="card-body">
+                                              <div class="dashboard-stat-title d-flex align-items-center">
+                                                  <i class="bx bx-arrow-out-down-left-stroke-square"></i>
+                                                  VERKOOPBAAR
+                                              </div>
+                                              <div class="dashboard-stat-value">
+                                                  @kpi.Verkoopgraad.ToString("F1") %
+                                              </div>
+                                              <div class="dashboard-stat-subtitle d-flex align-items-center">
+                                                  <i class="bx bx-check-circle"></i>{AANTAL} van {Totaal} verkocht
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+            </div>
+
+            <!-- Grafieken -->
+    <div class="row mb-4 chart-row">
+        <div class="col-md-4 mb-3">
+            <div class="card chart-card h-100">
+                <div class="card-body">
+                    <h6 class="chart-title  d-flex align-items-center"> <i class="bx bx-chart-bar-columns me-1 text-primary "></i>Verdeling vraagprijzen</h6>
+                    <div class="chart-subtitle">Aantal units per prijsrange</div>
+
+                    <div class="chart-container">
+                        <canvas id="chartVraagprijzen"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card chart-card h-100">
+                <div class="card-body">
+                    <h6 class="chart-title  d-flex align-items-center"><i class="bx bx-chart-bar-columns me-1 text-primary "></i>Verdeling prijs per m²</h6>
+                    <div class="chart-subtitle">Aantal units per €/m²-range</div>
+
+                    <div class="chart-container">
+                        <canvas id="chartPrijsPerM2"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card chart-card h-100">
+                <div class="card-body">
+                    <h6 class="chart-title  d-flex align-items-center">
+                        <i class="bx bx-trending-up me-1 text-primary g-3"></i>
+                        Verkoopgraad per project
+                    </h6>
+                    <div class="chart-subtitle">% verkocht per project</div>
+
+                    <div class="chart-container-h">
+                        <canvas id="chartVerkoopgraad"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+            <!-- Projectentabel -->
+            <div class="card mb-4">
+                <div class="card-header fw-semibold">Projecten</div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table id="tblProjecten" class="table table-sm table-hover mb-0 w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Ontwikkelaar</th>
+                                    <th>Type</th>
+                                    <th class="text-end">Units</th>
+                                    <th class="text-end">Verkocht</th>
+                                    <th class="text-end">Beschikbaar</th>
+                                    <th class="text-end">Verkoopgraad</th>
+                                    <th class="text-end">Gem. prijs</th>
+                                    <th class="text-end">Gem. €/m²</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in Model.Projecten)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a href="@Url.Action("Projectdetail", "Marktanalyse", new { id = p.Id })">@p.ProjectNaam</a>
+                                        </td>
+                                        <td>@p.Ontwikkelaar</td>
+                                        <td>@p.TypeLabel</td>
+                                        <td class="text-end">@p.TotaalUnits</td>
+                                        <td class="text-end">@p.VerkochteUnits</td>
+                                        <td class="text-end">@p.BeschikbareUnits</td>
+                                        <td class="text-end">
+                                            @{
+                                                var pBadge = p.Verkoopgraad >= 75 ? "bg-success" : p.Verkoopgraad >= 40 ? "bg-info text-dark" : "bg-danger";
+                                            }
+                                            <span class="badge @pBadge">@p.Verkoopgraad.ToString("F1") %</span>
+                                        </td>
+                                        <td class="text-end">@(p.GemiddeldePrijs.HasValue ? p.GemiddeldePrijs.Value.ToString("N0") + " €" : "—")</td>
+                                        <td class="text-end">@(p.GemiddeldePrijsPerM2.HasValue ? p.GemiddeldePrijsPerM2.Value.ToString("N0") : "—")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+    @* </div> *@
+
+
+@section PageScripts {
+    <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@@4.4.4/dist/chart.umd.min.js"></script>
+
+    <!-- Cascade + auto-submit + localStorage -->
+    <script>
+        (function () {
+            var LS_POSTCODE = 'ma_last_postcode';
+            var LS_TYPE     = 'ma_last_type';
+
+            var locaties     = @Html.Raw(locatiesJson);
+            var form         = document.getElementById('filterForm');
+            var selGemeente  = document.getElementById('sel-gemeente');
+            var selPostcode  = document.getElementById('sel-postcode');
+            var currentPostcode = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdePostcode ?? ""));
+            var currentType     = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdType));
+
+            // ── Sla huidige selectie op als we data hebben ────────────────────
+            if (currentPostcode) {
+                localStorage.setItem(LS_POSTCODE, currentPostcode);
+                localStorage.setItem(LS_TYPE, currentType);
+            }
+
+            // ── Redirect naar laatste gemeente als pagina zonder filter opent ─
+            if (!currentPostcode) {
+                var lastPostcode = localStorage.getItem(LS_POSTCODE);
+                var lastType     = localStorage.getItem(LS_TYPE) || 'Alles';
+                if (lastPostcode) {
+                    window.location.replace(
+                        form.action + '?postcode=' + encodeURIComponent(lastPostcode) +
+                        '&type=' + encodeURIComponent(lastType)
+                    );
+                    return;
+                }
+            }
+
+            // ── Postcode dropdown vullen ──────────────────────────────────────
+            function fillPostcodes(gemeente, autoSubmit) {
+                var filtered = locaties.filter(function (l) { return l.gemeente === gemeente; });
+                selPostcode.innerHTML = '<option value="">—</option>';
+                filtered.forEach(function (l) {
+                    var opt = document.createElement('option');
+                    opt.value = l.postcode;
+                    opt.textContent = l.postcode;
+                    if (l.postcode === currentPostcode) opt.selected = true;
+                    selPostcode.appendChild(opt);
+                });
+                // Één postcode voor deze gemeente → meteen selecteren
+                if (filtered.length === 1) selPostcode.selectedIndex = 1;
+                // Direct submitten als gevraagd én postcode geselecteerd
+                if (autoSubmit && selPostcode.value) form.submit();
+            }
+
+            // ── Gemeente wijzigt → postcodes vullen en direct submiten ────────
+            selGemeente.addEventListener('change', function () {
+                currentPostcode = '';
+                fillPostcodes(this.value, true);
+            });
+
+            // ── Postcode wijzigt → direct submiten ───────────────────────────
+            selPostcode.addEventListener('change', function () {
+                if (this.value) form.submit();
+            });
+
+            // ── Type wijzigt → direct submiten (enkel als postcode bekend is) ─
+            document.querySelectorAll('input[name="type"]').forEach(function (radio) {
+                radio.addEventListener('change', function () {
+                    if (selPostcode.value) form.submit();
+                });
+            });
+
+            // ── Initieel vullen (pagina geladen met bestaande selectie) ───────
+            if (selGemeente.value) fillPostcodes(selGemeente.value, false);
+        })();
+    </script>
+
+    @if (Model.HeeftData)
+    {
+        <!-- Chart.js + DataTable initialisatie -->
+        <script>
+
+
+            var vraagprijsLabels = @Html.Raw(JsonSerializer.Serialize(Model.VraagprijsBuckets.Select(b => b.Label).ToList()));
+            var vraagprijsData   = @Html.Raw(JsonSerializer.Serialize(Model.VraagprijsBuckets.Select(b => b.Aantal).ToList()));
+            var ppSqmLabels      = @Html.Raw(JsonSerializer.Serialize(Model.PrijsPerM2Buckets.Select(b => b.Label).ToList()));
+            var ppSqmData        = @Html.Raw(JsonSerializer.Serialize(Model.PrijsPerM2Buckets.Select(b => b.Aantal).ToList()));
+            var vkgLabels        = @Html.Raw(JsonSerializer.Serialize(Model.VerkoopgraadPerProject.Select(p => p.ProjectNaam).ToList()));
+            var vkgData          = @Html.Raw(JsonSerializer.Serialize(Model.VerkoopgraadPerProject.Select(p => p.Verkoopgraad).ToList()));
+
+const primaryColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--primary')
+    .trim();
+
+const mediumColor = '#f59e0b';   // amber
+const lowColor = '#0ea5e9';      // sky blue
+
+const gridColor = '#e9eef5';
+const tickColor = '#8a97a8';
+
+const defaultBarOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: '#0f172a',
+            padding: 10,
+            displayColors: false
+        }
+    },
+    scales: {
+        x: {
+            grid: { display: false },
+            ticks: {
+                color: tickColor,
+                font: { size: 11 }
+            }
+        },
+        y: {
+            beginAtZero: true,
+            grid: { color: gridColor },
+            ticks: {
+                color: tickColor,
+                precision: 0,
+                font: { size: 11 }
+            },
+            title: {
+                display: true,
+                text: 'Aantal units',
+                color: '#64748b',
+                font: { size: 12, weight: '600' }
+            }
+        }
+    }
+};
+new Chart(document.getElementById('chartVraagprijzen'), {
+    type: 'bar',
+    data: {
+        labels: vraagprijsLabels,
+        datasets: [{
+            data: vraagprijsData,
+            backgroundColor: primaryColor,
+            borderRadius: 5,
+            barPercentage: .55,
+            categoryPercentage: .7
+        }]
+    },
+    options: defaultBarOptions
+});
+
+new Chart(document.getElementById('chartPrijsPerM2'), {
+    type: 'bar',
+    data: {
+        labels: ppSqmLabels,
+        datasets: [{
+            data: ppSqmData,
+            backgroundColor: primaryColor,
+            borderRadius: 5,
+            barPercentage: .55,
+            categoryPercentage: .7
+        }]
+    },
+    options: defaultBarOptions
+});
+new Chart(document.getElementById('chartVerkoopgraad'), {
+    type: 'bar',
+    data: {
+        labels: vkgLabels,
+        datasets: [{
+            data: vkgData,
+            backgroundColor: vkgData.map(function (v) {
+                if (v >= 66) return primaryColor;
+                if (v >= 40) return mediumColor; // oranje
+                return lowColor;              // blauw
+            }),
+            borderRadius: 5,
+            barPercentage: .65,
+            categoryPercentage: .7
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                backgroundColor: '#0f172a',
+                padding: 10,
+                displayColors: false,
+                callbacks: {
+                    label: function (context) {
+                        return context.raw + '% verkocht';
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                beginAtZero: true,
+                max: 100,
+                grid: {
+                    color: gridColor
+                },
+                ticks: {
+                    color: tickColor,
+                    callback: function (v) {
+                        return v + '%';
+                    }
+                }
+            },
+            y: {
+                grid: {
+                    display: false
+                },
+                ticks: {
+                    color: tickColor,
+                    font: {
+                        size: 11
+                    }
+                }
+            }
+        }
+    }
+});
+
+            $(function () {
+                $('#tblProjecten').DataTable({
+                    language: { url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json' },
+                    order: [[6, 'desc']],
+                    pageLength: 25
+                });
+            });
+        </script>
+    }
+}

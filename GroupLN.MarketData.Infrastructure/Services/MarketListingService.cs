@@ -3,6 +3,7 @@ using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Interfaces;
+using GroupLN.MarketData.Infrastructure.TitleResolution;
 using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -40,7 +41,13 @@ public class MarketListingService : IMarketListingService
         {
             var oldPrice = existing.AskingPrice;
 
-            existing.Title = dto.Title ?? existing.Title;
+            if (!string.IsNullOrEmpty(dto.Title) && ListingTitleResolver.IsBetterTitle(existing.Title, dto.Title))
+            {
+                _logger.LogInformation(
+                    "[TitleResolved] {ExternalId} | Old='{OldTitle}' | New='{NewTitle}' | Source=TitleUpdate",
+                    dto.ExternalId, existing.Title ?? "(null)", dto.Title);
+                existing.Title = dto.Title;
+            }
             existing.AskingPrice = dto.AskingPrice ?? existing.AskingPrice;
             existing.LastSeenAt = now;
             existing.IsActive = true;
@@ -229,6 +236,10 @@ public class MarketListingService : IMarketListingService
                 existing.MissingCrawlCount = 0;
                 existing.UpdatedAt = now;
 
+                var resolvedUnitTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger).Title;
+                if (ListingTitleResolver.IsBetterTitle(existing.Title, resolvedUnitTitle))
+                    existing.Title = resolvedUnitTitle;
+
                 existing.Asset.SaleStatus = unit.SaleStatus;
                 if (unit.Surface.HasValue) existing.Asset.LivingArea = unit.Surface;
                 if (unit.BedroomCount.HasValue) existing.Asset.Bedrooms = unit.BedroomCount;
@@ -306,8 +317,7 @@ public class MarketListingService : IMarketListingService
                 _context.MarketAssets.Add(asset);
                 await _context.SaveChangesAsync(cancellationToken);
 
-                var projectName = unit.ParentProjectName ?? "Project";
-                var subTypeLabel = unit.RawSubType ?? unit.RawGroupType ?? "Unit";
+                var resolvedTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger).Title;
 
                 var listing = new MarketListing
                 {
@@ -315,7 +325,7 @@ public class MarketListingService : IMarketListingService
                     SourceId = projectDto.SourceId,
                     ExternalId = unit.UnitId,
                     Url = $"{projectDto.Url}#unit-{unit.UnitId}",
-                    Title = $"{projectName} – {subTypeLabel} – Unit {unit.UnitId}",
+                    Title = resolvedTitle,
                     AskingPrice = unit.Price,
                     FirstSeenAt = now,
                     LastSeenAt = now,

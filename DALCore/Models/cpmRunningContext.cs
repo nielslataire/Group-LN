@@ -3139,6 +3139,7 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.M3Grondwerk).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.LmBerlinerwanden).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.LmSecanpalen).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.M3Onderschoeiingen).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.NacalcBasisprijs).HasColumnType("decimal(8, 2)");
             entity.Property(e => e.SIndexStart).HasColumnType("decimal(10, 4)");
             entity.Property(e => e.SIndexHuidig).HasColumnType("decimal(10, 4)");

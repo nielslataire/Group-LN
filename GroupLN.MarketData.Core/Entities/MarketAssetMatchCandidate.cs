@@ -11,6 +11,17 @@ public class MarketAssetMatchCandidate
     public decimal MatchScore { get; set; }
     public string? MatchReason { get; set; }
 
+    // Kandidaat-asset (potentiële duplicate); null bij import-time candidates
+    public long? CandidateMarketAssetId { get; set; }
+
+    // "Project" of "Unit"
+    public string? MatchType { get; set; }
+    // "Exact", "Probable" of "Possible"
+    public string? MatchLevel { get; set; }
+
+    // JSON met vergelijkingsdetails
+    public string? ComparedFieldsJson { get; set; }
+
     public bool IsConfirmed { get; set; }
     public bool IsRejected { get; set; }
 
