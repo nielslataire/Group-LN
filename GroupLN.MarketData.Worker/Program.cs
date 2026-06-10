@@ -1,4 +1,6 @@
+using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
+using GroupLN.MarketData.Infrastructure.Commands;
 using GroupLN.MarketData.Infrastructure.Extensions;
 using GroupLN.MarketData.Persistence;
 using GroupLN.MarketData.Persistence.Extensions;
@@ -13,6 +15,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<CrawlerWorker>();
     })
     .Build();
+
 
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
 

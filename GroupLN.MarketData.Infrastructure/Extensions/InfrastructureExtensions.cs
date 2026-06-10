@@ -1,9 +1,11 @@
 using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
 using GroupLN.MarketData.Infrastructure.Browser;
+using GroupLN.MarketData.Infrastructure.Commands;
 using GroupLN.MarketData.Infrastructure.Crawlers;
 using GroupLN.MarketData.Infrastructure.Deduplication;
 using GroupLN.MarketData.Infrastructure.Factories;
+using GroupLN.MarketData.Infrastructure.GeoLocation;
 using GroupLN.MarketData.Infrastructure.Normalizers;
 using GroupLN.MarketData.Infrastructure.Services;
 using Microsoft.Extensions.Configuration;
@@ -64,6 +66,11 @@ public static class InfrastructureExtensions
 
         // Deduplicatie
         services.AddScoped<IDeduplicationService, DeduplicationService>();
+
+        // Geo-locatie
+        services.AddScoped<ILocationResolver, LocationResolver>();
+        services.AddScoped<IAdminVectorImportService, AdminVectorImportService>();
+        services.AddScoped<BackfillMarketAssetLocationsCommand>();
 
         return services;
     }

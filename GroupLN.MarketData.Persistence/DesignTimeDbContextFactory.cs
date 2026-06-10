@@ -14,7 +14,11 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<MarketData
 
         optionsBuilder.UseSqlServer(
             connectionString,
-            sql => sql.MigrationsAssembly(typeof(MarketDataDbContext).Assembly.FullName));
+            sql =>
+            {
+                sql.MigrationsAssembly(typeof(MarketDataDbContext).Assembly.FullName);
+                sql.UseNetTopologySuite();
+            });
 
         return new MarketDataDbContext(optionsBuilder.Options);
     }

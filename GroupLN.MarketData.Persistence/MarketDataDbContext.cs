@@ -19,6 +19,9 @@ public class MarketDataDbContext : DbContext
     public DbSet<ProjectGroupKpi> ProjectGroupKpis => Set<ProjectGroupKpi>();
     public DbSet<MarketAreaStatistics> MarketAreaStatistics => Set<MarketAreaStatistics>();
 
+    public DbSet<GeoMunicipality> GeoMunicipalities => Set<GeoMunicipality>();
+    public DbSet<GeoMunicipalSection> GeoMunicipalSections => Set<GeoMunicipalSection>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MarketDataDbContext).Assembly);

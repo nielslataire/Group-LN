@@ -13,10 +13,10 @@ public class MarktanalyseController : Controller
         _svc = svc;
     }
 
-    // GET /Marktanalyse/Gemeenteanalyse?postcode=8000&type=Alles&aanbodtype=Alles
+    // GET /Marktanalyse/Gemeenteanalyse?geoMunicipalityId=1&geoMunicipalSectionId=5&type=Alles&aanbodtype=Alles
     public async Task<IActionResult> Gemeenteanalyse(
-        string? postcode,
-        string? gemeente = null,
+        int? geoMunicipalityId = null,
+        int? geoMunicipalSectionId = null,
         string type = "Alles",
         string aanbodtype = "Alles",
         CancellationToken ct = default)
@@ -24,13 +24,13 @@ public class MarktanalyseController : Controller
         var locaties = await _svc.GetLocatiesAsync(ct);
 
         GemeenteAnalyseViewModel vm;
-        if (string.IsNullOrWhiteSpace(postcode))
+        if (!geoMunicipalityId.HasValue && !geoMunicipalSectionId.HasValue)
         {
             vm = new GemeenteAnalyseViewModel { GeselecteerdType = type, GeselecteerdAanbodtype = aanbodtype };
         }
         else
         {
-            vm = await _svc.GetGemeenteAnalyseAsync(postcode, gemeente, type, aanbodtype, ct);
+            vm = await _svc.GetGemeenteAnalyseAsync(geoMunicipalityId, geoMunicipalSectionId, type, aanbodtype, ct);
         }
 
         vm.Locaties = locaties;

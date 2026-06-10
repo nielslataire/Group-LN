@@ -63,7 +63,8 @@
       "PowerShell(Get-Command dotnet-ef -ErrorAction SilentlyContinue; Get-ChildItem \"$env:USERPROFILE\\\\.dotnet\\\\tools\\\\\" -ErrorAction SilentlyContinue | Select-Object Name)",
       "PowerShell(dotnet tool install --global dotnet-ef --version 8.0.10 2>&1)",
       "PowerShell($env:PATH = \"$env:USERPROFILE\\\\.dotnet\\\\tools;$env:PATH\"; dotnet-ef migrations add AddProjectGroupColumns --project c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Persistence --startup-project c:\\\\Users\\\\niels\\\\source\\\\repos\\\\nielslataire\\\\Group-LN\\\\GroupLN.MarketData.Worker 2>&1)",
-      "Bash(dotnet ef *)"
+      "Bash(dotnet ef *)",
+      "Bash(dotnet list *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\niels\\.claude\\projects\\c--Users-niels-source-repos-nielslataire-Group-LN\\memory"

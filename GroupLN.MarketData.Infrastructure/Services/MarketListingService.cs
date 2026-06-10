@@ -14,15 +14,18 @@ public class MarketListingService : IMarketListingService
 {
     private readonly MarketDataDbContext _context;
     private readonly IMarketAssetMatcher _assetMatcher;
+    private readonly ILocationResolver _locationResolver;
     private readonly ILogger<MarketListingService> _logger;
 
     public MarketListingService(
         MarketDataDbContext context,
         IMarketAssetMatcher assetMatcher,
+        ILocationResolver locationResolver,
         ILogger<MarketListingService> logger)
     {
         _context = context;
         _assetMatcher = assetMatcher;
+        _locationResolver = locationResolver;
         _logger = logger;
     }
 
@@ -55,7 +58,12 @@ public class MarketListingService : IMarketListingService
             existing.MissingCrawlCount = 0;
             existing.UpdatedAt = now;
 
+            var oldLat = existing.Asset.Latitude;
+            var oldLng = existing.Asset.Longitude;
             UpdateAssetFromDto(existing.Asset, dto, now);
+            var latLngChanged = existing.Asset.Latitude != oldLat || existing.Asset.Longitude != oldLng;
+            await TryResolveLocationAsync(existing.Asset, cancellationToken,
+                forceResolve: latLngChanged || !existing.Asset.GeoMunicipalSectionId.HasValue);
 
             var lastSnapshot = existing.Snapshots.MaxBy(s => s.SnapshotDate);
 
@@ -111,6 +119,9 @@ public class MarketListingService : IMarketListingService
             asset = CreateAsset(dto, now, assetKey);
             _context.MarketAssets.Add(asset);
             await _context.SaveChangesAsync(cancellationToken);
+
+            await TryResolveLocationAsync(asset, cancellationToken);
+
             _logger.LogInformation(
                 "Nieuw MarketAsset {AssetId} aangemaakt | {City} {PostalCode} | {Type} | match={AssetMatchType} | strategy={Strategy}.",
                 asset.Id, dto.City, dto.PostalCode, dto.PropertyType, matchResult.AssetMatchType, assetKeyStrategy);
@@ -316,6 +327,8 @@ public class MarketListingService : IMarketListingService
 
                 _context.MarketAssets.Add(asset);
                 await _context.SaveChangesAsync(cancellationToken);
+
+                await TryResolveLocationAsync(asset, cancellationToken);
 
                 var resolvedTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger).Title;
 
@@ -743,6 +756,38 @@ public class MarketListingService : IMarketListingService
 
         static string S(string? v) => (v ?? string.Empty).Trim().Replace("|", "_");
         static string K(params string[] parts) => string.Join("|", parts);
+    }
+
+    private async Task TryResolveLocationAsync(MarketAsset asset, CancellationToken cancellationToken, bool forceResolve = false)
+    {
+        if (!asset.Latitude.HasValue || !asset.Longitude.HasValue)
+            return;
+
+        if (!forceResolve && asset.LocationResolvedAt.HasValue && asset.LocationResolutionConfidence >= 100)
+            return;
+
+        try
+        {
+            var result = await _locationResolver.ResolveAsync(
+                asset.Latitude, asset.Longitude, asset.City, asset.PostalCode, cancellationToken);
+
+            if (result is not null && result.Resolved)
+            {
+                asset.GeoMunicipalityId = result.GeoMunicipalityId;
+                asset.GeoMunicipalSectionId = result.GeoMunicipalSectionId;
+                asset.LocationResolvedAt = result.ResolvedAt;
+                asset.LocationResolutionSource = result.Source;
+                asset.LocationResolutionConfidence = result.Confidence;
+
+                _logger.LogDebug(
+                    "LocationResolved AssetId={AssetId} | Source={Source} | Confidence={Confidence} | SectionId={SectionId}",
+                    asset.Id, result.Source, result.Confidence, result.GeoMunicipalSectionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "LocationResolver mislukt voor asset {AssetId} — locatie niet ingevuld.", asset.Id);
+        }
     }
 
     private static string BuildUnitAssetKey(string country, string postalCode, string projectExternalId, string unitExternalId)

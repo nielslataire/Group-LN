@@ -23,6 +23,7 @@ public static class PersistenceExtensions
                     maxRetryCount: 5,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorNumbersToAdd: null);
+                sql.UseNetTopologySuite();
             });
         });
 

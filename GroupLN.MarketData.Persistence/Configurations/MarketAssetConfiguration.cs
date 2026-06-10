@@ -55,6 +55,20 @@ public class MarketAssetConfiguration : IEntityTypeConfiguration<MarketAsset>
         builder.HasIndex(x => new { x.Latitude, x.Longitude }).HasDatabaseName("IX_MarketAsset_Coordinates");
         builder.HasIndex(x => x.ProjectExternalId).HasDatabaseName("IX_MarketAsset_ProjectExternalId");
         builder.HasIndex(x => x.ParentMarketAssetId).HasDatabaseName("IX_MarketAsset_ParentMarketAssetId");
+        builder.HasIndex(x => x.GeoMunicipalityId).HasDatabaseName("IX_MarketAsset_GeoMunicipalityId");
+        builder.HasIndex(x => x.GeoMunicipalSectionId).HasDatabaseName("IX_MarketAsset_GeoMunicipalSectionId");
+
+        builder.Property(x => x.LocationResolutionSource).HasMaxLength(50);
+
+        builder.HasOne(x => x.GeoMunicipality)
+            .WithMany(x => x.MarketAssets)
+            .HasForeignKey(x => x.GeoMunicipalityId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.GeoMunicipalSection)
+            .WithMany(x => x.MarketAssets)
+            .HasForeignKey(x => x.GeoMunicipalSectionId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(x => x.Listings)
             .WithOne(x => x.Asset)

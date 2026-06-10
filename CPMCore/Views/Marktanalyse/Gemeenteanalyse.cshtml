@@ -5,9 +5,17 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var locatiesJson = JsonSerializer.Serialize(
-        Model.Locaties.Select(l => new { gemeente = l.Gemeente, postcode = l.Postcode }));
-
-    var geselecteerdeGemeente = Model.GeselecteerdeGemeente ?? "";
+        Model.Locaties.Select(g => new {
+            municipalityId = g.GeoMunicipalityId,
+            naam           = g.GemeenteNaam,
+            secties        = g.Secties.Select(s => new {
+                sectionId      = s.GeoMunicipalSectionId,
+                municipalityId = s.GeoMunicipalityId,
+                naam           = s.DeelgemeenteNaam,
+                zipCode        = s.ZipCode,
+                label          = s.Label
+            }).ToList()
+        }).ToList());
 
     var kpi = Model.Kpi;
 }
@@ -471,6 +479,15 @@
             text-align: center;
         }
 
+        .locatie-gemeente-header {
+            background: #f8fafc;
+            font-weight: 700;
+        }
+
+        .locatie-sectie-row {
+            padding-left: 1.5rem;
+        }
+
         @@media (max-width: 991px) {
 
             .project-table-header
@@ -552,9 +569,9 @@
 <section class="content-header">
     <h1>
         Marktanalyse
-        @if (!string.IsNullOrEmpty(Model.GeselecteerdeGemeente))
+        @if (Model.HeeftFilter)
         {
-            <small class="text-muted">— @Model.GeselecteerdeGemeente (@Model.GeselecteerdePostcode)</small>
+            <small class="text-muted">— @Model.FilterLabel</small>
         }
     </h1>
 </section>
@@ -568,15 +585,15 @@
                 <h4 class="text-primary font-weight-semibold">FILTER</h4>
                 <form id="filterForm" method="get" action="@Url.Action("Gemeenteanalyse", "Marktanalyse")" class="row g-3 align-items-end">
                     <div class="col-sm-6 col-md-4">
-                        <label class="form-label fw-semibold text-muted" for="locatie-search">GEMEENTE / POSTCODE</label>
+                        <label class="form-label fw-semibold text-muted" for="locatie-search">GEMEENTE / DEELGEMEENTE</label>
                         <div class="position-relative">
                             <input type="text"
                                    id="locatie-search"
                                    class="form-control"
                                    placeholder="Zoek op gemeente of postcode…"
                                    autocomplete="off" />
-                            <input type="hidden" name="postcode" id="hidden-postcode" value="@Model.GeselecteerdePostcode" />
-                            <input type="hidden" name="gemeente" id="hidden-gemeente" value="@geselecteerdeGemeente" />
+                            <input type="hidden" name="geoMunicipalityId"  id="hidden-municipality-id"  value="@(Model.GeselecteerdGeoMunicipalityId?.ToString() ?? "")" />
+                            <input type="hidden" name="geoMunicipalSectionId" id="hidden-section-id" value="@(Model.GeselecteerdGeoMunicipalSectionId?.ToString() ?? "")" />
                             <div id="locatie-dropdown" class="locatie-dropdown d-none"></div>
                         </div>
                     </div>
@@ -611,7 +628,7 @@
         @if (Model.HeeftFilter && !Model.HeeftData)
         {
             <div class="alert alert-warning">
-                Geen projectdata gevonden voor postcode <strong>@Model.GeselecteerdePostcode</strong>@if (Model.GeselecteerdType != "Alles"){ <text> — type <strong>@Model.GeselecteerdType</strong></text> }.
+                Geen projectdata gevonden voor <strong>@Model.FilterLabel</strong>@if (Model.GeselecteerdType != "Alles"){ <text> — type <strong>@Model.GeselecteerdType</strong></text> }.
             </div>
         }
 
@@ -1017,127 +1034,175 @@
     <!-- Locatie autocomplete + auto-submit + localStorage -->
     <script>
         (function () {
-            var LS_POSTCODE = 'ma_last_postcode';
-            var LS_GEMEENTE = 'ma_last_gemeente';
-            var LS_TYPE     = 'ma_last_type';
-            var LS_VIEW     = 'ma_tabelview';
+            var LS_MUNI_ID    = 'ma_last_municipality_id';
+            var LS_SECTION_ID = 'ma_last_section_id';
+            var LS_LABEL      = 'ma_last_label';
+            var LS_TYPE       = 'ma_last_type';
 
-            var locaties        = @Html.Raw(locatiesJson);
-            var form            = document.getElementById('filterForm');
-            var searchInput     = document.getElementById('locatie-search');
-            var hiddenPostcode  = document.getElementById('hidden-postcode');
-            var hiddenGemeente  = document.getElementById('hidden-gemeente');
-            var dropdown        = document.getElementById('locatie-dropdown');
-            var currentPostcode = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdePostcode ?? ""));
-            var currentGemeente = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdeGemeente ?? ""));
-            var currentType     = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdType));
-            var activeIndex     = -1;
+            // Gegroepeerde locaties-data vanuit server
+            var gemeenteGroepen      = @Html.Raw(locatiesJson);
+            var form                 = document.getElementById('filterForm');
+            var searchInput          = document.getElementById('locatie-search');
+            var hiddenMunicipalityId = document.getElementById('hidden-municipality-id');
+            var hiddenSectionId      = document.getElementById('hidden-section-id');
+            var dropdown             = document.getElementById('locatie-dropdown');
+            var currentMunicipalityId = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdGeoMunicipalityId));
+            var currentSectionId      = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdGeoMunicipalSectionId));
+            var currentLabel          = @Html.Raw(JsonSerializer.Serialize(Model.FilterLabel));
+            var currentType           = @Html.Raw(JsonSerializer.Serialize(Model.GeselecteerdType));
+            var activeIndex           = -1;
+            var selectableItems       = [];   // vlakke lijst met alle klikbare rijen in volgorde
 
-            // ── Sla huidige selectie op ───────────────────────────────────────
-            if (currentPostcode) {
-                localStorage.setItem(LS_POSTCODE, currentPostcode);
-                localStorage.setItem(LS_GEMEENTE, currentGemeente);
-                localStorage.setItem(LS_TYPE,     currentType);
+            // ── Sla huidige selectie op in localStorage ───────────────────────
+            if (currentMunicipalityId || currentSectionId) {
+                if (currentMunicipalityId) localStorage.setItem(LS_MUNI_ID, currentMunicipalityId);
+                else                       localStorage.removeItem(LS_MUNI_ID);
+                if (currentSectionId) localStorage.setItem(LS_SECTION_ID, currentSectionId);
+                else                  localStorage.removeItem(LS_SECTION_ID);
+                if (currentLabel) localStorage.setItem(LS_LABEL, currentLabel);
+                localStorage.setItem(LS_TYPE, currentType);
             }
 
             // ── Redirect naar laatste locatie als pagina zonder filter opent ─
-            if (!currentPostcode) {
-                var lastPostcode = localStorage.getItem(LS_POSTCODE);
-                var lastGemeente = localStorage.getItem(LS_GEMEENTE) || '';
-                var lastType     = localStorage.getItem(LS_TYPE) || 'Alles';
-                if (lastPostcode) {
-                    window.location.replace(
-                        form.action + '?postcode=' + encodeURIComponent(lastPostcode) +
-                        '&gemeente=' + encodeURIComponent(lastGemeente) +
-                        '&type=' + encodeURIComponent(lastType)
-                    );
+            if (!currentMunicipalityId && !currentSectionId) {
+                var lastMuniId    = localStorage.getItem(LS_MUNI_ID);
+                var lastSectionId = localStorage.getItem(LS_SECTION_ID);
+                var lastType      = localStorage.getItem(LS_TYPE) || 'Alles';
+                if (lastMuniId || lastSectionId) {
+                    var url = form.action + '?type=' + encodeURIComponent(lastType);
+                    if (lastSectionId) url += '&geoMunicipalSectionId=' + encodeURIComponent(lastSectionId);
+                    else               url += '&geoMunicipalityId='     + encodeURIComponent(lastMuniId);
+                    window.location.replace(url);
                     return;
                 }
             }
 
-            // ── Stel zoekveld in op huidige selectie ─────────────────────────
-            if (currentPostcode && currentGemeente) {
-                searchInput.value = currentGemeente + ' — ' + currentPostcode;
+            // ── Stel zoekveld in op huidig label ─────────────────────────────
+            if (currentLabel) {
+                searchInput.value = currentLabel;
             }
 
             // ── Helpers ───────────────────────────────────────────────────────
             function escHtml(s) {
-                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             }
 
-            function filterLocaties(term) {
+            // Geeft gefilterde lijst van groepen terug (elke groep met matching secties)
+            function filterGroepen(term) {
                 var t = term.toLowerCase().trim();
-                if (!t) return locaties;
-                return locaties.filter(function (l) {
-                    return l.gemeente.toLowerCase().includes(t) || l.postcode.startsWith(t);
-                });
+                if (!t) return gemeenteGroepen;
+                return gemeenteGroepen.reduce(function (acc, g) {
+                    var gemeenteMatch = g.naam.toLowerCase().includes(t);
+                    var matchingSecties = g.secties.filter(function (s) {
+                        return s.naam.toLowerCase().includes(t) ||
+                               (s.zipCode && s.zipCode.startsWith(t));
+                    });
+                    if (gemeenteMatch || matchingSecties.length > 0) {
+                        acc.push({
+                            municipalityId: g.municipalityId,
+                            naam:           g.naam,
+                            secties:        gemeenteMatch ? g.secties : matchingSecties
+                        });
+                    }
+                    return acc;
+                }, []);
             }
 
-            function renderDropdown(items) {
+            function renderDropdown(groepen) {
                 dropdown.innerHTML = '';
-                activeIndex = -1;
-                if (!items.length) {
+                selectableItems   = [];
+                activeIndex       = -1;
+
+                if (!groepen.length) {
                     dropdown.innerHTML = '<div class="locatie-item-empty">Geen resultaten</div>';
                     dropdown.classList.remove('d-none');
                     return;
                 }
-                items.forEach(function (l) {
-                    var div = document.createElement('div');
-                    div.className = 'locatie-item';
-                    div.dataset.postcode = l.postcode;
-                    div.innerHTML =
-                        '<span>' + escHtml(l.gemeente) + '</span>' +
-                        '<span class="locatie-item-postcode">' + escHtml(l.postcode) + '</span>';
-                    div.addEventListener('mousedown', function (e) {
+
+                groepen.forEach(function (g) {
+                    // Gemeentekop (selecteert hele gemeente)
+                    var header = document.createElement('div');
+                    header.className = 'locatie-item locatie-gemeente-header';
+                    header.dataset.municipalityId = g.municipalityId;
+                    header.dataset.sectionId      = '';
+                    header.dataset.label          = g.naam;
+                    header.innerHTML =
+                        '<span><strong>' + escHtml(g.naam) + '</strong></span>' +
+                        '<span class="locatie-item-postcode">' + g.secties.length + ' deelgem.</span>';
+                    header.addEventListener('mousedown', function (e) {
                         e.preventDefault();
-                        selectLocatie(l);
+                        selectEntry({ municipalityId: g.municipalityId, sectionId: null, label: g.naam });
                     });
-                    dropdown.appendChild(div);
+                    dropdown.appendChild(header);
+                    selectableItems.push({ municipalityId: g.municipalityId, sectionId: null, label: g.naam, el: header });
+
+                    // Deelgemeenten (selecteren specifieke sectie)
+                    g.secties.forEach(function (s) {
+                        var row = document.createElement('div');
+                        row.className = 'locatie-item locatie-sectie-row';
+                        row.dataset.municipalityId = s.municipalityId;
+                        row.dataset.sectionId      = s.sectionId;
+                        row.dataset.label          = s.label;
+                        row.innerHTML =
+                            '<span class="ms-3">' + escHtml(s.naam) + '</span>' +
+                            '<span class="locatie-item-postcode">' + escHtml(s.zipCode || '') + '</span>';
+                        row.addEventListener('mousedown', function (e) {
+                            e.preventDefault();
+                            selectEntry({ municipalityId: s.municipalityId, sectionId: s.sectionId, label: s.label });
+                        });
+                        dropdown.appendChild(row);
+                        selectableItems.push({ municipalityId: s.municipalityId, sectionId: s.sectionId, label: s.label, el: row });
+                    });
                 });
+
                 dropdown.classList.remove('d-none');
             }
 
             function setActive(idx) {
-                var items = dropdown.querySelectorAll('.locatie-item[data-postcode]');
-                items.forEach(function (el, i) { el.classList.toggle('active', i === idx); });
-                if (idx >= 0 && items[idx]) {
-                    items[idx].scrollIntoView({ block: 'nearest' });
+                selectableItems.forEach(function (item, i) {
+                    item.el.classList.toggle('active', i === idx);
+                });
+                if (idx >= 0 && selectableItems[idx]) {
+                    selectableItems[idx].el.scrollIntoView({ block: 'nearest' });
                 }
                 activeIndex = idx;
             }
 
             function closeDropdown() {
                 dropdown.classList.add('d-none');
-                activeIndex = -1;
+                activeIndex     = -1;
+                selectableItems = [];
             }
 
-            function selectLocatie(l) {
-                hiddenPostcode.value = l.postcode;
-                hiddenGemeente.value = l.gemeente;
-                searchInput.value    = l.gemeente + ' — ' + l.postcode;
+            function selectEntry(entry) {
+                hiddenMunicipalityId.value = entry.municipalityId || '';
+                hiddenSectionId.value      = entry.sectionId     || '';
+                searchInput.value          = entry.label;
                 closeDropdown();
-                localStorage.setItem(LS_POSTCODE, l.postcode);
-                localStorage.setItem(LS_GEMEENTE, l.gemeente);
+                localStorage.setItem(LS_MUNI_ID, entry.municipalityId || '');
+                localStorage.setItem(LS_SECTION_ID, entry.sectionId   || '');
+                localStorage.setItem(LS_LABEL, entry.label);
                 form.submit();
             }
 
             // ── Events ────────────────────────────────────────────────────────
             searchInput.addEventListener('focus', function () {
-                this.value = '';
-                renderDropdown(locaties);
+                this.select();
+                renderDropdown(gemeenteGroepen);
             });
 
             searchInput.addEventListener('input', function () {
-                hiddenPostcode.value = '';
-                renderDropdown(filterLocaties(this.value));
+                hiddenMunicipalityId.value = '';
+                hiddenSectionId.value      = '';
+                renderDropdown(filterGroepen(this.value));
             });
 
             searchInput.addEventListener('blur', function () {
                 setTimeout(function () {
                     closeDropdown();
-                    // herstel label als er al een locatie geselecteerd was
-                    if (hiddenPostcode.value && hiddenGemeente.value) {
-                        searchInput.value = hiddenGemeente.value + ' — ' + hiddenPostcode.value;
+                    // Herstel label als er al een locatie geselecteerd was
+                    if (hiddenMunicipalityId.value || hiddenSectionId.value) {
+                        searchInput.value = currentLabel || localStorage.getItem(LS_LABEL) || '';
                     } else {
                         searchInput.value = '';
                     }
@@ -1145,19 +1210,16 @@
             });
 
             searchInput.addEventListener('keydown', function (e) {
-                var items = dropdown.querySelectorAll('.locatie-item[data-postcode]');
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
-                    setActive(Math.min(activeIndex + 1, items.length - 1));
+                    setActive(Math.min(activeIndex + 1, selectableItems.length - 1));
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     setActive(Math.max(activeIndex - 1, 0));
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
-                    if (activeIndex >= 0 && items[activeIndex]) {
-                        var pc = items[activeIndex].dataset.postcode;
-                        var found = locaties.find(function (x) { return x.postcode === pc; });
-                        if (found) selectLocatie(found);
+                    if (activeIndex >= 0 && selectableItems[activeIndex]) {
+                        selectEntry(selectableItems[activeIndex]);
                     }
                 } else if (e.key === 'Escape') {
                     closeDropdown();
@@ -1166,7 +1228,7 @@
 
             document.querySelectorAll('input[name="type"]').forEach(function (radio) {
                 radio.addEventListener('change', function () {
-                    if (hiddenPostcode.value) form.submit();
+                    if (hiddenMunicipalityId.value || hiddenSectionId.value) form.submit();
                 });
             });
         })();

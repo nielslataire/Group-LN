@@ -2,12 +2,15 @@ namespace CPMCore.Models.Marktanalyse;
 
 public class GemeenteAnalyseViewModel
 {
-    public string? GeselecteerdePostcode { get; set; }
-    public string? GeselecteerdeGemeente { get; set; }
+    public int? GeselecteerdGeoMunicipalityId { get; set; }
+    public int? GeselecteerdGeoMunicipalSectionId { get; set; }
+    public string? GeselecteerdeGemeenteNaam { get; set; }
+    public string? GeselecteerdeDeelgemeenteNaam { get; set; }
+    public string? GeselecteerdePostcode { get; set; }   // alleen voor display
     public string GeselecteerdType { get; set; } = "Alles";
     public string GeselecteerdAanbodtype { get; set; } = "Alles";
 
-    public List<LocatieOptie> Locaties { get; set; } = new();
+    public List<GemeenteGroep> Locaties { get; set; } = new();
     public GemeenteKpiViewModel? Kpi { get; set; }
     public List<PrijsBucketViewModel> VraagprijsBuckets { get; set; } = new();
     public List<PrijsBucketViewModel> PrijsPerM2Buckets { get; set; } = new();
@@ -16,14 +19,34 @@ public class GemeenteAnalyseViewModel
     public List<LosseEenheidRijViewModel> LosseEenheden { get; set; } = new();
 
     public bool HeeftData => Kpi != null && (Kpi.ActieveProjecten > 0 || Kpi.AantalLosseEenheden > 0);
-    public bool HeeftFilter => !string.IsNullOrEmpty(GeselecteerdePostcode);
+    public bool HeeftFilter => GeselecteerdGeoMunicipalityId.HasValue || GeselecteerdGeoMunicipalSectionId.HasValue;
+
+    public string FilterLabel =>
+        GeselecteerdGeoMunicipalSectionId.HasValue
+            ? GeselecteerdeDeelgemeenteNaam is { Length: > 0 } d
+                ? $"{d} ({GeselecteerdePostcode})"
+                : GeselecteerdeGemeenteNaam ?? ""
+            : GeselecteerdGeoMunicipalityId.HasValue
+                ? $"{GeselecteerdeGemeenteNaam} (+ deelgemeentes)"
+                : "";
+}
+
+public class GemeenteGroep
+{
+    public int GeoMunicipalityId { get; set; }
+    public string GemeenteNaam { get; set; } = "";
+    public List<LocatieOptie> Secties { get; set; } = new();
 }
 
 public class LocatieOptie
 {
-    public string Gemeente { get; set; } = "";
-    public string Postcode { get; set; } = "";
-    public string Label => $"{Gemeente} ({Postcode})";
+    public int GeoMunicipalSectionId { get; set; }
+    public int GeoMunicipalityId { get; set; }
+    public string DeelgemeenteNaam { get; set; } = "";
+    public string? ZipCode { get; set; }
+    public string Label => string.IsNullOrEmpty(ZipCode)
+        ? DeelgemeenteNaam
+        : $"{DeelgemeenteNaam} / {ZipCode}";
 }
 
 public class GemeenteKpiViewModel
@@ -69,7 +92,6 @@ public class ProjectRijViewModel
     public decimal? GemiddeldePrijs { get; set; }
     public decimal? GemiddeldePrijsPerM2 { get; set; }
 
-    // Adresgegevens (rechtstreeks uit MarketAsset)
     public string? Straat { get; set; }
     public string? Huisnummer { get; set; }
     public string? Postcode { get; set; }
@@ -87,7 +109,7 @@ public class ProjectRijViewModel
 public class LosseEenheidRijViewModel
 {
     public long Id { get; set; }
-    public string? Adres { get; set; }      // straat + huisnummer
+    public string? Adres { get; set; }
     public string? Postcode { get; set; }
     public string? Gemeente { get; set; }
     public string TypeLabel { get; set; } = "";
@@ -96,6 +118,6 @@ public class LosseEenheidRijViewModel
     public decimal? Vraagprijs { get; set; }
     public decimal? PrijsPerM2 { get; set; }
     public string Status { get; set; } = "";
-    public string AangeboenDoor { get; set; } = "";  // bron-naam
+    public string AangeboenDoor { get; set; } = "";
     public string? SourceUrl { get; set; }
 }

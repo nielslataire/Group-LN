@@ -4,11 +4,11 @@ namespace CPMCore.Services;
 
 public interface IMarktanalyseService
 {
-    Task<List<LocatieOptie>> GetLocatiesAsync(CancellationToken ct = default);
+    Task<List<GemeenteGroep>> GetLocatiesAsync(CancellationToken ct = default);
 
     Task<GemeenteAnalyseViewModel> GetGemeenteAnalyseAsync(
-        string? postcode,
-        string? gemeente,
+        int? geoMunicipalityId,
+        int? geoMunicipalSectionId,
         string type,
         string aanbodtype = "Alles",
         CancellationToken ct = default);

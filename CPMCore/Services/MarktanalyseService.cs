@@ -17,57 +17,97 @@ public class MarktanalyseService : IMarktanalyseService
 
     private sealed record UnitSnapshot(decimal? AskingPrice, decimal? PricePerSqm);
 
-    public async Task<List<LocatieOptie>> GetLocatiesAsync(CancellationToken ct = default)
+    // ── Locaties (dropdown-bron) ───────────────────────────────────────────────
+
+    public async Task<List<GemeenteGroep>> GetLocatiesAsync(CancellationToken ct = default)
     {
-        var projectRows = await _db.MarketAssets
-            .Where(a => a.IsProjectGroup && a.IsActive && a.PostalCode != null && a.City != null)
-            .Select(a => new { a.PostalCode, a.City })
-            .Distinct()
+        // Haal alle GeoMunicipalSectionId's op waarvoor actieve assets bestaan
+        var activeSectionIds = await _db.MarketAssets
             .AsNoTracking()
+            .Where(a => a.IsActive && a.GeoMunicipalSectionId.HasValue)
+            .Select(a => a.GeoMunicipalSectionId!.Value)
+            .Distinct()
             .ToListAsync(ct);
 
-        var losseRows = await _db.MarketAssets
-            .Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null
-                     && a.IsActive && a.PostalCode != null && a.City != null)
-            .Select(a => new { a.PostalCode, a.City })
-            .Distinct()
-            .AsNoTracking()
-            .ToListAsync(ct);
+        if (activeSectionIds.Count == 0)
+            return [];
 
-        // Per (postcode + city case-insensitief) de meest-voorkomende spelling bewaren
-        // zodat alle deelgemeenten van dezelfde postcode als aparte entries verschijnen
-        return projectRows.Concat(losseRows)
-            .Select(r => new { Postcode = r.PostalCode!.Trim(), City = r.City!.Trim() })
-            .Where(r => r.Postcode.Length > 0 && r.City.Length > 0)
-            .GroupBy(r => new { r.Postcode, CityKey = r.City.ToLowerInvariant() })
-            .Select(g => new LocatieOptie
+        // Laad de secties (alleen scalaire velden, geen Boundary)
+        var sections = await _db.GeoMunicipalSections
+            .Where(s => activeSectionIds.Contains(s.Id))
+            .Select(s => new
             {
-                Postcode = g.Key.Postcode,
-                Gemeente = g.GroupBy(r => r.City)
-                            .OrderByDescending(cg => cg.Count())
-                            .First().Key
+                s.Id,
+                s.NameDutch,
+                s.ZipCode,
+                s.NisCodeMunicipality
             })
-            .OrderBy(l => l.Gemeente)
-            .ThenBy(l => l.Postcode)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        // Laad de bijbehorende gemeenten
+        var nisCodes = sections
+            .Select(s => s.NisCodeMunicipality)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Distinct()
+            .ToList();
+
+        var municipalities = await _db.GeoMunicipalities
+            .Where(m => nisCodes.Contains(m.NisCode))
+            .Select(m => new { m.Id, m.NisCode, m.NameDutch })
+            .AsNoTracking()
+            .ToDictionaryAsync(m => m.NisCode, ct);
+
+        // Groepeer per gemeente
+        return sections
+            .Where(s => s.NisCodeMunicipality != null && municipalities.ContainsKey(s.NisCodeMunicipality))
+            .GroupBy(s => s.NisCodeMunicipality!)
+            .Select(g =>
+            {
+                var muni = municipalities[g.Key];
+                return new GemeenteGroep
+                {
+                    GeoMunicipalityId = muni.Id,
+                    GemeenteNaam = muni.NameDutch ?? g.Key,
+                    Secties = g
+                        .Select(s => new LocatieOptie
+                        {
+                            GeoMunicipalSectionId = s.Id,
+                            GeoMunicipalityId = muni.Id,
+                            DeelgemeenteNaam = s.NameDutch ?? "",
+                            ZipCode = s.ZipCode
+                        })
+                        .OrderBy(s => s.ZipCode)
+                        .ThenBy(s => s.DeelgemeenteNaam)
+                        .ToList()
+                };
+            })
+            .OrderBy(g => g.GemeenteNaam)
             .ToList();
     }
 
+    // ── Gemeenteanalyse ───────────────────────────────────────────────────────
+
     public async Task<GemeenteAnalyseViewModel> GetGemeenteAnalyseAsync(
-        string? postcode,
-        string? gemeente,
+        int? geoMunicipalityId,
+        int? geoMunicipalSectionId,
         string type,
         string aanbodtype = "Alles",
         CancellationToken ct = default)
     {
         var vm = new GemeenteAnalyseViewModel
         {
-            GeselecteerdePostcode = postcode,
-            GeselecteerdeGemeente = gemeente,
+            GeselecteerdGeoMunicipalityId = geoMunicipalityId,
+            GeselecteerdGeoMunicipalSectionId = geoMunicipalSectionId,
             GeselecteerdType = type,
             GeselecteerdAanbodtype = aanbodtype
         };
 
-        if (string.IsNullOrWhiteSpace(postcode)) return vm;
+        if (!geoMunicipalityId.HasValue && !geoMunicipalSectionId.HasValue)
+            return vm;
+
+        // Laad display-namen voor de geselecteerde locatie
+        await VulDisplayNamenAsync(vm, ct);
 
         bool loadProjecten = aanbodtype != "Losse eenheden";
         bool loadLosseEenheden = aanbodtype != "Projecten";
@@ -79,8 +119,9 @@ public class MarktanalyseService : IMarktanalyseService
         if (loadProjecten)
         {
             var projectQuery = _db.MarketAssets
-                .Where(a => a.IsProjectGroup && a.IsActive && a.PostalCode == postcode
-                         && (gemeente == null || a.City == gemeente));
+                .Where(a => a.IsProjectGroup && a.IsActive);
+
+            projectQuery = ToepassGeoFilter(projectQuery, geoMunicipalityId, geoMunicipalSectionId);
 
             if (type == "Appartement")
                 projectQuery = projectQuery.Where(a => a.PropertySubType == PropertySubType.ApartmentGroup);
@@ -108,10 +149,6 @@ public class MarktanalyseService : IMarktanalyseService
             }
         }
 
-        // GeselecteerdeGemeente komt al van de parameter; enkel invullen als het leeg was
-        if (string.IsNullOrEmpty(vm.GeselecteerdeGemeente))
-            vm.GeselecteerdeGemeente = projecten.FirstOrDefault()?.City;
-
         // ── Project units ophalen ──────────────────────────────────────────────
         List<MarketAsset> projectUnits = [];
         if (projecten.Count > 0)
@@ -133,9 +170,9 @@ public class MarktanalyseService : IMarktanalyseService
         if (loadLosseEenheden)
         {
             var losseQuery = _db.MarketAssets
-                .Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null
-                         && a.IsActive && a.PostalCode == postcode
-                         && (gemeente == null || a.City == gemeente));
+                .Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null && a.IsActive);
+
+            losseQuery = ToepassGeoFilter(losseQuery, geoMunicipalityId, geoMunicipalSectionId);
 
             if (type == "Appartement")
                 losseQuery = losseQuery.Where(a => a.PropertyType == PropertyType.Apartment);
@@ -147,9 +184,10 @@ public class MarktanalyseService : IMarktanalyseService
 
         if (projecten.Count == 0 && losseEenheden.Count == 0) return vm;
 
-        vm.GeselecteerdeGemeente ??= losseEenheden.FirstOrDefault()?.City;
+        // ── Officiële locatienamen voor projecten + losse eenheden ─────────────
+        var officieleLokaties = await LaadOfficieleLokaties(projecten.Concat(losseEenheden), ct);
 
-        // ── Prijssnapshots ophalen voor project units + losse eenheden ─────────
+        // ── Prijssnapshots ophalen ─────────────────────────────────────────────
         var alleEenhedenIds = projectUnits.Select(u => u.Id)
             .Concat(losseEenheden.Select(u => u.Id))
             .ToList();
@@ -184,7 +222,7 @@ public class MarktanalyseService : IMarktanalyseService
                     });
         }
 
-        // ── Losse eenheden: titels en bronnen ophalen ──────────────────────────
+        // ── Losse eenheden: bron en URL ophalen ───────────────────────────────
         var losseEenhedenInfo = new Dictionary<long, (string Bron, string? SourceUrl)>();
         if (losseEenheden.Count > 0)
         {
@@ -214,20 +252,15 @@ public class MarktanalyseService : IMarktanalyseService
 
         var combinedPrices = alleEenhedenIds
             .Select(id => prijzenPerEenheid.TryGetValue(id, out var s) ? s.AskingPrice : null)
-            .Where(p => p.HasValue)
-            .Select(p => p!.Value)
-            .ToList();
+            .Where(p => p.HasValue).Select(p => p!.Value).ToList();
 
         var combinedPpSqm = alleEenhedenIds
             .Select(id => prijzenPerEenheid.TryGetValue(id, out var s) ? s.PricePerSqm : null)
-            .Where(p => p.HasValue)
-            .Select(p => p!.Value)
-            .ToList();
+            .Where(p => p.HasValue).Select(p => p!.Value).ToList();
 
         var areas = projectUnits
             .Where(u => u.LivingArea.HasValue && u.LivingArea > 0)
-            .Select(u => u.LivingArea!.Value)
-            .ToList();
+            .Select(u => u.LivingArea!.Value).ToList();
 
         vm.Kpi = new GemeenteKpiViewModel
         {
@@ -246,22 +279,114 @@ public class MarktanalyseService : IMarktanalyseService
                 : 0m
         };
 
-        // ── Grafieken (gecombineerd: project units + losse eenheden) ───────────
         vm.VraagprijsBuckets = BerekeningVraagprijsBuckets(combinedPrices);
         vm.PrijsPerM2Buckets = BerekeningPrijsPerM2Buckets(combinedPpSqm);
 
         if (projecten.Count > 0)
             vm.VerkoopgraadPerProject = await BerekeningVerkoopgraadPerProjectAsync(projecten, projectNamen, ct);
 
-        // ── Projectentabel ────────────────────────────────────────────────────
         if (projecten.Count > 0)
-            vm.Projecten = BouwProjectenTabel(projecten, projectUnits, prijzenPerEenheid, projectNamen);
+            vm.Projecten = BouwProjectenTabel(projecten, projectUnits, prijzenPerEenheid, projectNamen, officieleLokaties);
 
-        // ── Losse eenheden tabel ──────────────────────────────────────────────
         if (losseEenheden.Count > 0)
-            vm.LosseEenheden = BouwLosseEenhedenTabel(losseEenheden, prijzenPerEenheid, losseEenhedenInfo);
+            vm.LosseEenheden = BouwLosseEenhedenTabel(losseEenheden, prijzenPerEenheid, losseEenhedenInfo, officieleLokaties);
 
         return vm;
+    }
+
+    // ── Geo-filter helper ─────────────────────────────────────────────────────
+
+    private static IQueryable<MarketAsset> ToepassGeoFilter(
+        IQueryable<MarketAsset> query,
+        int? geoMunicipalityId,
+        int? geoMunicipalSectionId)
+    {
+        if (geoMunicipalSectionId.HasValue)
+            return query.Where(a => a.GeoMunicipalSectionId == geoMunicipalSectionId.Value);
+
+        if (geoMunicipalityId.HasValue)
+            return query.Where(a => a.GeoMunicipalityId == geoMunicipalityId.Value);
+
+        return query;
+    }
+
+    private async Task VulDisplayNamenAsync(GemeenteAnalyseViewModel vm, CancellationToken ct)
+    {
+        if (vm.GeselecteerdGeoMunicipalSectionId.HasValue)
+        {
+            var section = await _db.GeoMunicipalSections
+                .Where(s => s.Id == vm.GeselecteerdGeoMunicipalSectionId.Value)
+                .Select(s => new { s.NameDutch, s.ZipCode, s.NisCodeMunicipality })
+                .FirstOrDefaultAsync(ct);
+
+            if (section is not null)
+            {
+                vm.GeselecteerdeDeelgemeenteNaam = section.NameDutch;
+                vm.GeselecteerdePostcode = section.ZipCode;
+
+                if (!string.IsNullOrEmpty(section.NisCodeMunicipality))
+                {
+                    vm.GeselecteerdeGemeenteNaam = await _db.GeoMunicipalities
+                        .Where(m => m.NisCode == section.NisCodeMunicipality)
+                        .Select(m => m.NameDutch)
+                        .FirstOrDefaultAsync(ct);
+                }
+            }
+        }
+        else if (vm.GeselecteerdGeoMunicipalityId.HasValue)
+        {
+            vm.GeselecteerdeGemeenteNaam = await _db.GeoMunicipalities
+                .Where(m => m.Id == vm.GeselecteerdGeoMunicipalityId.Value)
+                .Select(m => m.NameDutch)
+                .FirstOrDefaultAsync(ct);
+        }
+    }
+
+    // ── Officiële lokatie-lookup ──────────────────────────────────────────────
+
+    private sealed record OfficieleLokatie(string? ZipCode, string? GemeenteNaam);
+
+    private async Task<Dictionary<long, OfficieleLokatie>> LaadOfficieleLokaties(
+        IEnumerable<MarketAsset> assets, CancellationToken ct)
+    {
+        var lijst = assets.ToList();
+
+        var sectionIds = lijst
+            .Where(a => a.GeoMunicipalSectionId.HasValue)
+            .Select(a => a.GeoMunicipalSectionId!.Value)
+            .Distinct().ToList();
+
+        var municipalityIds = lijst
+            .Where(a => !a.GeoMunicipalSectionId.HasValue && a.GeoMunicipalityId.HasValue)
+            .Select(a => a.GeoMunicipalityId!.Value)
+            .Distinct().ToList();
+
+        var sections = sectionIds.Count > 0
+            ? await _db.GeoMunicipalSections
+                .Where(s => sectionIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.ZipCode, s.NameDutch })
+                .AsNoTracking()
+                .ToDictionaryAsync(s => s.Id, s => (s.ZipCode, s.NameDutch), ct)
+            : new Dictionary<int, (string? ZipCode, string? NameDutch)>();
+
+        var munis = municipalityIds.Count > 0
+            ? await _db.GeoMunicipalities
+                .Where(m => municipalityIds.Contains(m.Id))
+                .Select(m => new { m.Id, m.NameDutch })
+                .AsNoTracking()
+                .ToDictionaryAsync(m => m.Id, m => m.NameDutch, ct)
+            : new Dictionary<int, string?>();
+
+        return lijst.ToDictionary(
+            a => a.Id,
+            a =>
+            {
+                if (a.GeoMunicipalSectionId.HasValue && sections.TryGetValue(a.GeoMunicipalSectionId.Value, out var sec))
+                    return new OfficieleLokatie(sec.ZipCode ?? a.PostalCode, sec.NameDutch ?? a.City);
+                if (a.GeoMunicipalityId.HasValue && munis.TryGetValue(a.GeoMunicipalityId.Value, out var muniNaam))
+                    return new OfficieleLokatie(a.PostalCode, muniNaam ?? a.City);
+                return new OfficieleLokatie(a.PostalCode, a.City);
+            });
     }
 
     // ── Duplicaat-suppressie ──────────────────────────────────────────────────
@@ -342,7 +467,6 @@ public class MarktanalyseService : IMarktanalyseService
                 .ToList();
         }
 
-        // Fallback: bereken uit child units
         var unitCounts = await _db.MarketAssets
             .Where(a => a.ParentMarketAssetId.HasValue && projectIds.Contains(a.ParentMarketAssetId.Value))
             .GroupBy(a => a.ParentMarketAssetId!.Value)
@@ -359,9 +483,7 @@ public class MarktanalyseService : IMarktanalyseService
             .Select(uc =>
             {
                 var project = projecten.First(p => p.Id == uc.ProjectId);
-                var pct = uc.Total > 0
-                    ? Math.Round((decimal)uc.Sold / uc.Total * 100, 1)
-                    : 0m;
+                var pct = uc.Total > 0 ? Math.Round((decimal)uc.Sold / uc.Total * 100, 1) : 0m;
                 return new ProjectVerkoopgraadViewModel
                 {
                     ProjectNaam   = namen.GetValueOrDefault(uc.ProjectId) ?? project.AssetKey,
@@ -381,11 +503,13 @@ public class MarktanalyseService : IMarktanalyseService
         List<MarketAsset> projecten,
         List<MarketAsset> units,
         Dictionary<long, UnitSnapshot> prijzenPerEenheid,
-        Dictionary<long, string> namen)
+        Dictionary<long, string> namen,
+        Dictionary<long, OfficieleLokatie> lokaties)
     {
         return projecten
             .Select(project =>
             {
+                lokaties.TryGetValue(project.Id, out var lok);
                 var projectUnits = units.Where(u => u.ParentMarketAssetId == project.Id).ToList();
 
                 var soldCount      = projectUnits.Count(u => u.SaleStatus == SaleStatus.Sold);
@@ -393,22 +517,20 @@ public class MarktanalyseService : IMarktanalyseService
 
                 var unitPrices = projectUnits
                     .Where(u => prijzenPerEenheid.TryGetValue(u.Id, out var s) && s.AskingPrice.HasValue)
-                    .Select(u => prijzenPerEenheid[u.Id].AskingPrice!.Value)
-                    .ToList();
+                    .Select(u => prijzenPerEenheid[u.Id].AskingPrice!.Value).ToList();
 
                 var unitPpSqm = projectUnits
                     .Where(u => prijzenPerEenheid.TryGetValue(u.Id, out var s) && s.PricePerSqm.HasValue)
-                    .Select(u => prijzenPerEenheid[u.Id].PricePerSqm!.Value)
-                    .ToList();
+                    .Select(u => prijzenPerEenheid[u.Id].PricePerSqm!.Value).ToList();
 
                 var apartCount = projectUnits.Count(u => u.PropertyType == PropertyType.Apartment);
                 var houseCount = projectUnits.Count(u => u.PropertyType == PropertyType.House);
                 var typeLabel  = (apartCount, houseCount) switch
                 {
-                    ( > 0, 0) => "Appartement",
-                    (0, > 0)  => "Woning",
+                    ( > 0, 0)   => "Appartement",
+                    (0, > 0)    => "Woning",
                     ( > 0, > 0) => "Gemengd",
-                    _ => "-"
+                    _           => "-"
                 };
 
                 var pct = projectUnits.Count > 0
@@ -429,8 +551,8 @@ public class MarktanalyseService : IMarktanalyseService
                     GemiddeldePrijsPerM2 = unitPpSqm.Count > 0  ? Math.Round(unitPpSqm.Average(), 0)  : null,
                     Straat      = project.Street,
                     Huisnummer  = project.HouseNumber,
-                    Postcode    = project.PostalCode,
-                    Gemeente    = project.City
+                    Postcode    = lok?.ZipCode ?? project.PostalCode,
+                    Gemeente    = lok?.GemeenteNaam ?? project.City
                 };
             })
             .OrderByDescending(p => p.Verkoopgraad)
@@ -442,13 +564,14 @@ public class MarktanalyseService : IMarktanalyseService
     private static List<LosseEenheidRijViewModel> BouwLosseEenhedenTabel(
         List<MarketAsset> losseEenheden,
         Dictionary<long, UnitSnapshot> prijzenPerEenheid,
-        Dictionary<long, (string Bron, string? SourceUrl)> info)
+        Dictionary<long, (string Bron, string? SourceUrl)> info,
+        Dictionary<long, OfficieleLokatie> lokaties)
     {
         return losseEenheden
             .Select(e =>
             {
                 var (bron, sourceUrl) = info.TryGetValue(e.Id, out var i) ? i : ("-", null);
-
+                lokaties.TryGetValue(e.Id, out var lok);
                 prijzenPerEenheid.TryGetValue(e.Id, out var snapshot);
 
                 var typeLabel = e.PropertyType switch
@@ -459,17 +582,15 @@ public class MarktanalyseService : IMarktanalyseService
                 };
 
                 var statusLabel = e.SaleStatus is SaleStatus.Sold ? "Verkocht" : "Beschikbaar";
-
                 var adresBase = string.Join(" ",
-                    new[] { e.Street, e.HouseNumber }
-                        .Where(s => !string.IsNullOrWhiteSpace(s)));
+                    new[] { e.Street, e.HouseNumber }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
                 return new LosseEenheidRijViewModel
                 {
                     Id            = e.Id,
                     Adres         = string.IsNullOrWhiteSpace(adresBase) ? null : adresBase,
-                    Postcode      = e.PostalCode,
-                    Gemeente      = e.City,
+                    Postcode      = lok?.ZipCode ?? e.PostalCode,
+                    Gemeente      = lok?.GemeenteNaam ?? e.City,
                     TypeLabel     = typeLabel,
                     Oppervlakte   = e.LivingArea,
                     Slaapkamers   = e.Bedrooms,
@@ -495,20 +616,20 @@ public class MarktanalyseService : IMarktanalyseService
 
         if (project is null) return null;
 
-        // Projectnaam uit meest recente listing
         var projectNaam = await _db.MarketListings
             .Where(l => l.MarketAssetId == id && l.Title != null)
             .OrderByDescending(l => l.LastSeenAt)
             .Select(l => l.Title)
             .FirstOrDefaultAsync(ct) ?? project.AssetKey;
 
-        // Child units ophalen
         var units = await _db.MarketAssets
             .Where(a => a.ParentMarketAssetId == id)
             .AsNoTracking()
             .ToListAsync(ct);
 
-        // Prijssnapshots voor units
+        // Officiële lokatie voor het project zelf
+        var projectLok = (await LaadOfficieleLokaties([project], ct)).GetValueOrDefault(project.Id);
+
         Dictionary<long, UnitSnapshot> snapshots = new();
         if (units.Count > 0)
         {
@@ -537,21 +658,28 @@ public class MarktanalyseService : IMarktanalyseService
                     g => g.Key,
                     g => { var l = g.OrderByDescending(s => s.SnapshotDate).First(); return new UnitSnapshot(l.AskingPrice, l.PricePerSqm); });
 
-            // Listing info per unit (titel, url)
             var listingInfoPerUnit = unitListings
                 .GroupBy(l => l.MarketAssetId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.OrderByDescending(l => l.LastSeenAt).First());
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.LastSeenAt).First());
 
-            // Navigatie-opties: andere projecten in dezelfde postcode
-            var andereProjekten = project.PostalCode is not null
+            // Andere projecten in dezelfde gemeente (via GeoMunicipality)
+            var andereProjektenAssets = project.GeoMunicipalityId.HasValue
                 ? await _db.MarketAssets
-                    .Where(a => a.IsProjectGroup && a.IsActive && a.PostalCode == project.PostalCode && a.Id != id)
-                    .Select(a => new { a.Id, a.City })
+                    .Where(a => a.IsProjectGroup && a.IsActive
+                             && a.GeoMunicipalityId == project.GeoMunicipalityId && a.Id != id)
                     .AsNoTracking()
                     .ToListAsync(ct)
-                : [];
+                : project.PostalCode is not null
+                    ? await _db.MarketAssets
+                        .Where(a => a.IsProjectGroup && a.IsActive && a.PostalCode == project.PostalCode && a.Id != id)
+                        .AsNoTracking()
+                        .ToListAsync(ct)
+                    : new List<MarketAsset>();
+
+            var andereProjekten = andereProjektenAssets.Select(a => new { a.Id, a.City }).ToList();
+            var andereProjektenLokaties = andereProjektenAssets.Count > 0
+                ? await LaadOfficieleLokaties(andereProjektenAssets, ct)
+                : new Dictionary<long, OfficieleLokatie>();
 
             var andereProjektNamen = andereProjekten.Count > 0
                 ? await _db.MarketListings
@@ -600,10 +728,10 @@ public class MarktanalyseService : IMarktanalyseService
                 };
             }).OrderBy(u => u.Naam).ToList();
 
-            var prices   = unitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
-            var ppSqms   = unitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
-            var areas    = units.Where(u => u.LivingArea is > 0).Select(u => u.LivingArea!.Value).ToList();
-            var soldCnt  = units.Count(u => u.SaleStatus == SaleStatus.Sold);
+            var prices  = unitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
+            var ppSqms  = unitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
+            var areas   = units.Where(u => u.LivingArea is > 0).Select(u => u.LivingArea!.Value).ToList();
+            var soldCnt = units.Count(u => u.SaleStatus == SaleStatus.Sold);
             var availCnt = units.Count(u => u.SaleStatus == SaleStatus.Available);
 
             var apartCount = units.Count(u => u.PropertyType == PropertyType.Apartment);
@@ -618,15 +746,16 @@ public class MarktanalyseService : IMarktanalyseService
 
             var navOpties = new List<ProjectNavigatieOptie>
             {
-                new() { Id = id, Naam = projectNaam!, Gemeente = project.City }
+                new() { Id = id, Naam = projectNaam!, Gemeente = projectLok?.GemeenteNaam ?? project.City }
             };
             foreach (var ap in andereProjekten)
             {
+                andereProjektenLokaties.TryGetValue(ap.Id, out var apLok);
                 navOpties.Add(new ProjectNavigatieOptie
                 {
                     Id       = ap.Id,
                     Naam     = andereProjektNamen.GetValueOrDefault(ap.Id, ap.Id.ToString()),
-                    Gemeente = ap.City
+                    Gemeente = apLok?.GemeenteNaam ?? ap.City
                 });
             }
 
@@ -637,8 +766,8 @@ public class MarktanalyseService : IMarktanalyseService
                 TypeLabel            = typeLabel2,
                 Straat               = project.Street,
                 Huisnummer           = project.HouseNumber,
-                Postcode             = project.PostalCode,
-                Gemeente             = project.City,
+                Postcode             = projectLok?.ZipCode ?? project.PostalCode,
+                Gemeente             = projectLok?.GemeenteNaam ?? project.City,
                 DeveloperNaam        = project.DeveloperName,
                 DeveloperWebsite     = project.DeveloperWebsite,
                 DeveloperTelefoon    = project.DeveloperPhone,
@@ -654,21 +783,20 @@ public class MarktanalyseService : IMarktanalyseService
             };
         }
 
-        // Project zonder units
         return new ProjectDetailViewModel
         {
             Id          = id,
             ProjectNaam = projectNaam!,
             Straat      = project.Street,
             Huisnummer  = project.HouseNumber,
-            Postcode    = project.PostalCode,
-            Gemeente    = project.City,
+            Postcode    = projectLok?.ZipCode ?? project.PostalCode,
+            Gemeente    = projectLok?.GemeenteNaam ?? project.City,
             DeveloperNaam     = project.DeveloperName,
             DeveloperWebsite  = project.DeveloperWebsite,
             DeveloperTelefoon = project.DeveloperPhone,
             AndereProjecten   = new List<ProjectNavigatieOptie>
             {
-                new() { Id = id, Naam = projectNaam!, Gemeente = project.City }
+                new() { Id = id, Naam = projectNaam!, Gemeente = projectLok?.GemeenteNaam ?? project.City }
             }
         };
     }

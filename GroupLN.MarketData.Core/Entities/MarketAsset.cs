@@ -56,6 +56,16 @@ public class MarketAsset
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
+    // Geo-locatie op basis van AdminVector polygonen
+    public int? GeoMunicipalityId { get; set; }
+    public int? GeoMunicipalSectionId { get; set; }
+    public DateTime? LocationResolvedAt { get; set; }
+    public string? LocationResolutionSource { get; set; }
+    public int? LocationResolutionConfidence { get; set; }
+
+    public GeoMunicipality? GeoMunicipality { get; set; }
+    public GeoMunicipalSection? GeoMunicipalSection { get; set; }
+
     public ICollection<MarketListing> Listings { get; set; } = new List<MarketListing>();
     public ICollection<MarketAssetMatchCandidate> MatchCandidates { get; set; } = new List<MarketAssetMatchCandidate>();
 
