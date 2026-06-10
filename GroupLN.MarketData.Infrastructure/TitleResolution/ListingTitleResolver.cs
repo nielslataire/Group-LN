@@ -36,6 +36,15 @@ public static class ListingTitleResolver
         @"\s*[-–|:,]\s*(?:Appartementen|Woningen|Huizen|Project|Nieuwbouw)\s*$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    // Verwijdert marketing-suffix als linkerdeel ≥2 woorden heeft of begint met projectkeyword.
+    // Voorbeeld: "Residentie De Gendarmerie biedt naast" → "Residentie De Gendarmerie"
+    private static readonly Regex MarketingSuffixRegex = new(
+        @"\s+(?:biedt(?:\s+\w+)?|omvat|bestaat\s+uit|nabij|in\s+het\s+hart\s+van|energiezuinige?\b|modern\b|stijlvol\b|exclusief\b).*$",
+        RegexOptions.IgnoreCase | RegexOptions.Singleline | RegexOptions.Compiled);
+
+    private static readonly string[] MarketingSuffixProjectPrefixes =
+        ["residentie", "res.", "hof", "park", "villa", "kaai", "green", "linum", "mona"];
+
     // Patronen voor scan van volledige description-tekst
     private static readonly (Regex Pattern, string Label)[] DescriptionPatterns =
     [
@@ -241,15 +250,47 @@ public static class ListingTitleResolver
     }
 
     /// <summary>
+    /// Geeft een kwaliteitsscore [0–100] voor een projecttitel.
+    /// Hoge score: korte naam, "Residentie"-prefix, geen werkwoorden.
+    /// Lage score: marketing-tekst, te lang, technische fallback.
+    /// </summary>
+    public static int TitleQualityScore(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title)) return 0;
+        if (IsTechnicalFallbackTitle(title)) return 0;
+        var t = title.Trim();
+        var score = 50;
+
+        // Positief
+        if (Regex.IsMatch(t, @"^\s*Residentie\b", RegexOptions.IgnoreCase)) score += 20;
+        if (t.Length is > 3 and <= 30) score += 10;
+        else if (t.Length <= 45) score += 5;
+
+        // Negatief: marketing-werkwoorden
+        if (t.Contains("biedt",  StringComparison.OrdinalIgnoreCase)) score -= 25;
+        if (t.Contains("omvat",  StringComparison.OrdinalIgnoreCase)) score -= 20;
+        if (Regex.IsMatch(t, @"\bwaar\b",             RegexOptions.IgnoreCase)) score -= 15;
+        if (Regex.IsMatch(t, @"^Woonproject\b",       RegexOptions.IgnoreCase)) score -= 20;
+        if (Regex.IsMatch(t, @"^Nieuwbouwproject\b",  RegexOptions.IgnoreCase)) score -= 20;
+        if (t.Length > 45) score -= 15;
+        if (t.Contains("..."))  score -= 10;
+        if (IsBlacklisted(t))   score -= 30;
+
+        return Math.Clamp(score, 0, 100);
+    }
+
+    /// <summary>
     /// True als newTitle een duidelijke verbetering is over oldTitle.
-    /// Manueel gezette goede titels worden niet overschreven.
+    /// Gebruikt TitleQualityScore — minimaal 6 punten beter vereist.
     /// </summary>
     public static bool IsBetterTitle(string? oldTitle, string? newTitle)
     {
         if (string.IsNullOrWhiteSpace(newTitle)) return false;
         if (string.IsNullOrWhiteSpace(oldTitle)) return true;
         if (oldTitle == newTitle) return false;
-        return IsTechnicalFallbackTitle(oldTitle) && !IsTechnicalFallbackTitle(newTitle);
+        if (IsTechnicalFallbackTitle(oldTitle) && !IsTechnicalFallbackTitle(newTitle)) return true;
+        if (IsTechnicalFallbackTitle(newTitle)) return false;
+        return TitleQualityScore(newTitle) > TitleQualityScore(oldTitle) + 5;
     }
 
     // ── Type display helper ───────────────────────────────────────────────────
@@ -421,6 +462,9 @@ public static class ListingTitleResolver
 
         // Ellipsis
         result = result.Replace("...", string.Empty).Trim();
+
+        // Marketing suffix: "biedt ...", "omvat ...", etc.
+        result = StripMarketingSuffix(result);
 
         // Jaar tussen haakjes: "(2025)"
         result = YearInBracketsRegex.Replace(result, string.Empty).Trim();
@@ -687,6 +731,27 @@ public static class ListingTitleResolver
 
     private static bool IsGenericOrBlacklisted(string text) =>
         IsGenericTitle(text) || IsBlacklisted(text);
+
+    /// <summary>
+    /// Verwijdert marketing-suffix (biedt/omvat/...) alleen als het resterende deel
+    /// ≥2 woorden heeft of begint met een projectkeyword.
+    /// </summary>
+    private static string StripMarketingSuffix(string name)
+    {
+        var stripped = MarketingSuffixRegex.Replace(name, string.Empty).Trim();
+        if (stripped == name) return name;
+
+        var wordCount = stripped.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        if (wordCount >= 2) return stripped;
+
+        var lower = stripped.ToLowerInvariant();
+        foreach (var prefix in MarketingSuffixProjectPrefixes)
+        {
+            if (lower.StartsWith(prefix, StringComparison.Ordinal)) return stripped;
+        }
+
+        return name;
+    }
 
     /// <summary>
     /// True als een korte tekstregel een goede kandidaat-projectnaam is

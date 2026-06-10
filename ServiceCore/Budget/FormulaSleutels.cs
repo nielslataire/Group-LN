@@ -9,6 +9,19 @@ public static class FormulaSleutels {
     public const string OnderbouwFunderingen          = "onderbouw_funderingen";
     public const string OnderbouwGrondwerken          = "onderbouw_grondwerken";
     public const string OnderbouwOnderschoeiingen     = "onderbouw_onderschoeiingen";
+    // ── Dakwerken ────────────────────────────────────────────────────────────
+    public const string DakwerkenPlatdak              = "dakwerken_platdak";
+    public const string DakwerkenGroendak             = "dakwerken_groendak";
+    public const string DakwerkenDaktimmerwerk        = "dakwerken_daktimmerwerk";
+    public const string DakwerkenDakoversteken        = "dakwerken_dakoversteken";
+    public const string DakwerkenOnderkantDoorrit     = "dakwerken_onderkantdoorrit";
+    public const string DakwerkenHellendDakBedekking  = "dakwerken_hellenddak_bedekking";
+    public const string DakwerkenVeluxen              = "dakwerken_veluxen";
+    // ── Gevelsluiting ────────────────────────────────────────────────────────
+    public const string GevelsluitingBuitenschrijnwerk = "gevelsluiting_buitenschrijnwerk";
+    public const string GevelsluitingBallustrades      = "gevelsluiting_ballustrades";
+    public const string GevelsluitingZichtschermen     = "gevelsluiting_zichtschermen";
+    public const string GevelsluitingLeien             = "gevelsluiting_leien";
     // Voeg hier nieuwe sleutels toe zodra een nieuw formule-veld wordt aangemaakt.
     // Voeg ook een corresponderende rij toe in KostprijsFormulaKoppeling.sql.
 }

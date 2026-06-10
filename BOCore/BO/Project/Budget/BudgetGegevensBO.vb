@@ -185,6 +185,17 @@ Public Class BudgetGegevensBO
         End Set
     End Property
 
+    Private _aantalVeluxen As Integer?
+    <Display(Name:="Aantal veluxen")>
+    Public Property AantalVeluxen() As Integer?
+        Get
+            Return _aantalVeluxen
+        End Get
+        Set(ByVal value As Integer?)
+            _aantalVeluxen = value
+        End Set
+    End Property
+
     Private _nacalcBasisprijs As Decimal?
     <Display(Name:="Nacalc basisprijs (€/m²)")>
     Public Property NacalcBasisprijs() As Decimal?

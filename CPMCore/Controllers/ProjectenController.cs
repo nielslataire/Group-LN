@@ -9108,7 +9108,7 @@ namespace CPMCore.Controllers
 
         // ── BudgetGevels ─────────────────────────────────────────────────────
 
-        private static readonly string[] GevelTypes = { "GevelNieuwbouw", "GevelBestaand", "RaamNieuwbouw", "RaamBestaand", "Ballustrade", "Zichtscherm" };
+        private static readonly string[] GevelTypes = { "GevelNieuwbouw", "GevelBestaand", "RaamNieuwbouw", "RaamBestaand", "Ballustrade", "Zichtscherm", "Leien" };
 
         [HttpGet]
         public IActionResult BudgetGevels(int versieId)
@@ -9194,16 +9194,20 @@ namespace CPMCore.Controllers
                 .GroupBy(e => e.ElementType)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
+            var gegevens = _uow.BudgetGegevens.GetNoTracking()
+                .FirstOrDefault(g => g.BudgetVersieId == versieId);
+
             var model = new BudgetGevelsDakModel
             {
-                VersieId    = versieId,
-                MasterId    = versieEntity.BudgetMasterId,
-                ProjectId   = versieEntity.ProjectId,
-                ProjectName = projectResponse.Value?.Name,
-                VersieLabel = versieBO.VersieLabel,
-                MasterNaam  = versieEntity.BudgetMaster?.Naam,
-                Elementen   = elementen,
-                Totaal      = totaalResp.Success ? totaalResp.Value : new BudgetGevelTotaalBO()
+                VersieId      = versieId,
+                MasterId      = versieEntity.BudgetMasterId,
+                ProjectId     = versieEntity.ProjectId,
+                ProjectName   = projectResponse.Value?.Name,
+                VersieLabel   = versieBO.VersieLabel,
+                MasterNaam    = versieEntity.BudgetMaster?.Naam,
+                Elementen     = elementen,
+                Totaal        = totaalResp.Success ? totaalResp.Value : new BudgetGevelTotaalBO(),
+                AantalVeluxen = gegevens?.AantalVeluxen ?? 0
             };
 
             ViewBag.Breadcrumbs = new List<Breadcrumb>
@@ -9213,59 +9217,6 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Detail",       nameof(ProjectenController.Detail),  "Projecten",  true),
                 new Breadcrumb("Budgetten",    nameof(BudgetIndex),                 "Projecten",  true),
                 new Breadcrumb("Dak & Afbraak",nameof(BudgetDakAfbraak),            "Projecten",  false),
-            };
-
-            return View(model);
-        }
-
-        // ── BudgetGevelsDak ───────────────────────────────────────────────────
-
-        [HttpGet]
-        public IActionResult BudgetGevelsDak(int versieId)
-        {
-            var versieEntity = _uow.BudgetVersies.GetNoTracking()
-                .Where(v => v.Id == versieId)
-                .Include(v => v.BudgetMaster)
-                .SingleOrDefault();
-
-            if (versieEntity == null) return NotFound();
-
-            var projectResponse = _projectService.GetProjectByID(versieEntity.ProjectId);
-            if (!projectResponse.Success) return NotFound();
-
-            var elementenResp = _budgetService.GetBudgetGevelElementen(versieId);
-            var totaalResp    = _budgetService.GetBudgetGevelTotaal(versieId);
-
-            var versieBO = new BudgetVersieBO
-            {
-                Id           = versieEntity.Id,
-                Versienummer = versieEntity.Versienummer,
-                VersieNaam   = versieEntity.VersieNaam
-            };
-
-            var elementen = (elementenResp.Success ? elementenResp.Values : new List<BudgetGevelElementBO>())
-                .GroupBy(e => e.ElementType)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            var model = new BudgetGevelsDakModel
-            {
-                VersieId    = versieId,
-                MasterId    = versieEntity.BudgetMasterId,
-                ProjectId   = versieEntity.ProjectId,
-                ProjectName = projectResponse.Value?.Name,
-                VersieLabel = versieBO.VersieLabel,
-                MasterNaam  = versieEntity.BudgetMaster?.Naam,
-                Elementen   = elementen,
-                Totaal      = totaalResp.Success ? totaalResp.Value : new BudgetGevelTotaalBO()
-            };
-
-            ViewBag.Breadcrumbs = new List<Breadcrumb>
-            {
-                new Breadcrumb("Home",          nameof(HomeController.Index),       "Home",       true),
-                new Breadcrumb("Projecten",     nameof(ProjectenController.Index),  "Projecten",  true),
-                new Breadcrumb("Detail",        nameof(ProjectenController.Detail), "Projecten",  true),
-                new Breadcrumb("Budgetten",     nameof(BudgetIndex),                "Projecten",  true),
-                new Breadcrumb("Gevels & Dak",  nameof(BudgetGevelsDak),            "Projecten",  false),
             };
 
             return View(model);
@@ -9330,6 +9281,7 @@ namespace CPMCore.Controllers
                     totaalRaamBestaand     = t.TotaalRaamBestaand,
                     totaalBallustrade      = t.TotaalBallustrade,
                     totaalZichtscherm      = t.TotaalZichtscherm,
+                    totaalLeien            = t.TotaalLeien,
                     totaalPlatDak          = t.TotaalPlatDak,
                     totaalHellendDak       = t.TotaalHellendDak,
                     totaalGroenDak         = t.TotaalGroenDak,
@@ -9364,6 +9316,7 @@ namespace CPMCore.Controllers
                     totaalRaamBestaand     = t.TotaalRaamBestaand,
                     totaalBallustrade      = t.TotaalBallustrade,
                     totaalZichtscherm      = t.TotaalZichtscherm,
+                    totaalLeien            = t.TotaalLeien,
                     totaalPlatDak          = t.TotaalPlatDak,
                     totaalHellendDak       = t.TotaalHellendDak,
                     totaalGroenDak         = t.TotaalGroenDak,
@@ -9375,6 +9328,19 @@ namespace CPMCore.Controllers
                     totaalDakCombineerd    = t.TotaalDakCombineerd
                 }
             });
+        }
+
+        [HttpPost]
+        public IActionResult BudgetAantalVeluxenOpslaan(int versieId, int aantalVeluxen)
+        {
+            var entity = _uow.BudgetGegevens.GetNormal()
+                .FirstOrDefault(g => g.BudgetVersieId == versieId);
+            if (entity == null)
+                return Json(new { success = false });
+
+            entity.AantalVeluxen = aantalVeluxen;
+            _uow.SaveChanges();
+            return Json(new { success = true });
         }
 
         // ── BudgetActivityLijnen ──────────────────────────────────────────────

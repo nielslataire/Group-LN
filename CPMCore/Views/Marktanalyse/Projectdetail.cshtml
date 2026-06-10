@@ -1,17 +1,718 @@
-@model long
+@using System.Text.Json
+@model CPMCore.Models.Marktanalyse.ProjectDetailViewModel
 @{
-    ViewData["Title"] = "Projectdetail";
+    ViewData["Title"] = Model.ProjectNaam;
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var terugUrl   = Url.Action("Gemeenteanalyse", "Marktanalyse", new { postcode = Model.Postcode });
+    var detailUrl  = Url.Action("Projectdetail", "Marktanalyse", new { id = Model.Id });
+
+    // Totaalrij berekeningen
+    var totOpp   = Model.GemiddeldeOppervlakte;
+    var totPrijs = Model.GemiddeldePrijs;
+    var totPpSqm = Model.GemiddeldePrijsPerM2;
+    var vkgCleur = Model.Verkoopgraad >= 66 ? "var(--primary)" : Model.Verkoopgraad >= 40 ? "#f59e0b" : "#0ea5e9";
 }
 
-<section class="content-header">
-    <h1>Projectdetail</h1>
-</section>
+@section PageStyle {
+<style>
+        /* DETAIL PAGE */
+        .detail-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .75rem 0 1.25rem;
+        }
 
-<div class="content-body">
-    <div class="container-fluid">
-        <div class="alert alert-info">
-            Projectdetail (id: @Model) is nog niet beschikbaar.
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            color: #0f172a;
+            font-size: .875rem;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+            .back-link:hover {
+                color: var(--primary);
+            }
+
+        .project-switcher-label {
+            font-size: .72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: #94a3b8;
+        }
+
+        .project-switcher {
+            min-width: 300px;
+            border-radius: 8px;
+            border: 1px solid #dfe7ef;
+            font-size: .875rem;
+        }
+
+        /* HEADER */
+        .detail-header {
+            padding-bottom: 1.25rem;
+        }
+
+        .detail-header-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .detail-type-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            color: #64748b;
+            font-size: .9rem;
+            margin-bottom: .35rem;
+        }
+
+            .detail-type-badge i {
+                color: var(--primary);
+            }
+
+        .detail-title {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 .75rem;
+        }
+
+        .detail-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.25rem;
+            font-size: .875rem;
+            color: #475569;
+        }
+
+        .detail-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
+            .detail-meta-item i {
+                color: var(--primary);
+            }
+
+        /* KPI */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: .85rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .kpi-card {
+            background: #fff;
+            border: 1px solid #dfe7ef;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            box-shadow: 0 2px 6px rgba(15,23,42,.04);
+        }
+
+            .kpi-card.highlight {
+                background: #eaf7ef;
+                border-color: #b9dfc7;
+            }
+
+        .kpi-card-label {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            font-size: .68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: #8190a5;
+            margin-bottom: .45rem;
+        }
+
+            .kpi-card-label i {
+                color: var(--primary);
+            }
+
+        .kpi-card-value {
+            font-size: 1.55rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+
+        .kpi-card.highlight .kpi-card-value {
+            color: var(--primary);
+        }
+
+        /* INFO CARD */
+        .info-card,
+        .units-card {
+            background: #fff;
+            border: 1px solid #dfe7ef;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(15,23,42,.04);
+            overflow: hidden;
+        }
+
+        .info-card-header {
+            padding: .9rem 1.25rem;
+            border-bottom: 1px solid #dfe7ef;
+            font-size: .9rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 2rem;
+            padding: 1.25rem;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            padding: .75rem 0;
+            border-bottom: 1px dashed #dfe7ef;
+        }
+
+        .info-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #f1f8f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .info-item-icon i {
+                color: var(--primary);
+            }
+
+        .info-item-label {
+            font-size: .68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: #94a3b8;
+        }
+
+        .info-item-value {
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+            .info-item-value a {
+                color: #0073b5;
+                text-decoration: none;
+            }
+
+        /* UNITS TABLE HEADER */
+        .units-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: .85rem 1.25rem;
+            border-bottom: 1px solid #dfe7ef;
+        }
+
+        .units-count {
+            font-size: .875rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .units-toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+        }
+
+        .units-search-wrap {
+            position: relative;
+        }
+
+            .units-search-wrap i {
+                position: absolute;
+                left: .75rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #94a3b8;
+            }
+
+        #unitSearch {
+            width: 260px;
+            padding-left: 2.2rem;
+            border-radius: 8px;
+            border: 1px solid #dfe7ef;
+        }
+
+        #unitPageLength {
+            width: 80px;
+            border-radius: 8px;
+            border: 1px solid #dfe7ef;
+        }
+
+        /* TABLE */
+        .table-units {
+            margin-bottom: 0;
+            font-size: .75rem;
+        }
+
+            .table-units thead th {
+                background: #f7faf9;
+                color: #42526e;
+                font-size: .72rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: .05em;
+                padding: .85rem 1rem;
+                border-bottom: 1px solid #dfe7ef;
+                white-space: nowrap;
+            }
+
+            .table-units tbody td {
+                padding: .85rem 1rem;
+                vertical-align: middle;
+                border-top: 1px solid #edf2f7;
+                color: #0f172a;
+            }
+
+        .unit-name {
+            font-weight: 600;
+        }
+
+        /* TYPE */
+        .type-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            min-width: 90px;
+            justify-content: center;
+            padding: .2rem .75rem;
+            border-radius: 999px;
+            font-size: .70rem;
+            font-weight: 700;
+        }
+
+        .type-house {
+            background: #e8f7ef;
+            border: 1px solid #bee5cf;
+            color: #007a4d;
+        }
+
+        .type-apartment {
+            background: #e8f6ff;
+            border: 1px solid #b8e1fb;
+            color: #0073b5;
+        }
+
+        /* STATUS */
+        .status-dot {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .2rem .65rem;
+            border-radius: 999px;
+            font-size: .70rem;
+            font-weight: 700;
+        }
+
+            .status-dot::before {
+                content: '';
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+            }
+
+        .status-verkocht {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+            .status-verkocht::before {
+                background: #64748b;
+            }
+
+        .status-beschikbaar {
+            background: #e8f7ef;
+            color: #007a4d;
+        }
+
+            .status-beschikbaar::before {
+                background: #16a34a;
+            }
+
+        /* FOOTER TOTAL */
+        .totaal-row td {
+            background: #e8f7ef !important;
+            color: var(--primary);
+            font-weight: 800;
+            border-top: 2px solid var(--primary) !important;
+        }
+
+        /* PAGINATION */
+        .dataTables_info {
+            font-size: .85rem;
+            color: #8190a5;
+        }
+
+        .pagination {
+            gap: .35rem;
+            margin-bottom: 0;
+        }
+
+        .page-item .page-link {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-item.active .page-link {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .page-item.disabled .page-link {
+            color: #d1d5db;
+        }
+
+        /* RESPONSIVE */
+        @@media (max-width: 991px) {
+            .kpi-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .detail-topbar,
+            .detail-header-top,
+            .units-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .units-toolbar-right {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #unitSearch,
+            #unitPageLength,
+            .project-switcher {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    .type-mixed     { background: #f3f0ff; border: 1px solid #c4b5fd; color: #6d28d9; }
+</style>
+}
+
+<section class="content-header" style="display:none;"></section>
+
+<!-- Topbalk -->
+<div class="detail-topbar">
+    <a href="@terugUrl" class="back-link">
+        <i class="bx bx-chevron-left"></i>
+        Terug naar gemeenteanalyse
+    </a>
+    <div class="d-flex align-items-center gap-2">
+        <span class="project-switcher-label">PROJECT</span>
+        <select class="form-select project-switcher" id="projectSwitcher">
+            @foreach (var opt in Model.AndereProjecten)
+            {
+                var optUrl = Url.Action("Projectdetail", "Marktanalyse", new { id = opt.Id });
+                if (opt.Id == Model.Id)
+                {
+                    <option value="@optUrl" selected>@opt.Label</option>
+                }
+                else
+                {
+                    <option value="@optUrl">@opt.Label</option>
+                }
+            }
+        </select>
+    </div>
+</div>
+
+<!-- Header -->
+<div class="detail-header">
+    <div class="detail-header-top">
+        <div>
+            <div class="detail-type-badge">
+                <i class="bx @(Model.TypeLabel == "Woning" ? "bx-home" : Model.TypeLabel == "Appartement" ? "bx-building-house" : "bx-buildings")"></i>
+                @Model.TypeLabel
+            </div>
+            <h1 class="detail-title">@Model.ProjectNaam</h1>
+            <div class="detail-meta">
+                @if (!string.IsNullOrEmpty(Model.Straat))
+                {
+                    <span class="detail-meta-item">
+                        <i class="bx bx-map-pin"></i>
+                        @(string.Join(" ", new[] { Model.Straat, Model.Huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s))))
+                    </span>
+                }
+                @if (!string.IsNullOrEmpty(Model.Gemeente))
+                {
+                    <span class="detail-meta-item">
+                        <i class="bx bx-buildings"></i>
+                        @Model.Gemeente
+                    </span>
+                }
+                @if (!string.IsNullOrEmpty(Model.Postcode))
+                {
+                    <span class="detail-meta-item text-muted">@Model.Postcode</span>
+                }
+                @if (!string.IsNullOrEmpty(Model.DeveloperNaam))
+                {
+                    <span class="detail-meta-item">
+                        <i class="bx bx-briefcase"></i>
+                        @Model.DeveloperNaam
+                    </span>
+                }
+            </div>
+        </div>
+        <div class="detail-actions">
+            <a href="@Url.Action("VergelijkbarePanden", "Marktanalyse")" class="btn btn-outline-secondary btn-sm">
+                Vergelijk panden
+            </a>
         </div>
     </div>
 </div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid mb-4">
+    <div class="kpi-card">
+        <div class="kpi-card-label">Units totaal</div>
+        <div class="kpi-card-value">@Model.TotaalUnits</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-label">Beschikbaar</div>
+        <div class="kpi-card-value">@Model.BeschikbareUnits</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-label">Verkocht</div>
+        <div class="kpi-card-value">@Model.VerkochteUnits</div>
+    </div>
+    <div class="kpi-card highlight">
+        <div class="kpi-card-label"><i class="bx bx-trending-up"></i>Verkoopgraad</div>
+        <div class="kpi-card-value">@Model.Verkoopgraad.ToString("F0")%</div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-label"><span style="font-size:.85em">€</span> Gem. prijs</div>
+        <div class="kpi-card-value">
+            @(Model.GemiddeldePrijs.HasValue ? "€ " + Model.GemiddeldePrijs.Value.ToString("N0") : "—")
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-card-label"><i class="bx bx-ruler"></i>Gem. €/m²</div>
+        <div class="kpi-card-value">
+            @(Model.GemiddeldePrijsPerM2.HasValue ? "€ " + Model.GemiddeldePrijsPerM2.Value.ToString("N0") + "/m²" : "—")
+        </div>
+    </div>
+</div>
+
+<!-- Projectinformatie -->
+@if (!string.IsNullOrEmpty(Model.DeveloperNaam) || !string.IsNullOrEmpty(Model.DeveloperWebsite)
+  || !string.IsNullOrEmpty(Model.DeveloperTelefoon) || !string.IsNullOrEmpty(Model.AdresRegel))
+{
+    <div class="info-card mb-4">
+        <div class="info-card-header">
+            <i class="bx bx-info-circle"></i>
+            Projectinformatie
+        </div>
+        <div class="info-grid">
+            @if (!string.IsNullOrEmpty(Model.DeveloperNaam))
+            {
+                <div class="info-item">
+                    <div class="info-item-icon"><i class="bx bx-briefcase"></i></div>
+                    <div>
+                        <div class="info-item-label">Ontwikkelaar</div>
+                        <div class="info-item-value">@Model.DeveloperNaam</div>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.DeveloperWebsite))
+            {
+                <div class="info-item">
+                    <div class="info-item-icon"><i class="bx bx-globe"></i></div>
+                    <div>
+                        <div class="info-item-label">Website</div>
+                        <div class="info-item-value">
+                            <a href="@Model.DeveloperWebsite" target="_blank" rel="noopener">@Model.WebsiteLabel</a>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.DeveloperTelefoon))
+            {
+                <div class="info-item">
+                    <div class="info-item-icon"><i class="bx bx-phone"></i></div>
+                    <div>
+                        <div class="info-item-label">Telefoon</div>
+                        <div class="info-item-value">
+                            <a href="tel:@Model.DeveloperTelefoon">@Model.DeveloperTelefoon</a>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Model.AdresRegel))
+            {
+                <div class="info-item">
+                    <div class="info-item-icon"><i class="bx bx-map"></i></div>
+                    <div>
+                        <div class="info-item-label">Adres</div>
+                        <div class="info-item-value">@Model.AdresRegel</div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Units tabel -->
+<div class="units-card">
+    <div class="units-toolbar">
+        <span class="units-count">@Model.TotaalUnits unit@(Model.TotaalUnits == 1 ? "" : "s")</span>
+        <div class="units-toolbar-right">
+            <div class="d-flex align-items-center gap-2">
+                <label for="unitPageLength" class="form-label mb-0 small text-muted">Toon</label>
+                <select id="unitPageLength" class="form-select form-select-sm" style="width:80px;">
+                    <option value="10" selected>10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="units-search-wrap">
+                <i class="bx bx-search"></i>
+                <input id="unitSearch" type="text" class="form-control form-control-sm" placeholder="Zoek unit...">
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table id="tblUnits" class="table table-units w-100">
+            <thead>
+                <tr>
+                    <th>Unit</th>
+                    <th>Type</th>
+                    <th class="text-end">Oppervlakte</th>
+                    <th class="text-end">Slaapkamers</th>
+                    <th class="text-end">Vraagprijs</th>
+                    <th class="text-end">Prijs/m²</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model.Units)
+                {
+                    var statusClass = u.Status.ToLowerInvariant() switch
+                    {
+                        "verkocht"     => "status-verkocht",
+                        "gereserveerd" => "status-gereserveerd",
+                        "optie"        => "status-optie",
+                        _              => "status-beschikbaar"
+                    };
+                    var typeClass = u.TypeLabel == "Woning" ? "type-house" : "type-apartment";
+
+                    <tr @(!string.IsNullOrEmpty(u.SourceUrl) ? $"style=\"cursor:pointer;\" onclick=\"window.open('{u.SourceUrl}','_blank','noopener')\"" : "")>
+                        <td class="unit-name">@u.Naam</td>
+                        <td>
+                            <span class="type-pill @typeClass">
+                                <i class="bx @(u.TypeLabel == "Woning" ? "bx-home" : "bx-building-house")"></i>
+                                @u.TypeLabel
+                            </span>
+                        </td>
+                        <td class="text-end">@(u.Oppervlakte.HasValue ? u.Oppervlakte.Value.ToString("N0") + " m²" : "—")</td>
+                        <td class="text-end">@(u.Slaapkamers.HasValue ? u.Slaapkamers.Value.ToString() : "—")</td>
+                        <td class="text-end">@(u.Vraagprijs.HasValue ? "€ " + u.Vraagprijs.Value.ToString("N0") : "—")</td>
+                        <td class="text-end">@(u.PrijsPerM2.HasValue ? "€ " + u.PrijsPerM2.Value.ToString("N0") + "/m²" : "—")</td>
+                        <td><span class="status-dot @statusClass">@u.Status</span></td>
+                    </tr>
+                }
+                @if (Model.Units.Count > 0)
+                {
+
+                    <tr class="totaal-row">
+                        <td colspan="2">Totaal / gemiddeld</td>
+                        <td class="text-end">@(totOpp.HasValue? totOpp.Value.ToString("N0") + " m²" : "—")</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">@(totPrijs.HasValue ? "€ " + totPrijs.Value.ToString("N0") : "—")</td>
+                        <td class="text-end">@(totPpSqm.HasValue ? "€ " + totPpSqm.Value.ToString("N0") + "/m²" : "—")</td>
+                        <td>@Model.VerkochteUnits/@Model.TotaalUnits verkocht</td>
+                    </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section PageScripts {
+    <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
+    <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+    <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.min.css" />
+
+    <script>
+              $(function () {
+            var dt = $('#tblUnits').DataTable({
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json'
+                },
+                order: [[0, 'asc']],
+                pageLength: 10,
+                dom: 'rt<"row align-items-center px-3 py-3"<"col-md-6"i><"col-md-6 d-flex justify-content-end"p>>',
+                columnDefs: [
+                    { orderable: false, targets: -1 }
+                ]
+            });
+
+            $('#unitSearch').on('input', function () {
+                dt.search(this.value).draw();
+            });
+
+            $('#unitPageLength').on('change', function () {
+                dt.page.len(parseInt(this.value, 10)).draw();
+            });
+
+            $('#projectSwitcher').on('change', function () {
+                if (this.value) window.location.href = this.value;
+            });
+
+            function stylePaginationIcons() {
+                $('.paginate_button.previous .page-link').html('<i class="bx bx-chevron-left"></i>');
+                $('.paginate_button.next .page-link').html('<i class="bx bx-chevron-right"></i>');
+            }
+
+            stylePaginationIcons();
+            dt.on('draw', stylePaginationIcons);
+        });
+    </script>
+}

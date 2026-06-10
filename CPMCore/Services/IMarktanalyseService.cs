@@ -8,6 +8,10 @@ public interface IMarktanalyseService
 
     Task<GemeenteAnalyseViewModel> GetGemeenteAnalyseAsync(
         string? postcode,
+        string? gemeente,
         string type,
+        string aanbodtype = "Alles",
         CancellationToken ct = default);
+
+    Task<ProjectDetailViewModel?> GetProjectDetailAsync(long id, CancellationToken ct = default);
 }

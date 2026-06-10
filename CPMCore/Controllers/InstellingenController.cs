@@ -1777,6 +1777,18 @@ public class InstellingenController : BaseController
     [Breadcrumb("Kostprijzen materialen")]
     public IActionResult KostprijsMaterialen()
     {
+        var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = dashboard
+        };
+        var instellingenKM = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("KostprijsMaterialen", "Instellingen", "Kostprijs materialen")
+        {
+            Parent = instellingenIndex
+        };
+
+        ViewData["BreadcrumbNode"] = instellingenKM;
+
         var vm = new KostprijsMaterialenViewModel
         {
             IndexTypes         = _kostprijsService.GetIndexTypes().Values         ?? new(),

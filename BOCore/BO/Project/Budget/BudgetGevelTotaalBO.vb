@@ -11,6 +11,7 @@ Public Class BudgetGevelTotaalBO
     Public Property TotaalDakoversteken() As Decimal
     Public Property TotaalOnderkantDoorrit() As Decimal
     Public Property TotaalAfbraak() As Decimal
+    Public Property TotaalLeien() As Decimal
 
     Public ReadOnly Property TotaalGevelCombineerd() As Decimal
         Get

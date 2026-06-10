@@ -85,7 +85,7 @@ Dit is het grootste nieuwe onderdeel. Het koppelt velden in de budget-wizard aan
 1. Ga naar **Instellingen → Kostprijzen materialen → tab "Formule koppelingen"**
 2. Koppel een materiaal aan `nacalc_ruwbouw_basis`
 3. Open een project → Budget → stap 1 → het veld "Nacalc basisprijs ruwbouw" toont nu een voorstel met de geïndexeerde prijs en een knop om over te nemen
-
+ok di
 ### Volgende formule toevoegen (developer)
 
 **Voorbeeld: Gevelmetselwerk koppelen**

@@ -3,7 +3,7 @@ Imports System.ComponentModel.DataAnnotations
 Public Class BudgetGevelElementBO
 
     Private Shared ReadOnly TypesMetHoogte As String() =
-        {"GevelNieuwbouw", "GevelBestaand", "RaamNieuwbouw", "RaamBestaand"}
+        {"GevelNieuwbouw", "GevelBestaand", "RaamNieuwbouw", "RaamBestaand", "Leien"}
 
     Private Shared ReadOnly TypesLengteAlleen As String() =
         {"Ballustrade", "Zichtscherm"}

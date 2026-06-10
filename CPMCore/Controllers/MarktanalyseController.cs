@@ -13,10 +13,12 @@ public class MarktanalyseController : Controller
         _svc = svc;
     }
 
-    // GET /Marktanalyse/Gemeenteanalyse?postcode=8000&type=Alles
+    // GET /Marktanalyse/Gemeenteanalyse?postcode=8000&type=Alles&aanbodtype=Alles
     public async Task<IActionResult> Gemeenteanalyse(
         string? postcode,
+        string? gemeente = null,
         string type = "Alles",
+        string aanbodtype = "Alles",
         CancellationToken ct = default)
     {
         var locaties = await _svc.GetLocatiesAsync(ct);
@@ -24,11 +26,11 @@ public class MarktanalyseController : Controller
         GemeenteAnalyseViewModel vm;
         if (string.IsNullOrWhiteSpace(postcode))
         {
-            vm = new GemeenteAnalyseViewModel { GeselecteerdType = type };
+            vm = new GemeenteAnalyseViewModel { GeselecteerdType = type, GeselecteerdAanbodtype = aanbodtype };
         }
         else
         {
-            vm = await _svc.GetGemeenteAnalyseAsync(postcode, type, ct);
+            vm = await _svc.GetGemeenteAnalyseAsync(postcode, gemeente, type, aanbodtype, ct);
         }
 
         vm.Locaties = locaties;
@@ -42,8 +44,10 @@ public class MarktanalyseController : Controller
     }
 
     // GET /Marktanalyse/Projectdetail/5
-    public IActionResult Projectdetail(long id)
+    public async Task<IActionResult> Projectdetail(long id, CancellationToken ct = default)
     {
-        return View(model: id);
+        var vm = await _svc.GetProjectDetailAsync(id, ct);
+        if (vm is null) return NotFound();
+        return View(vm);
     }
 }

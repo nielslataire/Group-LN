@@ -4024,6 +4024,8 @@ namespace CPMCore.Models.Projecten
 
         [ValidateNever]
         public BudgetGevelTotaalBO Totaal { get; set; } = new();
+
+        public int? AantalVeluxen { get; set; }
     }
 
     public class BudgetPageHeaderModel

@@ -41,6 +41,8 @@ public partial class BudgetGegevens
 
     public decimal? M3Onderschoeiingen { get; set; }
 
+    public int? AantalVeluxen { get; set; }
+
     public decimal? NacalcBasisprijs { get; set; }
 
     public int? NacalcBasisJaar { get; set; }

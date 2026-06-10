@@ -10,6 +10,7 @@
     var raamBe  = Model.Elementen.GetValueOrDefault("RaamBestaand")    ?? new List<BudgetGevelElementBO>();
     var ballus  = Model.Elementen.GetValueOrDefault("Ballustrade")     ?? new List<BudgetGevelElementBO>();
     var zicht   = Model.Elementen.GetValueOrDefault("Zichtscherm")     ?? new List<BudgetGevelElementBO>();
+    var leien   = Model.Elementen.GetValueOrDefault("Leien")           ?? new List<BudgetGevelElementBO>();
     var t       = Model.Totaal;
 
     string Fmt(decimal v) => v.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
@@ -114,6 +115,14 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="fs-5 fw-semibold text-warning" id="kpi-leien">@Fmt(t.TotaalLeien) m²</div>
+                            <div class="small text-muted">Leien</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             @* ── Sectie tabs ── *@
@@ -137,6 +146,13 @@
                             data-bs-target="#tab-ballust" type="button" role="tab">
                         <i class="bi bi-three-dots me-1"></i>Balustrades &amp; Zichtschermen
                         <span class="badge bg-secondary ms-1" id="badge-ballust">@Fmt(t.TotaalBallustrade + t.TotaalZichtscherm) lm</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tab-leien-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-leien" type="button" role="tab">
+                        <i class="bi bi-layers me-1"></i>Leien
+                        <span class="badge bg-warning text-dark ms-1" id="badge-leien">@Fmt(t.TotaalLeien) m²</span>
                     </button>
                 </li>
             </ul>
@@ -522,6 +538,69 @@
                     </div>
                 </div>
 
+                @* ══════ TAB: LEIEN ══════ *@
+                <div class="tab-pane fade" id="tab-leien" role="tabpanel">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="card gevel-section-card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-layers me-2"></i>Leien gevelbekleding</span>
+                                    <span class="badge bg-warning text-dark" id="subtot-Leien">@Fmt(t.TotaalLeien) m²</span>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="gevel-add-row d-flex gap-2 align-items-end flex-wrap">
+                                        <div>
+                                            <label class="form-label small mb-1">Eenheid</label>
+                                            <input type="text" class="form-control form-control-sm add-eenheid"
+                                                   data-type="Leien" placeholder="bv. L1" style="width:90px;" />
+                                        </div>
+                                        <div>
+                                            <label class="form-label small mb-1">Geveldeel</label>
+                                            <input type="text" class="form-control form-control-sm add-beschrijving"
+                                                   data-type="Leien" placeholder="bv. VG" style="width:100px;" />
+                                        </div>
+                                        <button class="btn btn-warning btn-sm btn-add-element" data-type="Leien">
+                                            <i class="bi bi-plus me-1"></i>Toevoegen
+                                        </button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover gevel-table table-hide-lengte align-middle mb-1">
+                                            <thead class="table-light small">
+                                                <tr>
+                                                    <th>Eenheid</th>
+                                                    <th>Geveldeel</th>
+                                                    <th class="text-end">Aantal</th>
+                                                    <th class="text-end">Breedte (m)</th>
+                                                    <th class="text-end">Hoogte (m)</th>
+                                                    <th class="text-end text-muted">Lengte (m)</th>
+                                                    <th class="text-end text-warning">m²</th>
+                                                    <th style="width:44px;"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="tbody-Leien">
+                                                @foreach (var rij in leien)
+                                                {
+                                                    @await Html.PartialAsync("Partials/_BudgetGevelRij", rij)
+                                                }
+                                            </tbody>
+                                            <tfoot class="table-secondary small">
+                                                <tr>
+                                                    <td colspan="5" class="text-muted fw-semibold">Subtotaal</td>
+                                                    <td></td>@* Lengte (hidden) *@
+                                                    <td class="text-end text-warning fw-bold" id="tfoot-Leien">
+                                                        @Fmt(t.TotaalLeien) m²
+                                                    </td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>@* /tab-content *@
 
             @* ── Bottom actions ── *@
@@ -559,7 +638,7 @@
     });
 
     // ── Client-side calculation ───────────────────────────────────────────────
-    const TYPES_HOOGTE  = ['GevelNieuwbouw','GevelBestaand','RaamNieuwbouw','RaamBestaand'];
+    const TYPES_HOOGTE  = ['GevelNieuwbouw','GevelBestaand','RaamNieuwbouw','RaamBestaand','Leien'];
     const TYPES_LENGTE  = ['Ballustrade','Zichtscherm'];
 
     function calcRow(row) {
@@ -643,6 +722,7 @@
         const ramBe = totaal.totaalRaamBestaand     ?? 0;
         const bal   = totaal.totaalBallustrade      ?? 0;
         const zch   = totaal.totaalZichtscherm      ?? 0;
+        const lei   = totaal.totaalLeien            ?? 0;
         const gvlC  = totaal.totaalGevelCombineerd  ?? (gvlNB + gvlBe);
         const ramC  = totaal.totaalRaamCombineerd   ?? (ramNB + ramBe);
         const balC  = bal + zch;
@@ -654,11 +734,13 @@
         document.getElementById('kpi-raam-be').textContent  = fmt(ramBe) + ' m²';
         document.getElementById('kpi-ballus').textContent   = fmt(bal)   + ' lm';
         document.getElementById('kpi-zicht').textContent    = fmt(zch)   + ' lm';
+        document.getElementById('kpi-leien').textContent    = fmt(lei)   + ' m²';
 
         // Section tab badges
         document.getElementById('badge-gevels').textContent  = fmt(gvlC) + ' m²';
         document.getElementById('badge-ramen').textContent   = fmt(ramC) + ' m²';
         document.getElementById('badge-ballust').textContent = fmt(balC) + ' lm';
+        document.getElementById('badge-leien').textContent   = fmt(lei)  + ' m²';
 
         // Card header badges
         document.getElementById('subtot-GevelNieuwbouw').textContent = fmt(gvlNB) + ' m²';
@@ -667,6 +749,7 @@
         document.getElementById('subtot-RaamBestaand').textContent   = fmt(ramBe) + ' m²';
         document.getElementById('subtot-Ballustrade').textContent    = fmt(bal)   + ' lm';
         document.getElementById('subtot-Zichtscherm').textContent    = fmt(zch)   + ' lm';
+        document.getElementById('subtot-Leien').textContent          = fmt(lei)   + ' m²';
 
         // Tfoot subtotals
         document.getElementById('tfoot-GevelNieuwbouw').textContent = fmt(gvlNB) + ' m²';
@@ -675,6 +758,7 @@
         document.getElementById('tfoot-RaamBestaand').textContent   = fmt(ramBe) + ' m²';
         document.getElementById('tfoot-Ballustrade').textContent    = fmt(bal)   + ' lm';
         document.getElementById('tfoot-Zichtscherm').textContent    = fmt(zch)   + ' lm';
+        document.getElementById('tfoot-Leien').textContent          = fmt(lei)   + ' m²';
     }
 
     // ── Rij toevoegen ─────────────────────────────────────────────────────────

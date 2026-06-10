@@ -44,7 +44,11 @@
       "PowerShell(New-Item -ItemType Directory -Force \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Marktanalyse\")",
       "PowerShell(Get-Content \"C:\\\\Users\\\\latni\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\e--TFS\\\\e752130d-89a7-470b-b7b1-22357eb4d6b7\\\\tasks\\\\bwjx02ild.output\" -Wait -Tail 40)",
       "PowerShell(cd \"e:\\\\TFS\\\\CPMCore\"; dotnet build --no-restore -c Debug 2>&1 | Where-Object { $_ -match \"error|Error|Build succeeded|Build FAILED\" })",
-      "PowerShell(cd \"e:\\\\TFS\"; dotnet build GroupLN.MarketData.Infrastructure --no-restore -c Debug 2>&1 | Where-Object { $_ -match \"error|Error|succeeded|FAILED\" } | Select-Object -Last 10)"
+      "PowerShell(cd \"e:\\\\TFS\"; dotnet build GroupLN.MarketData.Infrastructure --no-restore -c Debug 2>&1 | Where-Object { $_ -match \"error|Error|succeeded|FAILED\" } | Select-Object -Last 10)",
+      "Bash(Select-String -Pattern \"error|warning|succeeded|failed\")",
+      "Bash(Select-Object -Last 20)",
+      "Bash(Remove-Item \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\BudgetGevelsDak.cshtml\")",
+      "PowerShell(Remove-Item \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\BudgetGevelsDak.cshtml\" -Confirm:$false)"
     ]
   }
 }

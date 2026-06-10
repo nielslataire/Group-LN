@@ -75,6 +75,87 @@ public class BudgetFormulaRegistry {
                 : (decimal?)null
         );
 
+        // ── Stap 3: Dakwerken ────────────────────────────────────────────────────
+        Register(
+            FormulaSleutels.DakwerkenPlatdak,
+            "Platdak (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenPlatdak)
+                ? ctx.M(FormulaSleutels.DakwerkenPlatdak) * ctx.MIndexFactor(FormulaSleutels.DakwerkenPlatdak)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.DakwerkenGroendak,
+            "Groendak (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenGroendak)
+                ? ctx.M(FormulaSleutels.DakwerkenGroendak) * ctx.MIndexFactor(FormulaSleutels.DakwerkenGroendak)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.DakwerkenDaktimmerwerk,
+            "Daktimmerwerk (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenDaktimmerwerk)
+                ? ctx.M(FormulaSleutels.DakwerkenDaktimmerwerk) * ctx.MIndexFactor(FormulaSleutels.DakwerkenDaktimmerwerk)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.DakwerkenDakoversteken,
+            "Dakoversteken (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenDakoversteken)
+                ? ctx.M(FormulaSleutels.DakwerkenDakoversteken) * ctx.MIndexFactor(FormulaSleutels.DakwerkenDakoversteken)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.DakwerkenOnderkantDoorrit,
+            "Onderkant doorrit (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenOnderkantDoorrit)
+                ? ctx.M(FormulaSleutels.DakwerkenOnderkantDoorrit) * ctx.MIndexFactor(FormulaSleutels.DakwerkenOnderkantDoorrit)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.DakwerkenHellendDakBedekking,
+            "Hellend dak bedekking (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenHellendDakBedekking)
+                ? ctx.M(FormulaSleutels.DakwerkenHellendDakBedekking) * ctx.MIndexFactor(FormulaSleutels.DakwerkenHellendDakBedekking)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.DakwerkenVeluxen,
+            "Veluxen (€/stuk)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.DakwerkenVeluxen)
+                ? ctx.M(FormulaSleutels.DakwerkenVeluxen) * ctx.MIndexFactor(FormulaSleutels.DakwerkenVeluxen)
+                : (decimal?)null
+        );
+
+        // ── Gevelsluiting ────────────────────────────────────────────────────────
+        Register(
+            FormulaSleutels.GevelsluitingBuitenschrijnwerk,
+            "Buitenschrijnwerk (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.GevelsluitingBuitenschrijnwerk)
+                ? ctx.M(FormulaSleutels.GevelsluitingBuitenschrijnwerk) * ctx.MIndexFactor(FormulaSleutels.GevelsluitingBuitenschrijnwerk)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.GevelsluitingBallustrades,
+            "Ballustrades (€/lm)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.GevelsluitingBallustrades)
+                ? ctx.M(FormulaSleutels.GevelsluitingBallustrades) * ctx.MIndexFactor(FormulaSleutels.GevelsluitingBallustrades)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.GevelsluitingZichtschermen,
+            "Zichtschermen (€/lm)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.GevelsluitingZichtschermen)
+                ? ctx.M(FormulaSleutels.GevelsluitingZichtschermen) * ctx.MIndexFactor(FormulaSleutels.GevelsluitingZichtschermen)
+                : (decimal?)null
+        );
+        Register(
+            FormulaSleutels.GevelsluitingLeien,
+            "Leien gevelbekleding (€/m²)",
+            ctx => ctx.HeeftMateriaal(FormulaSleutels.GevelsluitingLeien)
+                ? ctx.M(FormulaSleutels.GevelsluitingLeien) * ctx.MIndexFactor(FormulaSleutels.GevelsluitingLeien)
+                : (decimal?)null
+        );
+
         // Voeg hieronder nieuwe formules toe zodra een nieuw veld gekoppeld wordt.
         // Beschikbare helpers op ctx:
         //   ctx.M("sleutel")              prijs van gekoppeld materiaal

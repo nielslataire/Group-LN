@@ -74,6 +74,7 @@ namespace ServiceCore.Translators
             bo.LmBerlinerwanden                 = entity.LmBerlinerwanden;
             bo.LmSecanpalen                     = entity.LmSecanpalen;
             bo.M3Onderschoeiingen               = entity.M3Onderschoeiingen;
+            bo.AantalVeluxen                    = entity.AantalVeluxen;
             bo.NacalcBasisprijs                 = entity.NacalcBasisprijs;
             bo.NacalcBasisJaar                  = entity.NacalcBasisJaar;
             bo.SIndexStart                      = entity.SIndexStart;
@@ -105,6 +106,7 @@ namespace ServiceCore.Translators
             entity.LmBerlinerwanden                 = bo.LmBerlinerwanden;
             entity.LmSecanpalen                     = bo.LmSecanpalen;
             entity.M3Onderschoeiingen               = bo.M3Onderschoeiingen;
+            entity.AantalVeluxen                    = bo.AantalVeluxen;
             entity.NacalcBasisprijs                 = bo.NacalcBasisprijs;
             entity.NacalcBasisJaar                  = bo.NacalcBasisJaar;
             entity.SIndexStart                      = bo.SIndexStart;
@@ -222,6 +224,7 @@ namespace ServiceCore.Translators
                     case "Dakoversteken":     t.TotaalDakoversteken    += r.ResultaatM2;  break;
                     case "OnderkantDoorrit":  t.TotaalOnderkantDoorrit += r.ResultaatM2;  break;
                     case "Afbraak":           t.TotaalAfbraak          += r.ResultaatM2;  break;
+                    case "Leien":             t.TotaalLeien            += r.ResultaatM2;  break;
                 }
             }
             return t;

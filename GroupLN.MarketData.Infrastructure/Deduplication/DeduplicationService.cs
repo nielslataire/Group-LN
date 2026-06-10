@@ -135,6 +135,7 @@ public class DeduplicationService : IDeduplicationService
             foreach (var (existing, score, level, fields) in topCandidates)
             {
                 var (lowId, highId) = Canonical(existing.Id, newProject.Id);
+                if (lowId == highId) continue; // self-match verbod
                 if (await CandidateExistsAsync(lowId, highId, ct)) continue;
 
                 var candidate = new MarketAssetMatchCandidate
@@ -160,7 +161,7 @@ public class DeduplicationService : IDeduplicationService
                     "[ProjectMatchCandidate] Existing={Existing} Candidate={Candidate} Score={Score:F3} Level={Level} Reason={Reason}",
                     lowId, highId, score, level, candidate.MatchReason);
 
-                if (level == "Exact")
+                if (level == "Exact" || (level == "Probable" && score >= 0.80))
                     exactPairs.Add((newProject, existing, score));
 
                 debugEntries.Add(new

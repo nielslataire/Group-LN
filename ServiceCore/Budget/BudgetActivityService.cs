@@ -19,6 +19,14 @@ namespace ServiceCore.Budget
         private const int ActivityIdFunderingen       = 183;
         private const int ActivityIdGrondwerken       = 173;
         private const int ActivityIdOnderschoeiingen  = 179;
+        private const int ActivityIdPlatdak              = 197;
+        private const int ActivityIdGroendak             = 202;
+        private const int ActivityIdDaktimmerwerk        = 194;
+        private const int ActivityIdDakBedekking         = 195;
+        private const int ActivityIdKelderRuwbouw        = 181;
+        private const int ActivityIdBuitenschrijnwerk    = 205;
+        private const int ActivityIdGevelsluitingCombi   = 217;
+        private const int ActivityIdLeien                = 215;
 
         private readonly UnitOfWorkCore _uow;
         private readonly BouwIndexService _bouwIndex;
@@ -30,6 +38,9 @@ namespace ServiceCore.Budget
             _bouwIndex = bouwIndex;
             _formulaService = formulaService;
         }
+
+        private static decimal GevelLm(DALCore.Models.BudgetGevelElementen e)
+            => e.Aantal * (e.Lengte ?? 0m);
 
         private static decimal GevelM2(DALCore.Models.BudgetGevelElementen e)
         {
@@ -82,7 +93,8 @@ namespace ServiceCore.Budget
                 LmSecanpalen                    = dbGeg?.LmSecanpalen,
                 OppFunderingen                  = dbGeg?.OppFunderingen,
                 AantalVerdiepingenOndergronds   = dbGeg?.AantalVerdiepingenOndergronds ?? 0,
-                M3Onderschoeiingen              = dbGeg?.M3Onderschoeiingen
+                M3Onderschoeiingen              = dbGeg?.M3Onderschoeiingen,
+                AantalVeluxen                   = dbGeg?.AantalVeluxen
             };
             var formulaCtx = await _formulaService.BuildContextAsync(budgetVersieId, gegevensBO);
 
@@ -102,6 +114,22 @@ namespace ServiceCore.Budget
             var funderPrijsGeind     = MatGeind(FormulaSleutels.OnderbouwFunderingen);
             var grondwerkPrijsGeind  = MatGeind(FormulaSleutels.OnderbouwGrondwerken);
             var onderschPrijsGeind   = MatGeind(FormulaSleutels.OnderbouwOnderschoeiingen);
+
+            // ── Dakwerken: geïndexeerde catalogusprijzen ──────────────────────
+            var platdakPrijsGeind      = MatGeind(FormulaSleutels.DakwerkenPlatdak);
+            var groendakPrijsGeind     = MatGeind(FormulaSleutels.DakwerkenGroendak);
+            var timmerPrijsGeind       = MatGeind(FormulaSleutels.DakwerkenDaktimmerwerk);
+            var overstPrijsGeind       = MatGeind(FormulaSleutels.DakwerkenDakoversteken);
+            var doorritPrijsGeind      = MatGeind(FormulaSleutels.DakwerkenOnderkantDoorrit);
+            var bekkingPrijsGeind      = MatGeind(FormulaSleutels.DakwerkenHellendDakBedekking);
+            var veluxPrijsGeind          = MatGeind(FormulaSleutels.DakwerkenVeluxen);
+
+            // ── Gevelsluiting: geïndexeerde catalogusprijzen ──────────────────
+            var kelderRuwbouwPrijsGeind  = MatGeind(FormulaSleutels.NacalcRuwbouwBasis);
+            var buitenschrPrijsGeind     = MatGeind(FormulaSleutels.GevelsluitingBuitenschrijnwerk);
+            var ballustradePrijsGeind    = MatGeind(FormulaSleutels.GevelsluitingBallustrades);
+            var zichtschermenPrijsGeind  = MatGeind(FormulaSleutels.GevelsluitingZichtschermen);
+            var leienPrijsGeind          = MatGeind(FormulaSleutels.GevelsluitingLeien);
 
             // ── Hoeveelheden onderbouw ────────────────────────────────────────
             var lmBerliner     = gegevensBO.LmBerlinerwanden    ?? 0m;
@@ -128,6 +156,21 @@ namespace ServiceCore.Budget
                 .Where(g => g.ElementType == "PlatDak")
                 .Sum(g => GevelM2(g));
             totOppRuwbouw += totaalPlatDak * 0.25m;
+
+            // ── Dak hoeveelheden ──────────────────────────────────────────────
+            var totaalHellendDak      = gevelRijen.Where(g => g.ElementType == "HellendDak").Sum(g => GevelM2(g));
+            var totaalGroenDak        = gevelRijen.Where(g => g.ElementType == "GroenDak").Sum(g => GevelM2(g));
+            var totaalDakoversteken   = gevelRijen.Where(g => g.ElementType == "Dakoversteken").Sum(g => GevelM2(g));
+            var totaalOnderkantDoorrit= gevelRijen.Where(g => g.ElementType == "OnderkantDoorrit").Sum(g => GevelM2(g));
+            var aantalVeluxen         = (decimal)(gegevensBO.AantalVeluxen ?? 0);
+
+            // ── Gevelsluiting hoeveelheden ────────────────────────────────────
+            var totaalRamen           = gevelRijen
+                .Where(g => g.ElementType == "RaamNieuwbouw" || g.ElementType == "RaamBestaand")
+                .Sum(g => GevelM2(g));
+            var totaalBallustrade     = gevelRijen.Where(g => g.ElementType == "Ballustrade").Sum(g => GevelLm(g));
+            var totaalZichtscherm     = gevelRijen.Where(g => g.ElementType == "Zichtscherm").Sum(g => GevelLm(g));
+            var totaalLeien           = gevelRijen.Where(g => g.ElementType == "Leien").Sum(g => GevelM2(g));
 
             var aantalWoonComm = opps.Count(o =>
                 o.UnitGroupType != null && (
@@ -227,13 +270,118 @@ namespace ServiceCore.Budget
 
                         (decimal prijs, decimal hoev, string eenh, string label) enkel = activity.ActivityId switch
                         {
-                            ActivityIdBerlinerwanden   => (berlinerPrijsGeind,  lmBerliner,    "lm", "Berlinerwanden"),
-                            ActivityIdSecanpalen       => (secanPrijsGeind,     lmSecan,       "lm", "Secanpalen"),
-                            ActivityIdFunderingen      => (funderPrijsGeind,    m2Funder,      "m²", "Funderingen"),
-                            ActivityIdGrondwerken      => (grondwerkPrijsGeind, m3Grondwerk,   "m³", "Grondwerken"),
-                            ActivityIdOnderschoeiingen => (onderschPrijsGeind,  m3Onderschoei, "m³", "Onderschoeiingen"),
+                            ActivityIdBerlinerwanden   => (berlinerPrijsGeind,     lmBerliner,     "lm",  "Berlinerwanden"),
+                            ActivityIdSecanpalen       => (secanPrijsGeind,        lmSecan,        "lm",  "Secanpalen"),
+                            ActivityIdFunderingen      => (funderPrijsGeind,       m2Funder,       "m²",  "Funderingen"),
+                            ActivityIdGrondwerken      => (grondwerkPrijsGeind,    m3Grondwerk,    "m³",  "Grondwerken"),
+                            ActivityIdOnderschoeiingen => (onderschPrijsGeind,     m3Onderschoei,  "m³",  "Onderschoeiingen"),
+                            ActivityIdPlatdak          => (platdakPrijsGeind,      totaalPlatDak,  "m²",  "Platdak"),
+                            ActivityIdGroendak         => (groendakPrijsGeind,     totaalGroenDak, "m²",  "Groendak"),
+                            ActivityIdKelderRuwbouw    => (kelderRuwbouwPrijsGeind,totaalGarBerg,  "m²",  "Kelderruwbouw"),
+                            ActivityIdBuitenschrijnwerk=> (buitenschrPrijsGeind,   totaalRamen,    "m²",  "Buitenschrijnwerk"),
+                            ActivityIdLeien            => (leienPrijsGeind,        totaalLeien,    "m²",  "Leien"),
                             _                          => (0m, 0m, string.Empty, string.Empty)
                         };
+
+                        // ── Composite: ballustrades + zichtschermen (217) ─────
+                        if (activity.ActivityId == ActivityIdGevelsluitingCombi)
+                        {
+                            var ballDeel  = ballustradePrijsGeind  * totaalBallustrade;
+                            var zichtDeel = zichtschermenPrijsGeind * totaalZichtscherm;
+                            var totaalProject = ballDeel + zichtDeel;
+                            if (totaalProject > 0 && aantalWoonComm > 0)
+                            {
+                                var nlBE3 = new System.Globalization.CultureInfo("nl-BE");
+                                string F3(decimal v) => v.ToString("N2", nlBE3);
+                                var ePerEenheid = Math.Round(totaalProject / aantalWoonComm, 2);
+                                bo.VoorgesteldePrijsPerEenheid = ePerEenheid;
+                                bo.VoorstelEnkelPrijs          = ePerEenheid;
+                                bo.VoorstelEnkelHoeveelheid    = aantalWoonComm;
+                                bo.VoorstelEnkelEenheid        = "eenh.";
+                                bo.VoorstelEnkelLabel          = "Gevelsluiting";
+                                bo.VoorstelEnkelDetail         =
+                                    $"<tr style='font-size:.75rem;color:#6c757d'><td>Ballustrades</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{F3(totaalBallustrade)} lm</td>" +
+                                    $"<td style='text-align:right'>€ {F3(ballustradePrijsGeind)}/lm</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F3(ballDeel)}</td></tr>" +
+                                    $"<tr style='font-size:.75rem;color:#6c757d;border-bottom:1px dashed #ccc'><td>Zichtschermen</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{F3(totaalZichtscherm)} lm</td>" +
+                                    $"<td style='text-align:right'>€ {F3(zichtschermenPrijsGeind)}/lm</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F3(zichtDeel)}</td></tr>";
+                                bo.VoorstelAantalEenheden = aantalWoonComm;
+                                if (!heeftBestaandeLijn)
+                                    bo.AlternatievePrijsPerEenheid = ePerEenheid;
+                            }
+                        }
+
+                        // ── Composiete dak activiteiten (meerdere materialen) ─
+                        bool isDaktimmerwerk = activity.ActivityId == ActivityIdDaktimmerwerk;
+                        bool isDakBedekking  = activity.ActivityId == ActivityIdDakBedekking;
+
+                        if (isDaktimmerwerk || isDakBedekking)
+                        {
+                            decimal totaalProject;
+                            string  dakLabel;
+                            string  dakDetail;
+                            var nlBE2 = new System.Globalization.CultureInfo("nl-BE");
+                            string F2(decimal v) => v.ToString("N2", nlBE2);
+
+                            if (isDaktimmerwerk)
+                            {
+                                // hellend dak horizontale projectie × 1.42 × 0.45 + dakoversteken + onderkant doorrit
+                                var timmerM2   = totaalHellendDak * 1.42m * 0.45m;
+                                var timmerDeel = timmerPrijsGeind  * timmerM2;
+                                var overstDeel = overstPrijsGeind  * totaalDakoversteken;
+                                var doorDeel   = doorritPrijsGeind * totaalOnderkantDoorrit;
+                                totaalProject = timmerDeel + overstDeel + doorDeel;
+                                dakLabel = "Daktimmerwerk";
+                                dakDetail =
+                                    $"<tr style='font-size:.75rem;color:#6c757d'><td>Timmerwerk hellend</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{F2(totaalHellendDak)} m² × 1,42 × 0,45</td>" +
+                                    $"<td style='text-align:right'>€ {F2(timmerPrijsGeind)}/m²</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F2(timmerDeel)}</td></tr>" +
+                                    $"<tr style='font-size:.75rem;color:#6c757d'><td>Dakoversteken</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{F2(totaalDakoversteken)} m²</td>" +
+                                    $"<td style='text-align:right'>€ {F2(overstPrijsGeind)}/m²</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F2(overstDeel)}</td></tr>" +
+                                    $"<tr style='font-size:.75rem;color:#6c757d;border-bottom:1px dashed #ccc'><td>Onderkant doorrit</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{F2(totaalOnderkantDoorrit)} m²</td>" +
+                                    $"<td style='text-align:right'>€ {F2(doorritPrijsGeind)}/m²</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F2(doorDeel)}</td></tr>";
+                            }
+                            else // isDakBedekking
+                            {
+                                // hellend dak × 1.42 (schuine oppervlakte) + veluxen
+                                var schuin    = totaalHellendDak * 1.42m;
+                                var bekkDeel  = bekkingPrijsGeind * schuin;
+                                var veluxDeel = veluxPrijsGeind   * aantalVeluxen;
+                                totaalProject = bekkDeel + veluxDeel;
+                                dakLabel = "Hellend dak bedekking";
+                                dakDetail =
+                                    $"<tr style='font-size:.75rem;color:#6c757d'><td>Hellend dak</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{F2(totaalHellendDak)} m² × 1,42</td>" +
+                                    $"<td style='text-align:right'>€ {F2(bekkingPrijsGeind)}/m²</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F2(bekkDeel)}</td></tr>" +
+                                    $"<tr style='font-size:.75rem;color:#6c757d;border-bottom:1px dashed #ccc'><td>Veluxen</td>" +
+                                    $"<td style='padding:0 6px;text-align:right'>{(int)aantalVeluxen} st</td>" +
+                                    $"<td style='text-align:right'>€ {F2(veluxPrijsGeind)}/st</td>" +
+                                    $"<td style='padding-left:8px;text-align:right'>= € {F2(veluxDeel)}</td></tr>";
+                            }
+
+                            if (totaalProject > 0 && aantalWoonComm > 0)
+                            {
+                                var ePerEenheid = Math.Round(totaalProject / aantalWoonComm, 2);
+                                bo.VoorgesteldePrijsPerEenheid = ePerEenheid;
+                                bo.VoorstelEnkelPrijs          = ePerEenheid;
+                                bo.VoorstelEnkelHoeveelheid    = aantalWoonComm;
+                                bo.VoorstelEnkelEenheid        = "eenh.";
+                                bo.VoorstelEnkelLabel          = dakLabel;
+                                bo.VoorstelEnkelDetail         = dakDetail;
+                                bo.VoorstelAantalEenheden      = aantalWoonComm;
+                                if (!heeftBestaandeLijn)
+                                    bo.AlternatievePrijsPerEenheid = ePerEenheid;
+                            }
+                        }
 
                         if (enkel.prijs > 0 && enkel.hoev > 0)
                         {

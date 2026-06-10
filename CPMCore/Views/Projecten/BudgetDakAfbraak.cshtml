@@ -110,6 +110,20 @@
                         </div>
                     </div>
                 </div>
+                <div class="col-6 col-md-4">
+                    <div class="card text-center py-2">
+                        <div class="card-body p-2">
+                            <div class="d-flex align-items-center justify-content-center gap-2">
+                                <input type="number" min="0" id="input-veluxen"
+                                       class="form-control form-control-sm text-end"
+                                       style="width:80px"
+                                       value="@(Model.AantalVeluxen ?? 0)" />
+                                <span class="small text-muted">st</span>
+                            </div>
+                            <div class="small text-muted mt-1">Veluxen</div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             @* ── Hoofd layout: Dak (links) | Afbraak (rechts) ── *@
@@ -480,6 +494,21 @@
             const newRow = temp.querySelector('tr');
             if (newRow && tbody) tbody.appendChild(newRow);
         }
+    });
+
+    // ── Veluxen auto-save ─────────────────────────────────────────────────────
+    let veluxTimer;
+    document.getElementById('input-veluxen')?.addEventListener('change', function () {
+        clearTimeout(veluxTimer);
+        const val = parseInt(this.value) || 0;
+        veluxTimer = setTimeout(async () => {
+            const params = new URLSearchParams({ versieId, aantalVeluxen: val });
+            await fetch('/Projecten/BudgetAantalVeluxenOpslaan', {
+                method:  'POST',
+                headers: { 'RequestVerificationToken': antiForgery, 'Content-Type': 'application/x-www-form-urlencoded' },
+                body:    params.toString()
+            });
+        }, 400);
     });
 
     // ── Bootstrap tooltips ────────────────────────────────────────────────────

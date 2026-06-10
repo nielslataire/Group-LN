@@ -1,6 +1,6 @@
 @model CPMCore.Models.KostprijsMaterialenViewModel
 @{
-    ViewData["Title"] = "Kostprijzen materialen";
+    ViewData["Title"] = "Instellingen - Kostprijs materialen";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var ic = System.Globalization.CultureInfo.InvariantCulture;
     var eenheden = new[] { "m²", "m³", "lm", "stuk", "forfait" };
@@ -568,7 +568,7 @@
             paging: true,
             ordering: true,
             info: true,
-            searching: false,
+            searching: true,
             lengthChange: false,
             pageLength: 25,
             language: {
@@ -577,6 +577,9 @@
                 paginate: { previous: 'Vorige', next: 'Volgende' }
             }
         });
+        // Verberg de standaard DataTables zoekbalk — we gebruiken eigen filter-selects
+        document.querySelector('#datatable-materialen_filter')?.style &&
+            (document.querySelector('#datatable-materialen_filter').style.display = 'none');
 
         const filterCat       = document.getElementById('filter-categorie');
         const filterToepassing = document.getElementById('filter-toepassing');
