@@ -103,6 +103,8 @@ namespace DALCore
         public GenericRepository<ProjectKostprijs>   ProjectKostprijzen   { get; }
         public GenericRepository<BouwkostPercentageGroep> BouwkostPercentageGroepen { get; }
         public GenericRepository<BouwkostPercentage>      BouwkostPercentages       { get; }
+        public GenericRepository<BlogArtikel>    BlogArtikelen    { get; }
+        public GenericRepository<BlogArtikelBlok> BlogArtikelBlokken { get; }
 
 
         // Zorg dat services bij de DbContext kunnen (Attach/Entry/IsModified)
@@ -205,6 +207,8 @@ namespace DALCore
             ProjectKostprijzen   = new GenericRepository<ProjectKostprijs>(_context);
             BouwkostPercentageGroepen = new GenericRepository<BouwkostPercentageGroep>(_context);
             BouwkostPercentages       = new GenericRepository<BouwkostPercentage>(_context);
+            BlogArtikelen             = new GenericRepository<BlogArtikel>(_context);
+            BlogArtikelBlokken        = new GenericRepository<BlogArtikelBlok>(_context);
         }
 
         // Eenduidige save-methodes

@@ -48,7 +48,10 @@
       "Bash(Select-String -Pattern \"error|warning|succeeded|failed\")",
       "Bash(Select-Object -Last 20)",
       "Bash(Remove-Item \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\BudgetGevelsDak.cshtml\")",
-      "PowerShell(Remove-Item \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\BudgetGevelsDak.cshtml\" -Confirm:$false)"
+      "PowerShell(Remove-Item \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\BudgetGevelsDak.cshtml\" -Confirm:$false)",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(dir \"e:\\\\TFS\" /b)",
+      "Bash(dir \"e:\\\\TFS\\\\DALNEW\" /b /s)"
     ]
   }
 }

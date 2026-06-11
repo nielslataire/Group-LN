@@ -1,0 +1,322 @@
+@model CPMCore.Models.Instellingen.BlogArtikelEditVM
+@{
+    var isNieuw = Model.ID == 0;
+    ViewData["Title"] = isNieuw ? "Nieuw artikel" : "Artikel bewerken";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle {
+<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<style>
+    .blok-card { border: 1px solid #dee2e6; border-radius: 8px; background: #fff; }
+    .blok-foto-preview { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; }
+    .ql-container { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+    .ql-toolbar { border-top-left-radius: 4px; border-top-right-radius: 4px; }
+    .quill-wrap { height: 220px; }
+</style>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">@(isNieuw ? "Nieuw artikel" : "Artikel bewerken")</h1>
+        <p class="text-muted mb-0">
+            <a href="@Url.Action("Index")">Blog artikelen</a> /
+            @(isNieuw ? "Nieuw" : Model.Titel)
+        </p>
+    </div>
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bx bx-arrow-back"></i> Terug
+    </a>
+</div>
+
+@* ── Artikel basisgegevens ── *@
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Artikel</div>
+    <div class="card-body">
+
+        @* Validatiefouten *@
+        <div asp-validation-summary="All" class="alert alert-danger d-none" id="val-summary"></div>
+
+        <form id="artikel-form" method="post" action="@Url.Action("Bewerken")" enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="ID" />
+
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="Titel" class="form-label fw-semibold">Titel <span class="text-danger">*</span></label>
+                    <input asp-for="Titel" class="form-control" placeholder="Artikeltitel..." />
+                    <span asp-validation-for="Titel" class="text-danger small"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Datum" class="form-label fw-semibold">Datum <span class="text-danger">*</span></label>
+                    <input asp-for="Datum" type="date" class="form-control" />
+                    <span asp-validation-for="Datum" class="text-danger small"></span>
+                </div>
+
+                <div class="col-12">
+                    <label asp-for="PreviewTekst" class="form-label fw-semibold">Preview tekst</label>
+                    <textarea asp-for="PreviewTekst" class="form-control" rows="3"
+                              placeholder="Korte samenvatting die op de blogpagina verschijnt..."></textarea>
+                    <div class="form-text">Max. 500 tekens — getoond in de kaart op de overzichtspagina.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DetailTitel" class="form-label fw-semibold">Detailpagina titel</label>
+                    <input asp-for="DetailTitel" class="form-control" placeholder="Titel op de detailpagina (leeg = zelfde als Titel)" />
+                    <div class="form-text">Optioneel — verschijnt als hoofdtitel op de artikelpagina.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="DetailTitelTekst" class="form-label fw-semibold">Detailpagina titeltekst</label>
+                    <textarea asp-for="DetailTitelTekst" class="form-control" rows="2"
+                              placeholder="Ondertitel of inleiding onder de hoofdtitel..."></textarea>
+                    <div class="form-text">Max. 1000 tekens — getoond net onder de hoofdtitel op de detailpagina.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="Slug" class="form-label fw-semibold">URL-slug</label>
+                    <input asp-for="Slug" class="form-control" placeholder="wordt-automatisch-gegenereerd" />
+                    <div class="form-text">Leeg laten = automatisch gegenereerd op basis van de titel.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="SortOrder" class="form-label fw-semibold">Volgorde</label>
+                    <input asp-for="SortOrder" type="number" class="form-control" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Omslagfoto</label>
+                    <input asp-for="FotoUpload" type="file" class="form-control" accept="image/*" />
+                    @if (!string.IsNullOrEmpty(Model.FotoBestand))
+                    {
+                        <div class="mt-2">
+                            <img src="@Model.FotoBestand" alt="Huidige foto" class="img-thumbnail" style="max-height: 120px;" />
+                            <div class="form-text">Huidige foto — laad een nieuw bestand om te vervangen.</div>
+                            <input type="hidden" asp-for="FotoBestand" />
+                        </div>
+                    }
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsGepubliceerd" class="form-check-input" type="checkbox" role="switch" />
+                        <label asp-for="IsGepubliceerd" class="form-check-label fw-semibold">Gepubliceerd</label>
+                    </div>
+                    <div class="form-text">Alleen gepubliceerde artikelen zijn zichtbaar op de website.</div>
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2 align-items-center">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bx bx-save"></i> Opslaan
+                </button>
+                @if (!isNieuw)
+                {
+                    <button type="button" class="btn btn-outline-danger ms-auto"
+                            onclick="document.getElementById('delete-form').submit();"
+                            data-confirm="Weet je zeker dat je dit artikel wil verwijderen?">
+                        <i class="bx bx-trash"></i> Artikel verwijderen
+                    </button>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@* Delete form staat BUITEN de hoofdform (HTML staat geen nested forms toe) *@
+@if (!isNieuw)
+{
+    <form id="delete-form" method="post" action="@Url.Action("Verwijderen")" style="display:none;">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.ID" />
+    </form>
+}
+
+@* ── Inhoudsblokken (alleen bij bestaand artikel) ── *@
+@if (!isNieuw)
+{
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span class="fw-semibold">Inhoudsblokken</span>
+            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="collapse" data-bs-target="#nieuwBlokForm">
+                <i class="bx bx-plus"></i> Blok toevoegen
+            </button>
+        </div>
+        <div class="card-body">
+
+            @if (!Model.Blokken.Any())
+            {
+                <p class="text-muted text-center py-3">Nog geen inhoudsblokken. Voeg een blok toe om de artikelinhoud op te bouwen.</p>
+            }
+            else
+            {
+                @foreach (var blok in Model.Blokken.OrderBy(b => b.SortOrder))
+                {
+                    <div class="blok-card p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <strong>@(string.IsNullOrEmpty(blok.Titel) ? "(zonder titel)" : blok.Titel)</strong>
+                            <div class="d-flex gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-bs-toggle="collapse" data-bs-target="#blok-@blok.ID">
+                                    <i class="bx bx-edit"></i> Bewerken
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="if(confirm('Blok verwijderen?')) document.getElementById('del-blok-@blok.ID').submit();">
+                                    <i class="bx bx-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(blok.FotoBestand))
+                        {
+                            <img src="@blok.FotoBestand" alt="" class="blok-foto-preview mb-2" />
+                        }
+
+                        <div class="collapse" id="blok-@blok.ID">
+                            <form method="post" action="@Url.Action("BlokOpslaan")" enctype="multipart/form-data" class="mt-3">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ID" value="@blok.ID" />
+                                <input type="hidden" name="ArtikelId" value="@Model.ID" />
+
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <label class="form-label">Bloktitel</label>
+                                        <input type="text" name="Titel" value="@blok.Titel" class="form-control" placeholder="Optionele bloktitel..." />
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Volgorde</label>
+                                        <input type="number" name="SortOrder" value="@blok.SortOrder" class="form-control" />
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Tekst (rich text)</label>
+                                        <div id="quill-blok-@blok.ID" class="quill-wrap"></div>
+                                        <textarea name="RijkeTekst" id="quill-blok-@blok.ID-input" class="d-none">@Html.Raw(blok.RijkeTekst)</textarea>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Foto (optioneel)</label>
+                                        <input type="file" name="FotoUpload" class="form-control" accept="image/*" />
+                                        @if (!string.IsNullOrEmpty(blok.FotoBestand))
+                                        {
+                                            <div class="mt-1">
+                                                <img src="@blok.FotoBestand" alt="" class="blok-foto-preview" />
+                                                <input type="hidden" name="FotoBestand" value="@blok.FotoBestand" />
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-sm btn-primary mt-3">
+                                    <i class="bx bx-save"></i> Blok opslaan
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    @* Blok-delete form buiten de blok-bewerken form *@
+                    <form id="del-blok-@blok.ID" method="post" action="@Url.Action("BlokVerwijderen")" style="display:none;">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="blokId" value="@blok.ID" />
+                        <input type="hidden" name="artikelId" value="@Model.ID" />
+                    </form>
+                }
+            }
+
+            @* Nieuw blok formulier *@
+            <div class="collapse mt-3" id="nieuwBlokForm">
+                <div class="blok-card p-3">
+                    <h6 class="fw-semibold mb-3">Nieuw inhoudsblok</h6>
+                    <form method="post" action="@Url.Action("BlokOpslaan")" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="ID" value="0" />
+                        <input type="hidden" name="ArtikelId" value="@Model.ID" />
+
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Bloktitel</label>
+                                <input type="text" name="Titel" class="form-control" placeholder="Optionele bloktitel..." />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Volgorde</label>
+                                <input type="number" name="SortOrder" value="@(Model.Blokken.Any() ? Model.Blokken.Max(b => b.SortOrder) + 10 : 0)" class="form-control" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Tekst (rich text)</label>
+                                <div id="quill-new" class="quill-wrap"></div>
+                                <textarea name="RijkeTekst" id="quill-new-input" class="d-none"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Foto (optioneel)</label>
+                                <input type="file" name="FotoUpload" class="form-control" accept="image/*" />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary mt-3">
+                            <i class="bx bx-plus"></i> Blok toevoegen
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section PageScripts {
+<script>
+(function () {
+    var toolbarOptions = [
+        ['bold', 'italic', 'underline'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'header': [2, 3, 4, false] }],
+        ['link'],
+        ['clean']
+    ];
+
+    function initQuill(containerId, inputId) {
+        var container = document.getElementById(containerId);
+        var input     = document.getElementById(inputId);
+        if (!container || !input) return;
+
+        var quill = new Quill(container, { theme: 'snow', modules: { toolbar: toolbarOptions } });
+
+        if (input.value)
+            quill.root.innerHTML = input.value;
+
+        quill.on('text-change', function () {
+            input.value = quill.root.innerHTML;
+        });
+
+        // Bij form-submit ook syncen (voor zekerheid)
+        var form = input.closest('form');
+        if (form)
+            form.addEventListener('submit', function () { input.value = quill.root.innerHTML; });
+    }
+
+    // Bestaande blokken
+    @if (!isNieuw)
+    {
+        @foreach (var blok in Model.Blokken)
+        {
+            <text>initQuill('quill-blok-@blok.ID', 'quill-blok-@blok.ID-input');</text>
+        }
+    }
+
+    // Nieuw blok form
+    initQuill('quill-new', 'quill-new-input');
+
+    // Validatiesamenvatting tonen bij serverfouten
+    var summary = document.getElementById('val-summary');
+    if (summary && summary.querySelector('.validation-summary-errors'))
+        summary.classList.remove('d-none');
+
+    // Delete bevestigingen
+    document.querySelectorAll('[data-confirm]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm(this.dataset.confirm)) return;
+            document.getElementById('delete-form').submit();
+        });
+    });
+})();
+</script>
+}

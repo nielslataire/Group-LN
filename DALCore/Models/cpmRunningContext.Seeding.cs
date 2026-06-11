@@ -30,6 +30,22 @@ namespace DALCore.Models
                 new PaymentTerms { Id = 4, Name = "Contant", Days = 0, Description = "Onmiddellijk bij factuurdatum", TermType = 0, DisplayMode = 0 }
 );
             ConfigureKostprijsMaterialenEntities(modelBuilder);
+
+            modelBuilder.Entity<BlogArtikel>(entity =>
+            {
+                entity.ToTable("BlogArtikel");
+                entity.HasKey(e => e.Id);
+                entity.HasMany(e => e.Blokken)
+                      .WithOne(b => b.Artikel)
+                      .HasForeignKey(b => b.ArtikelId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<BlogArtikelBlok>(entity =>
+            {
+                entity.ToTable("BlogArtikelBlok");
+                entity.HasKey(e => e.Id);
+            });
         }
     }
 }

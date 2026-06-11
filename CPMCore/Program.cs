@@ -142,6 +142,7 @@ builder.Services.AddScoped<FacadeCore.IProjectService, ServiceCore.ProjectServic
 builder.Services.AddScoped<FacadeCore.IUnitService, ServiceCore.UnitService>();
 builder.Services.AddScoped<FacadeCore.IAuthenticationService, ServiceCore.AuthenticationService>();
 builder.Services.AddScoped<FacadeCore.IActivityService, ServiceCore.ActivityService>();
+builder.Services.AddScoped<FacadeCore.IBlogArtikelService, ServiceCore.BlogArtikelService>();
 builder.Services.AddScoped<FacadeCore.IKostprijsService, ServiceCore.KostprijsService>();
 builder.Services.AddScoped<FacadeCore.IProvinceService, ServiceCore.ProvinceService>();
 builder.Services.AddScoped<FacadeCore.ICompanyService, ServiceCore.CompanyService>();

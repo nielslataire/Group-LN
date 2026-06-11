@@ -139,6 +139,11 @@
                                         </a>
                                     </li>
                                     <li>
+                                        <a href="@Url.Action("Index", "Blog")">
+                                            Blog
+                                        </a>
+                                    </li>
+                                    <li>
                                         <a href="@Url.Action("Index", "Team")">
                                             Team
                                         </a>

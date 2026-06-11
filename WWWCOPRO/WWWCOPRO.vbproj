@@ -235,6 +235,7 @@
     <Compile Include="App_Start\RouteTranslations.vb" />
     <Compile Include="App_Start\WebApiConfig.vb" />
     <Compile Include="Controllers\AboutUsController.vb" />
+    <Compile Include="Controllers\BlogController.vb" />
     <Compile Include="Controllers\ContactController.vb" />
     <Compile Include="Controllers\HomeController.vb" />
     <Compile Include="Controllers\NewsletterController.vb" />
@@ -247,6 +248,7 @@
     <Compile Include="Helpers\ViewRenderHelper.vb" />
     <Compile Include="Helpers\Extensions.vb" />
     <Compile Include="Helpers\LatestNews.vb" />
+    <Compile Include="Models\Blog\BlogArtikelModel.vb" />
     <Compile Include="Models\Contact\NewsletterModel.vb" />
     <Compile Include="Models\Contact\MailModel.vb" />
     <Compile Include="Models\Projects\ProjectModel.vb" />
@@ -284,6 +286,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Content\blog-index.css" />
     <Content Include="Content\bootstrap-grid.css" />
     <Content Include="Content\bootstrap-grid.min.css" />
     <Content Include="Content\bootstrap-grid.rtl.css" />
@@ -530,6 +533,8 @@
     <Content Include="Views\Emails\ProjectMail.vbhtml" />
     <Content Include="Views\Emails\ProjectInternalMail.vbhtml" />
     <Content Include="Views\Projects\Inschrijving.vbhtml" />
+    <Content Include="Views\Blog\Artikel.vbhtml" />
+    <Content Include="Views\Blog\Index.vbhtml" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\custom.css" />
