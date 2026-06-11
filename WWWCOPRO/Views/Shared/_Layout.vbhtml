@@ -1,4 +1,7 @@
 ﻿@imports bo
+@Code
+    Dim _metaDesc As String = If(Not String.IsNullOrEmpty(CStr(ViewData("MetaDescription"))), CStr(ViewData("MetaDescription")), "Projectontwikkeling en Bouwcoördinatie van alle residentiële bouwprojecten.")
+End Code
 <!DOCTYPE html>
 <html>
 <head>
@@ -17,7 +20,7 @@
     <meta name="viewport" content="width=device-width" />
     <title>@ViewData("Title")</title>
     <meta name="keywords" content="bouw appartement ontwikkeling appartementen coordinatie coördinatie opvolging project woning woningen budget controle werfopvolging werf bouwwerf bouwproject appartementsbouw vlaanderen oost-vlaanderen drongen klaverdries bouwteam copro" />
-    <meta name="description" content="Projectontwikkeling en Bouwcoördinatie van alle residentiële bouwprojecten.">
+    <meta name="description" content="@_metaDesc" />
     <meta name="author" content="Group LN">
     <link rel="icon" href="@Url.Content("~/content/img/favicon.ico")" type="image/x-icon" />
     <meta property="og:title" content="@ViewData("ogtitle")" />
@@ -36,6 +39,7 @@
     @Styles.Render("~/Vendor/css")
     @Styles.Render("~/Content/theme")
     @Styles.Render("~/Content/skin")
+    @RenderSection("PageMeta", required:=False)
     @RenderSection("PageStyle", required:=False)
 
 </head>

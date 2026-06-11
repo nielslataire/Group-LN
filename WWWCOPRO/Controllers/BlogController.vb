@@ -27,7 +27,7 @@ Public Class BlogController
     ' ── private helpers ────────────────────────────────────────────────
 
     Private Function GetConnectionString() As String
-        Return ConfigurationManager.ConnectionStrings("testdbEntities").ConnectionString
+        Return ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString
     End Function
 
     Private Function GetGepubliceerdeArtikelen() As List(Of BlogArtikelModel)
