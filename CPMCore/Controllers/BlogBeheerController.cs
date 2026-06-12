@@ -74,11 +74,11 @@ public class BlogBeheerController : BaseController
         var fotoBestand = vm.FotoBestand;
         if (vm.FotoUpload != null && vm.FotoUpload.Length > 0)
         {
-            var uploaded = await UploadNaarStorageAsync(vm.FotoUpload, "blog");
+            var (uploaded, uploadError) = await UploadNaarStorageAsync(vm.FotoUpload, "pictures");
             if (uploaded != null)
                 fotoBestand = uploaded;
             else
-                AddMessage("warning", "Foto kon niet opgeslagen worden, artikel wordt zonder foto opgeslagen.", "Let op");
+                AddMessage("warning", $"Foto kon niet opgeslagen worden: {uploadError}", "Let op");
         }
 
         var bo = new BlogArtikelBO
@@ -134,9 +134,11 @@ public class BlogBeheerController : BaseController
         var fotoBestand = vm.FotoBestand;
         if (vm.FotoUpload != null && vm.FotoUpload.Length > 0)
         {
-            var uploaded = await UploadNaarStorageAsync(vm.FotoUpload, "blog/blokken");
+            var (uploaded, uploadError) = await UploadNaarStorageAsync(vm.FotoUpload, "pictures");
             if (uploaded != null)
                 fotoBestand = uploaded;
+            else
+                AddMessage("warning", $"Blokfoto kon niet opgeslagen worden: {uploadError}", "Let op");
         }
 
         var bo = new BlogArtikelBlokBO
@@ -200,15 +202,20 @@ public class BlogBeheerController : BaseController
         }).ToList()
     };
 
-    private async Task<string?> UploadNaarStorageAsync(IFormFile file, string folder)
+    private async Task<(string? Url, string? Error)> UploadNaarStorageAsync(IFormFile file, string folder)
     {
+        const long MaxBytes = 30 * 1024 * 1024;
+
+        if (file.Length > MaxBytes)
+            return (null, $"Foto is te groot ({file.Length / 1024 / 1024} MB). Maximum is 20 MB.");
+
         var baseUrl  = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
         var writeKey = _configuration["StorageApi:WriteApiKey"];
 
         if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
         {
             _logger.LogWarning("StorageApi niet geconfigureerd — foto wordt niet opgeslagen.");
-            return null;
+            return (null, "Storage API is niet geconfigureerd.");
         }
 
         try
@@ -225,16 +232,25 @@ public class BlogBeheerController : BaseController
             content.Add(fileContent, "file", file.FileName);
 
             var response = await httpClient.PostAsync($"{baseUrl}/api/assets/upload", content);
-            if (!response.IsSuccessStatusCode) return null;
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Storage upload mislukt: {Status} — {Body}", (int)response.StatusCode, errorBody);
+                return (null, $"Upload mislukt (HTTP {(int)response.StatusCode}).");
+            }
 
             var payload = await response.Content.ReadAsStringAsync();
             using var jsonDoc = JsonDocument.Parse(payload);
-            return jsonDoc.RootElement.TryGetProperty("fileName", out var fn) ? fn.GetString() : null;
+            if (jsonDoc.RootElement.TryGetProperty("publicUrl", out var pub) && pub.GetString() is string pubUrl && !string.IsNullOrEmpty(pubUrl))
+                return (baseUrl + pubUrl, null);
+            if (jsonDoc.RootElement.TryGetProperty("fileName", out var fn))
+                return (fn.GetString(), null);
+            return (null, "Storage gaf geen bestandsnaam terug.");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Fout bij uploaden van foto naar Storage API.");
-            return null;
+            return (null, "Verbindingsfout met Storage API.");
         }
     }
 }

@@ -19,7 +19,7 @@ builder.Services.AddSingleton<AssetSigningHelper>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 20 * 1024 * 1024;
+    options.MultipartBodyLengthLimit = 30 * 1024 * 1024;
 });
 
 builder.Services.AddCors(options =>
@@ -139,9 +139,7 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
     }
 
     var extension = Path.GetExtension(file.FileName);
-    var generatedFileName = IsSafeFileName(file.FileName)
-        ? file.FileName
-        : $"{Guid.NewGuid():N}{extension}";
+    var generatedFileName = $"{Guid.NewGuid():N}{extension}";
 
     var storageRoot = Path.Combine(env.ContentRootPath, localSettings.RootPath);
     var targetFolderPath = Path.Combine(storageRoot, folder);
@@ -645,7 +643,7 @@ sealed class AssetStorageSettings
     public string WriteApiKey { get; set; } = string.Empty;
     public string SignedUrlSecret { get; set; } = string.Empty;
     public int SignedUrlExpiryMinutes { get; set; } = 5;
-    public long MaxUploadBytes { get; set; } = 20 * 1024 * 1024;
+    public long MaxUploadBytes { get; set; } = 30 * 1024 * 1024;
 
     public void Validate()
     {
@@ -707,6 +705,7 @@ static class AssetFolders
     public const string PicturesNews = "pictures/news";
     public const string PicturesNewsOriginal = "pictures/news/original";
     public const string PicturesNews800 = "pictures/news/800";
+    public const string PicturesBlog = "pictures/blog";
     public const string Videos = "videos";
     public const string Plans = "plans";
     public const string Docs = "docs";
@@ -714,6 +713,7 @@ static class AssetFolders
     public static bool IsValid(string folder) =>
         folder is Pictures or Pictures447 or Pictures800
             or PicturesNews or PicturesNewsOriginal or PicturesNews800
+            or PicturesBlog
             or Videos or Plans or Docs;
 
     public static bool IsPrivate(string folder) => folder is Plans or Docs;
