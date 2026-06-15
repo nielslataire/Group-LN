@@ -249,6 +249,7 @@
     color: var(--tekst);
     line-height: 1.25;
     margin: 0 0 7px;
+    text-transform:inherit !important;
 }
 
 .blog-kaart-datum {
@@ -263,7 +264,7 @@
     line-height: 1.65;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 5;
     -webkit-box-orient: vertical;
     flex: 1;
     margin: 0;

@@ -58,7 +58,7 @@ End Section
             <a href="@Url.RouteUrl("BlogArtikel", New With {.slug = uitgelicht.Slug})" class="blog-uitgelicht">
                 <div class="blog-uitgelicht-foto">
                     @If Not String.IsNullOrEmpty(uitgelicht.FotoBestand) Then
-                        @<img src="@(imgBase & "blog/" & uitgelicht.FotoBestand)" alt="@uitgelicht.Titel" />
+                        @<img src="@(imgBase & "pictures/" &uitgelicht.FotoBestand)" alt="@uitgelicht.Titel" />
                     Else
                         @<div class="blog-uitgelicht-foto-placeholder"></div>
                     End If
@@ -92,7 +92,7 @@ End Section
                         @<a href="@Url.RouteUrl("BlogArtikel", New With {.slug = artikel.Slug})" class="blog-kaart">
                             <div class="blog-kaart-foto">
                                 @If Not String.IsNullOrEmpty(artikel.FotoBestand) Then
-                                    @<img src="@(imgBase & "blog/" & artikel.FotoBestand)" alt="@artikel.Titel" />
+                                    @<img src="@(imgBase & "pictures/" &artikel.FotoBestand)" alt="@artikel.Titel" />
                                 Else
                                     @<div class="blog-kaart-foto-placeholder"></div>
                                 End If

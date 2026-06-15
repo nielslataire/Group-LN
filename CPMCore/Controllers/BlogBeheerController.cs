@@ -76,7 +76,10 @@ public class BlogBeheerController : BaseController
         {
             var (uploaded, uploadError) = await UploadNaarStorageAsync(vm.FotoUpload, "pictures");
             if (uploaded != null)
+            {
+                await DeleteVanStorageAsync(vm.FotoBestand);
                 fotoBestand = uploaded;
+            }
             else
                 AddMessage("warning", $"Foto kon niet opgeslagen worden: {uploadError}", "Let op");
         }
@@ -113,14 +116,26 @@ public class BlogBeheerController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Verwijderen(int id)
+    public async Task<IActionResult> Verwijderen(int id)
     {
+        var fotos = new List<string?>();
+        var artikelResult = _blogService.GetArtikelById(id);
+        if (!artikelResult.HasErrors && artikelResult.Value != null)
+        {
+            fotos.Add(artikelResult.Value.FotoBestand);
+            fotos.AddRange(artikelResult.Value.Blokken.Select(b => b.FotoBestand));
+        }
+
         var response = _blogService.DeleteArtikel(id);
 
         if (response.HasErrors)
             AddMessage("error", "Artikel kon niet verwijderd worden.", "Fout");
         else
+        {
+            foreach (var foto in fotos)
+                await DeleteVanStorageAsync(foto);
             AddMessage("success", "Artikel verwijderd.", "Verwijderd");
+        }
 
         return RedirectToAction(nameof(Index));
     }
@@ -136,7 +151,10 @@ public class BlogBeheerController : BaseController
         {
             var (uploaded, uploadError) = await UploadNaarStorageAsync(vm.FotoUpload, "pictures");
             if (uploaded != null)
+            {
+                await DeleteVanStorageAsync(vm.FotoBestand);
                 fotoBestand = uploaded;
+            }
             else
                 AddMessage("warning", $"Blokfoto kon niet opgeslagen worden: {uploadError}", "Let op");
         }
@@ -165,14 +183,22 @@ public class BlogBeheerController : BaseController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult BlokVerwijderen(int blokId, int artikelId)
+    public async Task<IActionResult> BlokVerwijderen(int blokId, int artikelId)
     {
+        string? blokFoto = null;
+        var artikelResult = _blogService.GetArtikelById(artikelId);
+        if (!artikelResult.HasErrors && artikelResult.Value != null)
+            blokFoto = artikelResult.Value.Blokken.FirstOrDefault(b => b.ID == blokId)?.FotoBestand;
+
         var response = _blogService.DeleteBlok(blokId);
 
         if (response.HasErrors)
             AddMessage("error", "Blok kon niet verwijderd worden.", "Fout");
         else
+        {
+            await DeleteVanStorageAsync(blokFoto);
             AddMessage("success", "Blok verwijderd.", "Verwijderd");
+        }
 
         return RedirectToAction(nameof(Bewerken), new { id = artikelId });
     }
@@ -201,6 +227,43 @@ public class BlogBeheerController : BaseController
             FotoBestand = b.FotoBestand
         }).ToList()
     };
+
+    private async Task DeleteVanStorageAsync(string? fotoBestand)
+    {
+        if (string.IsNullOrWhiteSpace(fotoBestand))
+            return;
+
+        var baseUrl  = _configuration["StorageApi:BaseUrl"]?.TrimEnd('/');
+        var writeKey = _configuration["StorageApi:WriteApiKey"];
+
+        if (string.IsNullOrWhiteSpace(baseUrl) || string.IsNullOrWhiteSpace(writeKey))
+            return;
+
+        if (!fotoBestand.StartsWith(baseUrl, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var relativePath = fotoBestand[baseUrl.Length..].TrimStart('/');
+        var slashIndex = relativePath.IndexOf('/');
+        if (slashIndex < 0)
+            return;
+
+        var folder   = relativePath[..slashIndex];
+        var fileName = relativePath[(slashIndex + 1)..];
+
+        if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(fileName) || fileName.Contains('/'))
+            return;
+
+        try
+        {
+            using var httpClient = new HttpClient();
+            httpClient.DefaultRequestHeaders.Add("X-Api-Key", writeKey);
+            await httpClient.DeleteAsync($"{baseUrl}/api/assets/{folder}/{Uri.EscapeDataString(fileName)}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Kon oude foto niet verwijderen uit storage: {FotoBestand}", fotoBestand);
+        }
+    }
 
     private async Task<(string? Url, string? Error)> UploadNaarStorageAsync(IFormFile file, string folder)
     {

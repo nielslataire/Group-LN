@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Drawing;
@@ -139,16 +140,46 @@ app.MapPost("/api/assets/upload", async (HttpRequest request, IOptions<AssetStor
     }
 
     var extension = Path.GetExtension(file.FileName);
-    var generatedFileName = $"{Guid.NewGuid():N}{extension}";
 
     var storageRoot = Path.Combine(env.ContentRootPath, localSettings.RootPath);
     var targetFolderPath = Path.Combine(storageRoot, folder);
     Directory.CreateDirectory(targetFolderPath);
 
-    var targetFilePath = Path.Combine(targetFolderPath, generatedFileName);
+    bool isConvertibleImage = AssetFolders.IsPictures(folder) && (
+        string.Equals(extension, ".jpg",  StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(extension, ".png",  StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(extension, ".webp", StringComparison.OrdinalIgnoreCase));
 
-    await using (var stream = File.Create(targetFilePath))
+    string generatedFileName;
+
+    if (isConvertibleImage)
     {
+        generatedFileName = $"{Guid.NewGuid():N}.webp";
+        var targetFilePath = Path.Combine(targetFolderPath, generatedFileName);
+
+        await using var inputStream = file.OpenReadStream();
+        using var image = await SixLabors.ImageSharp.Image.LoadAsync(inputStream);
+
+        // Resize only for the flat pictures root (blog uitgelicht target: 1200px wide)
+        if (folder == AssetFolders.Pictures && image.Width > 1200)
+        {
+            var targetHeight = (int)Math.Round((double)image.Height * 1200 / image.Width);
+            image.Mutate(x => x.Resize(new ResizeOptions
+            {
+                Size = new SixLabors.ImageSharp.Size(1200, targetHeight),
+                Mode = ResizeMode.Max
+            }));
+        }
+
+        await image.SaveAsWebpAsync(targetFilePath, new WebpEncoder { Quality = 85 });
+    }
+    else
+    {
+        generatedFileName = $"{Guid.NewGuid():N}{extension}";
+        var targetFilePath = Path.Combine(targetFolderPath, generatedFileName);
+
+        await using var stream = File.Create(targetFilePath);
         await file.CopyToAsync(stream);
     }
 
@@ -278,6 +309,28 @@ app.MapGet("/api/assets/private/{folder}/{fileName}", (string folder, string fil
         : "application/octet-stream";
 
     return Results.File(filePath, contentType, enableRangeProcessing: true);
+});
+
+app.MapDelete("/api/assets/{folder}/{fileName}", (HttpRequest request, string folder, string fileName, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
+{
+    var localSettings = options.Value;
+
+    if (!TryValidateApiKey(request, localSettings.WriteApiKey))
+        return Results.Unauthorized();
+
+    folder = folder.Trim().ToLowerInvariant();
+    if (!AssetFolders.IsValid(folder))
+        return Results.BadRequest(new { error = "Invalid folder." });
+
+    if (!IsSafeFileName(fileName))
+        return Results.BadRequest(new { error = "Invalid file name." });
+
+    var filePath = Path.Combine(env.ContentRootPath, localSettings.RootPath, folder, fileName);
+
+    if (File.Exists(filePath))
+        File.Delete(filePath);
+
+    return Results.Ok(new { deleted = fileName });
 });
 
 app.MapGet("/api/assets/plans/{fileName}/page-image", (HttpRequest request, string fileName, int? page, IOptions<AssetStorageSettings> options, IWebHostEnvironment env) =>
