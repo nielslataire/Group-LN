@@ -60,6 +60,7 @@ public static class InfrastructureExtensions
         services.AddScoped<IRealEstateCrawler, RealoCrawler>();
         services.AddScoped<IRealEstateCrawler, BidditCrawler>();
         services.AddScoped<IRealEstateCrawler, ImmoNotaireCrawler>();
+        services.AddScoped<IRealEstateCrawler, ZimmoDiscoveryCrawler>();
 
         // Factory haalt alle crawlers op via IEnumerable<IRealEstateCrawler>
         services.AddScoped<ICrawlerFactory, CrawlerFactory>();
@@ -71,6 +72,13 @@ public static class InfrastructureExtensions
         services.AddScoped<ILocationResolver, LocationResolver>();
         services.AddScoped<IAdminVectorImportService, AdminVectorImportService>();
         services.AddScoped<BackfillMarketAssetLocationsCommand>();
+
+        // Canonical Projects
+        services.AddScoped<ICanonicalProjectService, CanonicalProjectService>();
+        services.AddScoped<RebuildCanonicalProjectsCommand>();
+
+        // Tijdelijke tests
+        services.AddScoped<ZimmoDetailDiscoveryTest>();
 
         return services;
     }

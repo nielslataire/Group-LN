@@ -1,5 +1,6 @@
 using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
+using GroupLN.MarketData.Infrastructure.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -195,17 +196,37 @@ public class CrawlerWorker : BackgroundService
                 _logger.LogWarning(ex, "[{Source}] MarketAreaStatistics bijwerken mislukt.", source.Name);
             }
 
-            // Verouderde listings markeren — alleen in echte run, niet DryRun
+            // Verouderde listings markeren — alleen bij volledige, succesvolle run
             if (!_settings.DryRun)
             {
-                await using var staleScope = _scopeFactory.CreateAsyncScope();
-                var listingService = staleScope.ServiceProvider.GetRequiredService<IMarketListingService>();
-                var staleCount = await listingService.MarkStaleListingsInactiveAsync(
-                    source.Id, _settings.MarkInactiveAfterDays, cancellationToken);
+                var canMarkStale = result.Success
+                    && !result.IsPartialRun
+                    && string.IsNullOrEmpty(result.MarkInactiveSkipReason)
+                    && _settings.MaxListingsPerRun == 0;
 
-                if (staleCount > 0)
-                    _logger.LogInformation("[{Source}] {Count} verouderde listings (>{Days} dagen) gemarkeerd als inactief.",
-                        source.Name, staleCount, _settings.MarkInactiveAfterDays);
+                if (canMarkStale)
+                {
+                    await using var staleScope = _scopeFactory.CreateAsyncScope();
+                    var listingService = staleScope.ServiceProvider.GetRequiredService<IMarketListingService>();
+                    var staleResult = await listingService.MarkStaleListingsInactiveAsync(
+                        source.Id, _settings.MarkInactiveAfterDays, cancellationToken);
+
+                    if (staleResult.ListingsDeactivated > 0)
+                        _logger.LogInformation(
+                            "[{Source}] Stale cleanup (>{Days}d): {Count} listings inactief | {LikelySold} assets LikelySold | {IsActiveFalse} assets IsActive=false.",
+                            source.Name, _settings.MarkInactiveAfterDays,
+                            staleResult.ListingsDeactivated, staleResult.AssetsLikelySold, staleResult.AssetsIsActiveSetFalse);
+                }
+                else
+                {
+                    var staleSkipReason = !result.Success ? "Crawl niet succesvol"
+                        : result.IsPartialRun ? "Gedeeltelijke run"
+                        : !string.IsNullOrEmpty(result.MarkInactiveSkipReason) ? result.MarkInactiveSkipReason
+                        : $"MaxListingsPerRun={_settings.MaxListingsPerRun} actief";
+                    _logger.LogWarning(
+                        "[{Source}] MarkStaleListingsInactive OVERGESLAGEN — {Reason}",
+                        source.Name, staleSkipReason);
+                }
 
                 // Deduplicatie: detecteer mogelijke duplicaten onder nieuwe/bijgewerkte assets
                 try
@@ -224,6 +245,21 @@ public class CrawlerWorker : BackgroundService
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "[{Source}] Deduplicatie mislukt.", source.Name);
+                }
+
+                // Canonical projects herberekenen na deduplicatie
+                if (_settings.RebuildCanonicalProjectsAfterDedup)
+                {
+                    try
+                    {
+                        await using var canonicalScope = _scopeFactory.CreateAsyncScope();
+                        var canonicalCmd = canonicalScope.ServiceProvider.GetRequiredService<RebuildCanonicalProjectsCommand>();
+                        await canonicalCmd.ExecuteAsync(cancellationToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[{Source}] Canonical projects rebuild mislukt.", source.Name);
+                    }
                 }
             }
             else

@@ -197,7 +197,9 @@
 
         // ===== Chevron expand/collapse voor meerdere contracten =====
         const canWriteContracts = @((ViewBag.CanWriteProjectSuppliers as bool? ?? false).ToString().ToLower());
+        const canDeleteContracts = @((ViewBag.CanDeleteProjectSuppliers as bool? ?? false).ToString().ToLower());
         const editContractBaseUrl = '@Url.Action("EditContract", "Projecten")';
+        const deleteContractBaseUrl = '@Url.Action("ModalDeleteContract", "Projecten")';
         const projectIdForEdit = @Model.ProjectId;
 
         function getColWidths() {
@@ -221,6 +223,12 @@
                        </a>`
                     : '';
 
+                const deleteBtn = canDeleteContracts
+                    ? `<a href="#" class="ms-1 me-1 deleteContract" title="Contract verwijderen" data-id="${c.id}">
+                           <i class="bx bx-trash fs-5"></i>
+                       </a>`
+                    : '';
+
                 // Kolommen 0-9 in dezelfde volgorde als de thead
                 return `<tr>
                     <td style="width:${w[0]}"></td>
@@ -237,7 +245,7 @@
                     <td style="width:${w[6]};text-align:right">${c.paymentTerm}</td>
                     <td style="width:${w[7]};text-align:right">${c.cashDiscount}</td>
                     <td style="width:${w[8]};text-align:right">${c.guarantee}</td>
-                    <td style="width:${w[9]}" class="actions">${editBtn}</td>
+                    <td style="width:${w[9]}" class="actions">${editBtn}${deleteBtn}</td>
                 </tr>`;
             }).join('');
 

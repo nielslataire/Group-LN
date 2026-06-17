@@ -51,7 +51,13 @@
       "PowerShell(Remove-Item \"e:\\\\TFS\\\\CPMCore\\\\Views\\\\Projecten\\\\BudgetGevelsDak.cshtml\" -Confirm:$false)",
       "Bash(grep -E \"\\\\.cs$\")",
       "Bash(dir \"e:\\\\TFS\" /b)",
-      "Bash(dir \"e:\\\\TFS\\\\DALNEW\" /b /s)"
+      "Bash(dir \"e:\\\\TFS\\\\DALNEW\" /b /s)",
+      "Bash(powershell \"\\(Get-Item 'e:/TFS/BO/bin/Release/BO.dll'\\).LastWriteTime\")",
+      "PowerShell(dotnet build GroupLN.MarketData.Worker\\\\GroupLN.MarketData.Worker.csproj 2>&1)",
+      "PowerShell(dotnet build CPMCore\\\\CPMCore.csproj 2>&1)",
+      "PowerShell(dotnet build GroupLN.MarketData.Infrastructure.Tests\\\\GroupLN.MarketData.Infrastructure.Tests.csproj 2>&1)",
+      "PowerShell(dotnet test GroupLN.MarketData.Infrastructure.Tests\\\\GroupLN.MarketData.Infrastructure.Tests.csproj --verbosity normal 2>&1)",
+      "Bash(grep -v \"//\\\\|\\\\.Url\\\\.\")"
     ]
   }
 }

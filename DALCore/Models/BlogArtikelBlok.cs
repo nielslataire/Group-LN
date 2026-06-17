@@ -13,6 +13,8 @@ public partial class BlogArtikelBlok
 
     public int SortOrder { get; set; }
 
+    public string BlokType { get; set; } = "tekst";
+
     public string Titel { get; set; }
 
     public string RijkeTekst { get; set; }

@@ -44,6 +44,11 @@ public class MarketAssetConfiguration : IEntityTypeConfiguration<MarketAsset>
         builder.Property(x => x.UnitExternalId).HasMaxLength(50);
         builder.Property(x => x.SaleStatus).HasConversion<int?>();
 
+        // Lifecycle status
+        builder.Property(x => x.LifecycleStatus).HasConversion<int>();
+        builder.Property(x => x.LifecycleStatusReason).HasMaxLength(500);
+        builder.Property(x => x.LifecycleSource).HasMaxLength(100);
+
         builder.HasIndex(x => x.AssetKey).IsUnique().HasDatabaseName("UQ_MarketAsset_AssetKey");
         builder.HasIndex(x => x.PostalCode);
         builder.HasIndex(x => x.City);

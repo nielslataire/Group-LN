@@ -1,9 +1,13 @@
+using BOCore;
 using CPMCore.Models.Marktanalyse;
 using CPMCore.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CPMCore.Controllers;
 
+[Authorize]
+[CPMCore.Filters.PermissionRead(PermissionCodes.Marktanalyse)]
 public class MarktanalyseController : Controller
 {
     private readonly IMarktanalyseService _svc;

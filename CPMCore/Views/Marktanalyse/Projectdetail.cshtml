@@ -354,6 +354,39 @@
                 background: #16a34a;
             }
 
+        .status-likelysold {
+            background: #fff7ed;
+            color: #c2410c;
+        }
+
+            .status-likelysold::before {
+                background: #f97316;
+            }
+
+        .status-gereserveerd {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+            .status-gereserveerd::before {
+                background: #ca8a04;
+            }
+
+        .status-optie {
+            background: #fefce8;
+            color: #713f12;
+        }
+
+            .status-optie::before {
+                background: #eab308;
+            }
+
+        .kpi-card-subtitle {
+            font-size: .68rem;
+            color: #94a3b8;
+            margin-top: .2rem;
+        }
+
         /* FOOTER TOTAL */
         .totaal-row td {
             background: #e8f7ef !important;
@@ -520,6 +553,10 @@
     <div class="kpi-card">
         <div class="kpi-card-label">Verkocht</div>
         <div class="kpi-card-value">@Model.VerkochteUnits</div>
+        @if (Model.SoldConfirmedCount > 0 || Model.LikelySoldCount > 0)
+        {
+            <div class="kpi-card-subtitle">@Model.SoldConfirmedCount bevestigd + @Model.LikelySoldCount vermoedelijk</div>
+        }
     </div>
     <div class="kpi-card highlight">
         <div class="kpi-card-label"><i class="bx bx-trending-up"></i>Verkoopgraad</div>
@@ -636,10 +673,11 @@
                 {
                     var statusClass = u.Status.ToLowerInvariant() switch
                     {
-                        "verkocht"     => "status-verkocht",
-                        "gereserveerd" => "status-gereserveerd",
-                        "optie"        => "status-optie",
-                        _              => "status-beschikbaar"
+                        "verkocht"              => "status-verkocht",
+                        "gereserveerd"          => "status-gereserveerd",
+                        "optie"                 => "status-optie",
+                        "vermoedelijk verkocht" => "status-likelysold",
+                        _                       => "status-beschikbaar"
                     };
                     var typeClass = u.TypeLabel == "Woning" ? "type-house" : "type-apartment";
 

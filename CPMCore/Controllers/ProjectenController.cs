@@ -33,6 +33,7 @@ using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Webp;
 using SixLabors.ImageSharp.Processing;
 //using CPMCore.Attributes;
+using ClosedXML.Excel;
 using SmartBreadcrumbs.Attributes;
 using System;
 using System.Collections;
@@ -2248,6 +2249,91 @@ namespace CPMCore.Controllers
         }
 
         [HttpGet]
+        public IActionResult ExportInvoicesExcel(int projectid)
+        {
+            var invoices = _projectService
+                .GetProjectIncommingInvoicesForRecalculation(projectid)
+                .Values;
+
+            // Groepeer op InvoiceId → één rij per factuur, gesorteerd op datum (oud → nieuw)
+            var rows = invoices
+                .GroupBy(x => x.InvoiceId)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    var omschrijvingen = g
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Description))
+                        .Select(x => x.Description.Trim())
+                        .Distinct()
+                        .ToList();
+                    return new
+                    {
+                        Datum        = first.Invoicedate,
+                        Leverancier  = first.Company?.Display ?? "",
+                        TotaalPrijs  = g.Sum(x => x.Price),
+                        Omschrijving = omschrijvingen.Any() ? string.Join(" / ", omschrijvingen) : "",
+                        ExterneRef   = first.ExternalInvoiceId ?? "",
+                    };
+                })
+                .OrderBy(x => x.Datum)
+                .ToList();
+
+            using var wb = new XLWorkbook();
+            var ws = wb.Worksheets.Add("Inkomende facturen");
+
+            // Koptekst
+            ws.Cell(1, 1).Value = "Factuurdatum";
+            ws.Cell(1, 2).Value = "Leverancier";
+            ws.Cell(1, 3).Value = "Totaalprijs factuur";
+            ws.Cell(1, 4).Value = "Omschrijving";
+            ws.Cell(1, 5).Value = "Externe ref.";
+
+            var headerRange = ws.Range("A1:E1");
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#0d6efd");
+            headerRange.Style.Font.FontColor = XLColor.White;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
+
+            // Data
+            int rij = 2;
+            foreach (var row in rows)
+            {
+                ws.Cell(rij, 1).Value = row.Datum.ToDateTime(TimeOnly.MinValue);
+                ws.Cell(rij, 1).Style.NumberFormat.Format = "dd/MM/yyyy";
+                ws.Cell(rij, 2).Value = row.Leverancier;
+                ws.Cell(rij, 3).Value = (double)row.TotaalPrijs;
+                ws.Cell(rij, 3).Style.NumberFormat.Format = "€ #,##0.00";
+                ws.Cell(rij, 4).Value = row.Omschrijving;
+                ws.Cell(rij, 5).Value = row.ExterneRef;
+                rij++;
+            }
+
+            // Kolombreedte automatisch + minimum voor datum en bedrag
+            ws.Columns().AdjustToContents();
+            if (ws.Column(1).Width < 14) ws.Column(1).Width = 14;
+            if (ws.Column(3).Width < 20) ws.Column(3).Width = 20;
+
+            // Randen rond het datagebied
+            if (rows.Any())
+            {
+                ws.Range(1, 1, rij - 1, 5).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                ws.Range(1, 1, rij - 1, 5).Style.Border.InsideBorder  = XLBorderStyleValues.Hair;
+            }
+
+            using var ms = new MemoryStream();
+            wb.SaveAs(ms);
+
+            var projectName = _projectService.GetProjectNameById(projectid) ?? "Project";
+            var safeName    = projectName.Replace(Path.GetInvalidFileNameChars(), '_');
+            var fileName    = $"Inkomende_facturen_{safeName}_{DateTime.Now:yyyyMMdd}.xlsx";
+
+            return File(
+                ms.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+        [HttpGet]
         [Breadcrumb("Nacalculatie Detail", FromAction = "Recalculation")]
         //[Breadcrumb("Nacalculatie detail")]
         public ActionResult RecalculationDetail(int projectId, int activityId, int groupid)
@@ -2391,52 +2477,46 @@ namespace CPMCore.Controllers
         [HttpPost]
         public ActionResult AddContract(ProjectAddContractModel model, List<ContractActivityBO> activities, List<ContractAdditionalOrderBO> additionalorders)
         {
-
-            var errors = new Dictionary<string, List<string>>();
             model.SiteManagers = GetSiteManagersForCompany(model.Contract.Company.ID);
 
-            foreach (var key in ModelState.Keys)
+            if (!ModelState.IsValid)
             {
-                var state = ModelState[key];
-                if (state != null && state.Errors.Count > 0)
-                {
-                    errors[key] = state.Errors.Select(e => e.ErrorMessage).ToList();
-                }
+                var firstError = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .FirstOrDefault();
+                AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
+                return View(model);
             }
 
-            if ((!ModelState.IsValid))
-                return View(model);
-            if ((ModelState.IsValid))
-            {
-                //Referrer
-                var referrer = TempData["Referrer"] as string
-                    ?? Url.Action("DetailContracts", "Projecten", new { projectid = model.ProjectId });
-                foreach (var contractactivity in activities)
-                {
-                    if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
-                    {
-                        InsuranceBO i = new InsuranceBO();
-                        i.Startdate = DateOnly.FromDateTime(DateTime.Now);
-                        contractactivity.InsuranceData = i;
-                    }
-                    model.Contract.Activities.Add(contractactivity);
-                }
+            var referrer = TempData["Referrer"] as string
+                ?? Url.Action("DetailContracts", "Projecten", new { projectid = model.ProjectId });
 
-                var service = _projectService;
-                var response = service.InsertUpdateProjectContract(model.Contract);
-                if (response.Success)
+            foreach (var contractactivity in activities ?? Enumerable.Empty<ContractActivityBO>())
+            {
+                if (contractactivity.Activity.ID == 142 && contractactivity.ContractId == 0)
                 {
-                    AddMessage("success", "Het contract is toegevoegd aan het project " + model.ProjectName, "Geslaagd!");
-                    return Redirect(referrer);
+                    InsuranceBO i = new InsuranceBO();
+                    i.Startdate = DateOnly.FromDateTime(DateTime.Now);
+                    contractactivity.InsuranceData = i;
                 }
-                else
-                {
-                    AddMessage("error", "Het contract is NIET toegevoegd aan het project " + model.ProjectName, "Fout!");
-                    return View(model);
-                }
+                model.Contract.Activities.Add(contractactivity);
+            }
+
+            var service = _projectService;
+            var response = service.InsertUpdateProjectContract(model.Contract);
+            if (response.Success)
+            {
+                AddMessage("success", "Het contract is toegevoegd aan het project " + model.ProjectName, "Geslaagd!");
+                return Redirect(referrer);
             }
             else
+            {
+                var serviceError = response.Messages?.FirstOrDefault(m => m.Type == MessageType.Error)?.Message
+                    ?? "Het contract is NIET toegevoegd aan het project " + model.ProjectName;
+                AddMessage("error", serviceError, "Fout!");
                 return View(model);
+            }
         }
         [HttpGet]
         //[Breadcrumb("Contract bewerken")]
@@ -2581,6 +2661,7 @@ namespace CPMCore.Controllers
                 }
             }
 
+            ViewBag.CanDelete = id == 0 || !_projectService.ContractHasLinkedData(id);
             return PartialView("_ModalDeleteContract", viewModel);
         }
         [CPMCore.Filters.PermissionDelete(PermissionCodes.ProjectsSuppliers)]

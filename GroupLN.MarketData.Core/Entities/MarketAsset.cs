@@ -53,6 +53,12 @@ public class MarketAsset
     public DateTime? StatusChangedAt { get; set; }
     public bool IsActive { get; set; } = true;
 
+    public AssetLifecycleStatus LifecycleStatus { get; set; } = AssetLifecycleStatus.Unknown;
+    public DateTime? LifecycleStatusUpdatedAt { get; set; }
+    public string? LifecycleStatusReason { get; set; }
+    public string? LifecycleSource { get; set; }
+    public int LifecycleConfidence { get; set; } = 0;
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

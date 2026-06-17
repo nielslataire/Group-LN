@@ -2,6 +2,7 @@ Public Class BlogArtikelBO
 
     Public Sub New()
         Blokken = New List(Of BlogArtikelBlokBO)
+        FaqItems = New List(Of BlogArtikelFaqBO)
     End Sub
 
     Public Property ID As Integer
@@ -16,6 +17,13 @@ Public Class BlogArtikelBO
     Public Property SortOrder As Integer
     Public Property AangemaaktOp As DateTime
     Public Property GewijzigdOp As DateTime
+    Public Property MetaTitel As String
+    Public Property MetaOmschrijving As String
+    Public Property MetaKeywords As String
+    Public Property GeoRegio As String
+    Public Property GeoPlaatsnaam As String
+    Public Property GeoPositie As String
     Public Property Blokken As List(Of BlogArtikelBlokBO)
+    Public Property FaqItems As List(Of BlogArtikelFaqBO)
 
 End Class

@@ -48,6 +48,7 @@ namespace ServiceCore
             var entity = _uow.BlogArtikelen
                 .GetNoTracking()
                 .Include(a => a.Blokken)
+                .Include(a => a.FaqItems)
                 .SingleOrDefault(a => a.Id == id);
 
             if (entity == null)
@@ -118,10 +119,16 @@ namespace ServiceCore
             entity.DetailTitel       = bo.DetailTitel;
             entity.DetailTitelTekst  = bo.DetailTitelTekst;
             entity.FotoBestand       = bo.FotoBestand;
-            entity.Datum           = bo.Datum == default ? DateTime.Now : bo.Datum;
-            entity.IsGepubliceerd  = bo.IsGepubliceerd;
-            entity.SortOrder       = bo.SortOrder;
-            entity.GewijzigdOp     = DateTime.Now;
+            entity.Datum             = bo.Datum == default ? DateTime.Now : bo.Datum;
+            entity.IsGepubliceerd    = bo.IsGepubliceerd;
+            entity.SortOrder         = bo.SortOrder;
+            entity.MetaTitel         = bo.MetaTitel;
+            entity.MetaOmschrijving  = bo.MetaOmschrijving;
+            entity.MetaKeywords      = bo.MetaKeywords;
+            entity.GeoRegio          = bo.GeoRegio;
+            entity.GeoPlaatsnaam     = bo.GeoPlaatsnaam;
+            entity.GeoPositie        = bo.GeoPositie;
+            entity.GewijzigdOp       = DateTime.Now;
 
             var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
             response.AddSaveChangesResult(result, "Artikel opgeslagen.", "Artikel niet opgeslagen.");
@@ -158,6 +165,7 @@ namespace ServiceCore
 
             entity.ArtikelId  = bo.ArtikelId;
             entity.SortOrder  = bo.SortOrder;
+            entity.BlokType   = string.IsNullOrWhiteSpace(bo.BlokType) ? "tekst" : bo.BlokType;
             entity.Titel      = bo.Titel;
             entity.RijkeTekst = bo.RijkeTekst;
             entity.FotoBestand = bo.FotoBestand;
@@ -168,6 +176,82 @@ namespace ServiceCore
             if (response.Success)
                 response.InsertedId = entity.Id;
 
+            return response;
+        }
+
+        public Response InsertUpdateFaq(BlogArtikelFaqBO bo)
+        {
+            var response = new Response();
+
+            if (bo?.ArtikelId <= 0)
+            {
+                response.AddError("ArtikelId is verplicht.");
+                return response;
+            }
+
+            if (string.IsNullOrWhiteSpace(bo.Vraag))
+            {
+                response.AddError("Vraag is verplicht.");
+                return response;
+            }
+
+            BlogArtikelFaq entity;
+
+            if (bo.ID == 0)
+                entity = _uow.BlogArtikelFaqItems.GetNew();
+            else
+            {
+                entity = _uow.BlogArtikelFaqItems.GetById(bo.ID);
+                if (entity == null)
+                {
+                    response.AddError("FAQ-item niet gevonden.");
+                    return response;
+                }
+            }
+
+            entity.ArtikelId = bo.ArtikelId;
+            entity.SortOrder = bo.SortOrder;
+            entity.Vraag     = bo.Vraag;
+            entity.Antwoord  = bo.Antwoord;
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "FAQ opgeslagen.", "FAQ niet opgeslagen.");
+
+            if (response.Success)
+                response.InsertedId = entity.Id;
+
+            return response;
+        }
+
+        public Response UpdateFaqVolgorde(int artikelId, List<int> sortedIds)
+        {
+            var response = new Response();
+
+            for (int i = 0; i < sortedIds.Count; i++)
+            {
+                var entity = _uow.BlogArtikelFaqItems.GetById(sortedIds[i]);
+                if (entity == null || entity.ArtikelId != artikelId) continue;
+                entity.SortOrder = i * 10;
+            }
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "Volgorde opgeslagen.", "Volgorde niet opgeslagen.");
+            return response;
+        }
+
+        public Response UpdateBlokkenVolgorde(int artikelId, List<int> sortedIds)
+        {
+            var response = new Response();
+
+            for (int i = 0; i < sortedIds.Count; i++)
+            {
+                var entity = _uow.BlogArtikelBlokken.GetById(sortedIds[i]);
+                if (entity == null || entity.ArtikelId != artikelId) continue;
+                entity.SortOrder = i * 10;
+            }
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "Volgorde opgeslagen.", "Volgorde niet opgeslagen.");
             return response;
         }
 
@@ -195,6 +279,18 @@ namespace ServiceCore
             return response;
         }
 
+        public Response DeleteFaq(int id)
+        {
+            var response = new Response();
+
+            _uow.BlogArtikelFaqItems.DeleteObject(id);
+
+            var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
+            response.AddSaveChangesResult(result, "FAQ-item verwijderd.", "FAQ-item niet verwijderd.");
+
+            return response;
+        }
+
         // ── private helpers ──────────────────────────────────────────────
 
         private static BlogArtikelBO MapToBO(BlogArtikel e, bool inclBlokken)
@@ -208,11 +304,17 @@ namespace ServiceCore
                 DetailTitel      = e.DetailTitel,
                 DetailTitelTekst = e.DetailTitelTekst,
                 FotoBestand      = e.FotoBestand,
-                Datum          = e.Datum,
-                IsGepubliceerd = e.IsGepubliceerd,
-                SortOrder      = e.SortOrder,
-                AangemaaktOp   = e.AangemaaktOp,
-                GewijzigdOp    = e.GewijzigdOp
+                Datum            = e.Datum,
+                IsGepubliceerd   = e.IsGepubliceerd,
+                SortOrder        = e.SortOrder,
+                AangemaaktOp     = e.AangemaaktOp,
+                GewijzigdOp      = e.GewijzigdOp,
+                MetaTitel        = e.MetaTitel,
+                MetaOmschrijving = e.MetaOmschrijving,
+                MetaKeywords     = e.MetaKeywords,
+                GeoRegio         = e.GeoRegio,
+                GeoPlaatsnaam    = e.GeoPlaatsnaam,
+                GeoPositie       = e.GeoPositie
             };
 
             if (inclBlokken && e.Blokken != null)
@@ -224,9 +326,25 @@ namespace ServiceCore
                         ID          = blok.Id,
                         ArtikelId   = blok.ArtikelId,
                         SortOrder   = blok.SortOrder,
+                        BlokType    = blok.BlokType ?? "tekst",
                         Titel       = blok.Titel,
                         RijkeTekst  = blok.RijkeTekst,
                         FotoBestand = blok.FotoBestand
+                    });
+                }
+            }
+
+            if (inclBlokken && e.FaqItems != null)
+            {
+                foreach (var faq in e.FaqItems.OrderBy(f => f.SortOrder))
+                {
+                    bo.FaqItems.Add(new BlogArtikelFaqBO
+                    {
+                        ID        = faq.Id,
+                        ArtikelId = faq.ArtikelId,
+                        SortOrder = faq.SortOrder,
+                        Vraag     = faq.Vraag,
+                        Antwoord  = faq.Antwoord
                     });
                 }
             }

@@ -51,6 +51,9 @@ public class PermissionResolver : IPermissionResolver
         }
 
         if (string.Equals(controller, "IssueNotificationAdmin", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsIssueNotifications;
+        if (string.Equals(controller, "Marktanalyse", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.Marktanalyse;
+        if (string.Equals(controller, "DocumentenCentrum", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.DocumentCenter;
+        if (string.Equals(controller, "BlogBeheer", StringComparison.OrdinalIgnoreCase)) return PermissionCodes.SettingsBlogBeheer;
 
         return PermissionCodes.Dashboard;
     }

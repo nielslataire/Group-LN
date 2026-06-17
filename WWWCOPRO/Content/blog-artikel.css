@@ -1,0 +1,644 @@
+/* ==============================================
+   Blog artikel detail — blog-artikel.css
+   ============================================== */
+
+/* --- Header --- */
+.artikel-header {
+    background: var(--mist);
+    padding: 36px 0 32px;
+    border-bottom: 1px solid var(--border);
+}
+
+.artikel-header .breadcrumb {
+    background: transparent;
+    padding: 0;
+    margin: 0 0 18px;
+    font-size: 12px;
+    color: var(--tekst-sub);
+}
+
+.artikel-titel {
+    font-family: var(--font-serif);
+    font-size: 40px;
+    font-weight: 400;
+    color: var(--tekst);
+    line-height: 1.18;
+    margin: 0 0 14px;
+    max-width: 820px;
+}
+
+.artikel-meta {
+    font-size: 13px;
+    color: var(--tekst-sub);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.artikel-meta-sep {
+    color: var(--border);
+}
+
+/* --- Container --- */
+.artikel-container {
+    padding-top: 36px;
+    padding-bottom: 72px;
+}
+
+/* --- Hero foto --- */
+.artikel-hero-foto {
+    margin-bottom: 40px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--mist);
+    max-height: 520px;
+    display: flex;
+}
+
+.artikel-hero-foto img {
+    width: 100%;
+    max-height: 520px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+}
+
+/* --- Body: twee kolommen --- */
+.artikel-body {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 48px;
+    align-items: start;
+}
+
+/* --- Artikel inhoud (links) --- */
+.artikel-inhoud {
+    min-width: 0;
+}
+
+.artikel-intro {
+    font-family: var(--font-serif);
+    font-size: 21px;
+    font-weight: 400;
+    color: #36423a;
+    line-height: 1.55;
+    margin-bottom: 34px;
+}
+
+/* --- Blok --- */
+.artikel-blok {
+    margin-bottom: 40px;
+}
+
+.artikel-blok-titel {
+    font-family: var(--font-serif);
+    font-size: 27px;
+    font-weight: 500;
+    color: var(--tekst);
+    line-height: 1.25;
+    margin: 0 0 6px;
+    padding-bottom: 0;
+}
+
+.artikel-blok-lijn {
+    width: 48px;
+    height: 2px;
+    background: var(--color-primary);
+    margin-bottom: 18px;
+    border: none;
+}
+
+/* Blok met foto: split layout */
+.artikel-blok-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    align-items: stretch;
+}
+
+.artikel-blok-split-foto {
+    border-radius: 2px;
+    overflow: hidden;
+    background: var(--mist);
+    max-height: 480px;
+}
+
+.artikel-blok-split-foto img {
+    width: 100%;
+    height: 100%;
+    max-height: 480px;
+    display: block;
+    object-fit: cover;
+    object-position: center;
+}
+
+.artikel-blok-split-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.artikel-blok-split-titel {
+    font-family: var(--font-serif);
+    font-size: 25px;
+    font-weight: 500;
+    color: var(--tekst);
+    line-height: 1.3;
+    margin: 0 0 12px;
+}
+
+/* Rich text (Quill output) */
+.artikel-blok-tekst p { margin-bottom: 18px; line-height: 1.85; font-size: 15px; color: var(--tekst); }
+.artikel-blok-tekst p:last-child { margin-bottom: 0; }
+.artikel-blok-tekst h1, .artikel-blok-tekst h2, .artikel-blok-tekst h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    color: var(--tekst);
+    margin: 24px 0 10px;
+}
+.artikel-blok-tekst ul, .artikel-blok-tekst ol {
+    padding-left: 22px;
+    margin-bottom: 14px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--tekst);
+}
+.artikel-blok-tekst li { margin-bottom: 6px; }
+.artikel-blok-tekst blockquote {
+    border-left: 3px solid var(--color-primary);
+    padding-left: 18px;
+    color: var(--tekst-sub);
+    font-style: italic;
+    margin: 20px 0;
+    font-size: 16px;
+    line-height: 1.7;
+}
+.artikel-blok-tekst a { color: var(--color-primary); text-decoration: underline; }
+.artikel-blok-tekst a:hover { color: var(--color-primary-hover); }
+.artikel-blok-tekst strong { font-weight: 600; }
+
+/* Quill bullet list (data-list="bullet") → gedraaide vierkantjes */
+.artikel-blok-tekst ol {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 14px;
+}
+
+.artikel-blok-tekst ol li[data-list="bullet"] {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--tekst);
+    list-style: none;
+    padding-left: 0;
+}
+
+.artikel-blok-tekst ol li[data-list="bullet"]::before {
+    content: '';
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    min-width: 7px;
+    background: var(--color-primary);
+    transform: rotate(45deg);
+    margin-top: 7px;
+    flex-shrink: 0;
+}
+
+/* --- Pullquote --- */
+.artikel-pullquote {
+    font-family: var(--font-serif);
+    font-size: 28px !important;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.85 !important;
+    color: var(--color-primary) !important;
+    padding: 8px 0 8px 26px;
+    border-left: 3px solid #cdb885;
+    margin: 34px 0;
+}
+
+    .artikel-pullquote p {
+        margin: 0;
+        color: var(--color-primary) !important;
+        line-height: 1.45 !important;
+        font-size: 25px !important;
+    }
+
+/* --- Callout (tip) --- */
+.artikel-callout {
+    background:  #ECF4E8;
+    border-left: 3px solid var(--green-700, #00532D);
+    padding: 26px 30px;
+    margin: 36px 0;
+}
+
+
+    .artikel-callout h4 {
+        font-family: var(--font-sans) !important;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 1.6px;
+        text-transform: uppercase;
+        color: var(--green-700, #00532D);
+        margin-bottom: 14px;
+    }
+    .artikel-callout ul{
+        margin-bottom: 0px;
+    }
+
+/* --- Footer (terug + delen) --- */
+.artikel-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 48px;
+    padding-top: 22px;
+    border-top: 1px solid var(--border);
+}
+
+.artikel-terug {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--tekst-sub);
+    text-decoration: underline;
+    flex-shrink: 0;
+}
+
+.artikel-terug:hover { color: var(--color-primary); text-decoration: underline; }
+
+.artikel-delen {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.artikel-delen-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tekst-sub);
+    margin-right: 4px;
+}
+
+.artikel-deel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--tekst-sub);
+    text-decoration: none;
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.artikel-deel-btn:hover {
+    background: var(--color-primary);
+    color: #fff;
+    border-color: var(--color-primary);
+    text-decoration: none;
+}
+
+.artikel-deel-btn.gekopieerd {
+    background: #2d7a4f;
+    color: #fff;
+    border-color: #2d7a4f;
+}
+
+/* --- Sidebar (rechts) --- */
+.artikel-sidebar {
+    position: sticky;
+    top: 24px;
+}
+
+.artikel-contact-blok {
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.artikel-contact-header {
+    background: var(--color-primary);
+    padding: 28px 26px 22px;
+}
+
+.artikel-contact-titel {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 400;
+    color: #fff;
+    line-height: 1.18;
+    margin: 0 0 10px;
+}
+
+.artikel-contact-sub {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.55;
+    margin: 0;
+}
+
+.artikel-contact-form {
+    padding: 22px 22px 18px;
+    background: #fff;
+    position: relative;
+}
+
+.artikel-contact-veld {
+    margin-bottom: 12px;
+}
+
+.artikel-contact-veld label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tekst-sub);
+    margin-bottom: 4px;
+}
+
+.artikel-contact-veld label .req { color: var(--color-primary); }
+
+.artikel-contact-veld input,
+.artikel-contact-veld textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 9px 11px;
+    font-size: 14px;
+    color: var(--tekst);
+    background: #fafafa;
+    transition: border-color 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+    line-height: 1.4;
+}
+
+.artikel-contact-veld input:focus,
+.artikel-contact-veld textarea:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: #fff;
+}
+
+.artikel-contact-veld textarea {
+    resize: vertical;
+    min-height: 86px;
+}
+
+.artikel-contact-check {
+    margin: 10px 0 14px;
+    font-size: 13px;
+    color: var(--tekst-sub);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.45;
+}
+
+.artikel-contact-check input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+
+.artikel-contact-btn {
+    display: block;
+    width: 100%;
+    background: var(--color-primary);
+    color: #fff;
+    border: none;
+    padding: 13px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s;
+    margin-bottom: 0;
+    font-family: inherit;
+}
+
+.artikel-contact-btn:hover { background: var(--color-primary-hover); }
+
+.artikel-contact-spinner { text-align: center; padding: 10px 0; color: var(--tekst-sub); font-size: 14px; }
+.artikel-contact-spinner.hidden,
+.artikel-contact-btn.hidden { display: none; }
+
+.artikel-contact-succes {
+    padding: 28px 22px;
+    text-align: center;
+    color: var(--tekst);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.artikel-contact-succes-icon {
+    font-size: 32px;
+    color: var(--color-primary);
+    margin-bottom: 12px;
+}
+
+/* Direct contact sectie */
+.artikel-contact-direct {
+    background: #fff;
+    padding: 14px 22px 18px;
+    border-top: 1px solid var(--border);
+}
+
+.artikel-contact-direct-titel {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--tekst-sub);
+    margin-bottom: 12px;
+}
+
+.artikel-contact-direct-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    text-decoration: none;
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+}
+
+.artikel-contact-direct-item:last-child { border-bottom: none; padding-bottom: 0; }
+.artikel-contact-direct-item:hover { color: var(--color-primary); text-decoration: none; }
+
+.artikel-contact-direct-icon {
+    width: 38px;
+    height: 38px;
+    background: var(--mist);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--color-primary);
+}
+
+.artikel-contact-direct-item strong {
+    display: block;
+    font-size: 13px;
+    color: var(--tekst);
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.artikel-contact-direct-item small {
+    font-size: 11px;
+    color: var(--tekst-sub);
+}
+
+/* --- FAQ accordion --- */
+.artikel-faq {
+    margin-top: 52px;
+    margin-bottom: 0;
+}
+
+.artikel-faq-titel {
+    font-family: var(--font-serif);
+    font-size: 27px;
+    font-weight: 400;
+    color: var(--tekst);
+    line-height: 1.25;
+    margin: 0 0 6px;
+}
+
+.artikel-faq-lijst {
+    margin: 0 ;
+    padding: 0 ;
+}
+
+.artikel-faq-item {
+    border-top: 1px solid var(--border);
+
+}
+
+.artikel-faq-item:first-child {
+    border-top: 1px solid var(--border);
+}
+
+.artikel-faq-vraag {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 15px 4px 0px 4px ;
+    cursor: pointer;
+    user-select: none;
+    margin: 0 ;
+}
+
+    .artikel-faq-vraag span {
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--tekst);
+        line-height: 1.45;
+        transition: color 0.18s;
+
+    }
+
+.artikel-faq-item.is-open .artikel-faq-vraag span {
+    color: var(--color-primary);
+}
+
+.artikel-faq-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 25px;
+    height: 25px;
+    min-width: 25px;
+    border-radius: 50% !important;
+    border: 1.5px solid var(--color-primary);
+    background: transparent;
+    color: var(--color-primary);
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.18s, color 0.18s;
+    pointer-events: none;
+}
+
+.artikel-faq-item.is-open .artikel-faq-btn {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.faq-icoon-plus { display: block; }
+.faq-icoon-min  { display: none;  }
+
+.artikel-faq-item.is-open .faq-icoon-plus { display: none;  }
+.artikel-faq-item.is-open .faq-icoon-min  { display: block; }
+
+.artikel-faq-antwoord {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0px 4px 0px 4px;
+    transition: max-height 0.3s ease;
+}
+
+.artikel-faq-item.is-open .artikel-faq-antwoord {
+    /* max-height wordt via JS gezet */
+}
+
+.artikel-faq-antwoord-inner {
+    padding-top: 20px;
+    padding-bottom: 10px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--tekst-sub);
+    white-space: pre-wrap;
+}
+
+/* --- Responsive --- */
+@media (max-width: 1100px) {
+    .artikel-body {
+        grid-template-columns: 1fr 320px;
+        gap: 36px;
+    }
+}
+
+@media (max-width: 991px) {
+    .artikel-body {
+        grid-template-columns: 1fr;
+    }
+
+    .artikel-sidebar {
+        position: static;
+    }
+
+    .artikel-titel {
+        font-size: 32px;
+    }
+}
+
+@media (max-width: 767px) {
+    .artikel-titel {
+        font-size: 26px;
+    }
+
+    .artikel-blok-split {
+        grid-template-columns: 1fr;
+    }
+
+    .artikel-hero-foto {
+        max-height: 260px;
+    }
+}

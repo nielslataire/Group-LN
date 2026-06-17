@@ -2163,10 +2163,26 @@ namespace ServiceCore
             return response;
         }
 
+        public bool ContractHasLinkedData(int contractId)
+        {
+            return _uow.Contracts.GetNoTracking()
+                .Where(c => c.Id == contractId)
+                .Any(c => c.IncommingInvoices.Any() ||
+                          c.ContractActivity.Any(ca => ca.ChangeOrder.Any() || ca.IncommingInvoiceDetail.Any()));
+        }
+
         public Response DeleteContracts(List<int> ids)
         {
             var response = new Response();
-            foreach (var id in ids) _uow.Contracts.DeleteObject(id);
+            foreach (var id in ids)
+            {
+                if (ContractHasLinkedData(id))
+                {
+                    response.AddError("Het contract heeft gekoppelde facturen of wijzigingsopdrachten en kan niet worden verwijderd.");
+                    return response;
+                }
+                _uow.Contracts.DeleteObject(id);
+            }
             var saved = _uow.SaveChanges();
             response.AddSaveChangesResult(saved, "Record(s) verwijderd", "Geen records verwijderd");
             return response;

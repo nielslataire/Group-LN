@@ -18,10 +18,138 @@ namespace GroupLN.MarketData.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.10")
+                .HasAnnotation("ProductVersion", "9.0.2")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CanonicalProject", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("CanonicalName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeveloperName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("GeoMunicipalSectionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("GeoMunicipalityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HouseNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("Latitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<decimal?>("Longitude")
+                        .HasPrecision(9, 6)
+                        .HasColumnType("decimal(9,6)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Street")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GeoMunicipalSectionId")
+                        .HasDatabaseName("IX_CanonicalProject_GeoMunicipalSectionId");
+
+                    b.HasIndex("GeoMunicipalityId")
+                        .HasDatabaseName("IX_CanonicalProject_GeoMunicipalityId");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("NormalizedName")
+                        .HasDatabaseName("IX_CanonicalProject_NormalizedName");
+
+                    b.ToTable("CanonicalProject", (string)null);
+                });
+
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CanonicalProjectAsset", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CanonicalProjectId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("MarketAssetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MatchLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("MatchReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("MatchScore")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CanonicalProjectId")
+                        .HasDatabaseName("IX_CanonicalProjectAsset_CanonicalProjectId");
+
+                    b.HasIndex("IsPrimary")
+                        .HasDatabaseName("IX_CanonicalProjectAsset_IsPrimary");
+
+                    b.HasIndex("MarketAssetId")
+                        .HasDatabaseName("IX_CanonicalProjectAsset_MarketAssetId");
+
+                    b.HasIndex("CanonicalProjectId", "MarketAssetId")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_CanonicalProjectAsset_Project_Asset");
+
+                    b.ToTable("CanonicalProjectAsset", (string)null);
+                });
 
             modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CrawlerRun", b =>
                 {
@@ -473,6 +601,23 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.Property<decimal?>("Latitude")
                         .HasPrecision(9, 6)
                         .HasColumnType("decimal(9,6)");
+
+                    b.Property<int>("LifecycleConfidence")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LifecycleSource")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("LifecycleStatus")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LifecycleStatusReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("LifecycleStatusUpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal?>("LivingArea")
                         .HasPrecision(10, 2)
@@ -1011,6 +1156,42 @@ namespace GroupLN.MarketData.Persistence.Migrations
                     b.ToTable("ProjectGroupSnapshot", (string)null);
                 });
 
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CanonicalProject", b =>
+                {
+                    b.HasOne("GroupLN.MarketData.Core.Entities.GeoMunicipalSection", "GeoMunicipalSection")
+                        .WithMany()
+                        .HasForeignKey("GeoMunicipalSectionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("GroupLN.MarketData.Core.Entities.GeoMunicipality", "GeoMunicipality")
+                        .WithMany()
+                        .HasForeignKey("GeoMunicipalityId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("GeoMunicipalSection");
+
+                    b.Navigation("GeoMunicipality");
+                });
+
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CanonicalProjectAsset", b =>
+                {
+                    b.HasOne("GroupLN.MarketData.Core.Entities.CanonicalProject", "CanonicalProject")
+                        .WithMany("Assets")
+                        .HasForeignKey("CanonicalProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GroupLN.MarketData.Core.Entities.MarketAsset", "MarketAsset")
+                        .WithMany()
+                        .HasForeignKey("MarketAssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CanonicalProject");
+
+                    b.Navigation("MarketAsset");
+                });
+
             modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CrawlerRun", b =>
                 {
                     b.HasOne("GroupLN.MarketData.Core.Entities.CrawlerSource", "Source")
@@ -1118,6 +1299,11 @@ namespace GroupLN.MarketData.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Asset");
+                });
+
+            modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CanonicalProject", b =>
+                {
+                    b.Navigation("Assets");
                 });
 
             modelBuilder.Entity("GroupLN.MarketData.Core.Entities.CrawlerSource", b =>

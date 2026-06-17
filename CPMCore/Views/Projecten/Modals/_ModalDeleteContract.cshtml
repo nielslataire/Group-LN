@@ -1,23 +1,46 @@
-﻿@model BOCore.ContractBO
+@model BOCore.ContractBO
+@{
+    var canDelete = ViewBag.CanDelete as bool? ?? true;
+}
 <section class="card">
 	<header class="card-header">
-		<h2 class="card-title">Contract verwijderen?</h2>
+		<h2 class="card-title">Contract verwijderen</h2>
 	</header>
 	<div class="card-body">
 		<div class="modal-wrapper">
 			<div class="modal-icon">
-				<i class="fas fa-question-circle"></i>
+				@if (canDelete)
+				{
+					<i class="fas fa-question-circle text-warning"></i>
+				}
+				else
+				{
+					<i class="fas fa-ban text-danger"></i>
+				}
 			</div>
 			<div class="modal-text">
-				<p>U staat op het punt om het contract en de leverancier @ViewBag.CompanyName van het project te verwijderen. Bent u zeker dat u deze wilt verwijderen?</p>
+				@if (canDelete)
+				{
+					<p>U staat op het punt om het contract van leverancier <strong>@ViewBag.CompanyName</strong> te verwijderen. Bent u zeker?</p>
+				}
+				else
+				{
+					<p>Het contract van <strong>@ViewBag.CompanyName</strong> kan niet worden verwijderd.</p>
+					<p class="text-muted small">Er zijn facturen of wijzigingsopdrachten aan dit contract gekoppeld. Verwijder eerst deze gegevens voordat u het contract verwijdert.</p>
+				}
 			</div>
 		</div>
 	</div>
 	<footer class="card-footer">
 		<div class="row">
 			<div class="col-md-12 text-end">
-				<a href="@Url.Action("DeleteContract", "Projecten", new {id = Model.Id, projectid = Model.ProjectId})" class="btn btn-warning">Verwijderen</a>
-				<button class="btn btn-default modal-dismiss">Annuleren</button>
+				@if (canDelete)
+				{
+					<a href="@Url.Action("DeleteContract", "Projecten", new { id = Model.Id, projectid = Model.ProjectId })" class="btn btn-danger">
+						<i class="bx bx-trash me-1"></i>Verwijderen
+					</a>
+				}
+				<button class="btn btn-default modal-dismiss">@(canDelete ? "Annuleren" : "Sluiten")</button>
 			</div>
 		</div>
 	</footer>

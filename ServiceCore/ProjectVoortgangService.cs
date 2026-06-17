@@ -103,15 +103,17 @@ namespace ServiceCore
             return response;
         }
 
-        public void CalculateAllProjects()
+        public List<int> GetActiveProjectIds()
         {
-            // Alle projecten die niet opgeleverd zijn (StatusId != 1)
-            var projectIds = _uow.Projects.GetNoTracking()
+            return _uow.Projects.GetNoTracking()
                 .Where(p => p.StatusId != (int)ProjectStatusType.Opgeleverd)
                 .Select(p => p.ProjectId)
                 .ToList();
+        }
 
-            foreach (var id in projectIds)
+        public void CalculateAllProjects()
+        {
+            foreach (var id in GetActiveProjectIds())
             {
                 try
                 {

@@ -142,6 +142,7 @@ namespace FacadeCore
         GetResponse<IdNameBO> GetProjectContractActivitiesForSelect(int projectid);
         Response InsertUpdateProjectContract(ContractBO Contract);
         Response DeleteContracts(List<int> ids);
+        bool ContractHasLinkedData(int contractId);
         GetResponse<IdNameBO> GetContractChangeOrdersForSelect(int contractid);
         GetResponse<ContractBO> GetProjectContractsWithoutInvoices(int projectid, int activityid = 0);
         decimal GetContractActivityPrice(int contractid);

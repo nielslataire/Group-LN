@@ -16,13 +16,12 @@
 	await PermissionService.EnsureLoadedAsync();
 	var canSeeKlanten = PermissionService.HasRead(PermissionCodes.Customers);
 	var canSeeLeveranciers = PermissionService.HasRead(PermissionCodes.Suppliers);
-	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.InvoicingByBillingCompany);
+	var canSeeBoekhouding = PermissionService.HasRead(PermissionCodes.Invoicing);
 	var canSeeDocumentenCentrum = PermissionService.HasRead(PermissionCodes.DocumentCenter) ||
 	                              PermissionService.HasRead(PermissionCodes.DocumentCenterByBillingCompany);
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
-	var canSeeAdmin = PermissionService.HasRead(PermissionCodes.SettingsUsers);
-	var canSeeActivities = PermissionService.HasRead(PermissionCodes.SettingsActivities);
-	var canSeeIssueNotifications = PermissionService.HasRead(PermissionCodes.SettingsIssueNotifications);
+	var canSeeInstellingen = PermissionService.HasRead(PermissionCodes.Settings);
+	var canSeeMarktanalyse = PermissionService.HasRead(PermissionCodes.Marktanalyse);
 	var customerIssuerCompanyIds = new HashSet<int>();
 	var supplierIssuerCompanyIds = new HashSet<int>();
 	var invoicingIssuerCompanyIds = new HashSet<int>();
@@ -90,8 +89,7 @@
 	var customersSubmenuClass = customerIssuerCompanies.Count + 1 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var invoicesSubmenuClass = invoicingIssuerCompanies.Count > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 	var projectSubmenuClass = 3 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
-	var settingsCount = (canSeeAdmin ? 6 : 0) + (canSeeActivities ? 1 : 0) + (canSeeIssueNotifications ? 1 : 0);
-	var settingsSubmenuClass = settingsCount > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
+	var settingsSubmenuClass = "nav nav-children flyout-menu";
 	var linksSubmenuClass = 4 > 10 ? "nav nav-children flyout-menu submenu-two-columns" : "nav nav-children flyout-menu";
 }
 
@@ -197,15 +195,17 @@
 							</a>
 						</li>
 					}
-					@if (canSeeAdmin || canSeeActivities || canSeeIssueNotifications)
+					@if (canSeeInstellingen)
 				{
-					<li class="@(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" ? "nav-active" : string.Empty)">
+					<li class="@(currentController == "Instellingen" || currentController == "IssueNotificationAdmin" || currentController == "BlogBeheer" ? "nav-active" : string.Empty)">
 						<a class="main-nav-tile" href="@Url.Action("Index", "Instellingen")">
 							<i class="bx bx-cog" aria-hidden="true"></i>
 							<span class="main-nav-label">Instellingen</span>
 						</a>
 					</li>
 				}
+				@if (canSeeMarktanalyse)
+				{
 					<li class="nav-parent @(currentController == "Marktanalyse" ? "nav-active" : string.Empty)">
 						<a class="main-nav-tile" href="#">
 							<i class="bx bx-analyze" aria-hidden="true"></i>
@@ -217,6 +217,7 @@
 							<li>@Html.ActionLink("Projectdetail", "Projectdetail", "Marktanalyse")</li>
 						</ul>
 					</li>
+				}
 					<li class="nav-parent">
 						<a class="main-nav-tile" href="#">
 							<i class="bx bx-link-alt" aria-hidden="true"></i>

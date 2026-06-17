@@ -51,7 +51,7 @@ End Code
     </noscript>
     <!-- End Google Tag Manager (noscript) -->
     <div class="body">
-        <header id="header" class="header-no-border-bottom" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": 148, "stickySetTop": "-148px", "stickyChangeLogo": false}'>
+        <header id="header" class="header-no-border-bottom" data-plugin-options='{"stickyEnabled": true, "stickyEnableOnBoxed": true, "stickyEnableOnMobile": true, "stickyStartAt": 175, "stickySetTop": "-175px", "stickyChangeLogo": false}'>
             <div class="header-body">
                 <!--
                 <div class="header-top header-top-style-2">

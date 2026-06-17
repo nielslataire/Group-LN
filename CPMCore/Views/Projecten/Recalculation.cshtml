@@ -52,6 +52,9 @@
                         <a class="btn btn-default btn-md px-3" href="@Url.Action("PrintRecalculation", "Projecten", new { projectid = Model.ProjectId })">
                           <i class="fas fa-file-pdf me-2"></i>Afdrukken
                         </a>
+                        <a class="btn btn-default btn-md px-3" href="@Url.Action("ExportInvoicesExcel", "Projecten", new { projectid = Model.ProjectId })">
+                          <i class="fas fa-file-excel me-2"></i>Facturen exporteren
+                        </a>
                         @if (canWriteProjectCalculation)
                         {
                             <div class="btn-group flex-wrap">

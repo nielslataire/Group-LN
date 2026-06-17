@@ -22,6 +22,9 @@ public class MarketDataDbContext : DbContext
     public DbSet<GeoMunicipality> GeoMunicipalities => Set<GeoMunicipality>();
     public DbSet<GeoMunicipalSection> GeoMunicipalSections => Set<GeoMunicipalSection>();
 
+    public DbSet<CanonicalProject> CanonicalProjects => Set<CanonicalProject>();
+    public DbSet<CanonicalProjectAsset> CanonicalProjectAssets => Set<CanonicalProjectAsset>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MarketDataDbContext).Assembly);

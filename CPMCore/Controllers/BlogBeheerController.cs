@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 namespace CPMCore.Controllers;
 
 [Authorize]
-[CPMCore.Filters.PermissionRead(PermissionCodes.Settings)]
+[CPMCore.Filters.PermissionRead(PermissionCodes.SettingsBlogBeheer)]
 public class BlogBeheerController : BaseController
 {
     private readonly IBlogArtikelService _blogService;
@@ -61,6 +61,15 @@ public class BlogBeheerController : BaseController
             return RedirectToAction(nameof(Index));
         }
 
+        var previewBase  = _configuration["Preview:BaseUrl"]?.TrimEnd('/');
+        var previewToken = _configuration["Preview:Token"];
+        if (!string.IsNullOrEmpty(previewBase) && !string.IsNullOrEmpty(previewToken))
+        {
+            var slug = result.Value?.Slug;
+            if (!string.IsNullOrEmpty(slug))
+                ViewBag.PreviewUrl = $"{previewBase}/Blog/{slug}?prev={previewToken}";
+        }
+
         return View(MapBoToVm(result.Value));
     }
 
@@ -95,7 +104,13 @@ public class BlogBeheerController : BaseController
             FotoBestand      = fotoBestand,
             Datum            = vm.Datum,
             IsGepubliceerd   = vm.IsGepubliceerd,
-            SortOrder        = vm.SortOrder
+            SortOrder        = vm.SortOrder,
+            MetaTitel        = vm.MetaTitel,
+            MetaOmschrijving = vm.MetaOmschrijving,
+            MetaKeywords     = vm.MetaKeywords,
+            GeoRegio         = vm.GeoRegio,
+            GeoPlaatsnaam    = vm.GeoPlaatsnaam,
+            GeoPositie       = vm.GeoPositie
         };
 
         var response = _blogService.InsertUpdate(bo);
@@ -164,6 +179,7 @@ public class BlogBeheerController : BaseController
             ID          = vm.ID,
             ArtikelId   = vm.ArtikelId,
             SortOrder   = vm.SortOrder,
+            BlokType    = vm.BlokType,
             Titel       = vm.Titel,
             RijkeTekst  = vm.RijkeTekst,
             FotoBestand = fotoBestand
@@ -177,6 +193,73 @@ public class BlogBeheerController : BaseController
             AddMessage("success", "Blok opgeslagen.", "Opgeslagen");
 
         return RedirectToAction(nameof(Bewerken), new { id = vm.ArtikelId });
+    }
+
+    // ── BLOK VOLGORDE ────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult BlokVolgorde([FromForm] BlokVolgordeVM vm)
+    {
+        if (vm.ArtikelId <= 0 || vm.SortedIds == null || !vm.SortedIds.Any())
+            return Json(new { success = false });
+
+        var response = _blogService.UpdateBlokkenVolgorde(vm.ArtikelId, vm.SortedIds);
+        return Json(new { success = !response.HasErrors });
+    }
+
+    // ── FAQ OPSLAAN ──────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult FaqOpslaan(BlogArtikelFaqVM vm)
+    {
+        var bo = new BlogArtikelFaqBO
+        {
+            ID        = vm.ID,
+            ArtikelId = vm.ArtikelId,
+            SortOrder = vm.SortOrder,
+            Vraag     = vm.Vraag,
+            Antwoord  = vm.Antwoord
+        };
+
+        var response = _blogService.InsertUpdateFaq(bo);
+
+        if (response.HasErrors)
+            AddMessage("error", "FAQ-item kon niet opgeslagen worden.", "Fout");
+        else
+            AddMessage("success", "FAQ-item opgeslagen.", "Opgeslagen");
+
+        return RedirectToAction(nameof(Bewerken), new { id = vm.ArtikelId });
+    }
+
+    // ── FAQ VOLGORDE ─────────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult FaqVolgorde([FromForm] FaqVolgordeVM vm)
+    {
+        if (vm.ArtikelId <= 0 || vm.SortedIds == null || !vm.SortedIds.Any())
+            return Json(new { success = false });
+
+        var response = _blogService.UpdateFaqVolgorde(vm.ArtikelId, vm.SortedIds);
+        return Json(new { success = !response.HasErrors });
+    }
+
+    // ── FAQ VERWIJDEREN ──────────────────────────────────────────────────
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult FaqVerwijderen(int faqId, int artikelId)
+    {
+        var response = _blogService.DeleteFaq(faqId);
+
+        if (response.HasErrors)
+            AddMessage("error", "FAQ-item kon niet verwijderd worden.", "Fout");
+        else
+            AddMessage("success", "FAQ-item verwijderd.", "Verwijderd");
+
+        return RedirectToAction(nameof(Bewerken), new { id = artikelId });
     }
 
     // ── BLOK VERWIJDEREN ─────────────────────────────────────────────────
@@ -217,14 +300,29 @@ public class BlogBeheerController : BaseController
         Datum            = bo.Datum == default ? DateTime.Today : bo.Datum,
         IsGepubliceerd   = bo.IsGepubliceerd,
         SortOrder        = bo.SortOrder,
-        Blokken          = bo.Blokken.Select(b => new BlogArtikelBlokVM
+        MetaTitel        = bo.MetaTitel,
+        MetaOmschrijving = bo.MetaOmschrijving,
+        MetaKeywords     = bo.MetaKeywords,
+        GeoRegio         = bo.GeoRegio,
+        GeoPlaatsnaam    = bo.GeoPlaatsnaam,
+        GeoPositie       = bo.GeoPositie,
+        Blokken  = bo.Blokken.Select(b => new BlogArtikelBlokVM
         {
             ID          = b.ID,
             ArtikelId   = b.ArtikelId,
             SortOrder   = b.SortOrder,
+            BlokType    = b.BlokType ?? "tekst",
             Titel       = b.Titel,
             RijkeTekst  = b.RijkeTekst,
             FotoBestand = b.FotoBestand
+        }).ToList(),
+        FaqItems = bo.FaqItems.Select(f => new BlogArtikelFaqVM
+        {
+            ID        = f.ID,
+            ArtikelId = f.ArtikelId,
+            SortOrder = f.SortOrder,
+            Vraag     = f.Vraag,
+            Antwoord  = f.Antwoord
         }).ToList()
     };
 

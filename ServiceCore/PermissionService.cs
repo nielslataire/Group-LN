@@ -117,17 +117,16 @@ public class PermissionService : IPermissionService
         var hasDirect = _effective.TryGetValue(code, out var grant);
         if (hasDirect)
         {
-            var directResult = access switch
+            // Directe entry is definitief: true = toegang, false = geweigerd.
+            // Geen kind-lookup bij expliciete false: kindcodes die niet in het panel
+            // staan (bv. Suppliers.All) mogen een expliciete weigering niet omzeilen.
+            return access switch
             {
                 PermissionAccessType.Read => grant!.Read,
                 PermissionAccessType.Write => grant!.Write,
                 PermissionAccessType.Delete => grant!.Delete,
                 _ => false
             };
-            // Directe match geeft toegang: meteen teruggeven.
-            if (directResult) return true;
-            // Directe entry ontzegt toegang: toch child-permissies controleren.
-            // (bv. rol ontzegt "Suppliers" maar gebruiker heeft override "Suppliers.Company.5")
         }
         else
         {

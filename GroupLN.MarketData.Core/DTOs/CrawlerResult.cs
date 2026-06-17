@@ -11,4 +11,11 @@ public class CrawlerResult
     public string? Message { get; set; }
     public DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
+
+    public bool IsPartialRun { get; set; }
+    public int AssetsMarkedLikelySold { get; set; }
+    public int AssetsMarkedSoldConfirmed { get; set; }
+    public int AssetsMarkedWithdrawn { get; set; }   // Voorlopig altijd 0
+    public int ListingsMissingCount { get; set; }
+    public string? MarkInactiveSkipReason { get; set; }
 }

@@ -342,8 +342,9 @@
             font-size: .75rem;
             font-weight: 600;
         }
-        .status-available { background: #e8f7ef; color: #007a4d; border: 1px solid #bee5cf; }
-        .status-sold      { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .status-available  { background: #e8f7ef; color: #007a4d; border: 1px solid #bee5cf; }
+        .status-sold       { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+        .status-likelysold { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
 
         .sales-cell {
             display: flex;
@@ -668,7 +669,16 @@
                                 VERKOCHTE UNITS
                             </div>
                             <div class="dashboard-stat-value">@kpi!.VerkochteUnits</div>
-                            <div class="dashboard-stat-subtitle">in projecten</div>
+                            <div class="dashboard-stat-subtitle">
+                                @if (kpi!.SoldConfirmedCount > 0 || kpi!.LikelySoldCount > 0)
+                                {
+                                    <text>@kpi!.SoldConfirmedCount bevestigd + @kpi!.LikelySoldCount vermoedelijk</text>
+                                }
+                                else
+                                {
+                                    <text>in projecten</text>
+                                }
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -980,7 +990,9 @@
                 <tbody>
                     @foreach (var e in Model.LosseEenheden)
                     {
-                        var statusClass = e.Status == "Verkocht" ? "status-sold" : "status-available";
+                        var statusClass = e.Status == "Verkocht" ? "status-sold"
+                            : e.Status == "Vermoedelijk verkocht" ? "status-likelysold"
+                            : "status-available";
                         <tr class="project-row @(string.IsNullOrEmpty(e.SourceUrl) ? "" : "eenheid-external")"
                             data-url="@e.SourceUrl">
                             <td>

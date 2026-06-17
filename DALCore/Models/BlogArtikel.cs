@@ -31,5 +31,19 @@ public partial class BlogArtikel
 
     public DateTime GewijzigdOp { get; set; }
 
+    public string MetaTitel { get; set; }
+
+    public string MetaOmschrijving { get; set; }
+
+    public string MetaKeywords { get; set; }
+
+    public string GeoRegio { get; set; }
+
+    public string GeoPlaatsnaam { get; set; }
+
+    public string GeoPositie { get; set; }
+
     public virtual ICollection<BlogArtikelBlok> Blokken { get; set; } = new List<BlogArtikelBlok>();
+
+    public virtual ICollection<BlogArtikelFaq> FaqItems { get; set; } = new List<BlogArtikelFaq>();
 }

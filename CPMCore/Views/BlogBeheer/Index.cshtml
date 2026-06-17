@@ -4,6 +4,173 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+@section PageStyle {
+<style>
+    .blog-thumb {
+        width: 56px;
+        height: 56px;
+        border-radius: 6px;
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .blog-thumb-placeholder {
+        width: 56px;
+        height: 56px;
+        border-radius: 6px;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: #adb5bd;
+        font-size: 20px;
+    }
+
+    .badge-gepubliceerd {
+        background: #d1fae5;
+        color: #065f46;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .badge-gepubliceerd::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #059669;
+        flex-shrink: 0;
+    }
+
+    .badge-concept {
+        background: #fef3c7;
+        color: #92400e;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .badge-concept::before {
+        content: '\e9a6';
+        font-family: 'boxicons';
+        font-size: 11px;
+        color: #d97706;
+    }
+
+    .bl-tabel th {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        color: #8a9aaa;
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 16px;
+        background: transparent;
+    }
+
+    .bl-tabel td {
+        padding: 14px 16px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f0f2f5;
+    }
+
+    .bl-tabel tbody tr:last-child td { border-bottom: none; }
+
+    .bl-tabel tbody tr:hover td { background: #f8fafb; }
+
+    .bl-datum {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        color: #6c757d;
+        white-space: nowrap;
+    }
+
+    .bl-actie-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        font-size: 15px;
+        transition: background .15s, color .15s, border-color .15s;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .bl-actie-btn:hover { background: #f0f2f5; color: #343a40; border-color: #c6cbd1; text-decoration: none; }
+    .bl-actie-btn.bl-actie-delete:hover { background: #fff1f0; color: #dc3545; border-color: #f5c6cb; }
+
+    .bl-pager {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .bl-pager-btn {
+        height: 32px;
+        min-width: 32px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+        background: #fff;
+        font-size: 13px;
+        font-weight: 500;
+        color: #495057;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 8px;
+        cursor: pointer;
+        transition: background .15s;
+    }
+
+    .bl-pager-btn:disabled { opacity: .45; cursor: default; }
+    .bl-pager-btn.active { background: var(--bs-primary, #00532d); color: #fff; border-color: var(--bs-primary, #00532d); }
+    .bl-pager-btn:not(:disabled):not(.active):hover { background: #f0f2f5; }
+
+    .bl-filter-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        background: #fff;
+        margin-bottom: 20px;
+        padding: 16px 20px;
+    }
+
+    .bl-search-wrap {
+        position: relative;
+    }
+
+    .bl-search-wrap .bx-search {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #adb5bd;
+        font-size: 17px;
+        pointer-events: none;
+    }
+
+    .bl-search-wrap input {
+        padding-left: 36px;
+    }
+</style>
+}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="h3 mb-1">Blog artikelen</h1>
@@ -11,7 +178,7 @@
     </div>
     <div class="d-flex gap-2">
         <a href="@Url.Action("Index", "Instellingen")" class="btn btn-outline-secondary">
-            <i class="bx bx-arrow-back"></i> Instellingen
+            <i class="bx bx-cog"></i> Instellingen
         </a>
         <a href="@Url.Action("Aanmaken")" class="btn btn-primary">
             <i class="bx bx-plus"></i> Nieuw artikel
@@ -33,66 +200,187 @@
 }
 else
 {
-    <div class="card">
+    @* Filter balk *@
+    <div class="bl-filter-card">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-7">
+                <label class="form-label fw-semibold mb-1" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#8a9aaa;">Zoeken</label>
+                <div class="bl-search-wrap">
+                    <i class="bx bx-search"></i>
+                    <input type="text" id="blSearch" class="form-control" placeholder="Zoek op titel of slug..." />
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold mb-1" style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#8a9aaa;">Status</label>
+                <select id="blStatus" class="form-select">
+                    <option value="">Alle statussen</option>
+                    <option value="gepubliceerd">Gepubliceerd</option>
+                    <option value="concept">Concept</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @* Tabel *@
+    <div class="card" style="border-radius:8px;border:1px solid #e9ecef;background-color:#fff;">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+            <table class="table bl-tabel mb-0" id="blTabel">
+                <thead>
                     <tr>
-                        <th style="width: 60px;"></th>
+                        <th style="width:72px;"></th>
                         <th>Titel</th>
-                        <th>Datum</th>
-                        <th>Status</th>
-                        <th style="width: 120px;"></th>
+                        <th style="width:140px;">Datum</th>
+                        <th style="width:150px;">Status</th>
+                        <th style="width:90px;">Acties</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var artikel in Model.Artikelen)
                     {
-                        <tr>
+                        <tr data-titel="@artikel.Titel.ToLower()" data-slug="@artikel.Slug?.ToLower()"
+                            data-status="@(artikel.IsGepubliceerd ? "gepubliceerd" : "concept")">
                             <td>
                                 @if (!string.IsNullOrEmpty(artikel.FotoBestand))
                                 {
-                                    <img src="@artikel.FotoBestand" alt="" class="rounded" style="width: 48px; height: 48px; object-fit: cover;" />
+                                    <img src="@artikel.FotoBestand" alt="" class="blog-thumb" />
                                 }
                                 else
                                 {
-                                    <div class="rounded bg-light d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                        <i class="bx bx-image text-muted"></i>
+                                    <div class="blog-thumb-placeholder">
+                                        <i class="bx bx-image"></i>
                                     </div>
                                 }
                             </td>
                             <td>
-                                <div class="fw-semibold">@artikel.Titel</div>
-                                <div class="text-muted small">@artikel.Slug</div>
+                                <div class="fw-semibold" style="font-size:14px;color:#212529;">@artikel.Titel</div>
+                                <div class="text-muted" style="font-size:12px;margin-top:2px;">@artikel.Slug</div>
                             </td>
-                            <td>@artikel.Datum.ToString("d-MM-yyyy")</td>
+                            <td>
+                                <div class="bl-datum">
+                                    <i class="bx bx-calendar" style="font-size:14px;"></i>
+                                    @artikel.Datum.ToString("dd-MM-yyyy")
+                                </div>
+                            </td>
                             <td>
                                 @if (artikel.IsGepubliceerd)
                                 {
-                                    <span class="badge bg-success">Gepubliceerd</span>
+                                    <span class="badge-gepubliceerd">Gepubliceerd</span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Concept</span>
+                                    <span class="badge-concept">Concept</span>
                                 }
                             </td>
-                            <td class="text-end">
-                                <a href="@Url.Action("Bewerken", new { id = artikel.ID })" class="btn btn-sm btn-outline-primary me-1">
-                                    <i class="bx bx-edit"></i>
-                                </a>
-                                <form method="post" action="@Url.Action("Verwijderen")" class="d-inline"
-                                      onsubmit="return confirm('Weet je zeker dat je dit artikel wil verwijderen?');">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@artikel.ID" />
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <a href="@Url.Action("Bewerken", new { id = artikel.ID })"
+                                       class="bl-actie-btn" title="Bewerken">
+                                        <i class="bx bx-edit-alt"></i>
+                                    </a>
+                                    <button type="button" class="bl-actie-btn bl-actie-delete" title="Verwijderen"
+                                            onclick="blVerwijder(@artikel.ID)">
                                         <i class="bx bx-trash"></i>
                                     </button>
-                                </form>
+                                    <form id="del-@artikel.ID" method="post" action="@Url.Action("Verwijderen")" style="display:none;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@artikel.ID" />
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     }
                 </tbody>
             </table>
         </div>
+
+        @* Footer: teller + paginering *@
+        <div class="d-flex align-items-center justify-content-between px-3 py-3"
+             style="border-top:1px solid #f0f2f5;">
+            <div class="text-muted" style="font-size:13px;" id="blTeller"></div>
+            <div class="bl-pager" id="blPager"></div>
+        </div>
     </div>
+}
+
+@section PageScripts {
+<script>
+(function () {
+    var PAGE_SIZE = 15;
+    var currentPage = 1;
+    var rijen = [];
+
+    function init() {
+        rijen = Array.from(document.querySelectorAll('#blTabel tbody tr'));
+        document.getElementById('blSearch')?.addEventListener('input', function () { currentPage = 1; render(); });
+        document.getElementById('blStatus')?.addEventListener('change', function () { currentPage = 1; render(); });
+        render();
+    }
+
+    function gefilterd() {
+        var zoek   = (document.getElementById('blSearch')?.value || '').toLowerCase().trim();
+        var status = (document.getElementById('blStatus')?.value || '').toLowerCase();
+        return rijen.filter(function (tr) {
+            var matchZoek  = !zoek   || tr.dataset.titel.includes(zoek) || (tr.dataset.slug || '').includes(zoek);
+            var matchStatus = !status || tr.dataset.status === status;
+            return matchZoek && matchStatus;
+        });
+    }
+
+    function render() {
+        var lijst   = gefilterd();
+        var totaal  = lijst.length;
+        var paginas = Math.max(1, Math.ceil(totaal / PAGE_SIZE));
+        if (currentPage > paginas) currentPage = paginas;
+
+        var start = (currentPage - 1) * PAGE_SIZE;
+        var einde = Math.min(start + PAGE_SIZE, totaal);
+
+        rijen.forEach(function (tr) { tr.style.display = 'none'; });
+        lijst.forEach(function (tr, i) { tr.style.display = (i >= start && i < einde) ? '' : 'none'; });
+
+        var teller = document.getElementById('blTeller');
+        if (teller) {
+            teller.textContent = totaal === 0
+                ? 'Geen artikelen gevonden'
+                : 'Toont ' + (start + 1) + ' – ' + einde + ' van ' + totaal + ' artikel' + (totaal === 1 ? '' : 'en');
+        }
+
+        var pager = document.getElementById('blPager');
+        if (!pager) return;
+        pager.innerHTML = '';
+
+        var prev = document.createElement('button');
+        prev.className = 'bl-pager-btn';
+        prev.textContent = 'Vorige';
+        prev.disabled = currentPage === 1;
+        prev.onclick = function () { currentPage--; render(); };
+        pager.appendChild(prev);
+
+        for (var p = 1; p <= paginas; p++) {
+            (function (pg) {
+                var btn = document.createElement('button');
+                btn.className = 'bl-pager-btn' + (pg === currentPage ? ' active' : '');
+                btn.textContent = pg;
+                btn.onclick = function () { currentPage = pg; render(); };
+                pager.appendChild(btn);
+            })(p);
+        }
+
+        var next = document.createElement('button');
+        next.className = 'bl-pager-btn';
+        next.textContent = 'Volgende';
+        next.disabled = currentPage === paginas;
+        next.onclick = function () { currentPage++; render(); };
+        pager.appendChild(next);
+    }
+
+    function blVerwijder(id) {
+        if (!confirm('Weet je zeker dat je dit artikel wil verwijderen?')) return;
+        document.getElementById('del-' + id).submit();
+    }
+    window.blVerwijder = blVerwijder;
+
+    init();
+})();
+</script>
 }

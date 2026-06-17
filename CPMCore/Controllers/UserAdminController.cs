@@ -787,6 +787,23 @@ public class UserAdminController : BaseController
         row.CanRead = canRead;
         row.CanWrite = canWrite;
         row.CanDelete = canDelete;
+
+        if (HiddenChildCodes.TryGetValue(permissionCode, out var hiddenChildren))
+        {
+            foreach (var childCode in hiddenChildren)
+            {
+                var childRow = await _db.SecurityRolePermission.FirstOrDefaultAsync(x => x.RoleId == roleId && x.PermissionCode == childCode);
+                if (childRow == null)
+                {
+                    childRow = new SecurityRolePermission { RoleId = roleId, PermissionCode = childCode };
+                    _db.SecurityRolePermission.Add(childRow);
+                }
+                childRow.CanRead = canRead;
+                childRow.CanWrite = canWrite;
+                childRow.CanDelete = canDelete;
+            }
+        }
+
         await _db.SaveChangesAsync();
         return Ok();
     }
@@ -917,6 +934,15 @@ public class UserAdminController : BaseController
         return Ok();
     }
 
+    // Kindcodes die verborgen zijn in het permissiepanel maar wel in _effective kunnen
+    // voorkomen (vanuit rol of isAdmin). Ze moeten meekaskaden bij de oudercode.
+    private static readonly Dictionary<string, string[]> HiddenChildCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [PermissionCodes.Suppliers] = [PermissionCodes.SuppliersAll, PermissionCodes.SuppliersByBillingCompany],
+        [PermissionCodes.Customers] = [PermissionCodes.CustomersAll, PermissionCodes.CustomersByBillingCompany],
+        [PermissionCodes.Invoicing] = [PermissionCodes.InvoicingByBillingCompany],
+    };
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [CPMCore.Filters.PermissionWrite(PermissionCodes.SettingsUsers)]
@@ -933,6 +959,23 @@ public class UserAdminController : BaseController
         row.CanRead = canRead;
         row.CanWrite = canWrite;
         row.CanDelete = canDelete;
+
+        // Cascade naar panel-verborgen kindcodes zodat die ook expliciet overridden worden.
+        if (HiddenChildCodes.TryGetValue(permissionCode, out var hiddenChildren))
+        {
+            foreach (var childCode in hiddenChildren)
+            {
+                var childRow = await _db.SecurityUserPermissionOverride.FirstOrDefaultAsync(x => x.UserId == userId && x.PermissionCode == childCode);
+                if (childRow == null)
+                {
+                    childRow = new SecurityUserPermissionOverride { UserId = userId, PermissionCode = childCode };
+                    _db.SecurityUserPermissionOverride.Add(childRow);
+                }
+                childRow.CanRead = canRead;
+                childRow.CanWrite = canWrite;
+                childRow.CanDelete = canDelete;
+            }
+        }
 
         await _db.SaveChangesAsync();
         return Ok();

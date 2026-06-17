@@ -156,6 +156,13 @@
 											<i class="bx bx-plus fs-5"></i>
 										</a>
 									}
+									@if (hasSingle && canDeleteProjectSuppliers)
+									{
+										<a href="#" class="ms-1 me-1 deleteContract" title="Contract verwijderen"
+										   data-id="@row.Contract.Id">
+											<i class="bx bx-trash fs-5"></i>
+										</a>
+									}
 								}
 							</td>
 						</tr>

@@ -1,6 +1,25 @@
+@using BOCore
+@inject IPermissionService PermissionService
 @{
     ViewData["Title"] = "Instellingen";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    await PermissionService.EnsureLoadedAsync();
+    var canBillingCompanies    = PermissionService.HasRead(PermissionCodes.SettingsBillingCompanies);
+    var canInvoiceTemplates    = PermissionService.HasRead(PermissionCodes.SettingsInvoiceTemplates);
+    var canBouwIndexen         = PermissionService.HasRead(PermissionCodes.SettingsBouwIndexen);
+    var canUsers               = PermissionService.HasRead(PermissionCodes.SettingsUsers);
+    var canHolidays            = PermissionService.HasRead(PermissionCodes.SettingsHolidays);
+    var canActivities          = PermissionService.HasRead(PermissionCodes.SettingsActivities);
+    var canKostprijs           = PermissionService.HasRead(PermissionCodes.SettingsKostprijsMaterialen);
+    var canBlog                = PermissionService.HasRead(PermissionCodes.SettingsBlogBeheer);
+    var canIssueNotifications  = PermissionService.HasRead(PermissionCodes.SettingsIssueNotifications);
+
+    var countFacturatie    = (canBillingCompanies ? 1 : 0) + (canInvoiceTemplates ? 1 : 0) + (canBouwIndexen ? 1 : 0);
+    var countTeam          = (canUsers ? 1 : 0) + (canHolidays ? 1 : 0);
+    var countCalculatie    = (canActivities ? 1 : 0) + (canKostprijs ? 1 : 0);
+    var countWebsite       = canBlog ? 1 : 0;
+    var countAutomatisatie = canIssueNotifications ? 1 : 0;
 }
 
 @section PageStyle {
@@ -170,220 +189,262 @@
 </div>
 
 @* ── FACTURATIE & BOEKHOUDING ── *@
-<div class="settings-section" data-section>
-    <div class="settings-section-header">
-        <span class="settings-section-dot dot-green"></span>
-        <span class="settings-section-label">Facturatie &amp; boekhouding</span>
-        <span class="settings-section-count">3 onderdelen</span>
+@if (countFacturatie > 0)
+{
+    <div class="settings-section" data-section>
+        <div class="settings-section-header">
+            <span class="settings-section-dot dot-green"></span>
+            <span class="settings-section-label">Facturatie &amp; boekhouding</span>
+            <span class="settings-section-count">@countFacturatie onderdeel@(countFacturatie != 1 ? "en" : "")</span>
+        </div>
+        <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
+            @if (canBillingCompanies)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-buildings"></i></div>
+                                <h3 class="settings-card-title">Mijn bedrijven</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer uitgevende vennootschappen, factuurlay-out, bankrekeningen en verzendgegevens.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (canInvoiceTemplates)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-file-detail"></i></div>
+                                <h3 class="settings-card-title">Factuurtemplates</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer factuurlay-outs die je per bedrijf kunt selecteren en hergebruiken.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("InvoiceTemplates", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("InvoiceTemplates", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            @if (canBouwIndexen)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-chart-line"></i></div>
+                                <h3 class="settings-card-title">Bouwindexen</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer S-index, I-2021-index en ABEX-index voor je budgetberekeningen.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("Bouwindexen", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("Bouwindexen", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
-    <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-buildings"></i></div>
-                        <h3 class="settings-card-title">Mijn bedrijven</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer uitgevende vennootschappen, factuurlay-out, bankrekeningen en verzendgegevens.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="btn btn-primary">
-                            <i class="bx bx-cog"></i> Open beheer
-                        </a>
-                        <a href="@Url.Action("IssuerCompanies", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-file-detail"></i></div>
-                        <h3 class="settings-card-title">Factuurtemplates</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer factuurlay-outs die je per bedrijf kunt selecteren en hergebruiken.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("InvoiceTemplates", "Instellingen")" class="btn btn-primary">
-                            <i class="bx bx-cog"></i> Open beheer
-                        </a>
-                        <a href="@Url.Action("InvoiceTemplates", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-chart-line"></i></div>
-                        <h3 class="settings-card-title">Bouwindexen</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer S-index, I-2021-index en ABEX-index voor je budgetberekeningen.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("Bouwindexen", "Instellingen")" class="btn btn-primary">
-                            <i class="bx bx-cog"></i> Open beheer
-                        </a>
-                        <a href="@Url.Action("Bouwindexen", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+}
 
 @* ── TEAM & TOEGANG ── *@
-<div class="settings-section" data-section>
-    <div class="settings-section-header">
-        <span class="settings-section-dot dot-green"></span>
-        <span class="settings-section-label">Team &amp; toegang</span>
-        <span class="settings-section-count">2 onderdelen</span>
-    </div>
-    <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-group"></i></div>
-                        <h3 class="settings-card-title">Gebruikers &amp; rollen</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer toegang van collega's, aannemers en gastgebruikers, en hou rolrechten up-to-date.</p>
-                    <div class="settings-card-footer">
-                        <div class="d-flex gap-2">
-                            <a href="@Url.Action("Index", "UserAdmin")" class="btn btn-primary">
-                                <i class="bx bx-user"></i> Gebruikers
-                            </a>
-                            <a href="@Url.Action("Index", "AppRoles")" class="btn btn-outline-primary">
-                                <i class="bx bx-shield"></i> Rollen
-                            </a>
+@if (countTeam > 0)
+{
+    <div class="settings-section" data-section>
+        <div class="settings-section-header">
+            <span class="settings-section-dot dot-green"></span>
+            <span class="settings-section-label">Team &amp; toegang</span>
+            <span class="settings-section-count">@countTeam onderdeel@(countTeam != 1 ? "en" : "")</span>
+        </div>
+        <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
+            @if (canUsers)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-group"></i></div>
+                                <h3 class="settings-card-title">Gebruikers &amp; rollen</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer toegang van collega's, aannemers en gastgebruikers, en hou rolrechten up-to-date.</p>
+                            <div class="settings-card-footer">
+                                <div class="d-flex gap-2">
+                                    <a href="@Url.Action("Index", "UserAdmin")" class="btn btn-primary">
+                                        <i class="bx bx-user"></i> Gebruikers
+                                    </a>
+                                    <a href="@Url.Action("Index", "AppRoles")" class="btn btn-outline-primary">
+                                        <i class="bx bx-shield"></i> Rollen
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-calendar"></i></div>
-                        <h3 class="settings-card-title">Verlofdagen</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Plan collectief verlof, feestdagen en weerverlet zodat projecten juist rekenen.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("VacationDays", "Instellingen")" class="btn btn-primary">
-                            <i class="bx bx-calendar-plus"></i> Plan dagen
-                        </a>
-                        <a href="@Url.Action("VacationDays", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+            }
+            @if (canHolidays)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-calendar"></i></div>
+                                <h3 class="settings-card-title">Verlofdagen</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Plan collectief verlof, feestdagen en weerverlet zodat projecten juist rekenen.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("VacationDays", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-calendar-plus"></i> Plan dagen
+                                </a>
+                                <a href="@Url.Action("VacationDays", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
-</div>
+}
 
 @* ── CALCULATIE ── *@
-<div class="settings-section" data-section>
-    <div class="settings-section-header">
-        <span class="settings-section-dot dot-green"></span>
-        <span class="settings-section-label">Calculatie</span>
-        <span class="settings-section-count">2 onderdelen</span>
-    </div>
-    <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-list-plus"></i></div>
-                        <h3 class="settings-card-title">Activiteiten</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer activiteiten en activiteitgroepen (loten) die in je calculaties terugkomen.</p>
-                    <div class="settings-card-footer">
-                        <div class="d-flex gap-2">
-                            <a href="@Url.Action("Activities", "Instellingen")" class="btn btn-primary">
-                                <i class="bx bx-list-ul"></i> Activiteiten
-                            </a>
-                            <a href="@Url.Action("Activities", "Instellingen")" class="btn btn-outline-primary">
-                                <i class="bx bx-folder"></i> Groepen
-                            </a>
+@if (countCalculatie > 0)
+{
+    <div class="settings-section" data-section>
+        <div class="settings-section-header">
+            <span class="settings-section-dot dot-green"></span>
+            <span class="settings-section-label">Calculatie</span>
+            <span class="settings-section-count">@countCalculatie onderdeel@(countCalculatie != 1 ? "en" : "")</span>
+        </div>
+        <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
+            @if (canActivities)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-list-plus"></i></div>
+                                <h3 class="settings-card-title">Activiteiten</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer activiteiten en activiteitgroepen (loten) die in je calculaties terugkomen.</p>
+                            <div class="settings-card-footer">
+                                <div class="d-flex gap-2">
+                                    <a href="@Url.Action("Activities", "Instellingen")" class="btn btn-primary">
+                                        <i class="bx bx-list-ul"></i> Activiteiten
+                                    </a>
+                                    <a href="@Url.Action("Activities", "Instellingen")" class="btn btn-outline-primary">
+                                        <i class="bx bx-folder"></i> Groepen
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-price-tag-alt"></i></div>
-                        <h3 class="settings-card-title">Kostprijzen materialen</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer referentieprijzen per materiaaltype en bouwkostpercentages voor gebruik in budgetten.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("KostprijsMaterialen", "Instellingen")" class="btn btn-primary">
-                            <i class="bx bx-cog"></i> Open beheer
-                        </a>
-                        <a href="@Url.Action("KostprijsMaterialen", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+            }
+            @if (canKostprijs)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-price-tag-alt"></i></div>
+                                <h3 class="settings-card-title">Kostprijzen materialen</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer referentieprijzen per materiaaltype en bouwkostpercentages voor gebruik in budgetten.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("KostprijsMaterialen", "Instellingen")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("KostprijsMaterialen", "Instellingen")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
-</div>
+}
 
 @* ── WEBSITE ── *@
-<div class="settings-section" data-section>
-    <div class="settings-section-header">
-        <span class="settings-section-dot dot-blue"></span>
-        <span class="settings-section-label">Website</span>
-        <span class="settings-section-count">1 onderdeel</span>
-    </div>
-    <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon" style="background-color: #2979ff;"><i class="bx bx-news"></i></div>
-                        <h3 class="settings-card-title">Blog artikelen</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer nieuws- en blogartikelen die op de publieke website verschijnen, inclusief foto's en rijke inhoud.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("Index", "BlogBeheer")" class="btn btn-primary">
-                            <i class="bx bx-cog"></i> Open beheer
-                        </a>
-                        <a href="@Url.Action("Index", "BlogBeheer")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+@if (countWebsite > 0)
+{
+    <div class="settings-section" data-section>
+        <div class="settings-section-header">
+            <span class="settings-section-dot dot-green"></span>
+            <span class="settings-section-label">Website</span>
+            <span class="settings-section-count">@countWebsite onderdeel</span>
+        </div>
+        <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
+            @if (canBlog)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-news"></i></div>
+                                <h3 class="settings-card-title">Blog artikelen</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer nieuws- en blogartikelen die op de publieke website verschijnen, inclusief foto's en rijke inhoud.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("Index", "BlogBeheer")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("Index", "BlogBeheer")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
-</div>
+}
 
 @* ── AUTOMATISATIE & MELDINGEN ── *@
-<div class="settings-section" data-section>
-    <div class="settings-section-header">
-        <span class="settings-section-dot dot-green"></span>
-        <span class="settings-section-label">Automatisatie &amp; meldingen</span>
-        <span class="settings-section-count">1 onderdeel</span>
-    </div>
-    <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
-        <div class="col settings-card-wrap">
-            <div class="card settings-card h-100">
-                <div class="card-body d-flex flex-column">
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="settings-icon"><i class="bx bx-bell"></i></div>
-                        <h3 class="settings-card-title">Automatische puntmeldingen</h3>
-                    </div>
-                    <p class="settings-card-desc flex-grow-1">Beheer schema's voor automatische e-mailmeldingen van werfpunten naar aannemers.</p>
-                    <div class="settings-card-footer">
-                        <a href="@Url.Action("Index", "IssueNotificationAdmin")" class="btn btn-primary">
-                            <i class="bx bx-cog"></i> Open beheer
-                        </a>
-                        <a href="@Url.Action("Index", "IssueNotificationAdmin")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+@if (countAutomatisatie > 0)
+{
+    <div class="settings-section" data-section>
+        <div class="settings-section-header">
+            <span class="settings-section-dot dot-green"></span>
+            <span class="settings-section-label">Automatisatie &amp; meldingen</span>
+            <span class="settings-section-count">@countAutomatisatie onderdeel</span>
+        </div>
+        <div class="row row-cols-1 row-cols-lg-3 row-cols-xl-5 g-3">
+            @if (canIssueNotifications)
+            {
+                <div class="col settings-card-wrap">
+                    <div class="card settings-card h-100">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="settings-icon"><i class="bx bx-bell"></i></div>
+                                <h3 class="settings-card-title">Automatische puntmeldingen</h3>
+                            </div>
+                            <p class="settings-card-desc flex-grow-1">Beheer schema's voor automatische e-mailmeldingen van werfpunten naar aannemers.</p>
+                            <div class="settings-card-footer">
+                                <a href="@Url.Action("Index", "IssueNotificationAdmin")" class="btn btn-primary">
+                                    <i class="bx bx-cog"></i> Open beheer
+                                </a>
+                                <a href="@Url.Action("Index", "IssueNotificationAdmin")" class="settings-arrow"><i class="bx bx-chevron-right"></i></a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
-</div>
+}
 
 @section PageScripts {
 <script>

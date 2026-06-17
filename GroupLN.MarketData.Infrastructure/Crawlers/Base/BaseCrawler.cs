@@ -70,6 +70,8 @@ public abstract class BaseCrawler : IRealEstateCrawler
                     isDryRun, maxListings, skipAllowedFilter: true, cancellationToken);
 
                 result.Success = result.Errors == 0 || result.ListingsFound > 0;
+                result.IsPartialRun = true;
+                result.MarkInactiveSkipReason = "ManualTestListingUrls actief — geen volledige crawl";
                 result.FinishedAt = DateTime.UtcNow;
                 var d = result.FinishedAt.Value - result.StartedAt;
                 Logger.LogInformation(
@@ -143,6 +145,9 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 ? uniqueListingUrls.Take(maxListings).ToList()
                 : uniqueListingUrls;
 
+            if (limitReached)
+                result.IsPartialRun = true;
+
             if (maxListings > 0)
                 Logger.LogInformation(
                     "[{Source}] MaxListingsPerRun={Max} | Beschikbaar={Unique} | ListingsToProcessAfterMaxLimit={ToProcess}",
@@ -165,6 +170,8 @@ public abstract class BaseCrawler : IRealEstateCrawler
                     SourceName, uniqueListingUrls.Count);
 
                 result.Success = true;
+                result.IsPartialRun = true;
+                result.MarkInactiveSkipReason = "SearchDebugMode actief — geen detailpagina's verwerkt";
                 result.FinishedAt = DateTime.UtcNow;
                 var debugDuration = result.FinishedAt.Value - result.StartedAt;
                 Logger.LogInformation(
@@ -178,6 +185,7 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 SourceName, listingsToProcess.Count);
 
             var seenExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var protectedExternalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var filteredOut = 0;
             var processed = 0;
 
@@ -226,6 +234,20 @@ public abstract class BaseCrawler : IRealEstateCrawler
                     result.Errors++;
                     result.ErrorMessages.Add($"[{listingUrl}] {ex.Message}");
                     Logger.LogWarning(ex, "[{Source}]   ✗ Fout bij listing {Url}.", SourceName, listingUrl);
+
+                    // Bestaande listing beschermen: een fetch-fout betekent niet dat de listing verdwenen is.
+                    try
+                    {
+                        var existingId = await ListingService.FindExternalIdByUrlAsync(listingUrl, source.Id, cancellationToken);
+                        if (existingId is not null)
+                        {
+                            protectedExternalIds.Add(existingId);
+                            Logger.LogDebug(
+                                "[{Source}]   Beschermd: {ExternalId} (fetch-fout — telt niet als ontbrekend).",
+                                SourceName, existingId);
+                        }
+                    }
+                    catch { /* bescherming is best-effort, negeer fouten in de lookup */ }
                 }
             }
 
@@ -233,21 +255,50 @@ public abstract class BaseCrawler : IRealEstateCrawler
                 "[{Source}]   Fase 2 klaar. Verwerkt: {Processed} | Gefilterd: {Filtered} | Gevonden: {Found}",
                 SourceName, processed, filteredOut, result.ListingsFound);
 
-            LogMarkInactiveDecision(isDryRun, limitReached, seenExternalIds.Count);
+            result.Success = result.Errors == 0 || result.ListingsFound > 0;
 
-            var canMarkInactive = !isDryRun
-                && !limitReached
-                && seenExternalIds.Count >= Settings.MinListingsBeforeMarkInactive;
+            var (canMarkInactive, skipReason) = EvaluateCanMarkInactive(
+                isDryRun, result.Success, limitReached, seenExternalIds.Count);
+
+            result.MarkInactiveSkipReason = string.IsNullOrEmpty(skipReason) ? null : skipReason;
 
             if (canMarkInactive)
-                await ListingService.MarkInactiveAsync(source.Id, seenExternalIds, Settings.MissingListingThreshold, cancellationToken);
+            {
+                var safeIds = protectedExternalIds.Count > 0
+                    ? seenExternalIds.Concat(protectedExternalIds)
+                    : (IEnumerable<string>)seenExternalIds;
 
-            result.Success = result.Errors == 0 || result.ListingsFound > 0;
+                if (protectedExternalIds.Count > 0)
+                    Logger.LogInformation(
+                        "[{Source}] MarkInactive: {Seen} gezien + {Protected} beschermd = {Total} veilige IDs.",
+                        SourceName, seenExternalIds.Count, protectedExternalIds.Count,
+                        seenExternalIds.Count + protectedExternalIds.Count);
+
+                var markResult = await ListingService.MarkInactiveAsync(
+                    source.Id, safeIds, Settings.MissingListingThreshold, cancellationToken);
+
+                result.ListingsMissingCount = markResult.ListingsMissing;
+                result.AssetsMarkedLikelySold += markResult.AssetsLikelySold;
+                result.AssetsMarkedSoldConfirmed += markResult.AssetsSoldConfirmed;
+
+                if (markResult.AssetsLikelySold > 0 || markResult.AssetsIsActiveSetFalse > 0)
+                    Logger.LogInformation(
+                        "[{Source}] Lifecycle-update: {LikelySold} LikelySold | {IsActiveFalse} IsActive=false.",
+                        SourceName, markResult.AssetsLikelySold, markResult.AssetsIsActiveSetFalse);
+            }
+            else
+            {
+                Logger.LogWarning(
+                    "[{Source}] MarkInactive OVERGESLAGEN — {Reason}",
+                    SourceName, skipReason);
+            }
         }
         catch (OperationCanceledException)
         {
             Logger.LogWarning("[{Source}] Crawl geannuleerd.", SourceName);
             result.Success = false;
+            result.IsPartialRun = true;
+            result.MarkInactiveSkipReason = "Crawl geannuleerd";
             result.Message = "Geannuleerd";
         }
         catch (Exception ex)
@@ -415,33 +466,21 @@ public abstract class BaseCrawler : IRealEstateCrawler
     /// </summary>
     protected virtual bool IsAllowed(ListingDto listing) => true;
 
-    private void LogMarkInactiveDecision(bool isDryRun, bool limitReached, int seenCount)
+    // Evalueert of inactive-markering veilig mag lopen voor deze crawl-run.
+    // Geeft (canMark=true, skipReason="") terug bij goedkeuring, anders (false, reden).
+    private (bool canMark, string skipReason) EvaluateCanMarkInactive(
+        bool isDryRun, bool crawlSuccess, bool limitReached, int seenCount)
     {
         if (isDryRun)
-        {
-            Logger.LogWarning(
-                "[{Source}] MarkInactive OVERGESLAGEN — DryRun actief. Geen listings worden gedeactiveerd.",
-                SourceName);
-        }
-        else if (limitReached)
-        {
-            Logger.LogWarning(
-                "[{Source}] MarkInactive OVERGESLAGEN — MaxListingsPerRun was actief (gedeeltelijke run). " +
-                "Listings worden niet gedeactiveerd om onterechte deactivaties te voorkomen.",
-                SourceName);
-        }
-        else if (seenCount < Settings.MinListingsBeforeMarkInactive)
-        {
-            Logger.LogWarning(
-                "[{Source}] MarkInactive OVERGESLAGEN — Te weinig listings gevonden ({Seen} < minimum {Min}). " +
-                "Mogelijke crawl-fout. Geen listings worden gedeactiveerd.",
-                SourceName, seenCount, Settings.MinListingsBeforeMarkInactive);
-        }
-        else
-        {
-            Logger.LogInformation(
-                "[{Source}] MarkInactive wordt uitgevoerd voor {Count} geziene listings (minimum={Min}).",
-                SourceName, seenCount, Settings.MinListingsBeforeMarkInactive);
-        }
+            return (false, "DryRun actief");
+        if (Settings.MaxListingsPerRun > 0)
+            return (false, $"MaxListingsPerRun={Settings.MaxListingsPerRun} actief — gedeeltelijke run mogelijk");
+        if (SearchDebugMode)
+            return (false, "SearchDebugMode actief");
+        if (!crawlSuccess)
+            return (false, "Crawl niet succesvol");
+        if (seenCount < Settings.MinListingsBeforeMarkInactive)
+            return (false, $"Te weinig listings gevonden ({seenCount} < minimum {Settings.MinListingsBeforeMarkInactive})");
+        return (true, string.Empty);
     }
 }

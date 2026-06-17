@@ -39,6 +39,12 @@ public class CrawlerSettings
     /// </summary>
     public bool FullDeduplicationScanOnStartup { get; set; } = false;
 
+    // ── Canonical Projects ────────────────────────────────────────────────────
+    /// <summary>
+    /// true = herberekent canonical projects na elke deduplicatieronde.
+    /// </summary>
+    public bool RebuildCanonicalProjectsAfterDedup { get; set; } = true;
+
     // ── Debug-instellingen ───────────────────────────────────────────────────
     public DebugSettings Debug { get; set; } = new();
 }
@@ -90,6 +96,13 @@ public class SourceSettings
     /// Leeg = geen geografisch filter (alle resultaten worden verwerkt).
     /// </summary>
     public List<LocationSettings> AllowedLocations { get; set; } = new();
+
+    /// <summary>
+    /// false = detailpagina's worden NIET geopend. Enkel zoekkaart-data uit
+    /// __NEXT_DATA__ van de zoekpagina wordt gebruikt. Lat/Lon blijven nullable.
+    /// true (standaard) = detailpagina's openen voor volledige parsing.
+    /// </summary>
+    public bool OpenDetailPages { get; set; } = true;
 }
 
 /// <summary>

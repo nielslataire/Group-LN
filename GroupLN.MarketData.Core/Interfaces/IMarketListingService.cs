@@ -19,14 +19,21 @@ public interface IMarketListingService
         CancellationToken cancellationToken = default);
 
     // missingThreshold: aantal opeenvolgende ontbrekende crawls voor deactivatie
-    Task MarkInactiveAsync(
+    Task<MarkInactiveResult> MarkInactiveAsync(
         int sourceId,
         IEnumerable<string> activeExternalIds,
         int missingThreshold = 1,
         CancellationToken cancellationToken = default);
 
-    Task<int> MarkStaleListingsInactiveAsync(
+    Task<MarkInactiveResult> MarkStaleListingsInactiveAsync(
         int sourceId,
         int afterDays,
+        CancellationToken cancellationToken = default);
+
+    // Geeft de ExternalId terug van een bestaande actieve listing op basis van URL + source.
+    // Gebruikt om bij fetch-fouten te voorkomen dat een bestaande listing als 'missing' geteld wordt.
+    Task<string?> FindExternalIdByUrlAsync(
+        string url,
+        int sourceId,
         CancellationToken cancellationToken = default);
 }

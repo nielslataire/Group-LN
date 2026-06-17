@@ -63,6 +63,8 @@ public class GemeenteKpiViewModel
     public decimal? GemiddeldePrijsPerM2 { get; set; }
     public decimal? GemiddeldeOppervlakte { get; set; }
     public decimal Verkoopgraad { get; set; }
+    public int SoldConfirmedCount { get; set; }
+    public int LikelySoldCount { get; set; }
 }
 
 public class PrijsBucketViewModel

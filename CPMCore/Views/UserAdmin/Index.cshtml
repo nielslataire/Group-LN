@@ -59,8 +59,17 @@
         }
 
     .permission-table .submenu-row td:first-child {
-        padding-left: 2rem;
         color: #6c757d;
+    }
+
+    /* Subcategorie-rij: submenu-row mét kinderen = tussenliggende groepering */
+    .permission-table .submenu-row[data-has-children="true"] {
+        background-color: #f4f6f8;
+    }
+
+    .permission-table .submenu-row[data-has-children="true"] td:first-child {
+        font-weight: 600;
+        color: #3d4f5c;
     }
 
     .permission-cell input.override {
@@ -688,6 +697,7 @@
 
                 const tr = document.createElement('tr');
                 tr.dataset.code = item.code;
+                tr.dataset.level = level;
                 tr.dataset.isSubrow = isSub ? 'true' : 'false';
 
                 if (item.children && item.children.length) {
@@ -707,7 +717,7 @@
                 const readWarning = options.markOverride && right.read !== (right.baseRead ?? false);
                 const writeWarning = options.markOverride && right.write !== (right.baseWrite ?? false);
                 const deleteWarning = options.markOverride && right.delete !== (right.baseDelete ?? false);
-                const labelPadding = isSub ? ' style="padding-left: ' + (1 + (level * 1.25)) + 'rem"' : '';
+                const labelPadding = isSub ? ' style="padding-left: ' + (1 + (level * 1.5)) + 'rem"' : '';
 
                 tr.innerHTML =
                     '<td' + labelPadding + '>' + item.name + '</td>' +
@@ -1047,11 +1057,8 @@
                         const matrix = response.ok ? await response.json() : {};
                         const rightsMap = {};
 
-                        menuStructure.forEach(function (item) {
+                        permissionItems.forEach(function (item) {
                             rightsMap[item.code] = matrix[item.code] || { read: false, write: false, delete: false, baseRead: false, baseWrite: false, baseDelete: false, overridden: false };
-                            (item.children || []).forEach(function (child) {
-                                rightsMap[child.code] = matrix[child.code] || { read: false, write: false, delete: false, baseRead: false, baseWrite: false, baseDelete: false, overridden: false };
-                            });
                         });
 
                         createPermissionRows(tbody, rightsMap, { editable: canWriteUsers, markOverride: true });
@@ -1115,11 +1122,8 @@
                 const matrix = response.ok ? await response.json() : {};
 
                 const rightsMap = {};
-                menuStructure.forEach(function (item) {
+                permissionItems.forEach(function (item) {
                     rightsMap[item.code] = matrix[item.code] || { read: false, write: false, delete: false };
-                    (item.children || []).forEach(function (child) {
-                        rightsMap[child.code] = matrix[child.code] || { read: false, write: false, delete: false };
-                    });
                 });
 
                 createPermissionRows(roleRightsBody, rightsMap, { editable: canManageRoleRights, markOverride: false });

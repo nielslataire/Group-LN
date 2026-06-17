@@ -19,6 +19,8 @@ public class ProjectDetailViewModel
     public int TotaalUnits { get; set; }
     public int BeschikbareUnits { get; set; }
     public int VerkochteUnits { get; set; }
+    public int SoldConfirmedCount { get; set; }
+    public int LikelySoldCount { get; set; }
     public decimal Verkoopgraad { get; set; }
     public decimal? GemiddeldePrijs { get; set; }
     public decimal? GemiddeldePrijsPerM2 { get; set; }

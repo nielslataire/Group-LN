@@ -4,6 +4,8 @@ public class ListingDto
 {
     public string ExternalId { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
+    public string? NavigationUrl { get; set; }
+    public string? CanonicalUrl  { get; set; }
     public string? Title { get; set; }
 
     public string? PropertyTypeRaw { get; set; }

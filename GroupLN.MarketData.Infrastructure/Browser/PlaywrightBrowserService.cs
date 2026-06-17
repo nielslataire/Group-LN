@@ -35,6 +35,28 @@ public class PlaywrightBrowserService : IAsyncDisposable
         return await context.NewPageAsync();
     }
 
+    /// <summary>
+    /// Maakt een persistente browsercontext aan (eigen user-data-dir voor cookies/sessie).
+    /// De caller is verantwoordelijk voor het sluiten via context.CloseAsync().
+    /// </summary>
+    public async Task<IBrowserContext> CreatePersistentContextAsync(
+        string userDataDir, string? userAgent = null)
+    {
+        await _lock.WaitAsync();
+        try { _playwright ??= await Playwright.CreateAsync(); }
+        finally { _lock.Release(); }
+
+        return await _playwright.Chromium.LaunchPersistentContextAsync(userDataDir,
+            new BrowserTypeLaunchPersistentContextOptions
+            {
+                Headless   = true,
+                Args       = ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+                UserAgent  = userAgent,
+                Locale     = "nl-BE",
+                TimezoneId = "Europe/Brussels"
+            });
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_browser is not null) await _browser.DisposeAsync();

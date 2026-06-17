@@ -77,6 +77,7 @@
 											<strong>
 												@Model.Contract.Company.Display
 												@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
+												@Html.HiddenFor(m => m.Contract.Company.Display, new { id = "txtCompanyDisplay" })
 											</strong>
 										</p>
 									}
@@ -86,6 +87,7 @@
 											<!-- Voeg hier de opties toe -->
 										</select>
 										@Html.HiddenFor(m => m.Contract.Company.ID, new { id = "txtCompanyID", @class = "form-control" })
+										@Html.HiddenFor(m => m.Contract.Company.Display, new { id = "txtCompanyDisplay" })
 									}
 								</div>
 							</div>
@@ -404,6 +406,7 @@
 				const selectedData = e.params?.data;
 				if (selectedData && selectedData.id) {
 					$('#txtCompanyID').val(selectedData.id);
+					$('#txtCompanyDisplay').val(selectedData.text);
 					LoadActivities(selectedData.id, '#lstActivities', '#btnAddActivities');
 					LoadSiteManagers(selectedData.id, '#ddlSiteManager');
 				}

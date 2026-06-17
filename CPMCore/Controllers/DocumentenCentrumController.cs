@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 namespace CPMCore.Controllers
 {
     [Authorize]
+    [CPMCore.Filters.PermissionRead(PermissionCodes.DocumentCenter)]
     public class DocumentenCentrumController : BaseController
     {
         private readonly IIncomingInvoiceService _incomingInvoiceService;

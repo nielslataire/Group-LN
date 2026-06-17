@@ -62,13 +62,15 @@ using (var scope = host.Services.CreateScope())
 using (var scope = host.Services.CreateScope())
 {
     var settings = scope.ServiceProvider.GetRequiredService<CrawlerSettings>();
+    var env = scope.ServiceProvider.GetRequiredService<IHostEnvironment>();
+
     logger.LogInformation(
         "GroupLN MarketData Worker gestart. " +
         "EnableCrawler={Enabled} | DryRun={DryRun} | MaxListings={Max} | Env={Env}",
         settings.EnableCrawler,
         settings.DryRun,
         settings.MaxListingsPerRun == 0 ? "onbeperkt" : settings.MaxListingsPerRun.ToString(),
-        Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production");
+        env.EnvironmentName);
 
     if (!settings.EnableCrawler)
         logger.LogWarning("⚠️  EnableCrawler = false. Crawling is uitgeschakeld. Wijzig in appsettings om te activeren.");
@@ -78,6 +80,19 @@ using (var scope = host.Services.CreateScope())
 
     if (settings.MaxListingsPerRun > 0)
         logger.LogWarning("⚠️  MaxListingsPerRun = {Max}. Testmodus actief.", settings.MaxListingsPerRun);
+}
+
+// ── Tijdelijke Zimmo detail-test ─────────────────────────────────────────
+if (args.Contains("--zimmo-detail-test"))
+{
+    logger.LogInformation("[Program] --zimmo-detail-test modus — normale worker wordt NIET gestart.");
+    using (var scope = host.Services.CreateScope())
+    {
+        var test = scope.ServiceProvider.GetRequiredService<ZimmoDetailDiscoveryTest>();
+        await test.RunAsync();
+    }
+    logger.LogInformation("[Program] Zimmo detail-test voltooid. Afsluiten.");
+    return;
 }
 
 await host.RunAsync();

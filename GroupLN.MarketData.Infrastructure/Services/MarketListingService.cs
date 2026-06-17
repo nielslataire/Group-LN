@@ -270,6 +270,8 @@ public class MarketListingService : IMarketListingService
                         unit.UnitId, oldStatus?.ToString() ?? "null", unit.SaleStatus);
                 }
 
+                ApplyUnitLifecycleFromSaleStatus(existing.Asset, unit.SaleStatus, now);
+
                 var lastSnapshot = existing.Snapshots.MaxBy(s => s.SnapshotDate);
                 if (HasUnitRelevantChange(lastSnapshot, unit))
                     _context.MarketListingSnapshots.Add(CreateUnitSnapshot(existing.Id, unit, now, projectDto.IsNewBuild));
@@ -293,6 +295,8 @@ public class MarketListingService : IMarketListingService
                     projectDto.PostalCode ?? "0000",
                     projectDto.ExternalId,
                     unit.UnitId);
+
+                var (initLifecycle, initConfidence) = SaleStatusToLifecycle(unit.SaleStatus);
 
                 var asset = new MarketAsset
                 {
@@ -321,6 +325,11 @@ public class MarketListingService : IMarketListingService
                     FirstSeenAt = now,
                     LastSeenAt = now,
                     IsActive = true,
+                    LifecycleStatus = initLifecycle,
+                    LifecycleConfidence = initConfidence,
+                    LifecycleSource = "ImmowebSaleStatus",
+                    LifecycleStatusReason = $"Source reported: {unit.SaleStatus}",
+                    LifecycleStatusUpdatedAt = now,
                     CreatedAt = now,
                     UpdatedAt = now
                 };
@@ -430,7 +439,7 @@ public class MarketListingService : IMarketListingService
             AverageLivingArea: avgArea);
     }
 
-    public async Task MarkInactiveAsync(
+    public async Task<MarkInactiveResult> MarkInactiveAsync(
         int sourceId,
         IEnumerable<string> activeExternalIds,
         int missingThreshold = 1,
@@ -443,9 +452,11 @@ public class MarketListingService : IMarketListingService
             .Where(l => l.SourceId == sourceId && l.IsActive && !activeSet.Contains(l.ExternalId))
             .ToListAsync(cancellationToken);
 
-        if (candidates.Count == 0) return;
+        if (candidates.Count == 0) return MarkInactiveResult.Empty;
 
         int deactivated = 0;
+        var deactivatedAssetIds = new HashSet<long>();
+
         foreach (var l in candidates)
         {
             l.MissingCrawlCount++;
@@ -456,6 +467,7 @@ public class MarketListingService : IMarketListingService
                 l.IsActive = false;
                 l.RemovedAt = now;
                 deactivated++;
+                deactivatedAssetIds.Add(l.MarketAssetId);
                 _logger.LogInformation(
                     "ListingDeactivated ExternalId={ExternalId} na {Count} ontbrekende crawls.",
                     l.ExternalId, l.MissingCrawlCount);
@@ -466,9 +478,34 @@ public class MarketListingService : IMarketListingService
         _logger.LogInformation(
             "{Missing} listings ontbreken (bron {SourceId}): {Deactivated} gedeactiveerd, {Pending} nog in threshold.",
             candidates.Count, sourceId, deactivated, candidates.Count - deactivated);
+
+        int assetsLikelySold = 0, assetsIsActiveFalse = 0;
+
+        foreach (var assetId in deactivatedAssetIds)
+        {
+            var (lifecycleSet, isActiveChanged) = await ApplyLoosePropertyLifecycleAsync(
+                assetId,
+                AssetLifecycleStatus.LikelySold, 80,
+                "MissingListingThreshold",
+                "Listing disappeared from source",
+                now, cancellationToken);
+
+            if (lifecycleSet) assetsLikelySold++;
+            if (isActiveChanged) assetsIsActiveFalse++;
+        }
+
+        if (assetsLikelySold > 0 || assetsIsActiveFalse > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation(
+                "Lifecycle (MissingListingThreshold): {LikelySold} assets LikelySold | {IsActiveFalse} assets IsActive=false.",
+                assetsLikelySold, assetsIsActiveFalse);
+        }
+
+        return new MarkInactiveResult(candidates.Count, deactivated, assetsLikelySold, 0, assetsIsActiveFalse);
     }
 
-    public async Task<int> MarkStaleListingsInactiveAsync(
+    public async Task<MarkInactiveResult> MarkStaleListingsInactiveAsync(
         int sourceId, int afterDays, CancellationToken cancellationToken = default)
     {
         var cutoff = DateTime.UtcNow.AddDays(-afterDays);
@@ -478,17 +515,191 @@ public class MarketListingService : IMarketListingService
             .Where(l => l.SourceId == sourceId && l.IsActive && l.LastSeenAt < cutoff)
             .ToListAsync(cancellationToken);
 
+        if (stale.Count == 0) return MarkInactiveResult.Empty;
+
+        var deactivatedAssetIds = new HashSet<long>();
+
         foreach (var l in stale)
         {
             l.IsActive = false;
             l.RemovedAt = now;
             l.UpdatedAt = now;
+            deactivatedAssetIds.Add(l.MarketAssetId);
         }
 
-        if (stale.Count > 0)
-            await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
 
-        return stale.Count;
+        int assetsLikelySold = 0, assetsIsActiveFalse = 0;
+
+        foreach (var assetId in deactivatedAssetIds)
+        {
+            var (lifecycleSet, isActiveChanged) = await ApplyLoosePropertyLifecycleAsync(
+                assetId,
+                AssetLifecycleStatus.LikelySold, 70,
+                "StaleListingCleanup",
+                "Listing not seen for configured stale period",
+                now, cancellationToken);
+
+            if (lifecycleSet) assetsLikelySold++;
+            if (isActiveChanged) assetsIsActiveFalse++;
+        }
+
+        if (assetsLikelySold > 0 || assetsIsActiveFalse > 0)
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation(
+                "Lifecycle (StaleListingCleanup): {LikelySold} assets LikelySold | {IsActiveFalse} assets IsActive=false.",
+                assetsLikelySold, assetsIsActiveFalse);
+        }
+
+        return new MarkInactiveResult(stale.Count, stale.Count, assetsLikelySold, 0, assetsIsActiveFalse);
+    }
+
+    public async Task<string?> FindExternalIdByUrlAsync(
+        string url, int sourceId, CancellationToken cancellationToken = default)
+    {
+        return await _context.MarketListings
+            .Where(l => l.SourceId == sourceId && l.Url == url && l.IsActive)
+            .Select(l => l.ExternalId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    // ── Lifecycle helpers ─────────────────────────────────────────────────────
+
+    // Stelt lifecycle in op een los pand (niet-projectgroep, geen parent) als geen actieve listings meer bestaan.
+    // Doet niets als het asset een projectgroep is, een child-unit is, of al een hogere zekerheid heeft.
+    private async Task<(bool lifecycleSet, bool isActiveChanged)> ApplyLoosePropertyLifecycleAsync(
+        long assetId,
+        AssetLifecycleStatus newLifecycle,
+        int confidence,
+        string source,
+        string reason,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var asset = await _context.MarketAssets.FindAsync(new object[] { assetId }, cancellationToken);
+        if (asset is null || asset.IsProjectGroup || asset.ParentMarketAssetId.HasValue)
+            return (false, false);
+
+        var hasActiveListings = await _context.MarketListings
+            .AnyAsync(l => l.MarketAssetId == assetId && l.IsActive, cancellationToken);
+
+        bool lifecycleSet = false;
+        bool isActiveChanged = false;
+
+        if (!hasActiveListings)
+        {
+            // Niet overschrijven als al een hogere-zekerheid status bestaat
+            if (asset.LifecycleStatus != AssetLifecycleStatus.SoldConfirmed)
+            {
+                asset.LifecycleStatus = newLifecycle;
+                asset.LifecycleConfidence = confidence;
+                asset.LifecycleSource = source;
+                asset.LifecycleStatusReason = reason;
+                asset.LifecycleStatusUpdatedAt = now;
+                asset.UpdatedAt = now;
+                lifecycleSet = true;
+            }
+
+            if (asset.IsActive)
+            {
+                asset.IsActive = false;
+                asset.UpdatedAt = now;
+                isActiveChanged = true;
+            }
+        }
+
+        return (lifecycleSet, isActiveChanged);
+    }
+
+    // Stelt lifecycle in op een projectunit (ParentMarketAssetId != null) als geen actieve listings meer bestaan.
+    // Overschrijft nooit SoldConfirmed (al bevestigd via bron).
+    private async Task<(bool lifecycleSet, bool isActiveChanged)> ApplyUnitLifecycleAfterDeactivationAsync(
+        long assetId,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var asset = await _context.MarketAssets.FindAsync(new object[] { assetId }, cancellationToken);
+        if (asset is null || asset.IsProjectGroup || !asset.ParentMarketAssetId.HasValue)
+            return (false, false);
+
+        var hasActiveListings = await _context.MarketListings
+            .AnyAsync(l => l.MarketAssetId == assetId && l.IsActive, cancellationToken);
+
+        bool lifecycleSet = false;
+        bool isActiveChanged = false;
+
+        if (!hasActiveListings)
+        {
+            if (asset.LifecycleStatus != AssetLifecycleStatus.SoldConfirmed)
+            {
+                asset.LifecycleStatus = AssetLifecycleStatus.LikelySold;
+                asset.LifecycleConfidence = 90;
+                asset.LifecycleSource = "ProjectInventory";
+                asset.LifecycleStatusReason = "Unit removed from active project inventory";
+                asset.LifecycleStatusUpdatedAt = now;
+                asset.UpdatedAt = now;
+                lifecycleSet = true;
+            }
+
+            if (asset.IsActive)
+            {
+                asset.IsActive = false;
+                asset.UpdatedAt = now;
+                isActiveChanged = true;
+            }
+        }
+
+        return (lifecycleSet, isActiveChanged);
+    }
+
+    // Herberekent IsActive van een projectgroep op basis van eigen listings + actieve child units.
+    // Raakt LifecycleStatus van de projectgroep nooit aan.
+    private async Task<bool> RecalculateProjectGroupIsActiveAsync(
+        long parentAssetId,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var asset = await _context.MarketAssets.FindAsync(new object[] { parentAssetId }, cancellationToken);
+        if (asset is null || !asset.IsProjectGroup) return false;
+
+        var hasActiveProjectListing = await _context.MarketListings
+            .AnyAsync(l => l.MarketAssetId == parentAssetId && l.IsActive, cancellationToken);
+
+        var hasActiveChildUnits = await _context.MarketAssets
+            .Where(a => a.ParentMarketAssetId == parentAssetId)
+            .AnyAsync(a => _context.MarketListings.Any(l => l.MarketAssetId == a.Id && l.IsActive), cancellationToken);
+
+        if (asset.IsActive && !hasActiveProjectListing && !hasActiveChildUnits)
+        {
+            asset.IsActive = false;
+            asset.UpdatedAt = now;
+            return true;
+        }
+
+        return false;
+    }
+
+    // Mapt SaleStatus (bronwaarde) naar AssetLifecycleStatus + confidence voor projectunits.
+    private static (AssetLifecycleStatus lifecycle, int confidence) SaleStatusToLifecycle(SaleStatus? saleStatus)
+        => saleStatus switch
+        {
+            SaleStatus.Sold      => (AssetLifecycleStatus.SoldConfirmed, 100),
+            SaleStatus.Reserved  => (AssetLifecycleStatus.Reserved,      100),
+            SaleStatus.Option    => (AssetLifecycleStatus.Reserved,       80),
+            SaleStatus.Available => (AssetLifecycleStatus.Available,     100),
+            _                    => (AssetLifecycleStatus.Unknown,          0)
+        };
+
+    // Past lifecycle toe op een bestaande projectunit op basis van huidige SaleStatus.
+    private static void ApplyUnitLifecycleFromSaleStatus(MarketAsset asset, SaleStatus? saleStatus, DateTime now)
+    {
+        var (lifecycle, confidence) = SaleStatusToLifecycle(saleStatus);
+        asset.LifecycleStatus = lifecycle;
+        asset.LifecycleConfidence = confidence;
+        asset.LifecycleSource = "ImmowebSaleStatus";
+        asset.LifecycleStatusReason = $"Source reported: {saleStatus}";
+        asset.LifecycleStatusUpdatedAt = now;
     }
 
     // ── Privé helpers ─────────────────────────────────────────────────────────
@@ -510,6 +721,8 @@ public class MarketListingService : IMarketListingService
             .ToListAsync(cancellationToken);
 
         int deactivated = 0;
+        var deactivatedAssetIds = new HashSet<long>();
+
         foreach (var unit in existingUnits.Where(u => !seenUnitIds.Contains(u.ExternalId)))
         {
             unit.MissingCrawlCount++;
@@ -520,6 +733,7 @@ public class MarketListingService : IMarketListingService
                 unit.IsActive = false;
                 unit.RemovedAt = now;
                 deactivated++;
+                deactivatedAssetIds.Add(unit.MarketAssetId);
                 _logger.LogInformation(
                     "UnitDeactivated ExternalId={ExternalId} (project {ProjectId}) na {Count} ontbrekende crawls.",
                     unit.ExternalId, parentAssetId, unit.MissingCrawlCount);
@@ -528,6 +742,29 @@ public class MarketListingService : IMarketListingService
 
         if (deactivated > 0 || existingUnits.Any(u => !seenUnitIds.Contains(u.ExternalId)))
             await _context.SaveChangesAsync(cancellationToken);
+
+        if (deactivatedAssetIds.Count > 0)
+        {
+            int unitLikelySold = 0, unitIsActiveFalse = 0;
+
+            foreach (var assetId in deactivatedAssetIds)
+            {
+                var (lifecycleSet, isActiveChanged) = await ApplyUnitLifecycleAfterDeactivationAsync(
+                    assetId, now, cancellationToken);
+                if (lifecycleSet) unitLikelySold++;
+                if (isActiveChanged) unitIsActiveFalse++;
+            }
+
+            var groupIsActiveChanged = await RecalculateProjectGroupIsActiveAsync(parentAssetId, now, cancellationToken);
+
+            if (unitLikelySold > 0 || unitIsActiveFalse > 0 || groupIsActiveChanged)
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation(
+                    "Lifecycle (ProjectInventory): {LikelySold} units LikelySold | {IsActiveFalse} units IsActive=false | projectgroep IsActive gewijzigd: {GroupChanged}.",
+                    unitLikelySold, unitIsActiveFalse, groupIsActiveChanged);
+            }
+        }
     }
 
     private async Task UpsertProjectGroupSnapshotAsync(

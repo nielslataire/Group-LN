@@ -16,6 +16,9 @@ namespace FacadeCore
         /// <summary>Bereken voortgang en sla (upsert) op in de database.</summary>
         GetResponse<ProjectVoortgangBO> CalculateAndSave(int projectId);
 
+        /// <summary>Geeft de IDs terug van alle actieve (niet-opgeleverde) projecten.</summary>
+        List<int> GetActiveProjectIds();
+
         /// <summary>Bereken en sla voortgang op voor alle actieve projecten (niet-opgeleverd).</summary>
         void CalculateAllProjects();
     }
