@@ -25,6 +25,8 @@ public class MarketDataDbContext : DbContext
     public DbSet<CanonicalProject> CanonicalProjects => Set<CanonicalProject>();
     public DbSet<CanonicalProjectAsset> CanonicalProjectAssets => Set<CanonicalProjectAsset>();
 
+    public DbSet<GeocodingCache> GeocodingCaches => Set<GeocodingCache>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MarketDataDbContext).Assembly);

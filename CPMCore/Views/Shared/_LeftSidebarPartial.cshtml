@@ -20,7 +20,9 @@
 	var canSeeDocumentenCentrum = PermissionService.HasRead(PermissionCodes.DocumentCenter) ||
 	                              PermissionService.HasRead(PermissionCodes.DocumentCenterByBillingCompany);
 	var canSeeProjects = PermissionService.HasRead(PermissionCodes.ProjectsDetail);
-	var canSeeInstellingen = PermissionService.HasRead(PermissionCodes.Settings);
+	var settingsPrefix = PermissionCodes.Settings + ".";
+	var canSeeInstellingen = PermissionService.EffectivePermissions.Any(kv =>
+		kv.Key.StartsWith(settingsPrefix, StringComparison.OrdinalIgnoreCase) && kv.Value.Read);
 	var canSeeMarktanalyse = PermissionService.HasRead(PermissionCodes.Marktanalyse);
 	var customerIssuerCompanyIds = new HashSet<int>();
 	var supplierIssuerCompanyIds = new HashSet<int>();

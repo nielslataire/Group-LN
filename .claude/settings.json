@@ -57,7 +57,23 @@
       "PowerShell(dotnet build CPMCore\\\\CPMCore.csproj 2>&1)",
       "PowerShell(dotnet build GroupLN.MarketData.Infrastructure.Tests\\\\GroupLN.MarketData.Infrastructure.Tests.csproj 2>&1)",
       "PowerShell(dotnet test GroupLN.MarketData.Infrastructure.Tests\\\\GroupLN.MarketData.Infrastructure.Tests.csproj --verbosity normal 2>&1)",
-      "Bash(grep -v \"//\\\\|\\\\.Url\\\\.\")"
+      "Bash(grep -v \"//\\\\|\\\\.Url\\\\.\")",
+      "PowerShell(cd e:\\\\TFS; dotnet build GroupLN.MarketData.Infrastructure\\\\GroupLN.MarketData.Infrastructure.csproj --no-restore -c Debug 2>&1 | Where-Object { $_ -match \"error|warning|succeeded|failed\" } | Select-Object -Last 20)",
+      "PowerShell($logFile = \"C:\\\\Users\\\\latni\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\dryrun-zimmo-$\\(Get-Date -Format 'yyyyMMdd-HHmm'\\).log\"; $env:ASPNETCORE_ENVIRONMENT = \"Development\"; cd \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\"; Start-Process -FilePath \"dotnet\" -ArgumentList \"run --no-build --project GroupLN.MarketData.Worker.csproj\" -WorkingDirectory \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\" -RedirectStandardOutput $logFile -RedirectStandardError \"$logFile.err\" -NoNewWindow; Write-Host \"DryRun gestart — log: $logFile\")",
+      "Read(//c/Users/latni/AppData/Local/Temp/claude/**)",
+      "PowerShell(Stop-Process -Name \"GroupLN.MarketData.Worker\" -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Name \"dotnet\" -Force -ErrorAction SilentlyContinue)",
+      "PowerShell($logFile = \"C:\\\\Users\\\\latni\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\dryrun-zimmo-20260618-1415.log\"; $psi = New-Object System.Diagnostics.ProcessStartInfo; $psi.FileName = \"dotnet\"; $psi.Arguments = \"run --no-build --project GroupLN.MarketData.Worker.csproj\"; $psi.WorkingDirectory = \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\"; $psi.UseShellExecute = $false; $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true; $psi.EnvironmentVariables[\"ASPNETCORE_ENVIRONMENT\"] = \"Development\"; $p = [System.Diagnostics.Process]::Start\\($psi\\); $out = [System.IO.StreamWriter]::new\\($logFile\\); $p.OutputDataReceived += { param\\($s,$e\\); if \\($e.Data\\) { $out.WriteLine\\($e.Data\\); $out.Flush\\(\\) } }; $p.ErrorDataReceived += { param\\($s,$e\\); if \\($e.Data\\) { $out.WriteLine\\(\"[ERR] \" + $e.Data\\); $out.Flush\\(\\) } }; $p.BeginOutputReadLine\\(\\); $p.BeginErrorReadLine\\(\\); Write-Host \"DryRun gestart PID=$\\($p.Id\\) — log: $logFile\")",
+      "PowerShell(Stop-Process -Id 39652 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Name \"dotnet\" -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2; $logFile = \"C:\\\\Users\\\\latni\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\dryrun-20260618-1420.log\"; $env:ASPNETCORE_ENVIRONMENT = \"Development\"; $p = Start-Process -FilePath \"dotnet\" -ArgumentList \"run --no-build --project GroupLN.MarketData.Worker.csproj\" -WorkingDirectory \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\" -RedirectStandardOutput $logFile -RedirectStandardError \"$logFile.err\" -PassThru; Start-Sleep -Seconds 15; Write-Host \"PID=$\\($p.Id\\)\"; Get-Content $logFile -ErrorAction SilentlyContinue | Select-Object -First 25)",
+      "PowerShell(Stop-Process -Name \"dotnet\" -Force -ErrorAction SilentlyContinue; Start-Sleep 1; [System.Environment]::GetEnvironmentVariable\\(\"ASPNETCORE_ENVIRONMENT\"\\); Write-Host \"---\"; $env:ASPNETCORE_ENVIRONMENT)",
+      "Bash(pkill -f \"GroupLN.MarketData.Worker\")",
+      "Bash(pkill -f \"dotnet run\")",
+      "Bash(sleep 20 && tail -n 30 /c/Users/latni/AppData/Local/Temp/dryrun-zimmo-v3.log)",
+      "Read(//c/Users/latni/AppData/Local/Temp/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\latni\\AppData\\Local\\Temp\\claude"
     ]
   }
 }

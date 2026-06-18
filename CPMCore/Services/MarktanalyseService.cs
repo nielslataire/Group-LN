@@ -109,6 +109,10 @@ public class MarktanalyseService : IMarktanalyseService
         // Laad display-namen voor de geselecteerde locatie
         await VulDisplayNamenAsync(vm, ct);
 
+        // Pre-laad fallback-postcodes voor assets die nog geen GeoMunicipalSectionId hebben
+        var (fallbackZips, fallbackSectionCity) = await LaadGeoFallbackAsync(
+            geoMunicipalityId, geoMunicipalSectionId, vm, ct);
+
         bool loadProjecten = aanbodtype != "Losse eenheden";
         bool loadLosseEenheden = aanbodtype != "Projecten";
 
@@ -122,7 +126,7 @@ public class MarktanalyseService : IMarktanalyseService
             var projectQuery = _db.MarketAssets
                 .Where(a => a.IsProjectGroup && a.IsActive);
 
-            projectQuery = ToepassGeoFilter(projectQuery, geoMunicipalityId, geoMunicipalSectionId);
+            projectQuery = ToepassGeoFilter(projectQuery, geoMunicipalityId, geoMunicipalSectionId, fallbackZips, fallbackSectionCity);
 
             if (type == "Appartement")
                 projectQuery = projectQuery.Where(a => a.PropertySubType == PropertySubType.ApartmentGroup);
@@ -202,7 +206,7 @@ public class MarktanalyseService : IMarktanalyseService
             var losseQuery = _db.MarketAssets
                 .Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null && a.IsActive);
 
-            losseQuery = ToepassGeoFilter(losseQuery, geoMunicipalityId, geoMunicipalSectionId);
+            losseQuery = ToepassGeoFilter(losseQuery, geoMunicipalityId, geoMunicipalSectionId, fallbackZips, fallbackSectionCity);
 
             if (type == "Appartement")
                 losseQuery = losseQuery.Where(a => a.PropertyType == PropertyType.Apartment);
@@ -328,18 +332,81 @@ public class MarktanalyseService : IMarktanalyseService
         return vm;
     }
 
-    // ── Geo-filter helper ─────────────────────────────────────────────────────
+    // ── Geo-filter helpers ────────────────────────────────────────────────────
+
+    private async Task<(List<string> FallbackZips, string? SectionCity)> LaadGeoFallbackAsync(
+        int? geoMunicipalityId,
+        int? geoMunicipalSectionId,
+        GemeenteAnalyseViewModel vm,
+        CancellationToken ct)
+    {
+        if (geoMunicipalSectionId.HasValue)
+        {
+            // Sectie geselecteerd: fallback = exacte postcode + deelgemeentenaam
+            var zip = vm.GeselecteerdePostcode;
+            var city = vm.GeselecteerdeDeelgemeenteNaam;
+            return (string.IsNullOrEmpty(zip) ? [] : [zip], city);
+        }
+
+        if (geoMunicipalityId.HasValue)
+        {
+            // Gemeente geselecteerd: fallback = alle postcodes in die gemeente
+            var nisCode = await _db.GeoMunicipalities
+                .Where(m => m.Id == geoMunicipalityId.Value)
+                .Select(m => m.NisCode)
+                .FirstOrDefaultAsync(ct);
+
+            if (string.IsNullOrEmpty(nisCode)) return ([], null);
+
+            var zips = await _db.GeoMunicipalSections
+                .Where(s => s.NisCodeMunicipality == nisCode && s.ZipCode != null)
+                .Select(s => s.ZipCode!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            return (zips, null);
+        }
+
+        return ([], null);
+    }
 
     private static IQueryable<MarketAsset> ToepassGeoFilter(
         IQueryable<MarketAsset> query,
         int? geoMunicipalityId,
-        int? geoMunicipalSectionId)
+        int? geoMunicipalSectionId,
+        List<string> fallbackZips,
+        string? fallbackSectionCity)
     {
         if (geoMunicipalSectionId.HasValue)
+        {
+            // Primair: exacte GeoMunicipalSectionId
+            // Fallback: assets zonder sectie-ID maar met matchende postcode + stad
+            if (fallbackZips.Count > 0 && !string.IsNullOrEmpty(fallbackSectionCity))
+            {
+                var zip  = fallbackZips[0];
+                var city = fallbackSectionCity;
+                return query.Where(a =>
+                    a.GeoMunicipalSectionId == geoMunicipalSectionId.Value
+                    || (a.GeoMunicipalSectionId == null
+                        && a.PostalCode == zip
+                        && EF.Functions.Like(a.City ?? "", city + "%")));
+            }
             return query.Where(a => a.GeoMunicipalSectionId == geoMunicipalSectionId.Value);
+        }
 
         if (geoMunicipalityId.HasValue)
+        {
+            // Primair: GeoMunicipalityId
+            // Fallback: assets zonder gemeente-ID maar met postcode in de gemeente
+            if (fallbackZips.Count > 0)
+            {
+                return query.Where(a =>
+                    a.GeoMunicipalityId == geoMunicipalityId.Value
+                    || (a.GeoMunicipalityId == null
+                        && fallbackZips.Contains(a.PostalCode ?? "")));
+            }
             return query.Where(a => a.GeoMunicipalityId == geoMunicipalityId.Value);
+        }
 
         return query;
     }

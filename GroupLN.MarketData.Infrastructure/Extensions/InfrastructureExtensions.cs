@@ -73,12 +73,22 @@ public static class InfrastructureExtensions
         services.AddScoped<IAdminVectorImportService, AdminVectorImportService>();
         services.AddScoped<BackfillMarketAssetLocationsCommand>();
 
+        // Geocoding (adres → coördinaten)
+        services.AddHttpClient("Nominatim", client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("GroupLN-MarketData/1.0");
+            client.Timeout = TimeSpan.FromSeconds(15);
+        });
+        services.AddScoped<IGeocodingService, NominatimGeocodingService>();
+        services.AddScoped<GeocodingEnrichmentService>();
+
         // Canonical Projects
         services.AddScoped<ICanonicalProjectService, CanonicalProjectService>();
         services.AddScoped<RebuildCanonicalProjectsCommand>();
 
         // Tijdelijke tests
         services.AddScoped<ZimmoDetailDiscoveryTest>();
+        services.AddScoped<ZimmoDirectDetailTest>();
 
         return services;
     }

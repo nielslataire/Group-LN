@@ -7,6 +7,7 @@ public class CrawlerSettings
     // ── Veiligheidsschakelaar ───────────────────────────────────────────────
     public bool EnableCrawler { get; set; } = true;
     public bool DryRun { get; set; } = false;
+    public bool ForceCrawl { get; set; } = false;
     public bool ApplyMigrationsOnStartup { get; set; } = false;
 
     // ── Limieten ────────────────────────────────────────────────────────────
@@ -58,6 +59,12 @@ public class SourceSettings
     /// <summary>false = bron wordt overgeslagen, geen URLs gegenereerd, geen verwerking.</summary>
     public bool Enabled { get; set; } = true;
 
+    // ── Source-specifieke rate-limit overrides (null = gebruik globale waarde) ─
+    public int? MaxRequestsPerMinute { get; set; }
+    public int? DelayBetweenRequestsSeconds { get; set; }
+    public int? HttpTimeoutSeconds { get; set; }
+    public int? PlaywrightTimeoutMs { get; set; }
+
     /// <summary>
     /// true = enkel zoekpagina's bezoeken en debug-bestanden schrijven.
     /// Geen detailpagina's openen, geen database-writes.
@@ -103,6 +110,23 @@ public class SourceSettings
     /// true (standaard) = detailpagina's openen voor volledige parsing.
     /// </summary>
     public bool OpenDetailPages { get; set; } = true;
+
+    /// <summary>
+    /// true (standaard) = detailpagina openen voor Zimmo nieuwbouwprojecten
+    /// (URL bevat /nieuwbouwproject/ of type=PROJECT in search-card).
+    /// </summary>
+    public bool OpenProjectDetailPages { get; set; } = true;
+
+    /// <summary>
+    /// false (standaard) = gewone huizen/appartementen alleen via search-card data.
+    /// true = ook voor losse listings detailpagina's openen (risico op Cloudflare-blokkering).
+    /// </summary>
+    public bool OpenDetailPagesForLooseListings { get; set; } = false;
+
+    /// <summary>
+    /// Maximaal aantal projectdetailpagina's per crawl-run. 0 = onbeperkt.
+    /// </summary>
+    public int MaxProjectDetailPagesPerRun { get; set; } = 100;
 }
 
 /// <summary>

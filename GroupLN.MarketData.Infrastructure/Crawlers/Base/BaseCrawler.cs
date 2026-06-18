@@ -28,6 +28,18 @@ public abstract class BaseCrawler : IRealEstateCrawler
     public abstract string SourceName { get; }
 
     /// <summary>
+    /// Geeft de source-specifieke instellingen terug. Subklassen overschrijven dit
+    /// zodat rate-limit helpers de juiste source kunnen opzoeken.
+    /// </summary>
+    protected virtual SourceSettings? GetCurrentSourceSettings() => null;
+
+    // ── Effective rate-limit helpers (source ?? global) ───────────────────────
+    protected int EffectiveMaxRequestsPerMinute      => GetCurrentSourceSettings()?.MaxRequestsPerMinute      ?? Settings.MaxRequestsPerMinute;
+    protected int EffectiveDelayBetweenRequestsSeconds => GetCurrentSourceSettings()?.DelayBetweenRequestsSeconds ?? Settings.DelayBetweenRequestsSeconds;
+    protected int EffectiveHttpTimeoutSeconds        => GetCurrentSourceSettings()?.HttpTimeoutSeconds        ?? Settings.HttpTimeoutSeconds;
+    protected int EffectivePlaywrightTimeoutMs       => GetCurrentSourceSettings()?.PlaywrightTimeoutMs       ?? Settings.PlaywrightTimeoutMs;
+
+    /// <summary>
     /// Geeft de manuele test-URL's terug. Subklassen overschrijven dit om
     /// source-specifieke ManualTestListingUrls te leveren vanuit Sources[name].
     /// </summary>
@@ -51,6 +63,15 @@ public abstract class BaseCrawler : IRealEstateCrawler
             isDryRun,
             maxListings == 0 ? "onbeperkt" : maxListings.ToString(),
             SearchDebugMode);
+
+        Logger.LogInformation(
+            "[{Source}] Effective rate limit: MaxRequestsPerMinute={Rpm} | Delay={Delay}s | " +
+            "HttpTimeout={Http}s | PlaywrightTimeout={Pw}ms",
+            SourceName,
+            EffectiveMaxRequestsPerMinute,
+            EffectiveDelayBetweenRequestsSeconds,
+            EffectiveHttpTimeoutSeconds,
+            EffectivePlaywrightTimeoutMs);
 
         if (isDryRun)
             Logger.LogWarning("[{Source}] DryRun actief — GEEN data wordt opgeslagen.", SourceName);
@@ -456,8 +477,8 @@ public abstract class BaseCrawler : IRealEstateCrawler
 
     protected virtual async Task ApplyRateLimitAsync(CancellationToken cancellationToken)
     {
-        if (Settings.DelayBetweenRequestsSeconds > 0)
-            await Task.Delay(TimeSpan.FromSeconds(Settings.DelayBetweenRequestsSeconds), cancellationToken);
+        if (EffectiveDelayBetweenRequestsSeconds > 0)
+            await Task.Delay(TimeSpan.FromSeconds(EffectiveDelayBetweenRequestsSeconds), cancellationToken);
     }
 
     /// <summary>

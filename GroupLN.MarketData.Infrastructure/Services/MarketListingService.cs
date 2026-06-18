@@ -3,6 +3,7 @@ using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Interfaces;
+using GroupLN.MarketData.Infrastructure.GeoLocation;
 using GroupLN.MarketData.Infrastructure.TitleResolution;
 using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -15,17 +16,20 @@ public class MarketListingService : IMarketListingService
     private readonly MarketDataDbContext _context;
     private readonly IMarketAssetMatcher _assetMatcher;
     private readonly ILocationResolver _locationResolver;
+    private readonly GeocodingEnrichmentService _geocodingEnrichment;
     private readonly ILogger<MarketListingService> _logger;
 
     public MarketListingService(
         MarketDataDbContext context,
         IMarketAssetMatcher assetMatcher,
         ILocationResolver locationResolver,
+        GeocodingEnrichmentService geocodingEnrichment,
         ILogger<MarketListingService> logger)
     {
         _context = context;
         _assetMatcher = assetMatcher;
         _locationResolver = locationResolver;
+        _geocodingEnrichment = geocodingEnrichment;
         _logger = logger;
     }
 
@@ -64,6 +68,7 @@ public class MarketListingService : IMarketListingService
             var latLngChanged = existing.Asset.Latitude != oldLat || existing.Asset.Longitude != oldLng;
             await TryResolveLocationAsync(existing.Asset, cancellationToken,
                 forceResolve: latLngChanged || !existing.Asset.GeoMunicipalSectionId.HasValue);
+            await TryGeocodeAndResolveAsync(existing.Asset, cancellationToken);
 
             var lastSnapshot = existing.Snapshots.MaxBy(s => s.SnapshotDate);
 
@@ -110,6 +115,8 @@ public class MarketListingService : IMarketListingService
         {
             asset = (await _context.MarketAssets.FindAsync(new object[] { matchResult.MatchedAssetId.Value }, cancellationToken))!;
             UpdateAssetFromDto(asset, dto, now);
+            await TryResolveLocationAsync(asset, cancellationToken, forceResolve: !asset.GeoMunicipalSectionId.HasValue);
+            await TryGeocodeAndResolveAsync(asset, cancellationToken);
             _logger.LogInformation(
                 "Nieuwe listing {ExternalId} gekoppeld aan bestaand MarketAsset {AssetId} (Strong, score={Score}).",
                 dto.ExternalId, asset.Id, matchResult.MatchScore);
@@ -121,6 +128,7 @@ public class MarketListingService : IMarketListingService
             await _context.SaveChangesAsync(cancellationToken);
 
             await TryResolveLocationAsync(asset, cancellationToken);
+            await TryGeocodeAndResolveAsync(asset, cancellationToken);
 
             _logger.LogInformation(
                 "Nieuw MarketAsset {AssetId} aangemaakt | {City} {PostalCode} | {Type} | match={AssetMatchType} | strategy={Strategy}.",
@@ -993,6 +1001,54 @@ public class MarketListingService : IMarketListingService
 
         static string S(string? v) => (v ?? string.Empty).Trim().Replace("|", "_");
         static string K(params string[] parts) => string.Join("|", parts);
+    }
+
+    private async Task TryGeocodeAndResolveAsync(MarketAsset asset, CancellationToken ct)
+    {
+        if (asset.Latitude.HasValue && asset.Longitude.HasValue)
+        {
+            _logger.LogInformation(
+                "[Geocoding] GeocodingSkippedSourceDetail — coördinaten van bronpagina | " +
+                "AssetId={AssetId} | Lat={Lat} | Lon={Lon}",
+                asset.Id, asset.Latitude, asset.Longitude);
+            await TryResolveLocationAsync(asset, ct, forceResolve: false);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(asset.Street)
+         || string.IsNullOrWhiteSpace(asset.PostalCode)
+         || string.IsNullOrWhiteSpace(asset.City))
+        {
+            _logger.LogDebug(
+                "[Geocoding] Overgeslagen (adres onvolledig) — AssetId={AssetId} | Street={Street} | Postcode={PostalCode} | City={City}",
+                asset.Id,
+                asset.Street    ?? "(null)",
+                asset.PostalCode ?? "(null)",
+                asset.City      ?? "(null)");
+            return;
+        }
+
+        var enriched = await _geocodingEnrichment.TryEnrichAsync(asset, ct);
+
+        if (enriched)
+        {
+            _logger.LogInformation(
+                "[Geocoding] Coördinaten ingevuld — AssetId={AssetId} | Lat={Lat} | Lon={Lon} | Confidence={Conf}",
+                asset.Id, asset.Latitude, asset.Longitude, asset.LocationResolutionConfidence);
+
+            await TryResolveLocationAsync(asset, ct, forceResolve: true);
+
+            if (asset.GeoMunicipalSectionId.HasValue || asset.GeoMunicipalityId.HasValue)
+                _logger.LogInformation(
+                    "[Geocoding] LocationResolver bijgewerkt — AssetId={AssetId} | MunicipalityId={MuniId} | SectionId={SectId}",
+                    asset.Id, asset.GeoMunicipalityId, asset.GeoMunicipalSectionId);
+        }
+        else
+        {
+            _logger.LogDebug(
+                "[Geocoding] Geen coördinaten gevonden — AssetId={AssetId} | {Street}, {PostalCode} {City}",
+                asset.Id, asset.Street, asset.PostalCode, asset.City);
+        }
     }
 
     private async Task TryResolveLocationAsync(MarketAsset asset, CancellationToken cancellationToken, bool forceResolve = false)

@@ -113,10 +113,10 @@ public class CrawlerWorker : BackgroundService
 
             try
             {
-                var isDue = await sourceService.IsDueCrawlAsync(source.Id, cancellationToken);
+                var isDue = _settings.ForceCrawl || await sourceService.IsDueCrawlAsync(source.Id, cancellationToken);
                 if (!isDue)
                 {
-                    _logger.LogDebug("[{Source}] Nog niet aan de beurt (elke {Hours}u).", source.Name, source.CrawlFrequencyHours);
+                    _logger.LogInformation("[{Source}] Nog niet aan de beurt (ForceCrawl=false, elke {Hours}u).", source.Name, source.CrawlFrequencyHours);
                     continue;
                 }
 

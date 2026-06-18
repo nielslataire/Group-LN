@@ -59,6 +59,8 @@ public class ZimmoDiscoveryCrawler : BaseCrawler
     private SourceSettings GetSourceSettings() =>
         Settings.Sources.TryGetValue("ZimmoDiscovery", out var s) ? s : new SourceSettings();
 
+    protected override SourceSettings? GetCurrentSourceSettings() => GetSourceSettings();
+
     private string GetDebugDir() =>
         Path.Combine(AppContext.BaseDirectory, Settings.Debug.DebugDirectory, "zimmo-discovery");
 
@@ -214,7 +216,7 @@ public class ZimmoDiscoveryCrawler : BaseCrawler
             var navResponse = await page.GotoAsync(pageUrl, new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout   = Settings.PlaywrightTimeoutMs
+                Timeout   = EffectivePlaywrightTimeoutMs
             });
 
             await page.WaitForTimeoutAsync(2500);
@@ -694,7 +696,7 @@ public class ZimmoDiscoveryCrawler : BaseCrawler
             await page.GotoAsync(url, new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout   = Settings.PlaywrightTimeoutMs
+                Timeout   = EffectivePlaywrightTimeoutMs
             });
             await page.WaitForTimeoutAsync(2500);
 

@@ -98,6 +98,8 @@ public partial class ImmowebCrawler : BaseCrawler
     private SourceSettings GetSourceSettings() =>
         Settings.Sources.TryGetValue("Immoweb", out var s) ? s : new SourceSettings();
 
+    protected override SourceSettings? GetCurrentSourceSettings() => GetSourceSettings();
+
     private string GetDebugDir() =>
         Path.Combine(AppContext.BaseDirectory, Settings.Debug.DebugDirectory);
 
@@ -300,7 +302,7 @@ public partial class ImmowebCrawler : BaseCrawler
             await page.GotoAsync(searchPageUrl, new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = Settings.PlaywrightTimeoutMs
+                Timeout = EffectivePlaywrightTimeoutMs
             });
 
             await page.WaitForTimeoutAsync(3000);
@@ -493,7 +495,7 @@ public partial class ImmowebCrawler : BaseCrawler
         }
         catch (PlaywrightException ex) when (ex.Message.Contains("Timeout"))
         {
-            Logger.LogWarning("[Immoweb] Timeout bij {Url} (>{Timeout}ms).", searchPageUrl, Settings.PlaywrightTimeoutMs);
+            Logger.LogWarning("[Immoweb] Timeout bij {Url} (>{Timeout}ms).", searchPageUrl, EffectivePlaywrightTimeoutMs);
             return Enumerable.Empty<string>();
         }
         catch (Exception ex)
@@ -1343,7 +1345,7 @@ public partial class ImmowebCrawler : BaseCrawler
             await page.GotoAsync(listingUrl, new PageGotoOptions
             {
                 WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = Settings.PlaywrightTimeoutMs
+                Timeout = EffectivePlaywrightTimeoutMs
             });
 
             // Stap 1: window.classified (meest betrouwbaar)

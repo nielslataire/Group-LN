@@ -95,4 +95,24 @@ if (args.Contains("--zimmo-detail-test"))
     return;
 }
 
+// ── Directe Zimmo detailpagina-test (geen warmup, geen cookies) ──────────
+if (args.Contains("--zimmo-direct-detail-test"))
+{
+    var urlArg = args.SkipWhile(a => a != "--url").Skip(1).FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(urlArg))
+    {
+        logger.LogError("[Program] --url <url> argument is vereist bij --zimmo-direct-detail-test.");
+        return;
+    }
+
+    logger.LogInformation("[Program] --zimmo-direct-detail-test modus — normale worker wordt NIET gestart.");
+    using (var scope = host.Services.CreateScope())
+    {
+        var test = scope.ServiceProvider.GetRequiredService<ZimmoDirectDetailTest>();
+        await test.RunAsync(urlArg);
+    }
+    logger.LogInformation("[Program] Zimmo direct detail-test voltooid. Afsluiten.");
+    return;
+}
+
 await host.RunAsync();
