@@ -113,6 +113,22 @@ public class CrawlerWorker : BackgroundService
 
             try
             {
+                // Controleer appsettings Sources[name].Enabled — DB.IsActive is noodzakelijk maar niet voldoende.
+                // Ontbrekende sectie = Enabled niet geconfigureerd = default true (backwards-compat).
+                var settingsEnabled = !_settings.Sources.TryGetValue(source.Name, out var srcSettings) || srcSettings.Enabled;
+                _logger.LogInformation(
+                    "[{Source}] DB.IsActive=true | Settings.Enabled={Enabled}",
+                    source.Name, settingsEnabled);
+
+                if (!settingsEnabled)
+                {
+                    _logger.LogWarning(
+                        "[{Source}] Overgeslagen — Sources.{Source}.Enabled = false in appsettings. " +
+                        "Zet Enabled=true om deze bron te activeren.",
+                        source.Name, source.Name);
+                    continue;
+                }
+
                 var isDue = _settings.ForceCrawl || await sourceService.IsDueCrawlAsync(source.Id, cancellationToken);
                 if (!isDue)
                 {
@@ -144,11 +160,22 @@ public class CrawlerWorker : BackgroundService
         var crawler = crawlerFactory.GetCrawler(source.Name);
         if (crawler is null)
         {
-            _logger.LogWarning("[{Source}] Geen crawler-implementatie gevonden. Bron wordt overgeslagen.", source.Name);
+            _logger.LogWarning("[{Source}] Geen crawler-implementatie gevonden voor DB-naam '{Name}'. Bron wordt overgeslagen.", source.Name, source.Name);
             return;
         }
 
-        _logger.LogInformation("[{Source}] ▶ Crawl starten...", source.Name);
+        // Guard: crawler.SourceName moet exact overeenkomen met de DB-bronnaam.
+        // Dit vangt configuratiefouten op waarbij een verkeerde crawler wordt geselecteerd.
+        if (!crawler.SourceName.Equals(source.Name, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning(
+                "[{Source}] Crawler-mismatch gedetecteerd: DB.Name='{DbName}' maar crawler.SourceName='{CrawlerName}'. " +
+                "Bron overgeslagen — controleer CrawlerFactory en SourceName-eigenschappen.",
+                source.Name, source.Name, crawler.SourceName);
+            return;
+        }
+
+        _logger.LogInformation("[{Source}] ▶ Crawl starten met {CrawlerType}...", source.Name, crawler.GetType().Name);
 
         var runId = await runService.StartRunAsync(source.Id, cancellationToken);
 

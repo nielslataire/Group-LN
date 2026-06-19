@@ -185,43 +185,59 @@ public static class ListingTitleResolver
     /// Bepaalt de best mogelijke titel voor een project-unit.
     /// <paramref name="resolvedParentTitle"/> overschrijft de raw <see cref="ProjectGroupUnitDto.ParentProjectName"/>
     /// met de al-opgekuiste titel van het parent project.
+    /// <paramref name="existingTitle"/> is de huidige DB-titel (voor logging OldTitle).
     /// </summary>
     public static TitleResolutionResult ResolveForUnit(
         ProjectGroupUnitDto unit,
         string? resolvedParentTitle = null,
-        ILogger? logger = null)
+        ILogger? logger = null,
+        string? existingTitle = null)
     {
         var typeLabel = GetDisplayPropertyType(
             unit.RawGroupType, unit.RawSubType,
             unit.MappedPropertyType, unit.MappedPropertySubType);
 
+        // Bepaal welk uniek component beschikbaar is (voor source-logging)
+        var uniqueSource =
+            !string.IsNullOrEmpty(unit.UnitNumber) ? "UnitNumber" :
+            unit.Floor.HasValue && unit.MappedPropertyType == PropertyType.Apartment ? "Floor" :
+            !string.IsNullOrEmpty(unit.UnitId) ? "ExternalId" :
+            "Fallback";
+
         // Gebruik de meest bruikbare naam: resolvedParentTitle > ParentProjectName
-        var rawParentName  = resolvedParentTitle ?? unit.ParentProjectName;
-        var projectName    = NormalizeProjectName(rawParentName);
+        var rawParentName = resolvedParentTitle ?? unit.ParentProjectName;
+        var projectName   = NormalizeProjectName(rawParentName);
         string title;
         string source;
 
         if (!string.IsNullOrEmpty(projectName) && IsValidProjectName(projectName))
         {
             var detail = BuildUnitDetail(typeLabel, unit.Floor, unit.BedroomCount,
-                unit.MappedPropertyType, unit.MappedPropertySubType);
+                unit.MappedPropertyType, unit.MappedPropertySubType,
+                unitNumber: unit.UnitNumber, externalUnitId: unit.UnitId);
             title  = $"{projectName} - {detail}";
-            source = "ParentProject";
+            source = $"ParentProject+{uniqueSource}";
         }
         else
         {
-            // Fallback: geen bruikbare projectnaam beschikbaar → "Unit X" als laatste redmiddel
-            title  = $"Unit {unit.UnitId}";
-            source = "TechnicalFallback";
+            // Fallback: geen bruikbare projectnaam — gebruik type + UnitId als identificatie
+            title = !string.IsNullOrEmpty(typeLabel) && !string.IsNullOrEmpty(unit.UnitId)
+                ? $"{typeLabel} {unit.UnitId}"
+                : !string.IsNullOrEmpty(typeLabel)
+                    ? typeLabel
+                    : $"Unit {unit.UnitId}";
+            source = $"Fallback+{uniqueSource}";
         }
 
         logger?.LogInformation(
-            "[TitleResolved] {UnitId} | Old='Unit {UnitId2}' | New='{NewTitle}' | Source={Source}",
-            unit.UnitId, unit.UnitId, title, source);
+            "[UnitTitleResolved] ParentProjectId={ParentId} | UnitExternalId={UnitId} | UnitNumber={UnitNumber} | " +
+            "OldTitle={OldTitle} | NewTitle={NewTitle} | Source={Source}",
+            unit.ParentProjectId, unit.UnitId, unit.UnitNumber ?? "(none)",
+            existingTitle ?? "(new)", title, uniqueSource);
 
         var result = new TitleResolutionResult(title, source, DetectedProjectName: projectName);
         AppendToDebugFile(unit.UnitId, isProjectGroup: false, isProjectUnit: true,
-            oldTitle: null, addressFallback: null, typeLabel: typeLabel, result: result);
+            oldTitle: existingTitle, addressFallback: null, typeLabel: typeLabel, result: result);
 
         return result;
     }
@@ -626,12 +642,14 @@ public static class ListingTitleResolver
     }
 
     /// <summary>
-    /// Bouwt het detail-gedeelte van een unit-titel op:
-    /// type + verdieping (appartement) of type + slaapkamers (woning).
+    /// Bouwt het detail-gedeelte van een unit-titel op.
+    /// Volgorde: UnitNumber → Floor (appartement) → ExternalUnitId → generiek type.
+    /// Slaapkamers worden NOOIT als uniek component gebruikt.
     /// </summary>
     private static string BuildUnitDetail(
         string typeLabel, int? floor, int? bedroomCount,
-        PropertyType propertyType, PropertySubType propertySubType)
+        PropertyType propertyType, PropertySubType propertySubType,
+        string? unitNumber = null, string? externalUnitId = null)
     {
         if (propertySubType == PropertySubType.Penthouse || typeLabel == "Penthouse")
             return "Penthouse";
@@ -646,16 +664,23 @@ public static class ListingTitleResolver
                 var lbl = FloorLabels.TryGetValue(floor.Value, out var l) ? l : $"{floor.Value}e verdieping";
                 return $"Appartement - {lbl}";
             }
+            if (!string.IsNullOrEmpty(unitNumber))    return $"Appartement {unitNumber}";
+            if (!string.IsNullOrEmpty(externalUnitId)) return $"Appartement {externalUnitId}";
             return "Appartement";
         }
 
         if (propertyType == PropertyType.House)
         {
-            return bedroomCount.HasValue
-                ? $"Woning - {bedroomCount.Value} slaapkamers"
-                : "Woning";
+            if (!string.IsNullOrEmpty(unitNumber))    return $"Woning {unitNumber}";
+            if (!string.IsNullOrEmpty(externalUnitId)) return $"Woning {externalUnitId}";
+            return "Woning";
         }
 
+        // Overig: gebruik unitNumber → externalUnitId → typeLabel
+        if (!string.IsNullOrEmpty(unitNumber))
+            return string.IsNullOrEmpty(typeLabel) ? $"Eenheid {unitNumber}" : $"{typeLabel} {unitNumber}";
+        if (!string.IsNullOrEmpty(externalUnitId))
+            return string.IsNullOrEmpty(typeLabel) ? $"Eenheid {externalUnitId}" : $"{typeLabel} {externalUnitId}";
         return string.IsNullOrEmpty(typeLabel) ? "Eenheid" : typeLabel;
     }
 

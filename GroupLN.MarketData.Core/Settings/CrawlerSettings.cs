@@ -47,6 +47,10 @@ public class CrawlerSettings
     public bool RebuildCanonicalProjectsAfterDedup { get; set; } = true;
 
     // ── Debug-instellingen ───────────────────────────────────────────────────
+    public PhotoHashingSettings PhotoHashing { get; set; } = new();
+
+    public AiExtractionSettings AiExtraction { get; set; } = new();
+
     public DebugSettings Debug { get; set; } = new();
 }
 
@@ -173,4 +177,25 @@ public class DebugSettings
     /// Overschrijft MaxSearchPagesPerLocation wanneer SearchDebugMode=true.
     /// </summary>
     public int MaxPagesInSearchDebugMode { get; set; } = 3;
+}
+
+public class PhotoHashingSettings
+{
+    public bool EnableProjectPhotoHashing { get; set; } = false;
+    public bool DownloadProjectPhotos { get; set; } = false;
+    public int MaxProjectPhotosPerProject { get; set; } = 20;
+    public int PhotoHashTimeoutSeconds { get; set; } = 20;
+    public int RehashPhotosAfterDays { get; set; } = 30;
+    public int PhotoHashMaxBytes { get; set; } = 10_485_760; // 10 MB
+    public int PhotoPerceptualHashMaxDistance { get; set; } = 8;
+}
+
+public class AiExtractionSettings
+{
+    public bool EnableAiProjectExtraction { get; set; } = false;
+    public string? AnthropicApiKey { get; set; }
+    public string AnthropicModel { get; set; } = "claude-haiku-4-5-20251001";
+    public int AiExtractionMinConfidence { get; set; } = 70;
+    public int MaxAiExtractionsPerRun { get; set; } = 50;
+    public int AiExtractionTimeoutSeconds { get; set; } = 30;
 }

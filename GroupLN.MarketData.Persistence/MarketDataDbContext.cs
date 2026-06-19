@@ -27,6 +27,9 @@ public class MarketDataDbContext : DbContext
 
     public DbSet<GeocodingCache> GeocodingCaches => Set<GeocodingCache>();
 
+    public DbSet<ProjectPhotoHash> ProjectPhotoHashes => Set<ProjectPhotoHash>();
+    public DbSet<ProjectAiExtractionCache> ProjectAiExtractionCaches => Set<ProjectAiExtractionCache>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(MarketDataDbContext).Assembly);

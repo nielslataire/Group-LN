@@ -70,10 +70,19 @@
       "Bash(pkill -f \"GroupLN.MarketData.Worker\")",
       "Bash(pkill -f \"dotnet run\")",
       "Bash(sleep 20 && tail -n 30 /c/Users/latni/AppData/Local/Temp/dryrun-zimmo-v3.log)",
-      "Read(//c/Users/latni/AppData/Local/Temp/**)"
+      "Read(//c/Users/latni/AppData/Local/Temp/**)",
+      "Read(//e/TFS/GroupLN.MarketData.Core/**)",
+      "PowerShell(Stop-Process -Name \"CPMCore\" -Force -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Path \"e:\\\\TFS\" -Directory -ErrorAction SilentlyContinue)",
+      "Read(//e/TFS/**)",
+      "Bash(ls /e/TFS/GroupLN.MarketData.Worker/../)",
+      "Read(//e/TFS//**)",
+      "PowerShell(dotnet user-secrets list --project \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\" 2>&1)",
+      "PowerShell($currentKey = dotnet user-secrets list --project \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\" 2>&1 | Select-String \"AnthropicApiKey\" | ForEach-Object { \\($_ -split \" = \"\\)[1].Trim\\(\\) }; if \\($currentKey\\) { dotnet user-secrets set \"CrawlerSettings:AiExtraction:AnthropicApiKey\" $currentKey --project \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\"; dotnet user-secrets remove \"AiExtraction:AnthropicApiKey\" --project \"e:\\\\TFS\\\\GroupLN.MarketData.Worker\" } else { Write-Host \"Geen AnthropicApiKey gevonden in user secrets\" })"
     ],
     "additionalDirectories": [
-      "C:\\Users\\latni\\AppData\\Local\\Temp\\claude"
+      "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",
+      "\\dev"
     ]
   }
 }

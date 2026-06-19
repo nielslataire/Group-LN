@@ -24,6 +24,15 @@ public static class InfrastructureExtensions
         configuration.GetSection(CrawlerSettings.Section).Bind(settings);
         services.AddSingleton(settings);
 
+        // Anthropic API client (voor AI project extractie)
+        services.AddHttpClient("AnthropicClient", client =>
+        {
+            client.BaseAddress = new Uri("https://api.anthropic.com/");
+            client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+            client.DefaultRequestHeaders.Add("anthropic-beta", "messages-2023-12-15");
+            client.Timeout = TimeSpan.FromSeconds(settings.AiExtraction.AiExtractionTimeoutSeconds);
+        });
+
         // HTTP client met retry + timeout
         services.AddHttpClient("MarketDataClient", client =>
         {
@@ -65,6 +74,10 @@ public static class InfrastructureExtensions
         // Factory haalt alle crawlers op via IEnumerable<IRealEstateCrawler>
         services.AddScoped<ICrawlerFactory, CrawlerFactory>();
 
+        // Photo hashing + AI extractie
+        services.AddScoped<IProjectPhotoHashService, ProjectPhotoHashService>();
+        services.AddScoped<IAiProjectExtractionService, AnthropicProjectExtractionService>();
+
         // Deduplicatie
         services.AddScoped<IDeduplicationService, DeduplicationService>();
 
@@ -85,6 +98,9 @@ public static class InfrastructureExtensions
         // Canonical Projects
         services.AddScoped<ICanonicalProjectService, CanonicalProjectService>();
         services.AddScoped<RebuildCanonicalProjectsCommand>();
+
+        // Database cleanup
+        services.AddScoped<ResetMarketDataCommand>();
 
         // Tijdelijke tests
         services.AddScoped<ZimmoDetailDiscoveryTest>();

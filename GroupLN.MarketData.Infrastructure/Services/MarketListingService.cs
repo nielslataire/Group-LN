@@ -3,6 +3,7 @@ using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Interfaces;
+using GroupLN.MarketData.Core.Settings;
 using GroupLN.MarketData.Infrastructure.GeoLocation;
 using GroupLN.MarketData.Infrastructure.TitleResolution;
 using GroupLN.MarketData.Persistence;
@@ -17,6 +18,9 @@ public class MarketListingService : IMarketListingService
     private readonly IMarketAssetMatcher _assetMatcher;
     private readonly ILocationResolver _locationResolver;
     private readonly GeocodingEnrichmentService _geocodingEnrichment;
+    private readonly IProjectPhotoHashService _photoHashService;
+    private readonly IAiProjectExtractionService _aiExtractionService;
+    private readonly CrawlerSettings _settings;
     private readonly ILogger<MarketListingService> _logger;
 
     public MarketListingService(
@@ -24,12 +28,18 @@ public class MarketListingService : IMarketListingService
         IMarketAssetMatcher assetMatcher,
         ILocationResolver locationResolver,
         GeocodingEnrichmentService geocodingEnrichment,
+        IProjectPhotoHashService photoHashService,
+        IAiProjectExtractionService aiExtractionService,
+        CrawlerSettings settings,
         ILogger<MarketListingService> logger)
     {
         _context = context;
         _assetMatcher = assetMatcher;
         _locationResolver = locationResolver;
         _geocodingEnrichment = geocodingEnrichment;
+        _photoHashService = photoHashService;
+        _aiExtractionService = aiExtractionService;
+        _settings = settings;
         _logger = logger;
     }
 
@@ -100,6 +110,17 @@ public class MarketListingService : IMarketListingService
             await _context.SaveChangesAsync(cancellationToken);
             _logger.LogDebug("Listing bijgewerkt: {ExternalId} ({City} {PostalCode}).",
                 dto.ExternalId, dto.City, dto.PostalCode);
+
+            if (dto.IsProjectListing)
+            {
+                if (dto.PhotoUrls.Count > 0)
+                    await _photoHashService.UpdateProjectPhotosAsync(
+                        existing.Asset.Id, dto.SourceId, dto.ExternalId, dto.PhotoUrls, cancellationToken);
+                else
+                    _logger.LogInformation("[PhotoHash] NoProjectPhotosFound | ExternalId={Id}", dto.ExternalId);
+                await TriggerAiExtractionAsync(dto, cancellationToken);
+            }
+
             return (false, existing.Asset.Id);
         }
 
@@ -186,6 +207,18 @@ public class MarketListingService : IMarketListingService
         await _context.SaveChangesAsync(cancellationToken);
         _logger.LogDebug("Nieuwe listing aangemaakt: {ExternalId} ({City} {PostalCode}).",
             dto.ExternalId, dto.City, dto.PostalCode);
+
+        // Foto-hashing voor projectgroepen (fail-safe, blokkeert nooit)
+        if (dto.IsProjectListing)
+        {
+            if (dto.PhotoUrls.Count > 0)
+                await _photoHashService.UpdateProjectPhotosAsync(
+                    asset.Id, dto.SourceId, dto.ExternalId, dto.PhotoUrls, cancellationToken);
+            else
+                _logger.LogInformation("[PhotoHash] NoProjectPhotosFound | ExternalId={Id}", dto.ExternalId);
+            await TriggerAiExtractionAsync(dto, cancellationToken);
+        }
+
         return (true, asset.Id);
     }
 
@@ -255,7 +288,7 @@ public class MarketListingService : IMarketListingService
                 existing.MissingCrawlCount = 0;
                 existing.UpdatedAt = now;
 
-                var resolvedUnitTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger).Title;
+                var resolvedUnitTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger, existing.Title).Title;
                 if (ListingTitleResolver.IsBetterTitle(existing.Title, resolvedUnitTitle))
                     existing.Title = resolvedUnitTitle;
 
@@ -354,7 +387,7 @@ public class MarketListingService : IMarketListingService
                     MarketAssetId = asset.Id,
                     SourceId = projectDto.SourceId,
                     ExternalId = unit.UnitId,
-                    Url = $"{projectDto.Url}#unit-{unit.UnitId}",
+                    Url = !string.IsNullOrEmpty(unit.Url) ? unit.Url : $"{projectDto.Url}#unit-{unit.UnitId}",
                     Title = resolvedTitle,
                     AskingPrice = unit.Price,
                     FirstSeenAt = now,
@@ -379,6 +412,26 @@ public class MarketListingService : IMarketListingService
                     unit.Surface?.ToString("N0") ?? "?",
                     unit.BedroomCount?.ToString() ?? "?",
                     unit.Price.HasValue ? $"€{unit.Price.Value:N0}" : "?");
+            }
+        }
+
+        // Duplicate titel detectie binnen hetzelfde project
+        if (!dryRun && units.Count > 1)
+        {
+            var titleToUnitIds = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var unit in units)
+            {
+                if (string.IsNullOrEmpty(unit.UnitId)) continue;
+                var t = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title).Title;
+                if (!titleToUnitIds.TryGetValue(t, out var ids))
+                    titleToUnitIds[t] = ids = [];
+                ids.Add(unit.UnitId);
+            }
+            foreach (var (dupTitle, dupIds) in titleToUnitIds.Where(kv => kv.Value.Count > 1))
+            {
+                _logger.LogWarning(
+                    "[DuplicateUnitTitleDetected] ParentProjectId={ParentId} | Title='{Title}' | Count={Count} | UnitIds={UnitIds}",
+                    parentAssetId, dupTitle, dupIds.Count, string.Join(", ", dupIds));
             }
         }
 
@@ -866,6 +919,97 @@ public class MarketListingService : IMarketListingService
         });
 
         await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    // ── AI projectnaam-extractie (fail-safe) ─────────────────────────────────────
+
+    private async Task TriggerAiExtractionAsync(NormalizedPropertyDto dto, CancellationToken ct)
+    {
+        if (!_settings.AiExtraction.EnableAiProjectExtraction) return;
+
+        try
+        {
+            // Source name ophalen (eenmalig per call — al gecachet door EF change tracker)
+            var sourceName = await _context.CrawlerSources
+                .Where(s => s.Id == dto.SourceId)
+                .Select(s => s.Name)
+                .FirstOrDefaultAsync(ct) ?? $"source_{dto.SourceId}";
+
+            var address = string.Join(", ", new[]
+            {
+                dto.Street is { Length: > 0 } s2 ? s2 + (dto.HouseNumber is { Length: > 0 } hn ? " " + hn : "") : null,
+                dto.PostalCode is { Length: > 0 } pc ? pc + (dto.City is { Length: > 0 } c ? " " + c : "") : null
+            }.Where(p => p is not null));
+
+            _logger.LogInformation(
+                "[AI] Start | Source={Source} | ExternalId={Id} | Title={Title}",
+                sourceName, dto.ExternalId, dto.Title?[..Math.Min(60, dto.Title?.Length ?? 0)] ?? "");
+
+            // Regex-extractor eerst (snelle lokale check zonder API-call)
+            var regexResult = ProjectNameRegexExtractor.TryExtractFromMultiple(dto.Title);
+            if (regexResult is not null)
+                _logger.LogInformation(
+                    "[AI] RegexExtract | {ExternalId} | '{Name}' (patroon={Pattern})",
+                    dto.ExternalId, regexResult.ProjectName, regexResult.MatchedPattern[..Math.Min(40, regexResult.MatchedPattern.Length)]);
+
+            // AI extractie (gecachet op InputHash)
+            var input = new AiProjectExtractionInput
+            {
+                SourceName  = sourceName,
+                ExternalId  = dto.ExternalId,
+                Url         = dto.Url,
+                RawTitle    = dto.Title,
+                Address     = address,
+                Developer   = dto.DeveloperName,
+            };
+
+            var result = await _aiExtractionService.ExtractAsync(input, ct);
+
+            if (result is null) return;
+
+            var origin = result.FromCache ? "cache" : "API";
+
+            if (string.IsNullOrEmpty(result.ProjectName))
+            {
+                var hasOtherData = !string.IsNullOrEmpty(result.Street)
+                    || !string.IsNullOrEmpty(result.PostalCode)
+                    || !string.IsNullOrEmpty(result.City)
+                    || result.NumberOfUnits.HasValue
+                    || !string.IsNullOrEmpty(result.Developer);
+
+                _logger.LogInformation(
+                    "[AI] NoProjectName | [{Origin}] | {ExternalId} | confidence={Confidence}% | " +
+                    "HasOtherData={HasOtherData} | Street={Street} | PostalCode={PC} | City={City} | " +
+                    "Units={Units} | Developer={Dev}",
+                    origin, dto.ExternalId, result.ProjectNameConfidence, hasOtherData,
+                    result.Street ?? "(none)", result.PostalCode ?? "(none)", result.City ?? "(none)",
+                    result.NumberOfUnits?.ToString() ?? "(none)", result.Developer ?? "(none)");
+            }
+            else if (result.IsMarketingTitle)
+            {
+                _logger.LogInformation(
+                    "[AI] Rejected | Reason=MarketingTitle | [{Origin}] | {ExternalId} | '{Name}' | confidence={Confidence}%",
+                    origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence);
+            }
+            else if (result.ProjectNameConfidence < _settings.AiExtraction.AiExtractionMinConfidence)
+            {
+                _logger.LogInformation(
+                    "[AI] Rejected | Reason=LowConfidence | [{Origin}] | {ExternalId} | '{Name}' | confidence={Confidence}% < min={Min}%",
+                    origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence, _settings.AiExtraction.AiExtractionMinConfidence);
+            }
+            else
+            {
+                _logger.LogInformation(
+                    "[AI] Success | [{Origin}] | {ExternalId} | '{Name}' | confidence={Confidence}%",
+                    origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence);
+            }
+        }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[AI] AI-extractie mislukt voor {ExternalId} — crawler gaat verder. Fout: {Err}",
+                dto.ExternalId, ex.Message);
+        }
     }
 
     private static bool HasRelevantChange(MarketListingSnapshot? last, NormalizedPropertyDto dto)

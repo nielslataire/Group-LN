@@ -29,6 +29,11 @@ public partial class ImmowebCrawler : BaseCrawler
     // Field availability summary — accumulatie over de volledige crawl-sessie
     private readonly Dictionary<string, (int Found, int Missing)> _fieldSummary = new(StringComparer.Ordinal);
 
+    // Per-locatie state — reset bij pagina 1 van elke nieuwe locatie
+    private string _currentLocationLabel = string.Empty;
+    private int? _locationDetectedResultCount;
+    private int _locationTotalUnique;
+
     // Listing-URL's afkomstig van een nieuwbouwzoekopdracht (isNewlyBuilt=true in zoek-URL)
     private readonly ConcurrentDictionary<string, bool> _newBuildSearchListings =
         new(StringComparer.OrdinalIgnoreCase);
@@ -140,6 +145,9 @@ public partial class ImmowebCrawler : BaseCrawler
         _pageStats.Clear();
         _pendingProjectUnits.Clear();
         _newBuildSearchListings.Clear();
+        _currentLocationLabel = string.Empty;
+        _locationDetectedResultCount = null;
+        _locationTotalUnique = 0;
 
         // Verwijder afgelopen crawl's rejected-urls bestand (herstart per crawl)
         try
@@ -175,6 +183,7 @@ public partial class ImmowebCrawler : BaseCrawler
         }
 
         var urls = new List<string>();
+        var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var template in src.SearchUrls)
         {
@@ -206,20 +215,36 @@ public partial class ImmowebCrawler : BaseCrawler
                     }
 
                     for (var p = 1; p <= maxPages; p++)
-                        urls.Add(ExpandUrl(template, loc, slug, p));
+                    {
+                        var url = BuildPagedSearchUrl(template, loc, slug, p);
+                        var isDuplicate = !seenUrls.Add(url);
+                        Logger.LogInformation(
+                            "[Immoweb] Zoek-URL | {City} {PostalCode} | Pagina {Page}/{MaxPages} | {Status} | {Url}",
+                            loc.City, loc.PostalCode, p, maxPages,
+                            isDuplicate ? "DUPLICAAT-SKIP" : "OK",
+                            url);
+                        if (!isDuplicate) urls.Add(url);
+                    }
                 }
             }
             else
             {
                 Logger.LogInformation("[Immoweb] Globale template (geen locatie-placeholders): {Template}", template);
                 for (var p = 1; p <= maxPages; p++)
-                    urls.Add(ExpandUrl(template, null, null, p));
+                {
+                    var url = BuildPagedSearchUrl(template, null, null, p);
+                    var isDuplicate = !seenUrls.Add(url);
+                    Logger.LogInformation(
+                        "[Immoweb] Zoek-URL | Globaal | Pagina {Page}/{MaxPages} | {Status} | {Url}",
+                        p, maxPages,
+                        isDuplicate ? "DUPLICAAT-SKIP" : "OK",
+                        url);
+                    if (!isDuplicate) urls.Add(url);
+                }
             }
         }
 
-        Logger.LogInformation("[Immoweb] {Count} zoek-URL(s) gegenereerd:", urls.Count);
-        foreach (var u in urls)
-            Logger.LogInformation("[Immoweb]   Zoek-URL: {Url}", u);
+        Logger.LogInformation("[Immoweb] {Count} unieke zoek-URL(s) gegenereerd.", urls.Count);
 
         return Task.FromResult<IEnumerable<string>>(urls);
     }
@@ -233,6 +258,36 @@ public partial class ImmowebCrawler : BaseCrawler
             .Replace("{transactionType}", "te-koop", StringComparison.OrdinalIgnoreCase)
             .Replace("{propertyType}", "huis-en-appartement", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Bouwt een pagineerde zoek-URL uit een template. Ondersteunt zowel templates met {page}
+    /// placeholder als templates zonder — in dat laatste geval wordt &amp;page=N toegevoegd voor N &gt; 1.
+    /// </summary>
+    internal static string BuildPagedSearchUrl(string template, LocationSettings? loc, string? slug, int page)
+    {
+        // Stap 1: alle locatie- en type-placeholders invullen (behalve {page})
+        var url = template
+            .Replace("{city}", loc?.City ?? "", StringComparison.OrdinalIgnoreCase)
+            .Replace("{citySlug}", slug ?? "", StringComparison.OrdinalIgnoreCase)
+            .Replace("{postalCode}", loc?.PostalCode ?? "", StringComparison.OrdinalIgnoreCase)
+            .Replace("{transactionType}", "te-koop", StringComparison.OrdinalIgnoreCase)
+            .Replace("{propertyType}", "huis-en-appartement", StringComparison.OrdinalIgnoreCase);
+
+        // Stap 2: paginering
+        if (template.Contains("{page}", StringComparison.OrdinalIgnoreCase))
+            return url.Replace("{page}", page.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        // Template bevat geen {page} — pagina 1 heeft geen extra parameter nodig
+        if (page <= 1) return url;
+
+        // Vervang bestaande page= parameter (voorkomt duplicaten)
+        // Gebruik match-evaluator om capture-group-nummering ambiguïteit te vermijden
+        if (Regex.IsMatch(url, @"[?&]page=\d+", RegexOptions.IgnoreCase))
+            return Regex.Replace(url, @"([?&]page=)\d+",
+                m => m.Groups[1].Value + page, RegexOptions.IgnoreCase);
+
+        return url + (url.Contains('?') ? $"&page={page}" : $"?page={page}");
+    }
+
     // ── Listing-URL's ophalen van één zoekpagina ───────────────────────────────
 
     protected override async Task<IEnumerable<string>> FetchListingUrlsFromSearchPageAsync(
@@ -241,13 +296,31 @@ public partial class ImmowebCrawler : BaseCrawler
         IPage? page = null;
 
         // ── Paginering: overgeslagen pagina's voorbij schatting ───────────────
+        var pageMatch = Regex.Match(searchPageUrl, @"[?&]page=(\d+)", RegexOptions.IgnoreCase);
+        var currentPage = pageMatch.Success ? int.Parse(pageMatch.Groups[1].Value) : 1;
+
+        if (currentPage == 1)
         {
-            var pageMatch = Regex.Match(searchPageUrl, @"[?&]page=(\d+)", RegexOptions.IgnoreCase);
-            var currentPage = pageMatch.Success ? int.Parse(pageMatch.Groups[1].Value) : 1;
+            _estimatedMaxPages = null;         // Reset voor nieuwe locatie/template
+            _detectedResultCount = null;       // ResultCount per locatie resetten
+            _locationDetectedResultCount = null;
+            _locationTotalUnique = 0;
 
-            if (currentPage == 1)
-                _estimatedMaxPages = null; // Reset voor nieuwe locatie/template
+            // Locatielabel extraheren voor logging
+            var locLabelMatch = Regex.Match(searchPageUrl,
+                @"/te-koop/([^/?]+)/(\d{4})", RegexOptions.IgnoreCase);
+            if (locLabelMatch.Success)
+                _currentLocationLabel = $"{locLabelMatch.Groups[1].Value} {locLabelMatch.Groups[2].Value}";
+            else
+            {
+                var pcMatch = Regex.Match(searchPageUrl,
+                    @"postalCodes=BE-(\d+)", RegexOptions.IgnoreCase);
+                _currentLocationLabel = pcMatch.Success ? pcMatch.Groups[1].Value : "onbekend";
+            }
+            Logger.LogInformation("[Immoweb] ══ LocationStart | {Location} ══", _currentLocationLabel);
+        }
 
+        {
             var src2 = GetSourceSettings();
             if (currentPage > 1 && _estimatedMaxPages.HasValue && !src2.ForceMaxSearchPages
                 && currentPage > _estimatedMaxPages.Value)
@@ -341,10 +414,15 @@ public partial class ImmowebCrawler : BaseCrawler
                 anchorCount, scriptCount, allRequests.Count, captured.Count,
                 bodyText?.Length ?? 0);
 
-            if (resultCount.HasValue && _detectedResultCount == null)
+            // ResultCount per locatie bijhouden — currentPage==1 reset al gedaan in de paginering-check hierboven
+            if (currentPage == 1 && resultCount.HasValue)
             {
-                // Eerste pagina: sla op en bereken schattingen
                 _detectedResultCount = resultCount;
+                _locationDetectedResultCount = resultCount;
+            }
+            else if (resultCount.HasValue && _detectedResultCount == null)
+            {
+                _detectedResultCount = resultCount; // Fallback als pagina 1 geen count gaf
             }
 
             if (_detectedResultCount.HasValue)
@@ -808,17 +886,22 @@ public partial class ImmowebCrawler : BaseCrawler
                 : "onbekend";
 
             if (pageNum == 1 && resultCount.HasValue)
+            {
                 _detectedResultCount = resultCount;
+                _locationDetectedResultCount = resultCount;
+            }
 
             _pageStats.Add(new PageStat(pageNum, location, hrefCount, apiCount, sponsorCount, uniqueCount));
+            _locationTotalUnique += uniqueCount;
 
             var totalUnique = _pageStats.Sum(p => p.Unique);
             var effectiveCount = _detectedResultCount ?? resultCount;
+            var locationResultCount = _locationDetectedResultCount ?? resultCount;
             var resultsPerPage = _pageStats.Count > 0
                 ? (int)Math.Max(1, _pageStats.Average(p => Math.Max(p.Href, p.Unique)))
                 : 30;
-            var estimatedPages = effectiveCount.HasValue
-                ? (int)Math.Ceiling(effectiveCount.Value / (double)resultsPerPage)
+            var estimatedPages = locationResultCount.HasValue
+                ? (int)Math.Ceiling(locationResultCount.Value / (double)resultsPerPage)
                 : (int?)null;
 
             // Sla geschat maximum op na pagina 1 (gebruikt voor vroeg afbreken)
@@ -835,11 +918,15 @@ public partial class ImmowebCrawler : BaseCrawler
             }
 
             Logger.LogInformation(
-                "[Immoweb] Paginering | Pagina {Page}: Href={Href} Unique={Unique} | " +
-                "Cumulatief={Total}/{ResultCount} | EstimatedPages={Est}",
-                pageNum, hrefCount, uniqueCount, totalUnique,
-                effectiveCount?.ToString() ?? "?",
-                estimatedPages?.ToString() ?? "?");
+                "[Immoweb] Paginering | {Location} | Page={Page}/{Est} | PageUnique={PU} | " +
+                "LocationUnique={LU}/{RC} | TotalUnique={TU}",
+                _currentLocationLabel,
+                pageNum,
+                estimatedPages?.ToString() ?? "?",
+                uniqueCount,
+                _locationTotalUnique,
+                locationResultCount?.ToString() ?? "?",
+                totalUnique);
 
             if (!Settings.Debug.Enabled || !Settings.Debug.SavePaginationSummary) return;
 
@@ -1361,6 +1448,8 @@ public partial class ImmowebCrawler : BaseCrawler
                     Logger.LogInformation("[Immoweb] window.classified gevonden.");
                     LogParsedListing(dto);
                     await HandleProjectGroupAsync(dto, classifiedJson, cancellationToken);
+                    if (IsProjectGroup(dto, listingUrl))
+                        dto.PhotoUrls = await ExtractImmowebProjectPhotoUrlsAsync(page, cancellationToken);
                     await WriteParserDebugFileAsync(dto, classifiedJson, cancellationToken);
                     return dto;
                 }
@@ -1379,6 +1468,8 @@ public partial class ImmowebCrawler : BaseCrawler
                     Logger.LogInformation("[Immoweb] __NEXT_DATA__ gevonden.");
                     LogParsedListing(dto);
                     await HandleProjectGroupAsync(dto, nextDataJson, cancellationToken);
+                    if (IsProjectGroup(dto, listingUrl))
+                        dto.PhotoUrls = await ExtractImmowebProjectPhotoUrlsAsync(page, cancellationToken);
                     await WriteParserDebugFileAsync(dto, nextDataJson, cancellationToken);
                     return dto;
                 }
@@ -1413,7 +1504,8 @@ public partial class ImmowebCrawler : BaseCrawler
                 LogParsedListing(fallbackDto);
                 var fallbackRaw = scripts?.FirstOrDefault(s => s.Contains(classifiedId ?? "")) ?? "";
                 await HandleProjectGroupAsync(fallbackDto, fallbackRaw, cancellationToken);
-                await WriteParserDebugFileAsync(fallbackDto, fallbackRaw, cancellationToken);
+                if (IsProjectGroup(fallbackDto, listingUrl))
+                    fallbackDto.PhotoUrls = await ExtractImmowebProjectPhotoUrlsAsync(page, cancellationToken);
             }
             else
             {
@@ -1509,6 +1601,69 @@ public partial class ImmowebCrawler : BaseCrawler
             string.IsNullOrEmpty(dto.RawJson) ? "NEE" : $"JA ({dto.RawJson.Length:N0} bytes)");
     }
 
+    // ── ProjectGroup foto-extractie ───────────────────────────────────────────
+
+    private async Task<List<string>> ExtractImmowebProjectPhotoUrlsAsync(
+        IPage page, CancellationToken cancellationToken)
+    {
+        await RemoveSimilarPropertiesFromDomAsync(page);
+
+        const string js = """
+            () => {
+                const seen = new Set();
+                const urls = [];
+                document.querySelectorAll(
+                    '.classified-gallery__main-bloc img[src], ' +
+                    '.classified-gallery__secondary-bloc img[src], ' +
+                    '.classified-gallery img.classified-gallery__picture[src], ' +
+                    '.classified-gallery img[src*="immowebstatic.be/classifieds/"]'
+                ).forEach(img => {
+                    const src = img.getAttribute('src') || '';
+                    if (!src.includes('immowebstatic.be/classifieds/')) return;
+                    // Normaliseer: verwijder resolutiesegment /WxH/
+                    const norm = src.replace(/\/\d+x\d+(?=\/)/, '');
+                    if (!seen.has(norm)) {
+                        seen.add(norm);
+                        urls.push(src);
+                    }
+                });
+                return urls;
+            }
+            """;
+        try
+        {
+            var urls = await page.EvaluateAsync<string[]>(js);
+            return urls?.ToList() ?? [];
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug("[Immoweb] Foto-extractie fout: {Err}", ex.Message);
+            return [];
+        }
+    }
+
+    private async Task RemoveSimilarPropertiesFromDomAsync(IPage page)
+    {
+        try
+        {
+            await page.EvaluateAsync("""
+                () => {
+                    [
+                        '#similarPropertiesContainer',
+                        '[class*="recommendation"]',
+                        '[class*="similar"]',
+                        '[class*="related"]'
+                    ].forEach(sel =>
+                        document.querySelectorAll(sel).forEach(el => el.remove()));
+                }
+                """);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug("[Immoweb] DOM-cleanup similar properties fout: {Err}", ex.Message);
+        }
+    }
+
     // ── ProjectGroup detectie & debug ─────────────────────────────────────────
 
     private static bool IsProjectGroup(ListingDto dto, string url) =>
@@ -1519,7 +1674,7 @@ public partial class ImmowebCrawler : BaseCrawler
         string.Equals(dto.PropertyTypeRaw, "APARTMENT_GROUP", StringComparison.OrdinalIgnoreCase);
 
     private static (string? ProjectName, int? SoldPercentage, List<ProjectGroupUnitDto> Units)
-        ParseProjectGroupUnits(string json, string projectId)
+        ParseProjectGroupUnits(string json, string projectId, string? projectUrl = null)
     {
         try
         {
@@ -1537,6 +1692,12 @@ public partial class ImmowebCrawler : BaseCrawler
             var projectName = cluster["projectInfo"]?["projectName"]?.GetValue<string>();
             var soldPct = TryGetInt(cluster["projectInfo"]?["soldPercentage"]);
 
+            // Basispad voor unit-URLs: vervang project-ID op het einde van de project-URL
+            // "https://www.immoweb.be/.../te-koop/brugge/8000/20383395" → ".../8000/"
+            var unitUrlBase = string.IsNullOrEmpty(projectUrl) ? null
+                : System.Text.RegularExpressions.Regex.Replace(
+                    projectUrl.TrimEnd('/'), @"/\d+$", "/");
+
             var units = new List<ProjectGroupUnitDto>();
             if (cluster["units"] is not JsonArray unitsArray) return (projectName, soldPct, units);
 
@@ -1550,11 +1711,17 @@ public partial class ImmowebCrawler : BaseCrawler
                 {
                     if (item is null) continue;
                     var subType = item["subtype"]?.GetValue<string>();
+                    var unitId  = item["id"]?.GetValue<long?>()?.ToString() ?? string.Empty;
+                    var unitUrl = unitUrlBase is not null && !string.IsNullOrEmpty(unitId)
+                        ? $"{unitUrlBase}{unitId}"
+                        : null;
+
                     units.Add(new ProjectGroupUnitDto
                     {
                         ParentProjectId = projectId,
                         ParentProjectName = projectName,
-                        UnitId = item["id"]?.GetValue<long?>()?.ToString() ?? string.Empty,
+                        UnitId = unitId,
+                        Url    = unitUrl,
                         RawGroupType = groupType,
                         RawSubType = subType,
                         MappedPropertyType = MapUnitPropertyType(groupType),
@@ -1615,7 +1782,7 @@ public partial class ImmowebCrawler : BaseCrawler
     {
         if (!IsProjectGroup(dto, dto.Url ?? "")) return;
 
-        var (projectName, soldPct, units) = ParseProjectGroupUnits(rawJson, dto.ExternalId ?? "");
+        var (projectName, soldPct, units) = ParseProjectGroupUnits(rawJson, dto.ExternalId ?? "", dto.Url);
 
         // Unitstatistieken berekenen uit geparsede units
         var unitsTotal     = units.Count;

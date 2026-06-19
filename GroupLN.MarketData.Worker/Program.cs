@@ -7,6 +7,14 @@ using GroupLN.MarketData.Persistence.Extensions;
 using GroupLN.MarketData.Worker.Workers;
 using Microsoft.EntityFrameworkCore;
 
+// Helperfunctie: gebruik een scoped service en voer een actie uit, daarna exit
+static async Task RunScopedCommandAsync<T>(IHost host, Func<T, Task> action) where T : notnull
+{
+    using var scope = host.Services.CreateScope();
+    var cmd = scope.ServiceProvider.GetRequiredService<T>();
+    await action(cmd);
+}
+
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((context, services) =>
     {
@@ -80,6 +88,24 @@ using (var scope = host.Services.CreateScope())
 
     if (settings.MaxListingsPerRun > 0)
         logger.LogWarning("⚠️  MaxListingsPerRun = {Max}. Testmodus actief.", settings.MaxListingsPerRun);
+
+    // ── AI extractie — configuratie-check (key nooit tonen) ──────────────────
+    var ai = settings.AiExtraction;
+    var apiKeyConfigured = !string.IsNullOrEmpty(ai.AnthropicApiKey);
+    logger.LogInformation(
+        "AiExtraction | Enabled={Enabled} | Model={Model} | ApiKeyConfigured={KeyOk} | " +
+        "MinConfidence={MinConf}% | MaxPerRun={Max}",
+        ai.EnableAiProjectExtraction,
+        ai.AnthropicModel,
+        apiKeyConfigured,
+        ai.AiExtractionMinConfidence,
+        ai.MaxAiExtractionsPerRun);
+
+    if (ai.EnableAiProjectExtraction && !apiKeyConfigured)
+        logger.LogWarning(
+            "⚠️  AiExtraction.EnableAiProjectExtraction=true maar AnthropicApiKey is NIET geconfigureerd. " +
+            "Stel in via user secrets: dotnet user-secrets set " +
+            "\"CrawlerSettings:AiExtraction:AnthropicApiKey\" \"<key>\"");
 }
 
 // ── Tijdelijke Zimmo detail-test ─────────────────────────────────────────
@@ -92,6 +118,34 @@ if (args.Contains("--zimmo-detail-test"))
         await test.RunAsync();
     }
     logger.LogInformation("[Program] Zimmo detail-test voltooid. Afsluiten.");
+    return;
+}
+
+// ── Database reset: verwijder alle crawler/immo-data ─────────────────────
+if (args.Contains("--reset-market-data"))
+{
+    var confirm            = args.Contains("--confirm");
+    var includeGeoCache    = args.Contains("--include-geocoding-cache");
+
+    logger.LogInformation(
+        "[Program] --reset-market-data modus — normale worker wordt NIET gestart. " +
+        "Confirm={Confirm} | IncludeGeocodingCache={Geo}",
+        confirm, includeGeoCache);
+
+    await RunScopedCommandAsync<ResetMarketDataCommand>(host, async cmd =>
+    {
+        var result = await cmd.ExecuteAsync(
+            confirm: confirm,
+            includeGeocodingCache: includeGeoCache);
+
+        if (result.Confirmed)
+            logger.LogInformation("[Program] --reset-market-data voltooid. Database is leeg.");
+        else
+            logger.LogWarning(
+                "[Program] --reset-market-data preview klaar. " +
+                "Herhaal met --confirm om effectief te wissen.");
+    });
+
     return;
 }
 

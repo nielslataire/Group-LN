@@ -469,7 +469,7 @@ public class ZimmoCrawler : BaseCrawler
                 bathrooms           : null,
                 epcLabel            : null,
                 epcScore            : null,
-                isNewConstruction   : zimmoType == "PROJECT" ? true : null,
+                isNewConstruction   : true,
                 developerName       : null,
                 developerPhone      : null,
                 developerWebsite    : null,
@@ -540,7 +540,7 @@ public class ZimmoCrawler : BaseCrawler
 
         if (!string.IsNullOrEmpty(addrLine))
         {
-            var sm = Regex.Match(addrLine, @"^(.*?)\s+(\d+\w*)\s*$");
+            var sm = Regex.Match(addrLine, @"^(.*?)\s+(\d[\w/\-]*(?:\s+bus\s+\d+)?)\s*$");
             if (sm.Success)
             {
                 street      = sm.Groups[1].Value.Trim();
@@ -661,10 +661,15 @@ public class ZimmoCrawler : BaseCrawler
         return null;
     }
 
+    private static bool IsMarketingTitle(string? title) =>
+        !string.IsNullOrEmpty(title) && Regex.IsMatch(title,
+            @"vanaf\s+€|\bwoningen\s+in\b|\bappartementen\s+in\b|\beigentijdse?\b|\bmoderne?\b|\bluxueuze?\b|\bprachtige?\b",
+            RegexOptions.IgnoreCase);
+
     private static void ApplyTitleFallback(ListingDto dto, string sourceName)
     {
         var t = dto.Title;
-        if (!string.IsNullOrWhiteSpace(t) && t != "- -" && t != "?" && t != "-")
+        if (!string.IsNullOrWhiteSpace(t) && t != "- -" && t != "?" && t != "-" && !IsMarketingTitle(t))
             return;
 
         // 1. Projectnaam
@@ -1076,7 +1081,7 @@ public class ZimmoCrawler : BaseCrawler
     {
         const string js = """
             () => {
-                // Projectnaam: h1.pand-title (zimmo-code div verwijderd) → meta og:title als fallback
+                // Projectnaam: h1.pand-title (zimmo-code div verwijderd)
                 const h1 = document.querySelector('h1.pand-title');
                 let projectName = '';
                 if (h1) {
@@ -1085,22 +1090,30 @@ public class ZimmoCrawler : BaseCrawler
                     if (zcode) zcode.remove();
                     projectName = (clone.textContent || '').replace(/\s+/g, ' ').trim();
                 }
+                // Strip marketing suffixes: "Urbisol West in Beernem vanaf € 275.000" → "Urbisol West"
+                projectName = projectName
+                    .replace(/\s+in\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-]+\s+vanaf\s+€.*/i, '')
+                    .replace(/\s+vanaf\s+€.*/i, '')
+                    .trim();
+                // Fallback: meta og:title
                 if (!projectName) {
                     const ogTitle = document.querySelector('meta[property="og:title"]');
                     if (ogTitle) {
                         // "Urbisol West nieuwbouw in Beernem vanaf € 275.000 (1004T93) - Kantoor | Zimmo"
-                        // Verwijder "(code) - ..." suffix
                         let t = (ogTitle.getAttribute('content') || '')
-                            .replace(/\s*\([^)]+\)\s*-.*$/i, '').trim();
+                            .replace(/\s*\([^)]+\)\s*-.*$/i, '')
+                            .replace(/\s+in\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\-]+\s+vanaf\s+€.*/i, '')
+                            .replace(/\s+vanaf\s+€.*/i, '')
+                            .trim();
                         projectName = t;
                     }
                 }
 
-                // Adres: section-features h2.section-title eerste span, anders body text zoeken
+                // Adres: section-features h2.section-title eerste span
                 const addrSpan = document.querySelector('section.section-features h2.section-title span:first-child')
                                || document.querySelector('section.section-features h2.section-title span');
                 let address = addrSpan ? (addrSpan.textContent || '').replace(/\s+/g, ' ').trim() : '';
-                // Fallback: zoek een patroon "Straatnaam 99, 9999 Gemeente" in meta description
+                // Fallback: meta description
                 if (!address) {
                     const metaDesc = document.querySelector('meta[name="description"]');
                     if (metaDesc) {
@@ -1123,23 +1136,61 @@ public class ZimmoCrawler : BaseCrawler
                 const description = descEl ? (descEl.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
                 // Units uit de indeling-tabel
-                // Kolomvolgorde: [lege][fav][Type][Nr][Prijs][Slpk][Woonopp][Grondopp][Terras][Tuin][Z-code]
+                // Kolomvolgorde: [foto][fav][Type=2][Nr=3][Prijs=4][Slpk=5][Woonopp=6][Grondopp=7][Terras=8][Tuin=9][Z-code=10]
+                // Elke klikbare cel heeft een onzichtbare overlay-link (opacity:0, position:absolute) met tekst "Appartement".
+                // cellText() verwijdert deze overlays vóór het lezen van textContent.
+                function cellText(td) {
+                    if (!td) return '';
+                    const clone = td.cloneNode(true);
+                    clone.querySelectorAll('a[style*="position: absolute"], a[style*="opacity: 0"]').forEach(el => el.remove());
+                    return (clone.textContent || '').replace(/\s+/g, ' ').trim();
+                }
                 const units = [];
+                let soldIdx = 0;
                 document.querySelectorAll('section.section-division table.table-striped tr').forEach(tr => {
                     if (tr.querySelector('th')) return;
                     const tds = Array.from(tr.querySelectorAll('td'));
                     if (tds.length < 7) return;
-                    const unitType    = (tds[2]?.textContent || '').replace(/\s+/g, ' ').trim();
-                    const priceTxt    = (tds[4]?.textContent || '').replace(/\s+/g, ' ').trim();
-                    const bedroomsTxt = (tds[5]?.textContent || '').replace(/\s+/g, ' ').trim();
-                    const areaTxt     = (tds[6]?.textContent || '').replace(/\s+/g, ' ').trim();
-                    const zcode       = tds.length > 10 ? (tds[10]?.textContent || '').replace(/\s+/g, ' ').trim() : '';
-                    const sold        = tr.classList.contains('disabled');
-                    const href        = tr.querySelector('a[href]')?.getAttribute('href') || '';
-                    units.push({ unitType, priceTxt, bedroomsTxt, areaTxt, zcode, sold, href });
+                    // Klikbare rijen hebben een zichtbare link in tds[2] (de Type-kolom) naar de unit-pagina
+                    const visibleLink = tds[2]?.querySelector('a:not([style*="opacity: 0"]):not([style*="position: absolute"])');
+                    const unitType    = visibleLink?.textContent?.trim() || cellText(tds[2]);
+                    const unitNumber  = cellText(tds[3]);
+                    const priceTxt    = cellText(tds[4]);
+                    const bedroomsTxt = cellText(tds[5]);
+                    const areaTxt     = cellText(tds[6]);
+                    const zcodeRaw    = tds.length > 10 ? cellText(tds[10]) : '';
+                    const sold        = tr.classList.contains('disabled')
+                                     || priceTxt.toLowerCase().includes('verkocht');
+                    // Href: gebruik de zichtbare link in tds[2]; voor verkochte units is er geen link
+                    const rawHref = visibleLink?.getAttribute('href') || '';
+                    const unitUrl = rawHref.startsWith('http') ? rawHref
+                                  : rawHref ? 'https://www.zimmo.be' + rawHref : '';
+                    // Z-code: voor verkochte units is de code leeg ("-"); genereer een stabiele placeholder
+                    const zcode = (zcodeRaw && zcodeRaw !== '-') ? zcodeRaw
+                                : sold ? ('SOLD_' + (soldIdx++)) : '';
+                    units.push({ unitType, unitNumber, priceTxt, bedroomsTxt, areaTxt, zcode, sold, href: unitUrl });
                 });
 
-                return { projectName, address, priceText, lat, lon, description, units };
+                // Projectfoto's uit de detail-slider
+                // Accepteer alleen foto's van files.zimmo.be/backend-api met /listings/ en /images/
+                const photoSet = new Set();
+                const photoUrls = [];
+                document.querySelectorAll(
+                    '#property-detail-slider img[src], #detail-slider img[src], .slider img[src]'
+                ).forEach(img => {
+                    const src = img.getAttribute('src') || '';
+                    if (!src.includes('files.zimmo.be/backend-api')) return;
+                    if (!src.includes('/listings/')) return;
+                    if (!src.includes('/images/')) return;
+                    // Normaliseer: verwijder resolutiesegment /WxH/
+                    const norm = src.replace(/\/\d+x\d+(?=\/)/, '');
+                    if (!photoSet.has(norm)) {
+                        photoSet.add(norm);
+                        photoUrls.push(src);
+                    }
+                });
+
+                return { projectName, address, priceText, lat, lon, description, units, photoUrls };
             }
             """;
 
@@ -1179,7 +1230,7 @@ public class ZimmoCrawler : BaseCrawler
                 var streetPart = addrM.Groups[1].Value.Trim();
                 postalCode = addrM.Groups[2].Value;
                 city       = addrM.Groups[3].Value.Trim();
-                var sm = Regex.Match(streetPart, @"^(.*?)\s+(\d+\w*)\s*$");
+                var sm = Regex.Match(streetPart, @"^(.*?)\s+(\d[\w/\-]*(?:\s+bus\s+\d+)?)\s*$");
                 if (sm.Success) { street = sm.Groups[1].Value.Trim(); houseNumber = sm.Groups[2].Value.Trim(); }
                 else              { street = streetPart; }
             }
@@ -1204,6 +1255,7 @@ public class ZimmoCrawler : BaseCrawler
             foreach (var u in unitsArr.EnumerateArray())
             {
                 var unitType     = S(u, "unitType");
+                var unitNumber   = S(u, "unitNumber");
                 var unitPriceTxt = S(u, "priceTxt");
                 var bedroomsTxt  = S(u, "bedroomsTxt");
                 var areaTxt      = S(u, "areaTxt");
@@ -1211,8 +1263,8 @@ public class ZimmoCrawler : BaseCrawler
                 var sold         = u.TryGetProperty("sold", out var sp) && sp.ValueKind == JsonValueKind.True;
                 var href         = S(u, "href");
 
+                // ExternalId: zcode (Zimmo-code) is leading; fallback naar URL-extractie
                 if (string.IsNullOrEmpty(zcode) && string.IsNullOrEmpty(href)) continue;
-
                 var unitId = !string.IsNullOrEmpty(zcode) ? zcode
                     : (ZimmoListingParser.ExtractExternalIdFromUrl(href.Split('?')[0]) ?? href);
 
@@ -1221,6 +1273,8 @@ public class ZimmoCrawler : BaseCrawler
                     ParentProjectId       = externalId ?? "",
                     ParentProjectName     = projectName,
                     UnitId                = unitId,
+                    Url                   = !string.IsNullOrEmpty(href) ? href : null,
+                    UnitNumber            = !string.IsNullOrEmpty(unitNumber) ? unitNumber : null,
                     RawGroupType          = unitType,
                     MappedPropertyType    = MapDomUnitType(unitType),
                     MappedPropertySubType = MapDomUnitSubType(unitType),
@@ -1253,7 +1307,16 @@ public class ZimmoCrawler : BaseCrawler
             if (prices.Count > 0) maxPrice = prices.Max();
         }
 
-        return ZimmoDtoMapper.Build(
+        // Foto-URL's uit JS-resultaat
+        var photoUrls = new List<string>();
+        if (result.TryGetProperty("photoUrls", out var photoArr) && photoArr.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var p in photoArr.EnumerateArray())
+                if (p.ValueKind == JsonValueKind.String && p.GetString() is { Length: > 0 } u)
+                    photoUrls.Add(u);
+        }
+
+        var dto = ZimmoDtoMapper.Build(
             externalId          : externalId ?? "",
             url                 : canonicalUrl,
             title               : projectName,
@@ -1281,6 +1344,9 @@ public class ZimmoCrawler : BaseCrawler
             projectName         : projectName,
             description         : description,
             rawJson             : null);
+
+        dto.PhotoUrls = photoUrls;
+        return dto;
     }
 
     private static PropertyType MapDomUnitType(string raw) => raw.ToUpperInvariant() switch

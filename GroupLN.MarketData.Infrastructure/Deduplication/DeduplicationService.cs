@@ -2,6 +2,7 @@ using System.Text.Json;
 using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Interfaces;
+using GroupLN.MarketData.Core.Settings;
 using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,12 +12,20 @@ namespace GroupLN.MarketData.Infrastructure.Deduplication;
 public class DeduplicationService : IDeduplicationService
 {
     private readonly MarketDataDbContext _context;
+    private readonly IProjectPhotoHashService _photoHashService;
+    private readonly CrawlerSettings _settings;
     private readonly ILogger<DeduplicationService> _logger;
 
-    public DeduplicationService(MarketDataDbContext context, ILogger<DeduplicationService> logger)
+    public DeduplicationService(
+        MarketDataDbContext context,
+        IProjectPhotoHashService photoHashService,
+        CrawlerSettings settings,
+        ILogger<DeduplicationService> logger)
     {
-        _context = context;
-        _logger  = logger;
+        _context          = context;
+        _photoHashService = photoHashService;
+        _settings         = settings;
+        _logger           = logger;
     }
 
     public async Task<DeduplicationSummary> RunAsync(DateTime since, CancellationToken ct = default)
@@ -63,6 +72,35 @@ public class DeduplicationService : IDeduplicationService
             "[Deduplicatie] Klaar. {Projects} project-candidates, {Units} unit-candidates, {Saved} opgeslagen.",
             projectCandidates, unitCandidates, saved);
 
+        // PhotoHash DB summary
+        if (_settings.PhotoHashing.EnableProjectPhotoHashing)
+        {
+            var projectsWithHashes = await _context.ProjectPhotoHashes
+                .AsNoTracking()
+                .Select(h => h.MarketAssetId)
+                .Distinct()
+                .CountAsync(ct);
+            var totalPhotoHashes = await _context.ProjectPhotoHashes
+                .AsNoTracking()
+                .CountAsync(ct);
+            var distinctContentHashes = await _context.ProjectPhotoHashes
+                .AsNoTracking()
+                .Select(h => h.ContentHash)
+                .Distinct()
+                .CountAsync(ct);
+            var distinctPerceptualHashes = await _context.ProjectPhotoHashes
+                .AsNoTracking()
+                .Where(h => h.PerceptualHash.HasValue)
+                .Select(h => h.PerceptualHash!.Value)
+                .Distinct()
+                .CountAsync(ct);
+
+            _logger.LogInformation(
+                "[PhotoHash] DbSummary | ProjectsWithHashes={P} | TotalPhotoHashes={T} | " +
+                "DistinctContentHashes={C} | DistinctPerceptualHashes={PH}",
+                projectsWithHashes, totalPhotoHashes, distinctContentHashes, distinctPerceptualHashes);
+        }
+
         return new DeduplicationSummary(totalScanned, projectCandidates, unitCandidates, saved);
     }
 
@@ -98,6 +136,33 @@ public class DeduplicationService : IDeduplicationService
             p => p.Id,
             p => ProjectNameNormalizer.Normalize(p.Listings.FirstOrDefault()?.Title));
 
+        // Foto-hash cache (ContentHash + PerceptualHash per project-ID)
+        var allProjectIds     = allForCache.Select(p => p.Id).ToHashSet();
+        var photoContentCache    = new Dictionary<long, List<string>>();
+        var photoPerceptualCache = new Dictionary<long, List<long>>();
+        if (_settings.PhotoHashing.EnableProjectPhotoHashing)
+        {
+            var photoHashes = await _context.ProjectPhotoHashes
+                .Where(h => allProjectIds.Contains(h.MarketAssetId))
+                .Select(h => new { h.MarketAssetId, h.ContentHash, h.PerceptualHash })
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            foreach (var row in photoHashes)
+            {
+                if (!photoContentCache.TryGetValue(row.MarketAssetId, out var cList))
+                    photoContentCache[row.MarketAssetId] = cList = [];
+                cList.Add(row.ContentHash);
+
+                if (row.PerceptualHash.HasValue)
+                {
+                    if (!photoPerceptualCache.TryGetValue(row.MarketAssetId, out var pList))
+                        photoPerceptualCache[row.MarketAssetId] = pList = [];
+                    pList.Add(row.PerceptualHash.Value);
+                }
+            }
+        }
+
         int saved = 0;
         var exactPairs = new List<(MarketAsset A, MarketAsset B, double Score)>();
 
@@ -107,6 +172,10 @@ public class DeduplicationService : IDeduplicationService
             normNew ??= string.Empty;
             fpCache.TryGetValue(newProject.Id, out var fpNew);
             fpNew ??= [];
+            photoContentCache.TryGetValue(newProject.Id, out var photoContentNew);
+            photoContentNew ??= [];
+            photoPerceptualCache.TryGetValue(newProject.Id, out var photoPerceptualNew);
+            photoPerceptualNew ??= [];
 
             // Scoor alle candidates voor dit project
             var rawCandidates = new List<(MarketAsset Existing, double Score, string Level, object Fields)>();
@@ -119,8 +188,15 @@ public class DeduplicationService : IDeduplicationService
                 normExisting ??= string.Empty;
                 fpCache.TryGetValue(existing.Id, out var fpExisting);
                 fpExisting ??= [];
+                photoContentCache.TryGetValue(existing.Id, out var photoContentExisting);
+                photoContentExisting ??= [];
+                photoPerceptualCache.TryGetValue(existing.Id, out var photoPerceptualExisting);
+                photoPerceptualExisting ??= [];
 
-                var (score, level, fields) = ScoreProjectPair(normNew, fpNew, newProject, normExisting, fpExisting, existing);
+                var (score, level, fields) = ScoreProjectPair(
+                    normNew, fpNew, photoContentNew, photoPerceptualNew, newProject,
+                    normExisting, fpExisting, photoContentExisting, photoPerceptualExisting, existing,
+                    _settings.PhotoHashing, _logger);
                 if (level == "None") continue;
 
                 rawCandidates.Add((existing, score, level, fields));
@@ -187,8 +263,11 @@ public class DeduplicationService : IDeduplicationService
     /// en debug-velden terug. Level wordt bepaald via expliciete combinatie-regels (niet puur score).
     /// </summary>
     private static (double Score, string Level, object Fields) ScoreProjectPair(
-        string normA, IReadOnlyList<string> fpA, MarketAsset a,
-        string normB, IReadOnlyList<string> fpB, MarketAsset b)
+        string normA, IReadOnlyList<string> fpA,
+        List<string> photoContentA, List<long> photoPerceptualA, MarketAsset a,
+        string normB, IReadOnlyList<string> fpB,
+        List<string> photoContentB, List<long> photoPerceptualB, MarketAsset b,
+        PhotoHashingSettings photoSettings, ILogger? logger = null)
     {
         var nameSim = ProjectNameNormalizer.Similarity(normA, normB);
 
@@ -211,6 +290,27 @@ public class DeduplicationService : IDeduplicationService
             ? UnitFingerprintBuilder.OverlapRatio(fpA, fpB)
             : 0.0;
 
+        // Foto-hash overlap (ContentHash = exacte overeenkomst)
+        var contentSetB     = photoContentB.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var photoContentMatches = photoContentA.Count(h => contentSetB.Contains(h));
+
+        // Perceptuele hash overlap (dHash Hamming-afstand ≤ maxDistance)
+        var photoPerceptualMatches = 0;
+        var minPerceptualDistance  = int.MaxValue;
+        if (photoPerceptualA.Count > 0 && photoPerceptualB.Count > 0)
+        {
+            foreach (var ha in photoPerceptualA)
+            {
+                foreach (var hb in photoPerceptualB)
+                {
+                    var dist = System.Numerics.BitOperations.PopCount((ulong)(ha ^ hb));
+                    if (dist < minPerceptualDistance) minPerceptualDistance = dist;
+                    if (dist <= photoSettings.PhotoPerceptualHashMaxDistance)
+                        photoPerceptualMatches++;
+                }
+            }
+        }
+
         // ── Combinatie-regels voor Exact (minstens één moet kloppen) ──────────
         // A: naam bijna identiek + zelfde postcode + zelfde straat of < 50m
         var comboA = normA.Length > 0 && normB.Length > 0
@@ -225,58 +325,95 @@ public class DeduplicationService : IDeduplicationService
         // C: unit fingerprint overlap > 85% + zelfde postcode
         var comboC = overlap > 0.85 && samePostal;
 
+        // D: 2+ exacte foto-matches + zelfde postcode/gemeente + adres of coördinaten
+        var comboD = photoSettings.EnableProjectPhotoHashing
+                  && photoContentMatches >= 2
+                  && samePostal
+                  && (sameStreet || (distM.HasValue && distM.Value <= 100.0));
+
         // ── Probable ──────────────────────────────────────────────────────────
         // P1: naam sterk gelijkend + zelfde postcode + < 150m
         var probCond1 = nameSim >= 0.80 && samePostal
                      && distM.HasValue && distM.Value <= 150.0;
         // P2: exact zelfde adres + gelijkaardig aantal units + overlap > 40%
         var probCond2 = sameStreet && sameHouseNr && unitCountSimilar && overlap > 0.40;
+        // P3: 2+ content foto-matches + zelfde postcode
+        var probCond3 = photoSettings.EnableProjectPhotoHashing
+                     && photoContentMatches >= 2 && samePostal;
+        // P4: 2+ perceptuele foto-matches + zelfde postcode
+        var probCondPerceptual = photoSettings.EnableProjectPhotoHashing
+                              && photoPerceptualMatches >= 2 && samePostal;
 
         // ── Gewogen score (voor ranking en Possible-drempel) ──────────────────
-        var nameScore  = nameSim * 0.30;
+        var nameScore  = nameSim * 0.25;
         var addrScore  = (sameStreet ? 0.15 : 0.0) + (sameHouseNr ? 0.10 : 0.0);
         var coordScore = distM switch { <= 50 => 0.15, <= 100 => 0.10, <= 200 => 0.05, _ => 0.0 };
         var devScore   = sameDev ? 0.10 : 0.0;
         var unitScore  = unitCountSimilar ? 0.07 : 0.0;
         var fpScore    = overlap switch { > 0.70 => 0.10, > 0.50 => 0.07, > 0.30 => 0.03, _ => 0.0 };
-        var score      = nameScore + addrScore + coordScore + devScore + unitScore + fpScore;
+        var photoScore = photoContentMatches switch { >= 3 => 0.12, >= 2 => 0.08, 1 => 0.03, _ => 0.0 };
+        var perceptualScore = photoPerceptualMatches switch { >= 3 => 0.08, >= 2 => 0.05, 1 => 0.02, _ => 0.0 };
+        var score = nameScore + addrScore + coordScore + devScore + unitScore + fpScore + photoScore + perceptualScore;
 
         // ── Level bepalen ─────────────────────────────────────────────────────
         string level;
-        if      (comboA || comboB || comboC)            level = "Exact";
-        else if (probCond1 || probCond2)                 level = "Probable";
-        else if (score >= 0.60 && samePostal)            level = "Possible";
-        else                                              return (score, "None", new { });
+        if      (comboA || comboB || comboC || comboD)                        level = "Exact";
+        else if (probCond1 || probCond2 || probCond3 || probCondPerceptual)   level = "Probable";
+        else if (score >= 0.60 && samePostal)                                 level = "Possible";
+        else                                                                   return (score, "None", new { });
 
         // Fases (Green Yard I vs II) nooit Exact
         if (level == "Exact" && ProjectNameNormalizer.IsPhaseVariant(normA, normB))
             level = "Possible";
 
+        // ── PhotoMatch log (enkel wanneer foto-informatie bijdraagt) ──────────
+        if (photoSettings.EnableProjectPhotoHashing
+            && (photoContentMatches > 0 || photoPerceptualMatches > 0))
+        {
+            logger?.LogInformation(
+                "[PhotoMatch] ProjectA={A} ProjectB={B} | ContentHashMatches={CM} | PerceptualHashMatches={PM} | " +
+                "MinPerceptualDistance={MPD} | SamePostalCode={SP} | SameStreet={SS} | DistanceMeters={Dist} | " +
+                "PhotoMatchScore={PhotoScore:F3} | FinalMatchLevel={Level}",
+                a.Id, b.Id,
+                photoContentMatches, photoPerceptualMatches,
+                minPerceptualDistance == int.MaxValue ? (int?)null : minPerceptualDistance,
+                samePostal, sameStreet,
+                distM.HasValue ? (int?)Math.Round(distM.Value) : null,
+                Math.Round(photoScore + perceptualScore, 3),
+                level);
+        }
+
         var fields = (object)new
         {
-            normTitleA          = normA,
-            normTitleB          = normB,
-            nameSimilarity      = Math.Round(nameSim, 3),
-            samePostalCode      = samePostal,
+            normTitleA               = normA,
+            normTitleB               = normB,
+            nameSimilarity           = Math.Round(nameSim, 3),
+            samePostalCode           = samePostal,
             sameStreet,
             sameHouseNr,
-            sameDeveloper       = sameDev,
-            distanceMeters      = distM.HasValue ? (int?)Math.Round(distM.Value) : null,
-            unitCountA          = countA,
-            unitCountB          = countB,
+            sameDeveloper            = sameDev,
+            distanceMeters           = distM.HasValue ? (int?)Math.Round(distM.Value) : null,
+            unitCountA               = countA,
+            unitCountB               = countB,
             unitCountSimilar,
-            fingerprintOverlap  = Math.Round(overlap, 3),
-            isPhaseVariant      = ProjectNameNormalizer.IsPhaseVariant(normA, normB),
-            comboA, comboB, comboC, probCond1, probCond2,
+            fingerprintOverlap       = Math.Round(overlap, 3),
+            photoContentMatches,
+            photoPerceptualMatches,
+            minPerceptualDistance    = minPerceptualDistance == int.MaxValue ? (int?)null : minPerceptualDistance,
+            isPhaseVariant           = ProjectNameNormalizer.IsPhaseVariant(normA, normB),
+            comboA, comboB, comboC, comboD,
+            probCond1, probCond2, probCond3, probCondPerceptual,
             scores = new
             {
-                name  = Math.Round(nameScore,  3),
-                addr  = Math.Round(addrScore,  3),
-                coord = Math.Round(coordScore, 3),
-                dev   = Math.Round(devScore,   3),
-                units = Math.Round(unitScore,  3),
-                fp    = Math.Round(fpScore,    3),
-                total = Math.Round(score,      3)
+                name       = Math.Round(nameScore,       3),
+                addr       = Math.Round(addrScore,       3),
+                coord      = Math.Round(coordScore,      3),
+                dev        = Math.Round(devScore,        3),
+                units      = Math.Round(unitScore,       3),
+                fp         = Math.Round(fpScore,         3),
+                photo      = Math.Round(photoScore,      3),
+                perceptual = Math.Round(perceptualScore, 3),
+                total      = Math.Round(score,           3)
             }
         };
 
@@ -554,12 +691,15 @@ public class DeduplicationService : IDeduplicationService
         {
             var doc   = JsonDocument.Parse(JsonSerializer.Serialize(fields)).RootElement;
             var parts = new List<string>();
-            if (doc.GetProperty("comboA").GetBoolean())    parts.Add("ComboA(naam+postcode+locatie)");
-            if (doc.GetProperty("comboB").GetBoolean())    parts.Add("ComboB(adres+dev/overlap)");
-            if (doc.GetProperty("comboC").GetBoolean())    parts.Add("ComboC(fingerprint>85%)");
-            if (doc.GetProperty("probCond1").GetBoolean()) parts.Add("Probable(naam+postcode+<150m)");
-            if (doc.GetProperty("probCond2").GetBoolean()) parts.Add("Probable(adres+units+overlap>40%)");
-            if (doc.GetProperty("isPhaseVariant").GetBoolean()) parts.Add("fase-variant");
+            if (doc.GetProperty("comboA").GetBoolean())            parts.Add("ComboA(naam+postcode+locatie)");
+            if (doc.GetProperty("comboB").GetBoolean())            parts.Add("ComboB(adres+dev/overlap)");
+            if (doc.GetProperty("comboC").GetBoolean())            parts.Add("ComboC(fingerprint>85%)");
+            if (doc.GetProperty("comboD").GetBoolean())            parts.Add("ComboD(foto+postcode+locatie)");
+            if (doc.GetProperty("probCond1").GetBoolean())         parts.Add("Probable(naam+postcode+<150m)");
+            if (doc.GetProperty("probCond2").GetBoolean())         parts.Add("Probable(adres+units+overlap>40%)");
+            if (doc.GetProperty("probCond3").GetBoolean())         parts.Add("Probable(foto+postcode)");
+            if (doc.GetProperty("probCondPerceptual").GetBoolean()) parts.Add("Probable(perceptueel+postcode)");
+            if (doc.GetProperty("isPhaseVariant").GetBoolean())    parts.Add("fase-variant");
             if (parts.Count == 0)
             {
                 var sim = doc.GetProperty("nameSimilarity").GetDouble();

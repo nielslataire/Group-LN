@@ -91,7 +91,9 @@ public class PropertyNormalizer : IPropertyNormalizer
 
             EnergyFeatures = listing.EnergyFeatures,
             DescriptionHash = HashDescription(listing.Description),
-            RawJson = listing.RawJson
+            RawJson = listing.RawJson,
+
+            PhotoUrls = listing.PhotoUrls.Count > 0 ? new List<string>(listing.PhotoUrls) : new List<string>()
         };
     }
 

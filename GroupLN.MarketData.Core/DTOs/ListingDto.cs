@@ -53,4 +53,7 @@ public class ListingDto
     public string? EnergyFeatures { get; set; }
     public string? Description { get; set; }
     public string? RawJson { get; set; }
+
+    // Foto-URL's van de projectdetailpagina (alleen voor projectgroepen)
+    public List<string> PhotoUrls { get; set; } = new();
 }

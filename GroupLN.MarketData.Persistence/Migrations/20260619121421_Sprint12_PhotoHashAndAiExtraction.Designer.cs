@@ -4,6 +4,7 @@ using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 
@@ -12,9 +13,11 @@ using NetTopologySuite.Geometries;
 namespace GroupLN.MarketData.Persistence.Migrations
 {
     [DbContext(typeof(MarketDataDbContext))]
-    partial class MarketDataDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619121421_Sprint12_PhotoHashAndAiExtraction")]
+    partial class Sprint12_PhotoHashAndAiExtraction
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
