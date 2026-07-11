@@ -462,7 +462,7 @@
     font-weight: 400;
     color: var(--tekst);
     line-height: 1.25;
-    margin: 0 0 5px;
+    margin: 0 0 12px;
 }
 
 .kaart-locatie {
@@ -471,7 +471,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 12px;
+    margin-bottom: 0;
 }
 
 .kaart-locatie svg {
@@ -483,7 +483,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    flex: 1;
 }
 
 .kaart-spec {
@@ -571,6 +570,64 @@
     background: rgba(var(--olijf-rgb, 101, 110, 79), 0.08);
     color: var(--olijf);
     border-color: rgba(var(--olijf-rgb, 101, 110, 79), 0.25);
+}
+
+/* Beschikbaar badge in kaart- en uitgelicht-body: pill-vorm, breedte = tekst */
+.kaart-body .status-badge-beschikbaar,
+.uitgelicht-info .status-badge-beschikbaar {
+    align-self: flex-start;
+    border-radius: 20px;
+}
+
+.kaart-body .status-badge-beschikbaar {
+    margin-top: 16px;
+}
+
+/* Verkocht-percentage badge op projectfoto */
+.kaart-verkocht-pct {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(22, 36, 26, 0.80);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #fff;
+    text-align: center;
+    min-width: 72px;
+    z-index: 2;
+}
+
+.kvp-label {
+    display: block;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    opacity: 0.65;
+    margin-bottom: 2px;
+}
+
+.kvp-pct {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 6px;
+}
+
+.kvp-bar {
+    height: 3px;
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.kvp-bar-fill {
+    height: 100%;
+    background: #5db87a;
+    border-radius: 2px;
 }
 
 .status-dot-lancering {

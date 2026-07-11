@@ -177,7 +177,10 @@ End Section
                         <div class="ik-waarde">
                             <span class="beschikbaar-pill">
                                 <span class="beschikbaar-dot"></span>
-                                @(Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold) wooneenheden
+                                @Code
+                                    Dim aantalBeschikbaar = Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold
+                                End Code
+                                @aantalBeschikbaar @(If(aantalBeschikbaar = 1, "wooneenheid", "wooneenheden"))
                             </span>
                         </div>
                     </div>
@@ -300,7 +303,7 @@ End Section
                                                     Dim tuin = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Tuin).Sum(Function(i) i.Surface)
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
                                                     Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-                                                    Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                                                    Dim heeftOpties = (unit.FinishingOptions.Count > 1 AndAlso Not isSold AndAlso Not isInOption)
                                                     @<tr class="@(If(isSold, "rij-verkocht", "")) @(If(heeftOpties, "heeft-opties", ""))" data-unit-id="@unit.Id">
                                                         <td>
                                                             <div class="lot-badge-wrap">
@@ -340,13 +343,15 @@ End Section
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If Not isSold Then
+                                                            @If Not isSold AndAlso Not isInOption Then
                                                                 @If heeftOpties Then
                                                                     Dim aptMinOptPrice = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
                                                                     @<text>
                                                                         <span class="prijs-vanaf-label">Vanaf</span>
                                                                         <span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(aptMinOptPrice)</span>
                                                                     </text>
+                                                                ElseIf unit.FinishingOptions.Count = 1 Then
+                                                                    @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.LandValue + unit.FinishingOptions.First().TotalValue)</span>
                                                                 Else
                                                                     @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                                 End If
@@ -376,7 +381,9 @@ End Section
                                                                         Dim optPrijs = unit.LandValue + opt.TotalValue
                                                                         @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
                                                                             <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
-                                                                            <div class="optie-kaart-prijs">@WWWCOPRO.Extensions.ToEuroCurrency(optPrijs)</div>
+                                                                            @If Not isInOption Then
+                                                                                @<div class="optie-kaart-prijs">@WWWCOPRO.Extensions.ToEuroCurrency(optPrijs)</div>
+                                                                            End If
                                                                             @If isInOption Then
                                                                                 @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
                                                                             Else
@@ -464,7 +471,7 @@ End Section
                                                     Dim ground = unit.GroundSurface
                                                     Dim slpkRoom = unit.Rooms.Where(Function(m) m.Type = BO.RoomType.Slaapkamer).FirstOrDefault()
                                                     Dim slpk = If(slpkRoom IsNot Nothing, slpkRoom.Number, 0)
-                                                    Dim heeftOpties = (unit.FinishingOptions.Count > 0 AndAlso Not isSold)
+                                                    Dim heeftOpties = (unit.FinishingOptions.Count > 1 AndAlso Not isSold AndAlso Not isInOption)
                                                     @<tr class="@(If(isSold, "rij-verkocht", "")) @(If(heeftOpties, "heeft-opties", ""))" data-unit-id="@unit.Id">
                                                         <td>
                                                             <div class="lot-badge-wrap">
@@ -502,13 +509,15 @@ End Section
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If Not isSold Then
+                                                            @If Not isSold AndAlso Not isInOption Then
                                                                 @If heeftOpties Then
                                                                     Dim wonMinOptPrice = unit.LandValue + unit.FinishingOptions.Min(Function(fo) fo.TotalValue)
                                                                     @<text>
                                                                         <span class="prijs-vanaf-label">Vanaf</span>
                                                                         <span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(wonMinOptPrice)</span>
                                                                     </text>
+                                                                ElseIf unit.FinishingOptions.Count = 1 Then
+                                                                    @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.LandValue + unit.FinishingOptions.First().TotalValue)</span>
                                                                 Else
                                                                     @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                                 End If
@@ -538,7 +547,9 @@ End Section
                                                                         Dim optPrijs = unit.LandValue + opt.TotalValue
                                                                         @<div class="optie-kaart @(If(opt.IsDefault, "optie-kaart-default", ""))">
                                                                             <div class="optie-kaart-naam">@opt.Name.ToUpper()</div>
-                                                                            <div class="optie-kaart-prijs">@WWWCOPRO.Extensions.ToEuroCurrency(optPrijs)</div>
+                                                                            @If Not isInOption Then
+                                                                                @<div class="optie-kaart-prijs">@WWWCOPRO.Extensions.ToEuroCurrency(optPrijs)</div>
+                                                                            End If
                                                                             @If isInOption Then
                                                                                 @<span class="eenheid-status-pill status-in-optie"><span class="status-dot"></span>In optie</span>
                                                                             Else
@@ -640,7 +651,7 @@ End Section
                                                             End If
                                                         </td>
                                                         <td class="num">
-                                                            @If Not isSold Then
+                                                            @If Not isSold AndAlso Not isInOption Then
                                                                 @<span class="prijs-val">@WWWCOPRO.Extensions.ToEuroCurrency(unit.TotalValue)</span>
                                                             Else
                                                                 @<span class="prijs-verkocht">—</span>

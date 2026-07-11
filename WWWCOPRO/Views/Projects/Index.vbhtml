@@ -18,6 +18,8 @@
     Dim fpHouses As Integer = If(fpSales IsNot Nothing, fpSales.NumberHouses, 0)
     Dim fpComm As Integer = If(fpSales IsNot Nothing, fpSales.NumberCommercial, 0)
     Dim fpLivingUnits As Integer = If(fpSales IsNot Nothing, fpSales.LivingUnits, 0)
+    Dim fpLivingUnitsSold As Integer = If(fpSales IsNot Nothing, fpSales.LivingUnitsSold, 0)
+    Dim fpBeschikbaar As Integer = fpLivingUnits - fpLivingUnitsSold
     Dim fpPercentageSold As Decimal = If(fpSales IsNot Nothing, fpSales.PercentageLivingUnitsSold, 0D)
     Dim fpSaleVisible As Boolean = If(fpSettings IsNot Nothing, fpSettings.SaleVisible, True)
     Dim fpExplicitStatus As Integer? = If(fpSettings IsNot Nothing AndAlso fpSettings.SalesDisplayStatus.HasValue, fpSettings.SalesDisplayStatus, Nothing)
@@ -111,6 +113,15 @@ end section
                     ElseIf fpIsLancering Then
                         @<text><span class="uitgelicht-foto-badge uitgelicht-foto-badge-lancering">Lancering</span></text>
                     End If
+                    @If fpPercentageSold >= 50 AndAlso Not fpIsUitverkocht Then
+                        @<text>
+                            <div class="kaart-verkocht-pct">
+                                <span class="kvp-label">Verkocht</span>
+                                <span class="kvp-pct">@String.Format("{0:0}", fpPercentageSold)%</span>
+                                <div class="kvp-bar"><div class="kvp-bar-fill" style="width:@String.Format("{0:0}", fpPercentageSold)%"></div></div>
+                            </div>
+                        </text>
+                    End If
                 </div>
                 <div class="uitgelicht-info">
                     <div class="uitgelicht-type">@fpTypeLabel</div>
@@ -174,6 +185,17 @@ end section
                             </div>
                         </text>
                     End If
+                    @If fpBeschikbaar > 0 AndAlso Not fpIsUitverkocht Then
+                        @Code
+                            Dim fpBeschikbaarLabel As String = If(fpHouses > 0 AndAlso fpAppts = 0, If(fpBeschikbaar = 1, "woning beschikbaar", "woningen beschikbaar"), If(fpAppts > 0 AndAlso fpHouses = 0, If(fpBeschikbaar = 1, "appartement beschikbaar", "appartementen beschikbaar"), If(fpBeschikbaar = 1, "eenheid beschikbaar", "eenheden beschikbaar")))
+                        End Code
+                        @<text>
+                            <span class="status-badge status-badge-beschikbaar" style="margin-bottom:16px;">
+                                <span class="status-dot status-dot-beschikbaar"></span>
+                                @fpBeschikbaar @fpBeschikbaarLabel
+                            </span>
+                        </text>
+                    End If
                     @If fpPrice > 0 Then
                         @<text>
                             <div class="uitgelicht-prijs">
@@ -200,6 +222,8 @@ end section
         Dim sales = Model.SalesData.FirstOrDefault(Function(m) m.ProjectId = project.Id)
         Dim settings = Model.SalesSettings.FirstOrDefault(Function(m) m.ProjectId = project.Id)
         Dim livingUnits As Integer = If(sales IsNot Nothing, sales.LivingUnits, 0)
+        Dim livingUnitsSold As Integer = If(sales IsNot Nothing, sales.LivingUnitsSold, 0)
+        Dim beschikbaar As Integer = livingUnits - livingUnitsSold
         Dim percentageSold As Decimal = If(sales IsNot Nothing, sales.PercentageLivingUnitsSold, 0D)
         Dim startingPrice As Decimal = If(sales IsNot Nothing, sales.StartingPrice, 0D)
         Dim numberAppartments As Integer = If(sales IsNot Nothing, sales.NumberAppartments, 0)
@@ -308,7 +332,7 @@ end section
                         </div>
                     </div>
                     <div class="kaart-footer">
-                        <span style="color:var(--tekst-sub)">Schrijf mij in</span>
+                        <span style="color:var(--color-primary);font-weight:500;">Schrijf mij in</span>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--tekst-sub);opacity:0.35"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     </div>
                 </a>
@@ -334,6 +358,15 @@ end section
                             @<text><span class="kaart-foto-badge kaart-foto-badge-nieuw">Nieuw</span></text>
                         ElseIf isLancering Then
                             @<text><span class="kaart-foto-badge kaart-foto-badge-lancering">Lancering</span></text>
+                        End If
+                        @If percentageSold >= 50 AndAlso Not isUitverkocht Then
+                            @<text>
+                                <div class="kaart-verkocht-pct">
+                                    <span class="kvp-label">Verkocht</span>
+                                    <span class="kvp-pct">@String.Format("{0:0}", percentageSold)%</span>
+                                    <div class="kvp-bar"><div class="kvp-bar-fill" style="width:@String.Format("{0:0}", percentageSold)%"></div></div>
+                                </div>
+                            </text>
                         End If
                         @If startingPrice > 0 AndAlso Not isUitverkocht Then
                             @<text>
@@ -402,6 +435,15 @@ end section
                                 </text>
                             End If
                         </div>
+                        @If beschikbaar > 0 AndAlso Not isUitverkocht Then
+                            @Code
+                                Dim bl As String = If(numberHouses > 0 AndAlso numberAppartments = 0, If(beschikbaar = 1, "woning beschikbaar", "woningen beschikbaar"), If(numberAppartments > 0 AndAlso numberHouses = 0, If(beschikbaar = 1, "appartement beschikbaar", "appartementen beschikbaar"), If(beschikbaar = 1, "eenheid beschikbaar", "eenheden beschikbaar")))
+                            End Code
+                            @<span class="status-badge status-badge-beschikbaar">
+                                <span class="status-dot status-dot-beschikbaar"></span>
+                                @beschikbaar @bl
+                            </span>
+                        End If
                     </div>
                     <div class="kaart-footer">
                         @If isUitverkocht Then
@@ -427,7 +469,7 @@ end section
                             </text>
                         Else
                             @<text>
-                                <span style="color:var(--tekst-sub)">
+                                <span style="color:var(--color-primary);font-weight:500;">
                                     Meer Info
                                 </span>
                             </text>
