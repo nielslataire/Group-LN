@@ -61,9 +61,14 @@
         <h1 class="h3 mb-1">@(isNieuw ? "Nieuwe e-mailtemplate" : "Template bewerken")</h1>
         <p class="text-muted mb-0">Onderwerp en tekst die je kan selecteren bij het versturen van een mail naar een contact.</p>
     </div>
-    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
-        <i class="bx bx-arrow-back"></i> Terug naar overzicht
-    </a>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+            <i class="bx bx-arrow-back"></i> Terug naar overzicht
+        </a>
+        <button type="submit" form="FormEmailTemplate" class="btn btn-primary">
+            <i class="bx bx-save"></i> Opslaan
+        </button>
+    </div>
 </div>
 
 <form method="post" action="@Url.Action("Bewerken")" id="FormEmailTemplate">
