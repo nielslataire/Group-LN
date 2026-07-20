@@ -48,6 +48,7 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.SettingsKostprijsMaterialen, "Kostprijs materialen", PermissionCodes.SettingsCalculatie, 91),
             New PermissionDefinition(PermissionCodes.SettingsWebsite, "Website", PermissionCodes.Settings, 92),
             New PermissionDefinition(PermissionCodes.SettingsBlogBeheer, "Blog artikelen", PermissionCodes.SettingsWebsite, 93),
+            New PermissionDefinition(PermissionCodes.SettingsEmailTemplates, "E-mailtemplates", PermissionCodes.SettingsWebsite, 96),
             New PermissionDefinition(PermissionCodes.SettingsAutomatisatie, "Automatisatie", PermissionCodes.Settings, 94),
             New PermissionDefinition(PermissionCodes.SettingsIssueNotifications, "Puntmeldingen", PermissionCodes.SettingsAutomatisatie, 95),
             New PermissionDefinition(PermissionCodes.Marktanalyse, "Marktanalyse", Nothing, 90),

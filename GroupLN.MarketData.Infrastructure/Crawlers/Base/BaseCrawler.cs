@@ -231,9 +231,9 @@ public abstract class BaseCrawler : IRealEstateCrawler
                     if (!IsAllowed(listing))
                     {
                         filteredOut++;
-                        Logger.LogDebug(
-                            "[{Source}]   ⊘ Overgeslagen (filter): postcode={PostalCode}, gemeente={City}",
-                            SourceName, listing.PostalCode ?? "?", listing.City ?? "?");
+                        Logger.LogInformation(
+                            "[{Source}] ListingSkippedOutsideAllowedLocation | Url={Url} | PostalCode={PostalCode} | City={City}",
+                            SourceName, listingUrl, listing.PostalCode ?? "?", listing.City ?? "?");
                         continue;
                     }
 
@@ -386,8 +386,9 @@ public abstract class BaseCrawler : IRealEstateCrawler
 
                 if (!skipAllowedFilter && !IsAllowed(listing))
                 {
-                    Logger.LogDebug("[{Source}]   ⊘ Geografisch gefilterd: {PostalCode} {City}",
-                        SourceName, listing.PostalCode ?? "?", listing.City ?? "?");
+                    Logger.LogInformation(
+                        "[{Source}] ListingSkippedOutsideAllowedLocation | Url={Url} | PostalCode={PostalCode} | City={City}",
+                        SourceName, listingUrl, listing.PostalCode ?? "?", listing.City ?? "?");
                     continue;
                 }
 

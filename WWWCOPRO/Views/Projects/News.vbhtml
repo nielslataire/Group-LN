@@ -12,7 +12,7 @@ End Code
                 <ul class="breadcrumb">
                     <li><a href="@(Url.Action("Index", "Home"))">Home</a></li>
                     <li><a href="@(Url.Action("Index", "Projects", New With {.id = UrlParameter.Optional}))">Woonprojecten</a></li>
-                    <li><a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = Model.ProjectSlug}))">@Model.ProjectName </a></li>
+                    <li><a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = Model.ProjectSlug}))">@Model.ProjectName </a></li>
                     <li class="active">Nieuws</li>
                 </ul>
             </div>
@@ -32,7 +32,7 @@ End Code
             <div class="portfolio-title">
                 <div class="row">
                     <div class="portfolio-nav-all col-md-1">
-                        <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = Model.ProjectSlug}))" class="portfolio-nav-prev" data-tooltip data-original-title="Terug naar @Model.ProjectName "><i class="fa fa-chevron-left"></i></a>
+                        <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = Model.ProjectSlug}))" class="portfolio-nav-prev" data-tooltip data-original-title="Terug naar @Model.ProjectName "><i class="fa fa-chevron-left"></i></a>
                     </div>
                     <div class="col-md-10 center">
                         <h2 class="mb-none">@Model.ProjectName te @System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(Model.ProjectCity.ToLower()) </h2>

@@ -3,7 +3,6 @@ using System.Text;
 using GroupLN.MarketData.Core.DTOs;
 using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Interfaces;
-using GroupLN.MarketData.Infrastructure.TitleResolution;
 using Microsoft.Extensions.Logging;
 
 namespace GroupLN.MarketData.Infrastructure.Normalizers;
@@ -40,14 +39,12 @@ public class PropertyNormalizer : IPropertyNormalizer
                 "[Normalizer] Onbekend PropertyType voor raw='{Raw}'. ExternalId={Id}",
                 listing.PropertyTypeRaw, listing.ExternalId);
 
-        var titleResult = ListingTitleResolver.Resolve(listing, mappedType, _logger);
-
         return new NormalizedPropertyDto
         {
             SourceId = sourceId,
             ExternalId = listing.ExternalId,
             Url = listing.Url,
-            Title = titleResult.Title,
+            Title = listing.Title?.Trim(),
 
             PropertyType = mappedType,
             PropertySubType = mappedSubType,
@@ -89,9 +86,19 @@ public class PropertyNormalizer : IPropertyNormalizer
             DeveloperWebsite = listing.DeveloperWebsite?.Trim(),
             DeveloperPhone = listing.DeveloperPhone?.Trim(),
 
-            EnergyFeatures = listing.EnergyFeatures,
+            EnergyFeatures  = listing.EnergyFeatures,
             DescriptionHash = HashDescription(listing.Description),
+            ListingTitle    = string.IsNullOrWhiteSpace(listing.Title) ? null : listing.Title.Trim(),
+            Description     = string.IsNullOrWhiteSpace(listing.Description) ? null : listing.Description.Trim(),
             RawJson = listing.RawJson,
+
+            MetaTitle       = string.IsNullOrWhiteSpace(listing.MetaTitle)       ? null : listing.MetaTitle.Trim(),
+            OgTitle         = string.IsNullOrWhiteSpace(listing.OgTitle)         ? null : listing.OgTitle.Trim(),
+            MetaDescription = string.IsNullOrWhiteSpace(listing.MetaDescription) ? null : listing.MetaDescription.Trim(),
+            H1              = string.IsNullOrWhiteSpace(listing.H1)              ? null : listing.H1.Trim(),
+            H2              = string.IsNullOrWhiteSpace(listing.H2)              ? null : listing.H2.Trim(),
+            H3              = string.IsNullOrWhiteSpace(listing.H3)              ? null : listing.H3.Trim(),
+            StructuredData  = string.IsNullOrWhiteSpace(listing.StructuredData)  ? null : listing.StructuredData.Trim(),
 
             PhotoUrls = listing.PhotoUrls.Count > 0 ? new List<string>(listing.PhotoUrls) : new List<string>()
         };

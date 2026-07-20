@@ -54,7 +54,20 @@ public class NormalizedPropertyDto
 
     public string? EnergyFeatures { get; set; }
     public string? DescriptionHash { get; set; }
+    // Raw listing title (DOM H1 voor Immoweb, project naam voor Zimmo) — alleen voor AI extractie
+    public string? ListingTitle { get; set; }
+    // Volledige beschrijvingstekst — alleen voor AI extractie
+    public string? Description { get; set; }
     public string? RawJson { get; set; }
+
+    // SEO / DOM metadata — voor AI extractie
+    public string? MetaTitle { get; set; }
+    public string? OgTitle { get; set; }
+    public string? MetaDescription { get; set; }
+    public string? H1 { get; set; }
+    public string? H2 { get; set; }
+    public string? H3 { get; set; }
+    public string? StructuredData { get; set; }
 
     // Foto-URL's van de projectdetailpagina (alleen voor projectgroepen)
     public List<string> PhotoUrls { get; set; } = new();

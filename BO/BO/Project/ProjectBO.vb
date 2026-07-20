@@ -393,4 +393,7 @@ Public Class ProjectBO
             _isPublished = value
         End Set
     End Property
+
+    Public Property SeoTitle As String
+    Public Property SeoDescription As String
 End Class

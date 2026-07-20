@@ -80,6 +80,10 @@ namespace CPMCore.Controllers
         private readonly BudgetBerekeningService     _berekeningService;
         private readonly BudgetExcelService          _excelService;
         private readonly ServiceCore.Budget.BudgetFormulaService _formulaService;
+        private readonly IEmailTemplateService _emailTemplateService;
+        private readonly IEmailSendLogService _emailSendLogService;
+        private readonly IUserSignatureService _userSignatureService;
+        private readonly IEmailSender _emailSender;
         //private readonly IInvoicePdfService _pdf;         // QuestPDF
         //private readonly IUblService _ubl;
         private static readonly HashSet<string> _validImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -88,7 +92,7 @@ namespace CPMCore.Controllers
         private static readonly HashSet<string> _validVideoTypes = new(StringComparer.OrdinalIgnoreCase)
             { "video/mp4", "video/webm", "video/quicktime", "video/x-msvideo", "video/avi" };
 
-        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService)
+        public ProjectenController(ILogger<HomeController> logger, IConfiguration configuration, IWebHostEnvironment env, cpmRunningContext db, IProjectService projectService, IUnitService unitService, IClientService clientService, ICompanyService companyService, IActivityService activityService, IInsuranceService insuranceService, ICountryService countryService, IPostalcodeService postalcodeService, IProjectVoortgangService voortgangService, DALCore.UnitOfWorkCore uow, IBudgetService budgetService, BudgetActivityService budgetActivityService, BouwIndexService bouwIndex, BudgetBerekeningService berekeningService, BudgetExcelService excelService, ServiceCore.Budget.BudgetFormulaService formulaService, IEmailTemplateService emailTemplateService, IEmailSendLogService emailSendLogService, IUserSignatureService userSignatureService, IEmailSender emailSender)
         {
             _logger = logger;
             Configuration = configuration;
@@ -110,6 +114,10 @@ namespace CPMCore.Controllers
             _berekeningService      = berekeningService;
             _excelService           = excelService;
             _formulaService         = formulaService;
+            _emailTemplateService   = emailTemplateService;
+            _emailSendLogService    = emailSendLogService;
+            _userSignatureService   = userSignatureService;
+            _emailSender            = emailSender;
         }
 
         // ========== PROJECT DETAIL ==========
@@ -853,6 +861,16 @@ namespace CPMCore.Controllers
             model.ContactGroups = BuildContactGroups(contacts);
             model.Stats = BuildContactStats(model.ContactGroups, contacts);
 
+            var lastEmailSentByContact = _emailSendLogService.GetLatestPerContact(projectid);
+            foreach (var group in model.ContactGroups)
+            {
+                var emailKey = (group.Email ?? string.Empty).Trim().ToLowerInvariant();
+                if (!string.IsNullOrEmpty(emailKey) && lastEmailSentByContact.TryGetValue(emailKey, out var lastSent))
+                {
+                    group.LastEmailSentAt = lastSent.VerzondenOp;
+                    group.LastEmailSentBy = lastSent.VerzondenDoorNaam;
+                }
+            }
 
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -1077,6 +1095,96 @@ namespace CPMCore.Controllers
             var response = service.DeleteContactRequestGroup(model.ProjectId, model.Email, model.Fullname, model.Phone);
             AddMessage(response.Success ? "success" : "error", response.Success ? "Contact verwijderd" : "Contact niet verwijderd", response.Success ? "Geslaagd!" : "Fout!");
 
+            return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+        }
+
+        [HttpGet]
+        public IActionResult ModalSendContactEmail(int projectid, string email, string fullname)
+        {
+            var templatesResponse = _emailTemplateService.GetAll(alleenActief: true);
+            var vm = new SendContactEmailModalVM
+            {
+                ProjectId = projectid,
+                Email = email,
+                Fullname = fullname,
+                Templates = (templatesResponse.Values ?? new List<EmailTemplateBO>())
+                    .Select(t => new SelectListItem(t.Naam, t.ID.ToString()))
+                    .ToList()
+            };
+
+            return PartialView("Modals/_ModalSendEmail", vm);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult SendContactEmail(SendContactEmailInputModel model)
+        {
+            if (model == null)
+                return RedirectToAction("DetailContacts", new { projectid = model?.ProjectId });
+
+            var userId = User.GetCpmUserId();
+            if (userId == null)
+                return Forbid();
+
+            var templateResponse = _emailTemplateService.GetById(model.TemplateId);
+            if (templateResponse.HasErrors || templateResponse.Value == null)
+            {
+                AddMessage("error", "Template niet gevonden.", "Fout!");
+                return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+            }
+
+            var template = templateResponse.Value;
+            var projectName = _projectService.GetProjectNameById(model.ProjectId) ?? string.Empty;
+            var gemeente = _uow.Projects.GetNoTracking()
+                .Where(p => p.ProjectId == model.ProjectId)
+                .Select(p => p.PostalCode != null ? p.PostalCode.Gemeente : null)
+                .FirstOrDefault() ?? string.Empty;
+            var voornaam = (model.Fullname ?? string.Empty).Trim()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault() ?? string.Empty;
+
+            string ReplaceTokens(string text) => (text ?? string.Empty)
+                .Replace("{Voornaam}", voornaam)
+                .Replace("{Naam}", model.Fullname ?? string.Empty)
+                .Replace("{ProjectNaam}", projectName)
+                .Replace("{Gemeente}", gemeente);
+
+            var subject = ReplaceTokens(template.Onderwerp);
+            var body = ReplaceTokens(template.BodyHtml);
+            var userName = User.GetCpmDisplayName() ?? User?.Identity?.Name ?? "Onbekende gebruiker";
+
+            if (model.IncludeSignature)
+            {
+                var signatureResponse = _userSignatureService.GetByUserId(userId.Value);
+                var signatureHtml = signatureResponse.Value?.SignatureHtml;
+                if (!string.IsNullOrWhiteSpace(signatureHtml))
+                    body += "<br/><br/>" + signatureHtml;
+            }
+
+            try
+            {
+                _emailSender.SendEmailAsync(model.Email, subject, body).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kon mail niet versturen naar {Email} voor project {ProjectId}", model.Email, model.ProjectId);
+                AddMessage("error", "Mail kon niet verstuurd worden.", "Fout!");
+                return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
+            }
+
+            _emailSendLogService.Log(new EmailSendLogBO
+            {
+                ProjectId = model.ProjectId,
+                ContactEmail = model.Email,
+                ContactNaam = model.Fullname,
+                EmailTemplateId = template.ID,
+                TemplateNaam = template.Naam,
+                Onderwerp = subject,
+                VerzondenDoorUserId = userId.Value,
+                VerzondenDoorNaam = userName
+            });
+
+            AddMessage("success", "Mail verstuurd.", "Geslaagd!");
             return RedirectToAction("DetailContacts", new { projectid = model.ProjectId });
         }
 

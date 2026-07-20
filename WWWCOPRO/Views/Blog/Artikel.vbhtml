@@ -38,6 +38,7 @@ End Code
 End Section
 
 @section PageStyle
+    <link rel="stylesheet" href="~/Content/blog-index.css" />
     <link rel="stylesheet" href="~/Content/blog-artikel.css" />
 End Section
 
@@ -279,6 +280,99 @@ End If
         </aside>
 
     </div>
+
+    @* ── Ontdek meer ── *@
+    @If Model.OntdekMeer.Count > 0 Then
+        @<section class="ontdek-meer">
+            <div class="sectie-kop">Ontdek meer</div>
+            <div class="blog-grid">
+                @For Each item In Model.OntdekMeer
+                    Dim itemHref As String = String.Empty
+                    If item.ItemType = "artikel" Then
+                        itemHref = Url.RouteUrl("BlogArtikel", New With {.slug = item.Slug})
+                    ElseIf Not String.IsNullOrEmpty(item.Slug) Then
+                        itemHref = Url.RouteUrl("ProjectBySlug", New With {.slug = item.Slug})
+                    Else
+                        itemHref = Url.RouteUrl("ProjectById")
+                    End If
+                    Dim slaapLabel As String = Nothing
+                    Dim eenhedenMeta As String = Nothing
+                    Dim prijsLabel As String = Nothing
+                    If item.ItemType = "project" Then
+                        If item.MinSlaapkamers.HasValue AndAlso item.MaxSlaapkamers.HasValue Then
+                            If item.MinSlaapkamers.Value = item.MaxSlaapkamers.Value Then
+                                slaapLabel = item.MinSlaapkamers.Value.ToString() & " slaapkamer" & If(item.MinSlaapkamers.Value = 1, "", "s")
+                            Else
+                                slaapLabel = item.MinSlaapkamers.Value.ToString() & Chr(8211) & item.MaxSlaapkamers.Value.ToString() & " slaapkamers"
+                            End If
+                        ElseIf item.MinSlaapkamers.HasValue Then
+                            slaapLabel = item.MinSlaapkamers.Value.ToString() & " slaapkamer" & If(item.MinSlaapkamers.Value = 1, "", "s")
+                        End If
+                        If Not String.IsNullOrEmpty(slaapLabel) AndAlso Not String.IsNullOrEmpty(item.AantalEenheden) Then
+                            eenhedenMeta = slaapLabel & " · " & item.AantalEenheden
+                        ElseIf Not String.IsNullOrEmpty(slaapLabel) Then
+                            eenhedenMeta = slaapLabel
+                        ElseIf Not String.IsNullOrEmpty(item.AantalEenheden) Then
+                            eenhedenMeta = item.AantalEenheden
+                        End If
+                        If item.VanafPrijs.HasValue Then
+                            prijsLabel = "Vanaf € " & item.VanafPrijs.Value.ToString("N0", New System.Globalization.CultureInfo("nl-BE")) & "<small>" & If(item.IsCasco, " casco", " incl. afwerking") & "</small>"
+                        End If
+                    End If
+                    @<a href="@itemHref" class="blog-kaart">
+                        <div class="blog-kaart-foto">
+                            @If item.IsVideo AndAlso Not String.IsNullOrEmpty(item.VideoUrl) Then
+                                @<video class="blog-kaart-video" autoplay="autoplay" muted="muted" loop="loop" playsinline="playsinline">
+                                    <source src="@item.VideoUrl" type="video/mp4" />
+                                </video>
+                            ElseIf Not String.IsNullOrEmpty(item.FotoUrl) Then
+                                @<img src="@item.FotoUrl" alt="@item.Titel" loading="lazy" />
+                            Else
+                                @<div class="blog-kaart-foto-placeholder"></div>
+                            End If
+                            @If item.ItemType = "artikel" Then
+                                @<span class="ontdek-badge ontdek-badge--artikel">ARTIKEL</span>
+                            Else
+                                @<span class="ontdek-badge ontdek-badge--project">PAND &middot; PROJECT</span>
+                            End If
+                        </div>
+                        <div class="blog-kaart-body">
+                            @If item.ItemType = "artikel" Then
+                                @<h3 class="blog-kaart-naam">@item.Titel</h3>
+                                @If item.Datum.HasValue Then
+                                    @<div class="blog-kaart-datum">@item.Datum.Value.ToString("d MMMM yyyy", New System.Globalization.CultureInfo("nl-BE"))</div>
+                                End If
+                                @If Not String.IsNullOrEmpty(item.PreviewTekst) Then
+                                    @<p class="blog-kaart-tekst">@item.PreviewTekst</p>
+                                End If
+                            Else
+                                @If Not String.IsNullOrEmpty(item.Street) Then
+                                    @<div class="blog-kaart-datum">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                        @item.Street
+                                    </div>
+                                End If
+                                @<h3 class="blog-kaart-naam">@item.Titel</h3>
+                                @If Not String.IsNullOrEmpty(eenhedenMeta) Then
+                                    @<div class="blog-kaart-datum">@eenhedenMeta</div>
+                                End If
+                                @If Not String.IsNullOrEmpty(prijsLabel) Then
+                                    @<p class="ontdek-kaart-tekst">@Html.Raw(prijsLabel)</p>
+                                End If
+                            End If
+                        </div>
+                        <div class="blog-kaart-footer">
+                            <span class="blog-kaart-link">
+                                @If item.ItemType = "artikel" Then @<text>Lees artikel</text> Else @<text>Ontdek project</text> End If
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                            </span>
+                        </div>
+                    </a>
+                Next
+            </div>
+        </section>
+    End If
+
 </div>
 
 @section scripts

@@ -526,6 +526,9 @@ Public Class ProjectBO
         End Set
     End Property
 
+    Public Property SeoTitle As String
+    Public Property SeoDescription As String
+
     Private _hourlyRates As List(Of ProjectHourlyRateBO)
     Public Property HourlyRates() As List(Of ProjectHourlyRateBO)
         Get

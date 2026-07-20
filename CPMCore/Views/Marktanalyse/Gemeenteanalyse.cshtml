@@ -388,6 +388,41 @@
         }
 
         /* ===========================
+           BRON BADGES
+        =========================== */
+
+        .bron-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: .15rem .45rem;
+            border-radius: 4px;
+            font-size: .65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+            margin-right: .2rem;
+            white-space: nowrap;
+        }
+
+        .bron-immoweb { background: #fff4e5; border: 1px solid #ffd591; color: #b26a00; }
+        .bron-zimmo   { background: #e8f0fe; border: 1px solid #bad0f7; color: #1a56db; }
+        .bron-other   { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; }
+
+        .dup-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            padding: .15rem .45rem;
+            border-radius: 4px;
+            font-size: .65rem;
+            font-weight: 700;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #c2410c;
+            margin-left: .3rem;
+        }
+
+        /* ===========================
            DATATABLES
         =========================== */
 
@@ -866,6 +901,7 @@
                     <tr>
                         <th>Project</th>
                         <th>Ontwikkelaar</th>
+                        <th>Bronnen</th>
                         <th>Type</th>
                         <th class="text-end">Units</th>
                         <th class="text-end">Verkocht</th>
@@ -893,6 +929,10 @@
                                 <div class="project-name">
                                     <i class="bx bx-buildings"></i>
                                     <a href="@detailUrl">@p.ProjectNaam</a>
+                                    @if (p.HeeftDuplicaten)
+                                    {
+                                        <span class="dup-badge"><i class="bx bx-link"></i>@p.AantalBronnen</span>
+                                    }
                                 </div>
 
                                 @if (!string.IsNullOrEmpty(p.AdresRegel))
@@ -901,7 +941,29 @@
                                 }
                             </td>
 
-                            <td>@p.Ontwikkelaar</td>
+                            <td>
+                                @p.Ontwikkelaar
+                                @if (p.DeveloperConflict)
+                                {
+                                    <i class="bx bx-error-circle text-warning ms-1" title="Ontwikkelaar verschilt per bron"></i>
+                                }
+                            </td>
+
+                            <td data-order="@p.AantalBronnen">
+                                @foreach (var bron in p.BronNamen)
+                                {
+                                    var bronClass = bron.ToLowerInvariant() switch {
+                                        "immoweb" => "bron-immoweb",
+                                        "zimmo"   => "bron-zimmo",
+                                        _         => "bron-other"
+                                    };
+                                    <span class="bron-badge @bronClass">@bron</span>
+                                }
+                                @if (!p.BronNamen.Any())
+                                {
+                                    <span class="text-muted" style="font-size:.8rem;">—</span>
+                                }
+                            </td>
 
                             <td>
                                 <span class="type-pill @(p.TypeLabel == "Woning" ? "type-house" : "type-apartment")">
@@ -954,7 +1016,38 @@
                     <span>@Model.LosseEenheden.Count losse eenhe@(Model.LosseEenheden.Count == 1 ? "id" : "den")</span>
                 </div>
                 <div class="table-card-subtitle">
-                    Individuele aanbiedingen zonder projectkoppeling
+                    @if (Model.ToonGekoppeld)
+                    {
+                        <span>Alle losse eenheden, inclusief @Model.AantalGekoppeld gekoppeld aan project</span>
+                    }
+                    else
+                    {
+                        <span>Individuele aanbiedingen zonder projectkoppeling</span>
+                        @if (Model.AantalGekoppeld > 0)
+                        {
+                            var toggleUrl = Url.Action("Gemeenteanalyse", "Marktanalyse", new {
+                                geoMunicipalityId     = Model.GeselecteerdGeoMunicipalityId,
+                                geoMunicipalSectionId = Model.GeselecteerdGeoMunicipalSectionId,
+                                type                  = Model.GeselecteerdType,
+                                aanbodtype            = Model.GeselecteerdAanbodtype,
+                                toonGekoppeld         = true
+                            });
+                            <a href="@toggleUrl" class="ms-2 small text-muted text-decoration-underline">
+                                + @Model.AantalGekoppeld gekoppeld aan project
+                            </a>
+                        }
+                    }
+                    @if (Model.ToonGekoppeld)
+                    {
+                        var toggleUrl = Url.Action("Gemeenteanalyse", "Marktanalyse", new {
+                            geoMunicipalityId     = Model.GeselecteerdGeoMunicipalityId,
+                            geoMunicipalSectionId = Model.GeselecteerdGeoMunicipalSectionId,
+                            type                  = Model.GeselecteerdType,
+                            aanbodtype            = Model.GeselecteerdAanbodtype,
+                            toonGekoppeld         = false
+                        });
+                        <a href="@toggleUrl" class="ms-2 small text-muted text-decoration-underline">Verberg gekoppelde</a>
+                    }
                 </div>
             </div>
             <div class="project-table-header-right">
@@ -1015,7 +1108,16 @@
                             <td>
                                 <span class="status-badge @statusClass">@e.Status</span>
                             </td>
-                            <td>@e.AangeboenDoor</td>
+                            <td>
+                                @e.AangeboenDoor
+                                @if (e.IsGekoppeld)
+                                {
+                                    <span class="badge ms-1" style="background:#e8f7ef;color:#007a4d;border:1px solid #bee5cf;font-size:.65rem;"
+                                          title="Gekoppeld aan @(e.GekoppeldProjectNaam ?? "project")">
+                                        <i class="bx bx-link-alt me-1"></i>Project
+                                    </span>
+                                }
+                            </td>
                             <td class="text-end">
                                 @if (!string.IsNullOrEmpty(e.SourceUrl))
                                 {
@@ -1402,7 +1504,7 @@ new Chart(document.getElementById('chartVerkoopgraad'), {
                 // ── Projecten DataTable ───────────────────────────────────────
                 var dtP = $('#tblProjecten').DataTable({
                     language: { url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json' },
-                    order: [[6, 'desc']],
+                    order: [[7, 'desc']],
                     pageLength: 10,
                     dom: domStr,
                     columnDefs: [{ orderable: false, targets: -1 }]

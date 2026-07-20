@@ -78,15 +78,30 @@ public class ZimmoCrawler : BaseCrawler
 
     protected override bool IsAllowed(ListingDto listing)
     {
-        var locs = GetSourceSettings().AllowedLocations;
-        if (locs.Count == 0) return true;
-        var codes = locs
+        var src = GetSourceSettings();
+        var effective = ResolveEffectiveLocations(src);
+        if (effective is null || effective.Count == 0) return true; // AllowDefaultLocations=false + leeg = niets crawlen, maar IsAllowed bereikt dit pad niet (lege URL-lijst)
+
+        var codes = effective
             .Where(l => !string.IsNullOrEmpty(l.PostalCode))
             .Select(l => l.PostalCode!.Trim())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return codes.Count == 0
-            || (!string.IsNullOrEmpty(listing.PostalCode)
-                && codes.Contains(listing.PostalCode.Trim()));
+
+        if (codes.Count == 0) return true;
+
+        var allowed = !string.IsNullOrEmpty(listing.PostalCode) && codes.Contains(listing.PostalCode.Trim());
+        if (!allowed)
+            Logger.LogInformation(
+                "[Zimmo] ListingSkippedOutsideAllowedLocation | Url={Url} | PostalCode={PC} | Allowed={Allowed}",
+                listing.Url, listing.PostalCode ?? "(null)", string.Join(",", codes));
+        return allowed;
+    }
+
+    // Hulpmethode: bepaal de effectieve locatielijst (AllowedLocations of DefaultLocations-fallback).
+    private IReadOnlyList<LocationSettings>? ResolveEffectiveLocations(SourceSettings src)
+    {
+        if (src.AllowedLocations.Count > 0) return src.AllowedLocations;
+        return src.AllowDefaultLocations ? DefaultLocations : null;
     }
 
     // Geen rate-limit op listing-loop-niveau (cache-lookups zijn instant).
@@ -110,15 +125,39 @@ public class ZimmoCrawler : BaseCrawler
         _projectDebugSaved = 0;
 
         var src = GetSourceSettings();
-        var locations = src.AllowedLocations.Count > 0
-            ? (IReadOnlyList<LocationSettings>)src.AllowedLocations
-            : DefaultLocations;
-        var maxPages = src.MaxSearchPagesPerLocation > 0 ? src.MaxSearchPagesPerLocation : 5;
+        var maxPages = src.MaxSearchPagesPerLocation.ToEffectiveMax();
+
+        IReadOnlyList<LocationSettings> locations;
+        if (src.AllowedLocations.Count > 0)
+        {
+            locations = src.AllowedLocations;
+            Logger.LogInformation("[Zimmo] AllowedLocations ({Count}):", locations.Count);
+            foreach (var l in locations)
+                Logger.LogInformation(
+                    "[Zimmo]   City={City} | PostalCode={PostalCode} | CitySlug={CitySlug} | PlaceId={PlaceId}",
+                    l.City, l.PostalCode,
+                    l.CitySlug ?? "(geen slug)",
+                    (!string.IsNullOrEmpty(l.PostalCode) && ZimmoSearchUrlBuilder.PlaceIdByPostalCode.TryGetValue(l.PostalCode, out var pid))
+                        ? pid.ToString() : "–");
+        }
+        else if (src.AllowDefaultLocations)
+        {
+            locations = DefaultLocations;
+            Logger.LogWarning(
+                "[Zimmo] ⚠ AllowedLocations is leeg — fallback naar {Count} hardcoded DefaultLocations " +
+                "(Brugge/Sint-Michiels/Beernem). Stel AllowedLocations in appsettings in of zet AllowDefaultLocations=false.",
+                DefaultLocations.Length);
+        }
+        else
+        {
+            Logger.LogWarning("[Zimmo] AllowedLocations is leeg en AllowDefaultLocations=false — geen zoek-URL's gegenereerd.");
+            return Task.FromResult<IEnumerable<string>>([]);
+        }
 
         Logger.LogInformation(
             "[Zimmo] {Count} locatie(s) | MaxPagesPerLocatie={Max} | " +
             "OpenProjectDetailPages={ProjDetail} | OpenDetailPagesForLooseListings={LooseDetail}",
-            locations.Count, maxPages, OpenProjectDetailPages, OpenDetailPagesForLooseListings);
+            locations.Count, src.MaxSearchPagesPerLocation.ToLimitLabel(), OpenProjectDetailPages, OpenDetailPagesForLooseListings);
 
         var urls = new List<string>();
         foreach (var loc in locations)
@@ -936,12 +975,14 @@ public class ZimmoCrawler : BaseCrawler
 
         _projectUnitsFound += result.UnitsFound;
 
+        var projectName = await ListingService.GetListingTitleAsync(assetId.Value, cancellationToken) ?? "?";
+
         Logger.LogInformation(
-            "[Zimmo] ProjectGroupSaved | AssetId={AssetId} | ExternalId={Id} | " +
+            "[Zimmo] ProjectGroupSaved | AssetId={AssetId} | ExternalId={Id} | ProjectName={Name} | " +
             "Units={Total} (nieuw={New}, bijgewerkt={Upd}) | " +
             "Beschikbaar={Avail} | Verkocht={Sold} | Gereserveerd={Res} | " +
             "TotaalUnitsDezeRun={RunTotal}",
-            assetId.Value, normalized.ExternalId,
+            assetId.Value, normalized.ExternalId, projectName,
             result.UnitsFound, result.UnitsCreated, result.UnitsUpdated,
             result.AvailableUnits, result.SoldUnits, result.ReservedUnits,
             _projectUnitsFound);
@@ -1131,24 +1172,40 @@ public class ZimmoCrawler : BaseCrawler
                 const lat = mapEl ? mapEl.getAttribute('lat') : null;
                 const lon = mapEl ? mapEl.getAttribute('long') : null;
 
-                // Beschrijving
-                const descEl = document.querySelector('section.section-description p');
-                const description = descEl ? (descEl.textContent || '').replace(/\s+/g, ' ').trim() : '';
+                // Beschrijving: volledige sectie, niet slechts eerste alinea
+                const descEl = document.querySelector('section#description, section.section-description');
+                const description = descEl ? (descEl.innerText || descEl.textContent || '').replace(/\s+/g, ' ').trim() : '';
 
                 // Units uit de indeling-tabel
                 // Kolomvolgorde: [foto][fav][Type=2][Nr=3][Prijs=4][Slpk=5][Woonopp=6][Grondopp=7][Terras=8][Tuin=9][Z-code=10]
-                // Elke klikbare cel heeft een onzichtbare overlay-link (opacity:0, position:absolute) met tekst "Appartement".
-                // cellText() verwijdert deze overlays vóór het lezen van textContent.
+                // th-rijen markeren een nieuwe verdieping (bv. "Gelijkvloers", "Verdieping 1").
+                // cellText() verwijdert onzichtbare overlay-links vóór het lezen van textContent.
                 function cellText(td) {
                     if (!td) return '';
                     const clone = td.cloneNode(true);
                     clone.querySelectorAll('a[style*="position: absolute"], a[style*="opacity: 0"]').forEach(el => el.remove());
                     return (clone.textContent || '').replace(/\s+/g, ' ').trim();
                 }
+                function parseArea(txt) {
+                    if (!txt) return null;
+                    const m = txt.match(/(\d+[\.,]?\d*)/);
+                    return m ? parseFloat(m[1].replace(',', '.')) : null;
+                }
                 const units = [];
                 let soldIdx = 0;
+                let currentFloor = null;
                 document.querySelectorAll('section.section-division table.table-striped tr').forEach(tr => {
-                    if (tr.querySelector('th')) return;
+                    if (tr.querySelector('th')) {
+                        // Verdiepingsheader (bv. "Gelijkvloers", "Verdieping 2")
+                        const hdr = (tr.querySelector('th')?.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                        if (hdr.includes('gelijkvloers') || hdr.includes('benedenverdieping')) {
+                            currentFloor = 0;
+                        } else {
+                            const m = hdr.match(/verdieping\s*(\d+)/);
+                            currentFloor = m ? parseInt(m[1]) : null;
+                        }
+                        return;
+                    }
                     const tds = Array.from(tr.querySelectorAll('td'));
                     if (tds.length < 7) return;
                     // Klikbare rijen hebben een zichtbare link in tds[2] (de Type-kolom) naar de unit-pagina
@@ -1158,6 +1215,9 @@ public class ZimmoCrawler : BaseCrawler
                     const priceTxt    = cellText(tds[4]);
                     const bedroomsTxt = cellText(tds[5]);
                     const areaTxt     = cellText(tds[6]);
+                    const grondTxt    = tds.length > 7 ? cellText(tds[7]) : '';
+                    const terrasTxt   = tds.length > 8 ? cellText(tds[8]) : '';
+                    const tuinTxt     = tds.length > 9 ? cellText(tds[9]) : '';
                     const zcodeRaw    = tds.length > 10 ? cellText(tds[10]) : '';
                     const sold        = tr.classList.contains('disabled')
                                      || priceTxt.toLowerCase().includes('verkocht');
@@ -1168,7 +1228,15 @@ public class ZimmoCrawler : BaseCrawler
                     // Z-code: voor verkochte units is de code leeg ("-"); genereer een stabiele placeholder
                     const zcode = (zcodeRaw && zcodeRaw !== '-') ? zcodeRaw
                                 : sold ? ('SOLD_' + (soldIdx++)) : '';
-                    units.push({ unitType, unitNumber, priceTxt, bedroomsTxt, areaTxt, zcode, sold, href: unitUrl });
+                    // Verdieping: sectie-header heeft prioriteit; fallback via unitnummer (bv. "01.02" → 1)
+                    let floor = currentFloor;
+                    if (floor === null && unitNumber) {
+                        const fm = unitNumber.match(/^(\d+)\./);
+                        if (fm) floor = parseInt(fm[1]);
+                    }
+                    units.push({ unitType, unitNumber, priceTxt, bedroomsTxt, areaTxt,
+                                 grond: parseArea(grondTxt), terras: parseArea(terrasTxt),
+                                 tuin: parseArea(tuinTxt), zcode, sold, href: unitUrl, floor });
                 });
 
                 // Projectfoto's uit de detail-slider
@@ -1190,7 +1258,19 @@ public class ZimmoCrawler : BaseCrawler
                     }
                 });
 
-                return { projectName, address, priceText, lat, lon, description, units, photoUrls };
+                // SEO metadata — voor AI extractie
+                const metaTitleRaw = (document.querySelector('meta[name="title"]')?.content || document.title || '').trim();
+                const ogTitleRaw   = (document.querySelector('meta[property="og:title"]')?.getAttribute('content') || '').trim();
+                const metaDescRaw  = (document.querySelector('meta[name="description"]')?.getAttribute('content')
+                                   || document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '').trim();
+                const h1Raw        = h1 ? (h1.innerText || '').trim() : '';
+                const h2Texts      = Array.from(document.querySelectorAll('h2')).map(e => (e.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 3).join(' | ');
+                const h3Texts      = Array.from(document.querySelectorAll('h3')).map(e => (e.innerText || '').replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 3).join(' | ');
+                const ldJsonRaw    = Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(e => (e.textContent || '').trim()).filter(Boolean).join('\n');
+
+                return { projectName, address, priceText, lat, lon, description, units, photoUrls,
+                         metaTitle: metaTitleRaw, ogTitle: ogTitleRaw, metaDesc: metaDescRaw,
+                         h1Raw, h2: h2Texts, h3: h3Texts, structuredData: ldJsonRaw };
             }
             """;
 
@@ -1206,12 +1286,19 @@ public class ZimmoCrawler : BaseCrawler
             el.TryGetProperty(key, out var p) && p.ValueKind == JsonValueKind.String
                 ? (p.GetString() ?? "") : "";
 
-        var projectName = S(result, "projectName");
-        var address     = S(result, "address");
-        var priceText   = S(result, "priceText");
-        var latStr      = S(result, "lat");
-        var lonStr      = S(result, "lon");
-        var description = S(result, "description");
+        var projectName     = S(result, "projectName");
+        var address         = S(result, "address");
+        var priceText       = S(result, "priceText");
+        var latStr          = S(result, "lat");
+        var lonStr          = S(result, "lon");
+        var description     = S(result, "description");
+        var metaTitle       = S(result, "metaTitle");
+        var ogTitle         = S(result, "ogTitle");
+        var metaDescription = S(result, "metaDesc");
+        var h1Raw           = S(result, "h1Raw");
+        var h2              = S(result, "h2");
+        var h3              = S(result, "h3");
+        var structuredData  = S(result, "structuredData");
 
         if (string.IsNullOrEmpty(projectName) && string.IsNullOrEmpty(address))
         {
@@ -1268,6 +1355,22 @@ public class ZimmoCrawler : BaseCrawler
                 var unitId = !string.IsNullOrEmpty(zcode) ? zcode
                     : (ZimmoListingParser.ExtractExternalIdFromUrl(href.Split('?')[0]) ?? href);
 
+                // Verdieping: int uit JS (0=gelijkvloers, 1=verdieping 1, …)
+                int? floor = null;
+                if (u.TryGetProperty("floor", out var fp) && fp.ValueKind == JsonValueKind.Number)
+                    floor = fp.GetInt32();
+
+                // Grondopp, terras, tuin: al geparsed naar number door JS parseArea()
+                static decimal? JsNum(JsonElement el, string key)
+                {
+                    if (el.TryGetProperty(key, out var v) && v.ValueKind == JsonValueKind.Number)
+                        return v.GetDecimal();
+                    return null;
+                }
+                var landArea   = JsNum(u, "grond");
+                var terraceArea = JsNum(u, "terras");
+                var gardenArea  = JsNum(u, "tuin");
+
                 units.Add(new ProjectGroupUnitDto
                 {
                     ParentProjectId       = externalId ?? "",
@@ -1282,7 +1385,10 @@ public class ZimmoCrawler : BaseCrawler
                     Price                 = sold ? null : ParseCardPrice(unitPriceTxt),
                     Surface               = ParseAreaText(areaTxt),
                     BedroomCount          = ParseBedroomsText(bedroomsTxt),
-                    Floor                 = null,
+                    Floor                 = floor,
+                    LandArea              = landArea,
+                    TerraceArea           = terraceArea,
+                    GardenArea            = gardenArea,
                 });
             }
         }
@@ -1346,6 +1452,15 @@ public class ZimmoCrawler : BaseCrawler
             rawJson             : null);
 
         dto.PhotoUrls = photoUrls;
+
+        if (!string.IsNullOrEmpty(metaTitle))       dto.MetaTitle       = metaTitle;
+        if (!string.IsNullOrEmpty(ogTitle))         dto.OgTitle         = ogTitle;
+        if (!string.IsNullOrEmpty(metaDescription)) dto.MetaDescription = metaDescription;
+        if (!string.IsNullOrEmpty(h1Raw))           dto.H1              = h1Raw;
+        if (!string.IsNullOrEmpty(h2))              dto.H2              = h2;
+        if (!string.IsNullOrEmpty(h3))              dto.H3              = h3;
+        if (!string.IsNullOrEmpty(structuredData))  dto.StructuredData  = structuredData;
+
         return dto;
     }
 

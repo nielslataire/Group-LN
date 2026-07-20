@@ -30,6 +30,15 @@ End Code
     <meta property="og:url" content="@ViewData("ogurl")" />
     <meta property="og:locale" content="language_nl_BE" />
     <meta property="og:site_name" content="Group LN" />
+    @If Not String.IsNullOrEmpty(CStr(ViewData("twittercard"))) Then
+        @<meta name="twitter:card" content="@ViewData("twittercard")" />
+        @<meta name="twitter:title" content="@ViewData("twittertitle")" />
+        @<meta name="twitter:description" content="@ViewData("twitterdescription")" />
+        @<meta name="twitter:image" content="@ViewData("twitterimage")" />
+    End If
+    @If Not String.IsNullOrEmpty(CStr(ViewData("canonical"))) Then
+        @<link rel="canonical" href="@ViewData("canonical")" />
+    End If
     <!-- Mobile Metas -->
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 

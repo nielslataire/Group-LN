@@ -103,6 +103,10 @@ public partial class Project
 
     public string StandardFotoName { get; set; }
 
+    public string SeoTitle { get; set; }
+
+    public string SeoDescription { get; set; }
+
     public virtual CompanyInfo Architect { get; set; }
 
     public virtual Users AspNetUser { get; set; }

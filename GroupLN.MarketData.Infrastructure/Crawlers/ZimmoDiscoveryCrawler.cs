@@ -77,11 +77,11 @@ public class ZimmoDiscoveryCrawler : BaseCrawler
             ? (IReadOnlyList<LocationSettings>)src.AllowedLocations
             : DefaultLocations;
 
-        var maxPages = src.MaxSearchPagesPerLocation > 0 ? src.MaxSearchPagesPerLocation : 3;
+        var maxPages = src.MaxSearchPagesPerLocation.ToEffectiveMax();
 
         Logger.LogInformation(
             "[ZimmoDiscovery] {Count} locatie(s) | MaxPagesPerLocatie={Max} | DebugDir={Dir}",
-            locations.Count, maxPages, GetDebugDir());
+            locations.Count, src.MaxSearchPagesPerLocation.ToLimitLabel(), GetDebugDir());
 
         var urls = new List<string>();
 

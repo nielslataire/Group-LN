@@ -4,6 +4,46 @@
 End Code
 @Imports wwwcopro.extensions
 @Imports System.Text.RegularExpressions
+@section PageMeta
+    @Code
+        Dim _ser As New System.Web.Script.Serialization.JavaScriptSerializer()
+        Dim _imgBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
+        Dim _imgUrl As String = If(Model.Data.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(Model.Data.DefaultPicture.Name),
+                                   _imgBase & "pictures/" & Model.Data.DefaultPicture.Name,
+                                   String.Empty)
+        Dim _canonical As String = CStr(If(ViewData("ogurl"), "https://www.groupln.be/woonprojecten/" & Model.Data.Slug))
+        Dim _seoTitle As String = CStr(If(ViewData("ogtitle"), Model.Data.Name))
+        Dim _seoDesc As String = CStr(If(ViewData("ogdescription"), String.Empty))
+        Dim _streetAddress As String = (If(Not String.IsNullOrWhiteSpace(Model.Data.Street), Model.Data.Street, "") & " " & If(Not String.IsNullOrWhiteSpace(Model.Data.HouseNumber), Model.Data.HouseNumber, "")).Trim()
+        Dim _imageField As String = If(Not String.IsNullOrWhiteSpace(_imgUrl), """image"": """ & _imgUrl & """," & Environment.NewLine & "      ", String.Empty)
+        Dim _listingJson As String = "{" & Environment.NewLine &
+            "  ""@context"": ""https://schema.org""," & Environment.NewLine &
+            "  ""@type"": ""RealEstateListing""," & Environment.NewLine &
+            "  ""name"": " & _ser.Serialize(_seoTitle) & "," & Environment.NewLine &
+            "  ""description"": " & _ser.Serialize(_seoDesc) & "," & Environment.NewLine &
+            "  ""url"": """ & _canonical & """," & Environment.NewLine &
+            "  " & _imageField &
+            "  ""address"": {" & Environment.NewLine &
+            "    ""@type"": ""PostalAddress""," & Environment.NewLine &
+            "    ""streetAddress"": " & _ser.Serialize(_streetAddress) & "," & Environment.NewLine &
+            "    ""postalCode"": """ & Model.Data.Postalcode.Postcode & """," & Environment.NewLine &
+            "    ""addressLocality"": " & _ser.Serialize(Model.Data.Postalcode.Gemeente) & "," & Environment.NewLine &
+            "    ""addressCountry"": ""BE""" & Environment.NewLine &
+            "  }" & Environment.NewLine &
+            "}"
+        Dim _breadcrumbJson As String = "{" & Environment.NewLine &
+            "  ""@context"": ""https://schema.org""," & Environment.NewLine &
+            "  ""@type"": ""BreadcrumbList""," & Environment.NewLine &
+            "  ""itemListElement"": [" & Environment.NewLine &
+            "    { ""@type"": ""ListItem"", ""position"": 1, ""name"": ""Home"", ""item"": ""https://www.groupln.be/"" }," & Environment.NewLine &
+            "    { ""@type"": ""ListItem"", ""position"": 2, ""name"": ""Woonprojecten"", ""item"": ""https://www.groupln.be/woonprojecten"" }," & Environment.NewLine &
+            "    { ""@type"": ""ListItem"", ""position"": 3, ""name"": " & _ser.Serialize(Model.Data.Name) & ", ""item"": """ & _canonical & """ }" & Environment.NewLine &
+            "  ]" & Environment.NewLine &
+            "}"
+    End Code
+    <script type="application/ld+json">@Html.Raw(_listingJson)</script>
+    <script type="application/ld+json">@Html.Raw(_breadcrumbJson)</script>
+End Section
 @section PageStyle
     <link rel="stylesheet" href="~/Content/real-estate.css" />
     <link rel="stylesheet" href="~/vendor/magnific-popup/magnific-popup.css" />
@@ -54,7 +94,7 @@ End Section
             @Code
                 Dim imgBase = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
                 Dim videoExts As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {".mp4", ".webm", ".mov", ".avi"}
-                Dim nevenfotos = Model.Data.Pictures.Where(Function(p) p.Type = BO.PictureType.Nevenfoto).ToList()
+                Dim nevenfotos = Model.Data.Pictures.Where(Function(p) p.Type = BO.PictureType.Nevenfoto AndAlso (Model.Data.DefaultPicture Is Nothing OrElse p.Id <> Model.Data.DefaultPicture.Id)).ToList()
                 Dim heeftMeerdereFotos = (Model.Data.DefaultPicture IsNot Nothing) AndAlso nevenfotos.Count > 0
                 Dim defaultIsVideo As Boolean = Model.Data.DefaultPicture IsNot Nothing AndAlso
                     (Model.Data.DefaultPicture.MediaType = 1 OrElse videoExts.Contains(System.IO.Path.GetExtension(Model.Data.DefaultPicture.Name)))
@@ -172,19 +212,22 @@ End Section
                     End If
 
                     <!-- Beschikbaar -->
-                    <div class="info-kaart-rij">
+                    @Code
+                        Dim beschikbaarAantal As Integer = Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold
+                    End Code
+                    <div class="info-kaart-rij info-kaart-rij-center">
                         <span class="ik-sleutel">Beschikbaar</span>
                         <div class="ik-waarde">
                             <span class="beschikbaar-pill">
                                 <span class="beschikbaar-dot"></span>
-                                @(Model.SalesData.LivingUnits - Model.SalesData.LivingUnitsSold) wooneenheden
+                                @beschikbaarAantal @(If(beschikbaarAantal = 1, "wooneenheid", "wooneenheden"))
                             </span>
                         </div>
                     </div>
 
                     <!-- Architect -->
                     @If Model.Data.Architect.ID > 0 Then
-                        @<div class="info-kaart-rij">
+                        @<div class="info-kaart-rij info-kaart-rij-center">
                             <span class="ik-sleutel">Architect</span>
                             <div class="ik-waarde">@Model.Data.Architect.Display</div>
                         </div>
@@ -1070,7 +1113,7 @@ End Section
                     content: contentString
                 });
                 var icon = {
-                    url: "http://www.groupln.be/content/img/icons/map-marker.gif", // url
+                    url: "https://www.groupln.be/content/img/icons/map-marker.gif", // url
                     scaledSize: new google.maps.Size(29, 43), // scaled size
                     origin: new google.maps.Point(0, 0), // origin
                     anchor: new google.maps.Point(14.5, 40) // anchor

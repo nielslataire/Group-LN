@@ -9,6 +9,10 @@ public class AiProjectExtractionInput
     public string? MetaTitle { get; init; }
     public string? OgTitle { get; init; }
     public string? MetaDescription { get; init; }
+    public string? H1 { get; init; }
+    public string? H2 { get; init; }
+    public string? H3 { get; init; }
+    public string? StructuredData { get; init; }
     public string? BodyText { get; init; }
     public string? Address { get; init; }
     public string? UnitTableText { get; init; }

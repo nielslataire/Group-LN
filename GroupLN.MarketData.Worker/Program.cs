@@ -4,8 +4,13 @@ using GroupLN.MarketData.Infrastructure.Commands;
 using GroupLN.MarketData.Infrastructure.Extensions;
 using GroupLN.MarketData.Persistence;
 using GroupLN.MarketData.Persistence.Extensions;
+using GroupLN.MarketData.Worker;
 using GroupLN.MarketData.Worker.Workers;
 using Microsoft.EntityFrameworkCore;
+
+// ── Stap 0: valideer appsettings.Development.json vóór de host gebouwd wordt ─
+// Geeft een duidelijke foutmelding als het bestand ongeldige JSON of comments bevat.
+ConfigDebugLogger.ValidateDevConfigJson();
 
 // Helperfunctie: gebruik een scoped service en voer een actie uit, daarna exit
 static async Task RunScopedCommandAsync<T>(IHost host, Func<T, Task> action) where T : notnull
@@ -99,13 +104,17 @@ using (var scope = host.Services.CreateScope())
         ai.AnthropicModel,
         apiKeyConfigured,
         ai.AiExtractionMinConfidence,
-        ai.MaxAiExtractionsPerRun);
+        ai.MaxAiExtractionsPerRun.ToLimitLabel());
 
     if (ai.EnableAiProjectExtraction && !apiKeyConfigured)
         logger.LogWarning(
             "⚠️  AiExtraction.EnableAiProjectExtraction=true maar AnthropicApiKey is NIET geconfigureerd. " +
             "Stel in via user secrets: dotnet user-secrets set " +
             "\"CrawlerSettings:AiExtraction:AnthropicApiKey\" \"<key>\"");
+
+    // ── Config debug samenvatting ─────────────────────────────────────────────
+    var configuration = host.Services.GetRequiredService<IConfiguration>();
+    ConfigDebugLogger.LogAll(logger, configuration, settings, env);
 }
 
 // ── Tijdelijke Zimmo detail-test ─────────────────────────────────────────
@@ -144,6 +153,122 @@ if (args.Contains("--reset-market-data"))
             logger.LogWarning(
                 "[Program] --reset-market-data preview klaar. " +
                 "Herhaal met --confirm om effectief te wissen.");
+    });
+
+    return;
+}
+
+// ── Canonical units herbouwen ─────────────────────────────────────────────
+if (args.Contains("--rebuild-canonical-units"))
+{
+    var projectIdArg = args.SkipWhile(a => a != "--canonical-project-id").Skip(1).FirstOrDefault();
+    long? canonicalProjectId = null;
+    if (projectIdArg is not null && long.TryParse(projectIdArg, out var parsedId))
+        canonicalProjectId = parsedId;
+
+    logger.LogInformation(
+        "[Program] --rebuild-canonical-units modus — normale worker wordt NIET gestart. " +
+        "CanonicalProjectId={Id}",
+        canonicalProjectId?.ToString() ?? "alle");
+
+    await RunScopedCommandAsync<RebuildCanonicalUnitsCommand>(host, async cmd =>
+    {
+        var result = await cmd.ExecuteAsync(canonicalProjectId);
+        logger.LogInformation(
+            "[Program] --rebuild-canonical-units klaar. " +
+            "Projects={P} | SourceUnits={S} | CanonicalUnits={C} | Merged={M} | Conflicts={Conf}",
+            result.ProjectsProcessed,
+            result.SourceUnitsScanned,
+            result.CanonicalUnitsCreated,
+            result.UnitsMerged,
+            result.ConflictsDetected);
+    });
+
+    return;
+}
+
+// ── Losse listings matchen aan canonical units ────────────────────────────
+if (args.Contains("--match-loose-listings-to-units"))
+{
+    logger.LogInformation("[Program] --match-loose-listings-to-units modus — normale worker wordt NIET gestart.");
+
+    await RunScopedCommandAsync<MatchLooseListingsCommand>(host, async cmd =>
+    {
+        var result = await cmd.ExecuteAsync();
+        logger.LogInformation(
+            "[Program] --match-loose-listings-to-units klaar. " +
+            "Candidates={C} | Matched={M} | Ambiguous={A} | Unmatched={U}",
+            result.CandidatesEvaluated,
+            result.Matched,
+            result.Ambiguous,
+            result.Unmatched);
+    });
+
+    return;
+}
+
+// ── Volledige deduplicatie uitvoeren ──────────────────────────────────────
+if (args.Contains("--run-deduplication"))
+{
+    // Optioneel: --since yyyy-MM-dd  (default = alles)
+    var sinceArg = args.SkipWhile(a => a != "--since").Skip(1).FirstOrDefault();
+    DateTime? since = null;
+    if (sinceArg is not null)
+    {
+        if (DateTime.TryParse(sinceArg, out var parsedSince))
+            since = parsedSince;
+        else
+            logger.LogWarning("[Program] Ongeldig --since formaat '{V}' — volledige scan wordt uitgevoerd.", sinceArg);
+    }
+
+    logger.LogInformation(
+        "[Program] --run-deduplication modus — normale worker wordt NIET gestart. Since={Since}",
+        since?.ToString("yyyy-MM-dd HH:mm") ?? "alle records");
+
+    await RunScopedCommandAsync<RunDeduplicationCommand>(host, async cmd =>
+    {
+        var result = await cmd.ExecuteAsync(since);
+        logger.LogInformation(
+            "[Program] --run-deduplication klaar. " +
+            "Gescand={Scanned} | ProjectCandidates={Projects} | UnitCandidates={Units} | Opgeslagen={Saved}",
+            result.NewAssetsScanned,
+            result.ProjectCandidatesFound,
+            result.UnitCandidatesFound,
+            result.CandidatesSaved);
+    });
+
+    return;
+}
+
+// ── AI Anthropic projectnaam-extractie uitvoeren ──────────────────────────
+if (args.Contains("--run-ai-extraction"))
+{
+    // Optioneel: --source <naam>     (bijv. "Immoweb")
+    // Optioneel: --force             (herextraheer ook gecachete assets)
+    var sourceArg  = args.SkipWhile(a => a != "--source").Skip(1).FirstOrDefault();
+    var forceArg   = args.Contains("--force");
+
+    logger.LogInformation(
+        "[Program] --run-ai-extraction modus — normale worker wordt NIET gestart. " +
+        "Source={Source} | Force={Force}",
+        sourceArg ?? "alle", forceArg);
+
+    await RunScopedCommandAsync<RunAiExtractionCommand>(host, async cmd =>
+    {
+        var result = await cmd.ExecuteAsync(
+            sourceName: sourceArg,
+            skipCached: !forceArg);
+
+        logger.LogInformation(
+            "[Program] --run-ai-extraction klaar. " +
+            "Candidates={C} | FromCache={Cache} | Nieuw={New} | " +
+            "GeenProjectnaam={NoPrj} | Overgeslagen={Skip} | Fouten={Err}",
+            result.Candidates,
+            result.FromCache,
+            result.NewExtractions,
+            result.NoProjectName,
+            result.Skipped,
+            result.Errors);
     });
 
     return;

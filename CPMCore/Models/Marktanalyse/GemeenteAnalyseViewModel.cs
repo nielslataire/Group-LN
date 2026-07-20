@@ -17,6 +17,8 @@ public class GemeenteAnalyseViewModel
     public List<ProjectVerkoopgraadViewModel> VerkoopgraadPerProject { get; set; } = new();
     public List<ProjectRijViewModel> Projecten { get; set; } = new();
     public List<LosseEenheidRijViewModel> LosseEenheden { get; set; } = new();
+    public bool ToonGekoppeld { get; set; } = false;
+    public int AantalGekoppeld { get; set; }
 
     public bool HeeftData => Kpi != null && (Kpi.ActieveProjecten > 0 || Kpi.AantalLosseEenheden > 0);
     public bool HeeftFilter => GeselecteerdGeoMunicipalityId.HasValue || GeselecteerdGeoMunicipalSectionId.HasValue;
@@ -99,6 +101,13 @@ public class ProjectRijViewModel
     public string? Postcode { get; set; }
     public string? Gemeente { get; set; }
 
+    // Canonical / bronnen info
+    public long? CanonicalProjectId { get; set; }
+    public int AantalBronnen { get; set; }
+    public List<string> BronNamen { get; set; } = new();
+    public bool DeveloperConflict { get; set; }
+    public bool HeeftDuplicaten => AantalBronnen > 1;
+
     public string AdresRegel =>
         string.Join(", ",
             new[]
@@ -122,4 +131,8 @@ public class LosseEenheidRijViewModel
     public string Status { get; set; } = "";
     public string AangeboenDoor { get; set; } = "";
     public string? SourceUrl { get; set; }
+
+    public long? LinkedCanonicalUnitId { get; set; }
+    public string? GekoppeldProjectNaam { get; set; }
+    public bool IsGekoppeld => LinkedCanonicalUnitId.HasValue;
 }

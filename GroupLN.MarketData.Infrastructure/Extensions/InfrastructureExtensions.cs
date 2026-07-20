@@ -99,6 +99,18 @@ public static class InfrastructureExtensions
         services.AddScoped<ICanonicalProjectService, CanonicalProjectService>();
         services.AddScoped<RebuildCanonicalProjectsCommand>();
 
+        // Canonical Units
+        services.AddScoped<ICanonicalUnitService, CanonicalUnitService>();
+        services.AddScoped<RebuildCanonicalUnitsCommand>();
+
+        // Loose listing matching
+        services.AddScoped<ILooseListingMatchingService, LooseListingMatchingService>();
+        services.AddScoped<MatchLooseListingsCommand>();
+
+        // Standalone batch commands
+        services.AddScoped<RunDeduplicationCommand>();
+        services.AddScoped<RunAiExtractionCommand>();
+
         // Database cleanup
         services.AddScoped<ResetMarketDataCommand>();
 

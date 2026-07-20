@@ -1,5 +1,6 @@
 using BOCore;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -58,8 +59,18 @@ public class BlogArtikelEditVM
     [StringLength(50)]
     public string? GeoPositie { get; set; }
 
+    public string? Link1Type { get; set; }
+    public int? Link1Id { get; set; }
+    public string? Link2Type { get; set; }
+    public int? Link2Id { get; set; }
+    public string? Link3Type { get; set; }
+    public int? Link3Id { get; set; }
+
     public List<BlogArtikelBlokVM> Blokken { get; set; } = new();
     public List<BlogArtikelFaqVM> FaqItems { get; set; } = new();
+
+    public List<SelectListItem> ArtikelOpties { get; set; } = new();
+    public List<SelectListItem> ProjectOpties { get; set; } = new();
 }
 
 public class BlogArtikelBlokVM

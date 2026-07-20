@@ -60,12 +60,8 @@ Namespace Controllers
                 'EPB Reporter
                 model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
 
-                ViewData("title") = "Group LN - " & model.Data.Name
-                ViewBag.Metatitle = "Group LN - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
-                ViewBag.MetaSubtitle = "Vanaf " & Extensions.ToEuroCurrency(model.SalesData.StartingPrice)
-                ViewBag.MetaDescription = model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
-                ViewBag.MetaURL = "http://www.groupln.be/woonprojecten/" & model.Data.Slug
-                ViewBag.MetaImageUrl = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & model.Data.DefaultPicture.Name
+                LoadProjectSeoFields(model.Data)
+                SetProjectSeoViewData(model.Data)
                 Return View("Detail", model)
             Else
                 ViewData("LatestNews") = GetLatestNews(4)
@@ -97,7 +93,12 @@ Namespace Controllers
             End If
 
         End Function
-        <Route("Projects/ProjectBySlug/{slug}", Name:="ProjectBySlug")>
+        <Route("Projects/ProjectBySlug/{slug}", Name:="ProjectBySlugLegacy")>
+        Function RedirectProjectBySlug(slug As String) As ActionResult
+            Return RedirectToRoutePermanent("ProjectBySlug", New With {.slug = slug})
+        End Function
+
+        <Route("woonprojecten/{slug}", Name:="ProjectBySlug")>
         Function ProjectBySlug(slug As String) As ActionResult
 
             ViewData("LatestNews") = GetLatestNews(4)
@@ -141,13 +142,8 @@ Namespace Controllers
             'EPB Reporter
             model.EpbReporter = GetCompanySafe(companyservice, model.Data.EpbReporter)
 
-            ViewData("title") = "Group LN - " & model.Data.Name
-            'Metatags
-            ViewBag.Metatitle = "Group LN - " & model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
-            ViewBag.MetaSubtitle = "Vanaf " & Extensions.ToEuroCurrency(model.SalesData.StartingPrice)
-            ViewBag.MetaDescription = model.Data.Postalcode.Gemeente & " - " & model.Data.Street & " - " & model.Data.Name
-            ViewBag.MetaURL = "http://www.groupln.be/woonprojecten/" & model.Data.Slug
-            ViewBag.MetaImageUrl = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL") & "pictures/" & model.Data.DefaultPicture.Name
+            LoadProjectSeoFields(model.Data)
+            SetProjectSeoViewData(model.Data)
             Return View("Detail", model)
 
 
@@ -1049,6 +1045,52 @@ Namespace Controllers
             End If
             Return news
         End Function
+        Private Sub LoadProjectSeoFields(data As ProjectBO)
+            Try
+                Using conn As New System.Data.SqlClient.SqlConnection(System.Configuration.ConfigurationManager.ConnectionStrings("testdbSql").ConnectionString)
+                    conn.Open()
+                    Using cmd As New System.Data.SqlClient.SqlCommand("SELECT SeoTitle, SeoDescription FROM Project WHERE ProjectID = @id", conn)
+                        cmd.Parameters.AddWithValue("@id", data.Id)
+                        Using reader = cmd.ExecuteReader()
+                            If reader.Read() Then
+                                If Not reader.IsDBNull(0) Then data.SeoTitle = reader.GetString(0)
+                                If Not reader.IsDBNull(1) Then data.SeoDescription = reader.GetString(1)
+                            End If
+                        End Using
+                    End Using
+                End Using
+            Catch
+            End Try
+        End Sub
+
+        Private Sub SetProjectSeoViewData(data As ProjectBO)
+            Dim imageBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
+            Dim imgUrl As String = If(data.DefaultPicture IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(data.DefaultPicture.Name),
+                                      imageBase & "pictures/" & data.DefaultPicture.Name,
+                                      imageBase & "pictures/placeholder.jpg")
+            Dim canonical As String = "https://www.groupln.be/woonprojecten/" & data.Slug
+
+            Dim seoTitle As String = If(Not String.IsNullOrWhiteSpace(data.SeoTitle),
+                                        data.SeoTitle,
+                                        Extensions.BuildProjectSeoTitle(data.Name, data.Postalcode?.Gemeente))
+            Dim seoDesc As String = If(Not String.IsNullOrWhiteSpace(data.SeoDescription),
+                                       data.SeoDescription,
+                                       Extensions.BuildProjectSeoDescription(data.Name, data.Postalcode?.Gemeente, data.Street, data.CommercialTextNL))
+
+            ViewData("Title") = seoTitle
+            ViewData("MetaDescription") = seoDesc
+            ViewData("canonical") = canonical
+            ViewData("ogtitle") = seoTitle
+            ViewData("ogtype") = "website"
+            ViewData("ogdescription") = seoDesc
+            ViewData("ogimage") = imgUrl
+            ViewData("ogurl") = canonical
+            ViewData("twittercard") = "summary_large_image"
+            ViewData("twittertitle") = seoTitle
+            ViewData("twitterdescription") = seoDesc
+            ViewData("twitterimage") = imgUrl
+        End Sub
+
         Private Function GetCompanySafe(companyService As ICompanyService, company As IdNameBO) As CompanyBO
             If companyService Is Nothing Then Return New CompanyBO
             If company Is Nothing OrElse company.ID = 0 Then Return New CompanyBO

@@ -170,6 +170,9 @@
     padding: 12px 26px;
     border-bottom: 0.5px solid var(--border, rgba(0,83,45,0.10));
 }
+.info-kaart-rij-center {
+    align-items: center;
+}
 .info-kaart-rij:last-child {
     border-bottom: none;
 }

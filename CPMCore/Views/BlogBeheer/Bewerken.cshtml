@@ -90,11 +90,11 @@
     <div class="d-flex gap-2">
         @if (!isNieuw && ViewBag.PreviewUrl != null)
         {
-            <a href="@ViewBag.PreviewUrl" target="_blank" rel="noopener" class="btn btn-outline-primary flex-shrink-0">
+            <a href="@ViewBag.PreviewUrl" target="_blank" rel="noopener" class="btn btn-primary flex-shrink-0">
                 <i class="bx bx-show"></i> Voorvertoning
             </a>
         }
-        <a href="@Url.Action("Index")" class="btn btn-outline-secondary flex-shrink-0">
+        <a href="@Url.Action("Index")" class="btn btn-default flex-shrink-0">
             <i class="bx bx-arrow-back"></i> Terug
         </a>
     </div>
@@ -118,59 +118,68 @@
             </div>
             <div class="bw-content">
                 <div class="row g-3">
-
-                    <div class="col-12">
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
                         <label asp-for="Titel" class="form-label fw-semibold">Titel <span class="text-danger">*</span></label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
                         <input asp-for="Titel" class="form-control" placeholder="Artikeltitel..." />
                         <span asp-validation-for="Titel" class="text-danger small"></span>
                     </div>
-
-                    <div class="col-md-5">
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
                         <label asp-for="Datum" class="form-label fw-semibold">Datum <span class="text-danger">*</span></label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
                         <input asp-for="Datum" type="date" class="form-control" />
                         <span asp-validation-for="Datum" class="text-danger small"></span>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-md-4 col-lg-2 text-end">
                         <label asp-for="PreviewTekst" class="form-label fw-semibold">Preview tekst</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
                         <textarea asp-for="PreviewTekst" class="form-control" rows="4" maxlength="500"
                                   id="previewTekstArea"
                                   placeholder="Korte samenvatting die op de blogpagina verschijnt..."></textarea>
                         <div class="form-text"><span id="previewTeller">0</span> / 500 tekens — getoond in de kaart op de overzichtspagina.</div>
                     </div>
-
-                    <div class="col-12">
+                    <div class="col-md-4 col-lg-2 text-end align-content-center">
                         <label asp-for="DetailTitel" class="form-label fw-semibold">
                             Detailpagina titel <small class="text-muted fw-normal">opt.</small>
                         </label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
                         <input asp-for="DetailTitel" class="form-control" placeholder="Titel op de detailpagina..." />
                         <div class="form-text">Verschijnt als hoofdtitel op de artikelpagina. Leeg laten = de gewone titel wordt gebruikt.</div>
                     </div>
-
-                    <div class="col-12">
+                    <div class="col-md-4 col-lg-2 text-end">
                         <label asp-for="DetailTitelTekst" class="form-label fw-semibold">
                             Detailpagina titeltekst <small class="text-muted fw-normal">opt.</small>
                         </label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
                         <textarea asp-for="DetailTitelTekst" class="form-control" rows="3" maxlength="1000"
                                   id="dtTekstArea"
                                   placeholder="Ondertitel of inleiding onder de hoofdtitel..."></textarea>
                         <div class="form-text"><span id="dtTeller">0</span> / 1000 tekens — getoond net onder de hoofdtitel op de detailpagina.</div>
                     </div>
-
-                    <div class="col-md-8">
+                    <div class="col-md-3 col-lg-2 align-content-center text-end">
                         <label asp-for="Slug" class="form-label fw-semibold">URL-slug</label>
+                    </div>
+                    <div class="col-md-3 col-lg-4">
                         <input asp-for="Slug" class="form-control" placeholder="wordt-automatisch-gegenereerd" />
                         <div class="form-text">Leeg laten = automatisch gegenereerd op basis van de titel.</div>
                     </div>
-
-                    <div class="col-md-4">
+                    <div class="col-md-3 col-lg-2 align-content-center text-end">
                         <label asp-for="SortOrder" class="form-label fw-semibold">Volgorde</label>
+                    </div>
+                    <div class="col-md-3 col-lg-4">
                         <input asp-for="SortOrder" type="number" class="form-control" />
                         <div class="form-text">Positie in het overzicht.</div>
                     </div>
-
-                    <div class="col-12">
+                    <div class="col-md-4 col-lg-2 text-end">
                         <label class="form-label fw-semibold">Omslagfoto</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
                         <div class="bw-file-row">
                             <label class="btn btn-outline-secondary btn-sm mb-0" style="cursor:pointer;">
                                 Bestand kiezen
@@ -199,18 +208,18 @@
                         <div class="form-text mt-1">Getoond in de kaart op de overzichtspagina en bovenaan de detailpagina.</div>
                     </div>
 
-                    <div class="col-12">
-                        <div class="d-flex align-items-start gap-3">
-                            <div class="form-check form-switch mt-1">
-                                <input asp-for="IsGepubliceerd" class="form-check-input" type="checkbox" role="switch"
-                                       style="width:2.6em;height:1.4em;cursor:pointer;" />
-                            </div>
-                            <div>
-                                <label asp-for="IsGepubliceerd" class="form-label fw-semibold mb-0" style="cursor:pointer;">Zichtbaar op de website</label>
-                                <div class="form-text">Alleen gepubliceerde artikelen zijn zichtbaar op de website.</div>
-                            </div>
+                    <div class="col-md-4 col-lg-2 align-content-center text-end">
+                        <label asp-for="IsGepubliceerd" class="form-label fw-semibold mb-0" style="cursor:pointer;">Zichtbaar op de website</label>
+                    </div>
+                    <div class="col-md-8 col-lg-10">
+                        <div class="form-check form-switch mt-1">
+                            <input asp-for="IsGepubliceerd" class="form-check-input" type="checkbox" role="switch"
+                                   style="width:2.6em;height:1.4em;cursor:pointer;" />
+                            <div class="form-text">&nbsp;Alleen gepubliceerde artikelen zijn zichtbaar op de website.</div>
                         </div>
                     </div>
+
+                  
 
                 </div>
             </div>
@@ -220,7 +229,7 @@
             <div class="d-flex gap-2">
                 @if (!isNieuw)
                 {
-                    <button type="button" class="btn btn-outline-danger btn-sm"
+                    <button type="button" class="btn btn-danger btn-sm"
                             onclick="if(confirm('Weet je zeker dat je dit artikel wil verwijderen?')) document.getElementById('delete-form').submit();">
                         <i class="bx bx-trash"></i> Verwijderen
                     </button>
@@ -269,6 +278,75 @@
                         <input type="text" asp-for="GeoPositie" class="form-control" placeholder="51.0682;3.6566" />
                     </div>
                 </div>
+            </div>
+        </div>
+        <div class="bw-card-footer">
+            <span></span>
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save"></i> Opslaan
+            </button>
+        </div>
+    </div>
+
+    @* ══ Card 3: Ontdek meer ══ *@
+    <div class="bw-card">
+        <div class="bw-card-inner">
+            <div class="bw-sidebar">
+                <div class="bw-icon"><i class="bx bx-grid"></i></div>
+                <div class="bw-sidebar-title">Ontdek meer</div>
+                <div class="bw-sidebar-desc">Kies tot 3 gerelateerde items (artikel of project) die onderaan het artikel worden getoond.</div>
+            </div>
+            <div class="bw-content">
+                @foreach (var (linkNr, typeField, idField, typeVal, idVal) in new[]
+                {
+                    ("Link 1", "Link1Type", "Link1Id", Model.Link1Type, Model.Link1Id),
+                    ("Link 2", "Link2Type", "Link2Id", Model.Link2Type, Model.Link2Id),
+                    ("Link 3", "Link3Type", "Link3Id", Model.Link3Type, Model.Link3Id),
+                })
+                {
+                    var selArtikel  = typeVal == "artikel"  ? "selected" : null;
+                    var selProject  = typeVal == "project"  ? "selected" : null;
+                    var idValStr    = idVal?.ToString();
+                    var dataArtId   = typeVal == "artikel"  ? idValStr : "";
+                    var dataProjId  = typeVal == "project"  ? idValStr : "";
+                    <div class="mb-4 p-3" style="border:1px solid #e9ecef;border-radius:8px;">
+                        <div class="row g-2">
+                            <div class="col-md-2 col-lg-1 align-content-center fw-bold">@linkNr</div>
+                            <div class="col-md-2 col-lg-1 align-content-center text-end"><label class="form-label">Type</label></div>
+                            <div class="col-md-3 col-lg-4"">
+                                <select name="@typeField" class="form-select bw-link-type" data-nr="@linkNr">
+                                    <option value="">— geen —</option>
+                                    <option value="artikel" selected="@selArtikel">Artikel</option>
+                                    <option value="project" selected="@selProject">Project</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 col-lg-1 align-content-center text-end"><label class="form-label">Keuze</label></div>
+                            <div class="col-md-3 col-lg-5">
+                                <select name="@idField" class="form-select form-select-sm bw-link-id" data-nr="@linkNr"
+                                        data-artikel-id="@dataArtId"
+                                        data-project-id="@dataProjId">
+                                    <option value="">— kies eerst een type —</option>
+                                    @if (typeVal == "artikel")
+                                    {
+                                        @foreach (var opt in Model.ArtikelOpties)
+                                        {
+                                            var optSel = opt.Value == idValStr ? "selected" : null;
+                                            <option value="@opt.Value" selected="@optSel">@opt.Text</option>
+                                        }
+                                    }
+                                    else if (typeVal == "project")
+                                    {
+                                        @foreach (var opt in Model.ProjectOpties)
+                                        {
+                                            var optSel = opt.Value == idValStr ? "selected" : null;
+                                            <option value="@opt.Value" selected="@optSel">@opt.Text</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
         <div class="bw-card-footer">
@@ -385,11 +463,11 @@
                                 </div>
                                 <div class="bw-blok-titel">@blokTitel</div>
                                 <div class="bw-blok-acties">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    <button type="button" class="btn btn-sm btn-default"
                                             data-bs-toggle="collapse" data-bs-target="#blok-panel-@blok.ID">
                                         <i class="bx bx-pencil"></i> Bewerken
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                    <button type="button" class="btn btn-sm btn-danger"
                                             onclick="if(confirm('Blok verwijderen?')) document.getElementById('del-blok-@blok.ID').submit();">
                                         <i class="bx bx-trash"></i>
                                     </button>
@@ -448,7 +526,7 @@
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 <i class="bx bx-save"></i> Blok opslaan
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            <button type="button" class="btn btn-sm btn-default"
                                                     data-bs-toggle="collapse" data-bs-target="#blok-panel-@blok.ID">
                                                 Annuleren
                                             </button>
@@ -564,11 +642,11 @@
                                 </div>
                                 <div class="bw-blok-titel">@(string.IsNullOrEmpty(faq.Vraag) ? "(zonder vraag)" : faq.Vraag)</div>
                                 <div class="bw-blok-acties">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    <button type="button" class="btn btn-sm btn-default"
                                             data-bs-toggle="collapse" data-bs-target="#faq-panel-@faq.ID">
                                         <i class="bx bx-pencil"></i> Bewerken
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                    <button type="button" class="btn btn-sm btn-danger"
                                             onclick="if(confirm('FAQ-item verwijderen?')) document.getElementById('del-faq-@faq.ID').submit();">
                                         <i class="bx bx-trash"></i>
                                     </button>
@@ -600,7 +678,7 @@
                                             <button type="submit" class="btn btn-sm btn-primary">
                                                 <i class="bx bx-save"></i> Opslaan
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                            <button type="button" class="btn btn-sm btn-default"
                                                     data-bs-toggle="collapse" data-bs-target="#faq-panel-@faq.ID">
                                                 Annuleren
                                             </button>
@@ -846,6 +924,45 @@
     var summary = document.getElementById('val-summary');
     if (summary && summary.querySelector('.validation-summary-errors'))
         summary.classList.remove('d-none');
+
+    // ── Ontdek meer: type dropdown wisselt inhoud id-dropdown (met Select2 zoeken) ──
+    var artikelOpties = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ArtikelOpties.Select(o => new { value = o.Value, text = o.Text })));
+    var projectOpties = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+        Model.ProjectOpties.Select(o => new { value = o.Value, text = o.Text })));
+
+    var select2Opts = {
+        theme: 'bootstrap',
+        language: 'nl',
+        placeholder: '— maak een keuze —',
+        allowClear: true,
+        width: '100%'
+    };
+
+    function vulEnInitIdSelect(idSel, type, geselecteerdeWaarde) {
+        var $sel = $(idSel);
+        if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
+        var opties = type === 'artikel' ? artikelOpties : type === 'project' ? projectOpties : [];
+        $sel.empty().append('<option value="">— maak een keuze —</option>');
+        opties.forEach(function (o) {
+            $sel.append(new Option(o.text, o.value, false, o.value === geselecteerdeWaarde));
+        });
+        $sel.select2(select2Opts);
+    }
+
+    // Initialiseer bij paginalading (opties zijn al aanwezig via server-side rendering)
+    document.querySelectorAll('.bw-link-id').forEach(function (idSel) {
+        $(idSel).select2(select2Opts);
+    });
+
+    // Bij type wissel: herbouw opties en herinitialiseer Select2
+    document.querySelectorAll('.bw-link-type').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+            var nr = this.dataset.nr;
+            var idSel = document.querySelector('.bw-link-id[data-nr="' + nr + '"]');
+            if (idSel) vulEnInitIdSelect(idSel, this.value, null);
+        });
+    });
 
 })();
 </script>

@@ -5,8 +5,7 @@
 /* --- Page header --- */
 .projecten-page-header {
     background: var(--mist);
-    padding: 44px 0 36px;
-    border-bottom: 1px solid var(--border);
+    padding: 44px 0 0px;
 }
 
 .projecten-page-header .breadcrumb {
@@ -83,6 +82,7 @@
 .uitgelicht-foto {
     position: relative;
     overflow: hidden;
+    min-width: 0;
     min-height: 280px;
     background: var(--mist);
     display: flex;
@@ -168,7 +168,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 14px;
-    margin-bottom: 20px;
 }
 
 .uitgelicht-spec-item {
@@ -188,6 +187,7 @@
     font-family: var(--font-serif);
     font-size: 20px;
     color: var(--tekst);
+    margin-top: 24px;
     margin-bottom: 24px;
     line-height: 1;
 }
@@ -440,6 +440,86 @@
     border-radius: 1px;
 }
 
+/* Percentage-verkocht badge (min. 50%, enkel te-koop projecten) */
+.kaart-verkocht-badge,
+.uitgelicht-verkocht-badge {
+    position: absolute;
+    z-index: 2;
+    box-sizing: border-box;
+    width: 82px;
+    background: var(--groen-diep, #2C3B2A);
+    padding: 9px 10px 10px;
+    border-radius: 10px !important;
+    pointer-events: none;
+    text-align: center;
+}
+
+.kaart-verkocht-badge {
+    top: 10px;
+    right: 10px;
+}
+
+.uitgelicht-verkocht-badge {
+    top: 16px;
+    right: 16px;
+}
+
+.verkocht-badge-label {
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1;
+    margin-bottom: 5px;
+}
+
+.verkocht-badge-value {
+    font-size: 21px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 7px;
+}
+
+.verkocht-badge-bar {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px !important;
+    background: rgba(255, 255, 255, 0.2);
+    overflow: hidden;
+}
+
+.verkocht-badge-bar-fill {
+    height: 100%;
+    border-radius: 2px !important;
+    background: #5FBF6E;
+}
+
+/* Beschikbaar-pill (enkel te-koop projecten met minstens 1 vrije eenheid) */
+.beschikbaar-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    align-self: flex-start;
+    background: #EAF3DE;
+    border: 0.5px solid #C0DD97;
+    color: #3B6D11;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 12px;
+    border-radius: 20px !important;
+    margin-top: 12px;
+}
+
+.beschikbaar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50% !important;
+    background: #3B6D11;
+    flex-shrink: 0;
+}
+
 .kaart-body {
     padding: 16px 18px 12px;
     flex: 1;
@@ -471,7 +551,6 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-bottom: 12px;
 }
 
 .kaart-locatie svg {
@@ -482,6 +561,7 @@
 .kaart-specs {
     display: flex;
     flex-wrap: wrap;
+    align-content: flex-start;
     gap: 10px;
     flex: 1;
 }
@@ -707,6 +787,7 @@
 
     .uitgelicht-foto {
         aspect-ratio: 16 / 9;
+        min-height: 0;
     }
 
     .uitgelicht-info {
@@ -721,6 +802,32 @@
 }
 
 @media (max-width: 767px) {
+    .kaart-verkocht-badge,
+    .uitgelicht-verkocht-badge {
+        width: 72px;
+        padding: 7px 8px 8px;
+    }
+
+    .verkocht-badge-label {
+        font-size: 8px;
+        margin-bottom: 4px;
+    }
+
+    .verkocht-badge-value {
+        font-size: 18px;
+        margin-bottom: 6px;
+    }
+
+    .uitgelicht-verkocht-badge {
+        top: 10px;
+        right: 10px;
+    }
+
+    .kaart-verkocht-badge {
+        top: 8px;
+        right: 8px;
+    }
+
     .projecten-page-header h1 {
         font-size: 28px;
     }

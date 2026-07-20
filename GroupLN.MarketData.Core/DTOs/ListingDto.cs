@@ -54,6 +54,15 @@ public class ListingDto
     public string? Description { get; set; }
     public string? RawJson { get; set; }
 
+    // SEO / DOM metadata — voor AI extractie
+    public string? MetaTitle { get; set; }
+    public string? OgTitle { get; set; }
+    public string? MetaDescription { get; set; }
+    public string? H1 { get; set; }
+    public string? H2 { get; set; }
+    public string? H3 { get; set; }
+    public string? StructuredData { get; set; }
+
     // Foto-URL's van de projectdetailpagina (alleen voor projectgroepen)
     public List<string> PhotoUrls { get; set; } = new();
 }

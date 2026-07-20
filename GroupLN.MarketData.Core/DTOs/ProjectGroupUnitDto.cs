@@ -19,6 +19,9 @@ public class ProjectGroupUnitDto
     public decimal? Price { get; init; }
     public int? BedroomCount { get; init; }
     public decimal? Surface { get; init; }
+    public decimal? TerraceArea { get; init; }
+    public decimal? LandArea { get; init; }
+    public decimal? GardenArea { get; init; }
     public int? Floor { get; init; }
     public string? Phase { get; init; }
 }

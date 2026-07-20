@@ -1041,7 +1041,8 @@ Public Class ProjectService
             salesdata.NumberAppartments = dao.GetNoTracking().Where(Function(m) m.ProjectId = id AndAlso m.AttachedUnit_attachedunit Is Nothing AndAlso m.LinkedUnit_linkedunit Is Nothing AndAlso m.UnitTypes.ID = 1).Count
             salesdata.NumberHouses = dao.GetNoTracking().Where(Function(m) m.ProjectId = id AndAlso m.AttachedUnit_attachedunit Is Nothing AndAlso m.LinkedUnit_linkedunit Is Nothing AndAlso m.UnitTypes.ID = 2).Count
             salesdata.NumberCommercial = dao.GetNoTracking().Where(Function(m) m.ProjectId = id AndAlso m.AttachedUnit_attachedunit Is Nothing AndAlso m.LinkedUnit_linkedunit Is Nothing AndAlso m.UnitTypes.ID = 10).Count
-            salesdata.StartingPrice = If(dao.GetNoTracking().Where(Function(m) m.ProjectId = id AndAlso m.AttachedUnit_attachedunit Is Nothing AndAlso m.LinkedUnit_linkedunit Is Nothing AndAlso m.ClientAccountID Is Nothing).Where(Function(i) i.UnitTypes.GroupID = 1 Or i.UnitTypes.GroupID = 4).Min(Function(i) i.UnitConstructionValue.Where(Function(l) l.UnitId = i.Id).Sum(Function(x) x.Value) + i.LandValue), 0)
+            Dim startingPriceUnits = dao.GetNoTracking().Where(Function(m) m.ProjectId = id AndAlso m.AttachedUnit_attachedunit Is Nothing AndAlso m.LinkedUnit_linkedunit Is Nothing AndAlso m.ClientAccountID Is Nothing).Where(Function(i) i.UnitTypes.GroupID = 1 Or i.UnitTypes.GroupID = 4).ToList()
+            salesdata.StartingPrice = If(startingPriceUnits.Any(), startingPriceUnits.Min(Function(i) If(i.LandValue, 0D) + If(i.UnitConstructionValue.Any(), i.UnitConstructionValue.GroupBy(Function(x) x.FinishingOptionId).Min(Function(g) g.Sum(Function(x) If(x.Value, 0D))), 0D)), 0D)
             response.AddValue(salesdata)
         Next
         Return response

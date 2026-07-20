@@ -79,7 +79,7 @@ public class ProjectPhotoHashService : IProjectPhotoHashService
             .Select(u => (Raw: u, Normalized: NormalizeImageUrl(u)))
             .Where(t => !string.IsNullOrEmpty(t.Normalized))
             .DistinctBy(t => t.Normalized, StringComparer.OrdinalIgnoreCase)
-            .Take(ph.MaxProjectPhotosPerProject)
+            .WithLimit(ph.MaxProjectPhotosPerProject)
             .ToList();
 
         _logger.LogInformation(

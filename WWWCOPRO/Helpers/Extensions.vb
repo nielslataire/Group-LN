@@ -1,4 +1,5 @@
 ﻿Imports System.Globalization
+Imports System.Text.RegularExpressions
 
 Public Module Extensions
     Private ReadOnly EuroCultureInfo As CultureInfo = CultureInfo.CreateSpecificCulture("nl-BE")
@@ -42,5 +43,43 @@ Public Module Extensions
     Public Function ToEuroCurrency(amount As Decimal?) As String
         If Not amount.HasValue Then Return String.Empty
         Return ToEuroCurrency(amount.Value)
+    End Function
+
+    Public Function StripHtml(html As String) As String
+        If String.IsNullOrWhiteSpace(html) Then Return String.Empty
+        Dim stripped = Regex.Replace(html, "<[^>]+>", " ")
+        stripped = System.Net.WebUtility.HtmlDecode(stripped)
+        stripped = Regex.Replace(stripped, "\s+", " ").Trim()
+        Return stripped
+    End Function
+
+    Public Function TruncateMetaDescription(text As String, Optional maxLength As Integer = 155) As String
+        If String.IsNullOrWhiteSpace(text) Then Return String.Empty
+        Dim clean = StripHtml(text)
+        If clean.Length <= maxLength Then Return clean
+        Dim cut = clean.LastIndexOf(" "c, maxLength)
+        If cut < 1 Then cut = maxLength
+        Return clean.Substring(0, cut).TrimEnd() & "…"
+    End Function
+
+    Public Function BuildProjectSeoTitle(projectName As String, gemeente As String) As String
+        If String.IsNullOrWhiteSpace(projectName) Then Return "Group LN"
+        If String.IsNullOrWhiteSpace(gemeente) Then
+            Return projectName & " | Group LN"
+        End If
+        Return projectName & " | Nieuwbouwproject in " & gemeente & " | Group LN"
+    End Function
+
+    Public Function BuildProjectSeoDescription(projectName As String, gemeente As String, street As String, commercialTextNL As String, Optional maxLength As Integer = 155) As String
+        If Not String.IsNullOrWhiteSpace(commercialTextNL) Then
+            Dim fromText = TruncateMetaDescription(commercialTextNL, maxLength)
+            If Not String.IsNullOrWhiteSpace(fromText) Then Return fromText
+        End If
+        Dim parts As New List(Of String)
+        If Not String.IsNullOrWhiteSpace(projectName) Then parts.Add(projectName)
+        If Not String.IsNullOrWhiteSpace(street) Then parts.Add(street)
+        If Not String.IsNullOrWhiteSpace(gemeente) Then parts.Add(gemeente)
+        Dim desc = "Ontdek nieuwbouwproject " & String.Join(", ", parts) & " van Group LN."
+        Return TruncateMetaDescription(desc, maxLength)
     End Function
 End Module

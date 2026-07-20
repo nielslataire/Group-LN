@@ -23,6 +23,12 @@ Public Class BlogArtikelBO
     Public Property GeoRegio As String
     Public Property GeoPlaatsnaam As String
     Public Property GeoPositie As String
+    Public Property Link1Type As String
+    Public Property Link1Id As Nullable(Of Integer)
+    Public Property Link2Type As String
+    Public Property Link2Id As Nullable(Of Integer)
+    Public Property Link3Type As String
+    Public Property Link3Id As Nullable(Of Integer)
     Public Property Blokken As List(Of BlogArtikelBlokBO)
     Public Property FaqItems As List(Of BlogArtikelFaqBO)
 

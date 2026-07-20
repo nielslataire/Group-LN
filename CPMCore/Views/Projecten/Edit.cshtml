@@ -207,6 +207,42 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-lg-2-5 col-xl-1-5">
+                            <i class="card-big-info-icon bx bx-search-alt"></i>
+                            <h2 class="card-big-info-title">SEO</h2>
+                            <p class="card-big-info-desc">Zoekmachineoptimalisatie. Laat leeg om automatisch te genereren.</p>
+                        </div>
+                        <div class="col-lg-3-5 col-xl-4-5">
+                            <div class="form-group row align-items-center pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0" for="Project_SeoTitle">
+                                    SEO-titel
+                                </label>
+                                <div class="col-lg-8 col-xl-8">
+                                    @Html.TextBoxFor(m => m.Project.SeoTitle, new { @class = "form-control form-control-modern", placeholder = "Laat leeg voor automatische titel", maxlength = "120", id = "Project_SeoTitle" })
+                                    <small class="text-muted">Max. 120 tekens — wordt getoond in zoekresultaten. Leeg = automatisch gegenereerd.</small>
+                                </div>
+                            </div>
+                            <div class="form-group row align-items-start pb-3">
+                                <label class="col-lg-4 col-xl-3 control-label text-lg-end mb-0 pt-2" for="Project_SeoDescription">
+                                    Meta-omschrijving
+                                </label>
+                                <div class="col-lg-8 col-xl-8">
+                                    @Html.TextAreaFor(m => m.Project.SeoDescription, 4, 40, new { @class = "form-control form-control-modern", placeholder = "Laat leeg voor automatische omschrijving", maxlength = "320", id = "Project_SeoDescription" })
+                                    <small class="text-muted">Max. 155 tekens aanbevolen — wordt getoond onder de titel in Google.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col">
+            <section class="card card-modern card-big-info">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2-5 col-xl-1-5">
                             <i class="card-big-info-icon bx bx-calendar"></i>
                             <h2 class="card-big-info-title">Planning & status</h2>
                             <p class="card-big-info-desc">Plan de uitvoering en wijs verantwoordelijken toe.</p>

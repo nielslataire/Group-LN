@@ -1,0 +1,151 @@
+@model CPMCore.Models.Instellingen.EmailTemplateEditVM
+@{
+    var isNieuw = Model.ID == 0;
+    ViewData["Title"] = isNieuw ? "Nieuwe e-mailtemplate" : "Template bewerken";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section PageStyle {
+<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<link rel="stylesheet" href="~/css/avenir-fonts.css" />
+<style>
+    .quill-wrap { background: #fff; }
+    .quill-wrap .ql-editor { min-height: 220px; max-height: 420px; overflow-y: auto; }
+    .et-token-hint {
+        font-size: 13px;
+        color: #6c757d;
+        background: #f8fafb;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-top: 10px;
+    }
+    .et-token-hint code {
+        background: #eef2f5;
+        border-radius: 4px;
+        padding: 1px 5px;
+    }
+    /* Bewust geen Bootstrap ".card-footer": het theme herpositioneert die knoppen
+       t.o.v. de kaarthoogte, wat naast een dynamisch groeiende Quill-editor tot
+       een overlappende "Opslaan"-knop leidt. */
+    .et-card-footer {
+        display: flex;
+        justify-content: flex-end;
+        padding: 14px 20px;
+        border-top: 1px solid #e9ecef;
+        background: #fff;
+        border-radius: 0 0 8px 8px;
+    }
+
+    /* Lettertype-keuze in de Quill-toolbar */
+    .ql-picker.ql-font .ql-picker-label::before,
+    .ql-picker.ql-font .ql-picker-item::before { content: 'Standaard lettertype'; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Arial"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Arial"]::before { content: 'Arial'; font-family: Arial, sans-serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Georgia"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Georgia"]::before { content: 'Georgia'; font-family: Georgia, serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Times New Roman"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Times New Roman"]::before { content: 'Times New Roman'; font-family: 'Times New Roman', serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Courier New"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Courier New"]::before { content: 'Courier New'; font-family: 'Courier New', monospace; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Verdana"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Verdana"]::before { content: 'Verdana'; font-family: Verdana, sans-serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Avenir, sans-serif"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Avenir, sans-serif"]::before { content: 'Avenir'; font-family: Avenir, sans-serif; }
+</style>
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">@(isNieuw ? "Nieuwe e-mailtemplate" : "Template bewerken")</h1>
+        <p class="text-muted mb-0">Onderwerp en tekst die je kan selecteren bij het versturen van een mail naar een contact.</p>
+    </div>
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bx bx-arrow-back"></i> Terug naar overzicht
+    </a>
+</div>
+
+<form method="post" action="@Url.Action("Bewerken")" id="FormEmailTemplate">
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.ID)
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Naam (intern)</label>
+                    <input asp-for="Naam" class="form-control" placeholder="Bv. Uitnodiging bezoek toonzaal" />
+                    <span asp-validation-for="Naam" class="text-danger"></span>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check form-switch">
+                        <input asp-for="IsActief" class="form-check-input" role="switch" />
+                        <label asp-for="IsActief" class="form-check-label">Actief (selecteerbaar bij versturen)</label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Onderwerp</label>
+                    <input asp-for="Onderwerp" class="form-control" placeholder="Bv. Welkom bij project {ProjectNaam}" />
+                    <span asp-validation-for="Onderwerp" class="text-danger"></span>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Tekst</label>
+                    <div id="quill-body" class="quill-wrap"></div>
+                    <textarea asp-for="BodyHtml" id="quill-body-input" class="d-none"></textarea>
+                    <div class="et-token-hint">
+                        Beschikbare tokens (worden automatisch ingevuld bij het versturen):
+                        <code>{Voornaam}</code>, <code>{Naam}</code>, <code>{ProjectNaam}</code>, <code>{Gemeente}</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="et-card-footer">
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save"></i> Opslaan
+            </button>
+        </div>
+    </div>
+</form>
+
+@section PageScripts {
+<script>
+    (function () {
+        // Inline stijl i.p.v. CSS-klasse, zodat het lettertype ook bewaard blijft
+        // wanneer de HTML als losstaande e-mail wordt verstuurd.
+        var FontAttributor = Quill.import('attributors/style/font');
+        FontAttributor.whitelist = ['Arial', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Avenir, sans-serif'];
+        Quill.register(FontAttributor, true);
+
+        var toolbarOptions = [
+            [{ 'font': FontAttributor.whitelist }],
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['link'],
+            ['clean']
+        ];
+
+        var container = document.getElementById('quill-body');
+        var input = document.getElementById('quill-body-input');
+        var quill = new Quill(container, { theme: 'snow', modules: { toolbar: toolbarOptions } });
+        quill.root.innerHTML = input.value || '';
+        quill.on('text-change', function () {
+            input.value = quill.root.innerHTML;
+        });
+
+        // Quill-toolbarknoppen zijn <button> zonder type="button": binnen een <form>
+        // gedragen ze zich anders als type="submit", waardoor klikken in de toolbar
+        // (bv. Bold) het formulier voortijdig verstuurt in plaats van de Opslaan-knop.
+        container.parentElement.querySelectorAll('.ql-toolbar button, .ql-toolbar .ql-picker-label')
+            .forEach(function (el) { el.setAttribute('type', 'button'); });
+
+        document.getElementById('FormEmailTemplate').addEventListener('submit', function () {
+            input.value = quill.root.innerHTML;
+        });
+    })();
+</script>
+}

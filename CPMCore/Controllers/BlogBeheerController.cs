@@ -1,10 +1,13 @@
 using BOCore;
 using CPMCore.Attributes;
 using CPMCore.Models.Instellingen;
+using DALCore.Models;
 using FacadeCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
@@ -22,12 +25,14 @@ public class BlogBeheerController : BaseController
     private readonly IBlogArtikelService _blogService;
     private readonly ILogger<BlogBeheerController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly cpmRunningContext _db;
 
-    public BlogBeheerController(IBlogArtikelService blogService, ILogger<BlogBeheerController> logger, IConfiguration configuration)
+    public BlogBeheerController(IBlogArtikelService blogService, ILogger<BlogBeheerController> logger, IConfiguration configuration, cpmRunningContext db)
     {
         _blogService = blogService;
         _logger = logger;
         _configuration = configuration;
+        _db = db;
     }
 
     // ── LIST ────────────────────────────────────────────────────────────
@@ -46,6 +51,7 @@ public class BlogBeheerController : BaseController
     public IActionResult Aanmaken()
     {
         var vm = new BlogArtikelEditVM { Datum = DateTime.Today };
+        VulLinkDropdowns(vm);
         return View("Bewerken", vm);
     }
 
@@ -70,7 +76,9 @@ public class BlogBeheerController : BaseController
                 ViewBag.PreviewUrl = $"{previewBase}/Blog/{slug}?prev={previewToken}";
         }
 
-        return View(MapBoToVm(result.Value));
+        var vm = MapBoToVm(result.Value);
+        VulLinkDropdowns(vm);
+        return View(vm);
     }
 
     [HttpPost]
@@ -110,7 +118,13 @@ public class BlogBeheerController : BaseController
             MetaKeywords     = vm.MetaKeywords,
             GeoRegio         = vm.GeoRegio,
             GeoPlaatsnaam    = vm.GeoPlaatsnaam,
-            GeoPositie       = vm.GeoPositie
+            GeoPositie       = vm.GeoPositie,
+            Link1Type        = vm.Link1Type,
+            Link1Id          = vm.Link1Id,
+            Link2Type        = vm.Link2Type,
+            Link2Id          = vm.Link2Id,
+            Link3Type        = vm.Link3Type,
+            Link3Id          = vm.Link3Id
         };
 
         var response = _blogService.InsertUpdate(bo);
@@ -119,6 +133,7 @@ public class BlogBeheerController : BaseController
         {
             foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
                 ModelState.AddModelError(string.Empty, msg.Message);
+            VulLinkDropdowns(vm);
             return View(vm);
         }
 
@@ -288,6 +303,25 @@ public class BlogBeheerController : BaseController
 
     // ── PRIVATE HELPERS ──────────────────────────────────────────────────
 
+    private void VulLinkDropdowns(BlogArtikelEditVM vm)
+    {
+        var artikelen = _blogService.GetArtikelen(alleenGepubliceerd: false);
+        vm.ArtikelOpties = (artikelen.Values ?? new())
+            .OrderBy(a => a.Titel)
+            .Select(a => new SelectListItem(a.Titel, a.ID.ToString()))
+            .ToList();
+
+        vm.ProjectOpties = _db.Set<DALCore.Models.Project>()
+            .Where(p => p.IsPublished)
+            .OrderBy(p => p.ProjectName)
+            .Select(p => new SelectListItem(
+                p.ProjectName + (p.PostalCode != null && p.PostalCode.Gemeente != null
+                    ? " — " + p.PostalCode.Gemeente
+                    : ""),
+                p.ProjectId.ToString()))
+            .ToList();
+    }
+
     private BlogArtikelEditVM MapBoToVm(BlogArtikelBO bo) => new()
     {
         ID               = bo.ID,
@@ -306,6 +340,12 @@ public class BlogBeheerController : BaseController
         GeoRegio         = bo.GeoRegio,
         GeoPlaatsnaam    = bo.GeoPlaatsnaam,
         GeoPositie       = bo.GeoPositie,
+        Link1Type        = bo.Link1Type,
+        Link1Id          = bo.Link1Id,
+        Link2Type        = bo.Link2Type,
+        Link2Id          = bo.Link2Id,
+        Link3Type        = bo.Link3Type,
+        Link3Id          = bo.Link3Id,
         Blokken  = bo.Blokken.Select(b => new BlogArtikelBlokVM
         {
             ID          = b.ID,

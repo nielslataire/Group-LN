@@ -1,0 +1,75 @@
+/* Avenir - lokale lettertypebestanden (wwwroot/fonts), geregistreerd onder één
+   familienaam "Avenir" zodat de browser de juiste snit kiest bij vet/cursief. */
+
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-LightOblique.ttf') format('truetype');
+    font-weight: 300;
+    font-style: italic;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Book.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-BookOblique.ttf') format('truetype');
+    font-weight: 400;
+    font-style: italic;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Roman.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Oblique.ttf') format('truetype');
+    font-weight: 500;
+    font-style: italic;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Medium.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-MediumOblique.ttf') format('truetype');
+    font-weight: 600;
+    font-style: italic;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Heavy.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-HeavyOblique.ttf') format('truetype');
+    font-weight: 700;
+    font-style: italic;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-Black.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+}
+@font-face {
+    font-family: "Avenir";
+    src: url('/fonts/Avenir-BlackOblique.ttf') format('truetype');
+    font-weight: 900;
+    font-style: italic;
+}

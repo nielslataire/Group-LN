@@ -43,6 +43,13 @@ public partial class BlogArtikel
 
     public string GeoPositie { get; set; }
 
+    public string Link1Type { get; set; }
+    public int? Link1Id { get; set; }
+    public string Link2Type { get; set; }
+    public int? Link2Id { get; set; }
+    public string Link3Type { get; set; }
+    public int? Link3Id { get; set; }
+
     public virtual ICollection<BlogArtikelBlok> Blokken { get; set; } = new List<BlogArtikelBlok>();
 
     public virtual ICollection<BlogArtikelFaq> FaqItems { get; set; } = new List<BlogArtikelFaq>();

@@ -1,6 +1,7 @@
 using CPMCore.Models.Marktanalyse;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Enums;
+using GroupLN.MarketData.Core.Helpers;
 using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -92,7 +93,8 @@ public class MarktanalyseService : IMarktanalyseService
         int? geoMunicipalityId,
         int? geoMunicipalSectionId,
         string type,
-        string aanbodtype = "Alles",
+        string aanbodtype    = "Alles",
+        bool toonGekoppeld   = false,
         CancellationToken ct = default)
     {
         var vm = new GemeenteAnalyseViewModel
@@ -100,7 +102,8 @@ public class MarktanalyseService : IMarktanalyseService
             GeselecteerdGeoMunicipalityId = geoMunicipalityId,
             GeselecteerdGeoMunicipalSectionId = geoMunicipalSectionId,
             GeselecteerdType = type,
-            GeselecteerdAanbodtype = aanbodtype
+            GeselecteerdAanbodtype = aanbodtype,
+            ToonGekoppeld = toonGekoppeld
         };
 
         if (!geoMunicipalityId.HasValue && !geoMunicipalSectionId.HasValue)
@@ -166,7 +169,9 @@ public class MarktanalyseService : IMarktanalyseService
                         .ToList();
                     projectNamen = canonicalGroepen.ToDictionary(
                         g => g.PrimaryAssetId,
-                        g => g.CanonicalName ?? listingNamen.GetValueOrDefault(g.PrimaryAssetId, ""));
+                        g => listingNamen.GetValueOrDefault(g.PrimaryAssetId) is { Length: > 0 } ln
+                             ? ln
+                             : g.CanonicalName ?? "");
                     unitIdsByPrimary = canonicalGroepen.ToDictionary(
                         g => g.PrimaryAssetId,
                         g => g.AllAssetIds);
@@ -213,7 +218,13 @@ public class MarktanalyseService : IMarktanalyseService
             else if (type == "Woning")
                 losseQuery = losseQuery.Where(a => a.PropertyType == PropertyType.House);
 
-            losseEenheden = await losseQuery.AsNoTracking().ToListAsync(ct);
+            var alleLosse = await losseQuery.AsNoTracking().ToListAsync(ct);
+
+            // Toon standaard enkel ongekoppelde losse eenheden
+            vm.AantalGekoppeld = alleLosse.Count(a => a.LinkedCanonicalUnitId.HasValue);
+            losseEenheden = toonGekoppeld
+                ? alleLosse
+                : alleLosse.Where(a => !a.LinkedCanonicalUnitId.HasValue).ToList();
         }
 
         if (projecten.Count == 0 && losseEenheden.Count == 0) return vm;
@@ -323,11 +334,73 @@ public class MarktanalyseService : IMarktanalyseService
         if (projecten.Count > 0)
             vm.VerkoopgraadPerProject = await BerekeningVerkoopgraadPerProjectAsync(projecten, projectNamen, ct);
 
+        // ── Bron-namen en developer-conflict per canonical groep ─────────────
+        var bronnenInfoPerProject = new Dictionary<long, BronnenInfo>();
         if (projecten.Count > 0)
-            vm.Projecten = BouwProjectenTabel(projecten, projectUnits, prijzenPerEenheid, projectNamen, officieleLokaties, unitIdsByPrimary);
+        {
+            var allGroupAssetIds = unitIdsByPrimary.Values.SelectMany(ids => ids).Distinct().ToList();
+
+            var sourceRows = await _db.MarketListings
+                .Where(l => allGroupAssetIds.Contains(l.MarketAssetId) && l.IsActive)
+                .Select(l => new { l.MarketAssetId, SourceName = l.Source.Name })
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            var sourcesByAsset = sourceRows
+                .GroupBy(x => x.MarketAssetId)
+                .ToDictionary(g => g.Key,
+                    g => g.Select(x => x.SourceName ?? "").Where(n => n != "").Distinct().ToList());
+
+            // Developer names per asset voor conflict-detectie
+            var devNameByAsset = await _db.MarketAssets
+                .Where(a => allGroupAssetIds.Contains(a.Id))
+                .Select(a => new { a.Id, a.DeveloperName })
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.Id, x => x.DeveloperName, ct);
+
+            foreach (var p in projecten)
+            {
+                var siblingIds = unitIdsByPrimary.TryGetValue(p.Id, out var sids) ? sids : new List<long> { p.Id };
+
+                var bronNamen = siblingIds
+                    .SelectMany(id => sourcesByAsset.TryGetValue(id, out var names)
+                        ? names : Enumerable.Empty<string>())
+                    .Distinct().OrderBy(n => n).ToList();
+
+                var uniqueDevNames = siblingIds
+                    .Select(id => devNameByAsset.TryGetValue(id, out var dn) ? dn : null)
+                    .Where(d => !string.IsNullOrWhiteSpace(d))
+                    .Distinct().ToList();
+
+                bronnenInfoPerProject[p.Id] = new BronnenInfo(
+                    siblingIds.Count, bronNamen, uniqueDevNames.Count > 1, null);
+            }
+        }
+
+        if (projecten.Count > 0)
+            vm.Projecten = BouwProjectenTabel(projecten, projectUnits, prijzenPerEenheid, projectNamen, officieleLokaties, unitIdsByPrimary, bronnenInfoPerProject);
+
+        // ── Projectnaam laden voor gekoppelde losse eenheden ──────────────────
+        Dictionary<long, string> gekoppeldProjectNaam = [];
+        if (toonGekoppeld)
+        {
+            var linkedUnitIds = losseEenheden
+                .Where(a => a.LinkedCanonicalUnitId.HasValue)
+                .Select(a => a.LinkedCanonicalUnitId!.Value)
+                .Distinct().ToList();
+
+            if (linkedUnitIds.Count > 0)
+            {
+                gekoppeldProjectNaam = await _db.CanonicalUnits
+                    .Where(cu => linkedUnitIds.Contains(cu.Id))
+                    .Select(cu => new { cu.Id, cu.CanonicalProject.CanonicalName })
+                    .AsNoTracking()
+                    .ToDictionaryAsync(x => x.Id, x => x.CanonicalName, ct);
+            }
+        }
 
         if (losseEenheden.Count > 0)
-            vm.LosseEenheden = BouwLosseEenhedenTabel(losseEenheden, prijzenPerEenheid, losseEenhedenInfo, officieleLokaties);
+            vm.LosseEenheden = BouwLosseEenhedenTabel(losseEenheden, prijzenPerEenheid, losseEenhedenInfo, officieleLokaties, gekoppeldProjectNaam);
 
         return vm;
     }
@@ -510,7 +583,9 @@ public class MarktanalyseService : IMarktanalyseService
 
     // ── Canonical groepen ─────────────────────────────────────────────────────
 
-    private sealed record CanonicalGroupInfo(long PrimaryAssetId, string? CanonicalName, List<long> AllAssetIds);
+    private sealed record CanonicalGroupInfo(long PrimaryAssetId, long? CanonicalProjectId, string? CanonicalName, List<long> AllAssetIds);
+
+    private sealed record BronnenInfo(int AantalBronnen, List<string> BronNamen, bool DeveloperConflict, long? CanonicalProjectId);
 
     private static List<CanonicalGroupInfo> BuildCanonicalGroups(
         List<CanonicalProjectAsset> links,
@@ -534,13 +609,13 @@ public class MarktanalyseService : IMarktanalyseService
                           ?? cpGroup.First(l => groupIds.Contains(l.MarketAssetId));
 
             canonicalNamen.TryGetValue(cpGroup.Key, out var naam);
-            result.Add(new CanonicalGroupInfo(primary.MarketAssetId, naam, groupIds));
+            result.Add(new CanonicalGroupInfo(primary.MarketAssetId, cpGroup.Key, naam, groupIds));
             foreach (var id in groupIds) handled.Add(id);
         }
 
         // Assets zonder canonical koppeling → singleton
         foreach (var id in knownAssetIds.Where(id => !handled.Contains(id)))
-            result.Add(new CanonicalGroupInfo(id, null, [id]));
+            result.Add(new CanonicalGroupInfo(id, null, null, [id]));
 
         return result;
     }
@@ -643,12 +718,15 @@ public class MarktanalyseService : IMarktanalyseService
         Dictionary<long, UnitSnapshot> prijzenPerEenheid,
         Dictionary<long, string> namen,
         Dictionary<long, OfficieleLokatie> lokaties,
-        Dictionary<long, List<long>>? unitIdsByPrimary = null)
+        Dictionary<long, List<long>>? unitIdsByPrimary = null,
+        Dictionary<long, BronnenInfo>? bronnenInfo = null)
     {
         return projecten
             .Select(project =>
             {
                 lokaties.TryGetValue(project.Id, out var lok);
+                BronnenInfo? bron = null;
+                bronnenInfo?.TryGetValue(project.Id, out bron);
                 // Gebruik canonical siblings als beschikbaar, anders alleen eigen units
                 var siblingIds = unitIdsByPrimary?.TryGetValue(project.Id, out var ids) == true
                     ? ids
@@ -695,7 +773,12 @@ public class MarktanalyseService : IMarktanalyseService
                     Straat      = project.Street,
                     Huisnummer  = project.HouseNumber,
                     Postcode    = lok?.ZipCode ?? project.PostalCode,
-                    Gemeente    = lok?.GemeenteNaam ?? project.City
+                    Gemeente    = lok?.GemeenteNaam ?? project.City,
+                    // Canonical / bronnen
+                    CanonicalProjectId = bron?.CanonicalProjectId,
+                    AantalBronnen      = bron?.AantalBronnen ?? 1,
+                    BronNamen          = bron?.BronNamen ?? new List<string>(),
+                    DeveloperConflict  = bron?.DeveloperConflict ?? false
                 };
             })
             .OrderByDescending(p => p.Verkoopgraad)
@@ -708,7 +791,8 @@ public class MarktanalyseService : IMarktanalyseService
         List<MarketAsset> losseEenheden,
         Dictionary<long, UnitSnapshot> prijzenPerEenheid,
         Dictionary<long, (string Bron, string? SourceUrl)> info,
-        Dictionary<long, OfficieleLokatie> lokaties)
+        Dictionary<long, OfficieleLokatie> lokaties,
+        Dictionary<long, string> gekoppeldProjectNaam)
     {
         return losseEenheden
             .Select(e =>
@@ -732,24 +816,399 @@ public class MarktanalyseService : IMarktanalyseService
                 var adresBase = string.Join(" ",
                     new[] { e.Street, e.HouseNumber }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
+                string? projectNaam = null;
+                if (e.LinkedCanonicalUnitId.HasValue)
+                    gekoppeldProjectNaam.TryGetValue(e.LinkedCanonicalUnitId.Value, out projectNaam);
+
                 return new LosseEenheidRijViewModel
                 {
-                    Id            = e.Id,
-                    Adres         = string.IsNullOrWhiteSpace(adresBase) ? null : adresBase,
-                    Postcode      = lok?.ZipCode ?? e.PostalCode,
-                    Gemeente      = lok?.GemeenteNaam ?? e.City,
-                    TypeLabel     = typeLabel,
-                    Oppervlakte   = e.LivingArea,
-                    Slaapkamers   = e.Bedrooms,
-                    Vraagprijs    = snapshot?.AskingPrice,
-                    PrijsPerM2    = snapshot?.PricePerSqm,
-                    Status        = statusLabel,
-                    AangeboenDoor = bron,
-                    SourceUrl     = sourceUrl
+                    Id                   = e.Id,
+                    Adres                = string.IsNullOrWhiteSpace(adresBase) ? null : adresBase,
+                    Postcode             = lok?.ZipCode ?? e.PostalCode,
+                    Gemeente             = lok?.GemeenteNaam ?? e.City,
+                    TypeLabel            = typeLabel,
+                    Oppervlakte          = e.LivingArea,
+                    Slaapkamers          = e.Bedrooms,
+                    Vraagprijs           = snapshot?.AskingPrice,
+                    PrijsPerM2           = snapshot?.PricePerSqm,
+                    Status               = statusLabel,
+                    AangeboenDoor        = bron,
+                    SourceUrl            = sourceUrl,
+                    LinkedCanonicalUnitId = e.LinkedCanonicalUnitId,
+                    GekoppeldProjectNaam  = projectNaam
                 };
             })
-            .OrderBy(e => e.Adres ?? "")
+            .OrderBy(e => e.IsGekoppeld ? 1 : 0)
+            .ThenBy(e => e.Adres ?? "")
             .ToList();
+    }
+
+    // ── Vergelijkbare panden ──────────────────────────────────────────────────
+
+    public async Task<VergelijkbarePandenViewModel> GetVergelijkbarePandenAsync(
+        List<int> gemeenteIds,
+        string? rondAdresPostcode,
+        int rondAdresStraal,
+        string type,
+        decimal? oppervlakte,
+        int tolerantie,
+        decimal? prijsMin,
+        decimal? prijsMax,
+        int? slaapkamers,
+        string status,
+        CancellationToken ct = default)
+    {
+        tolerantie = Math.Max(0, tolerantie);
+        var vm = new VergelijkbarePandenViewModel
+        {
+            GemeenteIds       = gemeenteIds,
+            RondAdresPostcode = rondAdresPostcode,
+            RondAdresStraal   = rondAdresStraal,
+            Type              = type,
+            Oppervlakte       = oppervlakte,
+            Tolerantie        = tolerantie,
+            PrijsMin          = prijsMin,
+            PrijsMax          = prijsMax,
+            Slaapkamers       = slaapkamers,
+            Status            = status
+        };
+
+        vm.Locaties          = await GetLocatiesAsync(ct);
+        vm.AantalPerGemeente = await BerekenAantalPerGemeenteAsync(ct);
+
+        bool useRondAdres = !string.IsNullOrWhiteSpace(rondAdresPostcode);
+        vm.HeeftZoekparameters = oppervlakte.HasValue || gemeenteIds.Count > 0 || useRondAdres
+                              || prijsMin.HasValue || prijsMax.HasValue || slaapkamers.HasValue
+                              || status != "Alles";
+        if (!vm.HeeftZoekparameters) return vm;
+
+        // ── Geo-center voor "Rond adres" ──────────────────────────────────────
+        double centerLat = 0, centerLng = 0;
+        bool heeftGeoCenter = false;
+        decimal minLat = 0, maxLat = 0, minLng = 0, maxLng = 0;
+
+        if (useRondAdres)
+        {
+            var refCoords = await _db.MarketAssets
+                .Where(a => a.PostalCode == rondAdresPostcode && a.Latitude.HasValue && a.Longitude.HasValue)
+                .Select(a => new { a.Latitude, a.Longitude })
+                .Take(50)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            if (refCoords.Count > 0)
+            {
+                centerLat = (double)refCoords.Average(a => a.Latitude!.Value);
+                centerLng = (double)refCoords.Average(a => a.Longitude!.Value);
+                var straalKm = rondAdresStraal / 1000.0;
+                var dLat = (decimal)(straalKm / 111.0);
+                var dLng = (decimal)(straalKm / (111.0 * Math.Cos(centerLat * Math.PI / 180)));
+                minLat = (decimal)centerLat - dLat;
+                maxLat = (decimal)centerLat + dLat;
+                minLng = (decimal)centerLng - dLng;
+                maxLng = (decimal)centerLng + dLng;
+                heeftGeoCenter = true;
+            }
+        }
+
+        decimal oppMin = oppervlakte.HasValue ? oppervlakte.Value - tolerantie : 0m;
+        decimal oppMax = oppervlakte.HasValue ? oppervlakte.Value + tolerantie : decimal.MaxValue;
+
+        // ── Project groups ophalen ────────────────────────────────────────────
+        var pgQuery = _db.MarketAssets.Where(a => a.IsProjectGroup && a.IsActive);
+        pgQuery = useRondAdres
+            ? heeftGeoCenter
+                ? pgQuery.Where(a => a.Latitude.HasValue && a.Longitude.HasValue
+                                  && a.Latitude >= minLat && a.Latitude <= maxLat
+                                  && a.Longitude >= minLng && a.Longitude <= maxLng)
+                : pgQuery.Where(a => a.PostalCode == rondAdresPostcode)
+            : gemeenteIds.Count > 0
+                ? pgQuery.Where(a => a.GeoMunicipalityId.HasValue && gemeenteIds.Contains(a.GeoMunicipalityId.Value))
+                : pgQuery;
+
+        if (type == "Appartement") pgQuery = pgQuery.Where(a => a.PropertySubType == PropertySubType.ApartmentGroup);
+        else if (type == "Woning") pgQuery = pgQuery.Where(a => a.PropertySubType == PropertySubType.HouseGroup);
+
+        var projectGroups    = await pgQuery.AsNoTracking().ToListAsync(ct);
+        var projectGroupIds  = projectGroups.Select(p => p.Id).ToList();
+        var alleRijen        = new List<VergelijkbaarPandRij>();
+
+        // ── Project child units ───────────────────────────────────────────────
+        if (projectGroupIds.Count > 0)
+        {
+            var uq = _db.MarketAssets
+                .Where(a => a.ParentMarketAssetId.HasValue && projectGroupIds.Contains(a.ParentMarketAssetId.Value));
+
+            if (type == "Appartement") uq = uq.Where(a => a.PropertyType == PropertyType.Apartment);
+            else if (type == "Woning") uq = uq.Where(a => a.PropertyType == PropertyType.House);
+            if (oppervlakte.HasValue) uq = uq.Where(a => a.LivingArea.HasValue && a.LivingArea >= oppMin && a.LivingArea <= oppMax);
+            if (slaapkamers.HasValue) uq = uq.Where(a => a.Bedrooms == slaapkamers.Value);
+            if (status == "Beschikbaar") uq = uq.Where(a => a.SaleStatus == SaleStatus.Available || a.SaleStatus == null);
+            else if (status == "Verkocht") uq = uq.Where(a => a.SaleStatus == SaleStatus.Sold);
+
+            var projectUnits = await uq.AsNoTracking().ToListAsync(ct);
+
+            // Exacte afstandsfilter post-query voor "Rond adres"
+            if (heeftGeoCenter && projectUnits.Count > 0)
+            {
+                var parentById2 = projectGroups.ToDictionary(p => p.Id);
+                projectUnits = projectUnits
+                    .Where(u => u.ParentMarketAssetId.HasValue
+                             && parentById2.TryGetValue(u.ParentMarketAssetId.Value, out var par)
+                             && par.Latitude.HasValue && par.Longitude.HasValue
+                             && VpGeoDistance(centerLat, centerLng, (double)par.Latitude.Value, (double)par.Longitude.Value) <= rondAdresStraal)
+                    .ToList();
+            }
+
+            if (projectUnits.Count > 0)
+            {
+                var unitIds = projectUnits.Select(u => u.Id).ToList();
+                var unitPrices = await _db.MarketListings
+                    .Where(l => unitIds.Contains(l.MarketAssetId) && l.IsActive)
+                    .GroupBy(l => l.MarketAssetId)
+                    .Select(g => new { AssetId = g.Key, Price = g.Max(l => l.AskingPrice) })
+                    .AsNoTracking()
+                    .ToDictionaryAsync(x => x.AssetId, x => x.Price, ct);
+
+                var kpiMap = await BerekenProjectVerkoopgraadAsync(projectGroupIds, ct);
+
+                var listingNamen = await _db.MarketListings
+                    .Where(l => projectGroupIds.Contains(l.MarketAssetId) && l.Title != null)
+                    .GroupBy(l => l.MarketAssetId)
+                    .Select(g => new { Id = g.Key, Naam = g.OrderByDescending(l => l.LastSeenAt).First().Title })
+                    .AsNoTracking()
+                    .ToDictionaryAsync(x => x.Id, x => x.Naam ?? "", ct);
+
+                var canonicalLinks = await _db.CanonicalProjectAssets
+                    .Where(a => projectGroupIds.Contains(a.MarketAssetId))
+                    .AsNoTracking()
+                    .ToListAsync(ct);
+
+                var cpNamen = new Dictionary<long, string>();
+                var cpIdMap = new Dictionary<long, long>();
+                if (canonicalLinks.Count > 0)
+                {
+                    var cpIds = canonicalLinks.Select(l => l.CanonicalProjectId).Distinct().ToList();
+                    var cpData = await _db.CanonicalProjects
+                        .Where(cp => cpIds.Contains(cp.Id) && cp.IsActive)
+                        .AsNoTracking()
+                        .ToDictionaryAsync(cp => cp.Id, cp => cp.CanonicalName ?? "", ct);
+                    foreach (var lnk in canonicalLinks)
+                        if (cpData.TryGetValue(lnk.CanonicalProjectId, out var n) && !string.IsNullOrEmpty(n))
+                        {
+                            cpNamen[lnk.MarketAssetId] = n;
+                            cpIdMap[lnk.MarketAssetId] = lnk.CanonicalProjectId;
+                        }
+                }
+
+                var parentLok = await LaadOfficieleLokaties(projectGroups, ct);
+                var parentById = projectGroups.ToDictionary(p => p.Id);
+
+                foreach (var unit in projectUnits)
+                {
+                    if (!unit.ParentMarketAssetId.HasValue) continue;
+                    if (!parentById.TryGetValue(unit.ParentMarketAssetId.Value, out var parent)) continue;
+
+                    unitPrices.TryGetValue(unit.Id, out var price);
+                    if (prijsMin.HasValue && (price is null || price < prijsMin.Value)) continue;
+                    if (prijsMax.HasValue && price.HasValue && price > prijsMax.Value) continue;
+
+                    var ppSqm = price.HasValue && unit.LivingArea is > 0
+                        ? Math.Round(price.Value / unit.LivingArea.Value, 0) : (decimal?)null;
+                    parentLok.TryGetValue(parent.Id, out var lok);
+                    kpiMap.TryGetValue(parent.Id, out var vkGraad);
+                    var naam = listingNamen.GetValueOrDefault(parent.Id) is { Length: > 0 } lnVp
+                               ? lnVp
+                               : cpNamen.GetValueOrDefault(parent.Id) ?? parent.AssetKey;
+                    cpIdMap.TryGetValue(parent.Id, out var cpId);
+
+                    alleRijen.Add(new VergelijkbaarPandRij
+                    {
+                        AssetId            = unit.Id,
+                        ProjectAssetId     = parent.Id,
+                        CanonicalProjectId = cpId == 0 ? null : cpId,
+                        ProjectNaam        = naam,
+                        AdresRegel         = FormatAdres(parent.Street, parent.HouseNumber, lok?.ZipCode ?? parent.PostalCode, lok?.GemeenteNaam ?? parent.City),
+                        TypeLabel          = MapTypeLabel(unit.PropertyType),
+                        Oppervlakte        = unit.LivingArea,
+                        Slaapkamers        = unit.Bedrooms,
+                        Vraagprijs         = price,
+                        PrijsPerM2         = ppSqm,
+                        Status             = MapStatusLabel(unit.SaleStatus, unit.LifecycleStatus),
+                        IsProject          = true,
+                        Verkoopgraad       = vkGraad
+                    });
+                }
+            }
+        }
+
+        // ── Losse listings ────────────────────────────────────────────────────
+        var lq = _db.MarketAssets.Where(a => !a.IsProjectGroup && a.ParentMarketAssetId == null && a.IsActive);
+        lq = useRondAdres
+            ? heeftGeoCenter
+                ? lq.Where(a => a.Latitude.HasValue && a.Longitude.HasValue
+                             && a.Latitude >= minLat && a.Latitude <= maxLat
+                             && a.Longitude >= minLng && a.Longitude <= maxLng)
+                : lq.Where(a => a.PostalCode == rondAdresPostcode)
+            : gemeenteIds.Count > 0
+                ? lq.Where(a => a.GeoMunicipalityId.HasValue && gemeenteIds.Contains(a.GeoMunicipalityId.Value))
+                : lq;
+
+        if (type == "Appartement") lq = lq.Where(a => a.PropertyType == PropertyType.Apartment);
+        else if (type == "Woning")  lq = lq.Where(a => a.PropertyType == PropertyType.House);
+        if (oppervlakte.HasValue) lq = lq.Where(a => a.LivingArea.HasValue && a.LivingArea >= oppMin && a.LivingArea <= oppMax);
+        if (slaapkamers.HasValue) lq = lq.Where(a => a.Bedrooms == slaapkamers.Value);
+        if (status == "Beschikbaar") lq = lq.Where(a => a.SaleStatus == SaleStatus.Available || a.SaleStatus == null);
+        else if (status == "Verkocht") lq = lq.Where(a => a.SaleStatus == SaleStatus.Sold);
+
+        var losseEenheden = await lq.AsNoTracking().ToListAsync(ct);
+        if (heeftGeoCenter && losseEenheden.Count > 0)
+            losseEenheden = losseEenheden
+                .Where(a => a.Latitude.HasValue && a.Longitude.HasValue
+                         && VpGeoDistance(centerLat, centerLng, (double)a.Latitude.Value, (double)a.Longitude.Value) <= rondAdresStraal)
+                .ToList();
+
+        if (losseEenheden.Count > 0)
+        {
+            var losseIds = losseEenheden.Select(e => e.Id).ToList();
+            var losseLst = await _db.MarketListings
+                .Where(l => losseIds.Contains(l.MarketAssetId) && l.IsActive)
+                .GroupBy(l => l.MarketAssetId)
+                .Select(g => new
+                {
+                    AssetId = g.Key,
+                    Price   = g.Max(l => l.AskingPrice),
+                    Url     = g.OrderByDescending(l => l.LastSeenAt).Select(l => l.Url).FirstOrDefault(),
+                    Title   = g.OrderByDescending(l => l.LastSeenAt).Select(l => l.Title).FirstOrDefault()
+                })
+                .AsNoTracking()
+                .ToDictionaryAsync(x => x.AssetId, ct);
+
+            var losseLok = await LaadOfficieleLokaties(losseEenheden, ct);
+
+            foreach (var e in losseEenheden)
+            {
+                losseLst.TryGetValue(e.Id, out var lst);
+                var price = lst?.Price;
+                if (prijsMin.HasValue && (price is null || price < prijsMin.Value)) continue;
+                if (prijsMax.HasValue && price.HasValue && price > prijsMax.Value) continue;
+
+                var ppSqm = price.HasValue && e.LivingArea is > 0
+                    ? Math.Round(price.Value / e.LivingArea.Value, 0) : (decimal?)null;
+                losseLok.TryGetValue(e.Id, out var lok);
+                var adresRegel = FormatAdres(e.Street, e.HouseNumber, lok?.ZipCode ?? e.PostalCode, lok?.GemeenteNaam ?? e.City);
+                var projectNaam = lst?.Title ?? adresRegel;
+
+                alleRijen.Add(new VergelijkbaarPandRij
+                {
+                    AssetId    = e.Id,
+                    ProjectNaam = projectNaam,
+                    AdresRegel = adresRegel,
+                    TypeLabel  = MapTypeLabel(e.PropertyType),
+                    Oppervlakte = e.LivingArea,
+                    Slaapkamers = e.Bedrooms,
+                    Vraagprijs  = price,
+                    PrijsPerM2  = ppSqm,
+                    Status      = MapStatusLabel(e.SaleStatus, e.LifecycleStatus),
+                    IsProject   = false,
+                    SourceUrl   = lst?.Url
+                });
+            }
+        }
+
+        vm.Panden = alleRijen.OrderBy(p => p.PrijsPerM2 ?? decimal.MaxValue).ToList();
+
+        // ── KPIs ──────────────────────────────────────────────────────────────
+        if (vm.Panden.Count > 0)
+        {
+            var prijzen = vm.Panden.Where(p => p.Vraagprijs.HasValue).Select(p => p.Vraagprijs!.Value).ToList();
+            var ppSqms  = vm.Panden.Where(p => p.PrijsPerM2.HasValue).Select(p => p.PrijsPerM2!.Value).ToList();
+            var opps    = vm.Panden.Where(p => p.Oppervlakte.HasValue).Select(p => p.Oppervlakte!.Value).ToList();
+            vm.Kpi = new VergelijkbaarKpiViewModel
+            {
+                Aantal         = vm.Panden.Count,
+                GemPrijs       = prijzen.Count > 0 ? Math.Round(prijzen.Average(), 0) : null,
+                GemPrijsPerM2  = ppSqms.Count  > 0 ? Math.Round(ppSqms.Average(), 0)  : null,
+                LaagstePrijs   = prijzen.Count > 0 ? prijzen.Min() : null,
+                HoogstePrijs   = prijzen.Count > 0 ? prijzen.Max() : null,
+                GemOppervlakte = opps.Count    > 0 ? Math.Round(opps.Average(), 0)    : null
+            };
+        }
+
+        return vm;
+    }
+
+    // ── Vergelijkbare panden helpers ──────────────────────────────────────────
+
+    private async Task<Dictionary<int, int>> BerekenAantalPerGemeenteAsync(CancellationToken ct) =>
+        await _db.MarketAssets
+            .Where(a => a.IsActive && !a.IsProjectGroup && a.GeoMunicipalityId.HasValue)
+            .GroupBy(a => a.GeoMunicipalityId!.Value)
+            .Select(g => new { Id = g.Key, Aantal = g.Count() })
+            .AsNoTracking()
+            .ToDictionaryAsync(x => x.Id, x => x.Aantal, ct);
+
+    private async Task<Dictionary<long, decimal>> BerekenProjectVerkoopgraadAsync(
+        List<long> projectGroupIds, CancellationToken ct)
+    {
+        var latestKpiIds = await _db.ProjectGroupKpis
+            .Where(k => projectGroupIds.Contains(k.MarketAssetId))
+            .GroupBy(k => k.MarketAssetId)
+            .Select(g => new { AssetId = g.Key, Id = g.OrderByDescending(k => k.SnapshotDate).Select(k => k.Id).First() })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (latestKpiIds.Count > 0)
+        {
+            var kpiIds = latestKpiIds.Select(x => x.Id).ToList();
+            return await _db.ProjectGroupKpis
+                .Where(k => kpiIds.Contains(k.Id))
+                .AsNoTracking()
+                .ToDictionaryAsync(k => k.MarketAssetId, k => k.SoldPercentage, ct);
+        }
+
+        var counts = await _db.MarketAssets
+            .Where(a => a.ParentMarketAssetId.HasValue && projectGroupIds.Contains(a.ParentMarketAssetId.Value))
+            .GroupBy(a => a.ParentMarketAssetId!.Value)
+            .Select(g => new { Id = g.Key, Total = g.Count(), Sold = g.Count(a => a.SaleStatus == SaleStatus.Sold) })
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return counts.ToDictionary(
+            x => x.Id,
+            x => x.Total > 0 ? Math.Round((decimal)x.Sold / x.Total * 100, 1) : 0m);
+    }
+
+    private static string FormatAdres(string? straat, string? huisnummer, string? postcode, string? gemeente)
+    {
+        var regel1 = string.Join(" ", new[] { straat, huisnummer }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        var regel2 = string.Join(" ", new[] { postcode, gemeente }.Where(s => !string.IsNullOrWhiteSpace(s)));
+        return string.IsNullOrEmpty(regel1) ? regel2 : $"{regel1}\n{regel2}".Trim('\n');
+    }
+
+    private static string MapTypeLabel(PropertyType type) => type switch
+    {
+        PropertyType.Apartment => "Appartement",
+        PropertyType.House     => "Woning",
+        _                      => type.ToString()
+    };
+
+    private static string MapStatusLabel(SaleStatus? saleStatus, AssetLifecycleStatus? lifecycleStatus) =>
+        saleStatus == SaleStatus.Sold || lifecycleStatus == AssetLifecycleStatus.SoldConfirmed
+            ? "Verkocht"
+            : lifecycleStatus == AssetLifecycleStatus.LikelySold
+                ? "Vermoedelijk verkocht"
+                : "Beschikbaar";
+
+    private static double VpGeoDistance(double lat1, double lng1, double lat2, double lng2)
+    {
+        const double R = 6_371_000;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLng = (lng2 - lng1) * Math.PI / 180;
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+              + Math.Cos(lat1 * Math.PI / 180) * Math.Cos(lat2 * Math.PI / 180)
+              * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+        return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
     }
 
     // ── Projectdetail ─────────────────────────────────────────────────────────
@@ -769,10 +1228,103 @@ public class MarktanalyseService : IMarktanalyseService
             .Select(l => l.Title)
             .FirstOrDefaultAsync(ct) ?? project.AssetKey;
 
+        // ── Canonical bronnen laden ────────────────────────────────────────────
+        var canonicalLink = await _db.CanonicalProjectAssets
+            .Where(l => l.MarketAssetId == id)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ct);
+
+        long? canonicalProjectId = null;
+        List<CanonicalProjectAsset> allCanonicalLinks = [];
+        List<MarketAsset> linkedProjectAssets = [];
+        var linkedProjectSources  = new Dictionary<long, string>();
+        var linkedProjectTitles   = new Dictionary<long, string>();
+        var linkedProjectUrls     = new Dictionary<long, string?>();
+        var linkedProjectLastSeen = new Dictionary<long, DateTime?>();
+
+        // Default: query units only for this asset; overridden below if a canonical group is found.
+        var linkedProjectIds = CanonicalProjectHelpers.ResolveLinkedProjectIds(id, []);
+
+        if (canonicalLink != null)
+        {
+            canonicalProjectId = canonicalLink.CanonicalProjectId;
+
+            allCanonicalLinks = await _db.CanonicalProjectAssets
+                .Where(l => l.CanonicalProjectId == canonicalLink.CanonicalProjectId)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            linkedProjectIds = CanonicalProjectHelpers.ResolveLinkedProjectIds(id, allCanonicalLinks);
+
+            linkedProjectAssets = await _db.MarketAssets
+                .Where(a => linkedProjectIds.Contains(a.Id))
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            var linkedListings = await _db.MarketListings
+                .Where(l => linkedProjectIds.Contains(l.MarketAssetId) && l.IsActive)
+                .Select(l => new { l.MarketAssetId, SourceName = l.Source.Name, l.Title, l.Url, l.LastSeenAt })
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            var latestListingPerAsset = linkedListings
+                .GroupBy(l => l.MarketAssetId)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(l => l.LastSeenAt).First());
+
+            foreach (var (linkedAssetId, listing) in latestListingPerAsset)
+            {
+                linkedProjectSources[linkedAssetId]  = listing.SourceName ?? "";
+                linkedProjectTitles[linkedAssetId]   = listing.Title ?? "";
+                linkedProjectUrls[linkedAssetId]     = listing.Url;
+                linkedProjectLastSeen[linkedAssetId] = listing.LastSeenAt;
+            }
+        }
+
+        // FIXED: load units from ALL linked project assets (was: ParentMarketAssetId == id only)
         var units = await _db.MarketAssets
-            .Where(a => a.ParentMarketAssetId == id)
+            .Where(a => a.ParentMarketAssetId.HasValue && linkedProjectIds.Contains(a.ParentMarketAssetId.Value))
             .AsNoTracking()
             .ToListAsync(ct);
+
+        // Build BronnenLijst after units are loaded so we have per-source counts.
+        var unitStatsByProject = CanonicalProjectHelpers.ComputeUnitStatsByProject(units);
+
+        var bronnenLijst = allCanonicalLinks
+            .Select(link =>
+            {
+                var asset = linkedProjectAssets.FirstOrDefault(a => a.Id == link.MarketAssetId);
+                linkedProjectSources.TryGetValue(link.MarketAssetId, out var sourceName);
+                linkedProjectUrls.TryGetValue(link.MarketAssetId, out var url);
+                linkedProjectTitles.TryGetValue(link.MarketAssetId, out var title);
+                linkedProjectLastSeen.TryGetValue(link.MarketAssetId, out var lastSeen);
+                unitStatsByProject.TryGetValue(link.MarketAssetId, out var stats);
+
+                var adres = string.Join(", ",
+                    new[]
+                    {
+                        string.Join(" ", new[] { asset?.Street, asset?.HouseNumber }.Where(s => !string.IsNullOrWhiteSpace(s))),
+                        string.Join(" ", new[] { asset?.PostalCode, asset?.City }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                    }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+                return new BronViewModel
+                {
+                    MarketAssetId  = link.MarketAssetId,
+                    BronNaam       = sourceName ?? "",
+                    ExternalId     = asset?.AssetKey,
+                    Url            = url,
+                    Title          = title,
+                    IsPrimary      = link.IsPrimary,
+                    DeveloperNaam  = asset?.DeveloperName,
+                    UnitCount      = stats.Total,
+                    AvailableCount = stats.Available,
+                    SoldCount      = stats.Sold,
+                    Adres          = adres,
+                    LastSeenAt     = lastSeen
+                };
+            })
+            .OrderByDescending(b => b.IsPrimary)
+            .ThenBy(b => b.BronNaam)
+            .ToList();
 
         // Officiële lokatie voor het project zelf
         var projectLok = (await LaadOfficieleLokaties([project], ct)).GetValueOrDefault(project.Id);
@@ -861,27 +1413,159 @@ public class MarktanalyseService : IMarktanalyseService
                     _ => u.LifecycleStatus == AssetLifecycleStatus.LikelySold ? "Vermoedelijk verkocht" : "Beschikbaar"
                 };
 
+                linkedProjectSources.TryGetValue(u.ParentMarketAssetId ?? 0, out var bronNaam);
+                linkedProjectTitles.TryGetValue(u.ParentMarketAssetId ?? 0, out var ouderProjectNaam);
+
                 return new UnitRijViewModel
                 {
-                    Id          = u.Id,
-                    Naam        = naam,
-                    TypeLabel   = typeLabel,
-                    Oppervlakte = u.LivingArea,
-                    Slaapkamers = u.Bedrooms,
-                    Vraagprijs  = snap?.AskingPrice,
-                    PrijsPerM2  = snap?.PricePerSqm,
-                    Status      = status,
-                    SourceUrl   = listing?.Url is { Length: > 0 } url ? url : null
+                    Id               = u.Id,
+                    Naam             = naam,
+                    TypeLabel        = typeLabel,
+                    Oppervlakte      = u.LivingArea,
+                    Slaapkamers      = u.Bedrooms,
+                    Vraagprijs       = snap?.AskingPrice,
+                    PrijsPerM2       = snap?.PricePerSqm,
+                    Status           = status,
+                    SourceUrl        = listing?.Url is { Length: > 0 } url ? url : null,
+                    BronNaam         = bronNaam,
+                    OuderProjectNaam = !string.IsNullOrEmpty(ouderProjectNaam) ? ouderProjectNaam : null
                 };
             }).OrderBy(u => u.Naam).ToList();
 
-            var prices          = unitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
-            var ppSqms          = unitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
-            var areas           = units.Where(u => u.LivingArea is > 0).Select(u => u.LivingArea!.Value).ToList();
-            var soldCnt         = units.Count(u => u.SaleStatus == SaleStatus.Sold);
-            var availCnt        = units.Count(u => u.SaleStatus == SaleStatus.Available);
-            var soldConfirmedCnt = units.Count(u => u.LifecycleStatus == AssetLifecycleStatus.SoldConfirmed);
-            var likelySoldCnt    = units.Count(u => u.LifecycleStatus == AssetLifecycleStatus.LikelySold);
+            // ── Canonical units laden (voor deduplicatie-weergave) ─────────────
+            List<CanonicalUnitViewModel> canonicalUnitRows = [];
+            if (canonicalProjectId.HasValue)
+            {
+                var canonicalUnits = await _db.CanonicalUnits
+                    .Where(u => u.CanonicalProjectId == canonicalProjectId.Value)
+                    .Include(u => u.SourceAssets)
+                    .AsNoTracking()
+                    .ToListAsync(ct);
+
+                if (canonicalUnits.Count > 0)
+                {
+                    // Prijs per source-unit opzoeken via de snapshot-dictionary
+                    var sourceAssetIds = canonicalUnits
+                        .SelectMany(u => u.SourceAssets)
+                        .Select(a => a.MarketAssetId)
+                        .ToList();
+
+                    var sourceListings = await _db.MarketListings
+                        .Where(l => sourceAssetIds.Contains(l.MarketAssetId) && l.IsActive)
+                        .Select(l => new { l.MarketAssetId, l.AskingPrice, l.Url })
+                        .AsNoTracking()
+                        .ToListAsync(ct);
+
+                    var sourcePriceByAsset = sourceListings
+                        .GroupBy(l => l.MarketAssetId)
+                        .ToDictionary(g => g.Key, g => g.First().AskingPrice);
+
+                    var sourceUrlByAsset = sourceListings
+                        .GroupBy(l => l.MarketAssetId)
+                        .ToDictionary(g => g.Key, g => g.First().Url);
+
+                    canonicalUnitRows = canonicalUnits
+                        .Select(cu =>
+                        {
+                            var typeLabel = cu.PropertyType switch
+                            {
+                                PropertyType.Apartment => "Appartement",
+                                PropertyType.House     => "Woning",
+                                _                      => cu.PropertyType.ToString()
+                            };
+
+                            var statusLabel = cu.Status switch
+                            {
+                                SaleStatus.Sold     => "Verkocht",
+                                SaleStatus.Reserved => "Gereserveerd",
+                                SaleStatus.Option   => "Optie",
+                                _                   => "Beschikbaar"
+                            };
+
+                            var bronnen = cu.SourceAssets.Select(sa =>
+                            {
+                                var sourceAsset = units.FirstOrDefault(u => u.Id == sa.MarketAssetId);
+                                sourcePriceByAsset.TryGetValue(sa.MarketAssetId, out var saPrice);
+                                sourceUrlByAsset.TryGetValue(sa.MarketAssetId, out var saUrl);
+
+                                return new UnitBronViewModel
+                                {
+                                    MarketAssetId      = sa.MarketAssetId,
+                                    BronNaam           = sa.SourceName,
+                                    ExternalId         = sa.ExternalId,
+                                    Url                = saUrl,
+                                    Vraagprijs         = saPrice,
+                                    Oppervlakte        = sourceAsset?.LivingArea,
+                                    Status             = sourceAsset?.SaleStatus switch
+                                    {
+                                        SaleStatus.Sold     => "Verkocht",
+                                        SaleStatus.Reserved => "Gereserveerd",
+                                        SaleStatus.Option   => "Optie",
+                                        _                   => "Beschikbaar"
+                                    },
+                                    MatchLevel         = sa.MatchLevel,
+                                    IsRepresentatief   = sa.IsRepresentative,
+                                    IsLosseAdvertentie = sa.IsFromLooseListing
+                                };
+                            }).OrderByDescending(b => b.IsRepresentatief).ThenBy(b => b.BronNaam).ToList();
+
+                            return new CanonicalUnitViewModel
+                            {
+                                Id                       = cu.Id,
+                                Titel                    = cu.Title ?? typeLabel,
+                                TypeLabel                = typeLabel,
+                                Oppervlakte              = cu.Area,
+                                Slaapkamers              = cu.Bedrooms,
+                                Vraagprijs               = cu.Price,
+                                PrijsPerM2               = cu.PricePerSqm,
+                                Status                   = statusLabel,
+                                Verdieping               = cu.Floor,
+                                IsAmbiguous              = cu.IsAmbiguous,
+                                HeeftPrijsConflict       = cu.HasPriceConflict,
+                                HeeftStatusConflict      = cu.HasStatusConflict,
+                                HeeftOppervlakteConflict = cu.HasAreaConflict,
+                                ConflictSamenvatting     = cu.ConflictSummary,
+                                Bronnen                  = bronnen
+                            };
+                        })
+                        .OrderBy(u => u.Verdieping ?? 999).ThenBy(u => u.Titel).ThenBy(u => u.Oppervlakte).ToList();
+                }
+            }
+
+            // KPI's berekenen — gebruik canonical units als beschikbaar (vermijdt dubbeltellingen)
+            int kpiTotal, kpiAvail, kpiSold, kpiSoldConfirmed, kpiLikelySold;
+            List<decimal> kpiPrices, kpiPpSqms, kpiAreas;
+
+            if (canonicalUnitRows.Count > 0)
+            {
+                kpiTotal         = canonicalUnitRows.Count;
+                kpiSold          = canonicalUnitRows.Count(u => u.Status == "Verkocht");
+                kpiAvail         = canonicalUnitRows.Count(u => u.Status == "Beschikbaar");
+                kpiSoldConfirmed = kpiSold;
+                kpiLikelySold    = 0;
+                kpiPrices        = canonicalUnitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
+                kpiPpSqms        = canonicalUnitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
+                kpiAreas         = canonicalUnitRows.Where(u => u.Oppervlakte.HasValue).Select(u => u.Oppervlakte!.Value).ToList();
+            }
+            else
+            {
+                kpiTotal         = units.Count;
+                kpiAvail         = units.Count(u => u.SaleStatus == SaleStatus.Available);
+                kpiSold          = units.Count(u => u.SaleStatus == SaleStatus.Sold);
+                kpiSoldConfirmed = units.Count(u => u.LifecycleStatus == AssetLifecycleStatus.SoldConfirmed);
+                kpiLikelySold    = units.Count(u => u.LifecycleStatus == AssetLifecycleStatus.LikelySold);
+                kpiPrices        = unitRows.Where(u => u.Vraagprijs.HasValue).Select(u => u.Vraagprijs!.Value).ToList();
+                kpiPpSqms        = unitRows.Where(u => u.PrijsPerM2.HasValue).Select(u => u.PrijsPerM2!.Value).ToList();
+                kpiAreas         = units.Where(u => u.LivingArea is > 0).Select(u => u.LivingArea!.Value).ToList();
+            }
+
+            var prices          = kpiPrices;
+            var ppSqms          = kpiPpSqms;
+            var areas           = kpiAreas;
+            var soldCnt         = kpiSold;
+            var availCnt        = kpiAvail;
+            var soldConfirmedCnt = kpiSoldConfirmed;
+            var likelySoldCnt    = kpiLikelySold;
 
             var apartCount = units.Count(u => u.PropertyType == PropertyType.Apartment);
             var houseCount = units.Count(u => u.PropertyType == PropertyType.House);
@@ -920,17 +1604,20 @@ public class MarktanalyseService : IMarktanalyseService
                 DeveloperNaam        = project.DeveloperName,
                 DeveloperWebsite     = project.DeveloperWebsite,
                 DeveloperTelefoon    = project.DeveloperPhone,
-                TotaalUnits          = units.Count,
+                TotaalUnits          = kpiTotal,
                 BeschikbareUnits     = availCnt,
                 VerkochteUnits       = soldCnt,
                 SoldConfirmedCount   = soldConfirmedCnt,
                 LikelySoldCount      = likelySoldCnt,
-                Verkoopgraad         = units.Count > 0 ? Math.Round((decimal)soldCnt / units.Count * 100, 1) : 0m,
+                Verkoopgraad         = kpiTotal > 0 ? Math.Round((decimal)soldCnt / kpiTotal * 100, 1) : 0m,
                 GemiddeldePrijs      = prices.Count > 0 ? Math.Round(prices.Average(), 0) : null,
                 GemiddeldePrijsPerM2 = ppSqms.Count > 0 ? Math.Round(ppSqms.Average(), 0) : null,
                 GemiddeldeOppervlakte = areas.Count > 0 ? Math.Round(areas.Average(), 0) : null,
                 Units                = unitRows,
-                AndereProjecten      = navOpties
+                CanonicalUnits       = canonicalUnitRows,
+                AndereProjecten      = navOpties,
+                CanonicalProjectId   = canonicalProjectId,
+                BronnenLijst         = bronnenLijst
             };
         }
 
@@ -948,7 +1635,9 @@ public class MarktanalyseService : IMarktanalyseService
             AndereProjecten   = new List<ProjectNavigatieOptie>
             {
                 new() { Id = id, Naam = projectNaam!, Gemeente = projectLok?.GemeenteNaam ?? project.City }
-            }
+            },
+            CanonicalProjectId = canonicalProjectId,
+            BronnenLijst       = bronnenLijst
         };
     }
 }

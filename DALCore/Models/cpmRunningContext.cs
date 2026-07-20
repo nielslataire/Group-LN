@@ -2324,6 +2324,8 @@ public partial class cpmRunningContext : DbContext
             entity.Property(e => e.Slug).HasMaxLength(50);
             entity.Property(e => e.StatusId).HasColumnName("StatusID");
             entity.Property(e => e.StandardFotoName).HasMaxLength(255);
+            entity.Property(e => e.SeoTitle).HasMaxLength(120);
+            entity.Property(e => e.SeoDescription).HasMaxLength(320);
             entity.Property(e => e.Street).HasMaxLength(100);
             entity.Property(e => e.TotalLandShare).HasColumnType("numeric(18, 0)");
             entity.Property(e => e.WheaterStationId).HasColumnName("WheaterStationID");

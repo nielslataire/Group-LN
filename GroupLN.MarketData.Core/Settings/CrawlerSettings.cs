@@ -11,6 +11,7 @@ public class CrawlerSettings
     public bool ApplyMigrationsOnStartup { get; set; } = false;
 
     // ── Limieten ────────────────────────────────────────────────────────────
+    /// <summary>Maximaal aantal listings per crawl-run. 0 = onbeperkt.</summary>
     public int MaxListingsPerRun { get; set; } = 0;
     public int MinListingsBeforeMarkInactive { get; set; } = 20;
 
@@ -29,6 +30,16 @@ public class CrawlerSettings
 
     // Aantal opeenvolgende crawls dat een listing ontbreekt voor deactivatie
     public int MissingListingThreshold { get; set; } = 3;
+
+    // ── Scheduler ────────────────────────────────────────────────────────────
+    /// <summary>Hoe vaak de worker controleert of een source aan de beurt is (in minuten). 0 = fallback 30 min.</summary>
+    public int WorkerCheckIntervalMinutes { get; set; } = 30;
+
+    /// <summary>
+    /// Wachttijd na een mislukte crawl voordat opnieuw geprobeerd wordt (in minuten).
+    /// 0 = gebruik CrawlIntervalMinutes van de source als fallback.
+    /// </summary>
+    public int RetryIntervalMinutes { get; set; } = 30;
 
     // ── Per-bron instellingen ────────────────────────────────────────────────
     public Dictionary<string, SourceSettings> Sources { get; set; } = new();
@@ -78,6 +89,7 @@ public class SourceSettings
     /// <summary>
     /// Maximaal aantal zoekpagina's per locatie (bijv. per gemeente).
     /// In SearchDebugMode wordt Debug.MaxPagesInSearchDebugMode gebruikt.
+    /// 0 = onbeperkt (stop wanneer geen volgende pagina meer bestaat).
     /// </summary>
     public int MaxSearchPagesPerLocation { get; set; } = 10;
 
@@ -104,9 +116,16 @@ public class SourceSettings
 
     /// <summary>
     /// Locatiefilter voor URL-generatie en detail-filtering.
-    /// Leeg = geen geografisch filter (alle resultaten worden verwerkt).
+    /// Leeg = geen geografisch filter; combineer met AllowDefaultLocations.
     /// </summary>
     public List<LocationSettings> AllowedLocations { get; set; } = new();
+
+    /// <summary>
+    /// true (standaard) = gebruik hardcoded DefaultLocations als fallback wanneer AllowedLocations leeg is.
+    /// false = crawler weigert te starten als AllowedLocations leeg is (aanbevolen voor productie).
+    /// Een WARNING wordt altijd gelogd wanneer de fallback actief is.
+    /// </summary>
+    public bool AllowDefaultLocations { get; set; } = true;
 
     /// <summary>
     /// false = detailpagina's worden NIET geopend. Enkel zoekkaart-data uit
@@ -131,6 +150,18 @@ public class SourceSettings
     /// Maximaal aantal projectdetailpagina's per crawl-run. 0 = onbeperkt.
     /// </summary>
     public int MaxProjectDetailPagesPerRun { get; set; } = 100;
+
+    /// <summary>
+    /// Minimaal aantal minuten tussen opeenvolgende crawls voor deze bron.
+    /// 0 (standaard) = gebruik de globale fallback van 30 minuten.
+    /// </summary>
+    public int CrawlIntervalMinutes { get; set; } = 0;
+
+    /// <summary>
+    /// ForceCrawl per bron. null = gebruik globale ForceCrawl instelling.
+    /// true overschrijft NextCrawlAt voor alleen deze bron.
+    /// </summary>
+    public bool? ForceCrawl { get; set; } = null;
 }
 
 /// <summary>
@@ -151,6 +182,9 @@ public class LocationSettings
 
     /// <summary>Postcode, bijv. "8730".</summary>
     public string PostalCode { get; set; } = string.Empty;
+
+    /// <summary>Zimmo-specifiek place ID, bijv. 1108 voor Beernem.</summary>
+    public int? PlaceId { get; set; }
 }
 
 /// <summary>
@@ -175,6 +209,7 @@ public class DebugSettings
     /// <summary>
     /// Maximaal aantal zoekpagina's in SearchDebugMode.
     /// Overschrijft MaxSearchPagesPerLocation wanneer SearchDebugMode=true.
+    /// 0 = onbeperkt.
     /// </summary>
     public int MaxPagesInSearchDebugMode { get; set; } = 3;
 }
@@ -183,6 +218,7 @@ public class PhotoHashingSettings
 {
     public bool EnableProjectPhotoHashing { get; set; } = false;
     public bool DownloadProjectPhotos { get; set; } = false;
+    /// <summary>Maximaal aantal foto's per project voor perceptuele hashing. 0 = onbeperkt.</summary>
     public int MaxProjectPhotosPerProject { get; set; } = 20;
     public int PhotoHashTimeoutSeconds { get; set; } = 20;
     public int RehashPhotosAfterDays { get; set; } = 30;
@@ -196,6 +232,7 @@ public class AiExtractionSettings
     public string? AnthropicApiKey { get; set; }
     public string AnthropicModel { get; set; } = "claude-haiku-4-5-20251001";
     public int AiExtractionMinConfidence { get; set; } = 70;
+    /// <summary>Maximaal aantal AI-extracties per run. 0 = onbeperkt.</summary>
     public int MaxAiExtractionsPerRun { get; set; } = 50;
     public int AiExtractionTimeoutSeconds { get; set; } = 30;
 }

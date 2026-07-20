@@ -213,6 +213,16 @@
                                                         <i class="bx bx-eye"></i>
                                                     <span class="visually-hidden">Details</span>
                                                 </a>
+                                                @if (canWriteProjectContacts)
+                                                {
+                                                    <a href="#" class="sendContactEmail" title="Mail verzenden"
+                                                       data-email="@contact.Email" data-fullname="@contact.DisplayName"
+                                                       data-toggle="tooltip" data-placement="top"
+                                                       data-original-title="@(contact.LastEmailSentAt.HasValue ? $"Laatst gemaild op {contact.LastEmailSentAt:dd/MM/yyyy} door {contact.LastEmailSentBy}" : "Mail verzenden")">
+                                                        <i class="bx bx-envelope"></i>
+                                                        <span class="visually-hidden">Mail verzenden</span>
+                                                    </a>
+                                                }
                                                 <a title="Bewerken"
                                                        href="@Url.Action("EditContact", "Projecten", new { projectid = Model.ProjectId, email = contact.Email, fullname = contact.DisplayName, phone = contact.Phone })" data-toggle="tooltip" data-placement="top" data-original-title="Bewerken">
                                                     <i class="bx bx-edit"></i>
@@ -242,6 +252,10 @@
         </div>
     </div>
 </section>
+
+<div id="modalsendemail" class="modal-block modal-block-primary mfp-hide">
+    <div id="send-email-container"></div>
+</div>
 
 @section PageScripts
 {
@@ -450,5 +464,24 @@
         //         $('#delete-contract-container').html(data);
         //     });
         // });
+
+        // MAIL VERZENDEN
+        $(document).on('click', '.sendContactEmail', function (e) {
+          e.preventDefault();
+          const email = $(this).data('email');
+          const fullname = $(this).data('fullname');
+
+          $('#send-email-container').empty();
+
+          $.get('@Url.Action("ModalSendContactEmail", "Projecten")', { projectid: @Model.ProjectId, email: email, fullname: fullname })
+            .done(function (html) {
+              $('#send-email-container').html(html);
+              $.magnificPopup.open({
+                items: { src: '#modalsendemail' },
+                type: 'inline'
+              });
+            })
+            .fail(function () { alert('Kon de mail-modal niet laden.'); });
+        });
     </script>
 }

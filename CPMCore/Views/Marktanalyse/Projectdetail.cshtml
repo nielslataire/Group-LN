@@ -465,6 +465,75 @@
             }
         }
     .type-mixed     { background: #f3f0ff; border: 1px solid #c4b5fd; color: #6d28d9; }
+
+    /* BRON BADGES */
+    .bron-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: .2rem .55rem;
+        border-radius: 5px;
+        font-size: .68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        margin-right: .3rem;
+    }
+    .bron-immoweb { background: #fff4e5; border: 1px solid #ffd591; color: #b26a00; }
+    .bron-zimmo   { background: #e8f0fe; border: 1px solid #bad0f7; color: #1a56db; }
+    .bron-other   { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; }
+
+    /* TABS */
+    .detail-nav-tabs {
+        border-bottom: 2px solid #dfe7ef;
+        margin-bottom: 1.25rem;
+    }
+    .detail-nav-tabs .nav-link {
+        border: none;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        color: #64748b;
+        font-size: .875rem;
+        font-weight: 600;
+        padding: .65rem 1rem;
+        border-radius: 0;
+    }
+    .detail-nav-tabs .nav-link:hover { color: var(--primary); }
+    .detail-nav-tabs .nav-link.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+        background: transparent;
+    }
+
+    /* BRONNEN TAB */
+    .bronnen-card {
+        background: #fff;
+        border: 1px solid #dfe7ef;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(15,23,42,.04);
+        overflow: hidden;
+    }
+    .bronnen-card-header {
+        padding: .9rem 1.25rem;
+        border-bottom: 1px solid #dfe7ef;
+        font-size: .9rem;
+        font-weight: 800;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+    .primary-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: .15rem .5rem;
+        border-radius: 4px;
+        font-size: .65rem;
+        font-weight: 700;
+        background: #e8f7ef;
+        border: 1px solid #bee5cf;
+        color: #007a4d;
+        margin-left: .4rem;
+    }
 </style>
 }
 
@@ -504,6 +573,24 @@
                 @Model.TypeLabel
             </div>
             <h1 class="detail-title">@Model.ProjectNaam</h1>
+            @if (Model.BronnenLijst.Any())
+            {
+                <div class="mb-2">
+                    @foreach (var bron in Model.BronnenLijst.Select(b => b.BronNaam).Where(n => n != "").Distinct().OrderBy(n => n))
+                    {
+                        var bronClass = bron.ToLowerInvariant() switch {
+                            "immoweb" => "bron-immoweb",
+                            "zimmo"   => "bron-zimmo",
+                            _         => "bron-other"
+                        };
+                        <span class="bron-badge @bronClass">@bron</span>
+                    }
+                    @if (Model.HeeftDuplicaten)
+                    {
+                        <span class="text-muted" style="font-size:.8rem;">@Model.TotaalUnits units uit @Model.AantalBronnen bronprojecten</span>
+                    }
+                </div>
+            }
             <div class="detail-meta">
                 @if (!string.IsNullOrEmpty(Model.Straat))
                 {
@@ -634,10 +721,35 @@
     </div>
 }
 
+<!-- Tab navigatie -->
+<ul class="nav detail-nav-tabs" id="detailTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="tab-units-link" data-bs-toggle="tab" href="#tab-units" role="tab">
+            <i class="bx bx-grid-alt me-1"></i>Units
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="tab-bronnen-link" data-bs-toggle="tab" href="#tab-bronnen" role="tab">
+            <i class="bx bx-link me-1"></i>Bronnen
+            @if (Model.HeeftDuplicaten)
+            {
+                <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">@Model.AantalBronnen</span>
+            }
+        </a>
+    </li>
+</ul>
+
+<div class="tab-content">
+
+<!-- Tab: Units -->
+<div class="tab-pane fade show active" id="tab-units" role="tabpanel">
+
 <!-- Units tabel -->
 <div class="units-card">
     <div class="units-toolbar">
         <span class="units-count">@Model.TotaalUnits unit@(Model.TotaalUnits == 1 ? "" : "s")</span>
+        @if (!Model.HeeftCanonicalUnits)
+        {
         <div class="units-toolbar-right">
             <div class="d-flex align-items-center gap-2">
                 <label for="unitPageLength" class="form-label mb-0 small text-muted">Toon</label>
@@ -653,9 +765,143 @@
                 <input id="unitSearch" type="text" class="form-control form-control-sm" placeholder="Zoek unit...">
             </div>
         </div>
+        }
     </div>
 
     <div class="table-responsive">
+@if (Model.HeeftCanonicalUnits)
+{
+        <table id="tblCanonicalUnits" class="table table-units w-100">
+            <thead>
+                <tr>
+                    <th>Unit</th>
+                    <th>Type</th>
+                    <th class="text-end">Verdieping</th>
+                    <th class="text-end">Oppervlakte</th>
+                    <th class="text-end">Slaapkamers</th>
+                    <th class="text-end">Vraagprijs</th>
+                    <th class="text-end">Prijs/m²</th>
+                    <th>Status</th>
+                    <th>Bronnen</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cu in Model.CanonicalUnits)
+                {
+                    var cuStatusClass = cu.Status.ToLowerInvariant() switch
+                    {
+                        "verkocht"    => "status-verkocht",
+                        "gereserveerd"=> "status-gereserveerd",
+                        "optie"       => "status-optie",
+                        _             => "status-beschikbaar"
+                    };
+                    var cuTypeClass = cu.TypeLabel == "Woning" ? "type-house" : "type-apartment";
+                    var cuRowId = $"cu-detail-{cu.Id}";
+
+                    <tr class="cu-row @(cu.AantalBronnen > 1 ? "cu-has-sources" : "")"
+                        @(cu.AantalBronnen > 1 ? $"data-bs-toggle=\"collapse\" data-bs-target=\"#{cuRowId}\" style=\"cursor:pointer;\"" : "")>
+                        <td class="unit-name">
+                            @cu.Titel
+                            @if (cu.IsAmbiguous)
+                            {
+                                <span class="badge bg-warning text-dark ms-1" style="font-size:.62rem;" title="Meerdere even goede matches — niet automatisch samengevoegd">?</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="type-pill @cuTypeClass">
+                                <i class="bx @(cu.TypeLabel == "Woning" ? "bx-home" : "bx-building-house")"></i>
+                                @cu.TypeLabel
+                            </span>
+                        </td>
+                        <td class="text-end">@(cu.Verdieping.HasValue ? (cu.Verdieping.Value == 0 ? "Gelijkvloers" : $"V{cu.Verdieping.Value}") : "—")</td>
+                        <td class="text-end">@(cu.Oppervlakte.HasValue ? cu.Oppervlakte.Value.ToString("N0") + " m²" : "—")</td>
+                        <td class="text-end">@(cu.Slaapkamers.HasValue ? cu.Slaapkamers.Value.ToString() : "—")</td>
+                        <td class="text-end">
+                            @(cu.Vraagprijs.HasValue ? "€ " + cu.Vraagprijs.Value.ToString("N0") : "—")
+                            @if (cu.HeeftPrijsConflict) { <i class="bx bx-error-circle text-warning ms-1" title="Prijsconflict tussen bronnen"></i> }
+                        </td>
+                        <td class="text-end">@(cu.PrijsPerM2.HasValue ? "€ " + cu.PrijsPerM2.Value.ToString("N0") + "/m²" : "—")</td>
+                        <td>
+                            <span class="status-dot @cuStatusClass">@cu.Status</span>
+                            @if (cu.HeeftStatusConflict) { <i class="bx bx-error-circle text-warning ms-1" title="Statusconflict tussen bronnen"></i> }
+                        </td>
+                        <td>
+                            @foreach (var bron in cu.Bronnen)
+                            {
+                                var bClass = bron.BronNaam.ToLowerInvariant() switch {
+                                    "immoweb" => "bron-immoweb",
+                                    "zimmo"   => "bron-zimmo",
+                                    _         => "bron-other"
+                                };
+                                <span class="bron-badge @bClass @(bron.IsRepresentatief ? "bron-primary" : "")">@bron.BronNaam</span>
+                            }
+                            @if (cu.AantalBronnen > 1) { <i class="bx bx-chevron-down ms-1 small text-muted"></i> }
+                        </td>
+                    </tr>
+                    @if (cu.AantalBronnen > 1)
+                    {
+                        <tr class="collapse" id="@cuRowId">
+                            <td colspan="9" class="p-0">
+                                <table class="table table-sm mb-0 cu-source-table">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Bron</th>
+                                            <th class="text-end">Vraagprijs</th>
+                                            <th class="text-end">Oppervlakte</th>
+                                            <th>Status</th>
+                                            <th>Match</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var bron in cu.Bronnen)
+                                        {
+                                            var bClass2 = bron.BronNaam.ToLowerInvariant() switch {
+                                                "immoweb" => "bron-immoweb",
+                                                "zimmo"   => "bron-zimmo",
+                                                _         => "bron-other"
+                                            };
+                                            <tr>
+                                                <td>
+                                                    <span class="bron-badge @bClass2">@bron.BronNaam</span>
+                                                    @if (bron.IsLosseAdvertentie)
+                                                    {
+                                                        <span class="badge ms-1" style="background:#fff4e5;border:1px solid #ffd591;color:#b26a00;font-size:.62rem;">losse advertentie</span>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(bron.Url)) {
+                                                        <a href="@bron.Url" target="_blank" rel="noopener" class="ms-1 small"><i class="bx bx-link-external"></i></a>
+                                                    }
+                                                </td>
+                                                <td class="text-end">@(bron.Vraagprijs.HasValue ? "€ " + bron.Vraagprijs.Value.ToString("N0") : "—")</td>
+                                                <td class="text-end">@(bron.Oppervlakte.HasValue ? bron.Oppervlakte.Value.ToString("N0") + " m²" : "—")</td>
+                                                <td>@(bron.Status ?? "—")</td>
+                                                <td><span class="match-badge match-@bron.MatchLevel.ToLowerInvariant()">@bron.MatchLevel</span></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </td>
+                        </tr>
+                    }
+                }
+                @if (Model.CanonicalUnits.Count > 0)
+                {
+                    <tr class="totaal-row">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-end">@(totOpp.HasValue ? totOpp.Value.ToString("N0") + " m²" : "—")</td>
+                        <td class="text-end">—</td>
+                        <td class="text-end">@(totPrijs.HasValue ? "€ " + totPrijs.Value.ToString("N0") : "—")</td>
+                        <td class="text-end">@(totPpSqm.HasValue ? "€ " + totPpSqm.Value.ToString("N0") + "/m²" : "—")</td>
+                        <td>@Model.VerkochteUnits/@Model.TotaalUnits verkocht</td>
+                        <td></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+}
+else
+{
         <table id="tblUnits" class="table table-units w-100">
             <thead>
                 <tr>
@@ -666,6 +912,10 @@
                     <th class="text-end">Vraagprijs</th>
                     <th class="text-end">Prijs/m²</th>
                     <th>Status</th>
+                    @if (Model.HeeftDuplicaten)
+                    {
+                        <th>Bron</th>
+                    }
                 </tr>
             </thead>
             <tbody>
@@ -694,24 +944,124 @@
                         <td class="text-end">@(u.Vraagprijs.HasValue ? "€ " + u.Vraagprijs.Value.ToString("N0") : "—")</td>
                         <td class="text-end">@(u.PrijsPerM2.HasValue ? "€ " + u.PrijsPerM2.Value.ToString("N0") + "/m²" : "—")</td>
                         <td><span class="status-dot @statusClass">@u.Status</span></td>
+                        @if (Model.HeeftDuplicaten)
+                        {
+                            var uBronClass = (u.BronNaam ?? "").ToLowerInvariant() switch {
+                                "immoweb" => "bron-immoweb",
+                                "zimmo"   => "bron-zimmo",
+                                _         => "bron-other"
+                            };
+                            <td>@if (!string.IsNullOrEmpty(u.BronNaam)) {<span class="bron-badge @uBronClass">@u.BronNaam</span>}</td>
+                        }
                     </tr>
                 }
                 @if (Model.Units.Count > 0)
                 {
-
                     <tr class="totaal-row">
-                        <td colspan="2">Totaal / gemiddeld</td>
+                        <td>Totaal / gemiddeld</td>
+                        <td></td>
                         <td class="text-end">@(totOpp.HasValue? totOpp.Value.ToString("N0") + " m²" : "—")</td>
                         <td class="text-end">—</td>
                         <td class="text-end">@(totPrijs.HasValue ? "€ " + totPrijs.Value.ToString("N0") : "—")</td>
                         <td class="text-end">@(totPpSqm.HasValue ? "€ " + totPpSqm.Value.ToString("N0") + "/m²" : "—")</td>
                         <td>@Model.VerkochteUnits/@Model.TotaalUnits verkocht</td>
+                        @if (Model.HeeftDuplicaten)
+                        {
+                            <td></td>
+                        }
                     </tr>
-            }
+                }
             </tbody>
         </table>
+}
     </div>
 </div>
+
+</div>@* /tab-pane units *@
+
+<!-- Tab: Bronnen -->
+<div class="tab-pane fade" id="tab-bronnen" role="tabpanel">
+@if (Model.BronnenLijst.Any())
+{
+    <div class="bronnen-card">
+        <div class="bronnen-card-header">
+            <i class="bx bx-link-alt"></i>
+            Bronnen (@Model.AantalBronnen)
+        </div>
+        <div class="table-responsive">
+            <table class="table table-units w-100 mb-0">
+                <thead>
+                    <tr>
+                        <th>Bron</th>
+                        <th>Titel</th>
+                        <th>Adres</th>
+                        <th>Ontwikkelaar</th>
+                        <th class="text-end">Units</th>
+                        <th class="text-end">Beschikbaar</th>
+                        <th class="text-end">Verkocht</th>
+                        <th>Laatste update</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var bron in Model.BronnenLijst)
+                    {
+                        var bronClass = bron.BronNaam.ToLowerInvariant() switch {
+                            "immoweb" => "bron-immoweb",
+                            "zimmo"   => "bron-zimmo",
+                            _         => "bron-other"
+                        };
+                        <tr>
+                            <td>
+                                <span class="bron-badge @bronClass">@bron.BronNaam</span>
+                                @if (bron.IsPrimary)
+                                {
+                                    <span class="primary-badge">Primair</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(bron.Url))
+                                {
+                                    <a href="@bron.Url" target="_blank" rel="noopener" class="text-primary">
+                                        @(bron.Title ?? bron.ExternalId ?? "—")
+                                    </a>
+                                }
+                                else
+                                {
+                                    @(bron.Title ?? bron.ExternalId ?? "—")
+                                }
+                            </td>
+                            <td class="text-muted" style="font-size:.8rem;">@(bron.Adres ?? "—")</td>
+                            <td>@(bron.DeveloperNaam ?? "—")</td>
+                            <td class="text-end">@bron.UnitCount</td>
+                            <td class="text-end text-success fw-bold">@bron.AvailableCount</td>
+                            <td class="text-end text-muted">@bron.SoldCount</td>
+                            <td>@(bron.LastSeenAt.HasValue ? bron.LastSeenAt.Value.ToString("dd/MM/yyyy") : "—")</td>
+                            <td class="text-end">
+                                @if (!string.IsNullOrEmpty(bron.Url))
+                                {
+                                    <a href="@bron.Url" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">
+                                        <i class="bx bx-link-external"></i>
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info mt-2">
+        <i class="bx bx-info-circle me-1"></i>
+        Geen brongegevens beschikbaar voor dit project.
+    </div>
+}
+</div>@* /tab-pane bronnen *@
+
+</div>@* /tab-content *@
 
 @section PageScripts {
     <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
@@ -720,37 +1070,42 @@
 
     <script>
               $(function () {
-            var dt = $('#tblUnits').DataTable({
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json'
-                },
-                order: [[0, 'asc']],
-                pageLength: 10,
-                dom: 'rt<"row align-items-center px-3 py-3"<"col-md-6"i><"col-md-6 d-flex justify-content-end"p>>',
-                columnDefs: [
-                    { orderable: false, targets: -1 }
-                ]
-            });
+            // DataTables only initialised on the source-units table (#tblUnits).
+            // The canonical units table (#tblCanonicalUnits) uses plain Bootstrap collapse
+            // and must NOT be wrapped in DataTables (colspan in detail rows would crash it).
+            if ($('#tblUnits').length) {
+                var dt = $('#tblUnits').DataTable({
+                    language: {
+                        url: 'https://cdn.datatables.net/plug-ins/2.0.8/i18n/nl-NL.json'
+                    },
+                    order: [[0, 'asc']],
+                    pageLength: 10,
+                    dom: 'rt<"row align-items-center px-3 py-3"<"col-md-6"i><"col-md-6 d-flex justify-content-end"p>>',
+                    columnDefs: [
+                        { orderable: false, targets: -1 }
+                    ]
+                });
 
-            $('#unitSearch').on('input', function () {
-                dt.search(this.value).draw();
-            });
+                $('#unitSearch').on('input', function () {
+                    dt.search(this.value).draw();
+                });
 
-            $('#unitPageLength').on('change', function () {
-                dt.page.len(parseInt(this.value, 10)).draw();
-            });
+                $('#unitPageLength').on('change', function () {
+                    dt.page.len(parseInt(this.value, 10)).draw();
+                });
+
+                function stylePaginationIcons() {
+                    $('.paginate_button.previous .page-link').html('<i class="bx bx-chevron-left"></i>');
+                    $('.paginate_button.next .page-link').html('<i class="bx bx-chevron-right"></i>');
+                }
+
+                stylePaginationIcons();
+                dt.on('draw', stylePaginationIcons);
+            }
 
             $('#projectSwitcher').on('change', function () {
                 if (this.value) window.location.href = this.value;
             });
-
-            function stylePaginationIcons() {
-                $('.paginate_button.previous .page-link').html('<i class="bx bx-chevron-left"></i>');
-                $('.paginate_button.next .page-link').html('<i class="bx bx-chevron-right"></i>');
-            }
-
-            stylePaginationIcons();
-            dt.on('draw', stylePaginationIcons);
         });
     </script>
 }

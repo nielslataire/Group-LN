@@ -17,24 +17,25 @@ public class MarktanalyseController : Controller
         _svc = svc;
     }
 
-    // GET /Marktanalyse/Gemeenteanalyse?geoMunicipalityId=1&geoMunicipalSectionId=5&type=Alles&aanbodtype=Alles
+    // GET /Marktanalyse/Gemeenteanalyse?geoMunicipalityId=1&geoMunicipalSectionId=5&type=Alles&aanbodtype=Alles&toonGekoppeld=false
     public async Task<IActionResult> Gemeenteanalyse(
-        int? geoMunicipalityId = null,
+        int? geoMunicipalityId     = null,
         int? geoMunicipalSectionId = null,
-        string type = "Alles",
-        string aanbodtype = "Alles",
-        CancellationToken ct = default)
+        string type                = "Alles",
+        string aanbodtype          = "Alles",
+        bool toonGekoppeld         = false,
+        CancellationToken ct       = default)
     {
         var locaties = await _svc.GetLocatiesAsync(ct);
 
         GemeenteAnalyseViewModel vm;
         if (!geoMunicipalityId.HasValue && !geoMunicipalSectionId.HasValue)
         {
-            vm = new GemeenteAnalyseViewModel { GeselecteerdType = type, GeselecteerdAanbodtype = aanbodtype };
+            vm = new GemeenteAnalyseViewModel { GeselecteerdType = type, GeselecteerdAanbodtype = aanbodtype, ToonGekoppeld = toonGekoppeld };
         }
         else
         {
-            vm = await _svc.GetGemeenteAnalyseAsync(geoMunicipalityId, geoMunicipalSectionId, type, aanbodtype, ct);
+            vm = await _svc.GetGemeenteAnalyseAsync(geoMunicipalityId, geoMunicipalSectionId, type, aanbodtype, toonGekoppeld, ct);
         }
 
         vm.Locaties = locaties;
@@ -42,9 +43,24 @@ public class MarktanalyseController : Controller
     }
 
     // GET /Marktanalyse/VergelijkbarePanden
-    public IActionResult VergelijkbarePanden()
+    public async Task<IActionResult> VergelijkbarePanden(
+        [FromQuery] List<int> gemeenteIds,
+        string? rondAdresPostcode      = null,
+        int    rondAdresStraal         = 1000,
+        string type                    = "Appartement",
+        decimal? oppervlakte           = null,
+        int    tolerantie              = 10,
+        decimal? prijsMin              = null,
+        decimal? prijsMax              = null,
+        int?   slaapkamers             = null,
+        string status                  = "Alles",
+        CancellationToken ct           = default)
     {
-        return View();
+        var vm = await _svc.GetVergelijkbarePandenAsync(
+            gemeenteIds, rondAdresPostcode, rondAdresStraal,
+            type, oppervlakte, tolerantie, prijsMin, prijsMax,
+            slaapkamers, status, ct);
+        return View(vm);
     }
 
     // GET /Marktanalyse/Projectdetail/5

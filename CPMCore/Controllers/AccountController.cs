@@ -1,6 +1,8 @@
 ﻿using CPMCore.Helpers;
 using CPMCore.Models;
+using CPMCore.Models.Account;
 using DALCore.Models;
+using FacadeCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -14,10 +16,12 @@ namespace CPMCore.Controllers;
 public class AccountController : BaseController
 {
     private readonly cpmRunningContext _db;
+    private readonly IUserSignatureService _userSignatureService;
 
-    public AccountController(cpmRunningContext db)
+    public AccountController(cpmRunningContext db, IUserSignatureService userSignatureService)
     {
         _db = db;
+        _userSignatureService = userSignatureService;
     }
     [AllowAnonymous]
     [HttpGet]
@@ -93,5 +97,39 @@ public class AccountController : BaseController
         }
 
         return Redirect(Url.Content("~/img/!logged-user.jpg"));
+    }
+
+    [HttpGet]
+    public IActionResult MijnHandtekening()
+    {
+        var userId = User.GetCpmUserId();
+        if (userId == null)
+            return Forbid();
+
+        var result = _userSignatureService.GetByUserId(userId.Value);
+        var vm = new MijnHandtekeningVM
+        {
+            SignatureHtml = result.Value?.SignatureHtml,
+            Format = string.IsNullOrWhiteSpace(result.Value?.SignatureFormat) ? "Visual" : result.Value.SignatureFormat
+        };
+        return View(vm);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public IActionResult MijnHandtekening(MijnHandtekeningVM vm)
+    {
+        var userId = User.GetCpmUserId();
+        if (userId == null)
+            return Forbid();
+
+        var response = _userSignatureService.Save(userId.Value, vm.SignatureHtml ?? string.Empty, vm.Format);
+
+        if (response.HasErrors)
+            AddMessage("error", "Handtekening kon niet opgeslagen worden.", "Fout");
+        else
+            AddMessage("success", "Handtekening opgeslagen.", "Opgeslagen");
+
+        return RedirectToAction(nameof(MijnHandtekening));
     }
 }

@@ -30,6 +30,7 @@ Public Class RouteConfig
                                 configuration.AttributeRouteProcessing = AttributeRouteProcessing.AddAsNeutralAndDefaultCultureRoute
                                 configuration.AddCultureAsRoutePrefix = False
                                 configuration.AddTranslationToSimiliarUrls = True
+                                configuration.ValidateURL = False
                             End Function).TranslateInitialAttributeRoutes().Translate(Function(localization1)
                                                                                           localization1.AddRoutesTranslation()
                                                                                       End Function)

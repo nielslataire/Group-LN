@@ -975,6 +975,25 @@ namespace CPMCore.Models.Projecten
         public string LatestStatus { get; set; }
         public string LatestStatusComment { get; set; }
         public DateTime? LatestStatusAt { get; set; }
+        public DateTime? LastEmailSentAt { get; set; }
+        public string LastEmailSentBy { get; set; }
+    }
+
+    public class SendContactEmailModalVM
+    {
+        public int ProjectId { get; set; }
+        public string Email { get; set; }
+        public string Fullname { get; set; }
+        public List<SelectListItem> Templates { get; set; } = new();
+    }
+
+    public class SendContactEmailInputModel
+    {
+        public int ProjectId { get; set; }
+        public string Email { get; set; }
+        public string Fullname { get; set; }
+        public int TemplateId { get; set; }
+        public bool IncludeSignature { get; set; }
     }
 
     public class ContactStatsModel

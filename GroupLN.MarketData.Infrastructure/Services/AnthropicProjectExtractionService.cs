@@ -56,8 +56,8 @@ public class AnthropicProjectExtractionService : IAiProjectExtractionService
             return MapCachedResult(cached);
         }
 
-        // Limiet per run
-        if (_extractionsThisRun >= ai.MaxAiExtractionsPerRun)
+        // Limiet per run (0 = onbeperkt)
+        if (ai.MaxAiExtractionsPerRun > 0 && _extractionsThisRun >= ai.MaxAiExtractionsPerRun)
         {
             _logger.LogInformation("[AI] MaxAiExtractionsPerRun ({Max}) bereikt — {Id} overgeslagen.",
                 ai.MaxAiExtractionsPerRun, input.ExternalId);
@@ -160,8 +160,9 @@ public class AnthropicProjectExtractionService : IAiProjectExtractionService
         var requestBody = new
         {
             model      = ai.AnthropicModel,
+            system     = BuildSystemPrompt(),
             max_tokens = 1024,
-            messages   = new[] { new { role = "user", content = BuildPrompt(input) } }
+            messages   = new[] { new { role = "user", content = BuildUserContent(input) } }
         };
 
         var content = new StringContent(
@@ -208,49 +209,186 @@ public class AnthropicProjectExtractionService : IAiProjectExtractionService
         return responseBody;
     }
 
-    private static string BuildPrompt(AiProjectExtractionInput input)
+    private static string BuildSystemPrompt() => """
+        Je bent een gespecialiseerde AI voor Belgische nieuwbouwprojecten.
+
+        Je taak is om uit ALLE beschikbare gegevens de commerciële projectnaam en de belangrijkste projectgegevens van een nieuwbouwproject te extraheren.
+
+        Gebruik hiervoor alle informatie die je krijgt, waaronder (indien beschikbaar):
+
+        - RawTitle
+        - MetaTitle
+        - OpenGraphTitle
+        - H1
+        - H2
+        - H3
+        - volledige bodytekst
+        - projectbeschrijving
+        - unit tabel
+        - adres
+        - ontwikkelaar
+        - meta description
+        - structured data (JSON-LD)
+        - alle overige tekst op de pagina
+
+        Gebruik NOOIT slechts één veld wanneer andere informatie beschikbaar is.
+
+        ==========================================================
+        PROJECTNAAM
+        ==========================================================
+
+        Zoek de commerciële naam waarmee het project door de ontwikkelaar of makelaar wordt aangeboden.
+
+        Dat is NIET noodzakelijk een expliciet voorafgegaan woord zoals:
+
+        - Residentie
+        - Woonproject
+        - Nieuwbouwproject
+        - Project
+
+        Deze woorden mogen voorkomen maar zijn geen vereiste.
+
+        De projectnaam mag dus perfect zijn:
+
+        Weylerhof
+        Karmel
+        Linum Park
+        Villa Cauxyde
+        De Kroon
+        De Berk
+        't Molenhof
+        Hof ter Linden
+
+        Wanneer de titel bijvoorbeeld "Residentie Weylerhof" is,
+        geef als projectnaam:
+
+        "Weylerhof"
+
+        Wanneer de titel "Project Karmel" is,
+        geef:
+
+        "Karmel"
+
+        Wanneer de titel gewoon "Weylerhof" is,
+        geef:
+
+        "Weylerhof"
+
+        Wanneer de titel "Villa Cauxyde" is,
+        geef:
+
+        "Villa Cauxyde"
+
+        ==========================================================
+        GEEN PROJECTNAAM
+        ==========================================================
+
+        Gebruik NOOIT als projectnaam:
+
+        - straatnamen
+        - gemeenten
+        - postcodes
+        - woningtypes
+        - marketingzinnen
+        - prijszinnen
+
+        Voorbeelden:
+
+        "Vier eigentijdse woningen"
+
+        "Appartementen vanaf € ..."
+
+        "Nieuwbouw te koop"
+
+        "Theresianenstraat 17"
+
+        "Brugge"
+
+        "Appartement"
+
+        Dit zijn GEEN projectnamen.
+
+        ==========================================================
+        BELANGRIJK
+        ==========================================================
+
+        Wanneer meerdere bronnen elkaar tegenspreken:
+
+        Gebruik de naam die:
+
+        1. het vaakst voorkomt;
+        2. het meest duidelijk als commerciële naam gebruikt wordt;
+        3. door een normale koper als projectnaam herkend zou worden.
+
+        De projectnaam hoeft dus NIET letterlijk voorafgegaan te worden door "Residentie" of "Project".
+
+        ==========================================================
+        CONFIDENCE
+        ==========================================================
+
+        95-100
+        De projectnaam staat duidelijk op meerdere plaatsen.
+
+        80-94
+        De projectnaam staat duidelijk minstens één keer vermeld.
+
+        60-79
+        Sterke aanwijzingen maar niet volledig zeker.
+
+        0
+        Geen commerciële projectnaam gevonden.
+
+        ==========================================================
+        KIES CORRECTE NAAM
+        ==========================================================
+
+        Kies liever een correcte commerciële projectnaam dan null.
+
+        Gebruik uitsluitend null wanneer de volledige pagina enkel een adres of generieke marketingtekst bevat en er werkelijk geen commerciële projectnaam kan worden afgeleid.
+
+        ==========================================================
+        OUTPUT
+        ==========================================================
+
+        Geef uitsluitend geldige JSON terug.
+        Geen markdown.
+        Geen uitleg.
+        Geen extra tekst.
+
+        {
+          "projectName": "commerciële projectnaam of null",
+          "projectNameConfidence": 0-100,
+          "isMarketingTitle": true/false,
+          "street": "straatnaam of null",
+          "houseNumber": "huisnummer of null",
+          "postalCode": "postcode of null",
+          "city": "gemeente of null",
+          "developer": "naam promotor of null",
+          "numberOfUnits": geheel getal of null,
+          "reasoningShort": "max 1 zin uitleg"
+        }
+        """;
+
+    private static string BuildUserContent(AiProjectExtractionInput input)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("Analyseer de volgende gegevens van een Belgisch nieuwbouwproject en geef UITSLUITEND geldig JSON terug (geen markdown, geen extra tekst).");
+        sb.AppendLine("Analyseer de volgende gegevens:");
         sb.AppendLine();
         if (!string.IsNullOrEmpty(input.RawTitle))        sb.AppendLine($"RawTitle: {input.RawTitle}");
-        if (!string.IsNullOrEmpty(input.OgTitle))         sb.AppendLine($"OgTitle: {input.OgTitle}");
+        if (!string.IsNullOrEmpty(input.OgTitle))         sb.AppendLine($"OpenGraphTitle: {input.OgTitle}");
         if (!string.IsNullOrEmpty(input.MetaTitle))       sb.AppendLine($"MetaTitle: {input.MetaTitle}");
         if (!string.IsNullOrEmpty(input.MetaDescription)) sb.AppendLine($"MetaDescription: {input.MetaDescription}");
+        if (!string.IsNullOrEmpty(input.H1))              sb.AppendLine($"H1: {input.H1}");
+        if (!string.IsNullOrEmpty(input.H2))              sb.AppendLine($"H2: {input.H2}");
+        if (!string.IsNullOrEmpty(input.H3))              sb.AppendLine($"H3: {input.H3}");
         if (!string.IsNullOrEmpty(input.Address))         sb.AppendLine($"Address: {input.Address}");
         if (!string.IsNullOrEmpty(input.Developer))       sb.AppendLine($"Developer: {input.Developer}");
+        if (!string.IsNullOrEmpty(input.UnitTableText))
+            sb.AppendLine($"UnitTabel: {input.UnitTableText[..Math.Min(2000, input.UnitTableText.Length)]}");
+        if (!string.IsNullOrEmpty(input.StructuredData))
+            sb.AppendLine($"StructuredData (JSON-LD): {input.StructuredData[..Math.Min(2000, input.StructuredData.Length)]}");
         if (!string.IsNullOrEmpty(input.BodyText))
-            sb.AppendLine($"BodyText (eerste 1000 tekens): {input.BodyText[..Math.Min(1000, input.BodyText.Length)]}");
-
-        sb.AppendLine();
-        sb.AppendLine("""
-            PRIORITEIT 1 – Expliciete projectnamen:
-            Zoek EERST naar woorden/zinnen die expliciet een projectnaam benoemen, bijv.:
-              "Residentie [Naam]", "het project [Naam]", "Woonproject [Naam]",
-              "Nieuwbouwproject [Naam]", "Site [Naam]", "Domein [Naam]",
-              "Verkaveling [Naam]", "Appartementscomplex [Naam]", "Gebouw [Naam]".
-            Gebruik die naam letterlijk als projectName.
-
-            PRIORITEIT 2 – Geen expliciete naam gevonden:
-            Als er GEEN expliciete projectnaam in de tekst staat, geef dan "projectName": null terug.
-            Verzin NOOIT een creatieve naam op basis van de locatie of beschrijving.
-            Een zelf bedachte naam is altijd slechter dan null.
-
-            Geef terug:
-            {
-              "projectName": "officiële naam van het project of null",
-              "projectNameConfidence": 0-100,
-              "isMarketingTitle": true/false,
-              "street": "straatnaam of null",
-              "houseNumber": "huisnummer of null",
-              "postalCode": "postcode of null",
-              "city": "gemeente of null",
-              "developer": "naam promotor of null",
-              "numberOfUnits": geheel getal of null,
-              "reasoningShort": "max 1 zin uitleg"
-            }
-            """);
-
+            sb.AppendLine($"BodyText: {input.BodyText[..Math.Min(3000, input.BodyText.Length)]}");
         return sb.ToString();
     }
 
@@ -378,6 +516,7 @@ public class AnthropicProjectExtractionService : IAiProjectExtractionService
             input.SourceName, input.ExternalId,
             input.RawTitle ?? "", input.OgTitle ?? "", input.MetaTitle ?? "",
             input.MetaDescription ?? "",
+            input.H1 ?? "", input.H2 ?? "", input.H3 ?? "",
             (input.BodyText ?? "")[..Math.Min(500, (input.BodyText ?? "").Length)]);
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(combined)));

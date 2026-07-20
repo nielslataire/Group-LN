@@ -128,6 +128,12 @@ namespace ServiceCore
             entity.GeoRegio          = bo.GeoRegio;
             entity.GeoPlaatsnaam     = bo.GeoPlaatsnaam;
             entity.GeoPositie        = bo.GeoPositie;
+            entity.Link1Type         = bo.Link1Type;
+            entity.Link1Id           = bo.Link1Id;
+            entity.Link2Type         = bo.Link2Type;
+            entity.Link2Id           = bo.Link2Id;
+            entity.Link3Type         = bo.Link3Type;
+            entity.Link3Id           = bo.Link3Id;
             entity.GewijzigdOp       = DateTime.Now;
 
             var result = _uow.SaveChangesAsync().GetAwaiter().GetResult();
@@ -314,7 +320,13 @@ namespace ServiceCore
                 MetaKeywords     = e.MetaKeywords,
                 GeoRegio         = e.GeoRegio,
                 GeoPlaatsnaam    = e.GeoPlaatsnaam,
-                GeoPositie       = e.GeoPositie
+                GeoPositie       = e.GeoPositie,
+                Link1Type        = e.Link1Type,
+                Link1Id          = e.Link1Id,
+                Link2Type        = e.Link2Type,
+                Link2Id          = e.Link2Id,
+                Link3Type        = e.Link3Type,
+                Link3Id          = e.Link3Id
             };
 
             if (inclBlokken && e.Blokken != null)

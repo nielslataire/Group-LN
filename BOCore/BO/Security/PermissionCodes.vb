@@ -53,6 +53,7 @@ Public NotInheritable Class PermissionCodes
     Public Const SettingsKostprijsMaterialen As String = "Settings.KostprijsMaterialen"
     Public Const SettingsWebsite As String = "Settings.Website"
     Public Const SettingsBlogBeheer As String = "Settings.BlogBeheer"
+    Public Const SettingsEmailTemplates As String = "Settings.EmailTemplates"
     Public Const SettingsAutomatisatie As String = "Settings.Automatisatie"
     Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"
 

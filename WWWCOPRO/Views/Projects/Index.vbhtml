@@ -18,6 +18,8 @@
     Dim fpHouses As Integer = If(fpSales IsNot Nothing, fpSales.NumberHouses, 0)
     Dim fpComm As Integer = If(fpSales IsNot Nothing, fpSales.NumberCommercial, 0)
     Dim fpLivingUnits As Integer = If(fpSales IsNot Nothing, fpSales.LivingUnits, 0)
+    Dim fpLivingUnitsSold As Integer = If(fpSales IsNot Nothing, fpSales.LivingUnitsSold, 0)
+    Dim fpLivingUnitsBeschikbaar As Integer = fpLivingUnits - fpLivingUnitsSold
     Dim fpPercentageSold As Decimal = If(fpSales IsNot Nothing, fpSales.PercentageLivingUnitsSold, 0D)
     Dim fpSaleVisible As Boolean = If(fpSettings IsNot Nothing, fpSettings.SaleVisible, True)
     Dim fpExplicitStatus As Integer? = If(fpSettings IsNot Nothing AndAlso fpSettings.SalesDisplayStatus.HasValue, fpSettings.SalesDisplayStatus, Nothing)
@@ -81,7 +83,7 @@ end section
     </div>
 </section>
 
-<div class="container" style="padding-top: 48px; padding-bottom: 64px;">
+<div class="container" style="padding-top: 12px; padding-bottom: 64px;">
 
     @If Not Model.Projects.Any() Then
         @<text>
@@ -94,7 +96,7 @@ end section
     @If fp IsNot Nothing Then
         @<text>
             <div class="sectie-kop">Uitgelicht project</div>
-            <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = fp.Slug}))" class="uitgelicht-project">
+            <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = fp.Slug}))" class="uitgelicht-project">
                 <div class="uitgelicht-foto">
                     @If fpIsVideo Then
                         @<video src="@fpVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -110,6 +112,16 @@ end section
                         @<text><span class="uitgelicht-foto-badge uitgelicht-foto-badge-binnenkort">Binnenkort</span></text>
                     ElseIf fpIsLancering Then
                         @<text><span class="uitgelicht-foto-badge uitgelicht-foto-badge-lancering">Lancering</span></text>
+                    End If
+                    @If fpPercentageSold >= 50 AndAlso Not fpIsUitverkocht AndAlso Not fpIsBinnenkort Then
+                        Dim fpPercentageSoldRounded As Integer = Math.Min(100, CInt(Math.Round(fpPercentageSold)))
+                        @<text>
+                            <div class="uitgelicht-verkocht-badge">
+                                <div class="verkocht-badge-label">Verkocht</div>
+                                <div class="verkocht-badge-value">@fpPercentageSoldRounded%</div>
+                                <div class="verkocht-badge-bar"><div class="verkocht-badge-bar-fill" style="width:@(fpPercentageSoldRounded)%"></div></div>
+                            </div>
+                        </text>
                     End If
                 </div>
                 <div class="uitgelicht-info">
@@ -174,6 +186,14 @@ end section
                             </div>
                         </text>
                     End If
+                    @If fpLivingUnitsBeschikbaar > 0 AndAlso Not fpIsUitverkocht AndAlso Not fpIsBinnenkort Then
+                        @<text>
+                            <span class="beschikbaar-pill">
+                                <span class="beschikbaar-dot"></span>
+                                @fpLivingUnitsBeschikbaar @(If(fpLivingUnitsBeschikbaar = 1, "wooneenheid", "wooneenheden")) beschikbaar
+                            </span>
+                        </text>
+                    End If
                     @If fpPrice > 0 Then
                         @<text>
                             <div class="uitgelicht-prijs">
@@ -200,6 +220,8 @@ end section
         Dim sales = Model.SalesData.FirstOrDefault(Function(m) m.ProjectId = project.Id)
         Dim settings = Model.SalesSettings.FirstOrDefault(Function(m) m.ProjectId = project.Id)
         Dim livingUnits As Integer = If(sales IsNot Nothing, sales.LivingUnits, 0)
+        Dim livingUnitsSold As Integer = If(sales IsNot Nothing, sales.LivingUnitsSold, 0)
+        Dim livingUnitsBeschikbaar As Integer = livingUnits - livingUnitsSold
         Dim percentageSold As Decimal = If(sales IsNot Nothing, sales.PercentageLivingUnitsSold, 0D)
         Dim startingPrice As Decimal = If(sales IsNot Nothing, sales.StartingPrice, 0D)
         Dim numberAppartments As Integer = If(sales IsNot Nothing, sales.NumberAppartments, 0)
@@ -315,7 +337,7 @@ end section
             </text>
         Else
             @<text>
-                <a href="@(Url.Action("ProjectBySlug", "Projects", New With {.slug = project.Slug}))" class="project-kaart">
+                <a href="@(Url.RouteUrl("ProjectBySlug", New With {.slug = project.Slug}))" class="project-kaart">
                     <div class="kaart-foto">
                         @If cardIsVideo Then
                             @<video src="@cardVideoSrc" muted loop playsinline data-autoplay="true"></video>
@@ -334,6 +356,16 @@ end section
                             @<text><span class="kaart-foto-badge kaart-foto-badge-nieuw">Nieuw</span></text>
                         ElseIf isLancering Then
                             @<text><span class="kaart-foto-badge kaart-foto-badge-lancering">Lancering</span></text>
+                        End If
+                        @If percentageSold >= 50 AndAlso Not isUitverkocht Then
+                            Dim percentageSoldRounded As Integer = Math.Min(100, CInt(Math.Round(percentageSold)))
+                            @<text>
+                                <div class="kaart-verkocht-badge">
+                                    <div class="verkocht-badge-label">Verkocht</div>
+                                    <div class="verkocht-badge-value">@percentageSoldRounded%</div>
+                                    <div class="verkocht-badge-bar"><div class="verkocht-badge-bar-fill" style="width:@(percentageSoldRounded)%"></div></div>
+                                </div>
+                            </text>
                         End If
                         @If startingPrice > 0 AndAlso Not isUitverkocht Then
                             @<text>
@@ -402,6 +434,14 @@ end section
                                 </text>
                             End If
                         </div>
+                        @If livingUnitsBeschikbaar > 0 AndAlso Not isUitverkocht Then
+                            @<text>
+                                <span class="beschikbaar-pill">
+                                    <span class="beschikbaar-dot"></span>
+                                    @livingUnitsBeschikbaar @(If(livingUnitsBeschikbaar = 1, "wooneenheid", "wooneenheden")) beschikbaar
+                                </span>
+                            </text>
+                        End If
                     </div>
                     <div class="kaart-footer">
                         @If isUitverkocht Then

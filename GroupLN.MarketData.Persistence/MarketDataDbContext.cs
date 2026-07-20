@@ -24,6 +24,10 @@ public class MarketDataDbContext : DbContext
 
     public DbSet<CanonicalProject> CanonicalProjects => Set<CanonicalProject>();
     public DbSet<CanonicalProjectAsset> CanonicalProjectAssets => Set<CanonicalProjectAsset>();
+    public DbSet<CanonicalUnit> CanonicalUnits => Set<CanonicalUnit>();
+    public DbSet<CanonicalUnitAsset> CanonicalUnitAssets => Set<CanonicalUnitAsset>();
+
+    public DbSet<CrawlerSourceStatus> CrawlerSourceStatuses => Set<CrawlerSourceStatus>();
 
     public DbSet<GeocodingCache> GeocodingCaches => Set<GeocodingCache>();
 

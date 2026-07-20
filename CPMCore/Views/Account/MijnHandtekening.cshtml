@@ -1,0 +1,211 @@
+@model CPMCore.Models.Account.MijnHandtekeningVM
+@{
+    ViewData["Title"] = "Mijn handtekening";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var isHtmlFormat = string.Equals(Model.Format, "Html", System.StringComparison.OrdinalIgnoreCase);
+}
+
+@section PageStyle {
+<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
+<link rel="stylesheet" href="~/css/avenir-fonts.css" />
+<style>
+    .quill-wrap { background: #fff; }
+    .quill-wrap .ql-editor { min-height: 180px; max-height: 420px; overflow-y: auto; }
+
+    /* Bewust geen Bootstrap ".card-footer": zie toelichting bij EmailTemplateBeheer. */
+    .mh-card-footer {
+        display: flex;
+        justify-content: flex-end;
+        padding: 14px 20px;
+        border-top: 1px solid #e9ecef;
+        background: #fff;
+        border-radius: 0 0 8px 8px;
+    }
+
+    .mh-html-source {
+        font-family: Consolas, 'Courier New', monospace;
+        font-size: 12.5px;
+        min-height: 220px;
+    }
+    .mh-preview {
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        background: #fff;
+        width: 100%;
+        min-height: 220px;
+    }
+    .mh-hint {
+        font-size: 13px;
+        color: #6c757d;
+        background: #f8fafb;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+    }
+    .mh-hint code { background: #eef2f5; border-radius: 4px; padding: 1px 5px; }
+
+    /* Lettertype-keuze in de Quill-toolbar */
+    .ql-picker.ql-font .ql-picker-label::before,
+    .ql-picker.ql-font .ql-picker-item::before { content: 'Standaard lettertype'; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Arial"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Arial"]::before { content: 'Arial'; font-family: Arial, sans-serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Georgia"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Georgia"]::before { content: 'Georgia'; font-family: Georgia, serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Times New Roman"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Times New Roman"]::before { content: 'Times New Roman'; font-family: 'Times New Roman', serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Courier New"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Courier New"]::before { content: 'Courier New'; font-family: 'Courier New', monospace; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Verdana"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Verdana"]::before { content: 'Verdana'; font-family: Verdana, sans-serif; }
+    .ql-picker.ql-font .ql-picker-label[data-value="Avenir, sans-serif"]::before,
+    .ql-picker.ql-font .ql-picker-item[data-value="Avenir, sans-serif"]::before { content: 'Avenir'; font-family: Avenir, sans-serif; }
+</style>
+}
+
+<div class="mb-4">
+    <h1 class="h3 mb-1">Mijn handtekening</h1>
+    <p class="text-muted mb-0">Deze handtekening kan je optioneel toevoegen onderaan e-mails die je vanuit een projectcontact verstuurt.</p>
+</div>
+
+<form method="post" action="@Url.Action("MijnHandtekening")" id="FormMijnHandtekening">
+    @Html.AntiForgeryToken()
+
+    <div class="card">
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(isHtmlFormat ? "" : "active")" type="button" id="mh-tab-visueel" data-bs-toggle="tab" data-bs-target="#mh-pane-visueel">Visueel</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link @(isHtmlFormat ? "active" : "")" type="button" id="mh-tab-html" data-bs-toggle="tab" data-bs-target="#mh-pane-html">HTML-bron</button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade @(isHtmlFormat ? "" : "show active")" id="mh-pane-visueel" role="tabpanel">
+                    <div id="quill-signature" class="quill-wrap"></div>
+                </div>
+
+                <div class="tab-pane fade @(isHtmlFormat ? "show active" : "")" id="mh-pane-html" role="tabpanel">
+                    <div class="mh-hint">
+                        Plak hier rechtstreeks de HTML-broncode van je Outlook-handtekening (tabellen, logo's, kleuren blijven zo exact behouden &mdash; dit wordt, in tegenstelling tot het Visueel-tabblad, niet vereenvoudigd).
+                        <br />
+                        Tip: Outlook slaat je handtekening lokaal op als bestand (meestal in <code>%APPDATA%\Microsoft\Signatures</code>). Open het <code>.htm</code>-bestand met Kladblok/Notepad en kopieer de volledige inhoud hierheen.
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">HTML</label>
+                            <textarea id="mh-html-source" class="form-control mh-html-source" spellcheck="false">@Model.SignatureHtml</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Voorbeeld</label>
+                            <iframe id="mh-preview" class="mh-preview" title="Voorbeeld handtekening"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <textarea asp-for="SignatureHtml" id="mh-signature-input" class="d-none"></textarea>
+            <input asp-for="Format" id="mh-format-input" type="hidden" />
+        </div>
+        <div class="mh-card-footer">
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save"></i> Opslaan
+            </button>
+        </div>
+    </div>
+</form>
+
+@section PageScripts {
+<script>
+    (function () {
+        var FontAttributor = Quill.import('attributors/style/font');
+        FontAttributor.whitelist = ['Arial', 'Georgia', 'Times New Roman', 'Courier New', 'Verdana', 'Avenir, sans-serif'];
+        Quill.register(FontAttributor, true);
+
+        var toolbarOptions = [
+            [{ 'font': FontAttributor.whitelist }],
+            ['bold', 'italic', 'underline'],
+            [{ 'color': [] }],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['link', 'image'],
+            ['clean']
+        ];
+
+        var quillContainer = document.getElementById('quill-signature');
+        var hiddenInput = document.getElementById('mh-signature-input');
+        var formatInput = document.getElementById('mh-format-input');
+        var htmlSource = document.getElementById('mh-html-source');
+        var preview = document.getElementById('mh-preview');
+
+        var quill = new Quill(quillContainer, { theme: 'snow', modules: { toolbar: toolbarOptions } });
+
+        // Quill-toolbarknoppen zijn <button> zonder type="button": binnen een <form>
+        // gedragen ze zich anders als type="submit", waardoor klikken in de toolbar
+        // het formulier voortijdig zou versturen in plaats van de Opslaan-knop.
+        quillContainer.parentElement.querySelectorAll('.ql-toolbar button, .ql-toolbar .ql-picker-label')
+            .forEach(function (el) { el.setAttribute('type', 'button'); });
+
+        // BELANGRIJK: enkel automatisch inladen in Quill als de handtekening ook via Quill
+        // ("Visual") werd opgeslagen. Quill kan complexe HTML (tabellen, MSO-opmaak van
+        // Outlook-handtekeningen) niet weergeven en vereenvoudigt die zodra de editor de
+        // DOM-inhoud herleest — daardoor zou een geplakte Outlook-handtekening bij het laden
+        // van de pagina stilzwijgend herleid worden tot kale <p>/<br>-tags.
+        var quillHasStoredContent = @(isHtmlFormat ? "false" : "true");
+        if (quillHasStoredContent) {
+            quill.root.innerHTML = hiddenInput.value || '';
+        }
+
+        function updatePreview(html) {
+            preview.srcdoc = html || '<p style="color:#adb5bd;font-family:sans-serif;">(leeg)</p>';
+        }
+
+        quill.on('text-change', function () {
+            if (document.getElementById('mh-pane-visueel').classList.contains('active')) {
+                hiddenInput.value = quill.root.innerHTML;
+            }
+        });
+
+        htmlSource.addEventListener('input', function () {
+            updatePreview(htmlSource.value);
+        });
+
+        // Wisselen van Visueel -> HTML-bron is altijd veilig (loutere weergave als brontekst).
+        document.getElementById('mh-tab-html').addEventListener('shown.bs.tab', function () {
+            if (quillHasStoredContent) {
+                htmlSource.value = quill.root.innerHTML;
+            }
+            updatePreview(htmlSource.value);
+        });
+
+        // Wisselen van HTML-bron -> Visueel kan complexe opmaak (tabellen) vereenvoudigen:
+        // dit gebeurt daarom pas na expliciete bevestiging, nooit automatisch bij het laden.
+        document.getElementById('mh-tab-visueel').addEventListener('shown.bs.tab', function () {
+            if (!quillHasStoredContent) {
+                var akkoord = confirm('Overschakelen naar Visueel kan complexe opmaak (bv. tabellen) uit je geplakte HTML vereenvoudigen. Doorgaan?');
+                if (!akkoord) {
+                    bootstrap.Tab.getOrCreateInstance(document.getElementById('mh-tab-html')).show();
+                    return;
+                }
+                quill.root.innerHTML = htmlSource.value || '';
+                quillHasStoredContent = true;
+            }
+        });
+
+        updatePreview(htmlSource.value);
+
+        document.getElementById('FormMijnHandtekening').addEventListener('submit', function () {
+            var htmlTabActive = document.getElementById('mh-pane-html').classList.contains('active');
+            if (htmlTabActive) {
+                hiddenInput.value = htmlSource.value;
+                formatInput.value = 'Html';
+            } else {
+                hiddenInput.value = quill.root.innerHTML;
+                formatInput.value = 'Visual';
+            }
+        });
+    })();
+</script>
+}

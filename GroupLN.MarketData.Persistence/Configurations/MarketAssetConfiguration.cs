@@ -42,7 +42,10 @@ public class MarketAssetConfiguration : IEntityTypeConfiguration<MarketAsset>
         builder.Property(x => x.IsProjectGroup).HasDefaultValue(false);
         builder.Property(x => x.ProjectExternalId).HasMaxLength(50);
         builder.Property(x => x.UnitExternalId).HasMaxLength(50);
+        builder.Property(x => x.UnitNumber).HasMaxLength(50);
         builder.Property(x => x.SaleStatus).HasConversion<int?>();
+        // LinkedCanonicalUnitId: set when a loose listing is matched to a project canonical unit
+        builder.HasIndex(x => x.LinkedCanonicalUnitId).HasDatabaseName("IX_MarketAsset_LinkedCanonicalUnitId");
 
         // Lifecycle status
         builder.Property(x => x.LifecycleStatus).HasConversion<int>();

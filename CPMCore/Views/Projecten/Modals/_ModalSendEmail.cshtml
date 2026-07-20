@@ -1,0 +1,65 @@
+@model CPMCore.Models.Projecten.SendContactEmailModalVM
+
+<div id="modalsendemailcontent" class="modal-edit-content">
+    @using (Html.BeginForm("SendContactEmail", "Projecten", FormMethod.Post, new { @class = "ecommerce-form", id = "FormSendContactEmail" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="ProjectId" value="@Model.ProjectId" />
+        <input type="hidden" name="Email" value="@Model.Email" />
+        <input type="hidden" name="Fullname" value="@Model.Fullname" />
+        <section class="card">
+            <header class="card-header">
+                <h2 class="card-title">Mail verzenden</h2>
+            </header>
+            <div class="card-body">
+                <p class="mb-3">
+                    Naar: <strong>@Model.Fullname</strong> (@Model.Email)
+                </p>
+
+                @if (!Model.Templates.Any())
+                {
+                    <div class="alert alert-warning">
+                        Er zijn nog geen actieve e-mailtemplates. Maak er eerst een aan via Instellingen &raquo; E-mailtemplates.
+                    </div>
+                }
+                else
+                {
+                    <div class="form-group">
+                        <div class="row align-items-center pb-3">
+                            <label class="col-md-4 control-label text-lg-end mb-0 mt-1">Template</label>
+                            <div class="col-md-8">
+                                <select name="TemplateId" class="form-control form-control-modern" required>
+                                    <option value="">Kies een template...</option>
+                                    @foreach (var item in Model.Templates)
+                                    {
+                                        <option value="@item.Value">@item.Text</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row align-items-center pb-3">
+                            <div class="col-md-8 offset-md-4">
+                                <div class="form-check">
+                                    <input type="checkbox" name="IncludeSignature" value="true" class="form-check-input" id="chkIncludeSignature" checked />
+                                    <label class="form-check-label" for="chkIncludeSignature">Voeg mijn handtekening toe</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <footer class="card-footer">
+                <div class="row">
+                    <div class="col-md-12 text-end">
+                        @if (Model.Templates.Any())
+                        {
+                            <button type="submit" class="btn btn-primary">Versturen</button>
+                        }
+                        <button type="button" class="btn btn-default modal-dismiss">Annuleren</button>
+                    </div>
+                </div>
+            </footer>
+        </section>
+    }
+</div>

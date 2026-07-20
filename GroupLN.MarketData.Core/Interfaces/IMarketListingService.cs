@@ -36,4 +36,8 @@ public interface IMarketListingService
         string url,
         int sourceId,
         CancellationToken cancellationToken = default);
+
+    // Geeft de huidige Title van de actieve listing terug voor het gegeven asset.
+    // Gebruikt na AI-extractie om de AI-bijgewerkte projectnaam op te halen voor logging.
+    Task<string?> GetListingTitleAsync(long assetId, CancellationToken cancellationToken = default);
 }

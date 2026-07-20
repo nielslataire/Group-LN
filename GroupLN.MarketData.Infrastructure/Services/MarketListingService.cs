@@ -5,7 +5,6 @@ using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Interfaces;
 using GroupLN.MarketData.Core.Settings;
 using GroupLN.MarketData.Infrastructure.GeoLocation;
-using GroupLN.MarketData.Infrastructure.TitleResolution;
 using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -58,13 +57,8 @@ public class MarketListingService : IMarketListingService
         {
             var oldPrice = existing.AskingPrice;
 
-            if (!string.IsNullOrEmpty(dto.Title) && ListingTitleResolver.IsBetterTitle(existing.Title, dto.Title))
-            {
-                _logger.LogInformation(
-                    "[TitleResolved] {ExternalId} | Old='{OldTitle}' | New='{NewTitle}' | Source=TitleUpdate",
-                    dto.ExternalId, existing.Title ?? "(null)", dto.Title);
+            if (!string.IsNullOrEmpty(dto.Title) && existing.Title != dto.Title && !dto.IsProjectListing)
                 existing.Title = dto.Title;
-            }
             existing.AskingPrice = dto.AskingPrice ?? existing.AskingPrice;
             existing.LastSeenAt = now;
             existing.IsActive = true;
@@ -126,7 +120,10 @@ public class MarketListingService : IMarketListingService
 
         // Stap 2: nieuwe listing — zoek of maak MarketAsset
         var (assetKey, assetKeyStrategy) = BuildAssetKey(dto);
-        _logger.LogInformation("AssetKey strategie={Strategy} | key={Key}", assetKeyStrategy, assetKey);
+
+        _logger.LogInformation(
+            "[Upsert] SourceId={SourceId} | ExternalId={ExtId} | Url={Url} | AssetKey={Key} | Strategy={Strategy}",
+            dto.SourceId, dto.ExternalId, dto.Url, assetKey, assetKeyStrategy);
 
         var matchResult = await _assetMatcher.FindMatchingAssetAsync(dto, cancellationToken);
 
@@ -139,21 +136,72 @@ public class MarketListingService : IMarketListingService
             await TryResolveLocationAsync(asset, cancellationToken, forceResolve: !asset.GeoMunicipalSectionId.HasValue);
             await TryGeocodeAndResolveAsync(asset, cancellationToken);
             _logger.LogInformation(
-                "Nieuwe listing {ExternalId} gekoppeld aan bestaand MarketAsset {AssetId} (Strong, score={Score}).",
+                "[Upsert] Action=LinkToExisting | ExternalId={ExtId} | ExistingAssetId={AssetId} | MatchType=Strong | Score={Score}",
                 dto.ExternalId, asset.Id, matchResult.MatchScore);
         }
         else
         {
-            asset = CreateAsset(dto, now, assetKey);
-            _context.MarketAssets.Add(asset);
-            await _context.SaveChangesAsync(cancellationToken);
+            // Pre-check: bestaat AssetKey al? Voorkomt SQL unique constraint violation.
+            var existingByKey = await _context.MarketAssets
+                .FirstOrDefaultAsync(a => a.AssetKey == assetKey, cancellationToken);
 
-            await TryResolveLocationAsync(asset, cancellationToken);
-            await TryGeocodeAndResolveAsync(asset, cancellationToken);
+            if (existingByKey is not null)
+            {
+                _logger.LogWarning(
+                    "[Upsert] ExistingAssetByAssetKeyFound | AssetKey={Key} | ExistingAssetId={ExId} | " +
+                    "IncomingExternalId={IncomingExtId} | IncomingUrl={Url} | Action=UpdateExisting",
+                    assetKey, existingByKey.Id, dto.ExternalId, dto.Url);
+                asset = existingByKey;
+                UpdateAssetFromDto(asset, dto, now);
+                await TryResolveLocationAsync(asset, cancellationToken, forceResolve: !asset.GeoMunicipalSectionId.HasValue);
+                await TryGeocodeAndResolveAsync(asset, cancellationToken);
+            }
+            else
+            {
+                asset = CreateAsset(dto, now, assetKey);
+                _context.MarketAssets.Add(asset);
 
-            _logger.LogInformation(
-                "Nieuw MarketAsset {AssetId} aangemaakt | {City} {PostalCode} | {Type} | match={AssetMatchType} | strategy={Strategy}.",
-                asset.Id, dto.City, dto.PostalCode, dto.PropertyType, matchResult.AssetMatchType, assetKeyStrategy);
+                try
+                {
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                catch (DbUpdateException ex) when (IsDuplicateKeyException(ex))
+                {
+                    _logger.LogWarning(
+                        "[Upsert] DuplicateKeySaveFailed | AssetKey={Key} | ExternalId={ExtId} | Url={Url} | " +
+                        "Error={Msg} | Action=DetachAndRetry",
+                        assetKey, dto.ExternalId, dto.Url, ex.InnerException?.Message ?? ex.Message);
+
+                    DetachFailedEntries();
+
+                    // Haal de reeds bestaande asset op (concurrent insert of timing race)
+                    existingByKey = await _context.MarketAssets
+                        .FirstOrDefaultAsync(a => a.AssetKey == assetKey, cancellationToken);
+
+                    if (existingByKey is not null)
+                    {
+                        asset = existingByKey;
+                        UpdateAssetFromDto(asset, dto, now);
+                        await TryResolveLocationAsync(asset, cancellationToken, forceResolve: !asset.GeoMunicipalSectionId.HasValue);
+                        await TryGeocodeAndResolveAsync(asset, cancellationToken);
+                    }
+                    else
+                    {
+                        _logger.LogError(
+                            "[Upsert] DuplicateKeyRecoveryFailed — asset niet teruggevonden na conflict. AssetKey={Key}",
+                            assetKey);
+                        throw;
+                    }
+                }
+
+                await TryResolveLocationAsync(asset, cancellationToken);
+                await TryGeocodeAndResolveAsync(asset, cancellationToken);
+
+                _logger.LogInformation(
+                    "[Upsert] Action=CreateNew | AssetId={AssetId} | {City} {PostalCode} | Type={Type} | " +
+                    "MatchType={MatchType} | Strategy={Strategy}",
+                    asset.Id, dto.City, dto.PostalCode, dto.PropertyType, matchResult.AssetMatchType, assetKeyStrategy);
+            }
         }
 
         var listing = new MarketListing
@@ -288,13 +336,18 @@ public class MarketListingService : IMarketListingService
                 existing.MissingCrawlCount = 0;
                 existing.UpdatedAt = now;
 
-                var resolvedUnitTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger, existing.Title).Title;
-                if (ListingTitleResolver.IsBetterTitle(existing.Title, resolvedUnitTitle))
-                    existing.Title = resolvedUnitTitle;
+                var newUnitTitle = BuildUnitTitle(unit);
+                if (!string.IsNullOrEmpty(newUnitTitle) && existing.Title != newUnitTitle)
+                    existing.Title = newUnitTitle;
 
                 existing.Asset.SaleStatus = unit.SaleStatus;
                 if (unit.Surface.HasValue) existing.Asset.LivingArea = unit.Surface;
                 if (unit.BedroomCount.HasValue) existing.Asset.Bedrooms = unit.BedroomCount;
+                if (unit.Floor.HasValue) existing.Asset.Floor = unit.Floor;
+                if (unit.TerraceArea.HasValue) existing.Asset.TerraceArea = unit.TerraceArea;
+                if (unit.LandArea.HasValue) existing.Asset.LandArea = unit.LandArea;
+                if (unit.GardenArea.HasValue) existing.Asset.GardenArea = unit.GardenArea;
+                if (!string.IsNullOrEmpty(unit.UnitNumber)) existing.Asset.UnitNumber = unit.UnitNumber;
                 existing.Asset.LastSeenAt = now;
                 existing.Asset.UpdatedAt = now;
 
@@ -353,6 +406,9 @@ public class MarketListingService : IMarketListingService
                     Latitude = projectDto.Latitude,
                     Longitude = projectDto.Longitude,
                     LivingArea = unit.Surface,
+                    TerraceArea = unit.TerraceArea,
+                    LandArea = unit.LandArea,
+                    GardenArea = unit.GardenArea,
                     Floor = unit.Floor,
                     Bedrooms = unit.BedroomCount,
                     NewBuild = projectDto.IsNewBuild,
@@ -360,6 +416,7 @@ public class MarketListingService : IMarketListingService
                     ParentMarketAssetId = parentAssetId,
                     ProjectExternalId = projectDto.ExternalId,
                     UnitExternalId = unit.UnitId,
+                    UnitNumber = unit.UnitNumber,
                     SaleStatus = unit.SaleStatus,
                     FirstSoldAt = unit.SaleStatus == SaleStatus.Sold ? now : null,
                     StatusChangedAt = null,
@@ -380,15 +437,13 @@ public class MarketListingService : IMarketListingService
 
                 await TryResolveLocationAsync(asset, cancellationToken);
 
-                var resolvedTitle = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title, _logger).Title;
-
                 var listing = new MarketListing
                 {
                     MarketAssetId = asset.Id,
                     SourceId = projectDto.SourceId,
                     ExternalId = unit.UnitId,
                     Url = !string.IsNullOrEmpty(unit.Url) ? unit.Url : $"{projectDto.Url}#unit-{unit.UnitId}",
-                    Title = resolvedTitle,
+                    Title = BuildUnitTitle(unit),
                     AskingPrice = unit.Price,
                     FirstSeenAt = now,
                     LastSeenAt = now,
@@ -422,7 +477,7 @@ public class MarketListingService : IMarketListingService
             foreach (var unit in units)
             {
                 if (string.IsNullOrEmpty(unit.UnitId)) continue;
-                var t = ListingTitleResolver.ResolveForUnit(unit, projectDto.Title).Title;
+                var t = BuildUnitTitle(unit);
                 if (!titleToUnitIds.TryGetValue(t, out var ids))
                     titleToUnitIds[t] = ids = [];
                 ids.Add(unit.UnitId);
@@ -622,6 +677,14 @@ public class MarketListingService : IMarketListingService
         return await _context.MarketListings
             .Where(l => l.SourceId == sourceId && l.Url == url && l.IsActive)
             .Select(l => l.ExternalId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<string?> GetListingTitleAsync(long assetId, CancellationToken cancellationToken = default)
+    {
+        return await _context.MarketListings
+            .Where(l => l.MarketAssetId == assetId && l.IsActive)
+            .Select(l => l.Title)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -921,6 +984,25 @@ public class MarketListingService : IMarketListingService
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    // ── Unit-titelbouw (eenvoudig, geen regex) ────────────────────────────────────
+
+    private static string BuildUnitTitle(ProjectGroupUnitDto unit)
+    {
+        var typeLabel = unit.MappedPropertyType switch
+        {
+            PropertyType.Apartment          => "Appartement",
+            PropertyType.House              => "Woning",
+            PropertyType.CommercialProperty => "Handelspand",
+            PropertyType.Garage             => "Parking",
+            _                               => unit.RawGroupType ?? "Unit"
+        };
+        var detail = unit.UnitNumber is { Length: > 0 } n ? n
+                   : unit.Floor.HasValue                   ? $"verdieping {unit.Floor}"
+                   : unit.UnitId is { Length: > 0 } id    ? id
+                   : null;
+        return detail is not null ? $"{typeLabel} – {detail}" : typeLabel;
+    }
+
     // ── AI projectnaam-extractie (fail-safe) ─────────────────────────────────────
 
     private async Task TriggerAiExtractionAsync(NormalizedPropertyDto dto, CancellationToken ct)
@@ -929,7 +1011,6 @@ public class MarketListingService : IMarketListingService
 
         try
         {
-            // Source name ophalen (eenmalig per call — al gecachet door EF change tracker)
             var sourceName = await _context.CrawlerSources
                 .Where(s => s.Id == dto.SourceId)
                 .Select(s => s.Name)
@@ -941,68 +1022,106 @@ public class MarketListingService : IMarketListingService
                 dto.PostalCode is { Length: > 0 } pc ? pc + (dto.City is { Length: > 0 } c ? " " + c : "") : null
             }.Where(p => p is not null));
 
-            _logger.LogInformation(
-                "[AI] Start | Source={Source} | ExternalId={Id} | Title={Title}",
-                sourceName, dto.ExternalId, dto.Title?[..Math.Min(60, dto.Title?.Length ?? 0)] ?? "");
-
-            // Regex-extractor eerst (snelle lokale check zonder API-call)
-            var regexResult = ProjectNameRegexExtractor.TryExtractFromMultiple(dto.Title);
-            if (regexResult is not null)
-                _logger.LogInformation(
-                    "[AI] RegexExtract | {ExternalId} | '{Name}' (patroon={Pattern})",
-                    dto.ExternalId, regexResult.ProjectName, regexResult.MatchedPattern[..Math.Min(40, regexResult.MatchedPattern.Length)]);
-
-            // AI extractie (gecachet op InputHash)
             var input = new AiProjectExtractionInput
             {
-                SourceName  = sourceName,
-                ExternalId  = dto.ExternalId,
-                Url         = dto.Url,
-                RawTitle    = dto.Title,
-                Address     = address,
-                Developer   = dto.DeveloperName,
+                SourceName      = sourceName,
+                ExternalId      = dto.ExternalId,
+                Url             = dto.Url,
+                RawTitle        = dto.ListingTitle ?? dto.Title,
+                MetaTitle       = dto.MetaTitle,
+                OgTitle         = dto.OgTitle,
+                MetaDescription = dto.MetaDescription,
+                H1              = dto.H1,
+                H2              = dto.H2,
+                H3              = dto.H3,
+                StructuredData  = dto.StructuredData,
+                Address         = address,
+                Developer       = dto.DeveloperName,
+                BodyText        = dto.Description,
             };
 
             var result = await _aiExtractionService.ExtractAsync(input, ct);
-
             if (result is null) return;
 
             var origin = result.FromCache ? "cache" : "API";
 
+            // ── Reject ────────────────────────────────────────────────────────────
             if (string.IsNullOrEmpty(result.ProjectName))
             {
-                var hasOtherData = !string.IsNullOrEmpty(result.Street)
-                    || !string.IsNullOrEmpty(result.PostalCode)
-                    || !string.IsNullOrEmpty(result.City)
-                    || result.NumberOfUnits.HasValue
-                    || !string.IsNullOrEmpty(result.Developer);
-
                 _logger.LogInformation(
-                    "[AI] NoProjectName | [{Origin}] | {ExternalId} | confidence={Confidence}% | " +
-                    "HasOtherData={HasOtherData} | Street={Street} | PostalCode={PC} | City={City} | " +
-                    "Units={Units} | Developer={Dev}",
-                    origin, dto.ExternalId, result.ProjectNameConfidence, hasOtherData,
-                    result.Street ?? "(none)", result.PostalCode ?? "(none)", result.City ?? "(none)",
-                    result.NumberOfUnits?.ToString() ?? "(none)", result.Developer ?? "(none)");
+                    "[AI] Rejected | Reason=NoProjectName | [{Origin}] | {ExternalId} | confidence={Confidence}%",
+                    origin, dto.ExternalId, result.ProjectNameConfidence);
+                return;
             }
-            else if (result.IsMarketingTitle)
+            if (result.IsMarketingTitle)
             {
                 _logger.LogInformation(
                     "[AI] Rejected | Reason=MarketingTitle | [{Origin}] | {ExternalId} | '{Name}' | confidence={Confidence}%",
                     origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence);
+                return;
             }
-            else if (result.ProjectNameConfidence < _settings.AiExtraction.AiExtractionMinConfidence)
+            if (result.ProjectNameConfidence < _settings.AiExtraction.AiExtractionMinConfidence)
             {
                 _logger.LogInformation(
                     "[AI] Rejected | Reason=LowConfidence | [{Origin}] | {ExternalId} | '{Name}' | confidence={Confidence}% < min={Min}%",
-                    origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence, _settings.AiExtraction.AiExtractionMinConfidence);
+                    origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence,
+                    _settings.AiExtraction.AiExtractionMinConfidence);
+                return;
             }
-            else
+
+            // ── Accept — toepassen op DB ──────────────────────────────────────────
+            var listing = await _context.MarketListings
+                .Include(l => l.Asset)
+                .FirstOrDefaultAsync(l => l.SourceId == dto.SourceId && l.ExternalId == dto.ExternalId, ct);
+
+            if (listing is null)
             {
-                _logger.LogInformation(
-                    "[AI] Success | [{Origin}] | {ExternalId} | '{Name}' | confidence={Confidence}%",
-                    origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence);
+                _logger.LogWarning("[AI] Listing niet meer gevonden na extractie: {ExternalId}", dto.ExternalId);
+                return;
             }
+
+            var asset = listing.Asset;
+            var now2 = DateTime.UtcNow;
+            var changes = new List<string>();
+
+            var oldTitle = listing.Title;
+            listing.Title = result.ProjectName;
+            listing.UpdatedAt = now2;
+            changes.Add($"Title: '{oldTitle ?? "(null)"}' → '{result.ProjectName}'");
+
+            if (!string.IsNullOrWhiteSpace(result.Street) && asset.Street != result.Street)
+            {
+                changes.Add($"Street: '{asset.Street ?? "(null)"}' → '{result.Street}'");
+                asset.Street = result.Street;
+            }
+            if (!string.IsNullOrWhiteSpace(result.HouseNumber) && asset.HouseNumber != result.HouseNumber)
+            {
+                changes.Add($"HouseNumber: '{asset.HouseNumber ?? "(null)"}' → '{result.HouseNumber}'");
+                asset.HouseNumber = result.HouseNumber;
+            }
+            if (!string.IsNullOrWhiteSpace(result.PostalCode) && asset.PostalCode != result.PostalCode)
+            {
+                changes.Add($"PostalCode: '{asset.PostalCode ?? "(null)"}' → '{result.PostalCode}'");
+                asset.PostalCode = result.PostalCode;
+            }
+            if (!string.IsNullOrWhiteSpace(result.City) && asset.City != result.City)
+            {
+                changes.Add($"City: '{asset.City ?? "(null)"}' → '{result.City}'");
+                asset.City = result.City;
+            }
+            if (!string.IsNullOrWhiteSpace(result.Developer) && asset.DeveloperName != result.Developer)
+            {
+                changes.Add($"Developer: '{asset.DeveloperName ?? "(null)"}' → '{result.Developer}'");
+                asset.DeveloperName = result.Developer;
+            }
+
+            asset.UpdatedAt = now2;
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation(
+                "[AI] Accepted | [{Origin}] | {ExternalId} | ProjectName='{Name}' | confidence={Confidence}% | Changes=[{Changes}]",
+                origin, dto.ExternalId, result.ProjectName, result.ProjectNameConfidence,
+                string.Join(", ", changes));
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -1032,7 +1151,10 @@ public class MarketListingService : IMarketListingService
         return last.AskingPrice != unit.Price
             || last.LivingArea != unit.Surface
             || last.Bedrooms != unit.BedroomCount
-            || last.SaleStatus != unit.SaleStatus;
+            || last.SaleStatus != unit.SaleStatus
+            || last.TerraceArea != unit.TerraceArea
+            || last.LandArea != unit.LandArea
+            || last.GardenArea != unit.GardenArea;
     }
 
     private static void UpdateAssetFromDto(MarketAsset asset, NormalizedPropertyDto dto, DateTime now)
@@ -1107,7 +1229,41 @@ public class MarketListingService : IMarketListingService
         UpdatedAt = now
     };
 
-    private static (string Key, string Strategy) BuildAssetKey(NormalizedPropertyDto dto)
+    // ── Duplicate key recovery ────────────────────────────────────────────────
+
+    private static bool IsDuplicateKeyException(DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        while (inner is not null)
+        {
+            var msg = inner.Message;
+            if (msg.Contains("2601", StringComparison.Ordinal) ||
+                msg.Contains("2627", StringComparison.Ordinal) ||
+                msg.Contains("duplicate key", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("Violation of UNIQUE KEY", StringComparison.OrdinalIgnoreCase) ||
+                msg.Contains("Cannot insert duplicate", StringComparison.OrdinalIgnoreCase))
+                return true;
+            inner = inner.InnerException;
+        }
+        return false;
+    }
+
+    private void DetachFailedEntries()
+    {
+        var failed = _context.ChangeTracker.Entries()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified)
+            .ToList();
+
+        foreach (var entry in failed)
+            entry.State = EntityState.Detached;
+
+        if (failed.Count > 0)
+            _logger.LogInformation("[ChangeTracker] {Count} pending entrie(s) gedetached na mislukte SaveChanges.", failed.Count);
+    }
+
+    // ── AssetKey ──────────────────────────────────────────────────────────────
+
+    internal static (string Key, string Strategy) BuildAssetKey(NormalizedPropertyDto dto)
     {
         var country = S(dto.Country ?? "BE").ToUpperInvariant();
         var postal = S(dto.PostalCode ?? "0000");
@@ -1270,6 +1426,9 @@ public class MarketListingService : IMarketListingService
             ? Math.Round(unit.Price!.Value / unit.Surface!.Value, 2)
             : null,
         LivingArea = unit.Surface,
+        TerraceArea = unit.TerraceArea,
+        LandArea = unit.LandArea,
+        GardenArea = unit.GardenArea,
         Floor = unit.Floor,
         Bedrooms = unit.BedroomCount,
         IsNewBuild = isNewBuild,

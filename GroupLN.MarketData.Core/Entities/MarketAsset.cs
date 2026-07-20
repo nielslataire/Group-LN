@@ -45,7 +45,12 @@ public class MarketAsset
     public long? ParentMarketAssetId { get; set; }
     public string? ProjectExternalId { get; set; }
     public string? UnitExternalId { get; set; }
+    /// <summary>Weergavenummer uit bronindeling (bv. "01.02" van Zimmo). Null als bron dit niet levert.</summary>
+    public string? UnitNumber { get; set; }
     public SaleStatus? SaleStatus { get; set; }
+
+    /// <summary>Ingevuld als deze losse listing gematcht is aan een CanonicalUnit in een project.</summary>
+    public long? LinkedCanonicalUnitId { get; set; }
 
     public DateTime FirstSeenAt { get; set; }
     public DateTime LastSeenAt { get; set; }
