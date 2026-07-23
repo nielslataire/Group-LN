@@ -1158,7 +1158,15 @@ namespace CPMCore.Controllers
                 var signatureResponse = _userSignatureService.GetByUserId(userId.Value);
                 var signatureHtml = signatureResponse.Value?.SignatureHtml;
                 if (!string.IsNullOrWhiteSpace(signatureHtml))
-                    body += "<br/><br/>" + signatureHtml;
+                {
+                    // Belangrijk: de handtekening (mogelijk een volledig Word/Outlook-document
+                    // met eigen <html>/<body>) moet als op zichzelf staand fragment opgeschoond
+                    // worden vóórdat ze aan de templatetekst geplakt wordt. Zou dit pas gebeuren
+                    // op de samengevoegde string, dan zou de "haal de inhoud tussen <body>/</body>
+                    // op"-stap de templatetekst die vóór dat ingesloten document staat weggooien.
+                    var cleanedSignature = CPMCore.Service.WordHtmlSanitizer.Clean(signatureHtml);
+                    body += "<br/><br/>" + cleanedSignature;
+                }
             }
 
             try

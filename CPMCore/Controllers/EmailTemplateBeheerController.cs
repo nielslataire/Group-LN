@@ -24,6 +24,9 @@ public class EmailTemplateBeheerController : BaseController
     {
         var result = _emailTemplateService.GetAll(alleenActief: false);
         var vm = new EmailTemplateListVM { Templates = result.Values ?? new() };
+
+        ViewData["BreadcrumbNode"] = BuildIndexBreadcrumb();
+
         return View(vm);
     }
 
@@ -31,6 +34,13 @@ public class EmailTemplateBeheerController : BaseController
     public IActionResult Aanmaken()
     {
         var vm = new EmailTemplateEditVM { IsActief = true };
+
+        var indexNode = BuildIndexBreadcrumb();
+        ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Aanmaken", "EmailTemplateBeheer", "Nieuwe template")
+        {
+            Parent = indexNode
+        };
+
         return View("Bewerken", vm);
     }
 
@@ -45,7 +55,27 @@ public class EmailTemplateBeheerController : BaseController
         }
 
         var vm = MapBoToVm(result.Value);
+
+        var indexNode = BuildIndexBreadcrumb();
+        ViewData["BreadcrumbNode"] = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Bewerken", "EmailTemplateBeheer", "Template bewerken")
+        {
+            Parent = indexNode
+        };
+
         return View(vm);
+    }
+
+    private static SmartBreadcrumbs.Nodes.MvcBreadcrumbNode BuildIndexBreadcrumb()
+    {
+        var index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
+        {
+            Parent = index
+        };
+        return new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "EmailTemplateBeheer", "E-mailtemplates")
+        {
+            Parent = instellingenIndex
+        };
     }
 
     [HttpPost]

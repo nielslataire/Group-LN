@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace CPMCore.Models.Marktanalyse;
 
 public class VergelijkbarePandenViewModel
@@ -6,6 +8,9 @@ public class VergelijkbarePandenViewModel
     public string ZoekgebiedTab { get; set; } = "Gemeenten";
     public List<int> GemeenteIds { get; set; } = new();
     public string? RondAdresPostcode { get; set; }
+    /// <summary>Middelpunt gekozen via adreszoekopdracht of door te slepen op de kaart.</summary>
+    public double? RondAdresLat { get; set; }
+    public double? RondAdresLng { get; set; }
     public int RondAdresStraal { get; set; } = 1000;  // meters
     public string Type { get; set; } = "Appartement";
     public decimal? Oppervlakte { get; set; }
@@ -35,7 +40,19 @@ public class VergelijkbarePandenViewModel
             : GemeenteIds.Count == 1
                 ? Locaties.FirstOrDefault(l => l.GeoMunicipalityId == GemeenteIds[0])?.GemeenteNaam ?? "1 gemeente"
                 : $"{GemeenteIds.Count} gemeenten geselecteerd";
+
+    public bool HeeftRondAdresPunt => RondAdresLat.HasValue && RondAdresLng.HasValue;
+
+    public string RondAdresDropdownLabel =>
+        HeeftRondAdresPunt
+            ? $"Eigen punt ({RondAdresLat!.Value.ToString("0.000", CultureInfo.InvariantCulture)}, " +
+              $"{RondAdresLng!.Value.ToString("0.000", CultureInfo.InvariantCulture)}) · " +
+              $"{(RondAdresStraal / 1000.0).ToString("0.#", CultureInfo.InvariantCulture)} km"
+            : "Kies een adres...";
 }
+
+/// <summary>Resultaat van een geocode-opzoeking, teruggegeven als JSON aan de kaart-UI.</summary>
+public record GeocodeAdresResult(double Lat, double Lng, string? Label);
 
 public class VergelijkbaarPandRij
 {

@@ -166,7 +166,7 @@ public class CanonicalUnitService : ICanonicalUnitService
                 PricePerSqm                 = rep.Asset.LivingArea is > 0 && rep.Price > 0
                     ? Math.Round(rep.Price / rep.Asset.LivingArea!.Value, 2) : null,
                 Status                      = rep.Asset.SaleStatus,
-                Floor                       = rep.Asset.Floor,
+                Floor                       = rep.Floor,
                 HasPriceConflict            = conflicts.Contains("Prijs"),
                 HasStatusConflict           = conflicts.Contains("Status"),
                 HasAreaConflict             = conflicts.Contains("Oppervlakte"),

@@ -39,7 +39,7 @@ namespace CPMCore.Controllers
             _activityService = activityService;
         }
 
-        public IActionResult PrintRecalculation(int projectid, int details)
+        public async Task<IActionResult> PrintRecalculation(int projectid, int details)
         {
             ProjectContractsModel viewmodel = new ProjectContractsModel();
 
@@ -56,7 +56,7 @@ namespace CPMCore.Controllers
             viewmodel.IncommingInvoicesActivities = response4.Values;
 
             // Render de view naar HTML
-            var htmlContent = RenderViewToStringAsync("PrintRecalculation", viewmodel).Result;
+            var htmlContent = await RenderViewToStringAsync("PrintRecalculation", viewmodel);
 
             // Maak een nieuwe PdfDocument
             var doc = new HtmlToPdfDocument()

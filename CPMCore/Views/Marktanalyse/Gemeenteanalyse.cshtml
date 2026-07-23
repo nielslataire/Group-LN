@@ -725,7 +725,7 @@
                                 BESCHIKBARE UNITS
                             </div>
                             <div class="dashboard-stat-value">@kpi!.BeschikbareUnits</div>
-                            <div class="dashboard-stat-subtitle">te koop in projecten</div>
+                            <div class="dashboard-stat-subtitle">te koop in projecten en losse eenheden</div>
                         </div>
                     </div>
                 </div>
@@ -788,13 +788,13 @@
                                           <div class="card-body">
                                               <div class="dashboard-stat-title d-flex align-items-center">
                                                   <i class="bx bx-arrow-out-down-left-stroke-square"></i>
-                                                  VERKOOPBAAR
+                                                  VERKOCHT
                                               </div>
                                               <div class="dashboard-stat-value">
                                                   @kpi.Verkoopgraad.ToString("F1") %
                                               </div>
                                               <div class="dashboard-stat-subtitle d-flex align-items-center">
-                                                  <i class="bx bx-check-circle"></i>{AANTAL} van {Totaal} verkocht
+                                                  <i class="bx bx-check-circle"></i>@kpi!.VerkochteUnits van @kpi!.TotaalAnalyseerbaar verkocht
                                               </div>
                                           </div>
                                       </div>

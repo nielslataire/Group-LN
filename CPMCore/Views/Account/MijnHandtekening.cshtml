@@ -11,6 +11,10 @@
 <link rel="stylesheet" href="~/css/avenir-fonts.css" />
 <style>
     .quill-wrap { background: #fff; }
+    /* Quill's eigen CSS zet .ql-container op height:100%. Binnen een Bootstrap-.row
+       (flex met align-items:stretch) resolveert dat onvoorspelbaar, waardoor de
+       editorinhoud buiten zijn vak groeit en over de footer/knop eronder valt. */
+    .quill-wrap.ql-container { height: auto; }
     .quill-wrap .ql-editor { min-height: 180px; max-height: 420px; overflow-y: auto; }
 
     /* Bewust geen Bootstrap ".card-footer": zie toelichting bij EmailTemplateBeheer. */

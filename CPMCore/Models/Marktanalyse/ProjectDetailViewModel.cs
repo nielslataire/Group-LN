@@ -72,6 +72,7 @@ public class UnitRijViewModel
     public string? SourceUrl { get; set; }
     public string? BronNaam { get; set; }
     public string? OuderProjectNaam { get; set; }
+    public bool IsBronActief { get; set; } = true;
 }
 
 public class ProjectNavigatieOptie
@@ -114,6 +115,7 @@ public class UnitBronViewModel
     public string MatchLevel { get; set; } = "";
     public bool IsRepresentatief { get; set; }
     public bool IsLosseAdvertentie { get; set; }
+    public bool IsActief { get; set; } = true;
 }
 
 public class BronViewModel
@@ -130,4 +132,5 @@ public class BronViewModel
     public int SoldCount { get; set; }
     public string? Adres { get; set; }
     public DateTime? LastSeenAt { get; set; }
+    public bool IsActief { get; set; } = true;
 }

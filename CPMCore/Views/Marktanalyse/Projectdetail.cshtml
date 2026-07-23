@@ -534,6 +534,18 @@
         color: #007a4d;
         margin-left: .4rem;
     }
+    .inactive-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: .15rem .5rem;
+        border-radius: 4px;
+        font-size: .65rem;
+        font-weight: 700;
+        background: #fdf1f1;
+        border: 1px solid #f3caca;
+        color: #b3261e;
+        margin-left: .4rem;
+    }
 </style>
 }
 
@@ -867,6 +879,10 @@
                                                     {
                                                         <span class="badge ms-1" style="background:#fff4e5;border:1px solid #ffd591;color:#b26a00;font-size:.62rem;">losse advertentie</span>
                                                     }
+                                                    @if (!bron.IsActief)
+                                                    {
+                                                        <span class="inactive-badge" title="Niet meer bevestigd bij de laatste crawl">Inactief</span>
+                                                    }
                                                     @if (!string.IsNullOrEmpty(bron.Url)) {
                                                         <a href="@bron.Url" target="_blank" rel="noopener" class="ms-1 small"><i class="bx bx-link-external"></i></a>
                                                     }
@@ -951,7 +967,16 @@ else
                                 "zimmo"   => "bron-zimmo",
                                 _         => "bron-other"
                             };
-                            <td>@if (!string.IsNullOrEmpty(u.BronNaam)) {<span class="bron-badge @uBronClass">@u.BronNaam</span>}</td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(u.BronNaam))
+                                {
+                                    <span class="bron-badge @uBronClass">@u.BronNaam</span>
+                                    @if (!u.IsBronActief)
+                                    {
+                                        <span class="inactive-badge" title="Niet meer bevestigd bij de laatste crawl">Inactief</span>
+                                    }
+                                }
+                            </td>
                         }
                     </tr>
                 }
@@ -1017,6 +1042,10 @@ else
                                 @if (bron.IsPrimary)
                                 {
                                     <span class="primary-badge">Primair</span>
+                                }
+                                @if (!bron.IsActief)
+                                {
+                                    <span class="inactive-badge" title="Niet meer bevestigd bij de laatste crawl">Inactief</span>
                                 }
                             </td>
                             <td>

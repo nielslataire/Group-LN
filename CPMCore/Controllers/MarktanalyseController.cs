@@ -46,6 +46,8 @@ public class MarktanalyseController : Controller
     public async Task<IActionResult> VergelijkbarePanden(
         [FromQuery] List<int> gemeenteIds,
         string? rondAdresPostcode      = null,
+        double? rondAdresLat           = null,
+        double? rondAdresLng           = null,
         int    rondAdresStraal         = 1000,
         string type                    = "Appartement",
         decimal? oppervlakte           = null,
@@ -57,10 +59,42 @@ public class MarktanalyseController : Controller
         CancellationToken ct           = default)
     {
         var vm = await _svc.GetVergelijkbarePandenAsync(
-            gemeenteIds, rondAdresPostcode, rondAdresStraal,
+            gemeenteIds, rondAdresPostcode, rondAdresLat, rondAdresLng, rondAdresStraal,
             type, oppervlakte, tolerantie, prijsMin, prijsMax,
             slaapkamers, status, ct);
         return View(vm);
+    }
+
+    // GET /Marktanalyse/GeocodeAdres?query=...
+    // Geocodeert een vrij ingevoerd adres naar coördinaten voor de "Rond adres"-kaart.
+    public async Task<IActionResult> GeocodeAdres(string query, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return Json(new { success = false });
+
+        var result = await _svc.GeocodeAdresAsync(query, ct);
+        if (result is null) return Json(new { success = false });
+
+        return Json(new { success = true, lat = result.Lat, lng = result.Lng, label = result.Label });
+    }
+
+    // GET /Marktanalyse/TelPandenInStraal?lat=..&lng=..&straal=..
+    // Lichtgewicht live telling voor de kaart-preview in de "Rond adres"-dropdown.
+    public async Task<IActionResult> TelPandenInStraal(
+        double lat,
+        double lng,
+        int    straal,
+        string type          = "Appartement",
+        decimal? oppervlakte = null,
+        int    tolerantie    = 10,
+        decimal? prijsMin    = null,
+        decimal? prijsMax    = null,
+        int?   slaapkamers   = null,
+        string status        = "Alles",
+        CancellationToken ct = default)
+    {
+        var aantal = await _svc.TelPandenInStraalAsync(
+            lat, lng, straal, type, oppervlakte, tolerantie, prijsMin, prijsMax, slaapkamers, status, ct);
+        return Json(new { aantal });
     }
 
     // GET /Marktanalyse/Projectdetail/5

@@ -4,89 +4,73 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-1">E-mailtemplates</h1>
-        <p class="text-muted mb-0">Beheer voorgedefinieerde e-mails (onderwerp + tekst) om te versturen naar projectcontacten.</p>
-    </div>
-    <div class="d-flex gap-2">
-        <a href="@Url.Action("Index", "Instellingen")" class="btn btn-outline-secondary">
-            <i class="bx bx-cog"></i> Instellingen
-        </a>
-        <a href="@Url.Action("Aanmaken")" class="btn btn-primary">
-            <i class="bx bx-plus"></i> Nieuwe template
-        </a>
-    </div>
-</div>
-
-@if (!Model.Templates.Any())
-{
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bx bx-envelope" style="font-size: 3rem; color: #adb5bd;"></i>
-            <p class="mt-3 text-muted">Er zijn nog geen e-mailtemplates. Maak je eerste template aan.</p>
-            <a href="@Url.Action("Aanmaken")" class="btn btn-primary mt-2">
-                <i class="bx bx-plus"></i> Nieuwe template
+<div class="row">
+    <div class="col">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="font-weight-bold mb-0">E-mailtemplates</h1>
+                <p class="mb-0 text-muted">Beheer voorgedefinieerde e-mails (onderwerp + tekst) om te versturen naar projectcontacten.</p>
+            </div>
+            <a class="btn btn-primary" href="@Url.Action("Aanmaken")">
+                Nieuwe template
             </a>
         </div>
-    </div>
-}
-else
-{
-    <div class="card" style="border-radius:8px;border:1px solid #e9ecef;background-color:#fff;">
-        <div class="table-responsive">
-            <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th>Naam</th>
-                        <th>Onderwerp</th>
-                        <th style="width:120px;">Status</th>
-                        <th style="width:90px;">Acties</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var template in Model.Templates)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@template.Naam</td>
-                            <td>@template.Onderwerp</td>
-                            <td>
-                                @if (template.IsActief)
-                                {
-                                    <span class="badge bg-success">Actief</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Inactief</span>
-                                }
-                            </td>
-                            <td>
-                                <div class="d-flex gap-1">
-                                    <a href="@Url.Action("Bewerken", new { id = template.ID })" class="btn btn-sm btn-outline-secondary" title="Bewerken">
-                                        <i class="bx bx-edit-alt"></i>
-                                    </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Verwijderen" onclick="etVerwijder(@template.ID)">
-                                        <i class="bx bx-trash"></i>
-                                    </button>
-                                    <form id="del-@template.ID" method="post" action="@Url.Action("Verwijderen")" style="display:none;">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="id" value="@template.ID" />
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
 
-@section PageScripts {
-<script>
-    function etVerwijder(id) {
-        if (!confirm('Weet je zeker dat je deze template wil verwijderen?')) return;
-        document.getElementById('del-' + id).submit();
-    }
-</script>
-}
+        @if (TempData["Message"] != null)
+        {
+            var messageType = TempData["MessageType"]?.ToString() ?? "success";
+            <div class="alert alert-@(messageType == "error" ? "danger" : messageType)">@TempData["Message"]</div>
+        }
+
+        <section class="card card-modern">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Naam</th>
+                                <th>Onderwerp</th>
+                                <th>Status</th>
+                                <th class="text-end">Acties</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var template in Model.Templates)
+                            {
+                                <tr>
+                                    <td><strong>@template.Naam</strong></td>
+                                    <td>@template.Onderwerp</td>
+                                    <td>
+                                        <span class="badge @(template.IsActief ? "bg-success" : "bg-secondary")">
+                                            @(template.IsActief ? "Actief" : "Inactief")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <a class="btn btn-link p-0 me-2" href="@Url.Action("Bewerken", new { id = template.ID })" title="Bewerken">
+                                            <i class="bx bx-edit"></i>
+                                        </a>
+                                        <form class="d-inline" method="post" action="@Url.Action("Verwijderen")">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@template.ID" />
+                                            <button type="submit" class="btn btn-link p-0 text-danger" title="Verwijderen" onclick="return confirm('Template verwijderen?');">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Templates.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        Er zijn nog geen e-mailtemplates. Maak je eerste template aan.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

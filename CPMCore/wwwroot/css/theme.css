@@ -10919,6 +10919,9 @@ select.select-style-1:focus {
 	font-size: 0.75rem;
 	line-height: 1.3;
 }
+	.form-control.form-control-sm {
+		font-size: 0.875rem;
+	}
 
 .form-control:not(.form-control-sm):not(.form-control-lg) {
 	font-size: 13.6px;

@@ -1330,7 +1330,8 @@ namespace CPMCore.Controllers
                         city = x.InvoiceAddress == true
                             ? (x.InvoicePostalCode != null ? x.InvoicePostalCode.Gemeente : null)
                             : (x.PostalCode != null ? x.PostalCode.Gemeente : null),
-                        vatNumber = x.Vatnumber
+                        vatNumber = x.Vatnumber,
+                        invoiceExtra = x.InvoiceExtra
                     })
                     .FirstOrDefaultAsync(ct);
                 return Json(ca);
@@ -1351,7 +1352,8 @@ namespace CPMCore.Controllers
                         city = x.InvoiceAddress == true
                             ? (x.InvoicePostalCode != null ? x.InvoicePostalCode.Gemeente : null)
                             : (x.PostalCode != null ? x.PostalCode.Gemeente : null),
-                        vatNumber = x.Vatnumber
+                        vatNumber = x.Vatnumber,
+                        invoiceExtra = x.ClientAccount != null ? x.ClientAccount.InvoiceExtra : null
                     })
                     .FirstOrDefaultAsync(ct);
                 return Json(cc);

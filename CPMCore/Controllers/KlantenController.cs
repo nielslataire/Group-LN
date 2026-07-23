@@ -1930,8 +1930,9 @@ namespace CPMCore.Controllers
                     ? Redirect(Referrer.ToString())
                     : RedirectToAction("Edit", new { projectid = viewmodel.ProjectId, clientid = viewmodel.Client.Id, activetab = 0 });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Onverwachte fout bij bewerken van klant {ClientId}", viewmodel.Client.Id);
                 await tx.RollbackAsync();
                 AddMessage("error", "Er is een onverwachte fout opgetreden.", "Fout!");
                 FillInAddSelectListsEdit(ref viewmodel);

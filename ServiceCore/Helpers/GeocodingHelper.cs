@@ -10,7 +10,7 @@ namespace ServiceCore.Helpers
     /// Geocodeert adressen via OpenStreetMap Nominatim (gratis, geen API-key nodig)
     /// en berekent de hemelsbreedse afstand (haversine) in kilometer.
     /// </summary>
-    internal static class GeocodingHelper
+    public static class GeocodingHelper
     {
         private static readonly HttpClient _http;
 
@@ -23,9 +23,9 @@ namespace ServiceCore.Helpers
 
         /// <summary>
         /// Geocodeer een adresstring via Nominatim.
-        /// Geeft (null, null) terug als het adres niet gevonden wordt.
+        /// Geeft null terug als het adres niet gevonden wordt.
         /// </summary>
-        internal static async Task<(double? Lat, double? Lon)> GeocodeAsync(string address)
+        public static async Task<GeocodeResult?> GeocodeAsync(string address)
         {
             try
             {
@@ -33,24 +33,24 @@ namespace ServiceCore.Helpers
                 var url = $"https://nominatim.openstreetmap.org/search?q={encoded}&format=json&limit=1";
                 var results = await _http.GetFromJsonAsync<NominatimResult[]>(url);
 
-                if (results == null || results.Length == 0) return (null, null);
+                if (results == null || results.Length == 0) return null;
                 if (!double.TryParse(results[0].Lat, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var lat)) return (null, null);
+                    System.Globalization.CultureInfo.InvariantCulture, out var lat)) return null;
                 if (!double.TryParse(results[0].Lon, System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture, out var lon)) return (null, null);
+                    System.Globalization.CultureInfo.InvariantCulture, out var lon)) return null;
 
-                return (lat, lon);
+                return new GeocodeResult(lat, lon, results[0].DisplayName);
             }
             catch
             {
-                return (null, null);
+                return null;
             }
         }
 
         /// <summary>
         /// Berekent de hemelsbreedse afstand in km (haversine-formule).
         /// </summary>
-        internal static decimal HaversineDistanceKm(double lat1, double lon1, double lat2, double lon2)
+        public static decimal HaversineDistanceKm(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371.0; // straal aarde in km
 
@@ -74,6 +74,12 @@ namespace ServiceCore.Helpers
 
             [JsonPropertyName("lon")]
             public string Lon { get; set; }
+
+            [JsonPropertyName("display_name")]
+            public string? DisplayName { get; set; }
         }
     }
+
+    /// <summary>Resultaat van een Nominatim-adreszoekopdracht.</summary>
+    public record GeocodeResult(double Lat, double Lon, string? DisplayName);
 }

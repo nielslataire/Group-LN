@@ -56,10 +56,12 @@ public class LooseListingMatchingServiceTests
         string?      houseNumber = null,
         decimal?     lat         = null,
         decimal?     lng         = null,
+        long         unitId      = 1,
+        long         projectId   = 1,
         List<(string SourceName, string? ExternalId, string? Url)>? sourceAssets = null) =>
         new(
-            CanonicalUnitId    : 1,
-            CanonicalProjectId : 1,
+            CanonicalUnitId    : unitId,
+            CanonicalProjectId : projectId,
             Area               : area,
             Price              : price,
             Bedrooms           : bedrooms,
@@ -221,6 +223,79 @@ public class LooseListingMatchingServiceTests
 
         Assert.True(scoreWithCoords > scoreNoCoords,
             $"Close distance should add bonus: withCoords={scoreWithCoords}, noCoords={scoreNoCoords}");
+    }
+
+    // ── AreEquivalentUnits: verdieping ───────────────────────────────────────
+
+    [Fact]
+    public void AreEquivalentUnits_DifferentFloors_NotEquivalentByDefault()
+    {
+        var a = MakeCu(area: 72m, price: 289_000m, bedrooms: 1, floor: 1, unitId: 1, projectId: 188);
+        var b = MakeCu(area: 74m, price: 289_000m, bedrooms: 1, floor: 3, unitId: 2, projectId: 188);
+
+        Assert.False(LooseListingMatchingService.AreEquivalentUnits(a, b));
+    }
+
+    [Fact]
+    public void AreEquivalentUnits_DifferentFloors_EquivalentWhenFloorIgnored()
+    {
+        // Losse listing zonder verdieping kan units die enkel in verdieping
+        // verschillen niet onderscheiden → gelijkwaardig behandelen.
+        var a = MakeCu(area: 72m, price: 289_000m, bedrooms: 1, floor: 1, unitId: 1, projectId: 188);
+        var b = MakeCu(area: 74m, price: 289_000m, bedrooms: 1, floor: 3, unitId: 2, projectId: 188);
+
+        Assert.True(LooseListingMatchingService.AreEquivalentUnits(a, b, ignoreFloor: true));
+    }
+
+    [Fact]
+    public void AreEquivalentUnits_PriceOrAreaDiffers_NotEquivalentEvenWithFloorIgnored()
+    {
+        var a = MakeCu(area: 72m, price: 289_000m, bedrooms: 1, unitId: 1, projectId: 188);
+        var priceDiff = MakeCu(area: 72m, price: 315_000m, bedrooms: 1, unitId: 2, projectId: 188);
+        var areaDiff  = MakeCu(area: 82m, price: 289_000m, bedrooms: 1, unitId: 3, projectId: 188);
+
+        Assert.False(LooseListingMatchingService.AreEquivalentUnits(a, priceDiff, ignoreFloor: true));
+        Assert.False(LooseListingMatchingService.AreEquivalentUnits(a, areaDiff,  ignoreFloor: true));
+    }
+
+    // ── SameBuilding ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void SameBuilding_SameProject_ReturnsTrue()
+    {
+        var a = MakeCu(unitId: 1, projectId: 188);
+        var b = MakeCu(unitId: 2, projectId: 188);
+
+        Assert.True(LooseListingMatchingService.SameBuilding(a, b));
+    }
+
+    [Fact]
+    public void SameBuilding_DifferentProjectSameAddress_ReturnsTrue()
+    {
+        // Duplicaat-projecten op hetzelfde adres die de projectdeduplicatie
+        // nog niet samenvoegde.
+        var a = MakeCu(unitId: 1, projectId: 10, street: "Sint-Pieterskaai", houseNumber: "37");
+        var b = MakeCu(unitId: 2, projectId: 18, street: "sint-pieterskaai", houseNumber: "37");
+
+        Assert.True(LooseListingMatchingService.SameBuilding(a, b));
+    }
+
+    [Fact]
+    public void SameBuilding_DifferentProjectDifferentAddress_ReturnsFalse()
+    {
+        var a = MakeCu(unitId: 1, projectId: 10, street: "Kerkstraat", houseNumber: "103");
+        var b = MakeCu(unitId: 2, projectId: 18, street: "Dorpsstraat", houseNumber: "5");
+
+        Assert.False(LooseListingMatchingService.SameBuilding(a, b));
+    }
+
+    [Fact]
+    public void SameBuilding_DifferentProjectMissingAddress_ReturnsFalse()
+    {
+        var a = MakeCu(unitId: 1, projectId: 10, street: null, houseNumber: null);
+        var b = MakeCu(unitId: 2, projectId: 18, street: null, houseNumber: null);
+
+        Assert.False(LooseListingMatchingService.SameBuilding(a, b));
     }
 
     // ── GeoDistanceMeters test ────────────────────────────────────────────────

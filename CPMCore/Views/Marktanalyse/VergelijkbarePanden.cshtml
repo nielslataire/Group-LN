@@ -22,11 +22,78 @@
 
 @section PageStyle {
 <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <style>
-.vp-sidebar         { width:220px; min-width:220px; flex-shrink:0; }
-.vp-content         { flex:1; min-width:0; }
+.split {
+    display: grid;
+    grid-template-columns: 288px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+/* Bootstrap's .container-fluid gutter geeft ongewenste links/rechts padding op deze pagina */
+.container-fluid {
+    padding-left: 0;
+    padding-right: 0;
+}
+.vp-sidebar         { min-width:0; }
+.vp-content         { min-width:0; position:relative; }
+
+/* Zoekknop in de echte thema-primary kleur (Bootstrap's .btn-primary is in
+   dit thema overschreven naar grijs, dus hier expliciet op var(--primary)) */
+.btn-vp-primary {
+    background: var(--primary,#2c7a4b);
+    border-color: var(--primary,#2c7a4b);
+    color: #fff;
+}
+.btn-vp-primary:hover,
+.btn-vp-primary:focus {
+    background: var(--primary,#2c7a4b);
+    border-color: var(--primary,#2c7a4b);
+    color: #fff;
+    filter: brightness(0.92);
+}
+
+/* Laad-overlay tijdens (automatisch) zoeken — dekt bestaande resultaten af
+   totdat de nieuwe pagina met verse data geladen is. */
+.vp-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    border-radius: 10px;
+    min-height: 120px;
+}
+.vp-loading-overlay.show { display: flex; }
+.vp-loading-overlay .spinner-border { color: var(--primary,#2c7a4b); width: 2.5rem; height: 2.5rem; }
+
+        .vp-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden; /* laat de afronding doorlopen door header/body/tabel */
+        }
+
+        .vp-card .card-header {
+            background: #fff;
+                padding-top: 1rem !important;
+                padding-bottom: 1rem !important;
+
+        }
+
 .vp-filter-card     { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:1.25rem; }
 .vp-filter-label    { font-size:.72rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.35rem; }
+
+        .vp-filter-card .vp-filter-card-head {
+            padding-bottom: 13px;
+            border-bottom: 1px solid #e3e7ee;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
 .vp-seg-group       { display:flex; border:1px solid #d1d5db; border-radius:7px; overflow:hidden; }
 .vp-seg-group input { display:none; }
 .vp-seg-group label { flex:1; text-align:center; padding:.35rem .5rem; font-size:.8rem; font-weight:500; cursor:pointer; color:#374151; background:#fff; transition:background .15s,color .15s; border-right:1px solid #d1d5db; }
@@ -52,9 +119,23 @@
 .vp-gem-row label    { cursor:pointer; flex:1; margin:0; }
 .vp-gem-count        { font-size:.75rem; color:#94a3b8; margin-left:.5rem; }
 
-/* Rond adres */
-.vp-rond-panel       { border:1px solid #d1d5db; border-radius:7px; padding:.75rem; background:#f8fafc; }
-.vp-rond-panel input { width:100%; border:1px solid #d1d5db; border-radius:5px; padding:.4rem .6rem; font-size:.85rem; }
+/* Rond adres — dropdown met kaart (middelpunt + straal) */
+.vp-rond-wrap        { position:relative; }
+.vp-rond-dropdown     { display:none; position:absolute; top:calc(100% + 6px); left:0; width:340px; z-index:1050; border:1px solid #e2e8f0; border-radius:10px; background:#fff; box-shadow:0 12px 32px rgba(15,23,42,.14); padding:.9rem; }
+.vp-rond-dropdown.open { display:block; }
+.vp-rond-dropdown-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:.65rem; }
+.vp-rond-dropdown-title  { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
+.vp-rond-count-badge     { background:#dcfce7; color:#166534; font-size:.68rem; font-weight:700; padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
+.vp-rond-search          { position:relative; margin-bottom:.75rem; }
+.vp-rond-search i        { position:absolute; left:.65rem; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:.9rem; }
+.vp-rond-search input    { width:100%; border:1px solid #d1d5db; border-radius:7px; padding:.45rem .75rem .45rem 2rem; font-size:.85rem; }
+.vp-rond-search input:focus { outline:none; border-color:var(--primary,#2c7a4b); }
+.vp-rond-slider-row      { display:flex; align-items:center; gap:.6rem; margin-bottom:.75rem; }
+.vp-rond-slider-row input[type="range"] { flex:1; }
+.vp-rond-slider-row span { font-size:.8rem; font-weight:700; color:var(--primary,#2c7a4b); min-width:44px; text-align:right; }
+.vp-rond-map             { height:200px; border-radius:7px; border:1px solid #e2e8f0; background:#eef2f7; }
+.vp-rond-hint            { display:flex; align-items:flex-start; gap:.4rem; margin-top:.6rem; font-size:.72rem; color:#94a3b8; line-height:1.4; }
+.vp-rond-hint i          { flex-shrink:0; margin-top:.1rem; }
 
 /* KPI cards */
 .vp-kpi-card         { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:.9rem 1rem; }
@@ -62,13 +143,13 @@
 .vp-kpi-value        { font-size:1.35rem; font-weight:700; color:#1e293b; line-height:1.1; }
 .vp-kpi-sub          { font-size:.75rem; color:#94a3b8; margin-top:.1rem; }
 .vp-kpi-first        { background:#f0fdf4; border-color:#bbf7d0; }
-.vp-kpi-first .vp-kpi-value { color:var(--primary,#2c7a4b); font-size:2rem; }
+.vp-kpi-first .vp-kpi-value { color:var(--primary,#2c7a4b); }
 
 /* Table */
-.table-vp thead th   { background:#f8fafc; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap; }
+.table-vp thead th   { background:#f8fafc; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap; padding-left:20px; padding-right:20px; }
 .table-vp tbody tr   { cursor:pointer; transition:background .1s; }
 .table-vp tbody tr:hover { background:#f8fafc; }
-.table-vp td         { font-size:.83rem; vertical-align:middle; }
+.table-vp td         { font-size:.83rem; vertical-align:middle; padding-left:20px; padding-right:20px; }
 .vp-adres-line1      { font-weight:600; color:#1e293b; }
 .vp-adres-line2      { font-size:.75rem; color:#64748b; }
 .type-pill           { display:inline-block; border-radius:20px; padding:.15rem .55rem; font-size:.72rem; font-weight:600; }
@@ -86,6 +167,15 @@
 .badge-los           { background:#fff4e5; border:1px solid #ffd591; color:#b26a00; font-size:.68rem; padding:.1rem .45rem; border-radius:20px; }
 .vp-empty            { text-align:center; padding:3rem; color:#94a3b8; }
 .vp-marktconclusie   { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem 1.25rem; font-size:.88rem; color:#374151; }
+.vp-mc-header        { display:flex; align-items:center; gap:.65rem; margin-bottom:.75rem; }
+.vp-mc-icon          { width:34px; height:34px; border-radius:8px; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+.vp-mc-title         { font-weight:700; font-size:.88rem; color:#1e293b; line-height:1.25; }
+.vp-mc-subtitle      { font-size:.75rem; color:#94a3b8; line-height:1.25; margin-top:1px; }
+
+/* theme.css (geladen ná deze PageStyle-sectie) zet .dataTables_wrapper .pagination
+   op margin-top:20px!important — hier ongedaan gemaakt via een ID-selector zodat
+   deze regel wint ondanks de latere laadvolgorde van theme.css. */
+#tblVergelijkbaar_wrapper .pagination { margin-top: 0 !important; }
 </style>
 }
 
@@ -99,12 +189,12 @@
 <form id="vpForm" method="get" action="/Marktanalyse/VergelijkbarePanden">
 <input type="hidden" name="zoekgebiedTab" id="hidZoekgebiedTab" value="@Model.ZoekgebiedTab" />
 
-<div class="d-flex gap-3 align-items-start">
+<div class="split">
 
     <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
     <aside class="vp-sidebar">
         <div class="vp-filter-card">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3 vp-filter-card-head">
                 <span style="font-weight:700;font-size:.92rem;color:#1e293b;"><i class="bx bx-slider-alt me-1"></i>Zoekprofiel</span>
                 <a href="/Marktanalyse/VergelijkbarePanden" class="text-decoration-none" style="font-size:.78rem;color:#94a3b8;">Reset</a>
             </div>
@@ -140,19 +230,39 @@
 
             <!-- Rond adres -->
             <div id="panelRondAdres" style="@(Model.ZoekgebiedTab != "RondAdres" ? "display:none" : "")">
-                <div class="vp-rond-panel mb-3">
-                    <div class="vp-filter-label">Postcode of adres</div>
-                    <input type="text" name="rondAdresPostcode" id="rondAdresPostcode"
-                           value="@Model.RondAdresPostcode" placeholder="bv. 9000"
-                           class="mb-2" />
-                    <div class="vp-filter-label mt-2">Straal: <span id="straalLabel">@((Model.RondAdresStraal / 1000.0).ToString("0.#")) km</span></div>
-                    <input type="range" name="rondAdresStraal" id="rondAdresStraal"
-                           min="250" max="10000" step="250" value="@Model.RondAdresStraal"
-                           class="form-range mt-1" />
-                    <div class="d-flex justify-content-between" style="font-size:.72rem;color:#94a3b8;">
-                        <span>250m</span><span>10 km</span>
+                <div class="vp-rond-wrap mb-3">
+                    <button type="button" id="rondAdresBtn" class="vp-gem-btn">
+                        <span id="rondAdresBtnLabel">@Model.RondAdresDropdownLabel</span>
+                        <i class="bx bx-chevron-down" id="rondAdresChevron"></i>
+                    </button>
+
+                    <div class="vp-rond-dropdown" id="rondAdresDropdown">
+                        <div class="vp-rond-dropdown-header">
+                            <span class="vp-rond-dropdown-title">Middelpunt &amp; straal</span>
+                            <span class="vp-rond-count-badge"><span id="rondAdresCount">0</span> panden in gebied</span>
+                        </div>
+
+                        <div class="vp-rond-search">
+                            <i class="bx bx-search"></i>
+                            <input type="text" id="rondAdresSearch" placeholder="Zoek adres..." autocomplete="off" />
+                        </div>
+
+                        <div class="vp-rond-slider-row">
+                            <input type="range" id="rondAdresStraal" name="rondAdresStraal"
+                                   min="250" max="25000" step="250" value="@Model.RondAdresStraal" class="form-range" />
+                            <span id="straalLabel">@((Model.RondAdresStraal / 1000.0).ToString("0.#")) km</span>
+                        </div>
+
+                        <div id="rondAdresMap" class="vp-rond-map"></div>
+
+                        <div class="vp-rond-hint">
+                            <i class="bx bx-info-circle"></i>
+                            <span>Klik of sleep op de kaart om het middelpunt te verplaatsen; sleep de greep om de straal aan te passen.</span>
+                        </div>
                     </div>
                 </div>
+                <input type="hidden" name="rondAdresLat" id="rondAdresLat" value="@Model.RondAdresLat" />
+                <input type="hidden" name="rondAdresLng" id="rondAdresLng" value="@Model.RondAdresLng" />
             </div>
 
             <!-- Type -->
@@ -225,7 +335,7 @@
                 <label for="stVerkocht">Verkocht</label>
             </div>
 
-            <button type="submit" class="btn btn-success w-100 btn-sm">
+            <button type="submit" class="btn btn-vp-primary w-100 btn-sm">
                 <i class="bx bx-search me-1"></i>Zoek vergelijkbare panden
             </button>
         </div>
@@ -233,6 +343,11 @@
 
     <!-- ── Resultaten ───────────────────────────────────────────────────── -->
     <div class="vp-content">
+        <div id="vpLoadingOverlay" class="vp-loading-overlay">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Bezig met laden...</span>
+            </div>
+        </div>
 
         @if (!Model.HeeftZoekparameters)
         {
@@ -249,7 +364,6 @@
                     <div class="vp-kpi-card vp-kpi-first">
                         <div class="vp-kpi-label"><i class="bx bx-building-house me-1"></i>Panden</div>
                         <div class="vp-kpi-value">@(Model.Kpi?.Aantal ?? 0)</div>
-                        <div class="vp-kpi-sub">vergelijkbare panden</div>
                     </div>
                 </div>
                 <div class="col">
@@ -296,7 +410,7 @@
             else
             {
                 <!-- Resultaten tabel -->
-                <div class="card">
+                <div class="vp-card">
                     <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
                         <span style="font-weight:600;font-size:.88rem;">
                             <i class="bx bx-list-ul me-1"></i>@Model.Panden.Count vergelijkbare panden
@@ -373,7 +487,6 @@
                                                             <div class="sales-bar" style="width:@(Math.Min(100, (int)p.Verkoopgraad.Value))%"></div>
                                                         </div>
                                                         <span class="sales-pct">@((int)Math.Round(p.Verkoopgraad.Value))%</span>
-                                                        <span class="badge-project">Project</span>
                                                     }
                                                     else if (!p.IsProject)
                                                     {
@@ -396,8 +509,12 @@
 
                 <!-- Marktconclusie -->
                 <div class="vp-marktconclusie mt-3">
-                    <div style="font-weight:600;font-size:.85rem;color:#1e293b;margin-bottom:.35rem;">
-                        <i class="bx bx-bar-chart-alt-2 me-1" style="color:var(--primary,#2c7a4b);"></i>Marktconclusie
+                    <div class="vp-mc-header">
+                        <div class="vp-mc-icon"><i class="bx bx-bar-chart"></i></div>
+                        <div>
+                            <div class="vp-mc-title">Marktconclusie</div>
+                            <div class="vp-mc-subtitle">Automatisch samengevat uit het zoekprofiel</div>
+                        </div>
                     </div>
                     @{
                         var typeOms = Model.Type == "Appartement" ? "appartementen" : Model.Type == "Woning" ? "woningen" : "panden";
@@ -414,7 +531,7 @@
                         De gemiddelde vraagprijs bedraagt <strong>@gemOms</strong>, of <strong>@ppSqmOms</strong>.
                         @if (Model.Kpi?.LaagstePrijs != null && Model.Kpi?.HoogstePrijs != null)
                         {
-                            <span>Prijsvork: van <strong>@($"€ {Model.Kpi.LaagstePrijs:N0}".Replace(",","."))</strong> tot <strong>@($"€ {Model.Kpi.HoogstePrijs:N0}".Replace(",","."))</strong>.</span>
+                            <br /><span>Prijsvork: van <strong>@($"€ {Model.Kpi.LaagstePrijs:N0}".Replace(",","."))</strong> tot <strong>@($"€ {Model.Kpi.HoogstePrijs:N0}".Replace(",","."))</strong>.</span>
                         }
                         <br />
                         <strong>@beschikbaar</strong> van @Model.Panden.Count panden zijn nog beschikbaar (@bPct% van de selectie).
@@ -431,6 +548,8 @@
 @section PageScripts {
 <script src="~/lib/datatables/media/js/jquery.dataTables.min.js"></script>
 <script src="~/lib/datatables/media/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 (function () {
     'use strict';
@@ -438,6 +557,20 @@
     // ── Data ──────────────────────────────────────────────────────────────────
     var gemeenten    = @Html.Raw(locatiesJson);
     var geselecteerd = new Set(@Html.Raw(JsonSerializer.Serialize(Model.GemeenteIds)));
+    var form         = document.getElementById('vpForm');
+
+    // ── Laad-overlay bij elke zoekactie (knop of automatisch) ──────────────────
+    var loadingOverlay = document.getElementById('vpLoadingOverlay');
+    form.addEventListener('submit', function () {
+        if (loadingOverlay) loadingOverlay.classList.add('show');
+    });
+
+    // ── Type en Status tonen automatisch resultaten (net als gemeente) ─────────
+    document.querySelectorAll('input[name="type"], input[name="status"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            form.requestSubmit();
+        });
+    });
 
     // ── Zoekgebied tabs ───────────────────────────────────────────────────────
     var tabGem  = document.getElementById('tabGemeenten');
@@ -457,15 +590,246 @@
         hidTab.value = 'RondAdres';
     });
 
-    // ── Straal label ──────────────────────────────────────────────────────────
-    var straalInput = document.getElementById('rondAdresStraal');
-    var straalLabel = document.getElementById('straalLabel');
-    if (straalInput) {
-        straalInput.addEventListener('input', function () {
-            var km = (parseInt(this.value) / 1000).toFixed(this.value < 1000 ? 2 : 1).replace(/\.?0+$/, '');
-            straalLabel.textContent = km + ' km';
+    // ── Rond adres: dropdown met kaart (middelpunt + straal) ───────────────────
+    (function () {
+        var GEOCODE_URL = '@Url.Action("GeocodeAdres", "Marktanalyse")';
+        var COUNT_URL   = '@Url.Action("TelPandenInStraal", "Marktanalyse")';
+        var BELGIE_LAT  = 50.85, BELGIE_LNG = 4.35, BELGIE_ZOOM = 7;
+
+        var btn        = document.getElementById('rondAdresBtn');
+        var btnLabel   = document.getElementById('rondAdresBtnLabel');
+        var chevron    = document.getElementById('rondAdresChevron');
+        var dropdown   = document.getElementById('rondAdresDropdown');
+        var searchInp  = document.getElementById('rondAdresSearch');
+        var straalInp  = document.getElementById('rondAdresStraal');
+        var straalLbl  = document.getElementById('straalLabel');
+        var countBadge = document.getElementById('rondAdresCount');
+        var mapDiv     = document.getElementById('rondAdresMap');
+        var latHidden  = document.getElementById('rondAdresLat');
+        var lngHidden  = document.getElementById('rondAdresLng');
+        if (!btn || !mapDiv) return;
+
+        var initieelLat = @Html.Raw(Model.RondAdresLat.HasValue ? Model.RondAdresLat.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null");
+        var initieelLng = @Html.Raw(Model.RondAdresLng.HasValue ? Model.RondAdresLng.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : "null");
+
+        var map, circle, centerMarker, handleMarker;
+        var huidigeLat  = initieelLat !== null ? initieelLat : BELGIE_LAT;
+        var huidigeLng  = initieelLng !== null ? initieelLng : BELGIE_LNG;
+        var puntGekozen = initieelLat !== null;
+        var puntGewijzigdSindsSubmit = false;
+
+        // ── Geo-helpers (spiegelen de server-side Haversine/VpGeoDistance) ─────
+        function haversineMeters(lat1, lng1, lat2, lng2) {
+            var R = 6371000;
+            var dLat = (lat2 - lat1) * Math.PI / 180;
+            var dLng = (lng2 - lng1) * Math.PI / 180;
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+        function destinationPoint(lat, lng, distM, bearingDeg) {
+            var R = 6371000;
+            var brng = bearingDeg * Math.PI / 180;
+            var lat1 = lat * Math.PI / 180, lng1 = lng * Math.PI / 180;
+            var lat2 = Math.asin(Math.sin(lat1) * Math.cos(distM / R) +
+                                  Math.cos(lat1) * Math.sin(distM / R) * Math.cos(brng));
+            var lng2 = lng1 + Math.atan2(
+                Math.sin(brng) * Math.sin(distM / R) * Math.cos(lat1),
+                Math.cos(distM / R) - Math.sin(lat1) * Math.sin(lat2));
+            return { lat: lat2 * 180 / Math.PI, lng: lng2 * 180 / Math.PI };
+        }
+        function dotIcon(size, fill, border) {
+            return L.divIcon({
+                className: '',
+                html: '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;' +
+                      'background:' + fill + ';border:2px solid ' + border + ';box-shadow:0 1px 4px rgba(0,0,0,.35);"></div>',
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2]
+            });
+        }
+
+        function fmtKm(meters) {
+            var km = meters / 1000;
+            return (km < 1 ? km.toFixed(2) : km.toFixed(1)).replace(/\.?0+$/, '') + ' km';
+        }
+
+        function updateLabel() {
+            straalLbl.textContent = fmtKm(parseInt(straalInp.value, 10));
+            if (puntGekozen) {
+                btnLabel.textContent = 'Eigen punt (' + huidigeLat.toFixed(3) + ', ' + huidigeLng.toFixed(3) + ') · ' + fmtKm(parseInt(straalInp.value, 10));
+            }
+        }
+
+        function syncHidden() {
+            latHidden.value = puntGekozen ? huidigeLat : '';
+            lngHidden.value = puntGekozen ? huidigeLng : '';
+        }
+
+        // ── Live telling (gedebounced) ──────────────────────────────────────────
+        var countTimer = null;
+        function ververTelling() {
+            if (countTimer) clearTimeout(countTimer);
+            if (!puntGekozen) { countBadge.textContent = '0'; return; }
+            countTimer = setTimeout(function () {
+                var params = new URLSearchParams({
+                    lat: huidigeLat, lng: huidigeLng, straal: straalInp.value,
+                    type: (document.querySelector('input[name="type"]:checked') || {}).value || 'Appartement',
+                    status: (document.querySelector('input[name="status"]:checked') || {}).value || 'Alles'
+                });
+                var oppEl = document.getElementById('oppervlakte');
+                var tolEl = document.getElementById('tolerantieSlider');
+                if (oppEl && oppEl.value) { params.set('oppervlakte', oppEl.value); params.set('tolerantie', tolEl.value); }
+                var slaapEl = document.querySelector('select[name="slaapkamers"]');
+                if (slaapEl && slaapEl.value) params.set('slaapkamers', slaapEl.value);
+                var prijsMinEl = document.querySelector('input[name="prijsMin"]');
+                var prijsMaxEl = document.querySelector('input[name="prijsMax"]');
+                if (prijsMinEl && prijsMinEl.value) params.set('prijsMin', prijsMinEl.value);
+                if (prijsMaxEl && prijsMaxEl.value) params.set('prijsMax', prijsMaxEl.value);
+
+                fetch(COUNT_URL + '?' + params.toString())
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) { countBadge.textContent = data.aantal; })
+                    .catch(function () { /* stille fout: preview is best-effort */ });
+            }, 300);
+        }
+
+        // ── Kaart lazy initialiseren (pas zodra dropdown zichtbaar is) ──────────
+        function initMapIndienNodig() {
+            if (map) { map.invalidateSize(); return; }
+
+            map = L.map(mapDiv, { zoomControl: true }).setView([huidigeLat, huidigeLng], BELGIE_ZOOM);
+            map.attributionControl.setPrefix(false);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap-bijdragers',
+                maxZoom: 19
+            }).addTo(map);
+
+            circle = L.circle([huidigeLat, huidigeLng], {
+                radius: parseInt(straalInp.value, 10),
+                color: '#16a34a', weight: 2, dashArray: '4 6',
+                fillColor: '#16a34a', fillOpacity: 0.08
+            }).addTo(map);
+
+            centerMarker = L.marker([huidigeLat, huidigeLng], {
+                draggable: true, icon: dotIcon(16, '#16a34a', '#fff')
+            }).addTo(map);
+
+            var handlePos = destinationPoint(huidigeLat, huidigeLng, parseInt(straalInp.value, 10), 90);
+            handleMarker = L.marker([handlePos.lat, handlePos.lng], {
+                draggable: true, icon: dotIcon(12, '#fff', '#16a34a')
+            }).addTo(map);
+
+            centerMarker.on('drag', function (e) {
+                var p = e.target.getLatLng();
+                circle.setLatLng(p);
+                var hp = destinationPoint(p.lat, p.lng, circle.getRadius(), 90);
+                handleMarker.setLatLng([hp.lat, hp.lng]);
+            });
+            centerMarker.on('dragend', function (e) {
+                zetPunt(e.target.getLatLng().lat, e.target.getLatLng().lng, true);
+            });
+
+            handleMarker.on('drag', function (e) {
+                var r = haversineMeters(huidigeLat, huidigeLng, e.target.getLatLng().lat, e.target.getLatLng().lng);
+                r = Math.min(25000, Math.max(250, Math.round(r / 250) * 250));
+                circle.setRadius(r);
+                straalInp.value = r;
+                updateLabel();
+            });
+            handleMarker.on('dragend', function () {
+                syncHidden();
+                ververTelling();
+            });
+
+            map.on('click', function (e) {
+                zetPunt(e.latlng.lat, e.latlng.lng, true);
+            });
+
+            if (puntGekozen) map.fitBounds(circle.getBounds(), { padding: [24, 24] });
+        }
+
+        function zetPunt(lat, lng, kaartActie) {
+            huidigeLat = lat; huidigeLng = lng; puntGekozen = true;
+            puntGewijzigdSindsSubmit = true;
+
+            if (map) {
+                circle.setLatLng([lat, lng]);
+                centerMarker.setLatLng([lat, lng]);
+                var hp = destinationPoint(lat, lng, circle.getRadius(), 90);
+                handleMarker.setLatLng([hp.lat, hp.lng]);
+                if (kaartActie === 'fit') map.fitBounds(circle.getBounds(), { padding: [24, 24] });
+                else if (kaartActie) map.panTo([lat, lng]);
+            }
+
+            updateLabel();
+            syncHidden();
+            ververTelling();
+        }
+
+        // ── Straal-slider ────────────────────────────────────────────────────────
+        straalInp.addEventListener('input', function () {
+            var r = parseInt(this.value, 10);
+            if (circle) {
+                circle.setRadius(r);
+                var hp = destinationPoint(huidigeLat, huidigeLng, r, 90);
+                if (handleMarker) handleMarker.setLatLng([hp.lat, hp.lng]);
+            }
+            updateLabel();
+            syncHidden();
+            ververTelling();
         });
-    }
+
+        // ── Adres zoeken (gedebounced geocoding) ────────────────────────────────
+        var geocodeTimer = null;
+        searchInp.addEventListener('input', function () {
+            var q = this.value.trim();
+            if (geocodeTimer) clearTimeout(geocodeTimer);
+            if (q.length < 3) return;
+            geocodeTimer = setTimeout(function () {
+                fetch(GEOCODE_URL + '?query=' + encodeURIComponent(q))
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data && data.success) {
+                            zetPunt(data.lat, data.lng, 'fit');
+                        }
+                    })
+                    .catch(function () { /* stille fout: gebruiker kan handmatig verslepen */ });
+            }, 450);
+        });
+        searchInp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') e.preventDefault();
+        });
+
+        // ── Dropdown open/close ──────────────────────────────────────────────────
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var open = dropdown.classList.toggle('open');
+            btn.classList.toggle('open', open);
+            chevron.className = open ? 'bx bx-chevron-up' : 'bx bx-chevron-down';
+            if (open) {
+                initMapIndienNodig();
+                ververTelling();
+            }
+        });
+
+        window.vpSluitRondAdresDropdown = function () {
+            if (!dropdown.classList.contains('open')) return;
+            dropdown.classList.remove('open');
+            btn.classList.remove('open');
+            chevron.className = 'bx bx-chevron-down';
+            // Toont automatisch resultaten zodra het middelpunt gekozen/gewijzigd is
+            // (net als bij gemeente-selectie) — geen aparte zoekknop nodig.
+            if (puntGewijzigdSindsSubmit && puntGekozen) {
+                puntGewijzigdSindsSubmit = false;
+                form.requestSubmit();
+            }
+        };
+
+        // Init
+        updateLabel();
+        syncHidden();
+    })();
 
     // ── Oppervlakte & tolerantie ──────────────────────────────────────────────
     var oppInput   = document.getElementById('oppervlakte');
@@ -518,6 +882,8 @@
                 else geselecteerd.delete(parseInt(this.value));
                 updateGemLabel();
                 syncHiddenInputs();
+                // Gemeente-selectie toont automatisch resultaten (geen zoekknop nodig)
+                form.requestSubmit();
             });
             gemList.appendChild(row);
         });
@@ -560,9 +926,12 @@
     gemSearch.addEventListener('input', function () { renderGemeenteList(this.value); });
 
     gemWissen.addEventListener('click', function () {
+        var hadSelectie = geselecteerd.size > 0;
         geselecteerd.clear();
         renderGemeenteList(gemSearch.value);
         updateGemLabel();
+        // Gemeente-selectie toont automatisch resultaten (geen zoekknop nodig)
+        if (hadSelectie) form.requestSubmit();
     });
 
     document.addEventListener('click', function (e) {
@@ -570,6 +939,13 @@
             gemDropdown.classList.remove('open');
             gemBtn.classList.remove('open');
             gemChevron.className = 'bx bx-chevron-down';
+        }
+
+        var rondBtn = document.getElementById('rondAdresBtn');
+        var rondDropdown = document.getElementById('rondAdresDropdown');
+        if (rondBtn && rondDropdown && !rondBtn.contains(e.target) && !rondDropdown.contains(e.target)
+            && typeof window.vpSluitRondAdresDropdown === 'function') {
+            window.vpSluitRondAdresDropdown();
         }
     });
 

@@ -164,6 +164,10 @@ public class LooseListingMatchingService : ILooseListingMatchingService
         int ambiguousCount = 0;
         int unmatchedCount = 0;
 
+        // Aantal losse listings dat deze run al aan een CanonicalUnit gekoppeld is —
+        // gebruikt om gelijkwaardige duplicaten één-op-één te verdelen.
+        var usedCuCounts = new Dictionary<long, int>();
+
         foreach (var loose in looseCandidates)
         {
             if (ct.IsCancellationRequested) break;
@@ -217,22 +221,56 @@ public class LooseListingMatchingService : ILooseListingMatchingService
             // Ambiguity check: top-2 binnen gap
             if (scored.Count > 1 && scored[1].Score >= best.Score - AmbiguityGap)
             {
-                ambiguousCount++;
-                debugReport.Ambiguous.Add(new DebugAmbiguous
+                // Als de gebonden topkandidaten gelijkwaardig zijn (zelfde gebouw,
+                // zelfde prijs, circa-oppervlakte), is koppelen aan om het even welke
+                // correct — verdeel dan één-op-één (minst gebruikte eerst) i.p.v. overslaan.
+                var tied = scored.Where(s => s.Score >= best.Score - AmbiguityGap).ToList();
+
+                // Verdieping kan alleen onderscheiden als de losse listing er zelf één heeft;
+                // zonder verdieping op de listing zijn units die enkel in verdieping
+                // verschillen niet uit elkaar te houden en dus gelijkwaardig.
+                bool ignoreFloor = !loose.Asset.Floor.HasValue;
+
+                var equivalentGroup = tied
+                    .Where(t => SameBuilding(best.Cu, t.Cu) && AreEquivalentUnits(best.Cu, t.Cu, ignoreFloor))
+                    .ToList();
+
+                // Niet-gelijkwaardige kandidaten blokkeren de resolutie alleen als ze
+                // even hoog scoren als de topkandidaat.
+                bool blocked = tied
+                    .Where(t => !equivalentGroup.Contains(t))
+                    .Any(o => o.Score >= best.Score);
+
+                if (!blocked && equivalentGroup.Count > 0)
                 {
-                    LooseUnit  = loose.Label,
-                    TopScore   = best.Score,
-                    Candidates = scored.Take(3).Select(s => $"CU#{s.Cu.CanonicalUnitId} ({s.Score})").ToList(),
-                    Reason     = "MultipleSimilarUnits"
-                });
-                _logger.LogInformation(
-                    "[LooseUnitMatch] Ambiguous | LooseAsset={Id} | Candidates={Cands} | Reason=MultipleSimilarUnits",
-                    loose.Asset.Id,
-                    string.Join(", ", scored.Take(3).Select(s => $"CU#{s.Cu.CanonicalUnitId}({s.Score})")));
-                continue;
+                    best = equivalentGroup
+                        .OrderBy(t => usedCuCounts.GetValueOrDefault(t.Cu.CanonicalUnitId))
+                        .ThenByDescending(t => t.Score)
+                        .First();
+                    best = (best.Cu, best.Level, best.Score,
+                        best.Reasons is null ? "EquivalentTieResolved" : best.Reasons + ", EquivalentTieResolved");
+                }
+                else
+                {
+                    ambiguousCount++;
+                    debugReport.Ambiguous.Add(new DebugAmbiguous
+                    {
+                        LooseUnit  = loose.Label,
+                        TopScore   = best.Score,
+                        Candidates = scored.Take(3).Select(s => $"CU#{s.Cu.CanonicalUnitId} ({s.Score})").ToList(),
+                        Reason     = "MultipleSimilarUnits"
+                    });
+                    _logger.LogInformation(
+                        "[LooseUnitMatch] Ambiguous | LooseAsset={Id} | Candidates={Cands} | Reason=MultipleSimilarUnits",
+                        loose.Asset.Id,
+                        string.Join(", ", scored.Take(3).Select(s => $"CU#{s.Cu.CanonicalUnitId}({s.Score})")));
+                    continue;
+                }
             }
 
             if (best.Score < ThresholdPossible) { unmatchedCount++; continue; }
+
+            usedCuCounts[best.Cu.CanonicalUnitId] = usedCuCounts.GetValueOrDefault(best.Cu.CanonicalUnitId) + 1;
 
             // Koppelen
             _logger.LogInformation(
@@ -390,6 +428,7 @@ public class LooseListingMatchingService : ILooseListingMatchingService
         if (loose.Asset.Floor.HasValue && cu.Floor.HasValue)
         {
             if (loose.Asset.Floor == cu.Floor) { score += 20; reasons.Add("Floor"); }
+            else                               { score -= 15; reasons.Add("FloorDiffers"); }
         }
 
         // ── Status ───────────────────────────────────────────────────────────
@@ -397,6 +436,19 @@ public class LooseListingMatchingService : ILooseListingMatchingService
             && loose.Asset.SaleStatus == cu.Status)
         {
             score += 10; reasons.Add("Status");
+        }
+
+        // ── Sterke combinatie: zelfde adres + zelfde prijs + circa-oppervlakte ─
+        // Dekt units waarvan enkel de m² licht afwijkt tussen bronnen (bijv. 73 vs 75 m²).
+        bool priceClose = loose.Price > 0 && cu.Price is > 0
+            && Math.Abs(loose.Price - cu.Price.Value) / Math.Max(loose.Price, cu.Price.Value) * 100m <= 1m;
+        bool areaClose = loose.Asset.LivingArea.HasValue && cu.Area.HasValue
+            && Math.Abs(loose.Asset.LivingArea.Value - cu.Area.Value) <= 3m;
+        bool floorCompatible = !loose.Asset.Floor.HasValue || !cu.Floor.HasValue
+            || loose.Asset.Floor == cu.Floor;
+        if (sameStreet && sameNumber && priceClose && areaClose && floorCompatible)
+        {
+            score += 30; reasons.Add("AdresPrijsOppCombo");
         }
 
         var reasonStr = reasons.Count > 0 ? string.Join(", ", reasons) : null;
@@ -407,6 +459,42 @@ public class LooseListingMatchingService : ILooseListingMatchingService
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    // Twee projectunits zijn gelijkwaardig als prijs, circa-oppervlakte, verdieping
+    // en slaapkamers overeenkomen (null telt als compatibel). Bij gelijkwaardige
+    // kandidaten is koppelen aan om het even welke unit correct voor deduplicatie.
+    // Met ignoreFloor=true telt een verdiepingsverschil niet mee (gebruikt wanneer
+    // de losse listing zelf geen verdieping heeft en dus niet kan onderscheiden).
+    internal static bool AreEquivalentUnits(CuCtx a, CuCtx b, bool ignoreFloor = false)
+    {
+        if (a.CanonicalUnitId == b.CanonicalUnitId) return true;
+
+        bool priceEq = a.Price is null || b.Price is null
+            || (a.Price > 0 && b.Price > 0
+                && Math.Abs(a.Price.Value - b.Price.Value) / Math.Max(a.Price.Value, b.Price.Value) * 100m <= 1m);
+
+        bool areaEq = a.Area is null || b.Area is null
+            || Math.Abs(a.Area.Value - b.Area.Value) <= 3m;
+
+        bool floorEq = ignoreFloor || !a.Floor.HasValue || !b.Floor.HasValue || a.Floor == b.Floor;
+
+        bool bedsEq = !a.Bedrooms.HasValue || !b.Bedrooms.HasValue || a.Bedrooms == b.Bedrooms;
+
+        return priceEq && areaEq && floorEq && bedsEq;
+    }
+
+    // Zelfde gebouw: zelfde CanonicalProject, of zelfde genormaliseerde straat +
+    // huisnummer (dekt duplicaat-projecten op hetzelfde adres die de projectdeduplicatie
+    // nog niet heeft samengevoegd).
+    internal static bool SameBuilding(CuCtx a, CuCtx b)
+    {
+        if (a.CanonicalProjectId == b.CanonicalProjectId) return true;
+
+        var street = Norm(a.Street);
+        var number = Norm(a.HouseNumber);
+        return !string.IsNullOrEmpty(street) && street == Norm(b.Street)
+            && !string.IsNullOrEmpty(number) && number == Norm(b.HouseNumber);
+    }
 
     internal static double GeoDistanceMeters(decimal lat1, decimal lng1, decimal lat2, decimal lng2)
     {

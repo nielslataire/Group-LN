@@ -503,7 +503,7 @@ $('#partySelect')
         if (p === 'su') typeVal = 3;
         $('input[name="PartyId"]').val(idStr);
         $('input[name="PartyType"]').val(typeVal || '');
-        fetchAndStorePartyDetails(v); // async, triggers rebuild when done
+        const partyDetailsPromise = fetchAndStorePartyDetails(v); // async, triggers rebuild when done
         if (window.skipPartySelectOnce) {
             window.skipPartySelectOnce = false;
             if (window.InvoiceIsEditing === true) {
@@ -522,6 +522,8 @@ $('#partySelect')
             return;
         }
         hardResetUI();
+        await partyDetailsPromise; // pas na de reset invullen, anders wist hardResetUI de footer weer
+        $('#FooterDescription').val((window.currentPartyDetails && window.currentPartyDetails.invoiceExtra) || '');
         if (window.rebuildInvoicePreview) window.rebuildInvoicePreview();
     })
     .on('select2:clear', function () {
