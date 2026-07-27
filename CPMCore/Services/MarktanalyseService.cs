@@ -1,19 +1,23 @@
 using CPMCore.Models.Marktanalyse;
+using DALCore.Models;
 using GroupLN.MarketData.Core.Entities;
 using GroupLN.MarketData.Core.Enums;
 using GroupLN.MarketData.Core.Helpers;
 using GroupLN.MarketData.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CPMCore.Services;
 
 public class MarktanalyseService : IMarktanalyseService
 {
     private readonly MarketDataDbContext _db;
+    private readonly cpmRunningContext _cpmDb;
 
-    public MarktanalyseService(MarketDataDbContext db)
+    public MarktanalyseService(MarketDataDbContext db, cpmRunningContext cpmDb)
     {
         _db = db;
+        _cpmDb = cpmDb;
     }
 
     private sealed record UnitSnapshot(decimal? AskingPrice, decimal? PricePerSqm);
@@ -1026,8 +1030,10 @@ public class MarktanalyseService : IMarktanalyseService
             if (projectUnits.Count > 0)
             {
                 var unitIds = projectUnits.Select(u => u.Id).ToList();
+                // Niet filteren op IsActive: de vraagprijs moet altijd getoond worden
+                // zolang ze in de database staat, ongeacht de status van het pand.
                 var unitPrices = await _db.MarketListings
-                    .Where(l => unitIds.Contains(l.MarketAssetId) && l.IsActive)
+                    .Where(l => unitIds.Contains(l.MarketAssetId))
                     .GroupBy(l => l.MarketAssetId)
                     .Select(g => new { AssetId = g.Key, Price = g.Max(l => l.AskingPrice) })
                     .AsNoTracking()
@@ -1134,8 +1140,10 @@ public class MarktanalyseService : IMarktanalyseService
         if (losseEenheden.Count > 0)
         {
             var losseIds = losseEenheden.Select(e => e.Id).ToList();
+            // Niet filteren op IsActive: de vraagprijs moet altijd getoond worden
+            // zolang ze in de database staat, ongeacht de status van het pand.
             var losseLst = await _db.MarketListings
-                .Where(l => losseIds.Contains(l.MarketAssetId) && l.IsActive)
+                .Where(l => losseIds.Contains(l.MarketAssetId))
                 .GroupBy(l => l.MarketAssetId)
                 .Select(g => new
                 {
@@ -1380,8 +1388,10 @@ public class MarktanalyseService : IMarktanalyseService
     {
         if (assetIds.Count == 0) return 0;
 
+        // Niet filteren op IsActive: zelfde regel als bij de vraagprijs-lookup
+        // in GetVergelijkbarePandenAsync — prijs telt mee ongeacht status.
         var prices = await _db.MarketListings
-            .Where(l => assetIds.Contains(l.MarketAssetId) && l.IsActive)
+            .Where(l => assetIds.Contains(l.MarketAssetId))
             .GroupBy(l => l.MarketAssetId)
             .Select(g => g.Max(l => l.AskingPrice))
             .ToListAsync(ct);
@@ -1847,5 +1857,217 @@ public class MarktanalyseService : IMarktanalyseService
             CanonicalProjectId = canonicalProjectId,
             BronnenLijst       = bronnenLijst
         };
+    }
+
+    // ── Zoekhistoriek & opgeslagen profielen (Vergelijkbare panden) ───────────
+    // Deze data leeft in cpmRunningContext (de CPM-hoofddatabase, gekoppeld aan
+    // Users), in tegenstelling tot de rest van deze service die MarketDataDbContext
+    // gebruikt voor de eigenlijke pandendata.
+
+    public async Task LogZoekActieAsync(
+        int userId,
+        VergelijkbarePandenZoekCriteria criteria,
+        int aantalResultaten,
+        CancellationToken ct = default)
+    {
+        var actie = new MarktanalyseZoekActie
+        {
+            UserId            = userId,
+            ZoekgebiedTab     = criteria.ZoekgebiedTab,
+            GemeenteIdsJson   = JsonSerializer.Serialize(criteria.GemeenteIds),
+            RondAdresPostcode = criteria.RondAdresPostcode,
+            RondAdresLat      = criteria.RondAdresLat,
+            RondAdresLng      = criteria.RondAdresLng,
+            RondAdresStraal   = criteria.RondAdresStraal,
+            Type              = criteria.Type,
+            Oppervlakte       = criteria.Oppervlakte,
+            Tolerantie        = criteria.Tolerantie,
+            PrijsMin          = criteria.PrijsMin,
+            PrijsMax          = criteria.PrijsMax,
+            Slaapkamers       = criteria.Slaapkamers,
+            Status            = criteria.Status,
+            AantalResultaten  = aantalResultaten,
+            UitgevoerdOp      = DateTime.UtcNow
+        };
+
+        _cpmDb.MarktanalyseZoekActie.Add(actie);
+        await _cpmDb.SaveChangesAsync(ct);
+    }
+
+    public async Task<List<VergelijkbarePandenSnelkoppelingViewModel>> GetRecenteZoekActiesAsync(
+        int userId, int take, CancellationToken ct = default)
+    {
+        var acties = await _cpmDb.MarktanalyseZoekActie
+            .Where(a => a.UserId == userId)
+            .OrderByDescending(a => a.UitgevoerdOp)
+            .Take(take)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (acties.Count == 0) return [];
+
+        var locaties = await GetLocatiesAsync(ct);
+        return acties
+            .Select(a => BuildSnelkoppeling(ToCriteria(a), locaties, a.AantalResultaten, a.UitgevoerdOp))
+            .ToList();
+    }
+
+    public async Task<List<VergelijkbarePandenSnelkoppelingViewModel>> GetSnelStartPresetsAsync(
+        int userId, int take, CancellationToken ct = default)
+    {
+        // Gebaseerd op de eigen zoekhistoriek: de meest gebruikte criteria-combinaties
+        // (over de laatste 200 zoekacties), gesorteerd op frequentie en dan recentheid.
+        var acties = await _cpmDb.MarktanalyseZoekActie
+            .Where(a => a.UserId == userId)
+            .OrderByDescending(a => a.UitgevoerdOp)
+            .Take(200)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (acties.Count == 0) return [];
+
+        var locaties = await GetLocatiesAsync(ct);
+
+        return acties
+            .GroupBy(BuildSignature)
+            .Select(g => new
+            {
+                Laatste = g.OrderByDescending(a => a.UitgevoerdOp).First(),
+                Aantal  = g.Count()
+            })
+            .OrderByDescending(g => g.Aantal)
+            .ThenByDescending(g => g.Laatste.UitgevoerdOp)
+            .Take(take)
+            .Select(g => BuildSnelkoppeling(ToCriteria(g.Laatste), locaties, g.Laatste.AantalResultaten, tijdstip: null))
+            .ToList();
+    }
+
+    public async Task<int> SaveZoekProfielAsync(
+        int userId,
+        string naam,
+        VergelijkbarePandenZoekCriteria criteria,
+        CancellationToken ct = default)
+    {
+        var profiel = new MarktanalyseZoekProfiel
+        {
+            UserId            = userId,
+            Naam              = naam,
+            ZoekgebiedTab     = criteria.ZoekgebiedTab,
+            GemeenteIdsJson   = JsonSerializer.Serialize(criteria.GemeenteIds),
+            RondAdresPostcode = criteria.RondAdresPostcode,
+            RondAdresLat      = criteria.RondAdresLat,
+            RondAdresLng      = criteria.RondAdresLng,
+            RondAdresStraal   = criteria.RondAdresStraal,
+            Type              = criteria.Type,
+            Oppervlakte       = criteria.Oppervlakte,
+            Tolerantie        = criteria.Tolerantie,
+            PrijsMin          = criteria.PrijsMin,
+            PrijsMax          = criteria.PrijsMax,
+            Slaapkamers       = criteria.Slaapkamers,
+            Status            = criteria.Status,
+            CreatedDate       = DateTime.UtcNow
+        };
+
+        _cpmDb.MarktanalyseZoekProfiel.Add(profiel);
+        await _cpmDb.SaveChangesAsync(ct);
+        return profiel.Id;
+    }
+
+    public async Task<List<VergelijkbarePandenSnelkoppelingViewModel>> GetOpgeslagenProfielenAsync(
+        int userId, int take, CancellationToken ct = default)
+    {
+        var profielen = await _cpmDb.MarktanalyseZoekProfiel
+            .Where(p => p.UserId == userId)
+            .OrderByDescending(p => p.CreatedDate)
+            .Take(take)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        if (profielen.Count == 0) return [];
+
+        return profielen
+            .Select(p => new VergelijkbarePandenSnelkoppelingViewModel
+            {
+                Id       = p.Id,
+                Titel    = p.Naam,
+                Subtitel = BuildSubtitel(ToCriteria(p)),
+                Criteria = ToCriteria(p)
+            })
+            .ToList();
+    }
+
+    private static VergelijkbarePandenZoekCriteria ToCriteria(MarktanalyseZoekActie a) => new(
+        a.ZoekgebiedTab, DeserializeGemeenteIds(a.GemeenteIdsJson), a.RondAdresPostcode,
+        a.RondAdresLat, a.RondAdresLng, a.RondAdresStraal, a.Type, a.Oppervlakte,
+        a.Tolerantie, a.PrijsMin, a.PrijsMax, a.Slaapkamers, a.Status);
+
+    private static VergelijkbarePandenZoekCriteria ToCriteria(MarktanalyseZoekProfiel p) => new(
+        p.ZoekgebiedTab, DeserializeGemeenteIds(p.GemeenteIdsJson), p.RondAdresPostcode,
+        p.RondAdresLat, p.RondAdresLng, p.RondAdresStraal, p.Type, p.Oppervlakte,
+        p.Tolerantie, p.PrijsMin, p.PrijsMax, p.Slaapkamers, p.Status);
+
+    private static List<int> DeserializeGemeenteIds(string? json) =>
+        string.IsNullOrWhiteSpace(json) ? [] : (JsonSerializer.Deserialize<List<int>>(json) ?? []);
+
+    private static string BuildSignature(MarktanalyseZoekActie a) => string.Join('|',
+        a.ZoekgebiedTab, a.GemeenteIdsJson, a.RondAdresPostcode, a.RondAdresStraal, a.Type,
+        a.Oppervlakte, a.Tolerantie, a.PrijsMin, a.PrijsMax, a.Slaapkamers, a.Status);
+
+    private static VergelijkbarePandenSnelkoppelingViewModel BuildSnelkoppeling(
+        VergelijkbarePandenZoekCriteria criteria,
+        List<GemeenteGroep> locaties,
+        int? aantalResultaten,
+        DateTime? tijdstip) => new()
+        {
+            Titel            = BuildTitel(criteria, locaties),
+            Subtitel         = BuildSubtitel(criteria),
+            AantalResultaten = aantalResultaten,
+            RelatieveTijd    = tijdstip.HasValue ? FormatRelatieveTijd(tijdstip.Value) : null,
+            Criteria         = criteria
+        };
+
+    private static string BuildTitel(VergelijkbarePandenZoekCriteria c, List<GemeenteGroep> locaties)
+    {
+        var typeLabel = c.Type == "Woning" ? "Woningen" : "Appartementen";
+
+        string plaats;
+        if (c.ZoekgebiedTab == "RondAdres")
+            plaats = "rond adres";
+        else if (c.GemeenteIds.Count == 1)
+            plaats = locaties.FirstOrDefault(l => l.GeoMunicipalityId == c.GemeenteIds[0])?.GemeenteNaam ?? "1 gemeente";
+        else if (c.GemeenteIds.Count > 1)
+            plaats = $"{c.GemeenteIds.Count} gemeenten";
+        else
+            plaats = "alle gemeenten";
+
+        return $"{typeLabel} · {plaats}";
+    }
+
+    private static string BuildSubtitel(VergelijkbarePandenZoekCriteria c)
+    {
+        var delen = new List<string>();
+
+        if (c.Oppervlakte.HasValue)
+            delen.Add($"±{c.Oppervlakte.Value:0} m²");
+
+        if (c.ZoekgebiedTab == "RondAdres")
+            delen.Add($"{(c.RondAdresStraal / 1000.0):0.#} km");
+
+        delen.Add(c.PrijsMin.HasValue || c.PrijsMax.HasValue
+            ? $"€{(c.PrijsMin?.ToString("N0") ?? "0")}–{(c.PrijsMax?.ToString("N0") ?? "∞")}"
+            : "alle prijzen");
+
+        return string.Join(" · ", delen);
+    }
+
+    private static string FormatRelatieveTijd(DateTime utc)
+    {
+        var span = DateTime.UtcNow - utc;
+        if (span.TotalMinutes < 1) return "zonet";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} min geleden";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours} uur geleden";
+        if (span.TotalDays < 2) return "gisteren";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays} dagen geleden";
+        return utc.ToLocalTime().ToString("dd/MM/yyyy");
     }
 }

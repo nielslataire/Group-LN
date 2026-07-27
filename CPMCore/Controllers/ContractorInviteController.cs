@@ -52,6 +52,7 @@ public class ContractorInviteController : BaseController
             CompanyName = company.BedrijfsNaam ?? $"Bedrijf {companyId}"
         };
 
+        SetPageHeader("bx bx-user-plus", "Aannemer uitnodigen");
         return View(vm);
     }
 
@@ -143,6 +144,7 @@ public class ContractorInviteController : BaseController
             Rows        = rows
         };
 
+        SetPageHeader("bx bx-user-check", "Portaal-toegang — " + vm.CompanyName);
         return View(vm);
     }
 

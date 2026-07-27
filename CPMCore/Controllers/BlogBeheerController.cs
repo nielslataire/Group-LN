@@ -40,6 +40,8 @@ public class BlogBeheerController : BaseController
     [HttpGet]
     public IActionResult Index()
     {
+        SetPageHeader("bx bx-news", "Blogartikelen");
+
         var result = _blogService.GetArtikelen(alleenGepubliceerd: false);
         var vm = new BlogArtikelListVM { Artikelen = result.Values ?? new() };
         return View(vm);
@@ -50,6 +52,8 @@ public class BlogBeheerController : BaseController
     [HttpGet]
     public IActionResult Aanmaken()
     {
+        SetPageHeader("bx bx-news", "Nieuw blogartikel");
+
         var vm = new BlogArtikelEditVM { Datum = DateTime.Today };
         VulLinkDropdowns(vm);
         return View("Bewerken", vm);
@@ -60,6 +64,8 @@ public class BlogBeheerController : BaseController
     [HttpGet]
     public IActionResult Bewerken(int id)
     {
+        SetPageHeader("bx bx-news", "Blogartikel bewerken");
+
         var result = _blogService.GetArtikelById(id);
         if (result.HasErrors || result.Value == null)
         {
@@ -86,7 +92,10 @@ public class BlogBeheerController : BaseController
     public async Task<IActionResult> Bewerken(BlogArtikelEditVM vm)
     {
         if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-news", vm.ID == 0 ? "Nieuw blogartikel" : "Blogartikel bewerken");
             return View(vm);
+        }
 
         var fotoBestand = vm.FotoBestand;
         if (vm.FotoUpload != null && vm.FotoUpload.Length > 0)

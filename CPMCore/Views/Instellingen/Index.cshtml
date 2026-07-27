@@ -2,7 +2,6 @@
 @using FacadeCore
 @inject IPermissionService PermissionService
 @{
-    ViewData["Title"] = "Instellingen";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     await PermissionService.EnsureLoadedAsync();

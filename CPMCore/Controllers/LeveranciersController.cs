@@ -665,7 +665,7 @@ public class LeveranciersController : BaseController
         }
         var writeScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Write, ct);
         var deleteScope = await ResolveSupplierIssuerScopeAsync(PermissionAccessType.Delete, ct);
-        ViewData["Title"] = "Leveranciers";
+        SetPageHeader("bx bx-hard-hat", "Leveranciers");
 
         var suppliersQuery = _db.CompanyInfo
             .Include(c => c.CompanyIssuerCompany)
@@ -1009,7 +1009,7 @@ public class LeveranciersController : BaseController
             Invoices = invoices
         };
 
-        ViewData["Title"] = detailModel.Name;
+        SetPageHeader("bx bx-hard-hat", detailModel.Name);
         return View(detailModel);
     }
 
@@ -1247,6 +1247,8 @@ public class LeveranciersController : BaseController
                 ? new List<int> { issuerCompanyId.Value }
                 : new List<int>()
         }, ct, scope);
+
+        SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
         return View(vm);
     }
     [HttpPost]
@@ -1275,6 +1277,7 @@ public class LeveranciersController : BaseController
         if (!ModelState.IsValid)
         {
             await BuildFormAsync(model, ct, scope);
+            SetPageHeader("bx bx-hard-hat", "Nieuwe leverancier");
             return View(model);
         }
 
@@ -1432,6 +1435,7 @@ public class LeveranciersController : BaseController
         }
 
         await BuildFormAsync(vm, ct, scope);
+        SetPageHeader("bx bx-hard-hat", $"Leverancier bewerken — {entity.BedrijfsNaam}");
         return View(vm);
     }
 
@@ -1460,6 +1464,7 @@ public class LeveranciersController : BaseController
         if (!ModelState.IsValid)
         {
             await BuildFormAsync(model, ct, scope);
+            SetPageHeader("bx bx-hard-hat", "Leverancier bewerken");
             return View(model);
         }
 

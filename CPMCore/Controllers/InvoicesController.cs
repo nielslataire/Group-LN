@@ -208,6 +208,7 @@ namespace CPMCore.Controllers
               ? FormatBookyearLabel(latestBookyear.StartDate, latestBookyear.EndDate)
               : vms.Select(v => v.BookyearLabel).FirstOrDefault();
             SetIndexBreadcrumb(issuerCompanyId, ViewBag.CompanyName as string);
+            SetPageHeader("bx bx-receipt", $"Facturen - {ViewBag.CompanyName}");
             return View(vms);
         }
 
@@ -458,6 +459,7 @@ namespace CPMCore.Controllers
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.Issuer.LegalName ?? vm.Issuer.Name;
             var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
             SetDetailBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
+            SetPageHeader("bx bx-receipt", detailTitle);
 
             return View(vm);
         }
@@ -599,6 +601,7 @@ namespace CPMCore.Controllers
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
             var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
             SetSendBreadcrumb(issuerId, companyDisplay, detail.Id, detailTitle);
+            SetPageHeader("bx bx-receipt", "Factuur verzenden");
             return View(vm);
         }
 
@@ -660,6 +663,7 @@ namespace CPMCore.Controllers
             var companyDisplay = (ViewBag.CompanyName as string) ?? vm.IssuerName;
             var detailTitle = BuildInvoiceDisplayTitle(companyDisplay, detail.PublicId, detail.Id);
             SetSendBreadcrumb(vm.IssuerCompanyId, companyDisplay, vm.InvoiceId, detailTitle);
+            SetPageHeader("bx bx-receipt", "Factuur verzenden");
 
             if (!ModelState.IsValid)
                 return View(vm);
@@ -1079,7 +1083,7 @@ namespace CPMCore.Controllers
             if (selectedIssuerId > 0)
                 await SetIssuerViewBagsAsync(selectedIssuerId, ct);
             SetCreateBreadcrumb(selectedIssuerId, ViewBag.CompanyName as string);
-            ViewData["Title"] = "Nieuwe factuur";
+            SetPageHeader("bx bx-receipt", "Nieuwe factuur");
 
             return View(vm);
         }
@@ -1913,12 +1917,14 @@ namespace CPMCore.Controllers
             {
                 var draftVm = await BuildDraftEditViewModelAsync(detail, null, resolvedReturnUrl, ct);
                 await ConfigureEditContextAsync(detail, ct);
+                SetPageHeader("bx bx-receipt", $"Factuur bewerken - {draftVm.DisplayId}");
                 return View("EditDraft", draftVm);
             }
 
             var vm = MapEdit(detail);
             vm.ReturnUrl = resolvedReturnUrl;
             await ConfigureEditContextAsync(detail, ct);
+            SetPageHeader("bx bx-receipt", string.IsNullOrWhiteSpace(vm.IssuerName) ? vm.DisplayId : $"{vm.IssuerName} - {vm.DisplayId}");
             return View(vm);
         }
 
@@ -1966,6 +1972,7 @@ namespace CPMCore.Controllers
                 var invalidVm = BuildEditViewModel(detail, vm);
                 invalidVm.ReturnUrl = resolvedReturnUrl;
                 await ConfigureEditContextAsync(detail, ct);
+                SetPageHeader("bx bx-receipt", string.IsNullOrWhiteSpace(invalidVm.IssuerName) ? invalidVm.DisplayId : $"{invalidVm.IssuerName} - {invalidVm.DisplayId}");
                 return View(invalidVm);
             }
 
@@ -2018,6 +2025,7 @@ namespace CPMCore.Controllers
             var hydrated = BuildEditViewModel(detail, vm);
             hydrated.ReturnUrl = resolvedReturnUrl;
             await ConfigureEditContextAsync(detail, ct);
+            SetPageHeader("bx bx-receipt", string.IsNullOrWhiteSpace(hydrated.IssuerName) ? hydrated.DisplayId : $"{hydrated.IssuerName} - {hydrated.DisplayId}");
             return View(hydrated);
         }
 
@@ -2066,6 +2074,7 @@ namespace CPMCore.Controllers
             {
                 var invalidVm = await BuildDraftEditViewModelAsync(detail, vm, resolvedReturnUrl, ct);
                 await ConfigureEditContextAsync(detail, ct);
+                SetPageHeader("bx bx-receipt", $"Factuur bewerken - {invalidVm.DisplayId}");
                 return View("EditDraft", invalidVm);
             }
 
@@ -2093,6 +2102,7 @@ namespace CPMCore.Controllers
 
             var hydratedDraft = await BuildDraftEditViewModelAsync(detail, vm, resolvedReturnUrl, ct);
             await ConfigureEditContextAsync(detail, ct);
+            SetPageHeader("bx bx-receipt", $"Factuur bewerken - {hydratedDraft.DisplayId}");
             return View("EditDraft", hydratedDraft);
         }
 

@@ -6,7 +6,6 @@
 @{
     var projectId = Model.ProjectId;
     var filters = Model.Filters;
-    ViewData["Title"] = "Punten";
     var today = DateOnly.FromDateTime(DateTime.Today);
     var openCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.Open);
     var waitingInspectionCount = Model.Issues.Count(i => i.Status == (int)ConstructionIssueStatus.WaitingInspection);

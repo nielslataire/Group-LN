@@ -2,7 +2,6 @@
 @using CPMCore.Models.Projecten
 @model CPMCore.Models.Projecten.CoordinatieInstellingenVM
 @{
-    ViewData["Title"] = "Coördinatie-instellingen – " + Model.ProjectName;
     var projectid = Model.ProjectId;
     var usedUserIds = Model.HourlyRates.Select(r => r.UserId).ToHashSet();
     var availableForFirst = Model.AvailableUsers.Where(u => !usedUserIds.Contains(u.Group)).ToList();

@@ -91,6 +91,8 @@ public class InstellingenController : BaseController
     [Breadcrumb("Instellingen")]
     public IActionResult Index()
     {
+        SetPageHeader("bx bx-cog", "Instellingen");
+
         var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
         {
@@ -110,6 +112,8 @@ public class InstellingenController : BaseController
     [Breadcrumb("Activiteiten")]
     public IActionResult Activities()
     {
+        SetPageHeader("bx bx-cog", "Activiteiten");
+
         var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
         {
@@ -237,8 +241,10 @@ public class InstellingenController : BaseController
     [Breadcrumb("Vakantiedagen")]
     public ActionResult Vacationdays()
     {
+        SetPageHeader("bx bx-cog", "Vakantiedagen");
+
         HomeModel model = new HomeModel();
-      
+
         return View(model);
     }
     [HttpGet]
@@ -288,6 +294,8 @@ public class InstellingenController : BaseController
     [HttpGet("IssuerCompanies")]
     public async Task<IActionResult> IssuerCompanies()
     {
+        SetPageHeader("bx bx-cog", "Mijn bedrijven");
+
         var list = await _issuers.GetAllAsync();
         var vms = list.Select(x => new IssuerCompanyVM
         {
@@ -388,6 +396,7 @@ public class InstellingenController : BaseController
         ApplyInvoiceTemplateDefaults(vm, templates);
 
         await PopulateInvoiceLayoutViewDataAsync();
+        SetPageHeader("bx bx-cog", "Nieuw bedrijf");
         return View(vm);
     }
 
@@ -405,6 +414,7 @@ public class InstellingenController : BaseController
             vm.InvoiceTemplates = templates;
             ApplyInvoiceTemplateDefaults(vm, templates);
             await PopulateInvoiceLayoutViewDataAsync();
+            SetPageHeader("bx bx-cog", "Nieuw bedrijf");
             return View(vm);
         }
         if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
@@ -638,6 +648,7 @@ public class InstellingenController : BaseController
         ViewData["BreadcrumbNode"] = InstellingenEditIssuer;
 
         await PopulateInvoiceLayoutViewDataAsync(ct);
+        SetPageHeader("bx bx-cog", $"Bedrijf bewerken — {vm.Name}");
         return View(vm);
     }
 
@@ -676,6 +687,7 @@ public class InstellingenController : BaseController
             vm.InvoiceTemplates = templates;
             ApplyInvoiceTemplateDefaults(vm, templates);
             await PopulateInvoiceLayoutViewDataAsync(ct);
+            SetPageHeader("bx bx-cog", $"Bedrijf bewerken — {vm.Name}");
             return View(vm);
         }
         if (vm.LogoUpload != null && vm.LogoUpload.Length > 0)
@@ -841,6 +853,7 @@ public class InstellingenController : BaseController
         };
         ViewData["BreadcrumbNode"] = templatesNode;
 
+        SetPageHeader("bx bx-cog", "Factuurtemplates");
         return View(vms);
     }
 
@@ -863,6 +876,7 @@ public class InstellingenController : BaseController
         };
         ViewData["BreadcrumbNode"] = createNode;
 
+        SetPageHeader("bx bx-cog", "Nieuw factuurtemplate");
         return View(new InvoiceLayoutTemplateVM
         {
             TemplateJson = DefaultLayouts.LayoutA
@@ -876,7 +890,10 @@ public class InstellingenController : BaseController
     {
         ValidateTemplateJson(vm.TemplateJson, nameof(InvoiceLayoutTemplateVM.TemplateJson));
         if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-cog", "Nieuw factuurtemplate");
             return View(vm);
+        }
 
         try
         {
@@ -922,6 +939,7 @@ public class InstellingenController : BaseController
         };
         ViewData["BreadcrumbNode"] = editNode;
 
+        SetPageHeader("bx bx-cog", $"Factuurtemplate bewerken — {template.Name}");
         return View(new InvoiceLayoutTemplateVM
         {
             Id = template.Id,
@@ -943,7 +961,10 @@ public class InstellingenController : BaseController
 
         ValidateTemplateJson(vm.TemplateJson, nameof(InvoiceLayoutTemplateVM.TemplateJson));
         if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-cog", $"Factuurtemplate bewerken — {vm.Name}");
             return View(vm);
+        }
 
         try
         {
@@ -1159,6 +1180,7 @@ public class InstellingenController : BaseController
         ViewBag.OctopusMessage = TempData["OctopusMessage"];
         ViewBag.OctopusMessageType = TempData["OctopusMessageType"];
 
+        SetPageHeader("bx bx-cog", "Octopus-relaties koppelen");
         return View("OctopusRelationSuggestions", vm);
     }
 
@@ -1360,6 +1382,7 @@ public class InstellingenController : BaseController
     [HttpGet("IssuerCompanies/{issuerId:int}/BankAccounts/Create")]
     public IActionResult BankAccountCreate(int issuerId)
     {
+        SetPageHeader("bx bx-cog", "Nieuwe bankrekening");
         return View(new IssuerBankAccountVM { IssuerCompanyId = issuerId, IsDefault = false });
     }
 
@@ -1367,7 +1390,11 @@ public class InstellingenController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> BankAccountCreate(int issuerId, IssuerBankAccountVM vm)
     {
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-cog", "Nieuwe bankrekening");
+            return View(vm);
+        }
         var bo = new IssuerBankAccountBO
         {
             IssuerCompanyId = issuerId,
@@ -1399,6 +1426,7 @@ public class InstellingenController : BaseController
             ValidFrom = bo.ValidFrom,
             ValidTo = bo.ValidTo
         };
+        SetPageHeader("bx bx-cog", "Bankrekening bewerken");
         return View(vm);
     }
 
@@ -1407,7 +1435,11 @@ public class InstellingenController : BaseController
     public async Task<IActionResult> BankAccountEdit(int issuerId, int id, IssuerBankAccountVM vm)
     {
         if (id != vm.Id || issuerId != vm.IssuerCompanyId) return BadRequest();
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-cog", "Bankrekening bewerken");
+            return View(vm);
+        }
 
         var bo = new IssuerBankAccountBO
         {
@@ -1445,13 +1477,21 @@ public class InstellingenController : BaseController
     // FACTUURREEKSEN BEHEREN
 
     [HttpGet("IssuerCompanies/{issuerId:int}/Series/Create")]
-    public IActionResult SeriesCreate(int issuerId) => View(new InvoiceSeriesVM { IssuerCompanyId = issuerId });
+    public IActionResult SeriesCreate(int issuerId)
+    {
+        SetPageHeader("bx bx-cog", "Nieuwe nummerreeks");
+        return View(new InvoiceSeriesVM { IssuerCompanyId = issuerId });
+    }
 
     [HttpPost("IssuerCompanies/{issuerId:int}/Series/Create")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SeriesCreate(int issuerId, InvoiceSeriesVM vm)
     {
-        if (!ModelState.IsValid) return View(vm);
+        if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-cog", "Nieuwe nummerreeks");
+            return View(vm);
+        }
         await _series.CreateAsync(new InvoiceSeriesBO { IssuerCompanyId = issuerId, Code = vm.Code, Description = vm.Description, IsCreditNote = vm.IsCreditNote, IsActive = true });
         AddMessage("success", "Nummerreeks toegevoegd.", "Geslaagd!");
         return RedirectToAction("IssuerCompaniesEdit", new { id = issuerId });
@@ -1473,6 +1513,7 @@ public class InstellingenController : BaseController
             IsCreditNote = bo.IsCreditNote,
             IsActive = bo.IsActive
         };
+        SetPageHeader("bx bx-cog", "Nummerreeks bewerken");
         return View(vm); // Views/Instellingen/SeriesEdit.cshtml
     }
 
@@ -1484,7 +1525,10 @@ public class InstellingenController : BaseController
         if (id != vm.Id || issuerId != vm.IssuerCompanyId) return BadRequest();
 
         if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-cog", "Nummerreeks bewerken");
             return View(vm);
+        }
 
         try
         {
@@ -1506,6 +1550,7 @@ public class InstellingenController : BaseController
         {
             // Unieke code per issuer geschonden
             ModelState.AddModelError(nameof(vm.Code), "Deze code bestaat al voor dit bedrijf.");
+            SetPageHeader("bx bx-cog", "Nummerreeks bewerken");
             return View(vm);
         }
     }
@@ -1554,6 +1599,7 @@ public class InstellingenController : BaseController
             }).ToList()
         };
         ViewBag.OctopusBookyears = bookyears;
+        SetPageHeader("bx bx-cog", "Sequenties");
         return View(vm);
     }
 
@@ -1777,6 +1823,8 @@ public class InstellingenController : BaseController
     [Breadcrumb("Kostprijzen materialen")]
     public IActionResult KostprijsMaterialen()
     {
+        SetPageHeader("bx bx-cog", "Kostprijzen materialen");
+
         var dashboard = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen")
         {
@@ -1888,6 +1936,7 @@ public class InstellingenController : BaseController
     public IActionResult KostprijsUpdatePreview(int projectId)
     {
         ViewBag.ProjectId = projectId;
+        SetPageHeader("bx bx-cog", "Kostprijzen bijwerken — preview");
         return View(_kostprijsService.GetUpdatePreview(projectId).Values ?? new());
     }
 
@@ -1904,6 +1953,8 @@ public class InstellingenController : BaseController
     [Breadcrumb("Bouwindexen")]
     public async Task<IActionResult> Bouwindexen()
     {
+        SetPageHeader("bx bx-cog", "Bouwindexen");
+
         var dashboard       = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
         var instellingen    = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
         var bouwindexen     = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Bouwindexen", "Instellingen", "Bouwindexen") { Parent = instellingen };

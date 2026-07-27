@@ -163,6 +163,10 @@ public partial class cpmRunningContext : DbContext
 
     public virtual DbSet<IssuerCompanyUserRate> IssuerCompanyUserRate { get; set; }
 
+    public virtual DbSet<MarktanalyseZoekActie> MarktanalyseZoekActie { get; set; }
+
+    public virtual DbSet<MarktanalyseZoekProfiel> MarktanalyseZoekProfiel { get; set; }
+
     public virtual DbSet<MigrationHistory> MigrationHistory { get; set; }
 
     public virtual DbSet<OctopusBookyearPeriods> OctopusBookyearPeriods { get; set; }
@@ -2079,6 +2083,43 @@ public partial class cpmRunningContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_IssuerCompanyUserRate_Users");
+        });
+
+        modelBuilder.Entity<MarktanalyseZoekActie>(entity =>
+        {
+            entity.HasIndex(e => new { e.UserId, e.UitgevoerdOp }, "IX_MarktanalyseZoekActie_UserId_UitgevoerdOp");
+
+            entity.Property(e => e.ZoekgebiedTab).HasMaxLength(20);
+            entity.Property(e => e.RondAdresPostcode).HasMaxLength(20);
+            entity.Property(e => e.Type).HasMaxLength(20);
+            entity.Property(e => e.Status).HasMaxLength(20);
+            entity.Property(e => e.Oppervlakte).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PrijsMin).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PrijsMax).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.UitgevoerdOp).HasColumnType("datetime2(7)");
+
+            entity.HasOne(d => d.User).WithMany(p => p.MarktanalyseZoekActie)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_MarktanalyseZoekActie_Users");
+        });
+
+        modelBuilder.Entity<MarktanalyseZoekProfiel>(entity =>
+        {
+            entity.HasIndex(e => e.UserId, "IX_MarktanalyseZoekProfiel_UserId");
+
+            entity.Property(e => e.Naam).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ZoekgebiedTab).HasMaxLength(20);
+            entity.Property(e => e.RondAdresPostcode).HasMaxLength(20);
+            entity.Property(e => e.Type).HasMaxLength(20);
+            entity.Property(e => e.Status).HasMaxLength(20);
+            entity.Property(e => e.Oppervlakte).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PrijsMin).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.PrijsMax).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime2(7)");
+
+            entity.HasOne(d => d.User).WithMany(p => p.MarktanalyseZoekProfiel)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_MarktanalyseZoekProfiel_Users");
         });
 
         modelBuilder.Entity<MigrationHistory>(entity =>

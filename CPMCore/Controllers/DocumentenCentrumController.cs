@@ -149,6 +149,7 @@ namespace CPMCore.Controllers
             ViewBag.SelectedIssuerCompanyId = issuerCompanyId;
             await LoadAssignableUsersAsync(ct);
 
+            SetPageHeader("bx bx-inbox", "Documentencentrum");
             return View(result);
         }
 
@@ -199,6 +200,7 @@ namespace CPMCore.Controllers
             ViewBag.CostContextOptions = BuildCostContextSelectList(vm.CostContextType);
             await LoadAssignableUsersAsync(ct);
 
+            SetPageHeader("bx bx-inbox", $"Document — {vm.InvoiceNumber ?? vm.SupplierName}");
             return View(vm);
         }
 

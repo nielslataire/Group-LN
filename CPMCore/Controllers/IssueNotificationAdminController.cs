@@ -12,7 +12,7 @@ namespace CPMCore.Controllers;
 [Authorize]
 [CPMCore.Filters.PermissionRead(PermissionCodes.SettingsIssueNotifications)]
 [Route("Instellingen/PuntMeldingen")]
-public class IssueNotificationAdminController : Controller
+public class IssueNotificationAdminController : BaseController
 {
     private readonly cpmRunningContext _db;
     private readonly IIssueNotificationSchedulerService _scheduler;
@@ -118,6 +118,7 @@ public class IssueNotificationAdminController : Controller
         };
 
         SetBreadcrumbs();
+        SetPageHeader("bx bx-bell", "Automatische puntmeldingen");
         return View(vm);
     }
 
@@ -131,6 +132,7 @@ public class IssueNotificationAdminController : Controller
         vm.BrusselsHour = UtcToBrusselsHour(vm.EveningUpdateHour);
         vm.BrusselsReminderHour = UtcToBrusselsHour(vm.ReminderHour);
         SetBreadcrumbs("Nieuw schema");
+        SetPageHeader("bx bx-bell", "Nieuw schema");
         return View("Edit", vm);
     }
 
@@ -142,6 +144,7 @@ public class IssueNotificationAdminController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateSelectLists(vm);
+            SetPageHeader("bx bx-bell", "Nieuw schema");
             return View("Edit", vm);
         }
 
@@ -194,6 +197,7 @@ public class IssueNotificationAdminController : Controller
         vm.BrusselsHour = UtcToBrusselsHour(vm.EveningUpdateHour);
         vm.BrusselsReminderHour = UtcToBrusselsHour(vm.ReminderHour);
         SetBreadcrumbs("Schema bewerken");
+        SetPageHeader("bx bx-bell", "Schema bewerken");
         return View(vm);
     }
 
@@ -205,6 +209,7 @@ public class IssueNotificationAdminController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateSelectLists(vm);
+            SetPageHeader("bx bx-bell", "Schema bewerken");
             return View("Edit", vm);
         }
 
@@ -349,6 +354,7 @@ public class IssueNotificationAdminController : Controller
         ViewBag.Page = page;
         ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
         SetBreadcrumbs("Logs");
+        SetPageHeader("bx bx-bell", "Uitvoeringslogboek");
         return View(runs.Select(MapRun).ToList());
     }
 

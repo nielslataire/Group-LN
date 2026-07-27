@@ -41,6 +41,10 @@ public partial class Users
 
     public virtual ICollection<IssuerCompanyUserRate> IssuerCompanyUserRate { get; set; } = new List<IssuerCompanyUserRate>();
 
+    public virtual ICollection<MarktanalyseZoekActie> MarktanalyseZoekActie { get; set; } = new List<MarktanalyseZoekActie>();
+
+    public virtual ICollection<MarktanalyseZoekProfiel> MarktanalyseZoekProfiel { get; set; } = new List<MarktanalyseZoekProfiel>();
+
     public virtual ICollection<PermissionPerUser> PermissionPerUser { get; set; } = new List<PermissionPerUser>();
 
     public virtual ICollection<Project> Project { get; set; } = new List<Project>();

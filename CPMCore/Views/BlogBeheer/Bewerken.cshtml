@@ -1,7 +1,6 @@
 @model CPMCore.Models.Instellingen.BlogArtikelEditVM
 @{
     var isNieuw = Model.ID == 0;
-    ViewData["Title"] = isNieuw ? "Nieuw artikel" : "Artikel bewerken";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 

@@ -1,7 +1,6 @@
 @model CPMCore.Models.Marktanalyse.VergelijkbarePandenViewModel
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Vergelijkbare panden";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var locatiesJson = JsonSerializer.Serialize(Model.Locaties.Select(g => new
@@ -15,6 +14,23 @@
         v.HasValue ? $"{prefix} {v.Value:N0}".Replace(",", ".") : "—";
 
     string FmtArea(decimal? v) => v.HasValue ? $"{v.Value:N0} m²" : "—";
+
+    var huidigCriteriaJson = JsonSerializer.Serialize(new
+    {
+        ZoekgebiedTab     = Model.ZoekgebiedTab,
+        GemeenteIds       = Model.GemeenteIds,
+        RondAdresPostcode = Model.RondAdresPostcode,
+        RondAdresLat      = Model.RondAdresLat,
+        RondAdresLng      = Model.RondAdresLng,
+        RondAdresStraal   = Model.RondAdresStraal,
+        Type              = Model.Type,
+        Oppervlakte       = Model.Oppervlakte,
+        Tolerantie        = Model.Tolerantie,
+        PrijsMin          = Model.PrijsMin,
+        PrijsMax          = Model.PrijsMax,
+        Slaapkamers       = Model.Slaapkamers,
+        Status            = Model.Status
+    });
 
     // Null = attribute omitted by Razor; "selected" = selected="selected"
     string? Sel(bool cond) => cond ? "selected" : null;
@@ -37,7 +53,12 @@
     padding-right: 0;
 }
 .vp-sidebar         { min-width:0; }
-.vp-content         { min-width:0; position:relative; }
+
+        .vp-content {
+            min-width: 0;
+            position: relative;
+            background: #fff;
+        }
 
 /* Zoekknop in de echte thema-primary kleur (Bootstrap's .btn-primary is in
    dit thema overschreven naar grijs, dus hier expliciet op var(--primary)) */
@@ -165,7 +186,35 @@
 .sales-pct           { font-size:.78rem; font-weight:600; color:#374151; min-width:32px; text-align:right; }
 .badge-project       { background:#e8f7ef; border:1px solid #bbf7d0; color:#166534; font-size:.68rem; padding:.1rem .45rem; border-radius:20px; }
 .badge-los           { background:#fff4e5; border:1px solid #ffd591; color:#b26a00; font-size:.68rem; padding:.1rem .45rem; border-radius:20px; }
-.vp-empty            { text-align:center; padding:3rem; color:#94a3b8; }
+.vp-empty            { text-align:center; padding:2.5rem 1rem 2rem; }
+.vp-empty-icon        { width:64px; height:64px; margin:0 auto .9rem; border-radius:14px; background:#f1f5f9; color:#64748b; display:flex; align-items:center; justify-content:center; font-size:1.6rem; }
+.vp-empty-title       { font-weight:700; font-size:1.05rem; color:#1e293b; margin-bottom:.4rem; }
+.vp-empty-text        { font-size:.85rem; color:#94a3b8; max-width:480px; margin:0 auto; }
+
+.vp-section           { margin-top:1.75rem; }
+.vp-section-label     { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding-bottom:.6rem; border-bottom:1px solid #e2e8f0; margin-bottom:.9rem; }
+
+.vp-quickcard          { display:flex; align-items:center; gap:.7rem; border:1px solid #e2e8f0; border-radius:10px; padding:.85rem .9rem; text-decoration:none; height:100%; transition:border-color .15s,box-shadow .15s; }
+.vp-quickcard:hover     { border-color:var(--primary,#2c7a4b); box-shadow:0 4px 14px rgba(15,23,42,.06); text-decoration:none; }
+.vp-quickcard-icon      { width:36px; height:36px; flex-shrink:0; border-radius:8px; background:var(--lightgreen,#e8f0eb); color:var(--primary,#2c7a4b); display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
+.vp-quickcard-body      { min-width:0; display:flex; flex-direction:column; }
+.vp-quickcard-title     { font-size:.85rem; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vp-quickcard-subtitle  { font-size:.74rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.vp-actielijst         { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
+.vp-actie-row          { display:flex; align-items:center; gap:.75rem; padding:.7rem 1rem; text-decoration:none; border-bottom:1px solid #f1f5f9; transition:background .12s; }
+.vp-actie-row:last-child { border-bottom:none; }
+.vp-actie-row:hover    { background:#f8fafc; text-decoration:none; }
+.vp-actie-icon         { width:32px; height:32px; flex-shrink:0; border-radius:8px; background:#f1f5f9; color:#64748b; display:flex; align-items:center; justify-content:center; font-size:.95rem; }
+.vp-actie-body         { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; }
+.vp-actie-title        { font-size:.85rem; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vp-actie-subtitle     { font-size:.74rem; color:#94a3b8; }
+.vp-actie-meta         { flex-shrink:0; display:flex; align-items:center; gap:.6rem; }
+.vp-actie-count        { font-size:.72rem; font-weight:700; background:#dcfce7; color:#166534; padding:.15rem .55rem; border-radius:20px; white-space:nowrap; }
+.vp-actie-time         { font-size:.72rem; color:#94a3b8; white-space:nowrap; }
+
+.vp-hint-banner        { display:flex; align-items:flex-start; gap:.6rem; margin-top:1.75rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:.85rem 1rem; font-size:.82rem; color:#166534; }
+.vp-hint-banner i      { font-size:1.1rem; flex-shrink:0; }
 .vp-marktconclusie   { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem 1.25rem; font-size:.88rem; color:#374151; }
 .vp-mc-header        { display:flex; align-items:center; gap:.65rem; margin-bottom:.75rem; }
 .vp-mc-icon          { width:34px; height:34px; border-radius:8px; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
@@ -179,10 +228,48 @@
 </style>
 }
 
-<section class="content-header">
-    <h1>Vergelijkbare panden</h1>
-    <p class="text-muted" style="font-size:.87rem;margin-top:-.25rem;">Bepaal de marktwaarde van een pand door vergelijkbare units te zoeken op oppervlakte, type en prijs.</p>
-</section>
+@await Html.PartialAsync("_Tabs", "VergelijkbarePanden")
+
+<div class="page-intro">
+    <div>
+        <span class="page-intro-kicker"><i class="bx bx-file-report"></i> Vergelijkende marktanalyse (CMA)</span>
+        <h1 class="page-intro-title">Vergelijkbare panden</h1>
+        <p class="page-intro-description">Bepaal de marktwaarde van een pand door vergelijkbare units te zoeken op oppervlakte, type en prijs. Stel uw zoekprofiel links in en bekijk de marktconclusie.</p>
+    </div>
+    <div class="page-intro-actions">
+        <a id="vpExportBtn" class="btn btn-secondary btn" href="#">
+            <i class="bx bx-export me-1"></i>Exporteren
+        </a>
+        <button type="button" id="vpSaveProfileBtn" class="btn btn-primary btn"
+                data-bs-toggle="modal" data-bs-target="#vpSaveProfileModal"
+                @(Model.HeeftZoekparameters ? "" : "disabled")>
+            <i class="bx bx-bookmark me-1"></i>Profiel opslaan
+        </button>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+<!-- Modal: profiel opslaan -->
+<div class="modal fade" id="vpSaveProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bx bx-bookmark me-1"></i>Zoekprofiel opslaan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Sluiten"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label fw-semibold" for="vpProfileNaam">Naam van dit profiel</label>
+                <input type="text" id="vpProfileNaam" class="form-control" maxlength="200"
+                       placeholder="bv. Appartementen Gent ±120m²" autocomplete="off" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuleren</button>
+                <button type="button" id="vpProfileOpslaanConfirm" class="btn btn-vp-primary btn-sm">Opslaan</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <div class="container-fluid">
@@ -352,8 +439,77 @@
         @if (!Model.HeeftZoekparameters)
         {
             <div class="vp-empty">
-                <i class="bx bx-search-alt" style="font-size:2.5rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
-                <div style="font-size:.9rem;">Stel uw zoekprofiel links in en klik op <strong>Zoek vergelijkbare panden</strong>.</div>
+                <div class="vp-empty-icon"><i class="bx bx-search-alt"></i></div>
+                <div class="vp-empty-title">Nog geen zoekprofiel actief</div>
+                <div class="vp-empty-text">Stel links uw criteria in en klik op <strong>Zoek vergelijkbare panden</strong>, of start meteen met een veelgebruikt profiel hieronder.</div>
+            </div>
+
+            @if (Model.SnelStartPresets.Any())
+            {
+                <div class="vp-section">
+                    <div class="vp-section-label">Snel starten</div>
+                    <div class="row g-2">
+                        @foreach (var preset in Model.SnelStartPresets)
+                        {
+                            <div class="col-md-4">
+                                <a class="vp-quickcard" href="@preset.Url">
+                                    <span class="vp-quickcard-icon"><i class="bx bx-bolt"></i></span>
+                                    <span class="vp-quickcard-body">
+                                        <span class="vp-quickcard-title">@preset.Titel</span>
+                                        <span class="vp-quickcard-subtitle">@preset.Subtitel</span>
+                                    </span>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (Model.RecenteZoekActies.Any())
+            {
+                <div class="vp-section">
+                    <div class="vp-section-label">Laatste zoekacties</div>
+                    <div class="vp-actielijst">
+                        @foreach (var actie in Model.RecenteZoekActies)
+                        {
+                            <a class="vp-actie-row" href="@actie.Url">
+                                <span class="vp-actie-icon"><i class="bx bx-time-five"></i></span>
+                                <span class="vp-actie-body">
+                                    <span class="vp-actie-title">@actie.Titel</span>
+                                    <span class="vp-actie-subtitle">@actie.Subtitel</span>
+                                </span>
+                                <span class="vp-actie-meta">
+                                    <span class="vp-actie-count">@actie.AantalResultaten panden</span>
+                                    <span class="vp-actie-time">@actie.RelatieveTijd</span>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (Model.OpgeslagenProfielen.Any())
+            {
+                <div class="vp-section">
+                    <div class="vp-section-label">Opgeslagen profielen</div>
+                    <div class="vp-actielijst">
+                        @foreach (var profiel in Model.OpgeslagenProfielen)
+                        {
+                            <a class="vp-actie-row" href="@profiel.Url">
+                                <span class="vp-actie-icon"><i class="bx bx-bookmark"></i></span>
+                                <span class="vp-actie-body">
+                                    <span class="vp-actie-title">@profiel.Titel</span>
+                                    <span class="vp-actie-subtitle">@profiel.Subtitel</span>
+                                </span>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="vp-hint-banner">
+                <i class="bx bx-map-alt"></i>
+                <span>Zodra u zoekt, tonen we hier de <strong>kaart, kerncijfers en vergelijkbare panden</strong> — inclusief een automatische marktconclusie.</span>
             </div>
         }
         else
@@ -555,9 +711,92 @@
     'use strict';
 
     // ── Data ──────────────────────────────────────────────────────────────────
-    var gemeenten    = @Html.Raw(locatiesJson);
-    var geselecteerd = new Set(@Html.Raw(JsonSerializer.Serialize(Model.GemeenteIds)));
-    var form         = document.getElementById('vpForm');
+    var gemeenten        = @Html.Raw(locatiesJson);
+    var geselecteerd     = new Set(@Html.Raw(JsonSerializer.Serialize(Model.GemeenteIds)));
+    var form             = document.getElementById('vpForm');
+    var huidigeCriteria  = @Html.Raw(huidigCriteriaJson);
+
+    // ── Exporteren (huidige resultaten als Excel) ──────────────────────────────
+    var exportBtn = document.getElementById('vpExportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            window.location.href = '@Url.Action("ExportVergelijkbarePanden", "Marktanalyse")' + window.location.search;
+        });
+    }
+
+    // ── Profiel opslaan (modal → AJAX) ──────────────────────────────────────────
+    var saveBtn = document.getElementById('vpProfileOpslaanConfirm');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+            var naamInput = document.getElementById('vpProfileNaam');
+            var naam = (naamInput.value || '').trim();
+            if (!naam) {
+                naamInput.classList.add('is-invalid');
+                naamInput.focus();
+                return;
+            }
+            naamInput.classList.remove('is-invalid');
+
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var body  = new URLSearchParams();
+            body.append('__RequestVerificationToken', token);
+            body.append('Naam', naam);
+            body.append('ZoekgebiedTab', huidigeCriteria.ZoekgebiedTab || '');
+            (huidigeCriteria.GemeenteIds || []).forEach(function (id) { body.append('GemeenteIds', id); });
+            body.append('RondAdresPostcode', huidigeCriteria.RondAdresPostcode || '');
+            if (huidigeCriteria.RondAdresLat != null) body.append('RondAdresLat', huidigeCriteria.RondAdresLat);
+            if (huidigeCriteria.RondAdresLng != null) body.append('RondAdresLng', huidigeCriteria.RondAdresLng);
+            body.append('RondAdresStraal', huidigeCriteria.RondAdresStraal);
+            body.append('Type', huidigeCriteria.Type || '');
+            if (huidigeCriteria.Oppervlakte != null) body.append('Oppervlakte', huidigeCriteria.Oppervlakte);
+            body.append('Tolerantie', huidigeCriteria.Tolerantie);
+            if (huidigeCriteria.PrijsMin != null) body.append('PrijsMin', huidigeCriteria.PrijsMin);
+            if (huidigeCriteria.PrijsMax != null) body.append('PrijsMax', huidigeCriteria.PrijsMax);
+            if (huidigeCriteria.Slaapkamers != null) body.append('Slaapkamers', huidigeCriteria.Slaapkamers);
+            body.append('Status', huidigeCriteria.Status || '');
+
+            saveBtn.disabled = true;
+            fetch('@Url.Action("SaveZoekProfiel", "Marktanalyse")', {
+                method: 'POST',
+                body: body,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (resp) { return resp.json().then(function (data) { return { ok: resp.ok, data: data }; }); })
+                .then(function (result) {
+                    saveBtn.disabled = false;
+                    var modalEl = document.getElementById('vpSaveProfileModal');
+                    var modal   = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    if (result.ok && result.data && result.data.success) {
+                        modal.hide();
+                        naamInput.value = '';
+                        new PNotify({
+                            title: 'Opgeslagen',
+                            text: 'Zoekprofiel "' + naam + '" is opgeslagen.',
+                            type: 'success',
+                            addclass: 'stack-bottomright'
+                        });
+                    } else {
+                        naamInput.classList.add('is-invalid');
+                        new PNotify({
+                            title: 'Mislukt',
+                            text: (result.data && result.data.message) || 'Profiel kon niet opgeslagen worden.',
+                            type: 'error',
+                            addclass: 'stack-bottomright'
+                        });
+                    }
+                })
+                .catch(function () {
+                    saveBtn.disabled = false;
+                    new PNotify({
+                        title: 'Mislukt',
+                        text: 'Profiel kon niet opgeslagen worden.',
+                        type: 'error',
+                        addclass: 'stack-bottomright'
+                    });
+                });
+        });
+    }
 
     // ── Laad-overlay bij elke zoekactie (knop of automatisch) ──────────────────
     var loadingOverlay = document.getElementById('vpLoadingOverlay');
@@ -700,8 +939,9 @@
 
             map = L.map(mapDiv, { zoomControl: true }).setView([huidigeLat, huidigeLng], BELGIE_ZOOM);
             map.attributionControl.setPrefix(false);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap-bijdragers',
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap-bijdragers &copy; CARTO',
+                subdomains: 'abcd',
                 maxZoom: 19
             }).addTo(map);
 

@@ -102,6 +102,8 @@ public class AccountController : BaseController
     [HttpGet]
     public IActionResult MijnHandtekening()
     {
+        SetPageHeader("bx bx-envelope", "Mijn handtekening");
+
         var userId = User.GetCpmUserId();
         if (userId == null)
             return Forbid();

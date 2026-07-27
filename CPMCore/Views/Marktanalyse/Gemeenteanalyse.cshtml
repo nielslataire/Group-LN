@@ -1,7 +1,6 @@
 @using System.Text.Json
 @model CPMCore.Models.Marktanalyse.GemeenteAnalyseViewModel
 @{
-    ViewData["Title"] = "Gemeenteanalyse";
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var locatiesJson = JsonSerializer.Serialize(
@@ -602,15 +601,21 @@
 
 }
 
-<section class="content-header">
-    <h1>
-        Marktanalyse
-        @if (Model.HeeftFilter)
-        {
-            <small class="text-muted">— @Model.FilterLabel</small>
-        }
-    </h1>
-</section>
+@await Html.PartialAsync("_Tabs", "Gemeenteanalyse")
+
+<div class="page-intro">
+    <div>
+        <span class="page-intro-kicker"><i class="bx bx-map"></i> Marktanalyse per gemeente</span>
+        <h1 class="page-intro-title">
+            Gemeenteanalyse
+            @if (Model.HeeftFilter)
+            {
+                <small class="text-muted">— @Model.FilterLabel</small>
+            }
+        </h1>
+        <p class="page-intro-description">Bekijk vraag- en aanbodcijfers, prijsevoluties en marktindicatoren per gemeente of deelgemeente.</p>
+    </div>
+</div>
 
 
 @*     <div class="container-fluid"> *@

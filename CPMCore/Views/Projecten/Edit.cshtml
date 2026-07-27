@@ -5,7 +5,6 @@
 @model CPMCore.Models.Projecten.EditProjectDetail
 
 @{
-    ViewData["Title"] = $"Project - {Model.Project.Name}";
     var canWriteProject = ViewBag.CanWriteProject as bool? ?? false;
 }
 

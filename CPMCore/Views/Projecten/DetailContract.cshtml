@@ -6,7 +6,6 @@
 
 
 @{
-    ViewData["Title"] = $"{Model.ProjectName} - Contract detail";
     var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
     var invoiceCount = Model.IncommingInvoices?.Count ?? 0;
     var invoiceTotal = Model.IncommingInvoices?.Sum(i => i.InvoicePrice) ?? 0;

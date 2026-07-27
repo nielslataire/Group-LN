@@ -180,6 +180,7 @@ public class UserAdminController : BaseController
 
         var permissionDefinitions = await GetPermissionDefinitionsAsync();
 
+        SetPageHeader("bx bx-user-circle", "Gebruikers beheren");
         return View(new UserAdminIndexViewModel
         {
             LocalUsers        = localUsers,
@@ -349,6 +350,7 @@ public class UserAdminController : BaseController
             EntraUsers = await LoadEntraUsersAsync()
         };
 
+        SetPageHeader("bx bx-user-circle", "Gebruiker toevoegen");
         return View(vm);
     }
 
@@ -384,7 +386,10 @@ public class UserAdminController : BaseController
         }
 
         if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-user-circle", "Gebruiker toevoegen");
             return View(model);
+        }
 
         var nextId = await _db.Users.AnyAsync()
             ? await _db.Users.MaxAsync(u => u.Id) + 1
@@ -548,6 +553,7 @@ public class UserAdminController : BaseController
             EntraUsers = await LoadEntraUsersAsync()
         };
 
+        SetPageHeader("bx bx-user-circle", "Gebruiker bewerken");
         return View(vm);
     }
 

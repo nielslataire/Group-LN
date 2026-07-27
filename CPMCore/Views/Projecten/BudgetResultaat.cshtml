@@ -3,7 +3,6 @@
 @using CPMCore.Models.Projecten
 @model BudgetResultaatModel
 @{
-    ViewData["Title"] = "Resultaat — " + Model.BudgetNaam;
     var ic = System.Globalization.CultureInfo.InvariantCulture;
     decimal totaal = Model.Resultaat.TotaalKosten;
     string Perc(decimal bedrag) => totaal > 0 ? (bedrag / totaal * 100m).ToString("F1", ic) : "0.0";

@@ -2,9 +2,6 @@
 @using BOCore
 @model CPMCore.Models.Projecten.BudgetIndexModel
 @{
-    ViewData["Title"] = "Budgetten — " + Model.ProjectName;
-}
-@{
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
     {
         new Breadcrumb("Home",      nameof(HomeController.Index),                      "Home",       true),

@@ -1,7 +1,6 @@
 @model CPMCore.Models.Instellingen.EmailTemplateEditVM
 @{
     var isNieuw = Model.ID == 0;
-    ViewData["Title"] = isNieuw ? "Nieuwe e-mailtemplate" : "Template bewerken";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 

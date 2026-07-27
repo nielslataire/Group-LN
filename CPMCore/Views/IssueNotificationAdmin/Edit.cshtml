@@ -1,7 +1,6 @@
 @model CPMCore.Models.IssueNotification.ScheduleEditVm
 @{
     var isNew = Model.Id == 0;
-    ViewData["Title"] = isNew ? "Nieuw schema" : "Schema bewerken";
     var postAction = isNew ? "CreatePost" : "EditPost";
     ViewBag.BreadcrumbTitle = isNew ? "Nieuw schema" : "Schema bewerken";
     var reminderRowStyle = Model.ReminderFrequencyDays == 0 ? "display:none;" : "";

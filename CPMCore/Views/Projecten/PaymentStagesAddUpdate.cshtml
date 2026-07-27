@@ -5,7 +5,6 @@
 @using HtmlHelpers.BeginCollectionItemCore
 
 @{
-    ViewData["Title"] = "Project – " + Model.ProjectName;
     ViewBag.Breadcrumbs = new List<Breadcrumb>()
         {
             new Breadcrumb("Home", nameof(HomeController.Index), "Home", true),

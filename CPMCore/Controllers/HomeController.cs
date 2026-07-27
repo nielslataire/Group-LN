@@ -38,6 +38,8 @@ public class HomeController : BaseController
     [DefaultBreadcrumb("Dashboard")]
     public async Task<IActionResult> Index()
     {
+        SetPageHeader("bx bx-home-alt", "Dashboard");
+
         var model = new Models.Home.HomeModel();
         var currentUserCode = User.GetCpmUserCode() ?? string.Empty;
 

@@ -48,4 +48,21 @@ public interface IMarktanalyseService
         int? slaapkamers,
         string status,
         CancellationToken ct = default);
+
+    // ── Zoekhistoriek & opgeslagen profielen ("Vergelijkbare panden") ─────────
+
+    /// <summary>Logt een uitgevoerde zoekopdracht (voor "Laatste zoekacties" en "Snel starten").</summary>
+    Task LogZoekActieAsync(int userId, VergelijkbarePandenZoekCriteria criteria, int aantalResultaten, CancellationToken ct = default);
+
+    /// <summary>De meest recente individuele zoekopdrachten van de gebruiker.</summary>
+    Task<List<VergelijkbarePandenSnelkoppelingViewModel>> GetRecenteZoekActiesAsync(int userId, int take, CancellationToken ct = default);
+
+    /// <summary>De meest gebruikte criteria-combinaties van de gebruiker (frequentie-gebaseerd).</summary>
+    Task<List<VergelijkbarePandenSnelkoppelingViewModel>> GetSnelStartPresetsAsync(int userId, int take, CancellationToken ct = default);
+
+    /// <summary>Slaat het huidige zoekprofiel op onder een naam; retourneert het nieuwe Id.</summary>
+    Task<int> SaveZoekProfielAsync(int userId, string naam, VergelijkbarePandenZoekCriteria criteria, CancellationToken ct = default);
+
+    /// <summary>De opgeslagen zoekprofielen van de gebruiker, meest recent eerst.</summary>
+    Task<List<VergelijkbarePandenSnelkoppelingViewModel>> GetOpgeslagenProfielenAsync(int userId, int take, CancellationToken ct = default);
 }

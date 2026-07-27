@@ -1,6 +1,5 @@
 ﻿@model CPMCore.Models.Projecten.ContactDetailsModel
 @{
-    ViewData["Title"] = Model.ProjectName;
     var contact = Model.Contact;
     var requests = Model.Requests ?? new List<BOCore.ContactRequestBO>();
     var canWriteProjectContacts = ViewBag.CanWriteProjectContacts as bool? ?? false;

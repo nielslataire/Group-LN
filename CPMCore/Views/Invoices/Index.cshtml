@@ -4,7 +4,6 @@
 @using BOCore
 @{
     var culture = CultureInfo.GetCultureInfo("nl-BE");
-    ViewData["Title"] = "Facturen - " + @ViewBag.CompanyName;
     var currentPath = Context.Request.Path.ToString();
     var currentQuery = Context.Request.QueryString.ToString();
     var returnUrl = string.Concat(currentPath, currentQuery);

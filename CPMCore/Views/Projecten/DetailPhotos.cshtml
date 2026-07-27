@@ -2,7 +2,6 @@
 @inject IConfiguration Configuration
 @model DetailPhotosModel
 @{
-    ViewData["Title"] = Model.ProjectName + " - Media";
     var canWrite  = ViewBag.CanWriteProjectPhotos  as bool? ?? false;
     var canDelete = ViewBag.CanDeleteProjectPhotos as bool? ?? false;
     var imgBase   = ((string)ViewBag.ImageWebURL  ?? "").TrimEnd('/');

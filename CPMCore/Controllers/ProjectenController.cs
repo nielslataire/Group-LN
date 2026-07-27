@@ -124,6 +124,7 @@ namespace CPMCore.Controllers
         [Breadcrumb("Projecten", FromController = typeof(HomeController), FromAction = nameof(HomeController.Index))]
         public IActionResult Index(bool showAll = false)
         {
+            SetPageHeader("bx bx-building-house", "Projecten");
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanReadProjectsForSale = _ps.HasRead(PermissionCodes.ProjectsForSale);
             ViewBag.CanWriteProject = _ps.HasWrite(PermissionCodes.ProjectsDetail);
@@ -169,7 +170,6 @@ namespace CPMCore.Controllers
                 model.Statuses = statusResponse.Values;
             }
 
-            ViewData["Title"] = "Projecten - Alle";
             ViewData["SubTitle"] = "Alle projecten";
             ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
 
@@ -196,6 +196,7 @@ namespace CPMCore.Controllers
         [Breadcrumb("Eigen projecten", FromAction = nameof(Index))]
         public IActionResult ProjectsByUserId(string userId)
         {
+            SetPageHeader("bx bx-building-house", "Projecten");
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanReadProjectsForSale = _ps.HasRead(PermissionCodes.ProjectsForSale);
             var model = new ShowProjectsModel();
@@ -237,7 +238,6 @@ namespace CPMCore.Controllers
                 model.Statuses = statusResponse.Values;
             }
 
-            ViewData["Title"] = "Projecten - Alle";
             ViewData["SubTitle"] = "Alle projecten";
             ViewData["SubTitleText"] = "Overzicht van alle projecten binnen CPM.";
 
@@ -311,6 +311,7 @@ namespace CPMCore.Controllers
         [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
         public IActionResult Toevoegen()
         {
+            SetPageHeader("bx bx-building-house", "Project toevoegen");
             var referrer = Request.Headers["Referer"].ToString();
             TempData["Referrer"] = string.IsNullOrEmpty(referrer)
                 ? Url.Action("Index", "Projecten")
@@ -323,8 +324,6 @@ namespace CPMCore.Controllers
             FillInAddSelectLists(model);
             FillInAvailableUsers(model);
 
-            ViewData["Title"] = "Project toevoegen";
-
             return View(model);
         }
 
@@ -333,6 +332,7 @@ namespace CPMCore.Controllers
         [Breadcrumb("Project toevoegen", FromAction = nameof(Index))]
         public async Task<IActionResult> Toevoegen(ProjectModel model)
         {
+            SetPageHeader("bx bx-building-house", "Project toevoegen");
             if (!ModelState.IsValid)
             {
                 FillInAddSelectLists(model);
@@ -477,6 +477,8 @@ namespace CPMCore.Controllers
 
             ViewData["BreadcrumbNode"] = projectDetail;
 
+            SetPageHeader("bx bx-building-house", model.Project.Name);
+
             return View(model);
         }
         [HttpGet]
@@ -580,7 +582,7 @@ namespace CPMCore.Controllers
                     }).ToList();
             }
 
-            ViewData["Title"] = $"Project - {model.Project.Name}";
+            SetPageHeader("bx bx-building-house", $"Project - {model.Project.Name}");
 
             return View(model);
         }
@@ -592,6 +594,7 @@ namespace CPMCore.Controllers
         {
             if (!ModelState.IsValid)
             {
+                SetPageHeader("bx bx-building-house", $"Project - {model.Project.Name}");
                 FillInAddSelectListsDetailEdit(model);
                 FillInAvailableUsers(model);
                 model.Users = GetOrderedUsers();
@@ -806,6 +809,7 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid }            
             };
             ViewData["BreadcrumbNode"] = projectKlanten;
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Klanten");
             return View(model);
         }
 
@@ -840,6 +844,7 @@ namespace CPMCore.Controllers
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectUnits = _ps.HasWrite(PermissionCodes.ProjectsUnits);
             ViewBag.CanDeleteProjectUnits = _ps.HasDelete(PermissionCodes.ProjectsUnits);
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Eenheden");
             return View(model);
         }
         [HttpGet]
@@ -892,6 +897,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectContacts = _psContacts.HasWrite(PermissionCodes.ProjectsContacts);
             ViewBag.CanDeleteProjectContacts = _psContacts.HasDelete(PermissionCodes.ProjectsContacts);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contacten");
             return View(model);
         }
 
@@ -957,6 +963,7 @@ namespace CPMCore.Controllers
             var _psContactDet = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectContacts = _psContactDet.HasWrite(PermissionCodes.ProjectsContacts);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contactdetails");
             return View(model);
         }
         [HttpGet]
@@ -996,6 +1003,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = addContact;
 
+            SetPageHeader("bx bx-building-house", $"{projectName} - Contact toevoegen");
             return View(model);
         }
 
@@ -1054,6 +1062,7 @@ namespace CPMCore.Controllers
                 ContactMethod = latestContact?.SourceSite
             };
 
+            SetPageHeader("bx bx-building-house", $"{service.GetProjectNameById(projectid)} - Contact bewerken");
             return View(model);
         }
 
@@ -1512,6 +1521,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Eenheid toevoegen");
             return View(model);
         }
         [HttpPost]
@@ -1658,6 +1668,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Unit.Name} - Bewerken");
             return View(model);
         }
         [HttpPost]
@@ -1694,6 +1705,7 @@ namespace CPMCore.Controllers
                     {
                         ModelState.AddModelError("PdfUpload", "Plan upload naar storage API mislukt.");
                         Model.ExecutionPlans = await BuildUnitExecutionPlansVm(Model.Unit.Id);
+                        SetPageHeader("bx bx-building-house", $"{_projectService.GetProjectNameById(Model.ProjectId)} - {Model.Unit.Name} - Bewerken");
                         return View(Model);
                     }
 
@@ -1819,6 +1831,7 @@ namespace CPMCore.Controllers
                 }
             }
             Model.ExecutionPlans = await BuildUnitExecutionPlansVm(Model.Unit.Id);
+            SetPageHeader("bx bx-building-house", $"{_projectService.GetProjectNameById(Model.ProjectId)} - {Model.Unit.Name} - Bewerken");
             return View(Model);
         }
 
@@ -2104,6 +2117,7 @@ namespace CPMCore.Controllers
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectSuppliers = _ps.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _ps.HasDelete(PermissionCodes.ProjectsSuppliers);
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Leveranciers");
             return View(model);
         }
 
@@ -2181,6 +2195,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = contractDetail;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
             return View(model);
         }
 
@@ -2244,6 +2259,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = supplierDetail;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {model.Company?.Bedrijfsnaam ?? "Leverancier detail"}");
             return View("DetailContract", model);
         }
 
@@ -2288,6 +2304,7 @@ namespace CPMCore.Controllers
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectCalculation = _ps.HasWrite(PermissionCodes.ProjectsPostCalculation);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Nacalculatie");
             return View(model);
         }
         [HttpGet]
@@ -2530,6 +2547,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = projectRecalcAct;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Nacalculatie - {breadcrumbTitle}");
             return View(model);
         }
         [HttpGet]
@@ -2588,6 +2606,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = projectContractsAdd;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
             return View(model);
         }
         [HttpPost]
@@ -2602,6 +2621,7 @@ namespace CPMCore.Controllers
                     .Select(e => e.ErrorMessage)
                     .FirstOrDefault();
                 AddMessage("error", firstError ?? "Controleer de ingevulde gegevens.", "Validatiefout");
+                SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(model.ProjectId) : model.ProjectName)} - Contract toevoegen");
                 return View(model);
             }
 
@@ -2631,6 +2651,7 @@ namespace CPMCore.Controllers
                 var serviceError = response.Messages?.FirstOrDefault(m => m.Type == MessageType.Error)?.Message
                     ?? "Het contract is NIET toegevoegd aan het project " + model.ProjectName;
                 AddMessage("error", serviceError, "Fout!");
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract toevoegen");
                 return View(model);
             }
         }
@@ -2708,6 +2729,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = projectContractsEdit;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
             return View(model);
         }
         [HttpPost]
@@ -2727,7 +2749,10 @@ namespace CPMCore.Controllers
             }
 
             if ((!ModelState.IsValid))
+            {
+                SetPageHeader("bx bx-building-house", $"{(string.IsNullOrWhiteSpace(model.ProjectName) ? _projectService.GetProjectNameById(model.ProjectId) : model.ProjectName)} - Contract bewerken");
                 return View(model);
+            }
             if ((ModelState.IsValid))
             {
                 //Referrer
@@ -2754,11 +2779,15 @@ namespace CPMCore.Controllers
                 else
                 {
                     AddMessage("error", "Het contract is NIET bijgewerkt voor project " + model.ProjectName, "Fout!");
+                    SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
                     return View(model);
                 }
             }
             else
+            {
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Contract bewerken");
                 return View(model);
+            }
         }
         [HttpGet]
         public ActionResult ModalDeleteContract(int id)
@@ -2941,8 +2970,6 @@ namespace CPMCore.Controllers
             if (model.BudgetActivities.Any())
                 model.SelectedActivities = model.BudgetActivities.Select(b => b.Activity.ID).Distinct().ToList();
 
-            ViewData["Title"] = $"Project - {model.ProjectName}";
-
             //BREADCRUMBS
             var Index = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
             var projectenIndex = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Projecten", "Projecten")
@@ -2969,7 +2996,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = projectRecalcAct;
 
-
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget instellen");
             return View(model);
         }
 
@@ -2977,7 +3004,10 @@ namespace CPMCore.Controllers
         public IActionResult CalculationSettings(ProjectCalculationSettings model, List<BudgetActivityBO> budgetactivities)
         {
             if (!ModelState.IsValid)
+            {
+                SetPageHeader("bx bx-building-house", $"{(model.ProjectName ?? _projectService.GetProjectNameById(model.ProjectId))} - Budget instellen");
                 return View(model);
+            }
 
             // ProjectId meegeven aan alle regels
             if (budgetactivities != null)
@@ -3005,6 +3035,7 @@ namespace CPMCore.Controllers
             TempData["MessageType"] = "error";
             TempData["MessageTitle"] = "Fout!";
             TempData["Message"] = "De activiteiten zijn NIET aan het budget toegevoegd.";
+            SetPageHeader("bx bx-building-house", $"{(model.ProjectName ?? _projectService.GetProjectNameById(model.ProjectId))} - Budget instellen");
             return View(model);
         }
 
@@ -3104,6 +3135,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
             return View(model);
         }
         [HttpPost]
@@ -3164,6 +3196,7 @@ namespace CPMCore.Controllers
                 var label = model.Type == 0 ? "Contractactiviteiten" : "Bedrijfsactiviteiten";
                 model.ListActivities.Insert(0, new IdNameBO { Group = label });
 
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
                 return View(model);
             }
             var Referrer = TempData["Referrer"];
@@ -3181,6 +3214,7 @@ namespace CPMCore.Controllers
             else
             {
                 AddMessage("error", $"De factuur is NIET toegevoegd aan het project {model.ProjectName}", "Fout!");
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur toevoegen");
                 return View(model);
             }
         }
@@ -3269,6 +3303,7 @@ namespace CPMCore.Controllers
             ViewData["BreadcrumbNode"] = lastnode;
 
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
             return View(model);
         }
         [HttpPost]
@@ -3324,6 +3359,7 @@ namespace CPMCore.Controllers
                 var label = model.Type == 0 ? "Contractactiviteiten" : "Bedrijfsactiviteiten";
                 model.ListActivities.Insert(0, new IdNameBO { Group = label });
 
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
                 return View(model);
             }
             var Referrer = TempData["Referrer"];
@@ -3341,6 +3377,7 @@ namespace CPMCore.Controllers
             else
             {
                 AddMessage("error", $"De factuur is NIET aangepast aan het project {model.ProjectName}", "Fout!");
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Factuur bewerken");
                 return View(model);
             }
         }
@@ -3482,6 +3519,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectSuppliers = _psInv.HasWrite(PermissionCodes.ProjectsSuppliers);
             ViewBag.CanDeleteProjectSuppliers = _psInv.HasDelete(PermissionCodes.ProjectsSuppliers);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Inkomende factuur");
             return View(model);
         }
 
@@ -3585,6 +3623,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectChangeOrders = _ps.HasWrite(PermissionCodes.ProjectsChangeOrders);
             ViewBag.CanDeleteProjectChangeOrders = _ps.HasDelete(PermissionCodes.ProjectsChangeOrders);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName ?? model.ClientName} - Wijzigingsopdrachten");
             return View(model);
         }
 
@@ -3672,6 +3711,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht toevoegen");
             return View(model);
         }
         private const string DefaultChangeOrderConditions =
@@ -3696,6 +3736,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 ChangeOrderFillInSelectList(model);
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht toevoegen");
                 return View(model);
             }
 
@@ -3711,6 +3752,7 @@ namespace CPMCore.Controllers
 
             AddMessage("error", "De wijzigingsopdracht is NIET toegevoegd", "Fout!");
             ChangeOrderFillInSelectList(model);
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht toevoegen");
             return View(model);
         }
 
@@ -3775,6 +3817,7 @@ namespace CPMCore.Controllers
 
             ChangeOrderFillInSelectList(model);
             TempData["Referrer"] = Url.Action("DetailsChangeOrder", "Projecten", new { projectid });
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht toevoegen");
             return View("AddChangeOrder", model);
         }
 
@@ -3878,6 +3921,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = editNode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht bewerken");
             return View(model);
         }
 
@@ -3901,6 +3945,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 ChangeOrderFillInSelectList(model);
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht bewerken");
                 return View(model);
             }
 
@@ -3916,6 +3961,7 @@ namespace CPMCore.Controllers
 
             AddMessage("error", "De wijzigingsopdracht is NIET bewerkt", "Fout!");
             ChangeOrderFillInSelectList(model);
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Wijzigingsopdracht bewerken");
             return View(model);
         }
         [HttpGet]
@@ -4022,6 +4068,7 @@ namespace CPMCore.Controllers
         [Breadcrumb("Weerverlet", FromAction = "Index")]
         public ActionResult Weather()
         {
+            SetPageHeader("bx bx-building-house", "Weerverlet");
             var model = new BWDModel();
             var service = _projectService;
             var response = service.GetWheaterstationsSelect();
@@ -4236,6 +4283,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectPhotos  = _ps.HasWrite(PermissionCodes.ProjectsPhotos);
             ViewBag.CanDeleteProjectPhotos = _ps.HasDelete(PermissionCodes.ProjectsPhotos);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Media");
             return View(model);
         }
         [HttpGet]
@@ -4412,6 +4460,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectNews = _ps.HasWrite(PermissionCodes.ProjectsNews);
             ViewBag.CanDeleteProjectNews = _ps.HasDelete(PermissionCodes.ProjectsNews);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Nieuws");
             return View(model);
         }
 
@@ -4725,6 +4774,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectDocs = _psDocs.HasWrite(PermissionCodes.ProjectsDocuments);
             ViewBag.CanDeleteProjectDocs = _psDocs.HasDelete(PermissionCodes.ProjectsDocuments);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Documenten");
             return View(model);
         }
 
@@ -5053,6 +5103,7 @@ namespace CPMCore.Controllers
             ViewBag.CanWriteProjectInsurances = _ps.HasWrite(PermissionCodes.ProjectsInsurances);
             ViewBag.CanDeleteProjectInsurances = _ps.HasDelete(PermissionCodes.ProjectsInsurances);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Verzekeringen");
             return View(model);
         }
 
@@ -5223,6 +5274,7 @@ namespace CPMCore.Controllers
             var _ps = HttpContext.RequestServices.GetRequiredService<IPermissionService>();
             ViewBag.CanWriteProjectSales = _ps.HasWrite(PermissionCodes.ProjectsForSale);
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Verkoop");
             return View(model);
         }
 
@@ -5350,6 +5402,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Coördinatie");
             return View(model);
         }
 
@@ -5405,6 +5458,7 @@ namespace CPMCore.Controllers
                 .FirstOrDefault();
 
             SetCoordinatieBreadcrumb(projectid, proj.Name);
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Coördinatie-instellingen");
             return View(model);
         }
 
@@ -5658,6 +5712,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{viewModel.Project.Name} - Verkoopsinstellingen");
             return View(viewModel);
         }
 
@@ -5667,6 +5722,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 await PopulateBankAccountsAsync(model);
+                SetPageHeader("bx bx-building-house", $"{(model.Project?.Name ?? _projectService.GetProjectNameById(model.ProjectId))} - Verkoopsinstellingen");
                 return View(model);
             }
 
@@ -5696,6 +5752,7 @@ namespace CPMCore.Controllers
                 {
                     ModelState.AddModelError("Settings.BankAccountId", "Selecteer of maak een projectrekening aan.");
                     await PopulateBankAccountsAsync(model);
+                    SetPageHeader("bx bx-building-house", $"{(model.Project?.Name ?? _projectService.GetProjectNameById(model.ProjectId))} - Verkoopsinstellingen");
                     return View(model);
                 }
             }
@@ -6295,6 +6352,7 @@ namespace CPMCore.Controllers
             };
             ViewData["BreadcrumbNode"] = lastnode;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Betalingsschijven");
             return View(model);
         }
 
@@ -6351,6 +6409,7 @@ namespace CPMCore.Controllers
                 RouteValues = new { projectid = projectid, groupid = groupid }
             };
             ViewData["BreadcrumbNode"] = lastnode;
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {(model.Group.Id == 0 ? "Betalingsgroep toevoegen" : "Betalingsgroep bewerken")}");
             return View(model);
         }
 
@@ -6361,6 +6420,7 @@ namespace CPMCore.Controllers
             if (!ModelState.IsValid)
             {
                 ViewBag.VatTypes = GetVatTypeSelectList(model.ProjectId);
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {(model.Group.Id == 0 ? "Betalingsgroep toevoegen" : "Betalingsgroep bewerken")}");
                 return View(model);
             }
 
@@ -6382,6 +6442,7 @@ namespace CPMCore.Controllers
 
             AddMessage("error", $"De betalingsschijven zijn NIET aan het project {model.ProjectName} toegevoegd", "Fout!");
             ViewBag.VatTypes = GetVatTypeSelectList(model.ProjectId);
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - {(model.Group.Id == 0 ? "Betalingsgroep toevoegen" : "Betalingsgroep bewerken")}");
             return View(model);
         }
 
@@ -6413,6 +6474,7 @@ namespace CPMCore.Controllers
             if (responseUnits.Success)
                 model.Units = responseUnits.Values;
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Betalingsgroep koppelen");
             return View(model);
         }
 
@@ -6434,6 +6496,7 @@ namespace CPMCore.Controllers
                 if (responseUnits.Success)
                     model.Units = responseUnits.Values;
 
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Betalingsgroep koppelen");
                 return View(model);
             }
 
@@ -8802,6 +8865,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Budgetten", nameof(BudgetIndex),                 "Projecten",  false),
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetten");
             return View(model);
         }
 
@@ -8818,6 +8882,7 @@ namespace CPMCore.Controllers
                 ProjectName = projectResponse.Value?.Name
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetmaster aanmaken");
             return View(model);
         }
 
@@ -8826,7 +8891,10 @@ namespace CPMCore.Controllers
         public IActionResult BudgetMasterAanmaken(BudgetMasterAanmakenModel model)
         {
             if (!ModelState.IsValid)
+            {
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetmaster aanmaken");
                 return View(model);
+            }
 
             var userId = _db.Users.FirstOrDefault(u => u.Email == User.Identity.Name)?.Id ?? 0;
 
@@ -8842,6 +8910,7 @@ namespace CPMCore.Controllers
             {
                 foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
                     ModelState.AddModelError(string.Empty, msg.Message);
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budgetmaster aanmaken");
                 return View(model);
             }
 
@@ -8920,6 +8989,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Gegevens",  nameof(BudgetGegevens),              "Projecten",  false),
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget gegevens");
             return View(model);
         }
 
@@ -8928,13 +8998,17 @@ namespace CPMCore.Controllers
         public IActionResult BudgetGegevens(BudgetGegevensModel model, string submitAction)
         {
             if (!ModelState.IsValid)
+            {
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget gegevens");
                 return View(model);
+            }
 
             var response = _budgetService.SaveBudgetGegevens(model.Gegevens, model.VersieId);
             if (!response.Success)
             {
                 foreach (var msg in response.Messages.Where(m => m.Type == MessageType.Error))
                     ModelState.AddModelError(string.Empty, msg.Message);
+                SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget gegevens");
                 return View(model);
             }
 
@@ -9022,6 +9096,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Oppervlaktes",  nameof(BudgetOppervlaktes),         "Projecten",  false),
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget oppervlaktes");
             return View(model);
         }
 
@@ -9219,6 +9294,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Sanitair",   nameof(BudgetSanitair),            "Projecten",  false),
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget sanitair");
             return View(model);
         }
 
@@ -9356,6 +9432,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Gevels",     nameof(BudgetGevels),              "Projecten",  false),
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget gevels");
             return View(model);
         }
 
@@ -9416,6 +9493,7 @@ namespace CPMCore.Controllers
                 new Breadcrumb("Dak & Afbraak",nameof(BudgetDakAfbraak),            "Projecten",  false),
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget dak & afbraak");
             return View(model);
         }
 
@@ -9589,6 +9667,7 @@ namespace CPMCore.Controllers
 
             ViewData["Referrer"] = Request.Headers["Referer"].ToString();
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Activiteitslijnen");
             return View(model);
         }
 
@@ -9670,6 +9749,7 @@ namespace CPMCore.Controllers
                 AantalLiften   = versie.BudgetGegevens?.AantalLiften ?? 0
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget parameters");
             return View(model);
         }
 
@@ -9757,6 +9837,7 @@ namespace CPMCore.Controllers
                 BeschikbareEenheden   = eenheden
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget verkoop");
             return View(model);
         }
 
@@ -9857,6 +9938,7 @@ namespace CPMCore.Controllers
                 AndereVersies        = andereVersies
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget resultaat");
             return View(model);
         }
 
@@ -9884,6 +9966,7 @@ namespace CPMCore.Controllers
                                     .ToList()
             };
 
+            SetPageHeader("bx bx-building-house", $"{model.ProjectName} - Budget vergelijken");
             return View(model);
         }
 

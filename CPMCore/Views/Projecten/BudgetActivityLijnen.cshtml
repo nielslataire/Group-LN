@@ -1,7 +1,6 @@
 @using CPMCore.Controllers
 @model CPMCore.Models.Budget.BudgetActivityLijnenModel
 @{
-    ViewData["Title"] = "Activiteiten — " + Model.BudgetNaam;
     var ic = System.Globalization.CultureInfo.InvariantCulture;
     string Fmt(decimal v, int d = 2) => v.ToString("F" + d, ic);
     string FmtN(decimal v) => v.ToString("N0", ic);

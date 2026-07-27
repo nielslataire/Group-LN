@@ -6,7 +6,6 @@
 @{
     var isReadOnly = ViewBag.ReadOnly as bool? ?? false;
     var displayName = string.IsNullOrWhiteSpace(Model.DisplayLabel) ? Model.Title : Model.DisplayLabel;
-    ViewData["Title"] = isReadOnly ? displayName : Model.Title;
 
     var issuerNames = Model.IssuerCompanies
         .Where(ic => Model.SelectedIssuerCompanyIds.Contains(ic.Id))

@@ -22,6 +22,8 @@ public class EmailTemplateBeheerController : BaseController
     [HttpGet]
     public IActionResult Index()
     {
+        SetPageHeader("bx bx-envelope", "E-mailtemplates");
+
         var result = _emailTemplateService.GetAll(alleenActief: false);
         var vm = new EmailTemplateListVM { Templates = result.Values ?? new() };
 
@@ -33,6 +35,8 @@ public class EmailTemplateBeheerController : BaseController
     [HttpGet]
     public IActionResult Aanmaken()
     {
+        SetPageHeader("bx bx-envelope", "Nieuwe e-mailtemplate");
+
         var vm = new EmailTemplateEditVM { IsActief = true };
 
         var indexNode = BuildIndexBreadcrumb();
@@ -47,6 +51,8 @@ public class EmailTemplateBeheerController : BaseController
     [HttpGet]
     public IActionResult Bewerken(int id)
     {
+        SetPageHeader("bx bx-envelope", "E-mailtemplate bewerken");
+
         var result = _emailTemplateService.GetById(id);
         if (result.HasErrors || result.Value == null)
         {
@@ -83,7 +89,10 @@ public class EmailTemplateBeheerController : BaseController
     public IActionResult Bewerken(EmailTemplateEditVM vm)
     {
         if (!ModelState.IsValid)
+        {
+            SetPageHeader("bx bx-envelope", vm.ID == 0 ? "Nieuwe e-mailtemplate" : "E-mailtemplate bewerken");
             return View(vm);
+        }
 
         var bo = new EmailTemplateBO
         {

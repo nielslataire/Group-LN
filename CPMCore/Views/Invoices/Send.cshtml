@@ -2,7 +2,6 @@
 @using System.Globalization
 @using CPMCore.Helpers
 @{
-    ViewData["Title"] = "Factuur verzenden";
     var issuerId = ViewBag.CompanyId as int?;
     var hasEnterpriseIdentifier = !string.IsNullOrWhiteSpace(Model.ClientVatNumber) || !string.IsNullOrWhiteSpace(Model.ClientEnterpriseNumber);
     var isCopyMode = Model.IsCopyRequest;

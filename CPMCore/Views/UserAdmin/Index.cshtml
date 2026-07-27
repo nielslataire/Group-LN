@@ -3,7 +3,6 @@
 @using BOCore;
 @inject IPermissionService PermissionService
 @{
-    ViewData["Title"] = "Gebruikers beheren";
     Layout = "~/Views/Shared/_Layout.cshtml";
     var roleNames = Model.Roles.Select(r => r.RoleName).Distinct().OrderBy(x => x).ToList();
     var permissionDefsJson = System.Text.Json.JsonSerializer.Serialize(

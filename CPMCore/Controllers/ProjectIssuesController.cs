@@ -75,6 +75,7 @@ public class ProjectsIssuesController : BaseController
         };
 
 
+        SetPageHeader("bx bx-error-circle", $"{projectName} - Punten");
         filters ??= new ConstructionIssueFilterBO();
         var hasExplicitStatusFilter = Request.Query.ContainsKey("status");
         // Don't set a default server-side status filter — all issues are loaded so the
@@ -262,6 +263,7 @@ public class ProjectsIssuesController : BaseController
             Notifications = await _service.GetNotifications(projectId, id),
             MediaUrls = media.ToDictionary(x => x.Id, x => GetSignedAssetUrlByFileName(x.FileId, "pictures"))
         };
+        SetPageHeader("bx bx-error-circle", issue.Title);
         return View(vm);
     }
 

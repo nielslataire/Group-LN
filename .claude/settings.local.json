@@ -68,7 +68,12 @@
       "Bash(Get-ChildItem -Recurse -Filter \"*.csproj\")",
       "Bash(Select-Object -Property FullName)",
       "Bash(grep -v \"//\\\\|<!--\")",
-      "WebFetch(domain:www.groupln.be)"
+      "WebFetch(domain:www.groupln.be)",
+      "Bash(dotnet build *)",
+      "Bash(tasklist //FI \"IMAGENAME eq CPMCore.exe\")",
+      "Bash(taskkill //PID 42356 //F)",
+      "Bash(git worktree *)",
+      "Bash(git branch *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\niels\\.claude\\projects\\c--Users-niels-source-repos-nielslataire-Group-LN\\memory"

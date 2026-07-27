@@ -20,6 +20,8 @@ public class AppRolesController : BaseController
 
     public async Task<IActionResult> Index()
     {
+        SetPageHeader("bx bx-shield-quarter", "Rollen");
+
         var permissions = await _db.Permission
             .AsNoTracking()
             .OrderBy(p => p.PermissionName)
@@ -36,6 +38,7 @@ public class AppRolesController : BaseController
     [HttpGet]
     public IActionResult Create()
     {
+        SetPageHeader("bx bx-shield-quarter", "Nieuwe rol");
         return View(new PermissionEditViewModel());
     }
 
@@ -43,6 +46,8 @@ public class AppRolesController : BaseController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(PermissionEditViewModel model)
     {
+        SetPageHeader("bx bx-shield-quarter", "Nieuwe rol");
+
         if (!ModelState.IsValid)
             return View(model);
 

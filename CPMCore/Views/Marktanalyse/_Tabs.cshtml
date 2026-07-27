@@ -1,0 +1,18 @@
+@* Herbruikbare tabbladen onder de topbar voor de Marktanalyse-sectie.
+   Gebruik: @await Html.PartialAsync("_Tabs", "Gemeenteanalyse") *@
+@model string
+@{
+    var active = Model ?? string.Empty;
+    string ActiveClass(string tab) => string.Equals(tab, active, StringComparison.OrdinalIgnoreCase) ? "page-tab active" : "page-tab";
+}
+<div class="page-tabs">
+    <a class="@ActiveClass("Gemeenteanalyse")" href="@Url.Action("Gemeenteanalyse", "Marktanalyse")">
+        <i class="bx bx-line-chart"></i> Gemeenteanalyse
+    </a>
+    <a class="@ActiveClass("VergelijkbarePanden")" href="@Url.Action("VergelijkbarePanden", "Marktanalyse")">
+        <i class="bx bx-search-alt"></i> Vergelijkbare panden
+    </a>
+    <a class="@ActiveClass("Projectdetail")" href="#">
+        <i class="bx bx-building-house"></i> Projectdetail
+    </a>
+</div>

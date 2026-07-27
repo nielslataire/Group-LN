@@ -3,7 +3,6 @@
 @using BOCore
 @using FacadeCore
 @{
-    ViewData["Title"] = "Documentencentrum";
     InvoiceReasonFlags Flags(long f) => (InvoiceReasonFlags)f;
     bool HasFlag(long f, InvoiceReasonFlags flag) => (Flags(f) & flag) != 0;
 

@@ -29,6 +29,11 @@ public class VergelijkbarePandenViewModel
     public List<VergelijkbaarPandRij> Panden { get; set; } = new();
     public VergelijkbaarKpiViewModel? Kpi { get; set; }
 
+    // ── Lege staat: snel starten / historiek / opgeslagen profielen ───────────
+    public List<VergelijkbarePandenSnelkoppelingViewModel> SnelStartPresets { get; set; } = new();
+    public List<VergelijkbarePandenSnelkoppelingViewModel> RecenteZoekActies { get; set; } = new();
+    public List<VergelijkbarePandenSnelkoppelingViewModel> OpgeslagenProfielen { get; set; } = new();
+
     // ── Computed ──────────────────────────────────────────────────────────────
     public bool HeeftResultaten => Panden.Count > 0;
     public decimal? OppervlakteLaag => Oppervlakte.HasValue ? Oppervlakte.Value - Tolerantie : null;

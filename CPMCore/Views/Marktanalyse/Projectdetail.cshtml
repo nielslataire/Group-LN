@@ -1,7 +1,6 @@
 @using System.Text.Json
 @model CPMCore.Models.Marktanalyse.ProjectDetailViewModel
 @{
-    ViewData["Title"] = Model.ProjectNaam;
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var terugUrl   = Url.Action("Gemeenteanalyse", "Marktanalyse", new { postcode = Model.Postcode });
@@ -549,7 +548,7 @@
 </style>
 }
 
-<section class="content-header" style="display:none;"></section>
+@await Html.PartialAsync("_Tabs", "Projectdetail")
 
 <!-- Topbalk -->
 <div class="detail-topbar">

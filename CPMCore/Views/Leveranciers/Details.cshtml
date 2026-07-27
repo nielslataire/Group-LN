@@ -4,7 +4,6 @@
 @using CPMCore.Helpers
 
 @{
-    ViewData["Title"] = Model.Name;
     var currencyCulture = CultureInfo.CreateSpecificCulture("nl-BE");
     var departmentCount = Model.Departments?.Count() ?? 0;
     var contactCount = Model.Contacts?.Count() ?? 0;

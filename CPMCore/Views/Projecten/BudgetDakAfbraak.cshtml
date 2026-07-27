@@ -2,8 +2,6 @@
 @using BOCore
 @model CPMCore.Models.Projecten.BudgetGevelsDakModel
 @{
-    ViewData["Title"] = "Dak & Afbraak — " + Model.MasterNaam;
-
     var platDak    = Model.Elementen.GetValueOrDefault("PlatDak")          ?? new List<BudgetGevelElementBO>();
     var hellendDak = Model.Elementen.GetValueOrDefault("HellendDak")       ?? new List<BudgetGevelElementBO>();
     var groenDak   = Model.Elementen.GetValueOrDefault("GroenDak")         ?? new List<BudgetGevelElementBO>();

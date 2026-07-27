@@ -1,7 +1,6 @@
 ﻿@using System.Linq
 @model CPMCore.Models.Instellingen.InvoiceSequencesPageVM
 @{
-    ViewData["Title"] = "Sequenties";
     var octopusBookyears = ViewBag.OctopusBookyears as IEnumerable<BOCore.OctopusBookyearBO> ?? Enumerable.Empty<BOCore.OctopusBookyearBO>();
     var octopusJournals = octopusBookyears.SelectMany(by => by.Journals.Select(j => new { Journal = j, Bookyear = by })).ToList();
     var bookyearLookup = octopusBookyears.ToDictionary(by => by.Id);

@@ -3,7 +3,6 @@
 @using BOCore
 @using FacadeCore
 @{
-    ViewData["Title"] = $"Document — {Model.InvoiceNumber ?? Model.SupplierName}";
     var projects  = ViewBag.Projects  as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var contracts = ViewBag.Contracts as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? Enumerable.Empty<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
     var hasEnrichment = Model.Enrichment != null;

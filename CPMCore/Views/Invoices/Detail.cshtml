@@ -17,7 +17,6 @@
         || Model.OctopusDeliveryDateTime.HasValue
         || Model.OctopusDeliveryUpdatedAt.HasValue
         || !string.IsNullOrWhiteSpace(Model.OctopusDeliveryComment);
-    ViewData["Title"] = string.IsNullOrWhiteSpace(issuerName) ? displayId : $"{issuerName} - {displayId}";
     var detailReturnUrl = Url.Action("Detail", "Invoices", new { id = Model.Id, issuerCompanyId = issuerId });
 }
 @functions {

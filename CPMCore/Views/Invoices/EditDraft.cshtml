@@ -4,7 +4,6 @@
 @using BOCore;
 
 @{
-    ViewData["Title"] ??= $"Factuur bewerken - {Model.DisplayId}";
     var lockStages = Model.Mode == InvoiceMode.Stages;
     var hasIssuerBankAccounts = Model.IssuerBankAccounts?.Any() == true;
 }

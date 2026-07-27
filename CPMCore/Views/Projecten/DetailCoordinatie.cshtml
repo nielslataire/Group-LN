@@ -1,7 +1,6 @@
 @using BOCore
 @model CPMCore.Models.Projecten.ProjectCoordinatieModel
 @{
-    ViewData["Title"] = Model.ProjectName;
     var contractType = Model.ContractType;
     var showSchijven = contractType == CoordinationContractType.Schijven || contractType == CoordinationContractType.Gemengd;
     var showRegie    = contractType == CoordinationContractType.Regie    || contractType == CoordinationContractType.Gemengd;

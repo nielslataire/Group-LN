@@ -1,6 +1,5 @@
 ﻿@model CPMCore.Models.Projecten.DetailContactsModel
 @{
-    ViewData["Title"] = Model.ProjectName;
     var contactGroups = Model.ContactGroups ?? new List<CPMCore.Models.Projecten.ContactGroupModel>();
     var stats = Model.Stats ?? new CPMCore.Models.Projecten.ContactStatsModel();
     var canWriteProjectContacts = ViewBag.CanWriteProjectContacts as bool? ?? false;

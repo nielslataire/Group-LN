@@ -225,6 +225,7 @@ namespace CPMCore.Controllers
                    : writeScope.AllowedIssuerIds.ToList()
             };
 
+            SetPageHeader("bx bx-group", "Klanten");
             return View(model);
         }
 
@@ -353,6 +354,7 @@ namespace CPMCore.Controllers
 
             await BuildFormAsync(model, ct);
             ViewBag.ReadOnly = true;
+            SetPageHeader("bx bx-group", string.IsNullOrWhiteSpace(model.DisplayLabel) ? model.Title : model.DisplayLabel);
             return View("Form", model);
         }
 
@@ -379,6 +381,7 @@ namespace CPMCore.Controllers
                     : new List<int>()
             };
             await BuildFormAsync(model, ct, scope);
+            SetPageHeader("bx bx-group", model.Title);
             return View("Create", model);
         }
 
@@ -408,6 +411,7 @@ namespace CPMCore.Controllers
 
             if (!ModelState.IsValid)
             {
+                SetPageHeader("bx bx-group", model.Title);
                 return View("Create", model);
             }
 
@@ -669,6 +673,7 @@ namespace CPMCore.Controllers
             };
 
             await BuildFormAsync(model, ct, scope);
+            SetPageHeader("bx bx-group", model.Title);
             return View("Edit", model);
         }
 
@@ -718,6 +723,7 @@ namespace CPMCore.Controllers
 
             if (!ModelState.IsValid)
             {
+                SetPageHeader("bx bx-group", model.Title);
                 return View("Edit", model);
             }
 
@@ -848,6 +854,7 @@ namespace CPMCore.Controllers
 
 
 
+            SetPageHeader("bx bx-group", "Klant - " + model.Client?.DisplayName);
             return View(model);
         }
 
@@ -890,12 +897,14 @@ namespace CPMCore.Controllers
             var bcAdd = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("AddClientAccount", "Klanten", "Klant toevoegen") { Parent = bcKlanten };
             ViewData["BreadcrumbNode"] = bcAdd;
 
+            SetPageHeader("bx bx-group", model.ProjectName);
             return View(model);
         }
         [HttpPost]
         [CPMCore.Filters.PermissionWrite(PermissionCodes.Customers)]
         public ActionResult AddClientAccount(AddClientAccountModel model, List<ClientContactBO> contacts, List<UnitBO> units)
         {
+            SetPageHeader("bx bx-group", model.ProjectName);
             var Referrer = TempData["Referrer"];
             var errors = new Dictionary<string, ModelErrorCollection>();
 
@@ -1729,7 +1738,7 @@ namespace CPMCore.Controllers
                     title += client.CompanyName == null
                         ? $" - {client.Salutation.GetDisplayName()} {client.DisplayName}"
                         : $" - {client.DisplayName}";
-                    ViewData["Title"] = title;
+                    SetPageHeader("bx bx-group", title);
 
                     // Eenheden
                     var unitsResponse = unitService.GetUnitsByAccountId(clientid);
@@ -1763,12 +1772,17 @@ namespace CPMCore.Controllers
 
             model.ProjectId = projectid;
             FillInAddSelectListsEdit(ref model);
+            if (ViewData["PageIcon"] == null)
+            {
+                SetPageHeader("bx bx-group", model.Client?.DisplayName ?? "Klant bewerken");
+            }
             return View("EditProject", model);
         }
 
         [HttpPost]
         public async Task<IActionResult> EditProject(EditClientModel viewmodel)
         {
+            SetPageHeader("bx bx-group", viewmodel.Client?.DisplayName ?? "Klant bewerken");
             var Referrer = TempData["Referrer"];
             if (!ModelState.IsValid || viewmodel.Client.Id == 0)
             {

@@ -1,9 +1,5 @@
 @using CPMCore.Controllers
 @model CPMCore.Models.Projecten.BudgetMasterAanmakenModel
-@{
-    ViewData["Title"] = "Nieuw budget — " + Model.ProjectName;
-}
-
 <section class="content-with-menu">
     <div class="content-with-menu-container">
         @await Html.PartialAsync("DetailMenu", Model.ProjectId)

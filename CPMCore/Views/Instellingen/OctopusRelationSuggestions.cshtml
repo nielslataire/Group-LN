@@ -3,7 +3,6 @@
 @using System.Linq
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
-    ViewData["Title"] = "Octopus-relaties koppelen";
     var statusMessage = ViewBag.OctopusMessage as string;
     var statusMessageType = ViewBag.OctopusMessageType as string ?? "info";
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context);

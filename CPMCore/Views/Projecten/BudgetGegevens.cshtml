@@ -3,7 +3,6 @@
 @using ServiceCore.Budget
 @model CPMCore.Models.Projecten.BudgetGegevensModel
 @{
-    ViewData["Title"] = "Gegevens — " + Model.MasterNaam;
     var currentYear = DateTime.Now.Year;
     Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.NacalcRuwbouwBasis,      out var fRuwbouw);
     Model.FormulaVoorstellingen.TryGetValue(FormulaSleutels.BovenbouwGevelmetselwerk, out var fGevel);
