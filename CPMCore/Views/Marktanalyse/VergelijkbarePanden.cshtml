@@ -40,192 +40,7 @@
 <link rel="stylesheet" href="~/lib/datatables/media/css/dataTables.bootstrap5.min.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<style>
-.split {
-    display: grid;
-    grid-template-columns: 288px minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
-}
-/* Bootstrap's .container-fluid gutter geeft ongewenste links/rechts padding op deze pagina */
-.container-fluid {
-    padding-left: 0;
-    padding-right: 0;
-}
-.vp-sidebar         { min-width:0; }
-
-        .vp-content {
-            min-width: 0;
-            position: relative;
-            background: #fff;
-        }
-
-/* Zoekknop in de echte thema-primary kleur (Bootstrap's .btn-primary is in
-   dit thema overschreven naar grijs, dus hier expliciet op var(--primary)) */
-.btn-vp-primary {
-    background: var(--primary,#2c7a4b);
-    border-color: var(--primary,#2c7a4b);
-    color: #fff;
-}
-.btn-vp-primary:hover,
-.btn-vp-primary:focus {
-    background: var(--primary,#2c7a4b);
-    border-color: var(--primary,#2c7a4b);
-    color: #fff;
-    filter: brightness(0.92);
-}
-
-/* Laad-overlay tijdens (automatisch) zoeken — dekt bestaande resultaten af
-   totdat de nieuwe pagina met verse data geladen is. */
-.vp-loading-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(255,255,255,.75);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 20;
-    border-radius: 10px;
-    min-height: 120px;
-}
-.vp-loading-overlay.show { display: flex; }
-.vp-loading-overlay .spinner-border { color: var(--primary,#2c7a4b); width: 2.5rem; height: 2.5rem; }
-
-        .vp-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            background: #fff;
-            overflow: hidden; /* laat de afronding doorlopen door header/body/tabel */
-        }
-
-        .vp-card .card-header {
-            background: #fff;
-                padding-top: 1rem !important;
-                padding-bottom: 1rem !important;
-
-        }
-
-.vp-filter-card     { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:1.25rem; }
-.vp-filter-label    { font-size:.72rem; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.05em; margin-bottom:.35rem; }
-
-        .vp-filter-card .vp-filter-card-head {
-            padding-bottom: 13px;
-            border-bottom: 1px solid #e3e7ee;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-.vp-seg-group       { display:flex; border:1px solid #d1d5db; border-radius:7px; overflow:hidden; }
-.vp-seg-group input { display:none; }
-.vp-seg-group label { flex:1; text-align:center; padding:.35rem .5rem; font-size:.8rem; font-weight:500; cursor:pointer; color:#374151; background:#fff; transition:background .15s,color .15s; border-right:1px solid #d1d5db; }
-.vp-seg-group label:last-of-type { border-right:none; }
-.vp-seg-group input:checked + label { background:var(--primary,#2c7a4b); color:#fff; }
-.vp-seg-tab         { display:flex; border:1px solid #d1d5db; border-radius:7px; overflow:hidden; margin-bottom:.75rem; }
-.vp-seg-tab button  { flex:1; border:none; background:#fff; padding:.4rem; font-size:.8rem; font-weight:500; cursor:pointer; color:#374151; transition:background .15s,color .15s; }
-.vp-seg-tab button.active { background:var(--primary,#2c7a4b); color:#fff; }
-
-/* Gemeente multiselect dropdown */
-.vp-gem-wrap         { position:relative; }
-.vp-gem-btn          { width:100%; text-align:left; border:1px solid #d1d5db; border-radius:7px; background:#fff; padding:.45rem .75rem; font-size:.85rem; color:#374151; cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
-.vp-gem-btn:hover    { border-color:var(--primary,#2c7a4b); }
-.vp-gem-btn.open     { border-color:var(--primary,#2c7a4b); border-bottom-left-radius:0; border-bottom-right-radius:0; }
-.vp-gem-dropdown     { display:none; position:absolute; top:100%; left:0; right:0; z-index:1050; border:1px solid var(--primary,#2c7a4b); border-top:none; border-radius:0 0 7px 7px; background:#fff; max-height:240px; overflow-y:auto; }
-.vp-gem-dropdown.open { display:block; }
-.vp-gem-search       { padding:.5rem .75rem; border-bottom:1px solid #e2e8f0; position:sticky; top:0; background:#fff; z-index:2; }
-.vp-gem-search input { width:100%; border:1px solid #d1d5db; border-radius:5px; padding:.3rem .6rem; font-size:.8rem; outline:none; }
-.vp-gem-header       { display:flex; justify-content:space-between; padding:.4rem .75rem .2rem; font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; background:#f8fafc; }
-.vp-gem-header a     { color:var(--primary,#2c7a4b); cursor:pointer; font-weight:600; text-decoration:none; }
-.vp-gem-row          { display:flex; align-items:center; justify-content:space-between; padding:.4rem .75rem; font-size:.82rem; cursor:pointer; }
-.vp-gem-row:hover    { background:#f1f5f9; }
-.vp-gem-row label    { cursor:pointer; flex:1; margin:0; }
-.vp-gem-count        { font-size:.75rem; color:#94a3b8; margin-left:.5rem; }
-
-/* Rond adres — dropdown met kaart (middelpunt + straal) */
-.vp-rond-wrap        { position:relative; }
-.vp-rond-dropdown     { display:none; position:absolute; top:calc(100% + 6px); left:0; width:340px; z-index:1050; border:1px solid #e2e8f0; border-radius:10px; background:#fff; box-shadow:0 12px 32px rgba(15,23,42,.14); padding:.9rem; }
-.vp-rond-dropdown.open { display:block; }
-.vp-rond-dropdown-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:.65rem; }
-.vp-rond-dropdown-title  { font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; }
-.vp-rond-count-badge     { background:#dcfce7; color:#166534; font-size:.68rem; font-weight:700; padding:.2rem .55rem; border-radius:20px; white-space:nowrap; }
-.vp-rond-search          { position:relative; margin-bottom:.75rem; }
-.vp-rond-search i        { position:absolute; left:.65rem; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:.9rem; }
-.vp-rond-search input    { width:100%; border:1px solid #d1d5db; border-radius:7px; padding:.45rem .75rem .45rem 2rem; font-size:.85rem; }
-.vp-rond-search input:focus { outline:none; border-color:var(--primary,#2c7a4b); }
-.vp-rond-slider-row      { display:flex; align-items:center; gap:.6rem; margin-bottom:.75rem; }
-.vp-rond-slider-row input[type="range"] { flex:1; }
-.vp-rond-slider-row span { font-size:.8rem; font-weight:700; color:var(--primary,#2c7a4b); min-width:44px; text-align:right; }
-.vp-rond-map             { height:200px; border-radius:7px; border:1px solid #e2e8f0; background:#eef2f7; }
-.vp-rond-hint            { display:flex; align-items:flex-start; gap:.4rem; margin-top:.6rem; font-size:.72rem; color:#94a3b8; line-height:1.4; }
-.vp-rond-hint i          { flex-shrink:0; margin-top:.1rem; }
-
-/* KPI cards */
-.vp-kpi-card         { border:1px solid #e2e8f0; border-radius:10px; background:#fff; padding:.9rem 1rem; }
-.vp-kpi-label        { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#64748b; margin-bottom:.15rem; }
-.vp-kpi-value        { font-size:1.35rem; font-weight:700; color:#1e293b; line-height:1.1; }
-.vp-kpi-sub          { font-size:.75rem; color:#94a3b8; margin-top:.1rem; }
-.vp-kpi-first        { background:#f0fdf4; border-color:#bbf7d0; }
-.vp-kpi-first .vp-kpi-value { color:var(--primary,#2c7a4b); }
-
-/* Table */
-.table-vp thead th   { background:#f8fafc; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap; padding-left:20px; padding-right:20px; }
-.table-vp tbody tr   { cursor:pointer; transition:background .1s; }
-.table-vp tbody tr:hover { background:#f8fafc; }
-.table-vp td         { font-size:.83rem; vertical-align:middle; padding-left:20px; padding-right:20px; }
-.vp-adres-line1      { font-weight:600; color:#1e293b; }
-.vp-adres-line2      { font-size:.75rem; color:#64748b; }
-.type-pill           { display:inline-block; border-radius:20px; padding:.15rem .55rem; font-size:.72rem; font-weight:600; }
-.type-pill.apt       { background:#e8f6ff; color:#0369a1; border:1px solid #bae6fd; }
-.type-pill.won       { background:#e8f7ef; color:#166534; border:1px solid #bbf7d0; }
-.status-badge        { display:inline-block; border-radius:20px; padding:.15rem .55rem; font-size:.72rem; font-weight:600; }
-.status-beschikbaar  { background:#dcfce7; color:#166534; }
-.status-verkocht     { background:#fee2e2; color:#dc2626; }
-.status-mogelijk     { background:#fef9c3; color:#854d0e; }
-.sales-cell          { display:flex; align-items:center; gap:.5rem; }
-.sales-track         { flex:1; height:6px; background:#e2e8f0; border-radius:3px; min-width:50px; }
-.sales-bar           { height:6px; border-radius:3px; background:var(--primary,#2c7a4b); }
-.sales-pct           { font-size:.78rem; font-weight:600; color:#374151; min-width:32px; text-align:right; }
-.badge-project       { background:#e8f7ef; border:1px solid #bbf7d0; color:#166534; font-size:.68rem; padding:.1rem .45rem; border-radius:20px; }
-.badge-los           { background:#fff4e5; border:1px solid #ffd591; color:#b26a00; font-size:.68rem; padding:.1rem .45rem; border-radius:20px; }
-.vp-empty            { text-align:center; padding:2.5rem 1rem 2rem; }
-.vp-empty-icon        { width:64px; height:64px; margin:0 auto .9rem; border-radius:14px; background:#f1f5f9; color:#64748b; display:flex; align-items:center; justify-content:center; font-size:1.6rem; }
-.vp-empty-title       { font-weight:700; font-size:1.05rem; color:#1e293b; margin-bottom:.4rem; }
-.vp-empty-text        { font-size:.85rem; color:#94a3b8; max-width:480px; margin:0 auto; }
-
-.vp-section           { margin-top:1.75rem; }
-.vp-section-label     { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#94a3b8; padding-bottom:.6rem; border-bottom:1px solid #e2e8f0; margin-bottom:.9rem; }
-
-.vp-quickcard          { display:flex; align-items:center; gap:.7rem; border:1px solid #e2e8f0; border-radius:10px; padding:.85rem .9rem; text-decoration:none; height:100%; transition:border-color .15s,box-shadow .15s; }
-.vp-quickcard:hover     { border-color:var(--primary,#2c7a4b); box-shadow:0 4px 14px rgba(15,23,42,.06); text-decoration:none; }
-.vp-quickcard-icon      { width:36px; height:36px; flex-shrink:0; border-radius:8px; background:var(--lightgreen,#e8f0eb); color:var(--primary,#2c7a4b); display:flex; align-items:center; justify-content:center; font-size:1.05rem; }
-.vp-quickcard-body      { min-width:0; display:flex; flex-direction:column; }
-.vp-quickcard-title     { font-size:.85rem; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.vp-quickcard-subtitle  { font-size:.74rem; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-.vp-actielijst         { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; }
-.vp-actie-row          { display:flex; align-items:center; gap:.75rem; padding:.7rem 1rem; text-decoration:none; border-bottom:1px solid #f1f5f9; transition:background .12s; }
-.vp-actie-row:last-child { border-bottom:none; }
-.vp-actie-row:hover    { background:#f8fafc; text-decoration:none; }
-.vp-actie-icon         { width:32px; height:32px; flex-shrink:0; border-radius:8px; background:#f1f5f9; color:#64748b; display:flex; align-items:center; justify-content:center; font-size:.95rem; }
-.vp-actie-body         { min-width:0; flex:1 1 auto; display:flex; flex-direction:column; }
-.vp-actie-title        { font-size:.85rem; font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.vp-actie-subtitle     { font-size:.74rem; color:#94a3b8; }
-.vp-actie-meta         { flex-shrink:0; display:flex; align-items:center; gap:.6rem; }
-.vp-actie-count        { font-size:.72rem; font-weight:700; background:#dcfce7; color:#166534; padding:.15rem .55rem; border-radius:20px; white-space:nowrap; }
-.vp-actie-time         { font-size:.72rem; color:#94a3b8; white-space:nowrap; }
-
-.vp-hint-banner        { display:flex; align-items:flex-start; gap:.6rem; margin-top:1.75rem; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:.85rem 1rem; font-size:.82rem; color:#166534; }
-.vp-hint-banner i      { font-size:1.1rem; flex-shrink:0; }
-.vp-marktconclusie   { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:1rem 1.25rem; font-size:.88rem; color:#374151; }
-.vp-mc-header        { display:flex; align-items:center; gap:.65rem; margin-bottom:.75rem; }
-.vp-mc-icon          { width:34px; height:34px; border-radius:8px; background:#dcfce7; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
-.vp-mc-title         { font-weight:700; font-size:.88rem; color:#1e293b; line-height:1.25; }
-.vp-mc-subtitle      { font-size:.75rem; color:#94a3b8; line-height:1.25; margin-top:1px; }
-
-/* theme.css (geladen ná deze PageStyle-sectie) zet .dataTables_wrapper .pagination
-   op margin-top:20px!important — hier ongedaan gemaakt via een ID-selector zodat
-   deze regel wint ondanks de latere laadvolgorde van theme.css. */
-#tblVergelijkbaar_wrapper .pagination { margin-top: 0 !important; }
-</style>
+<link rel="stylesheet" href="~/css/marktanalyse-custom.css" />
 }
 
 @await Html.PartialAsync("_Tabs", "VergelijkbarePanden")
@@ -272,7 +87,7 @@
 </div>
 
 
-<div class="container-fluid">
+<div class="container-fluid ma-vergelijkbare-panden">
 <form id="vpForm" method="get" action="/Marktanalyse/VergelijkbarePanden">
 <input type="hidden" name="zoekgebiedTab" id="hidZoekgebiedTab" value="@Model.ZoekgebiedTab" />
 
@@ -282,8 +97,8 @@
     <aside class="vp-sidebar">
         <div class="vp-filter-card">
                     <div class="d-flex justify-content-between align-items-center mb-3 vp-filter-card-head">
-                <span style="font-weight:700;font-size:.92rem;color:#1e293b;"><i class="bx bx-slider-alt me-1"></i>Zoekprofiel</span>
-                <a href="/Marktanalyse/VergelijkbarePanden" class="text-decoration-none" style="font-size:.78rem;color:#94a3b8;">Reset</a>
+                <span class="vp-panel-title"><i class="bx bx-slider-alt me-1"></i>Zoekprofiel</span>
+                <a href="/Marktanalyse/VergelijkbarePanden" class="text-decoration-none vp-reset-link">Reset</a>
             </div>
 
             <!-- Zoekgebied tabs -->
@@ -294,7 +109,7 @@
             </div>
 
             <!-- Gemeente multiselect -->
-            <div id="panelGemeenten" style="@(Model.ZoekgebiedTab == "RondAdres" ? "display:none" : "")">
+            <div id="panelGemeenten" class="@(Model.ZoekgebiedTab == "RondAdres" ? "vp-hidden" : "")">
                 <div class="vp-gem-wrap mb-3">
                     <button type="button" id="gemBtn" class="vp-gem-btn">
                         <span id="gemBtnLabel">@Model.GemeenteDropdownLabel</span>
@@ -316,7 +131,7 @@
             </div>
 
             <!-- Rond adres -->
-            <div id="panelRondAdres" style="@(Model.ZoekgebiedTab != "RondAdres" ? "display:none" : "")">
+            <div id="panelRondAdres" class="@(Model.ZoekgebiedTab != "RondAdres" ? "vp-hidden" : "")">
                 <div class="vp-rond-wrap mb-3">
                     <button type="button" id="rondAdresBtn" class="vp-gem-btn">
                         <span id="rondAdresBtnLabel">@Model.RondAdresDropdownLabel</span>
@@ -373,21 +188,21 @@
             <!-- Tolerantie slider -->
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span style="font-size:.76rem;color:#64748b;">Tolerantie</span>
-                    <span id="tolLabel" style="font-size:.76rem;font-weight:600;color:var(--primary,#2c7a4b);">± @(Model.Tolerantie) m²</span>
+                    <span class="vp-tolerantie-caption">Tolerantie</span>
+                    <span id="tolLabel">± @(Model.Tolerantie) m²</span>
                 </div>
                 <input type="range" name="tolerantie" id="tolerantieSlider"
                        min="0" max="50" step="5" value="@Model.Tolerantie"
                        class="form-range" />
                 @if (Model.Oppervlakte.HasValue)
                 {
-                    <div id="oppRangeLabel" class="text-muted mt-1" style="font-size:.75rem;">
+                    <div id="oppRangeLabel" class="text-muted mt-1">
                         Zoekt units tussen <strong>@((int)(Model.Oppervlakte.Value - Model.Tolerantie))</strong> en <strong>@((int)(Model.Oppervlakte.Value + Model.Tolerantie))</strong> m²
                     </div>
                 }
                 else
                 {
-                    <div id="oppRangeLabel" class="text-muted mt-1" style="font-size:.75rem;display:none;"></div>
+                    <div id="oppRangeLabel" class="text-muted mt-1 vp-hidden"></div>
                 }
             </div>
 
@@ -413,7 +228,7 @@
 
             <!-- Status -->
             <div class="vp-filter-label">Status</div>
-            <div class="vp-seg-group mb-4" style="font-size:.76rem;">
+            <div class="vp-seg-group vp-seg-group-status mb-4">
                 <input type="radio" name="status" id="stAlles"      value="Alles"       @(Model.Status == "Alles"      || string.IsNullOrEmpty(Model.Status) ? "checked" : "") />
                 <label for="stAlles">Alles</label>
                 <input type="radio" name="status" id="stBeschikbaar" value="Beschikbaar" @(Model.Status == "Beschikbaar" ? "checked" : "") />
@@ -558,7 +373,7 @@
             {
                 <div class="card">
                     <div class="card-body vp-empty">
-                        <i class="bx bx-search-alt" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+                        <i class="bx bx-search-alt vp-noresult-icon"></i>
                         <div>Geen vergelijkbare panden gevonden voor dit zoekprofiel.</div>
                     </div>
                 </div>
@@ -568,19 +383,19 @@
                 <!-- Resultaten tabel -->
                 <div class="vp-card">
                     <div class="card-header d-flex justify-content-between align-items-center py-2 px-3">
-                        <span style="font-weight:600;font-size:.88rem;">
+                        <span class="vp-card-header-title">
                             <i class="bx bx-list-ul me-1"></i>@Model.Panden.Count vergelijkbare panden
                         </span>
                         <div class="d-flex align-items-center gap-2">
-                            <span style="font-size:.78rem;color:#64748b;">Toon</span>
-                            <select id="vpPageLength" class="form-select form-select-sm" style="width:70px;">
+                            <span class="vp-toon-label">Toon</span>
+                            <select id="vpPageLength" class="form-select form-select-sm">
                                 <option value="10">10</option>
                                 <option value="25">25</option>
                                 <option value="50">50</option>
                                 <option value="100">100</option>
                             </select>
                             <input type="text" id="vpSearch" class="form-control form-control-sm"
-                                   placeholder="Zoek project of adres..." style="width:200px;" />
+                                   placeholder="Zoek project of adres..." />
                         </div>
                     </div>
                     <div class="card-body p-0">
@@ -614,7 +429,7 @@
                                             data-url="@detailUrl"
                                             data-external="@(!p.IsProject ? "true" : "false")">
                                             <td>
-                                                <div style="font-weight:600;font-size:.83rem;color:#1e293b;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="@p.ProjectNaam">
+                                                <div class="vp-project-naam" title="@p.ProjectNaam">
                                                     @p.ProjectNaam
                                                 </div>
                                             </td>
@@ -628,10 +443,10 @@
                                             <td><span class="type-pill @typeCss">@p.TypeLabel</span></td>
                                             <td class="text-end">@(p.Oppervlakte.HasValue ? $"{p.Oppervlakte:N0} m²" : "—")</td>
                                             <td class="text-center">@(p.Slaapkamers?.ToString() ?? "—")</td>
-                                            <td class="text-end" style="font-weight:600;">
+                                            <td class="text-end vp-cell-strong">
                                                 @(p.Vraagprijs.HasValue ? $"€ {p.Vraagprijs.Value:N0}".Replace(",",".") : "—")
                                             </td>
-                                            <td class="text-end" style="color:#64748b;">
+                                            <td class="text-end vp-cell-muted">
                                                 @(p.PrijsPerM2.HasValue ? $"€ {p.PrijsPerM2.Value:N0}/m²".Replace(",",".") : "—")
                                             </td>
                                             <td><span class="status-badge @statusCss">@p.Status</span></td>
@@ -650,7 +465,7 @@
                                                     }
                                                     else
                                                     {
-                                                        <span style="color:#94a3b8;font-size:.75rem;">—</span>
+                                                        <span class="vp-dash-muted">—</span>
                                                         <span class="badge-project">Project</span>
                                                     }
                                                 </div>
@@ -682,7 +497,7 @@
                         var beschikbaar = Model.Panden.Count(p => p.Status == "Beschikbaar");
                         var bPct = Model.Panden.Count > 0 ? (int)Math.Round((double)beschikbaar / Model.Panden.Count * 100) : 0;
                     }
-                    <p style="margin:0;line-height:1.6;">
+                    <p class="vp-marktconclusie-tekst">
                         Voor @typeOms@oppOms werden <strong>@Model.Panden.Count vergelijkbare panden</strong> gevonden.
                         De gemiddelde vraagprijs bedraagt <strong>@gemOms</strong>, of <strong>@ppSqmOms</strong>.
                         @if (Model.Kpi?.LaagstePrijs != null && Model.Kpi?.HoogstePrijs != null)
@@ -820,12 +635,12 @@
 
     tabGem.addEventListener('click', function () {
         tabGem.classList.add('active'); tabRond.classList.remove('active');
-        panGem.style.display = ''; panRond.style.display = 'none';
+        panGem.classList.remove('vp-hidden'); panRond.classList.add('vp-hidden');
         hidTab.value = 'Gemeenten';
     });
     tabRond.addEventListener('click', function () {
         tabRond.classList.add('active'); tabGem.classList.remove('active');
-        panRond.style.display = ''; panGem.style.display = 'none';
+        panRond.classList.remove('vp-hidden'); panGem.classList.add('vp-hidden');
         hidTab.value = 'RondAdres';
     });
 
@@ -1082,10 +897,10 @@
         var tol = parseInt(tolSlider.value) || 0;
         tolLabel.textContent = '± ' + tol + ' m²';
         if (opp > 0) {
-            oppRangeLbl.style.display = '';
+            oppRangeLbl.classList.remove('vp-hidden');
             oppRangeLbl.innerHTML = 'Zoekt units tussen <strong>' + Math.max(0, opp - tol) + '</strong> en <strong>' + (opp + tol) + '</strong> m²';
         } else {
-            oppRangeLbl.style.display = 'none';
+            oppRangeLbl.classList.add('vp-hidden');
         }
     }
 
@@ -1114,7 +929,7 @@
             row.className = 'vp-gem-row';
             var checked = geselecteerd.has(g.id) ? 'checked' : '';
             row.innerHTML =
-                '<input type="checkbox" id="gem_' + g.id + '" value="' + g.id + '" ' + checked + ' style="margin-right:.5rem;cursor:pointer;" />' +
+                '<input type="checkbox" class="vp-gem-checkbox" id="gem_' + g.id + '" value="' + g.id + '" ' + checked + ' />' +
                 '<label for="gem_' + g.id + '">' + g.naam + '</label>' +
                 '<span class="vp-gem-count">' + (g.aantal || 0) + '</span>';
             row.querySelector('input').addEventListener('change', function () {

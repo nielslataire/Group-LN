@@ -1,0 +1,801 @@
+/* ==========================================================================
+   Marktanalyse module — gedeelde stylesheet
+   Gebruikt door:
+     - Views/Marktanalyse/Gemeenteanalyse.cshtml   (scope: .ma-gemeenteanalyse)
+     - Views/Marktanalyse/VergelijkbarePanden.cshtml (scope: .ma-vergelijkbare-panden)
+
+   De twee pagina's gebruiken elk hun eigen versie van een aantal gelijknamige
+   klassen (.type-pill, .status-badge, .sales-cell, ...) met andere waarden.
+   Daarom staat alles hieronder achter de scope-klasse van de pagina, zodat
+   beide pagina's dit ene bestand kunnen laden zonder elkaars opmaak te breken.
+   ========================================================================== */
+
+/* ==========================================================================
+   Gemeenteanalyse
+   ========================================================================== */
+
+.ma-gemeenteanalyse .kpi-card { border-left: 4px solid #6c757d; }
+.ma-gemeenteanalyse .kpi-card.accent-blue  { border-left-color: #0d6efd; }
+.ma-gemeenteanalyse .kpi-card.accent-green { border-left-color: #198754; }
+.ma-gemeenteanalyse .kpi-card.accent-red   { border-left-color: #dc3545; }
+.ma-gemeenteanalyse .kpi-card.accent-teal  { border-left-color: #0dcaf0; }
+.ma-gemeenteanalyse .kpi-value { font-size: 1.6rem; font-weight: 700; line-height: 1.1; }
+.ma-gemeenteanalyse .kpi-label { font-size: .75rem; color: #6c757d; text-transform: uppercase; letter-spacing: .04em; }
+
+.ma-gemeenteanalyse .dashboard-stat {
+    border: 0;
+    border-radius: .75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    transition: all .2s ease;
+    min-height: 100px;
+}
+
+.ma-gemeenteanalyse .dashboard-stat:hover {
+    box-shadow: 0 .25rem .75rem rgba(0,0,0,.10);
+}
+
+.ma-gemeenteanalyse .dashboard-stat .card-body {
+    padding: 1rem 1.25rem;
+}
+
+.ma-gemeenteanalyse .dashboard-stat-title {
+    color: #6c757d;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: .2rem;
+}
+
+.ma-gemeenteanalyse .dashboard-stat-title i {
+    margin-right: .25rem;
+    font-size: .9rem;
+    color: var(--primary);
+}
+
+.ma-gemeenteanalyse .dashboard-stat-value {
+    font-size: 21px;
+    font-weight: 700;
+    line-height: 1;
+    color: #212529;
+    margin-bottom: .2rem;
+}
+
+.ma-gemeenteanalyse .dashboard-stat-subtitle {
+    color: #6c757d;
+    font-size: 10.5px;
+    margin-bottom: 0;
+}
+
+.ma-gemeenteanalyse .dashboard-stat-subtitle i {
+    margin-right: .25rem;
+    color: #adb5bd;
+}
+
+.ma-gemeenteanalyse .btn-group-segmented {
+    padding: 4px;
+    background: #f3f5f7;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    gap: 4px;
+    display: inline-flex;
+}
+
+.ma-gemeenteanalyse .btn-group-segmented .btn {
+    border: 0;
+    background: transparent;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: .875rem;
+    padding: .4rem .85rem;
+    border-radius: 7px;
+    transition: all .2s ease;
+    margin: 0;
+}
+
+.ma-gemeenteanalyse .btn-group-segmented .btn:hover {
+    color: var(--primary);
+    background: rgba(0,0,0,.03);
+}
+
+/* geselecteerde knop */
+.ma-gemeenteanalyse .btn-check:checked + .btn {
+    background: #fff;
+    color: var(--primary);
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+/* Grafieken */
+.ma-gemeenteanalyse .chart-row {
+    padding-top: 0 !important;
+}
+
+.ma-gemeenteanalyse .chart-card {
+    border: 1px solid #e1e7ef;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, .06);
+}
+
+.ma-gemeenteanalyse .chart-card .card-body {
+    padding: 1rem 1.25rem .9rem;
+}
+
+.ma-gemeenteanalyse .chart-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ma-gemeenteanalyse .chart-subtitle {
+    font-size: 10.5px;
+    color: #8a97a8;
+    margin-bottom: .75rem;
+}
+
+.ma-gemeenteanalyse .chart-container   { height: 210px; }
+.ma-gemeenteanalyse .chart-container-h { height: 210px; }
+
+/* ===========================
+   TABLE CARD
+=========================== */
+
+.ma-gemeenteanalyse .table-card {
+    border: 1px solid #dfe7ef;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff !important;
+    box-shadow: 0 2px 6px rgba(15,23,42,.04);
+}
+
+.ma-gemeenteanalyse .project-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: .9rem 1rem;
+    background: #fff !important;
+    border-bottom: 1px solid #dfe7ef;
+}
+
+.ma-gemeenteanalyse .project-table-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.ma-gemeenteanalyse .project-table-header-right {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+
+.ma-gemeenteanalyse .table-card-title {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ma-gemeenteanalyse .table-card-title i {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.ma-gemeenteanalyse .table-card-subtitle {
+    font-size: .8rem;
+    color: #8190a5;
+}
+
+/* ===========================
+   FILTERS IN HEADER
+=========================== */
+
+.ma-gemeenteanalyse #projectPageLength  { width: 80px; }
+.ma-gemeenteanalyse #projectSearch      { width: 260px; }
+.ma-gemeenteanalyse #projectSearch,
+.ma-gemeenteanalyse #projectPageLength {
+    border-radius: 8px;
+    border: 1px solid #dfe7ef;
+    font-size: .85rem;
+}
+
+.ma-gemeenteanalyse #eenhedenPageLength { width: 80px; }
+.ma-gemeenteanalyse #eenhedenSearch     { width: 260px; }
+.ma-gemeenteanalyse #eenhedenSearch,
+.ma-gemeenteanalyse #eenhedenPageLength {
+    border-radius: 8px;
+    border: 1px solid #dfe7ef;
+    font-size: .85rem;
+}
+
+/* ===========================
+   TABLE
+=========================== */
+
+.ma-gemeenteanalyse .table-projecten {
+    margin-bottom: 0;
+    font-size: .875rem;
+}
+
+.ma-gemeenteanalyse .table-projecten thead th {
+    background: #f8fafc;
+    color: #64748b;
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    padding: .9rem 1rem;
+    border-top: 0;
+    border-bottom: 1px solid #dfe7ef;
+    white-space: nowrap;
+}
+
+.ma-gemeenteanalyse .table-projecten tbody td {
+    padding: .9rem 1rem;
+    vertical-align: middle;
+    border-top: 1px solid #edf2f7;
+    color: #0f172a;
+}
+
+.ma-gemeenteanalyse .table-projecten tbody tr {
+    transition: background .15s ease;
+    cursor: pointer;
+}
+
+.ma-gemeenteanalyse .table-projecten tbody tr:hover {
+    background: #fbfcfd;
+}
+
+/* ===========================
+   PROJECT KOLOM
+=========================== */
+
+.ma-gemeenteanalyse .project-name {
+    display: flex;
+    align-items: center;
+    gap: .4rem;
+    font-weight: 700;
+}
+
+.ma-gemeenteanalyse .project-name i {
+    color: var(--primary);
+}
+
+.ma-gemeenteanalyse .project-name a {
+    color: #0f172a;
+    text-decoration: none;
+}
+
+.ma-gemeenteanalyse .project-name a:hover {
+    color: var(--primary);
+}
+
+.ma-gemeenteanalyse .project-address {
+    margin-top: .2rem;
+    font-size: .8rem;
+    color: #94a3b8;
+}
+
+/* ===========================
+   TYPE PILLS
+=========================== */
+
+.ma-gemeenteanalyse .type-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .3rem .75rem;
+    border-radius: 999px;
+    font-size: .78rem;
+    font-weight: 600;
+}
+
+.ma-gemeenteanalyse .type-house {
+    background: #e8f7ef;
+    border: 1px solid #bee5cf;
+    color: #007a4d;
+}
+
+.ma-gemeenteanalyse .type-apartment {
+    background: #e8f6ff;
+    border: 1px solid #b8e1fb;
+    color: #0073b5;
+}
+
+/* ===========================
+   VERKOOPGRAAD BAR
+=========================== */
+
+.ma-gemeenteanalyse .status-badge {
+    display: inline-block;
+    padding: .25rem .65rem;
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 600;
+}
+.ma-gemeenteanalyse .status-available  { background: #e8f7ef; color: #007a4d; border: 1px solid #bee5cf; }
+.ma-gemeenteanalyse .status-sold       { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.ma-gemeenteanalyse .status-likelysold { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+.ma-gemeenteanalyse .sales-cell {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    min-width: 180px;
+}
+
+.ma-gemeenteanalyse .sales-track {
+    flex: 1;
+    height: 6px;
+    background: #edf2f7;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.ma-gemeenteanalyse .sales-bar {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.ma-gemeenteanalyse .sales-cell strong {
+    min-width: 38px;
+    font-size: .82rem;
+    color: #0f172a;
+}
+
+/* ===========================
+   CHEVRON
+=========================== */
+
+.ma-gemeenteanalyse .row-chevron {
+    color: #94a3b8;
+    font-size: 1.1rem;
+    transition: transform .15s ease;
+}
+
+.ma-gemeenteanalyse .table-projecten tbody tr:hover .row-chevron {
+    transform: translateX(3px);
+    color: var(--primary);
+}
+
+/* ===========================
+   BRON BADGES
+=========================== */
+
+.ma-gemeenteanalyse .bron-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    font-size: .65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    margin-right: .2rem;
+    white-space: nowrap;
+}
+
+.ma-gemeenteanalyse .bron-immoweb { background: #fff4e5; border: 1px solid #ffd591; color: #b26a00; }
+.ma-gemeenteanalyse .bron-zimmo   { background: #e8f0fe; border: 1px solid #bad0f7; color: #1a56db; }
+.ma-gemeenteanalyse .bron-other   { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; }
+
+.ma-gemeenteanalyse .dup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+    padding: .15rem .45rem;
+    border-radius: 4px;
+    font-size: .65rem;
+    font-weight: 700;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #c2410c;
+    margin-left: .3rem;
+}
+
+/* Badge voor losse eenheid die gekoppeld is aan een project (was inline style) */
+.ma-gemeenteanalyse .badge-gekoppeld {
+    background: #e8f7ef;
+    color: #007a4d;
+    border: 1px solid #bee5cf;
+    font-size: .65rem;
+}
+
+/* Placeholder wanneer een project geen bronnen heeft (was inline style) */
+.ma-gemeenteanalyse .bron-empty {
+    font-size: .8rem;
+}
+
+/* ===========================
+   DATATABLES
+=========================== */
+
+.ma-gemeenteanalyse .dataTables_info {
+    font-size: .85rem;
+    color: #64748b;
+}
+
+.ma-gemeenteanalyse .dataTables_paginate {
+    margin-top: 0 !important;
+}
+
+.ma-gemeenteanalyse .pagination {
+    margin-bottom: 0;
+}
+
+.ma-gemeenteanalyse .page-link {
+    color: #64748b;
+    border-color: #dfe7ef;
+}
+
+.ma-gemeenteanalyse .page-link:hover {
+    color: var(--primary);
+    background: #f8fafc;
+}
+
+.ma-gemeenteanalyse .page-item.active .page-link {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+/* ===========================
+   LOCATIE AUTOCOMPLETE
+=========================== */
+
+.ma-gemeenteanalyse .locatie-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: #fff;
+    border: 1px solid #dfe7ef;
+    border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(15,23,42,.12);
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.ma-gemeenteanalyse .locatie-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .55rem 1rem;
+    cursor: pointer;
+    font-size: .875rem;
+    gap: .5rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ma-gemeenteanalyse .locatie-item:last-child {
+    border-bottom: 0;
+}
+
+.ma-gemeenteanalyse .locatie-item:hover,
+.ma-gemeenteanalyse .locatie-item.active {
+    background: #f0f7ff;
+    color: var(--primary);
+}
+
+.ma-gemeenteanalyse .locatie-item.active .locatie-item-postcode {
+    color: var(--primary);
+}
+
+.ma-gemeenteanalyse .locatie-item-postcode {
+    font-size: .8rem;
+    color: #94a3b8;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.ma-gemeenteanalyse .locatie-item-empty {
+    padding: .75rem 1rem;
+    font-size: .875rem;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.ma-gemeenteanalyse .locatie-gemeente-header {
+    background: #f8fafc;
+    font-weight: 700;
+}
+
+.ma-gemeenteanalyse .locatie-sectie-row {
+    padding-left: 1.5rem;
+}
+
+@media (max-width: 991px) {
+    .ma-gemeenteanalyse .project-table-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ma-gemeenteanalyse .project-table-header-left,
+    .ma-gemeenteanalyse .project-table-header-right {
+        width: 100%;
+    }
+
+    .ma-gemeenteanalyse .project-table-header-right {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ma-gemeenteanalyse #projectSearch {
+        width: 100%;
+    }
+
+    .ma-gemeenteanalyse #projectPageLength {
+        width: 100%;
+    }
+
+    /* PAGINATION */
+
+    .ma-gemeenteanalyse .dataTables_paginate {
+        margin-top: 0 !important;
+    }
+
+    .ma-gemeenteanalyse .pagination {
+        gap: .35rem;
+        margin-bottom: 0;
+    }
+
+    .ma-gemeenteanalyse .page-item .page-link {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .9rem;
+        transition: all .15s ease;
+    }
+
+    .ma-gemeenteanalyse .page-item .page-link:hover {
+        background: #f8fafc;
+        color: var(--primary);
+        border-color: #dfe7ef;
+    }
+
+    .ma-gemeenteanalyse .page-item.active .page-link {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .ma-gemeenteanalyse .page-item.disabled .page-link {
+        background: #fff;
+        color: #d1d5db;
+        border-color: #e5e7eb;
+    }
+}
+
+
+/* ==========================================================================
+   VergelijkbarePanden
+   ========================================================================== */
+
+.ma-vergelijkbare-panden.split,
+.ma-vergelijkbare-panden .split {
+    display: grid;
+    grid-template-columns: 288px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+/* Bootstrap's .container-fluid gutter geeft ongewenste links/rechts padding
+   op deze pagina */
+.ma-vergelijkbare-panden {
+    padding-left: 0;
+    padding-right: 0;
+}
+
+.ma-vergelijkbare-panden .vp-sidebar { min-width: 0; }
+
+.ma-vergelijkbare-panden .vp-content {
+    min-width: 0;
+    position: relative;
+    background: #fff;
+}
+
+/* Zoekknop in de echte thema-primary kleur (Bootstrap's .btn-primary is in
+   dit thema overschreven naar grijs, dus hier expliciet op var(--primary)) */
+.ma-vergelijkbare-panden .btn-vp-primary {
+    background: var(--primary,#2c7a4b);
+    border-color: var(--primary,#2c7a4b);
+    color: #fff;
+}
+.ma-vergelijkbare-panden .btn-vp-primary:hover,
+.ma-vergelijkbare-panden .btn-vp-primary:focus {
+    background: var(--primary,#2c7a4b);
+    border-color: var(--primary,#2c7a4b);
+    color: #fff;
+    filter: brightness(0.92);
+}
+
+/* Laad-overlay tijdens (automatisch) zoeken — dekt bestaande resultaten af
+   totdat de nieuwe pagina met verse data geladen is. */
+.ma-vergelijkbare-panden .vp-loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,.75);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    border-radius: 10px;
+    min-height: 120px;
+}
+.ma-vergelijkbare-panden .vp-loading-overlay.show { display: flex; }
+.ma-vergelijkbare-panden .vp-loading-overlay .spinner-border { color: var(--primary,#2c7a4b); width: 2.5rem; height: 2.5rem; }
+
+.ma-vergelijkbare-panden .vp-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    overflow: hidden; /* laat de afronding doorlopen door header/body/tabel */
+}
+
+.ma-vergelijkbare-panden .vp-card .card-header {
+    background: #fff;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.ma-vergelijkbare-panden .vp-filter-card  { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: 1.25rem; }
+.ma-vergelijkbare-panden .vp-filter-label { font-size: .72rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .35rem; }
+
+.ma-vergelijkbare-panden .vp-filter-card .vp-filter-card-head {
+    padding-bottom: 13px;
+    border-bottom: 1px solid #e3e7ee;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ma-vergelijkbare-panden .vp-seg-group       { display: flex; border: 1px solid #d1d5db; border-radius: 7px; overflow: hidden; }
+.ma-vergelijkbare-panden .vp-seg-group input { display: none; }
+.ma-vergelijkbare-panden .vp-seg-group label { flex: 1; text-align: center; padding: .35rem .5rem; font-size: .8rem; font-weight: 500; cursor: pointer; color: #374151; background: #fff; transition: background .15s,color .15s; border-right: 1px solid #d1d5db; }
+.ma-vergelijkbare-panden .vp-seg-group label:last-of-type { border-right: none; }
+.ma-vergelijkbare-panden .vp-seg-group input:checked + label { background: var(--primary,#2c7a4b); color: #fff; }
+.ma-vergelijkbare-panden .vp-seg-tab         { display: flex; border: 1px solid #d1d5db; border-radius: 7px; overflow: hidden; margin-bottom: .75rem; }
+.ma-vergelijkbare-panden .vp-seg-tab button  { flex: 1; border: none; background: #fff; padding: .4rem; font-size: .8rem; font-weight: 500; cursor: pointer; color: #374151; transition: background .15s,color .15s; }
+.ma-vergelijkbare-panden .vp-seg-tab button.active { background: var(--primary,#2c7a4b); color: #fff; }
+
+/* Status-segment is iets compacter dan de standaard .vp-seg-group (was inline style) */
+.ma-vergelijkbare-panden .vp-seg-group-status { font-size: .76rem; }
+
+/* Gemeente multiselect dropdown */
+.ma-vergelijkbare-panden .vp-gem-wrap         { position: relative; }
+.ma-vergelijkbare-panden .vp-gem-btn          { width: 100%; text-align: left; border: 1px solid #d1d5db; border-radius: 7px; background: #fff; padding: .45rem .75rem; font-size: .85rem; color: #374151; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.ma-vergelijkbare-panden .vp-gem-btn:hover    { border-color: var(--primary,#2c7a4b); }
+.ma-vergelijkbare-panden .vp-gem-btn.open     { border-color: var(--primary,#2c7a4b); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.ma-vergelijkbare-panden .vp-gem-dropdown     { display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 1050; border: 1px solid var(--primary,#2c7a4b); border-top: none; border-radius: 0 0 7px 7px; background: #fff; max-height: 240px; overflow-y: auto; }
+.ma-vergelijkbare-panden .vp-gem-dropdown.open { display: block; }
+.ma-vergelijkbare-panden .vp-gem-search       { padding: .5rem .75rem; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; background: #fff; z-index: 2; }
+.ma-vergelijkbare-panden .vp-gem-search input { width: 100%; border: 1px solid #d1d5db; border-radius: 5px; padding: .3rem .6rem; font-size: .8rem; outline: none; }
+.ma-vergelijkbare-panden .vp-gem-header       { display: flex; justify-content: space-between; padding: .4rem .75rem .2rem; font-size: .68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; background: #f8fafc; }
+.ma-vergelijkbare-panden .vp-gem-header a     { color: var(--primary,#2c7a4b); cursor: pointer; font-weight: 600; text-decoration: none; }
+.ma-vergelijkbare-panden .vp-gem-row          { display: flex; align-items: center; justify-content: space-between; padding: .4rem .75rem; font-size: .82rem; cursor: pointer; }
+.ma-vergelijkbare-panden .vp-gem-row:hover    { background: #f1f5f9; }
+.ma-vergelijkbare-panden .vp-gem-row label    { cursor: pointer; flex: 1; margin: 0; }
+.ma-vergelijkbare-panden .vp-gem-count        { font-size: .75rem; color: #94a3b8; margin-left: .5rem; }
+
+/* Checkbox in de gemeentelijst (JS-gegenereerd, was inline style) */
+.ma-vergelijkbare-panden .vp-gem-checkbox     { margin-right: .5rem; cursor: pointer; }
+
+/* Rond adres — dropdown met kaart (middelpunt + straal) */
+.ma-vergelijkbare-panden .vp-rond-wrap        { position: relative; }
+.ma-vergelijkbare-panden .vp-rond-dropdown     { display: none; position: absolute; top: calc(100% + 6px); left: 0; width: 340px; z-index: 1050; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; box-shadow: 0 12px 32px rgba(15,23,42,.14); padding: .9rem; }
+.ma-vergelijkbare-panden .vp-rond-dropdown.open { display: block; }
+.ma-vergelijkbare-panden .vp-rond-dropdown-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .65rem; }
+.ma-vergelijkbare-panden .vp-rond-dropdown-title  { font-size: .68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .06em; }
+.ma-vergelijkbare-panden .vp-rond-count-badge     { background: #dcfce7; color: #166534; font-size: .68rem; font-weight: 700; padding: .2rem .55rem; border-radius: 20px; white-space: nowrap; }
+.ma-vergelijkbare-panden .vp-rond-search          { position: relative; margin-bottom: .75rem; }
+.ma-vergelijkbare-panden .vp-rond-search i        { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: .9rem; }
+.ma-vergelijkbare-panden .vp-rond-search input    { width: 100%; border: 1px solid #d1d5db; border-radius: 7px; padding: .45rem .75rem .45rem 2rem; font-size: .85rem; }
+.ma-vergelijkbare-panden .vp-rond-search input:focus { outline: none; border-color: var(--primary,#2c7a4b); }
+.ma-vergelijkbare-panden .vp-rond-slider-row      { display: flex; align-items: center; gap: .6rem; margin-bottom: .75rem; }
+.ma-vergelijkbare-panden .vp-rond-slider-row input[type="range"] { flex: 1; }
+.ma-vergelijkbare-panden .vp-rond-slider-row span { font-size: .8rem; font-weight: 700; color: var(--primary,#2c7a4b); min-width: 44px; text-align: right; }
+.ma-vergelijkbare-panden .vp-rond-map             { height: 200px; border-radius: 7px; border: 1px solid #e2e8f0; background: #eef2f7; }
+.ma-vergelijkbare-panden .vp-rond-hint            { display: flex; align-items: flex-start; gap: .4rem; margin-top: .6rem; font-size: .72rem; color: #94a3b8; line-height: 1.4; }
+.ma-vergelijkbare-panden .vp-rond-hint i          { flex-shrink: 0; margin-top: .1rem; }
+
+/* KPI cards */
+.ma-vergelijkbare-panden .vp-kpi-card  { border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; padding: .9rem 1rem; }
+.ma-vergelijkbare-panden .vp-kpi-label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #64748b; margin-bottom: .15rem; }
+.ma-vergelijkbare-panden .vp-kpi-value { font-size: 1.35rem; font-weight: 700; color: #1e293b; line-height: 1.1; }
+.ma-vergelijkbare-panden .vp-kpi-sub   { font-size: .75rem; color: #94a3b8; margin-top: .1rem; }
+.ma-vergelijkbare-panden .vp-kpi-first { background: #f0fdf4; border-color: #bbf7d0; }
+.ma-vergelijkbare-panden .vp-kpi-first .vp-kpi-value { color: var(--primary,#2c7a4b); }
+
+/* Table */
+.ma-vergelijkbare-panden .table-vp thead th   { background: #f8fafc; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #64748b; border-bottom: 2px solid #e2e8f0; white-space: nowrap; padding-left: 20px; padding-right: 20px; }
+.ma-vergelijkbare-panden .table-vp tbody tr   { cursor: pointer; transition: background .1s; }
+.ma-vergelijkbare-panden .table-vp tbody tr:hover { background: #f8fafc; }
+.ma-vergelijkbare-panden .table-vp td         { font-size: .83rem; vertical-align: middle; padding-left: 20px; padding-right: 20px; }
+.ma-vergelijkbare-panden .vp-adres-line1      { font-weight: 600; color: #1e293b; }
+.ma-vergelijkbare-panden .vp-adres-line2      { font-size: .75rem; color: #64748b; }
+.ma-vergelijkbare-panden .type-pill           { display: inline-block; border-radius: 20px; padding: .15rem .55rem; font-size: .72rem; font-weight: 600; }
+.ma-vergelijkbare-panden .type-pill.apt       { background: #e8f6ff; color: #0369a1; border: 1px solid #bae6fd; }
+.ma-vergelijkbare-panden .type-pill.won       { background: #e8f7ef; color: #166534; border: 1px solid #bbf7d0; }
+.ma-vergelijkbare-panden .status-badge        { display: inline-block; border-radius: 20px; padding: .15rem .55rem; font-size: .72rem; font-weight: 600; }
+.ma-vergelijkbare-panden .status-beschikbaar  { background: #dcfce7; color: #166534; }
+.ma-vergelijkbare-panden .status-verkocht     { background: #fee2e2; color: #dc2626; }
+.ma-vergelijkbare-panden .status-mogelijk     { background: #fef9c3; color: #854d0e; }
+.ma-vergelijkbare-panden .sales-cell          { display: flex; align-items: center; gap: .5rem; }
+.ma-vergelijkbare-panden .sales-track         { flex: 1; height: 6px; background: #e2e8f0; border-radius: 3px; min-width: 50px; }
+.ma-vergelijkbare-panden .sales-bar           { height: 6px; border-radius: 3px; background: var(--primary,#2c7a4b); }
+.ma-vergelijkbare-panden .sales-pct           { font-size: .78rem; font-weight: 600; color: #374151; min-width: 32px; text-align: right; }
+.ma-vergelijkbare-panden .badge-project       { background: #e8f7ef; border: 1px solid #bbf7d0; color: #166534; font-size: .68rem; padding: .1rem .45rem; border-radius: 20px; }
+.ma-vergelijkbare-panden .badge-los           { background: #fff4e5; border: 1px solid #ffd591; color: #b26a00; font-size: .68rem; padding: .1rem .45rem; border-radius: 20px; }
+.ma-vergelijkbare-panden .vp-empty            { text-align: center; padding: 2.5rem 1rem 2rem; }
+.ma-vergelijkbare-panden .vp-empty-icon       { width: 64px; height: 64px; margin: 0 auto .9rem; border-radius: 14px; background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; }
+.ma-vergelijkbare-panden .vp-empty-title      { font-weight: 700; font-size: 1.05rem; color: #1e293b; margin-bottom: .4rem; }
+.ma-vergelijkbare-panden .vp-empty-text       { font-size: .85rem; color: #94a3b8; max-width: 480px; margin: 0 auto; }
+
+/* Icoon bij "geen resultaten gevonden" (was inline style, andere context dan .vp-empty-icon) */
+.ma-vergelijkbare-panden .vp-noresult-icon    { font-size: 2rem; opacity: .3; display: block; margin-bottom: .5rem; }
+
+.ma-vergelijkbare-panden .vp-section          { margin-top: 1.75rem; }
+.ma-vergelijkbare-panden .vp-section-label    { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; padding-bottom: .6rem; border-bottom: 1px solid #e2e8f0; margin-bottom: .9rem; }
+
+.ma-vergelijkbare-panden .vp-quickcard          { display: flex; align-items: center; gap: .7rem; border: 1px solid #e2e8f0; border-radius: 10px; padding: .85rem .9rem; text-decoration: none; height: 100%; transition: border-color .15s,box-shadow .15s; }
+.ma-vergelijkbare-panden .vp-quickcard:hover     { border-color: var(--primary,#2c7a4b); box-shadow: 0 4px 14px rgba(15,23,42,.06); text-decoration: none; }
+.ma-vergelijkbare-panden .vp-quickcard-icon      { width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: var(--lightgreen,#e8f0eb); color: var(--primary,#2c7a4b); display: flex; align-items: center; justify-content: center; font-size: 1.05rem; }
+.ma-vergelijkbare-panden .vp-quickcard-body      { min-width: 0; display: flex; flex-direction: column; }
+.ma-vergelijkbare-panden .vp-quickcard-title     { font-size: .85rem; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ma-vergelijkbare-panden .vp-quickcard-subtitle  { font-size: .74rem; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ma-vergelijkbare-panden .vp-actielijst         { border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; }
+.ma-vergelijkbare-panden .vp-actie-row          { display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; text-decoration: none; border-bottom: 1px solid #f1f5f9; transition: background .12s; }
+.ma-vergelijkbare-panden .vp-actie-row:last-child { border-bottom: none; }
+.ma-vergelijkbare-panden .vp-actie-row:hover    { background: #f8fafc; text-decoration: none; }
+.ma-vergelijkbare-panden .vp-actie-icon         { width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px; background: #f1f5f9; color: #64748b; display: flex; align-items: center; justify-content: center; font-size: .95rem; }
+.ma-vergelijkbare-panden .vp-actie-body         { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+.ma-vergelijkbare-panden .vp-actie-title        { font-size: .85rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ma-vergelijkbare-panden .vp-actie-subtitle     { font-size: .74rem; color: #94a3b8; }
+.ma-vergelijkbare-panden .vp-actie-meta         { flex-shrink: 0; display: flex; align-items: center; gap: .6rem; }
+.ma-vergelijkbare-panden .vp-actie-count        { font-size: .72rem; font-weight: 700; background: #dcfce7; color: #166534; padding: .15rem .55rem; border-radius: 20px; white-space: nowrap; }
+.ma-vergelijkbare-panden .vp-actie-time         { font-size: .72rem; color: #94a3b8; white-space: nowrap; }
+
+.ma-vergelijkbare-panden .vp-hint-banner        { display: flex; align-items: flex-start; gap: .6rem; margin-top: 1.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: .85rem 1rem; font-size: .82rem; color: #166534; }
+.ma-vergelijkbare-panden .vp-hint-banner i      { font-size: 1.1rem; flex-shrink: 0; }
+.ma-vergelijkbare-panden .vp-marktconclusie     { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.25rem; font-size: .88rem; color: #374151; }
+.ma-vergelijkbare-panden .vp-mc-header          { display: flex; align-items: center; gap: .65rem; margin-bottom: .75rem; }
+.ma-vergelijkbare-panden .vp-mc-icon            { width: 34px; height: 34px; border-radius: 8px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+.ma-vergelijkbare-panden .vp-mc-title           { font-weight: 700; font-size: .88rem; color: #1e293b; line-height: 1.25; }
+.ma-vergelijkbare-panden .vp-mc-subtitle        { font-size: .75rem; color: #94a3b8; line-height: 1.25; margin-top: 1px; }
+
+/* Kleine tekst-utilities die voorheen als inline style op de pagina stonden */
+.ma-vergelijkbare-panden .vp-panel-title        { font-weight: 700; font-size: .92rem; color: #1e293b; }
+.ma-vergelijkbare-panden .vp-reset-link         { font-size: .78rem; color: #94a3b8; }
+.ma-vergelijkbare-panden .vp-tolerantie-caption { font-size: .76rem; color: #64748b; }
+.ma-vergelijkbare-panden .vp-card-header-title  { font-weight: 600; font-size: .88rem; }
+.ma-vergelijkbare-panden .vp-toon-label         { font-size: .78rem; color: #64748b; }
+.ma-vergelijkbare-panden .vp-project-naam       { font-weight: 600; font-size: .83rem; color: #1e293b; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ma-vergelijkbare-panden .vp-cell-strong        { font-weight: 600; }
+.ma-vergelijkbare-panden .vp-cell-muted         { color: #64748b; }
+.ma-vergelijkbare-panden .vp-dash-muted         { color: #94a3b8; font-size: .75rem; }
+.ma-vergelijkbare-panden .vp-marktconclusie-tekst { margin: 0; line-height: 1.6; }
+
+.ma-vergelijkbare-panden #oppRangeLabel { font-size: .75rem; }
+.ma-vergelijkbare-panden #tolLabel      { font-size: .76rem; font-weight: 600; color: var(--primary,#2c7a4b); }
+.ma-vergelijkbare-panden #vpPageLength  { width: 70px; }
+.ma-vergelijkbare-panden #vpSearch      { width: 200px; }
+
+/* Generieke "verborgen"-klasse (zonder !important) voor elementen waarvan de
+   zichtbaarheid ook via JS (element.style.display) wordt bijgestuurd — zo
+   blijft de bestaande JS-toggle-logica werken. */
+.ma-vergelijkbare-panden .vp-hidden { display: none; }
+
+/* theme.css (geladen ná deze stylesheet) zet .dataTables_wrapper .pagination
+   op margin-top:20px!important — hier ongedaan gemaakt via een ID-selector
+   zodat deze regel wint ondanks de latere laadvolgorde van theme.css. */
+.ma-vergelijkbare-panden #tblVergelijkbaar_wrapper .pagination { margin-top: 0 !important; }

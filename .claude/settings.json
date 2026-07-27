@@ -127,7 +127,11 @@
       "Bash(sqlcmd -S \"sql6031.site4now.net,1433\" -d \"db_ab5fbb_cpmmarketdata\" -U \"db_ab5fbb_cpmmarketdata_admin\" -P \"840683P@ssword\" -C -Q \"SELECT Id, AssetKey, Street, HouseNumber, PostalCode, City, DeveloperName, IsProjectGroup, IsActive, ParentMarketAssetId FROM MarketAsset WHERE City LIKE '%Beernem%' OR Street LIKE '%Beernemstraat%' ORDER BY IsProjectGroup DESC, Id\" -W -y 0)",
       "Bash(sqlcmd -S \"sql6031.site4now.net,1433\" -d \"db_ab5fbb_cpmmarketdata\" -U \"db_ab5fbb_cpmmarketdata_admin\" -P \"840683P@ssword\" -C -Q \"SELECT Id, AssetKey, Street, HouseNumber, PostalCode, City, DeveloperName, IsProjectGroup, IsActive, ParentMarketAssetId FROM MarketAsset WHERE City LIKE '%Beernem%' OR Street LIKE '%Beernemstraat%' ORDER BY IsProjectGroup DESC, Id\" -W)",
       "Bash(sqlcmd -S sql6031.site4now.net,1433 -d db_ab5fbb_cpmmarketdata -U db_ab5fbb_cpmmarketdata_admin -P 840683P@ssword -C -Q ' *)",
-      "PowerShell(dotnet build CPMCore -v q --nologo -o \"$env:TEMP\\\\cpmcore_build_check14\" 2>&1 | Select-String -Pattern \"error|Error\\\\\\(s\\\\\\)\")"
+      "PowerShell(dotnet build CPMCore -v q --nologo -o \"$env:TEMP\\\\cpmcore_build_check14\" 2>&1 | Select-String -Pattern \"error|Error\\\\\\(s\\\\\\)\")",
+      "Bash(openssl rand *)",
+      "Bash(dotnet publish *)",
+      "Bash(ls -la \"C:/BUILDMARKETDATA_TEST\" 2>&1)",
+      "Read(//c/BUILDMARKETDATA_TEST/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",

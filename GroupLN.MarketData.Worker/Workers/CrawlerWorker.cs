@@ -13,6 +13,9 @@ public class CrawlerWorker : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<CrawlerWorker> _logger;
     private readonly CrawlerSettings _settings;
+    // Voorkomt overlappende runs wanneer de interne timer en een externe HTTP-trigger
+    // (bv. smarterasp.net Task Scheduler) rond hetzelfde moment afgaan.
+    private readonly SemaphoreSlim _runLock = new(1, 1);
 
 
     public CrawlerWorker(
@@ -66,15 +69,40 @@ public class CrawlerWorker : BackgroundService
         }
 
         // Eerste check direct bij opstart
-        await RunAllDueCrawlsAsync(stoppingToken);
+        await RunLockedAsync(stoppingToken, "startup");
 
         using var timer = new PeriodicTimer(checkInterval);
         while (!stoppingToken.IsCancellationRequested && await timer.WaitForNextTickAsync(stoppingToken))
         {
-            await RunAllDueCrawlsAsync(stoppingToken);
+            await RunLockedAsync(stoppingToken, "scheduler");
         }
 
         _logger.LogInformation("CrawlerWorker gestopt.");
+    }
+
+    /// <summary>
+    /// Extern aanroepbaar (bv. vanaf het /api/trigger/crawl HTTP-endpoint) om buiten de
+    /// interne timer om een crawl-check te forceren. Slaat over als er al een run bezig is.
+    /// </summary>
+    public async Task TriggerRunAsync(string triggeredBy, CancellationToken cancellationToken = default)
+        => await RunLockedAsync(cancellationToken, triggeredBy);
+
+    private async Task RunLockedAsync(CancellationToken cancellationToken, string triggeredBy)
+    {
+        if (!await _runLock.WaitAsync(TimeSpan.Zero, cancellationToken))
+        {
+            _logger.LogWarning("Crawl-run ({TriggeredBy}) overgeslagen: vorige run is nog actief.", triggeredBy);
+            return;
+        }
+
+        try
+        {
+            await RunAllDueCrawlsAsync(cancellationToken);
+        }
+        finally
+        {
+            _runLock.Release();
+        }
     }
 
     private async Task RunAllDueCrawlsAsync(CancellationToken cancellationToken)

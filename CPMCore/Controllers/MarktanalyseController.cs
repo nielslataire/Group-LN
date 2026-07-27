@@ -28,7 +28,7 @@ public class MarktanalyseController : BaseController
         bool toonGekoppeld         = false,
         CancellationToken ct       = default)
     {
-        SetPageHeader("bx bx-line-chart", "Gemeenteanalyse");
+        SetPageHeader("bx bx-map", "Gemeenteanalyse");
 
         var locaties = await _svc.GetLocatiesAsync(ct);
 

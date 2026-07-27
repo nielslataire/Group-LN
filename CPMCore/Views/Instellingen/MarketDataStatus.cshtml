@@ -1,0 +1,181 @@
+@model CPMCore.Models.Instellingen.MarketDataStatusModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    string FmtDt(DateTime? dt) => dt.HasValue ? dt.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm") : "—";
+
+    string FmtDuration(int? seconds)
+    {
+        if (!seconds.HasValue) return "—";
+        var ts = TimeSpan.FromSeconds(seconds.Value);
+        return ts.TotalHours >= 1 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"m\:ss") + "m";
+    }
+}
+
+@section PageStyle {
+<style>
+    .mds-source-card { border: 1px solid #e2e8f0; border-radius: 10px; }
+    .mds-source-card .card-body { padding: 1rem 1.25rem; }
+    .mds-source-name { font-weight: 700; font-size: 1rem; color: #1e293b; }
+    .mds-source-meta { font-size: .78rem; color: #94a3b8; }
+    .mds-source-error {
+        margin-top: .6rem;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        border-radius: 8px;
+        padding: .6rem .75rem;
+        font-size: .8rem;
+        color: #b91c1c;
+        word-break: break-word;
+    }
+    .mds-stat-row { display: flex; gap: 1.25rem; margin-top: .75rem; flex-wrap: wrap; }
+    .mds-stat { font-size: .78rem; color: #64748b; }
+    .mds-stat strong { display: block; font-size: 1rem; color: #1e293b; }
+    .mds-log-cell { max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+</style>
+}
+
+<section class="card mb-4">
+    <header class="card-header">
+        <div class="card-actions">
+            <a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+        </div>
+        <h2 class="card-title">Marktdata-status per bron</h2>
+        <p class="card-subtitle">Status van de laatste crawl-poging van GroupLN.MarketData.Worker, per bron (Immoweb, Zimmo, ...).</p>
+    </header>
+    <div class="card-body">
+        @if (!Model.Sources.Any())
+        {
+            <div class="alert alert-info mb-0">Geen crawler-bronnen gevonden.</div>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var s in Model.Sources)
+                {
+                    var badgeClass = s.IsRunning ? "bg-primary"
+                        : !s.HasEverRun ? "bg-secondary"
+                        : s.LastRunFailed ? "bg-danger"
+                        : "bg-success";
+                    var badgeLabel = s.IsRunning ? "Bezig"
+                        : !s.HasEverRun ? "Nog niet gedraaid"
+                        : s.LastRunFailed ? "Mislukt"
+                        : "Geslaagd";
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card mds-source-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <div class="mds-source-name">@s.SourceName</div>
+                                        <div class="mds-source-meta">
+                                            @(s.IsActive ? "Actief" : "Inactief")
+                                            @if (s.IsRunning && !string.IsNullOrEmpty(s.CurrentPhase))
+                                            {
+                                                <text> · @s.CurrentPhase</text>
+                                                @if (!string.IsNullOrEmpty(s.CurrentProgress))
+                                                {
+                                                    <text> (@s.CurrentProgress)</text>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                    <span class="badge @badgeClass">@badgeLabel</span>
+                                </div>
+
+                                <div class="mds-stat-row">
+                                    <div class="mds-stat">
+                                        Laatste geslaagde run
+                                        <strong>@FmtDt(s.LastSuccessfulCrawlAt)</strong>
+                                    </div>
+                                    <div class="mds-stat">
+                                        Laatste poging
+                                        <strong>@FmtDt(s.LastAttemptedCrawlAt)</strong>
+                                    </div>
+                                    <div class="mds-stat">
+                                        Duur
+                                        <strong>@FmtDuration(s.LastDurationSeconds)</strong>
+                                    </div>
+                                </div>
+
+                                @if (s.LastResultFound.HasValue)
+                                {
+                                    <div class="mds-stat-row">
+                                        <div class="mds-stat">Gevonden<strong>@s.LastResultFound</strong></div>
+                                        <div class="mds-stat">Nieuw<strong>@s.LastResultNew</strong></div>
+                                        <div class="mds-stat">Bijgewerkt<strong>@s.LastResultUpdated</strong></div>
+                                        <div class="mds-stat">Fouten<strong>@s.LastResultErrors</strong></div>
+                                    </div>
+                                }
+
+                                @if (s.LastRunFailed && !string.IsNullOrEmpty(s.LastErrorMessage))
+                                {
+                                    <div class="mds-source-error">
+                                        <i class="bx bx-error-circle me-1"></i>@s.LastErrorMessage
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>
+
+<section class="card">
+    <header class="card-header">
+        <div class="card-actions">
+            <a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+        </div>
+        <h2 class="card-title">Recente runs</h2>
+        <p class="card-subtitle">Laatste @Model.RecenteRuns.Count uitvoeringen over alle bronnen, nieuwste eerst.</p>
+    </header>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Bron</th>
+                        <th>Gestart</th>
+                        <th>Afgerond</th>
+                        <th>Status</th>
+                        <th class="text-end">Gevonden</th>
+                        <th class="text-end">Nieuw</th>
+                        <th class="text-end">Bijgewerkt</th>
+                        <th class="text-end">Fouten</th>
+                        <th>Melding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.RecenteRuns.Any())
+                    {
+                        <tr><td colspan="9" class="text-center text-muted py-3">Nog geen runs geregistreerd.</td></tr>
+                    }
+                    @foreach (var r in Model.RecenteRuns)
+                    {
+                        var badgeClass = r.Status switch
+                        {
+                            "Voltooid" => "bg-success",
+                            "Mislukt" => "bg-danger",
+                            "Gedeeltelijk" => "bg-warning text-dark",
+                            "Bezig" => "bg-primary",
+                            _ => "bg-secondary"
+                        };
+                        <tr>
+                            <td>@r.SourceName</td>
+                            <td>@FmtDt(r.StartedAt)</td>
+                            <td>@FmtDt(r.FinishedAt)</td>
+                            <td><span class="badge @badgeClass">@r.Status</span></td>
+                            <td class="text-end">@r.ListingsFound</td>
+                            <td class="text-end">@r.ListingsCreated</td>
+                            <td class="text-end">@r.ListingsUpdated</td>
+                            <td class="text-end">@r.Errors</td>
+                            <td class="mds-log-cell" title="@r.LogMessage">@(r.LogMessage ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

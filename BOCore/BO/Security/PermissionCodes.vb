@@ -56,6 +56,7 @@ Public NotInheritable Class PermissionCodes
     Public Const SettingsEmailTemplates As String = "Settings.EmailTemplates"
     Public Const SettingsAutomatisatie As String = "Settings.Automatisatie"
     Public Const SettingsIssueNotifications As String = "Settings.IssueNotifications"
+    Public Const SettingsMarketDataStatus As String = "Settings.MarketDataStatus"
 
     ' Marktanalyse
     Public Const Marktanalyse As String = "Marktanalyse"

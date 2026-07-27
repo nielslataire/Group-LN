@@ -20,14 +20,14 @@ static async Task RunScopedCommandAsync<T>(IHost host, Func<T, Task> action) whe
     await action(cmd);
 }
 
-var host = Host.CreateDefaultBuilder(args)
-    .ConfigureServices((context, services) =>
-    {
-        services.AddMarketDataPersistence(context.Configuration);
-        services.AddMarketDataInfrastructure(context.Configuration);
-        services.AddHostedService<CrawlerWorker>();
-    })
-    .Build();
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddMarketDataPersistence(builder.Configuration);
+builder.Services.AddMarketDataInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<CrawlerWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CrawlerWorker>());
+
+var host = builder.Build();
 
 
 var logger = host.Services.GetRequiredService<ILogger<Program>>();
@@ -293,5 +293,41 @@ if (args.Contains("--zimmo-direct-detail-test"))
     logger.LogInformation("[Program] Zimmo direct detail-test voltooid. Afsluiten.");
     return;
 }
+
+// ── Externe HTTP-triggers (bv. smarterasp.net Task Scheduler) ────────────
+// /ping   → keep-alive, voorkomt dat IIS de app pool idle-recycled
+// /crawl  → forceert een crawl-check buiten de interne 30-min timer om
+host.MapGet("/api/trigger/ping", () => Results.Ok(new { status = "alive", timestamp = DateTime.UtcNow }));
+
+host.MapGet("/api/trigger/crawl", async (string? key, IConfiguration cfg, CrawlerWorker worker) =>
+{
+    var expectedKey = cfg["TriggerKeys:MarketDataCrawl"];
+    if (string.IsNullOrEmpty(expectedKey) || key != expectedKey)
+        return Results.Unauthorized();
+
+    _ = worker.TriggerRunAsync("http-trigger");
+    return Results.Accepted(value: new { status = "Accepted", timestamp = DateTime.UtcNow });
+});
+
+// /diag → toont welke omgeving/config effectief geladen is (nooit geheime waarden zelf).
+host.MapGet("/api/trigger/diag", (string? key, IConfiguration cfg, IHostEnvironment env) =>
+{
+    var expectedKey = cfg["TriggerKeys:MarketDataCrawl"];
+    if (string.IsNullOrEmpty(expectedKey) || key != expectedKey)
+        return Results.Unauthorized();
+
+    return Results.Ok(new
+    {
+        environment = env.EnvironmentName,
+        dotnetEnvironmentVar = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"),
+        aspnetEnvironmentVar = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+        enableCrawler = cfg["CrawlerSettings:EnableCrawler"],
+        dryRun = cfg["CrawlerSettings:DryRun"],
+        workerCheckIntervalMinutes = cfg["CrawlerSettings:WorkerCheckIntervalMinutes"],
+        debugEnabled = cfg["CrawlerSettings:Debug:Enabled"],
+        anthropicKeyConfigured = !string.IsNullOrEmpty(cfg["CrawlerSettings:AiExtraction:AnthropicApiKey"]),
+        connectionStringConfigured = !string.IsNullOrEmpty(cfg.GetConnectionString("MarketData"))
+    });
+});
 
 await host.RunAsync();

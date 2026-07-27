@@ -53,6 +53,7 @@ public class InstellingenController : BaseController
     private readonly ServiceCore.Budget.BouwIndexService _bouwIndex;
     private readonly ServiceCore.Budget.SIndexScraperService _sIndexScraper;
     private readonly ServiceCore.Budget.I2021SyncService _i2021Sync;
+    private readonly CPMCore.Services.IMarketDataStatusService _marketDataStatus;
 
     private static readonly JsonSerializerOptions LayoutSerializerOptions = new()
     {
@@ -68,7 +69,7 @@ public class InstellingenController : BaseController
 
     private static readonly string LayoutSchemaJson = LayoutSchemaProvider.GetSchemaJson();
 
-    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync)
+    public InstellingenController(ILogger<HomeController> logger, IIssuerCompanyService issuers, IIssuerBankAccountService bank, IIssuerSeriesService series, IInvoiceLayoutTemplateService invoiceTemplates, IOctopusApiClient octopusClient, IOctopusTokenManager octopusTokens, IOctopusBookyearService octopusBookyears, IOctopusRelationSyncService octopusRelations, IActivityService activityService, IProjectService projectService, IKostprijsService kostprijsService, ServiceCore.Budget.BouwIndexService bouwIndex, ServiceCore.Budget.SIndexScraperService sIndexScraper, ServiceCore.Budget.I2021SyncService i2021Sync, CPMCore.Services.IMarketDataStatusService marketDataStatus)
     {
         _logger = logger;
         _issuers = issuers;
@@ -85,6 +86,7 @@ public class InstellingenController : BaseController
         _bouwIndex = bouwIndex;
         _sIndexScraper = sIndexScraper;
         _i2021Sync = i2021Sync;
+        _marketDataStatus = marketDataStatus;
     }
 
     [HttpGet]
@@ -2019,6 +2021,23 @@ public class InstellingenController : BaseController
     {
         await _bouwIndex.SetActiefAsync(indexType, id);
         return Json(new { ok = true });
+    }
+
+    // ─── Marktdata-status ───────────────────────────────────────────────────────
+
+    [HttpGet]
+    [Breadcrumb("Marktdata-status")]
+    public async Task<IActionResult> MarketDataStatus(CancellationToken ct)
+    {
+        SetPageHeader("bx bx-radar", "Marktdata-status");
+
+        var dashboard    = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Home", "Dashboard");
+        var instellingen = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("Index", "Instellingen", "Instellingen") { Parent = dashboard };
+        var status       = new SmartBreadcrumbs.Nodes.MvcBreadcrumbNode("MarketDataStatus", "Instellingen", "Marktdata-status") { Parent = instellingen };
+        ViewData["BreadcrumbNode"] = status;
+
+        var model = await _marketDataStatus.GetStatusAsync(ct: ct);
+        return View(model);
     }
 
 }

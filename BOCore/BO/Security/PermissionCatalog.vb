@@ -51,6 +51,7 @@ Public NotInheritable Class PermissionCatalog
             New PermissionDefinition(PermissionCodes.SettingsEmailTemplates, "E-mailtemplates", PermissionCodes.SettingsWebsite, 96),
             New PermissionDefinition(PermissionCodes.SettingsAutomatisatie, "Automatisatie", PermissionCodes.Settings, 94),
             New PermissionDefinition(PermissionCodes.SettingsIssueNotifications, "Puntmeldingen", PermissionCodes.SettingsAutomatisatie, 95),
+            New PermissionDefinition(PermissionCodes.SettingsMarketDataStatus, "Marktdata-status", PermissionCodes.SettingsAutomatisatie, 97),
             New PermissionDefinition(PermissionCodes.Marktanalyse, "Marktanalyse", Nothing, 90),
             New PermissionDefinition(PermissionCodes.DocumentCenter, "Documentencentrum", Nothing, 100),
             New PermissionDefinition(PermissionCodes.DocumentCenterByBillingCompany, "Per facturatiebedrijf", PermissionCodes.DocumentCenter, 101)

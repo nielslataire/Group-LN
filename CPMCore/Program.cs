@@ -222,6 +222,7 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<VoortgangHostedSer
 // ── Marktanalyse ─────────────────────────────────────────────────────────────
 builder.Services.AddMarketDataPersistence(configuration);
 builder.Services.AddScoped<IMarktanalyseService, MarktanalyseService>();
+builder.Services.AddScoped<IMarketDataStatusService, MarketDataStatusService>();
 
 builder.Services.AddSingleton<TemplateInterpolator>();
 builder.Services.AddSingleton<BandsRenderer>();
