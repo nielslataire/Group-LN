@@ -1,5 +1,5 @@
 ﻿@Code
-    ViewData("Title") = "Group LN - Over Ons"
+    ViewData("Title") = "Over ons | Group LN"
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 

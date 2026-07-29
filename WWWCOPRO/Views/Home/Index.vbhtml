@@ -1,5 +1,5 @@
 ﻿@Code
-    ViewData("Title") = "Group LN - Projectontwikkeling - Bouwcoördinatie"
+    ViewData("Title") = "Projectontwikkelaar in Gent en Oost-Vlaanderen | Group LN"
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 <!-- Current Page CSS -->

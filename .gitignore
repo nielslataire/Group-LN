@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Docker env-bestand met echte secrets (zie .env.example voor template)
+.env
+
 # User-specific files
 *.rsuser
 *.suo

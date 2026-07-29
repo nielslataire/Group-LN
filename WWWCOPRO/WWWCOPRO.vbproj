@@ -237,8 +237,10 @@
     <Compile Include="Controllers\AboutUsController.vb" />
     <Compile Include="Controllers\BlogController.vb" />
     <Compile Include="Controllers\ContactController.vb" />
+    <Compile Include="Controllers\ErrorController.vb" />
     <Compile Include="Controllers\HomeController.vb" />
     <Compile Include="Controllers\NewsletterController.vb" />
+    <Compile Include="Controllers\SitemapController.vb" />
     <Compile Include="Controllers\TeamController.vb" />
     <Compile Include="Controllers\ProjectsController.vb" />
     <Compile Include="Controllers\ReferencesController.vb" />
@@ -499,6 +501,9 @@
     <Content Include="Vendor\simple-line-icons\README.md" />
     <Content Include="Vendor\simple-line-icons\scss\simple-line-icons.scss" />
     <Content Include="packages.config" />
+    <Content Include="robots.txt" />
+    <Content Include="Views\Error\NotFound.vbhtml" />
+    <Content Include="Views\Error\ServerError.vbhtml" />
     <Content Include="Views\Home\Index.vbhtml" />
     <Content Include="Views\Contact\Index.vbhtml" />
     <Content Include="Views\AboutUs\Index.vbhtml" />

@@ -18,14 +18,13 @@ Public Class RouteConfig
         'routes.MapMvcAttributeRoutes()
         routes.MapMvcAttributeRoutes(Localization.LocalizationDirectRouteProvider)
 
-        Const en As String = "en"
+        Const nl As String = "nl"
         Dim acceptedCultures As ISet(Of String) = New HashSet(Of String)() From {
-            en,
-            "nl"
+            nl
             }
 
         routes.Localization(Function(configuration)
-                                configuration.DefaultCulture = en
+                                configuration.DefaultCulture = nl
                                 configuration.AcceptedCultures = acceptedCultures
                                 configuration.AttributeRouteProcessing = AttributeRouteProcessing.AddAsNeutralAndDefaultCultureRoute
                                 configuration.AddCultureAsRoutePrefix = False
@@ -34,7 +33,7 @@ Public Class RouteConfig
                             End Function).TranslateInitialAttributeRoutes().Translate(Function(localization1)
                                                                                           localization1.AddRoutesTranslation()
                                                                                       End Function)
-        CultureSensitiveHttpModule.GetCultureFromHttpContextDelegate = Localization.DetectCultureFromBrowserUserLanguages(acceptedCultures, en)
+        CultureSensitiveHttpModule.GetCultureFromHttpContextDelegate = Localization.DetectCultureFromBrowserUserLanguages(acceptedCultures, nl)
 
         ' Dim cultureEN = CultureInfo.GetCultureInfo("en-US")
         ' Dim cultureNL = CultureInfo.GetCultureInfo("nl-BE")

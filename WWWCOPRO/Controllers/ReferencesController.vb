@@ -25,7 +25,7 @@
             'Architect
             response2 = companyservice.GetCompanyByID(model.Data.Architect.ID)
             If (response.Success) Then model.Architect = response2.Values.FirstOrDefault
-            ViewData("Title") = "Group LN - " & model.Data.Name
+            ViewData("Title") = WWWCOPRO.Extensions.BuildProjectSeoTitle(model.Data.Name, model.Data.Postalcode?.Gemeente)
             Return View("detail", model)
         Else
             ViewData("LatestNews") = GetLatestNews(4)

@@ -601,7 +601,6 @@
 .ma-vergelijkbare-panden .vp-content {
     min-width: 0;
     position: relative;
-    background: #fff;
 }
 
 /* Zoekknop in de echte thema-primary kleur (Bootstrap's .btn-primary is in
@@ -762,10 +761,10 @@
 .ma-vergelijkbare-panden .vp-actie-title        { font-size: .85rem; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ma-vergelijkbare-panden .vp-actie-subtitle     { font-size: .74rem; color: #94a3b8; }
 .ma-vergelijkbare-panden .vp-actie-meta         { flex-shrink: 0; display: flex; align-items: center; gap: .6rem; }
-.ma-vergelijkbare-panden .vp-actie-count        { font-size: .72rem; font-weight: 700; background: #dcfce7; color: #166534; padding: .15rem .55rem; border-radius: 20px; white-space: nowrap; }
+.ma-vergelijkbare-panden .vp-actie-count        { font-size: .72rem; font-weight: 700; background: var(--lightgreen); color: var(--primary); padding: .15rem .55rem; border-radius: 20px; white-space: nowrap; }
 .ma-vergelijkbare-panden .vp-actie-time         { font-size: .72rem; color: #94a3b8; white-space: nowrap; }
 
-.ma-vergelijkbare-panden .vp-hint-banner        { display: flex; align-items: flex-start; gap: .6rem; margin-top: 1.75rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: .85rem 1rem; font-size: .82rem; color: #166534; }
+.ma-vergelijkbare-panden .vp-hint-banner        { display: flex; align-items: flex-start; gap: .6rem; margin-top: 1.75rem; background: var(--lightgreen,#e8f0eb); border-radius: 10px; padding: .85rem 1rem; font-size: .82rem; color: #166534; }
 .ma-vergelijkbare-panden .vp-hint-banner i      { font-size: 1.1rem; flex-shrink: 0; }
 .ma-vergelijkbare-panden .vp-marktconclusie     { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.25rem; font-size: .88rem; color: #374151; }
 .ma-vergelijkbare-panden .vp-mc-header          { display: flex; align-items: center; gap: .65rem; margin-bottom: .75rem; }

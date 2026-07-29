@@ -12,12 +12,12 @@
     ViewData("ogtype") = "article"
     ViewData("ogdescription") = metaDescStr
     ViewData("ogimage") = If(Not String.IsNullOrEmpty(Model.FotoBestand), Model.FotoBestand, "https://www.groupln.be/Content/img/logoimg.jpg")
-    ViewData("ogurl") = "https://www.groupln.be/Blog/" & Model.Slug
+    ViewData("ogurl") = "https://www.groupln.be/blog/" & Model.Slug
+    ViewData("canonical") = "https://www.groupln.be/blog/" & Model.Slug
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 
 @section PageMeta
-    <link rel="canonical" href="https://www.groupln.be/Blog/@Model.Slug" />
     <meta property="article:published_time" content="@Model.Datum.ToString("yyyy-MM-dd")" />
     <meta property="article:author" content="Group LN" />
     @If Not String.IsNullOrEmpty(Model.MetaKeywords) Then

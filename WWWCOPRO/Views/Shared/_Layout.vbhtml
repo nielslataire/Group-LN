@@ -1,9 +1,17 @@
 ﻿@imports bo
 @Code
     Dim _metaDesc As String = If(Not String.IsNullOrEmpty(CStr(ViewData("MetaDescription"))), CStr(ViewData("MetaDescription")), "Projectontwikkeling en Bouwcoördinatie van alle residentiële bouwprojecten.")
+    Dim _ogTitle As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogtitle"))), CStr(ViewData("ogtitle")), CStr(ViewData("Title")))
+    Dim _ogType As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogtype"))), CStr(ViewData("ogtype")), "website")
+    Dim _ogDescription As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogdescription"))), CStr(ViewData("ogdescription")), _metaDesc)
+    Dim _ogImage As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogimage"))), CStr(ViewData("ogimage")), "https://www.groupln.be/Content/img/logoimg.jpg")
+    Dim _defaultCanonical As String = "https://www.groupln.be" & Request.Url.AbsolutePath.ToLowerInvariant().TrimEnd("/"c)
+    If _defaultCanonical = "https://www.groupln.be" Then _defaultCanonical &= "/"
+    Dim _ogUrl As String = If(Not String.IsNullOrEmpty(CStr(ViewData("ogurl"))), CStr(ViewData("ogurl")), _defaultCanonical)
+    Dim _canonical As String = If(Not String.IsNullOrEmpty(CStr(ViewData("canonical"))), CStr(ViewData("canonical")), _defaultCanonical)
 End Code
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
     <!-- Google Tag Manager -->
     <script>
@@ -17,18 +25,18 @@ End Code
         })(window, document, 'script', 'dataLayer', 'GTM-KG5HPVWR');</script>
     <!-- End Google Tag Manager -->
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData("Title")</title>
     <meta name="keywords" content="bouw appartement ontwikkeling appartementen coordinatie coördinatie opvolging project woning woningen budget controle werfopvolging werf bouwwerf bouwproject appartementsbouw vlaanderen oost-vlaanderen drongen klaverdries bouwteam copro" />
     <meta name="description" content="@_metaDesc" />
     <meta name="author" content="Group LN">
     <link rel="icon" href="@Url.Content("~/content/img/favicon.ico")" type="image/x-icon" />
-    <meta property="og:title" content="@ViewData("ogtitle")" />
-    <meta property="og:type" content="@ViewData("ogtype")" />
-    <meta property="og:description" content="@ViewData("ogdescription")" />
-    <meta property="og:image" content="@ViewData("ogimage")" />
-    <meta property="og:url" content="@ViewData("ogurl")" />
-    <meta property="og:locale" content="language_nl_BE" />
+    <meta property="og:title" content="@_ogTitle" />
+    <meta property="og:type" content="@_ogType" />
+    <meta property="og:description" content="@_ogDescription" />
+    <meta property="og:image" content="@_ogImage" />
+    <meta property="og:url" content="@_ogUrl" />
+    <meta property="og:locale" content="nl_BE" />
     <meta property="og:site_name" content="Group LN" />
     @If Not String.IsNullOrEmpty(CStr(ViewData("twittercard"))) Then
         @<meta name="twitter:card" content="@ViewData("twittercard")" />
@@ -36,12 +44,64 @@ End Code
         @<meta name="twitter:description" content="@ViewData("twitterdescription")" />
         @<meta name="twitter:image" content="@ViewData("twitterimage")" />
     End If
-    @If Not String.IsNullOrEmpty(CStr(ViewData("canonical"))) Then
-        @<link rel="canonical" href="@ViewData("canonical")" />
-    End If
-    <!-- Mobile Metas -->
-    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
+    <link rel="canonical" href="@_canonical" />
+<script type="application/ld+json">
+           {
+             "@@context": "https://schema.org",
+             "@@type": [
+               "Organization",
+               "LocalBusiness"
+             ],
+             "name": "Group LN",
+             "url": "https://www.groupln.be/",
+             "logo": "https://www.groupln.be/Content/img/logoimg.jpg",
+             "image": "https://www.groupln.be/Content/img/logoimg.jpg",
+             "telephone": "+32 9 216 49 50",
+             "email": "info@groupln.be",
+             "address": {
+               "@@type": "PostalAddress",
+               "streetAddress": "Klaverdries 53",
+               "postalCode": "9031",
+               "addressLocality": "Drongen",
+               "addressRegion": "Oost-Vlaanderen",
+               "addressCountry": {
+                 "@@type": "Country",
+                 "name": "BE"
+               }
+             },
+             "areaServed": [
+               {
+                 "@@type": "AdministrativeArea",
+                 "name": "Oost-Vlaanderen"
+               },
+               {
+                 "@@type": "AdministrativeArea",
+                 "name": "West-Vlaanderen"
+               },
+               {
+                  "@@type": "AdministrativeArea",
+                  "name": "Antwerpen"
+                }
+             ],
+             "contactPoint": {
+               "@@type": "ContactPoint",
+               "telephone": "+32 9 216 49 50",
+               "email": "info@groupln.be",
+               "contactType": "sales",
+               "areaServed": "BE",
+               "availableLanguage": [
+                 "nl",
+                 "fr",
+                 "en"
+               ]
+             },
+             "sameAs": [
+               "https://www.facebook.com/GROUPLN",
+               "https://www.linkedin.com/company/group-ln",
+               "https://www.instagram.com/group.ln/"
+             ]
+           }
+</script>
     <!-- Web Fonts  -->
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700;800&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet" type="text/css">
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>

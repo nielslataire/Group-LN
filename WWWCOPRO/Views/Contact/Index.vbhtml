@@ -1,6 +1,6 @@
 ﻿@MOdeltype wwwcopro.MailModel 
 @Code
-    ViewData("Title") = "Group LN - Contacteer ons"
+    ViewData("Title") = "Contacteer ons | Group LN"
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 <section class="page-header page-header-light">

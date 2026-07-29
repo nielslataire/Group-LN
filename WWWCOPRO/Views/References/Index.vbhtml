@@ -1,6 +1,6 @@
 ﻿@ModelType WWWCOPRO.ReferencesModel
 @Code
-    ViewData("Title") = "Group LN - Realisaties"
+    ViewData("Title") = "Realisaties | Group LN"
     Layout = "~/Views/Shared/_Layout.vbhtml"
 End Code
 @section PageStyle

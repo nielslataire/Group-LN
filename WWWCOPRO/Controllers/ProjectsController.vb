@@ -66,14 +66,14 @@ Namespace Controllers
             Else
                 ViewData("LatestNews") = GetLatestNews(4)
                 If Type = ProjectType.Woonproject Then
-                    ViewData("Title") = "Group LN - Woonprojecten"
-                    ViewBag.Metatitle = "Group LN - Woonprojecten"
+                    ViewData("Title") = "Woonprojecten | Group LN"
+                    ViewBag.Metatitle = "Woonprojecten | Group LN"
                     ViewBag.MetaDescription = "Woonprojecten"
                     ViewBag.MetaURL = "http://www.groupln.be/woonprojecten"
                     ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
                 Else
-                    ViewData("Title") = "Group LN - Commercieel"
-                    ViewBag.Metatitle = "Group LN - Commercieel"
+                    ViewData("Title") = "Commerciële projecten | Group LN"
+                    ViewBag.Metatitle = "Commerciële projecten | Group LN"
                     ViewBag.MetaDescription = "Commercieel"
                     ViewBag.MetaURL = "http://www.groupln.be/Commercieel"
                     ViewBag.MetaImageUrl = "http://www.groupln.be/content/img/slides/slide2.jpg"
@@ -958,7 +958,7 @@ Namespace Controllers
             model.ProjectCity = service.GetProjectCityById(model.ProjectId)
             model.ProjectSlug = service.GetProjectSlugById(model.ProjectId)
 
-            ViewData("title") = "Group LN - " & model.ProjectName & " - Foto's"
+            ViewData("Title") = model.ProjectName & " - Foto's | Group LN"
 
             Return View(model)
 
@@ -978,7 +978,7 @@ Namespace Controllers
             model.ProjectCity = service.GetProjectCityById(model.ProjectId)
             model.ProjectSlug = service.GetProjectSlugById(model.ProjectId)
 
-            ViewData("title") = "Group LN - " & model.ProjectName & " - Nieuws"
+            ViewData("Title") = model.ProjectName & " - Nieuws | Group LN"
 
             If Not newsid = 0 Then
 
@@ -1010,7 +1010,7 @@ Namespace Controllers
             model.ProjectCity = service.GetProjectCityById(model.ProjectId)
             model.ProjectSlug = service.GetProjectSlugById(model.ProjectId)
 
-            ViewData("title") = "Group LN - " & model.ProjectName & " - Nieuws"
+            ViewData("Title") = model.ProjectName & " - Nieuws | Group LN"
             If Not newsid = 0 Then
 
                 model.NewsId = newsid
@@ -1119,8 +1119,8 @@ Namespace Controllers
                 model.SalesSetttings.SaleVisible = False
             End If
 
-            ViewData("title") = "Group LN - Inschrijving - " & model.Data.Name
-            ViewBag.Metatitle = "Group LN - Inschrijvingspagina - " & model.Data.Name
+            ViewData("Title") = "Inschrijving " & model.Data.Name & " | Group LN"
+            ViewBag.Metatitle = "Inschrijvingspagina " & model.Data.Name & " | Group LN"
             ViewBag.MetaDescription = "Schrijf u in voor " & model.Data.Name & " in " & model.Data.Postalcode.Gemeente
             Return View("Inschrijving", model)
         End Function

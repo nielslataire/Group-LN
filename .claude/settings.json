@@ -131,11 +131,32 @@
       "Bash(openssl rand *)",
       "Bash(dotnet publish *)",
       "Bash(ls -la \"C:/BUILDMARKETDATA_TEST\" 2>&1)",
-      "Read(//c/BUILDMARKETDATA_TEST/**)"
+      "Read(//c/BUILDMARKETDATA_TEST/**)",
+      "Bash(git -C /e/TFS status --porcelain)",
+      "Bash(git -C /e/TFS status --porcelain -- BOCore/BO/Security/PermissionCodes.vb CPMCore/Controllers/InstellingenController.cs CPMCore/Program.cs CPMCore/Services/MarketDataStatusService.cs CPMCore/Views/Instellingen/Index.cshtml CPMCore/Views/Instellingen/MarketDataStatus.cshtml)",
+      "Bash(git -C /e/TFS diff --stat -- BOCore/BO/Security/PermissionCodes.vb CPMCore/Program.cs)",
+      "Bash(git -C /e/TFS check-ignore -v CPMCore/Services/MarketDataStatusService.cs CPMCore/Views/Instellingen/MarketDataStatus.cshtml BOCore/BO/Security/PermissionCodes.vb)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(mkdir -p \"/c/Users/latni/AppData/Local/Temp/claude/e--TFS/86fc3029-dc6f-49aa-8fed-dce711c0f09f/scratchpad\")",
+      "Bash(grep -n \"^\\\\.env$\" \"e:/TFS/.gitignore\")",
+      "Bash(docker version *)",
+      "PowerShell(docker version --format '{{.Server.Version}}' 2>&1)",
+      "Bash(grep -n \"Controllers\\\\\\\\\\\\\\\\.*Controller.vb\\\\|Content Include=\\\\\"Web.config\\\\\"\\\\|Content Include=\\\\\".*\\\\.css\\\\\"\\\\|ItemGroup\" /e/TFS/WWWCOPRO/WWWCOPRO.vbproj)",
+      "Bash(grep -n 'View Include=\"Views\\\\\\\\\\\\\\\\Shared\\\\\\\\\\\\\\\\Error' /e/TFS/WWWCOPRO/WWWCOPRO.vbproj)",
+      "Bash(grep -n '<Compile Include=\"Controllers\\\\\\\\ErrorController.vb\"\\\\|<Compile Include=\"Controllers\\\\\\\\SitemapController.vb\"\\\\|<Content Include=\"robots.txt\"\\\\|<Content Include=\"Views\\\\\\\\Error' /e/TFS/WWWCOPRO/WWWCOPRO.vbproj)",
+      "Bash(where msbuild.exe)",
+      "Read(//c/Program Files/Microsoft Visual Studio/**)",
+      "Read(//c/Windows/Microsoft.NET/**)",
+      "Bash(\"/c/Program Files/Microsoft Visual Studio/2022/Community/MSBuild/Current/Bin/amd64/MSBuild.exe\" WWWCOPRO/WWWCOPRO.vbproj /p:Configuration=Debug /t:Build /v:minimal /nologo)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\amd64\\\\MSBuild.exe\" \"E:\\\\TFS\\\\WWWCOPRO\\\\WWWCOPRO.vbproj\" /p:Configuration=Debug /t:Build /v:minimal /nologo)",
+      "PowerShell(& \"C:\\\\Program Files\\\\Microsoft Visual Studio\\\\2022\\\\Community\\\\MSBuild\\\\Current\\\\Bin\\\\amd64\\\\MSBuild.exe\" \"E:\\\\TFS\\\\WWWCOPRO\\\\WWWCOPRO.vbproj\" /p:Configuration=Debug /p:MvcBuildViews=true /t:Build /v:minimal /nologo)",
+      "Read(//c/Program Files/IIS Express/**)",
+      "Read(//c/Program Files \\\\\\(x86\\\\\\)/IIS Express/**)"
     ],
     "additionalDirectories": [
       "C:\\Users\\latni\\AppData\\Local\\Temp\\claude",
-      "\\dev"
+      "\\dev",
+      "C:\\Users\\latni\\AppData\\Local\\Temp\\claude\\e--TFS\\86fc3029-dc6f-49aa-8fed-dce711c0f09f\\scratchpad"
     ]
   }
 }

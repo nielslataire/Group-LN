@@ -9,7 +9,8 @@
     ViewData("ogtype") = "website"
     ViewData("ogdescription") = pageDesc
     ViewData("ogimage") = "https://www.groupln.be/Content/img/logoimg.jpg"
-    ViewData("ogurl") = "https://www.groupln.be/Blog"
+    ViewData("ogurl") = "https://www.groupln.be/blog"
+    ViewData("canonical") = "https://www.groupln.be/blog"
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim nlBE = New CultureInfo("nl-BE")
     Dim imgBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
@@ -22,7 +23,6 @@
 End Code
 
 @section PageMeta
-    <link rel="canonical" href="https://www.groupln.be/Blog" />
     <meta name="geo.region" content="BE-VOV" />
     <meta name="geo.placename" content="Drongen, Gent, Oost-Vlaanderen" />
     <meta name="geo.position" content="51.0682;3.6566" />

@@ -3,7 +3,7 @@
 @Imports System.Globalization
 @Code
     Dim isWoonproject As Boolean = Model.Projects.Any() AndAlso Model.Projects.First().ProjectType = BO.ProjectType.Woonproject
-    ViewData("Title") = If(isWoonproject, "Group LN - Woonprojecten", "Group LN - Commerciële projecten")
+    ViewData("Title") = If(isWoonproject, "Woonprojecten | Group LN", "Commerciële projecten | Group LN")
     Layout = "~/Views/Shared/_Layout.vbhtml"
     Dim belgianCulture = New CultureInfo("nl-BE")
     Dim imgBase As String = System.Web.Configuration.WebConfigurationManager.AppSettings("ImageWebURL")
@@ -58,7 +58,81 @@
     ' CTA vulling: bereken vrije slots in laatste rij (3 kolommen)
     Dim gridProjectCount As Integer = Math.Max(0, Model.Projects.Count() - 1)
     Dim remainingSlots As Integer = If(gridProjectCount > 0, (3 - (gridProjectCount Mod 3)) Mod 3, 0)
+
+    ' ItemList JSON-LD: beschrijft de projecten die op deze
+    ' overzichtspagina worden getoond en verwijst naar hun detailpagina's.
+
+    Dim _ser As New System.Web.Script.Serialization.JavaScriptSerializer()
+
+    Dim _listName As String =
+        If(isWoonproject,
+           "Woonprojecten",
+           "Commerciële projecten")
+
+    Dim _typeValue As String =
+        If(isWoonproject,
+           "Woonproject",
+           "Commercieel")
+
+    Dim _listUrl As String =
+        "https://www.groupln.be/woonprojecten?Type=" &
+        Uri.EscapeDataString(_typeValue)
+
+    ViewData("canonical") = _listUrl
+
+    Dim _itemsJson As New System.Text.StringBuilder()
+    Dim _pos As Integer = 0
+
+    For Each p In Model.Projects
+
+        _pos += 1
+
+        Dim pName As String =
+            If(Not String.IsNullOrWhiteSpace(p.CommercialTitleNL),
+               p.CommercialTitleNL,
+               p.Name)
+
+        Dim pUrl As String =
+            "https://www.groupln.be/woonprojecten/" &
+            Uri.EscapeDataString(p.Slug)
+
+        If _itemsJson.Length > 0 Then
+            _itemsJson.Append(","c)
+            _itemsJson.Append(Environment.NewLine)
+        End If
+
+        _itemsJson.Append(
+            "    {" &
+            " ""@type"": ""ListItem""," &
+            " ""position"": " & _pos & "," &
+            " ""item"": {" &
+            " ""name"": " & _ser.Serialize(pName) & "," &
+            " ""url"": " & _ser.Serialize(pUrl) &
+            " }" &
+            " }"
+        )
+
+    Next
+
+    Dim _itemListJson As String =
+        "{" & Environment.NewLine &
+        "  ""@context"": ""https://schema.org""," & Environment.NewLine &
+        "  ""@type"": ""ItemList""," & Environment.NewLine &
+        "  ""name"": " & _ser.Serialize(_listName) & "," & Environment.NewLine &
+        "  ""url"": " & _ser.Serialize(_listUrl) & "," & Environment.NewLine &
+        "  ""numberOfItems"": " & _pos & "," & Environment.NewLine &
+        "  ""itemListOrder"": ""https://schema.org/ItemListOrderAscending""," &
+        Environment.NewLine &
+        "  ""itemListElement"": [" & Environment.NewLine &
+        _itemsJson.ToString() & Environment.NewLine &
+        "  ]" & Environment.NewLine &
+        "}"
 End Code
+@section PageMeta
+    @If Model.Projects.Any() Then
+        @<script type="application/ld+json">@Html.Raw(_itemListJson)</script>
+    End If
+End Section
 @section PageStyle
     <link rel="stylesheet" href="~/Content/projects-index.css" />
 end section

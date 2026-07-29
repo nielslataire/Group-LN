@@ -1,0 +1,20 @@
+services:
+  marketdata-worker:
+    build:
+      context: .
+      dockerfile: GroupLN.MarketData.Worker/Dockerfile
+    container_name: groupln-marketdata-worker
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__MarketData: "${MARKETDATA_CONNECTION_STRING}"
+      TriggerKeys__MarketDataCrawl: "${TRIGGER_KEY}"
+      CrawlerSettings__AiExtraction__AnthropicApiKey: "${ANTHROPIC_API_KEY}"
+    # Poort niet publiek blootstellen — enkel lokaal bereikbaar (bv. via SSH-tunnel)
+    # voor handmatige /api/trigger/ping of /diag checks.
+    ports:
+      - "127.0.0.1:8080:8080"
+    # Overschrijft het bestand dat in de image gebakken zit — aanpassen op de
+    # server + "docker compose restart" volstaat dan, geen rebuild nodig.
+    volumes:
+      - ./GroupLN.MarketData.Worker/appsettings.Production.json:/app/appsettings.Production.json:ro

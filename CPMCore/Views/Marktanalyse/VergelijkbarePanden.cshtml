@@ -253,11 +253,13 @@
 
         @if (!Model.HeeftZoekparameters)
         {
-            <div class="vp-empty">
-                <div class="vp-empty-icon"><i class="bx bx-search-alt"></i></div>
-                <div class="vp-empty-title">Nog geen zoekprofiel actief</div>
-                <div class="vp-empty-text">Stel links uw criteria in en klik op <strong>Zoek vergelijkbare panden</strong>, of start meteen met een veelgebruikt profiel hieronder.</div>
-            </div>
+            <div class="vp-filter-card">
+                <div class="vp-empty">
+                    <div class="vp-empty-icon"><i class="bx bx-search-alt"></i></div>
+                    <div class="vp-empty-title">Nog geen zoekprofiel actief</div>
+                    <div class="vp-empty-text">Stel links uw criteria in en klik op <strong>Zoek vergelijkbare panden</strong>, of start meteen met een veelgebruikt profiel hieronder.</div>
+                </div>
+
 
             @if (Model.SnelStartPresets.Any())
             {
@@ -268,7 +270,7 @@
                         {
                             <div class="col-md-4">
                                 <a class="vp-quickcard" href="@preset.Url">
-                                    <span class="vp-quickcard-icon"><i class="bx bx-bolt"></i></span>
+                                    <span class="vp-quickcard-icon"><i class="bx bx-fast-forward"></i></span>
                                     <span class="vp-quickcard-body">
                                         <span class="vp-quickcard-title">@preset.Titel</span>
                                         <span class="vp-quickcard-subtitle">@preset.Subtitel</span>
@@ -288,7 +290,7 @@
                         @foreach (var actie in Model.RecenteZoekActies)
                         {
                             <a class="vp-actie-row" href="@actie.Url">
-                                <span class="vp-actie-icon"><i class="bx bx-time-five"></i></span>
+                                <span class="vp-actie-icon"><i class="bx bx-clock"></i></span>
                                 <span class="vp-actie-body">
                                     <span class="vp-actie-title">@actie.Titel</span>
                                     <span class="vp-actie-subtitle">@actie.Subtitel</span>
@@ -326,6 +328,7 @@
                 <i class="bx bx-map-alt"></i>
                 <span>Zodra u zoekt, tonen we hier de <strong>kaart, kerncijfers en vergelijkbare panden</strong> — inclusief een automatische marktconclusie.</span>
             </div>
+                    </div>
         }
         else
         {

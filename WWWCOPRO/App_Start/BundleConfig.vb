@@ -24,7 +24,6 @@ Public Class BundleConfig
                     "~/Scripts/modernizr-*"))
 
         bundles.Add(New ScriptBundle("~/Vendor/jsbundle").Include(
-                    "~/vendor/jquery/jquery.min.js",
                     "~/vendor/jquery.appear/jquery.appear.min.js",
                     "~/vendor/jquery.easing/jquery.easing.min.js",
                     "~/vendor/jquery-cookie/jquery-cookie.min.js",

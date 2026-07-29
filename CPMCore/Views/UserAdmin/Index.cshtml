@@ -796,20 +796,6 @@
               return descendants;
           }
 
-          function getAncestorRows(tbody, row) {
-              const ancestors = [];
-              let parentCode = row ? row.dataset.parentCode : null;
-
-              while (parentCode) {
-                  const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"]');
-                  if (!parentRow) break;
-                  ancestors.push(parentRow);
-                  parentCode = parentRow.dataset.parentCode;
-              }
-
-              return ancestors;
-          }
-
           function updateParentRowState(tbody, parentCode, access) {
               const parentRow = tbody.querySelector('tr[data-code="' + parentCode + '"]');
             if (!parentRow) return;
@@ -1079,17 +1065,6 @@
                                         canDelete: del,
                                         __RequestVerificationToken: antiForgeryToken
                                     });
-                                     const ancestorRows = getAncestorRows(tbody, row);
-                                    for (const ancestorRow of ancestorRows) {
-                                        await postJson('@Url.Action("SaveUserPermissionOverride", "UserAdmin")', {
-                                            userId: btn.dataset.userId,
-                                            permissionCode: ancestorRow.dataset.code,
-                                            canRead: ancestorRow.querySelector('input[data-access="read"]').checked,
-                                            canWrite: ancestorRow.querySelector('input[data-access="write"]').checked,
-                                            canDelete: ancestorRow.querySelector('input[data-access="delete"]').checked,
-                                            __RequestVerificationToken: antiForgeryToken
-                                        });
-                                    }
                                 });
                             });
                         }
@@ -1144,17 +1119,6 @@
                                 canDelete: del,
                                 __RequestVerificationToken: antiForgeryToken
                             });
-                             const ancestorRows = getAncestorRows(roleRightsBody, row);
-                            for (const ancestorRow of ancestorRows) {
-                                await postJson('@Url.Action("SaveRolePermission", "UserAdmin")', {
-                                    roleId: roleId,
-                                    permissionCode: ancestorRow.dataset.code,
-                                    canRead: ancestorRow.querySelector('input[data-access="read"]').checked,
-                                    canWrite: ancestorRow.querySelector('input[data-access="write"]').checked,
-                                    canDelete: ancestorRow.querySelector('input[data-access="delete"]').checked,
-                                    __RequestVerificationToken: antiForgeryToken
-                                });
-                            }
                         });
                     });
                 }

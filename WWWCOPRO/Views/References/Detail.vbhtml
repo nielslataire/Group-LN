@@ -16,7 +16,7 @@ End Code
         </div>
         <div class="row">
             <div class="col-md-12">
-                <h1>Projectgegevens</h1>
+                <h1>@Model.Data.Name in @System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ToTitleCase(Model.Data.Postalcode.Gemeente.ToLower())</h1>
             </div>
         </div>
     </div>
